@@ -30,6 +30,17 @@ jest.mock('@walkeros/cli', () => ({
   getDeploymentBySlug: jest.fn(),
   deleteDeployment: jest.fn(),
   listJourneys: jest.fn(),
+  listReleases: jest.fn(),
+  getRelease: jest.fn(),
+  listStepHistory: jest.fn(),
+  setReleaseRationale: jest.fn(),
+  listThreads: jest.fn(),
+  createThread: jest.fn(),
+  addThreadMessage: jest.fn(),
+  listKnowledge: jest.fn(),
+  listFrames: jest.fn(),
+  listPageFrames: jest.fn(),
+  getFrame: jest.fn(),
   requestDeviceCode: jest.fn(),
   pollForToken: jest.fn(),
   whoami: jest.fn(),
@@ -92,7 +103,7 @@ describe('public API surface', () => {
 
   it('exports TOOL_DEFINITIONS array', () => {
     expect(Array.isArray(api.TOOL_DEFINITIONS)).toBe(true);
-    expect(api.TOOL_DEFINITIONS.length).toBe(16);
+    expect(api.TOOL_DEFINITIONS.length).toBe(18);
   });
 
   it('exports the observe_session description and every next-hint', () => {

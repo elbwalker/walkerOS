@@ -35,9 +35,11 @@ export function createMockPush(collectedEvents: WalkerOS.Event[]) {
       trigger: event.trigger || '',
       timestamp: event.timestamp || Date.now(),
       timing: event.timing || 0,
+      // Mirrors the collector default. The source under test supplies its own
+      // identity, so nothing is invented here.
       source: {
-        type: event.source?.type || 'dataLayer',
-        platform: event.source?.platform || 'web',
+        type: event.source?.type ?? 'collector',
+        platform: event.source?.platform,
       },
     };
     collectedEvents.push(fullEvent);

@@ -6,13 +6,24 @@ jest.mock('@walkeros/cli', () => ({
   examples: jest.fn(),
   flowLoad: jest.fn(),
   loadFlow: jest.fn(),
+  listReleases: jest.fn(),
+  getRelease: jest.fn(),
+  listStepHistory: jest.fn(),
+  setReleaseRationale: jest.fn(),
+  listThreads: jest.fn(),
+  createThread: jest.fn(),
+  addThreadMessage: jest.fn(),
+  listKnowledge: jest.fn(),
+  listFrames: jest.fn(),
+  listPageFrames: jest.fn(),
+  getFrame: jest.fn(),
 }));
 
 import { createToolHandlers } from '../index.js';
 import { stubClient } from './support/stub-client.js';
 
 describe('createToolHandlers', () => {
-  it('returns specs for all 17 tools keyed by name', () => {
+  it('returns specs for all 19 tools keyed by name', () => {
     const specs = createToolHandlers(stubClient());
     expect(Object.keys(specs).sort()).toEqual(
       [
@@ -27,6 +38,8 @@ describe('createToolHandlers', () => {
         'flow_push',
         'flow_simulate',
         'flow_validate',
+        'frame_manage',
+        'hub_manage',
         'observe_journeys',
         'observe_session',
         'package_get',

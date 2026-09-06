@@ -118,7 +118,7 @@ should point `settings.output.botReasons` at an event path instead.
 | `automation`     | isbot match, missing UA, or a value impossible for the pinned context                                                                            | 70-80  |
 | `search-crawler` | search engine crawler (Googlebot, bingbot, Applebot, YandexBot, Baiduspider, PetalBot, …)                                                        | 90     |
 | `seo-tool`       | commercial SEO crawler (AhrefsBot, SemrushBot, DotBot, MJ12bot, Screaming Frog)                                                                  | 90     |
-| `monitor`        | uptime and synthetic monitoring, usually your own infrastructure (UptimeRobot, Pingdom, StatusCake)                                              | 90     |
+| `monitor`        | uptime and synthetic monitoring, usually your own infrastructure (UptimeRobot, Pingdom, Uptrends, Site24x7, Datadog Synthetics, ...)             | 90     |
 | `link-preview`   | link unfurler, meaning a person just shared this URL (facebookexternalhit, Twitterbot, LinkedInBot, Slackbot, Discordbot, TelegramBot, WhatsApp) | 90     |
 | `ai-agent`       | AI agent acting for a person (ChatGPT-User, Claude-User, Perplexity-User, Google-Agent)                                                          | 90     |
 | `ai-crawler`     | AI training or search-index crawler (GPTBot, ClaudeBot, CCBot, OAI-SearchBot)                                                                    | 90     |

@@ -76,7 +76,7 @@ five run locally:
 
 ## Tools
 
-The server registers 17 tools.
+The server registers 19 tools.
 
 ### Local, no account
 
@@ -103,6 +103,8 @@ The server registers 17 tools.
 | `secret_manage`    | Manage a flow's `$secret.<NAME>` values. Write-mostly, values are never returned          |
 | `observe_session`  | Start, inspect, or stop an Observe session, a time-boxed window on one running flow       |
 | `observe_journeys` | Read the assembled journeys for an observed flow, each event traced across web and server |
+| `hub_manage`       | Read a flow's release history and the reasoning behind it, and add to the discussion      |
+| `frame_manage`     | Read the frames of a measurement plan, the named rectangles and the marks inside them     |
 | `feedback`         | Send feedback about walkerOS                                                              |
 
 ## Resources

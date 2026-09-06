@@ -123,9 +123,9 @@ export const POST = handler;`}
 />
 
 To use the raw tool registry without the MCP protocol (e.g., with the Vercel
-AI SDK), import \`TOOL_DEFINITIONS\` and provide your own \`ToolClient\`
-implementation. The stdio binary stays available via \`@walkeros/mcp/stdio\`
-and the \`walkeros-mcp\` bin entry, unchanged for end users.
+AI SDK), import `TOOL_DEFINITIONS` and provide your own `ToolClient`
+implementation. The stdio binary stays available via `@walkeros/mcp/stdio`
+and the `walkeros-mcp` bin entry.
 
 ### Tools
 
@@ -460,6 +460,53 @@ When the flow has no active Observe session the result is
 `{ "sessionId": null, "journeys": [], "gaps": [] }`. Start an Observe session and
 drive traffic first, then read again.
 
+##### `hub_manage`
+
+Read a flow's release history and the reasoning behind it: what each release
+changed, and why. `release_get` returns a diff the server computes against the
+release before it, and a diff is never accepted from a caller. Writes are
+additive: `rationale_set` records why a release happened, `note_add` appends to a
+discussion, and there is no delete. Threads are resolved by a person in the app,
+never here. Steps are addressed as `type.name`, the same form `flow_simulate`
+takes. Needs the `hub` feature.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"releases"` \| `"release_get"` \| `"step_history"` \| `"rationale_set"` \| `"threads"` \| `"note_add"` \| `"knowledge"` | Yes | Which part of the release history to read or write |
+| `projectId` | string | No | Project ID (`proj_...`). Optional: falls back to the default project when omitted. |
+| `flowId` | string | No | Flow ID (`flow_...`). Required for every action except `knowledge`, which hangs on a page rather than a flow and refuses this field. |
+| `versionId` | string | No | Release version ID (`ver_...`) from action `releases`. Addresses one release for `release_get` and `rationale_set`. Pass this or `versionNumber`. |
+| `versionNumber` | number | No | Spine release number for this flow, the `versionNumber` field of action `releases`. Alternative to `versionId`. Not the same as a row's `deploymentAttempt`. |
+| `step` | string | No | Step key as `type.name`, e.g. `destination.ga4` or `contract.checkout`. Required for `step_history`. |
+| `flow` | string | No | Named flow inside the config, e.g. `web` or `server`. Optional for `step_history`: omit to scan every named flow. Ignored for contract steps, which are top-level. |
+| `text` | string | No | The text to write (1-4000 chars). Required for `rationale_set` and `note_add`. As rationale it replaces the note already on the release and never touches the machine summary. As a note it is appended to a thread and nothing is ever replaced. |
+| `limit` | number | No | Page size. Releases to list for action `releases` (max 100), or releases to scan for `step_history` (max 50). For `step_history` this bounds releases, not entries: a step present in several named flows yields one entry per flow per release, and the scan stops at 200 entries with `entriesTruncated` set. Narrow with `flow` to avoid that. For `threads` it bounds threads, and a read that carries messages is held to 20 of them. Knowledge entries are bounded the same way. |
+| `offset` | number | No | Releases to skip. Action `releases` only. |
+| `anchorType` | `"step"` \| `"entity_action"` \| `"release"` \| `"contract"` \| `"tag"` | No | What a thread hangs on. Defaults to `release`, the only anchor the app writes today. Pair it with `anchorKey`, since a key means a different thing under each type. |
+| `anchorKey` | string | No | What the anchor addresses within its type: a release version ID (`ver_...`) for `release`, a `type.name` step key for `step`. For a release you can pass `versionId` or `versionNumber` instead. Omit entirely on action `threads` to read every thread on the flow. |
+| `anchorLabel` | string | No | How the anchor reads on screen, stored once when a thread is opened so a later rename leaves it readable. Derived for a release (`v14`). Pass it only when opening a thread on another anchor type. |
+| `threadId` | string | No | Thread ID (`thr_...`) from action `threads`. Pass it to `note_add` to reply in that thread, omit it to open a new thread on the anchor. |
+| `status` | `"open"` \| `"resolved"` | No | Read only threads in this state. Action `threads` only, omit for both. |
+| `pageKey` | string | No | The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action `knowledge` to every frame that page holds, at any depth. Omit it to read the whole project. |
+| `frameId` | string | No | One frame (`frm_...`), the named rectangle a note hangs on. Action `knowledge` only. Narrower than `pageKey`, since a page holds several frames. |
+| `markId` | string | No | One mark within `frameId`. Action `knowledge` only, and refused without `frameId`, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies. |
+
+##### `frame_manage`
+
+Read the frames of a measurement plan: named rectangles with marks inside them,
+drawn in Tag Mode or in the app. A frame name is documentation, the marks inside
+it carry the meaning. Read-only, because a frame's geometry only means something
+next to the pixels it was drawn on, so frames are edited where the page is.
+Use `hub_manage` with action `knowledge` to read what people wrote on a frame.
+Needs the `frames` feature.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"list"` \| `"page"` \| `"get"` | Yes | `list` returns every frame of the project without marks, `page` returns one page's frames with their marks, `get` returns one frame with its marks. |
+| `projectId` | string | No | Project ID (`proj_...`). Optional: falls back to the default project when omitted. |
+| `pageKey` | string | No | The page as its frames address it (the `source.key` of a page frame, usually the page URL without query). Required for `page`. |
+| `frameId` | string | No | Frame ID (`frm_...`). Required for `get`. Use action `list` or `page` to find one. |
+
 ### Resources
 
 | URI | Description |
@@ -481,6 +528,51 @@ drive traffic first, then read again.
 | `add-step` | Add a source, destination, transformer, or store to a flow |
 | `setup-mapping` | Configure event mapping for a step |
 | `manage-contract` | Create/update event contracts (bidirectional with mappings) |
+
+## Two doors, one tool set
+
+Every `@walkeros/mcp` tool is registered on both doors, and both doors run the
+same code against the same app.
+
+| Door | How it runs | Auth |
+|------|-------------|------|
+| Local | `npx @walkeros/mcp` over stdio, or the Claude Code plugin. The local tools run on your own machine, the cloud tools call the app over HTTPS. | `auth` tool login, or `WALKEROS_TOKEN` |
+| Hosted | `POST https://app.walkeros.io/api/mcp` over Streamable HTTP. Tools run inside the app. | Bearer MCP token |
+
+Two things behave differently.
+
+**File paths.** `flow_load`, `flow_validate`, `flow_bundle`, `flow_simulate`,
+`flow_push`, and `flow_examples` accept a file path, and a path names the
+filesystem of the machine running the door. On the local door that is your
+machine. On the hosted door it is the app server, which cannot read your files.
+Give the hosted door inline JSON or a flow ID instead of a path.
+
+**Login.** `auth` runs the device code flow on the local door. The hosted door
+authenticates every request with the bearer token instead, so there is nothing
+to log in to: `auth` reports `authenticated: false` there and `action: "login"`
+fails. Skip the tool on that door.
+
+### Hosted door
+
+The hosted door is one HTTPS endpoint: `https://app.walkeros.io/api/mcp`. Enter
+it as the server URL in any MCP client that speaks Streamable HTTP, and send an
+MCP token in the `Authorization` header as `Bearer mcp-walkeros-...`. A bearer
+token is the only credential the endpoint accepts.
+
+Mint one with an API token created in the app under Account, Tokens:
+
+```bash
+curl -X POST https://app.walkeros.io/api/mcp/tokens -H "Authorization: Bearer sk-walkeros-..." -H "Content-Type: application/json" -d '{"name":"my-laptop"}'
+```
+
+The response carries the raw token exactly once. `GET /api/mcp/tokens` lists the
+tokens you hold, and `DELETE /api/mcp/tokens/{tokenId}` revokes one, which takes
+effect on the next request. Tokens expire after 90 days by default.
+
+A token acts as you: it reads and changes every project you are a member of,
+within what your plan enables. The endpoint needs the `mcp` feature, `hub_manage`
+needs `hub`, and `frame_manage` needs `frames`. A call to a feature your plan
+does not include answers `FEATURE_NOT_AVAILABLE` and names the feature.
 
 ---
 

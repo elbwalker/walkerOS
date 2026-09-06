@@ -1,7 +1,7 @@
 import { TOOL_DEFINITIONS } from '../tool-definitions.js';
 
 describe('TOOL_DEFINITIONS', () => {
-  it('lists all 16 tools by name', () => {
+  it('lists all 18 tools by name', () => {
     const names = TOOL_DEFINITIONS.map((d) => d.name).sort();
     expect(names).toEqual(
       [
@@ -15,6 +15,8 @@ describe('TOOL_DEFINITIONS', () => {
         'flow_push',
         'flow_simulate',
         'flow_validate',
+        'frame_manage',
+        'hub_manage',
         'observe_journeys',
         'observe_session',
         'package_get',

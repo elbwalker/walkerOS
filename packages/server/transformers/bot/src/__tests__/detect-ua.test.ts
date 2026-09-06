@@ -137,6 +137,85 @@ describe('detectCrawler', () => {
   });
 });
 
+describe('detectCrawler monitors', () => {
+  it.each([
+    [
+      'Uptrends',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 uptrends',
+      'Uptrends',
+    ],
+    [
+      'Site24x7',
+      'Mozilla/5.0 (compatible; Site24x7/1.0; +https://www.site24x7.com/)',
+      'Site24x7',
+    ],
+    ['Datadog Synthetics API test', 'Datadog/Synthetics', 'Datadog Synthetics'],
+    [
+      'Datadog Synthetics browser test',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 DatadogSynthetics',
+      'Datadog Synthetics',
+    ],
+    [
+      'New Relic Synthetics',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36 NewRelicSynthetics/1.0',
+      'New Relic Synthetics',
+    ],
+    [
+      'Better Stack',
+      'Better Uptime Bot Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      'Better Stack',
+    ],
+    [
+      'HetrixTools',
+      'HetrixTools Uptime Monitoring Bot. https://hetrix.tools/uptime-monitoring-bot.html',
+      'HetrixTools',
+    ],
+    [
+      'updown.io',
+      'Mozilla/5.0 (compatible; updown.io daemon 2.4)',
+      'updown.io',
+    ],
+    [
+      'Oh Dear',
+      'Mozilla/5.0 (compatible; OhDear/1.1; +https://ohdear.app/checker)',
+      'Oh Dear',
+    ],
+    [
+      'GTmetrix',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 GTmetrix',
+      'GTmetrix',
+    ],
+  ])('%s resolves to the named monitor %s', (_, ua, product) => {
+    expect(detectCrawler(ua)).toMatchObject({ product, category: 'monitor' });
+  });
+
+  test('Better Uptime Bot does not shadow UptimeRobot', () => {
+    expect(
+      detectCrawler(
+        'Mozilla/5.0+(compatible; UptimeRobot/2.0; http://www.uptimerobot.com/)',
+      )?.product,
+    ).toBe('UptimeRobot');
+  });
+});
+
+describe('crawler token reachability', () => {
+  // An entry whose token contains an earlier entry's token can never fire: the
+  // earlier, broader row always wins the first-hit scan.
+  test('no entry is shadowed by an earlier, broader token', () => {
+    const shadowed = crawlers
+      .filter((entry, index) =>
+        crawlers
+          .slice(0, index)
+          .some((earlier) =>
+            entry.match.toLowerCase().includes(earlier.match.toLowerCase()),
+          ),
+      )
+      .map((entry) => entry.match);
+
+    expect(shadowed).toEqual([]);
+  });
+});
+
 describe('parseUAFamily', () => {
   it.each([
     [

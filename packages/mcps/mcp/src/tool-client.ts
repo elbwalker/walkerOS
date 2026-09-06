@@ -126,6 +126,257 @@ export interface ObserveSessionRef {
   sessionId: string;
 }
 
+// ---- Hub and frames wire shapes. Each mirrors one app response schema; the
+// hosted door serializes through the same functions its routes use, the local
+// door hands the parsed JSON through, so a tool sees one shape from both.
+
+export type ThreadAnchorType =
+  | 'step'
+  | 'entity_action'
+  | 'release'
+  | 'contract'
+  | 'tag';
+export type StoredAnchorType = ThreadAnchorType | 'page';
+export type ThreadStatus = 'open' | 'resolved';
+export type ReleaseRef = { versionId: string } | { versionNumber: number };
+
+export interface ReleaseRationaleSummaryWire {
+  hasHumanText: boolean;
+  hasGeneratedSummary: boolean;
+  firstLine: string | null;
+}
+
+export interface FlowReleaseWire {
+  id: string;
+  deploymentId: string;
+  deploymentSlug: string | null;
+  deploymentType: string | null;
+  versionNumber: number;
+  flowVersionId: string | null;
+  flowVersionNumber: number | null;
+  status: string;
+  source: string;
+  errorCode: string | null;
+  createdAt: string;
+  createdBy: string | null;
+  createdByLabel: string | null;
+  /** Present only on a read that asked for rationale. */
+  rationale?: ReleaseRationaleSummaryWire | null;
+}
+
+export interface ReleaseIndexWire {
+  releases: FlowReleaseWire[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface VersionAnnotationWire {
+  versionId: string;
+  humanText: string | null;
+  generatedSummary: string | null;
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReleaseDiffWire {
+  prevVersionId: string;
+  prevVersionNumber: number;
+  text: string;
+  contentIdentical: boolean;
+}
+
+export interface ReleaseDetailWire {
+  versionId: string;
+  versionNumber: number;
+  contentHash: string | null;
+  createdAt: string;
+  createdBy: string;
+  rationale: VersionAnnotationWire | null;
+  diff: ReleaseDiffWire | null;
+}
+
+export interface StepHistoryEntryWire {
+  versionId: string;
+  versionNumber: number;
+  createdAt: string;
+  flow: string | null;
+  change: 'added' | 'removed' | 'changed';
+  humanText: string | null;
+  generatedSummary: string | null;
+}
+
+export interface StepHistoryWire {
+  step: string;
+  flow: string | null;
+  entries: StepHistoryEntryWire[];
+  scanned: number;
+  truncated: boolean;
+  entriesTruncated: boolean;
+  knownSteps?: string[];
+}
+
+export interface HubMessageWire {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface HubThreadWire {
+  id: string;
+  anchorType: ThreadAnchorType;
+  anchorKey: string;
+  anchorLabel: string;
+  status: ThreadStatus;
+  resolvedByVersionId: string | null;
+  resolvedByVersionNumber: number | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+  messages?: HubMessageWire[];
+  hasMoreMessages?: boolean;
+}
+
+export interface ListThreadsWire {
+  threads: HubThreadWire[];
+  hasMoreThreads: boolean;
+}
+
+export type KnowledgeValidityWire =
+  | {
+      tier: 'release';
+      versionId: string;
+      versionNumber: number;
+      promoted: boolean;
+    }
+  | { tier: 'draft'; versionId?: string }
+  | { tier: 'none' };
+
+export interface KnowledgeAuthorWire {
+  kind: 'user' | 'preview' | 'agent';
+  id: string | null;
+  label: string;
+}
+
+export interface KnowledgeMessageWire {
+  id: string;
+  author: string;
+  authorLabel: string;
+  text: string;
+  createdAt: string;
+  clientMessageId: string | null;
+}
+
+interface KnowledgeEntryBaseWire {
+  id: string;
+  anchorKey: string;
+  anchorLabel: string;
+  frameId: string | null;
+  frameName: string | null;
+  flowId: string | null;
+  subjectKey: string | null;
+  /** Opaque DOM anchor plus a fractional point. Never surfaced by a tool. */
+  spatial: {
+    at: { x: number; y: number };
+    element?: Record<string, unknown>;
+  } | null;
+  validity: KnowledgeValidityWire;
+  freshness: 'current' | 'subject_changed' | 'unknown';
+  author: KnowledgeAuthorWire;
+  source: 'tag_mode' | 'hub' | 'mcp';
+  updatedAt: string;
+}
+
+export interface KnowledgeThreadWire extends KnowledgeEntryBaseWire {
+  kind: 'thread';
+  anchorType: StoredAnchorType;
+  status: ThreadStatus;
+  createdAt: string;
+  messageCount: number;
+  messages?: KnowledgeMessageWire[];
+  hasMoreMessages?: boolean;
+}
+
+export interface KnowledgeDescriptionWire extends KnowledgeEntryBaseWire {
+  kind: 'description';
+  anchorType: 'tag' | 'page';
+  body: string;
+}
+
+export type KnowledgeEntryWire = KnowledgeThreadWire | KnowledgeDescriptionWire;
+
+export interface ListKnowledgeWire {
+  entries: KnowledgeEntryWire[];
+  hasMoreEntries: boolean;
+}
+
+export interface PlanSizeWire {
+  width: number;
+  height: number;
+}
+export interface PlanRectWire {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface FramePlacementWire {
+  id: string;
+  rect: PlanRectWire;
+  selector?: string;
+  anchor?: Record<string, unknown>;
+}
+
+export type FrameSourceWire =
+  | { kind: 'page'; key: string; url: string }
+  | { kind: 'figma'; fileKey: string; nodeId: string }
+  | { kind: 'image' };
+
+export interface FrameScreenshotWire {
+  assetId: string;
+  capturedAt: string;
+  size: PlanSizeWire;
+  dpr: number;
+  capturedRect: PlanRectWire;
+}
+
+export interface FrameLeanWire {
+  id: string;
+  projectId: string;
+  name: string;
+  parentId: string | null;
+  placements: FramePlacementWire[];
+  size: PlanSizeWire;
+  extends: string | null;
+  source: FrameSourceWire | null;
+  origin: 'drawn' | 'imported' | 'observed';
+  flowId: string | null;
+  screenshot: FrameScreenshotWire | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  deletedAt: string | null;
+}
+
+export interface FrameWire extends FrameLeanWire {
+  marks: Record<string, unknown>;
+}
+
+export interface FrameListWire {
+  frames: FrameWire[];
+}
+export interface FrameLeanListWire {
+  frames: FrameLeanWire[];
+}
+
 /**
  * Transport-agnostic client for network-reach MCP tools. The stdio build
  * plugs in HttpToolClient (talks to the walkerOS app over HTTPS via the
@@ -237,6 +488,73 @@ export interface ToolClient {
   ): Promise<ObserveSessionResult>;
   getObserveSession?(options: ObserveSessionRef): Promise<ObserveSessionResult>;
   endObserveSession?(options: ObserveSessionRef): Promise<void>;
+
+  // Hub: the release spine, threads and knowledge (server-owned; the diff is
+  // never computed client-side). REQUIRED, so both doors answer the same by
+  // construction rather than by convention.
+  listReleases(options: {
+    projectId: string;
+    flowId: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ReleaseIndexWire>;
+  getRelease(options: {
+    projectId: string;
+    flowId: string;
+    ref: ReleaseRef;
+  }): Promise<ReleaseDetailWire>;
+  listStepHistory(options: {
+    projectId: string;
+    flowId: string;
+    step: string;
+    flow?: string;
+    limit?: number;
+  }): Promise<StepHistoryWire>;
+  setReleaseRationale(options: {
+    projectId: string;
+    flowId: string;
+    versionId: string;
+    text: string;
+  }): Promise<VersionAnnotationWire>;
+  listThreads(options: {
+    projectId: string;
+    flowId: string;
+    anchorType?: ThreadAnchorType;
+    anchorKey?: string;
+    status?: ThreadStatus;
+    includeMessages: boolean;
+    limit?: number;
+  }): Promise<ListThreadsWire>;
+  createThread(options: {
+    projectId: string;
+    flowId: string;
+    anchorType: ThreadAnchorType;
+    anchorKey: string;
+    anchorLabel?: string;
+    text: string;
+  }): Promise<HubThreadWire>;
+  addThreadMessage(options: {
+    projectId: string;
+    flowId: string;
+    threadId: string;
+    text: string;
+  }): Promise<HubThreadWire>;
+  listKnowledge(options: {
+    projectId: string;
+    pageKey?: string;
+    frameId?: string;
+    markId?: string;
+    includeMessages: boolean;
+    limit?: number;
+  }): Promise<ListKnowledgeWire>;
+
+  // Frames: read-only.
+  listFrames(options: { projectId: string }): Promise<FrameLeanListWire>;
+  listPageFrames(options: {
+    projectId: string;
+    pageKey: string;
+  }): Promise<FrameListWire>;
+  getFrame(options: { projectId: string; frameId: string }): Promise<FrameWire>;
 
   // Auth
   requestDeviceCode(): Promise<DeviceCodeResult>;

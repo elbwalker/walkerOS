@@ -170,6 +170,43 @@ export type {
   EndObserveSessionOptions,
 } from './commands/observe/index.js';
 export {
+  listReleases,
+  getRelease,
+  listStepHistory,
+  setReleaseRationale,
+  listThreads,
+  createThread,
+  addThreadMessage,
+  listKnowledge,
+} from './commands/hub/index.js';
+export type {
+  ListReleasesOptions,
+  GetReleaseOptions,
+  ReleaseRef,
+  ReleaseIndexResponse,
+  ReleaseRationaleSummary,
+  ReleaseDiffResponse,
+  ReleaseDetailResponse,
+  ListStepHistoryOptions,
+  SetReleaseRationaleOptions,
+  ListThreadsOptions,
+  CreateThreadOptions,
+  AddThreadMessageOptions,
+  ListKnowledgeOptions,
+  ThreadAnchorType,
+  ThreadStatus,
+} from './commands/hub/index.js';
+export {
+  listFrames,
+  listPageFrames,
+  getFrame,
+} from './commands/frames/index.js';
+export type {
+  ListFramesOptions,
+  ListPageFramesOptions,
+  GetFrameOptions,
+} from './commands/frames/index.js';
+export {
   listSecrets,
   createSecret,
   updateSecret,

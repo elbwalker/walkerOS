@@ -2498,10 +2498,10 @@
           "anchorLabel": {
             "type": "string"
           },
-          "planId": {
+          "frameId": {
             "type": ["string", "null"]
           },
-          "sourceKey": {
+          "frameName": {
             "type": ["string", "null"]
           },
           "flowId": {
@@ -2538,8 +2538,15 @@
           },
           "anchorType": {
             "type": "string",
-            "enum": ["step", "entity_action", "release", "contract", "tag"],
-            "example": "release"
+            "enum": [
+              "step",
+              "entity_action",
+              "release",
+              "contract",
+              "tag",
+              "page"
+            ],
+            "example": "tag"
           },
           "status": {
             "type": "string",
@@ -2568,8 +2575,8 @@
           "id",
           "anchorKey",
           "anchorLabel",
-          "planId",
-          "sourceKey",
+          "frameId",
+          "frameName",
           "flowId",
           "subjectKey",
           "spatial",
@@ -2720,10 +2727,10 @@
           "anchorLabel": {
             "type": "string"
           },
-          "planId": {
+          "frameId": {
             "type": ["string", "null"]
           },
-          "sourceKey": {
+          "frameName": {
             "type": ["string", "null"]
           },
           "flowId": {
@@ -2760,7 +2767,8 @@
           },
           "anchorType": {
             "type": "string",
-            "enum": ["tag"]
+            "enum": ["tag", "page"],
+            "example": "tag"
           },
           "body": {
             "type": "string"
@@ -2770,8 +2778,8 @@
           "id",
           "anchorKey",
           "anchorLabel",
-          "planId",
-          "sourceKey",
+          "frameId",
+          "frameName",
           "flowId",
           "subjectKey",
           "spatial",
@@ -2797,10 +2805,10 @@
           "anchorLabel": {
             "type": "string"
           },
-          "planId": {
+          "frameId": {
             "type": ["string", "null"]
           },
-          "sourceKey": {
+          "frameName": {
             "type": ["string", "null"]
           },
           "flowId": {
@@ -2837,8 +2845,15 @@
           },
           "anchorType": {
             "type": "string",
-            "enum": ["step", "entity_action", "release", "contract", "tag"],
-            "example": "release"
+            "enum": [
+              "step",
+              "entity_action",
+              "release",
+              "contract",
+              "tag",
+              "page"
+            ],
+            "example": "tag"
           },
           "status": {
             "type": "string",
@@ -2867,8 +2882,8 @@
           "id",
           "anchorKey",
           "anchorLabel",
-          "planId",
-          "sourceKey",
+          "frameId",
+          "frameName",
           "flowId",
           "subjectKey",
           "spatial",
@@ -2896,10 +2911,10 @@
           "anchorLabel": {
             "type": "string"
           },
-          "planId": {
+          "frameId": {
             "type": ["string", "null"]
           },
-          "sourceKey": {
+          "frameName": {
             "type": ["string", "null"]
           },
           "flowId": {
@@ -2936,7 +2951,8 @@
           },
           "anchorType": {
             "type": "string",
-            "enum": ["tag"]
+            "enum": ["tag", "page"],
+            "example": "tag"
           },
           "body": {
             "type": "string"
@@ -2946,8 +2962,8 @@
           "id",
           "anchorKey",
           "anchorLabel",
-          "planId",
-          "sourceKey",
+          "frameId",
+          "frameName",
           "flowId",
           "subjectKey",
           "spatial",
@@ -2960,6 +2976,431 @@
           "anchorType",
           "body"
         ]
+      },
+      "FrameInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "parentId": {
+            "type": ["string", "null"],
+            "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+            "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+          },
+          "placements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FramePlacement"
+            },
+            "minItems": 1
+          },
+          "size": {
+            "$ref": "#/components/schemas/PlanSize"
+          },
+          "marks": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "extends": {
+            "type": ["string", "null"],
+            "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+            "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FrameSource"
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["drawn", "imported", "observed"]
+          },
+          "flowId": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "name",
+          "parentId",
+          "placements",
+          "size",
+          "marks",
+          "extends",
+          "source",
+          "origin",
+          "flowId"
+        ]
+      },
+      "FramePlacement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^pl_[A-Za-z0-9_-]{21}$"
+          },
+          "rect": {
+            "$ref": "#/components/schemas/PlanRect"
+          },
+          "selector": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "anchor": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": ["id", "rect"]
+      },
+      "PlanRect": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "w": {
+            "type": "number"
+          },
+          "h": {
+            "type": "number"
+          }
+        },
+        "required": ["x", "y", "w", "h"]
+      },
+      "PlanSize": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "height": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": ["width", "height"]
+      },
+      "FrameSource": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["page"]
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            },
+            "required": ["kind", "key", "url"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["figma"]
+              },
+              "fileKey": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "nodeId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "required": ["kind", "fileKey", "nodeId"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["image"]
+              }
+            },
+            "required": ["kind"]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "Frame": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+            "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": ["string", "null"]
+          },
+          "placements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FramePlacement"
+            }
+          },
+          "size": {
+            "$ref": "#/components/schemas/PlanSize"
+          },
+          "marks": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "extends": {
+            "type": ["string", "null"]
+          },
+          "source": {
+            "$ref": "#/components/schemas/FrameSource"
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["drawn", "imported", "observed"]
+          },
+          "flowId": {
+            "type": ["string", "null"]
+          },
+          "screenshot": {
+            "$ref": "#/components/schemas/FrameScreenshot"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "name",
+          "parentId",
+          "placements",
+          "size",
+          "marks",
+          "extends",
+          "source",
+          "origin",
+          "flowId",
+          "screenshot",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "createdBy",
+          "updatedBy",
+          "deletedAt"
+        ]
+      },
+      "FrameScreenshot": {
+        "type": ["object", "null"],
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "size": {
+            "$ref": "#/components/schemas/PlanSize"
+          },
+          "dpr": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "capturedRect": {
+            "$ref": "#/components/schemas/PlanRect"
+          }
+        },
+        "required": ["assetId", "capturedAt", "size", "dpr", "capturedRect"]
+      },
+      "FrameLean": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+            "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": ["string", "null"]
+          },
+          "placements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FramePlacement"
+            }
+          },
+          "size": {
+            "$ref": "#/components/schemas/PlanSize"
+          },
+          "extends": {
+            "type": ["string", "null"]
+          },
+          "source": {
+            "$ref": "#/components/schemas/FrameSource"
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["drawn", "imported", "observed"]
+          },
+          "flowId": {
+            "type": ["string", "null"]
+          },
+          "screenshot": {
+            "$ref": "#/components/schemas/FrameScreenshot"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "name",
+          "parentId",
+          "placements",
+          "size",
+          "extends",
+          "source",
+          "origin",
+          "flowId",
+          "screenshot",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "createdBy",
+          "updatedBy",
+          "deletedAt"
+        ]
+      },
+      "FrameListResponse": {
+        "type": "object",
+        "properties": {
+          "frames": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Frame"
+            }
+          }
+        },
+        "required": ["frames"]
+      },
+      "FrameLeanListResponse": {
+        "type": "object",
+        "properties": {
+          "frames": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FrameLean"
+            }
+          }
+        },
+        "required": ["frames"]
+      },
+      "PutFrameResponse": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": ["version"]
+      },
+      "FrameConflictResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["FRAME_VERSION_CONFLICT"]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"]
+          },
+          "head": {
+            "$ref": "#/components/schemas/Frame"
+          }
+        },
+        "required": ["error", "head"]
       },
       "SummarizeReleaseResponse": {
         "type": "object",
@@ -6406,6 +6847,41 @@
           }
         },
         "required": ["message"]
+      },
+      "ScreenshotUploadResponse": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "pattern": "^fas_[A-Za-z0-9_-]{21}$",
+            "example": "fas_V1StGXR8Z5jdHi6BmyT7K"
+          },
+          "reused": {
+            "type": "boolean"
+          }
+        },
+        "required": ["assetId", "reused"]
+      },
+      "FrameScreenshotMeta": {
+        "type": "object",
+        "properties": {
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "size": {
+            "$ref": "#/components/schemas/PlanSize"
+          },
+          "dpr": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "capturedRect": {
+            "$ref": "#/components/schemas/PlanRect"
+          }
+        },
+        "required": ["capturedAt", "size", "dpr", "capturedRect"]
       },
       "HeartbeatRequest": {
         "type": "object",
@@ -14677,7 +15153,7 @@
       "get": {
         "tags": ["Projects"],
         "summary": "List knowledge captured in this project",
-        "description": "What people wrote on pages, most recently active first. Two kinds come back together and `kind` separates them: a `thread` carries its text in messages, a `description` carries one body and cannot be replied to. `sourceKey` narrows to one page; `markId` narrows to one mark within it and is refused without `sourceKey`, since a mark id alone addresses nothing. `includeMessages=true` attaches message bodies and holds the page to a much smaller ceiling, so `hasMoreEntries` is what separates a complete answer from a truncated one. `validity` says when an entry was true and `freshness` compares that against the flow’s newest release; neither is a verdict. Requires member role.",
+        "description": "What people wrote on the frames of a page, most recently active first. Two kinds come back together and `kind` separates them: a `thread` carries its text in messages, a `description` carries one body and cannot be replied to. `pageKey` narrows to a whole page, resolved server-side to every frame that page holds at any depth; `frameId` narrows to one frame; `markId` narrows to one mark within it and is refused without `frameId`, since a mark id alone addresses nothing. `includeMessages=true` attaches message bodies and holds the page to a much smaller ceiling, so `hasMoreEntries` is what separates a complete answer from a truncated one. `validity` says when an entry was true and `freshness` compares that against the flow’s newest release; neither is a verdict. Requires member role.",
         "parameters": [
           {
             "schema": {
@@ -14695,7 +15171,17 @@
               "example": "https://shop.example/checkout"
             },
             "required": false,
-            "name": "sourceKey",
+            "name": "pageKey",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+            },
+            "required": false,
+            "name": "frameId",
             "in": "query"
           },
           {
@@ -14738,7 +15224,7 @@
             }
           },
           "400": {
-            "description": "Invalid query, or a mark filter with no page",
+            "description": "Invalid query, or a mark filter with no frame",
             "content": {
               "application/json": {
                 "schema": {
@@ -14791,8 +15277,8 @@
       },
       "post": {
         "tags": ["Projects"],
-        "summary": "Open a thread on a mark",
-        "description": "Open a thread on one mark of one page, with its first message. A thread never exists empty, so `text` is required and may not be blank. `clientThreadId` and `clientMessageId` are minted by the client at compose time and are what make a replay idempotent: repeating a known `clientThreadId` hands back the existing thread and writes nothing, so an offline queue can drain repeatedly without duplicating what a person wrote once. `flowId` binds the capture to a flow or is explicitly null; a flow this project cannot see answers 404, never 403. The server decides the plan id, the composed anchor key, the born release, the author and the source: a client cannot assert any of them. Requires member role.",
+        "summary": "Open a thread on a mark or a frame",
+        "description": "Open a thread on one mark of one frame, or on the frame itself with `anchorType` `page` and no `markId`, with its first message. A thread never exists empty, so `text` is required and may not be blank. `clientThreadId` and `clientMessageId` are minted by the client at compose time and are what make a replay idempotent: repeating a known `clientThreadId` hands back the existing thread and writes nothing, so an offline queue can drain repeatedly without duplicating what a person wrote once. `flowId` binds the capture to a flow or is explicitly null; a flow this project cannot see answers 404, never 403. A frame this project does not hold answers 404 with `FRAME_NOT_FOUND`, which a draining client waits on and retries, because the frame’s own write may not have landed yet. The server decides the composed anchor key, the born release, the author and the source: a client cannot assert any of them. Requires member role.",
         "parameters": [
           {
             "schema": {
@@ -14813,13 +15299,13 @@
                 "properties": {
                   "anchorType": {
                     "type": "string",
-                    "enum": ["tag"],
+                    "enum": ["tag", "page"],
                     "example": "tag"
                   },
-                  "sourceKey": {
+                  "frameId": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 512
+                    "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+                    "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
                   },
                   "markId": {
                     "type": "string",
@@ -14862,8 +15348,7 @@
                 },
                 "required": [
                   "anchorType",
-                  "sourceKey",
-                  "markId",
+                  "frameId",
                   "flowId",
                   "clientThreadId",
                   "text",
@@ -14915,7 +15400,7 @@
             }
           },
           "404": {
-            "description": "The named flow is not in this project",
+            "description": "The named flow or frame is not in this project",
             "content": {
               "application/json": {
                 "schema": {
@@ -15056,8 +15541,8 @@
     "/api/projects/{projectId}/knowledge/description": {
       "put": {
         "tags": ["Projects"],
-        "summary": "Write the description of a mark",
-        "description": "Write the one description of one mark, replacing whatever it said before. There is no id to mint: the anchor is the key, so a replayed write lands on the same row by construction, which is why this is a PUT. An empty `body` is refused rather than stored, so a drain that arrives with nothing to say can never erase what a person wrote. The response is 200 whether the description was opened or replaced. Requires member role.",
+        "summary": "Write the description of a mark or a frame",
+        "description": "Write the one description of one anchor, a mark or the frame itself, replacing whatever it said before. There is no id to mint: the anchor is the key, so a replayed write lands on the same row by construction, which is why this is a PUT. An empty `body` is refused rather than stored, so a drain that arrives with nothing to say can never erase what a person wrote. The response is 200 whether the description was opened or replaced. Requires member role.",
         "parameters": [
           {
             "schema": {
@@ -15078,13 +15563,13 @@
                 "properties": {
                   "anchorType": {
                     "type": "string",
-                    "enum": ["tag"],
+                    "enum": ["tag", "page"],
                     "example": "tag"
                   },
-                  "sourceKey": {
+                  "frameId": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 512
+                    "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+                    "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
                   },
                   "markId": {
                     "type": "string",
@@ -15113,13 +15598,7 @@
                     "maxLength": 4000
                   }
                 },
-                "required": [
-                  "anchorType",
-                  "sourceKey",
-                  "markId",
-                  "flowId",
-                  "body"
-                ]
+                "required": ["anchorType", "frameId", "flowId", "body"]
               }
             }
           }
@@ -15166,7 +15645,634 @@
             }
           },
           "404": {
-            "description": "The named flow is not in this project",
+            "description": "The named flow or frame is not in this project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/frames": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "List the frames of a page, or of the whole project",
+        "description": "A frame is a named rectangle with marks inside it, the spatial unit of a measurement plan. Naming a `pageKey` returns that page’s frames at any depth, marks and all, newest updated first: the walk starts at the page’s top-level frames and descends containment, so a child is reachable through its parent rather than by carrying a page of its own. Naming no page returns every live frame of the project WITHOUT its marks, which is what makes that read cheap enough to answer \"what does this project have\": the marks are the bulk of a frame and a listing never renders them. That lean read asks nothing about containment, so a frame whose parent cannot be resolved still appears. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "required": false,
+            "name": "pageKey",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page’s frames with their marks, or the project’s frames without them",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FrameListResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FrameLeanListResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/frames/{frameId}": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "Read one frame",
+        "description": "One frame with its marks. A frame of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted frame is gone to every read. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Frame"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The path segment does not address a frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Projects"],
+        "summary": "Create or replace one frame",
+        "description": "The path is the identity, so the body carries no id: a create is a write to an absent row at `baseVersion` 0 and everything else is a replace. `clientWriteId` is minted at compose time and is what makes a replayed drain exact: a write whose id already produced the stored version landed once and is answered with that version, writing nothing, so an offline queue drains repeatedly without turning one edit into two versions. A write against a version someone else has moved past answers 409 `FRAME_VERSION_CONFLICT` carrying the head, which is what lets a client raise keep-mine against load-theirs on the one frame that conflicted instead of dropping what a person drew. A name another live frame already holds is a distinct 409 `FRAME_NAME_EXISTS`. A relation naming a frame this project does not hold, or one that would place a frame inside itself, is 400 `INVALID_FRAME`. The screenshot is never touched here: a frame write carries no capture. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "frame": {
+                    "$ref": "#/components/schemas/FrameInput"
+                  },
+                  "baseVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "clientWriteId": {
+                    "type": "string",
+                    "pattern": "^cw_[A-Za-z0-9_-]{21}$"
+                  }
+                },
+                "required": ["frame", "baseVersion", "clientWriteId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The stored version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PutFrameResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, a bad relation, or a path segment that addresses no frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A stale base version, carrying the head, or a name another live frame already holds. Only the version conflict carries `head`: a name clash needs no frame to resolve, since the client already knows the name it sent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FrameConflictResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Projects"],
+        "summary": "Delete one frame",
+        "description": "Soft-delete the frame and, transitively, every variation of what this delete removes. Children are not variations and survive: each live frame under a removed one is re-parented to its nearest live ancestor in the same transaction, and one left with no live ancestor becomes top-level and inherits the page it hung under, so nothing is left unreachable. Those re-parents are server writes that bump their own versions, so a client still holding a pre-delete version meets a conflict carrying the new parent. A frame this project does not hold answers 404: a delete that removed nothing is not a delete that succeeded. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The frame is deleted"
+          },
+          "400": {
+            "description": "The path segment does not address a frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/frames/{frameId}/screenshot": {
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Store the capture of one frame",
+        "description": "Store one screenshot and set it on its frame. The image arrives as base64 rather than multipart, because the extension relay carries string bodies only. The server decides everything about the bytes: it decodes them, counts the DECODED length against a 4 MB cap, reads the type from the file’s own magic bytes, and hashes them, so nothing the client claims about size or type is consulted. Captures are deduplicated by content within a project: identical pixels resolve to one asset and one upload, and `reused` says whether that happened, which is the common answer rather than the rare one because re-capturing an unchanged frame produces identical bytes. A body past the cap is 413 `PAYLOAD_TOO_LARGE` and one that is not a PNG is 415 `UNSUPPORTED_MEDIA_TYPE`. The capture bumps no frame version: it is not an edit, so an upload never conflicts with the frame write the client queued beside it. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "imageBase64": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "meta": {
+                    "$ref": "#/components/schemas/FrameScreenshotMeta"
+                  }
+                },
+                "required": ["imageBase64", "meta"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The asset the bytes resolved to, and whether it already existed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenshotUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, or a path segment that addresses no frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This project does not hold the named frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The decoded image is past the 4 MB cap",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The bytes are not a PNG",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/assets/{assetId}": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "Read one stored capture",
+        "description": "The bytes of one frame screenshot, for the app canvas. The extension keeps its own capture locally and never reads assets back. Same-origin and session-authenticated: the response carries `Cross-Origin-Resource-Policy: same-origin`, so no other site can embed a tenant capture off the reader’s session. The bytes are immutable by construction, since the object key is their own content hash, which is why they are cacheable for a year, and `private` keeps a shared cache from serving one tenant’s capture to the next request for the same URL. An asset another project holds answers 404, never 403. Requires member role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^fas_[A-Za-z0-9_-]{21}$",
+              "description": "Asset ID (fas_...)"
+            },
+            "required": true,
+            "description": "Asset ID (fas_...)",
+            "name": "assetId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image bytes",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The path segment does not address an asset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {

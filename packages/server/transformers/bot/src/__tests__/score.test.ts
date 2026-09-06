@@ -110,6 +110,12 @@ describe('deterministic ladder', () => {
       'UptimeRobot',
     ],
     [
+      'Uptrends',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 uptrends',
+      'monitor',
+      'Uptrends',
+    ],
+    [
       'facebookexternalhit',
       'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
       'link-preview',

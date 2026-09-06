@@ -30,6 +30,17 @@ import {
   startObserveSession,
   getObserveSession,
   endObserveSession,
+  listReleases,
+  getRelease,
+  listStepHistory,
+  setReleaseRationale,
+  listThreads,
+  createThread,
+  addThreadMessage,
+  listKnowledge,
+  listFrames,
+  listPageFrames,
+  getFrame,
   requestDeviceCode,
   pollForToken,
   whoami,
@@ -64,6 +75,19 @@ import type {
   ObserveSessionResult,
   ObserveSessionRef,
   StartObserveSessionOptions,
+  ReleaseRef,
+  ReleaseIndexWire,
+  ReleaseDetailWire,
+  StepHistoryWire,
+  VersionAnnotationWire,
+  ThreadAnchorType,
+  ThreadStatus,
+  HubThreadWire,
+  ListThreadsWire,
+  ListKnowledgeWire,
+  FrameWire,
+  FrameListWire,
+  FrameLeanListWire,
 } from './tool-client.js';
 
 /**
@@ -232,6 +256,94 @@ export class HttpToolClient implements ToolClient {
   }
   async endObserveSession(options: ObserveSessionRef): Promise<void> {
     return endObserveSession(options);
+  }
+
+  async listReleases(options: {
+    projectId: string;
+    flowId: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ReleaseIndexWire> {
+    return listReleases(options);
+  }
+  async getRelease(options: {
+    projectId: string;
+    flowId: string;
+    ref: ReleaseRef;
+  }): Promise<ReleaseDetailWire> {
+    return getRelease(options);
+  }
+  async listStepHistory(options: {
+    projectId: string;
+    flowId: string;
+    step: string;
+    flow?: string;
+    limit?: number;
+  }): Promise<StepHistoryWire> {
+    return listStepHistory(options);
+  }
+  async setReleaseRationale(options: {
+    projectId: string;
+    flowId: string;
+    versionId: string;
+    text: string;
+  }): Promise<VersionAnnotationWire> {
+    return setReleaseRationale(options);
+  }
+  async listThreads(options: {
+    projectId: string;
+    flowId: string;
+    anchorType?: ThreadAnchorType;
+    anchorKey?: string;
+    status?: ThreadStatus;
+    includeMessages: boolean;
+    limit?: number;
+  }): Promise<ListThreadsWire> {
+    return listThreads(options);
+  }
+  async createThread(options: {
+    projectId: string;
+    flowId: string;
+    anchorType: ThreadAnchorType;
+    anchorKey: string;
+    anchorLabel?: string;
+    text: string;
+  }): Promise<HubThreadWire> {
+    return createThread(options);
+  }
+  async addThreadMessage(options: {
+    projectId: string;
+    flowId: string;
+    threadId: string;
+    text: string;
+  }): Promise<HubThreadWire> {
+    return addThreadMessage(options);
+  }
+  async listKnowledge(options: {
+    projectId: string;
+    pageKey?: string;
+    frameId?: string;
+    markId?: string;
+    includeMessages: boolean;
+    limit?: number;
+  }): Promise<ListKnowledgeWire> {
+    return listKnowledge(options);
+  }
+
+  async listFrames(options: { projectId: string }): Promise<FrameLeanListWire> {
+    return listFrames(options);
+  }
+  async listPageFrames(options: {
+    projectId: string;
+    pageKey: string;
+  }): Promise<FrameListWire> {
+    return listPageFrames(options);
+  }
+  async getFrame(options: {
+    projectId: string;
+    frameId: string;
+  }): Promise<FrameWire> {
+    return getFrame(options);
   }
 
   async requestDeviceCode(): Promise<DeviceCodeResult> {
