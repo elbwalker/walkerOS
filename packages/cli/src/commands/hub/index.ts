@@ -4,50 +4,27 @@ import { throwApiResponseError } from '../../core/api-error.js';
 import type { components } from '../../types/api.gen.js';
 
 type VersionAnnotation = components['schemas']['VersionAnnotation'];
-type FlowRelease = components['schemas']['FlowRelease'];
 type StepHistoryResponse = components['schemas']['StepHistoryResponse'];
 type ListHubThreadsResponse = components['schemas']['ListHubThreadsResponse'];
 type HubThreadResponse = components['schemas']['HubThreadResponse'];
 type ListKnowledgeResponse = components['schemas']['ListKnowledgeResponse'];
 
-// === Wire shapes the generated types do not carry ===
-// These mirror the app's release rationale and release detail zod schemas.
-// They are declared here until the generated OpenAPI types carry them.
+// === Release wire shapes, aliased onto the generated components ===
 
 /** The rationale summary a release index row carries when asked for one. */
-export interface ReleaseRationaleSummary {
-  hasHumanText: boolean;
-  hasGeneratedSummary: boolean;
-  /** First non-empty line of the human text, cut at 120 characters. */
-  firstLine: string | null;
-}
+export type ReleaseRationaleSummary =
+  components['schemas']['ReleaseRationaleSummary'];
 
-export interface ReleaseIndexResponse {
-  releases: Array<FlowRelease & { rationale?: ReleaseRationaleSummary | null }>;
-  total: number;
-  limit: number;
-  offset: number;
-}
+/** The release index. Each row carries `rationale` when one was asked for. */
+export type ReleaseIndexResponse =
+  components['schemas']['ListFlowReleasesResponse'];
 
-export interface ReleaseDiffResponse {
-  prevVersionId: string;
-  prevVersionNumber: number;
-  /** Rendered from masked content. Empty when nothing visible changed. */
-  text: string;
-  /** Compared over unmasked content hashes, so this is the real answer. */
-  contentIdentical: boolean;
-}
+/** The diff a release carries against its spine predecessor. */
+export type ReleaseDiffResponse = components['schemas']['ReleaseDiff'];
 
-export interface ReleaseDetailResponse {
-  versionId: string;
-  versionNumber: number;
-  contentHash: string | null;
-  createdAt: string;
-  createdBy: string;
-  rationale: VersionAnnotation | null;
-  /** Null for the flow's oldest release. */
-  diff: ReleaseDiffResponse | null;
-}
+/** One release in full: rationale plus the diff the server computed. */
+export type ReleaseDetailResponse =
+  components['schemas']['ReleaseDetailResponse'];
 
 // === Programmatic API ===
 

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "4.4.0",
+    "version": "4.5.1",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -1344,7 +1344,14 @@
             "example": "active"
           },
           "currentVersion": {
-            "$ref": "#/components/schemas/DeploymentVersionDetail"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeploymentVersionDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "versions": {
             "type": "array",
@@ -1353,7 +1360,14 @@
             }
           },
           "error": {
-            "$ref": "#/components/schemas/DeploymentError"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeploymentError"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "recentErrors": {
             "type": ["array", "null"],
@@ -1452,7 +1466,7 @@
         ]
       },
       "DeploymentVersionDetail": {
-        "type": ["object", "null"],
+        "type": "object",
         "properties": {
           "number": {
             "type": "integer",
@@ -1544,7 +1558,7 @@
         ]
       },
       "DeploymentError": {
-        "type": ["object", "null"],
+        "type": "object",
         "properties": {
           "code": {
             "type": "string"
@@ -2118,6 +2132,16 @@
           },
           "createdByLabel": {
             "type": ["string", "null"]
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseRationaleSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2135,6 +2159,21 @@
           "createdBy",
           "createdByLabel"
         ]
+      },
+      "ReleaseRationaleSummary": {
+        "type": "object",
+        "properties": {
+          "hasHumanText": {
+            "type": "boolean"
+          },
+          "hasGeneratedSummary": {
+            "type": "boolean"
+          },
+          "firstLine": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["hasHumanText", "hasGeneratedSummary", "firstLine"]
       },
       "ReleaseContentResponse": {
         "type": "object",
@@ -2170,17 +2209,85 @@
           "createdBy"
         ]
       },
-      "ListVersionAnnotationsResponse": {
+      "ReleaseDiff": {
         "type": "object",
         "properties": {
-          "annotations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VersionAnnotation"
-            }
+          "prevVersionId": {
+            "type": "string",
+            "pattern": "^ver_[a-zA-Z0-9_-]+$",
+            "example": "ver_a1b2c3d4"
+          },
+          "prevVersionNumber": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "text": {
+            "type": "string"
+          },
+          "contentIdentical": {
+            "type": "boolean"
           }
         },
-        "required": ["annotations"]
+        "required": [
+          "prevVersionId",
+          "prevVersionNumber",
+          "text",
+          "contentIdentical"
+        ]
+      },
+      "ReleaseDetailResponse": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "pattern": "^ver_[a-zA-Z0-9_-]+$",
+            "example": "ver_a1b2c3d4"
+          },
+          "versionNumber": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "contentHash": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionAnnotation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseDiff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "versionId",
+          "versionNumber",
+          "contentHash",
+          "createdAt",
+          "createdBy",
+          "rationale",
+          "diff"
+        ]
       },
       "VersionAnnotation": {
         "type": "object",
@@ -2219,6 +2326,18 @@
           "createdAt",
           "updatedAt"
         ]
+      },
+      "ListVersionAnnotationsResponse": {
+        "type": "object",
+        "properties": {
+          "annotations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionAnnotation"
+            }
+          }
+        },
+        "required": ["annotations"]
       },
       "UpsertVersionAnnotationResponse": {
         "type": "object",
@@ -2511,7 +2630,14 @@
             "type": ["string", "null"]
           },
           "spatial": {
-            "$ref": "#/components/schemas/KnowledgeSpatial"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeSpatial"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "validity": {
             "$ref": "#/components/schemas/KnowledgeValidity"
@@ -2593,7 +2719,7 @@
         ]
       },
       "KnowledgeSpatial": {
-        "type": ["object", "null"],
+        "type": "object",
         "properties": {
           "at": {
             "type": "object",
@@ -2740,7 +2866,14 @@
             "type": ["string", "null"]
           },
           "spatial": {
-            "$ref": "#/components/schemas/KnowledgeSpatial"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeSpatial"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "validity": {
             "$ref": "#/components/schemas/KnowledgeValidity"
@@ -2818,7 +2951,14 @@
             "type": ["string", "null"]
           },
           "spatial": {
-            "$ref": "#/components/schemas/KnowledgeSpatial"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeSpatial"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "validity": {
             "$ref": "#/components/schemas/KnowledgeValidity"
@@ -2924,7 +3064,14 @@
             "type": ["string", "null"]
           },
           "spatial": {
-            "$ref": "#/components/schemas/KnowledgeSpatial"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeSpatial"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "validity": {
             "$ref": "#/components/schemas/KnowledgeValidity"
@@ -3188,7 +3335,14 @@
             "type": ["string", "null"]
           },
           "screenshot": {
-            "$ref": "#/components/schemas/FrameScreenshot"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameScreenshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "version": {
             "type": "integer"
@@ -3237,7 +3391,7 @@
         ]
       },
       "FrameScreenshot": {
-        "type": ["object", "null"],
+        "type": "object",
         "properties": {
           "assetId": {
             "type": "string"
@@ -3300,7 +3454,14 @@
             "type": ["string", "null"]
           },
           "screenshot": {
-            "$ref": "#/components/schemas/FrameScreenshot"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameScreenshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "version": {
             "type": "integer"
@@ -3774,10 +3935,24 @@
             "type": ["string", "null"]
           },
           "web": {
-            "$ref": "#/components/schemas/ObserveSessionWeb"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObserveSessionWeb"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "server": {
-            "$ref": "#/components/schemas/ObserveSessionServer"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObserveSessionServer"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "expiresAt": {
             "type": "string",
@@ -3814,7 +3989,7 @@
         ]
       },
       "ObserveSessionWeb": {
-        "type": ["object", "null"],
+        "type": "object",
         "properties": {
           "activationUrl": {
             "type": ["string", "null"],
@@ -3846,7 +4021,7 @@
         ]
       },
       "ObserveSessionServer": {
-        "type": ["object", "null"],
+        "type": "object",
         "properties": {
           "endpoint": {
             "type": ["string", "null"],
@@ -13533,12 +13708,12 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
+                  "anyOf": [
                     {
                       "$ref": "#/components/schemas/BillingDetailsResponse"
                     },
                     {
-                      "type": ["object", "null"]
+                      "type": "null"
                     }
                   ]
                 }
@@ -14230,7 +14405,7 @@
       "get": {
         "tags": ["Deployments"],
         "summary": "List flow releases",
-        "description": "List the release history for a flow across all of its deployment lineages, newest first, paginated. Each entry is a deployed version joined to its parent deployment (slug and type). Requires member role.",
+        "description": "List the release history for a flow across all of its deployment lineages, newest first, paginated. Each entry is a deployed version joined to its parent deployment (slug and type). `rationale=true` joins each row's stored rationale summary on, which requires the `hub` feature; without it the `rationale` key is absent from every row rather than null, and no feature beyond member role is needed. Requires member role.",
         "parameters": [
           {
             "schema": {
@@ -14270,6 +14445,15 @@
             "required": false,
             "name": "offset",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "required": false,
+            "name": "rationale",
+            "in": "query"
           }
         ],
         "responses": {
@@ -14279,6 +14463,109 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListFlowReleasesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/releases/{versionId}": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "Read one release in full",
+        "description": "One release of this flow with its rationale and its diff. The path segment is either the spine version id (`ver_...`) or the flow-unique spine number, and the route decides which it was, so a caller holding only the number needs no lookup first. The diff is computed server-side from the two stored snapshots and is never accepted from a caller; its predecessor is the next LOWER spine number, not the previous row by time, because spine rows are reused across redeploys of identical content. `diff.text` is rendered from masked content, so an empty string can still mean the releases differ inside an inline secret: `diff.contentIdentical`, compared over the unmasked hashes, is the trustworthy answer. `diff` is null for the flow's oldest release. An unknown address, a sibling flow's version, and an autosave revision all answer 404 alike. Requires member role and the `hub` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(ver_[a-zA-Z0-9_-]+|[1-9][0-9]*)$",
+              "example": "ver_a1b2c3d4",
+              "description": "Spine version id of the release (ver_...) or its spine number"
+            },
+            "required": true,
+            "description": "Spine version id of the release (ver_...) or its spine number",
+            "name": "versionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The release, its rationale, and its diff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid release reference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

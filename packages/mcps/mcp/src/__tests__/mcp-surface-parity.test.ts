@@ -84,6 +84,11 @@ import type {
  * implementations agree, and the identical fixture committed on the app side
  * is a second copy of one contract, not a second opinion about it.
  *
+ * NOTHING VERIFIES THE TWO COPIES ARE IDENTICAL. Each repository's test reads
+ * only its own copy and no script or CI step compares them, so editing one
+ * copy alone leaves both suites green while the two fixtures describe
+ * different surfaces. Keeping them in step is a manual diff at edit time.
+ *
  * WHAT IT DOES DO, and why it belongs at the source. It fails an unreviewed
  * change to the published tool surface here, before publish, instead of
  * downstream in a consumer that already pinned a version. It catches a renamed,

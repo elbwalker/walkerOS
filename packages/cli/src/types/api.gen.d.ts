@@ -5991,8 +5991,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['BillingDetailsResponse'] &
-              (Record<string, never> | null);
+            'application/json':
+              | components['schemas']['BillingDetailsResponse']
+              | null;
           };
         };
         /** @description Unauthorized */
@@ -6580,13 +6581,14 @@ export interface paths {
     };
     /**
      * List flow releases
-     * @description List the release history for a flow across all of its deployment lineages, newest first, paginated. Each entry is a deployed version joined to its parent deployment (slug and type). Requires member role.
+     * @description List the release history for a flow across all of its deployment lineages, newest first, paginated. Each entry is a deployed version joined to its parent deployment (slug and type). `rationale=true` joins each row's stored rationale summary on, which requires the `hub` feature; without it the `rationale` key is absent from every row rather than null, and no feature beyond member role is needed. Requires member role.
      */
     get: {
       parameters: {
         query?: {
           limit?: number;
           offset?: number | null;
+          rationale?: 'true' | 'false';
         };
         header?: never;
         path: {
@@ -6604,6 +6606,95 @@ export interface paths {
           };
           content: {
             'application/json': components['schemas']['ListFlowReleasesResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/releases/{versionId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read one release in full
+     * @description One release of this flow with its rationale and its diff. The path segment is either the spine version id (`ver_...`) or the flow-unique spine number, and the route decides which it was, so a caller holding only the number needs no lookup first. The diff is computed server-side from the two stored snapshots and is never accepted from a caller; its predecessor is the next LOWER spine number, not the previous row by time, because spine rows are reused across redeploys of identical content. `diff.text` is rendered from masked content, so an empty string can still mean the releases differ inside an inline secret: `diff.contentIdentical`, compared over the unmasked hashes, is the trustworthy answer. `diff` is null for the flow's oldest release. An unknown address, a sibling flow's version, and an autosave revision all answer 404 alike. Requires member role and the `hub` feature.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Spine version id of the release (ver_...) or its spine number */
+          versionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The release, its rationale, and its diff */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReleaseDetailResponse'];
+          };
+        };
+        /** @description Invalid release reference */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
         /** @description Unauthorized */
@@ -10459,9 +10550,9 @@ export interface components {
         | 'active'
         | 'stopped'
         | 'failed';
-      currentVersion: components['schemas']['DeploymentVersionDetail'];
+      currentVersion: components['schemas']['DeploymentVersionDetail'] | null;
       versions: components['schemas']['DeploymentVersionHistoryEntry'][];
-      error: components['schemas']['DeploymentError'];
+      error: components['schemas']['DeploymentError'] | null;
       recentErrors?:
         | {
             message: string;
@@ -10506,7 +10597,7 @@ export interface components {
       /** Format: date-time */
       publishedAt: string;
       publishedBy: string | null;
-    } | null;
+    };
     DeploymentVersionHistoryEntry: {
       versionNumber: number;
       status: string;
@@ -10527,7 +10618,7 @@ export interface components {
        */
       phase: 'preflight' | 'deploy' | 'bundle' | 'publish' | 'provision';
       detail?: string;
-    } | null;
+    };
     CreateDeploymentResponse: {
       /** @example dep_a1b2c3d4 */
       id: string;
@@ -10733,6 +10824,12 @@ export interface components {
       createdAt: string;
       createdBy: string | null;
       createdByLabel: string | null;
+      rationale?: components['schemas']['ReleaseRationaleSummary'] | null;
+    };
+    ReleaseRationaleSummary: {
+      hasHumanText: boolean;
+      hasGeneratedSummary: boolean;
+      firstLine: string | null;
     };
     ReleaseContentResponse: {
       /** @example ver_a1b2c3d4 */
@@ -10748,8 +10845,26 @@ export interface components {
       /** @enum {string} */
       createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
     };
-    ListVersionAnnotationsResponse: {
-      annotations: components['schemas']['VersionAnnotation'][];
+    ReleaseDiff: {
+      /** @example ver_a1b2c3d4 */
+      prevVersionId: string;
+      prevVersionNumber: number;
+      text: string;
+      contentIdentical: boolean;
+    };
+    ReleaseDetailResponse: {
+      /** @example ver_a1b2c3d4 */
+      versionId: string;
+      versionNumber: number;
+      contentHash: string | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      createdBy: string;
+      rationale: components['schemas']['VersionAnnotation'] | null;
+      diff: components['schemas']['ReleaseDiff'] | null;
     };
     VersionAnnotation: {
       /** @example ver_a1b2c3d4 */
@@ -10768,6 +10883,9 @@ export interface components {
        * @example 2026-01-26T14:30:00.000Z
        */
       updatedAt: string;
+    };
+    ListVersionAnnotationsResponse: {
+      annotations: components['schemas']['VersionAnnotation'][];
     };
     UpsertVersionAnnotationResponse: {
       /** @example ver_a1b2c3d4 */
@@ -10893,7 +11011,7 @@ export interface components {
       frameName: string | null;
       flowId: string | null;
       subjectKey: string | null;
-      spatial: components['schemas']['KnowledgeSpatial'];
+      spatial: components['schemas']['KnowledgeSpatial'] | null;
       validity: components['schemas']['KnowledgeValidity'];
       /** @enum {string} */
       freshness: 'current' | 'subject_changed' | 'unknown';
@@ -10943,7 +11061,7 @@ export interface components {
       element?: {
         [key: string]: unknown;
       };
-    } | null;
+    };
     KnowledgeValidity:
       | {
           /** @enum {string} */
@@ -10989,7 +11107,7 @@ export interface components {
       frameName: string | null;
       flowId: string | null;
       subjectKey: string | null;
-      spatial: components['schemas']['KnowledgeSpatial'];
+      spatial: components['schemas']['KnowledgeSpatial'] | null;
       validity: components['schemas']['KnowledgeValidity'];
       /** @enum {string} */
       freshness: 'current' | 'subject_changed' | 'unknown';
@@ -11021,7 +11139,7 @@ export interface components {
       frameName: string | null;
       flowId: string | null;
       subjectKey: string | null;
-      spatial: components['schemas']['KnowledgeSpatial'];
+      spatial: components['schemas']['KnowledgeSpatial'] | null;
       validity: components['schemas']['KnowledgeValidity'];
       /** @enum {string} */
       freshness: 'current' | 'subject_changed' | 'unknown';
@@ -11068,7 +11186,7 @@ export interface components {
       frameName: string | null;
       flowId: string | null;
       subjectKey: string | null;
-      spatial: components['schemas']['KnowledgeSpatial'];
+      spatial: components['schemas']['KnowledgeSpatial'] | null;
       validity: components['schemas']['KnowledgeValidity'];
       /** @enum {string} */
       freshness: 'current' | 'subject_changed' | 'unknown';
@@ -11157,7 +11275,7 @@ export interface components {
       /** @enum {string} */
       origin: 'drawn' | 'imported' | 'observed';
       flowId: string | null;
-      screenshot: components['schemas']['FrameScreenshot'];
+      screenshot: components['schemas']['FrameScreenshot'] | null;
       version: number;
       /**
        * Format: date-time
@@ -11187,7 +11305,7 @@ export interface components {
       size: components['schemas']['PlanSize'];
       dpr: number;
       capturedRect: components['schemas']['PlanRect'];
-    } | null;
+    };
     FrameLean: {
       /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
       id: string;
@@ -11201,7 +11319,7 @@ export interface components {
       /** @enum {string} */
       origin: 'drawn' | 'imported' | 'observed';
       flowId: string | null;
-      screenshot: components['schemas']['FrameScreenshot'];
+      screenshot: components['schemas']['FrameScreenshot'] | null;
       version: number;
       /**
        * Format: date-time
@@ -11361,8 +11479,8 @@ export interface components {
       observedFlowName: string | null;
       serverFlowName: string | null;
       serverEndpoint: string | null;
-      web: components['schemas']['ObserveSessionWeb'];
-      server: components['schemas']['ObserveSessionServer'];
+      web: components['schemas']['ObserveSessionWeb'] | null;
+      server: components['schemas']['ObserveSessionServer'] | null;
       /** Format: date-time */
       expiresAt: string;
       recordsReceived: number;
@@ -11380,12 +11498,12 @@ export interface components {
       /** Format: uri */
       url?: string;
       binding?: string;
-    } | null;
+    };
     ObserveSessionServer: {
       /** Format: uri */
       endpoint: string | null;
       env: components['schemas']['ObserveSessionServerEnv'];
-    } | null;
+    };
     ObserveSessionServerEnv: {
       /** Format: uri */
       WALKEROS_OBSERVER_URL: string;
