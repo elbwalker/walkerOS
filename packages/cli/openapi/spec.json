@@ -21,6 +21,10 @@
       "description": "Authentication (magic link, session, identity)"
     },
     {
+      "name": "OAuth",
+      "description": "OAuth 2.1 authorization server (client registration, admin clients)"
+    },
+    {
       "name": "Projects",
       "description": "Project management and membership"
     },
@@ -7196,6 +7200,544 @@
           }
         },
         "required": ["instanceId", "flowId"]
+      },
+      "OAuthClientRegistrationResponse": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "example": "client_abc"
+          },
+          "client_id_issued_at": {
+            "type": "integer",
+            "example": 1725400000
+          },
+          "client_name": {
+            "type": "string"
+          },
+          "redirect_uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "token_endpoint_auth_method": {
+            "type": "string",
+            "enum": ["none"]
+          },
+          "grant_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "response_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "client_id",
+          "client_id_issued_at",
+          "client_name",
+          "redirect_uris",
+          "token_endpoint_auth_method",
+          "grant_types",
+          "response_types"
+        ]
+      },
+      "OAuthRegistrationError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": ["invalid_client_metadata", "invalid_redirect_uri"]
+          },
+          "error_description": {
+            "type": "string"
+          }
+        },
+        "required": ["error", "error_description"]
+      },
+      "OAuthClientRegistrationRequest": {
+        "type": "object",
+        "properties": {
+          "redirect_uris": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "minItems": 1,
+            "maxItems": 10,
+            "example": ["https://claude.ai/api/mcp/auth_callback"]
+          },
+          "client_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "token_endpoint_auth_method": {
+            "type": "string",
+            "enum": ["none"]
+          },
+          "grant_types": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["authorization_code", "refresh_token"]
+            },
+            "minItems": 1
+          },
+          "response_types": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["code"]
+            }
+          },
+          "client_uri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "logo_uri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "software_id": {
+            "type": "string"
+          },
+          "software_version": {
+            "type": "string"
+          }
+        },
+        "required": ["redirect_uris"]
+      },
+      "DeviceAuthorizationResponse": {
+        "type": "object",
+        "properties": {
+          "device_code": {
+            "type": "string"
+          },
+          "user_code": {
+            "type": "string",
+            "example": "WDJB-MJHT"
+          },
+          "verification_uri": {
+            "type": "string"
+          },
+          "verification_uri_complete": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer",
+            "example": 900
+          },
+          "interval": {
+            "type": "integer",
+            "example": 5
+          }
+        },
+        "required": [
+          "device_code",
+          "user_code",
+          "verification_uri",
+          "verification_uri_complete",
+          "expires_in",
+          "interval"
+        ]
+      },
+      "OAuthError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "invalid_client"
+          },
+          "error_description": {
+            "type": "string"
+          }
+        },
+        "required": ["error", "error_description"]
+      },
+      "DeviceAuthorizationRequest": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "example": "walkeros-cli"
+          },
+          "scope": {
+            "type": "string",
+            "example": "read write offline_access"
+          },
+          "resource": {
+            "type": "string",
+            "example": "https://app.walkeros.io/api"
+          }
+        },
+        "required": ["client_id"]
+      },
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string",
+            "enum": ["Bearer"]
+          },
+          "expires_in": {
+            "type": "integer",
+            "example": 3600
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "example": "read write offline_access"
+          }
+        },
+        "required": ["access_token", "token_type", "expires_in", "scope"]
+      },
+      "TokenRequest": {
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "enum": [
+              "authorization_code",
+              "refresh_token",
+              "urn:ietf:params:oauth:grant-type:device_code"
+            ],
+            "example": "authorization_code"
+          },
+          "client_id": {
+            "type": "string",
+            "example": "walkeros-cli"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "redirect_uri": {
+            "type": "string"
+          },
+          "code_verifier": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "device_code": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "example": "read offline_access"
+          },
+          "resource": {
+            "type": "string",
+            "example": "https://app.walkeros.io/api"
+          }
+        },
+        "required": ["grant_type"]
+      },
+      "RevocationRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "token_type_hint": {
+            "type": "string",
+            "enum": ["access_token", "refresh_token"]
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          }
+        },
+        "required": ["token"]
+      },
+      "DeviceApprovalResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["approve", "deny"]
+          }
+        },
+        "required": ["success", "decision"]
+      },
+      "DeviceApprovalRequest": {
+        "type": "object",
+        "properties": {
+          "userCode": {
+            "type": "string",
+            "minLength": 1,
+            "example": "WDJB-MJHT"
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["approve", "deny"]
+          }
+        },
+        "required": ["userCode", "decision"]
+      },
+      "OAuthConsentDecisionResponse": {
+        "type": "object",
+        "properties": {
+          "redirectTo": {
+            "type": "string",
+            "example": "https://claude.ai/api/mcp/auth_callback?code=abc&state=xyz"
+          }
+        },
+        "required": ["redirectTo"]
+      },
+      "OAuthConsentDecisionRequest": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["allow", "deny"]
+          }
+        },
+        "required": ["ticket", "decision"]
+      },
+      "ListOAuthGrantsResponse": {
+        "type": "object",
+        "properties": {
+          "grants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthGrantSummary"
+            }
+          }
+        },
+        "required": ["grants"]
+      },
+      "OAuthGrantSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "lastUsedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "clientName",
+          "scope",
+          "createdAt",
+          "lastUsedAt"
+        ]
+      },
+      "ListOAuthClientsResponse": {
+        "type": "object",
+        "properties": {
+          "clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthClientSummary"
+            }
+          }
+        },
+        "required": ["clients"]
+      },
+      "OAuthClientSummary": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["dcr", "cimd", "confidential", "builtin"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "redirectUris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "grantTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tokenEndpointAuthMethod": {
+            "type": "string",
+            "enum": ["none", "client_secret_basic", "client_secret_post"]
+          },
+          "allowedResources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["mcp", "api"]
+            }
+          },
+          "revokedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "clientId",
+          "kind",
+          "name",
+          "redirectUris",
+          "grantTypes",
+          "tokenEndpointAuthMethod",
+          "allowedResources",
+          "revokedAt"
+        ]
+      },
+      "CreateOAuthClientResponse": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["dcr", "cimd", "confidential", "builtin"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "redirectUris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "grantTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tokenEndpointAuthMethod": {
+            "type": "string",
+            "enum": ["none", "client_secret_basic", "client_secret_post"]
+          },
+          "allowedResources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["mcp", "api"]
+            }
+          },
+          "revokedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "clientSecret": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId",
+          "kind",
+          "name",
+          "redirectUris",
+          "grantTypes",
+          "tokenEndpointAuthMethod",
+          "allowedResources",
+          "revokedAt",
+          "clientSecret"
+        ]
+      },
+      "CreateOAuthClientRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "redirectUris": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "maxItems": 10
+          },
+          "grantTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["authorization_code", "refresh_token"]
+            },
+            "minItems": 1,
+            "default": ["authorization_code", "refresh_token"]
+          },
+          "allowedResources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["mcp", "api"]
+            },
+            "minItems": 1,
+            "default": ["mcp", "api"]
+          },
+          "authMethod": {
+            "type": "string",
+            "enum": ["client_secret_basic", "client_secret_post"],
+            "default": "client_secret_basic"
+          }
+        },
+        "required": ["name", "redirectUris"]
       }
     },
     "parameters": {}
@@ -18341,6 +18883,537 @@
           },
           "400": {
             "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/register": {
+      "post": {
+        "tags": ["OAuth"],
+        "summary": "Register a client",
+        "description": "RFC 7591 dynamic client registration. Unauthenticated: a client registers itself before it holds any credential. Issues public clients only (`token_endpoint_auth_method: none`), which prove themselves with PKCE. Errors use the RFC 7591 section 3.2.2 shape, not the standard error envelope.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthClientRegistrationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Client registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthClientRegistrationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client metadata or redirect URI",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthRegistrationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Registration ceiling reached (Retry-After header)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/device_authorization": {
+      "post": {
+        "tags": ["OAuth"],
+        "summary": "Start a device authorization",
+        "description": "RFC 8628 section 3.1. A client that cannot host a browser redirect asks for a device code and a user code here, then polls the token endpoint while the person approves the user code at `/oauth/device`. Unauthenticated, and public clients only: the code is worth nothing until a signed-in person approves it. Body is `application/x-www-form-urlencoded`; errors use the RFC 6749 section 5.2 shape, not the standard error envelope.",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceAuthorizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Device authorization opened",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceAuthorizationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request, unauthorized_client, invalid_scope or invalid_target",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid_client: unknown, revoked or confidential client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/token": {
+      "post": {
+        "tags": ["OAuth"],
+        "summary": "Exchange a grant for tokens",
+        "description": "RFC 6749 section 3.2. Runs the authorization code, refresh token and device code grants. The client authenticates here: a public client with PKCE, a confidential one with HTTP Basic or a form secret. Body is `application/x-www-form-urlencoded` only; errors use the RFC 6749 section 5.2 shape, not the standard error envelope, and a failed Basic authentication is answered with a `WWW-Authenticate: Basic` challenge. Responses are never cacheable. Rate limited per `client_id`.",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request, invalid_grant, invalid_scope, invalid_target, unsupported_grant_type, or a device grant status (authorization_pending, slow_down, access_denied, expired_token)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid_client: unknown, revoked, or bad credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-client token budget reached (Retry-After header)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/revoke": {
+      "post": {
+        "tags": ["OAuth"],
+        "summary": "Revoke a token",
+        "description": "RFC 7009. Client authentication is the same as at the token endpoint. A refresh token revokes its whole rotation family, an access token only itself. An authenticated request always answers 200 with an empty body, unknown tokens included: a distinguishable answer would be an oracle. Body is `application/x-www-form-urlencoded`.",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/RevocationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revoked, or nothing matched"
+          },
+          "400": {
+            "description": "invalid_request or unsupported_token_type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid_client: unknown, revoked, or bad credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/device/approve": {
+      "post": {
+        "tags": ["OAuth"],
+        "summary": "Decide a device authorization",
+        "description": "The person's approve or deny decision on a pending device authorization. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token can never approve its own device. Requires the `X-CSRF-Token` minted with the consent page, bound to this user code.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Decision recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceApprovalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/authorize": {
+      "post": {
+        "tags": ["OAuth"],
+        "summary": "Decide a consent request",
+        "description": "The person's allow or deny decision on the consent screen at `/oauth/authorize`. The ticket is the HMAC-signed authorization request that screen was rendered from, so the decision cannot alter what was validated, and it is bound to the person it was minted for. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token can never approve a consent. The response says where to send the browser: the client's registered redirect URI, carrying `code` on allow and `error=access_denied` on deny.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthConsentDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Decision recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthConsentDecisionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/grants": {
+      "get": {
+        "tags": ["OAuth"],
+        "summary": "List connected apps",
+        "description": "The apps the signed-in person has consented to, as the Connected apps page renders them. Revoked grants are absent. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token cannot read the connections its owner holds.",
+        "responses": {
+          "200": {
+            "description": "Connected apps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOAuthGrantsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["OAuth"],
+        "summary": "Disconnect every app",
+        "description": "Revoke every grant this person holds and the tokens hanging from them. Automation tokens hang from no grant and survive. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a read-scoped machine token cannot disconnect everything its owner has connected.",
+        "responses": {
+          "204": {
+            "description": "Apps disconnected"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/grants/{grantId}": {
+      "delete": {
+        "tags": ["OAuth"],
+        "summary": "Disconnect one app",
+        "description": "Revoke one grant and the tokens hanging from it. Idempotent: an unknown grant, another person's grant and an already revoked one all answer 204, and the token sweep runs either way, so pressing Disconnect twice cleans up a token minted inside the first press's window. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "grant_abc123"
+            },
+            "required": true,
+            "name": "grantId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "App disconnected"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/oauth/clients": {
+      "get": {
+        "tags": ["OAuth"],
+        "summary": "List OAuth clients",
+        "description": "Every registered OAuth client, revoked ones included. No secret material is returned. Admin only: a non-admin caller gets 404, not 403, so the endpoint does not confirm its own existence.",
+        "responses": {
+          "200": {
+            "description": "OAuth client list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOAuthClientsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["OAuth"],
+        "summary": "Create a confidential OAuth client",
+        "description": "Create an OAuth client that authenticates with a secret. The raw secret is returned exactly once and is never retrievable afterwards. Admin only: a non-admin caller gets 404, not 403.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOAuthClientRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Client created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateOAuthClientResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/oauth/clients/{clientId}": {
+      "delete": {
+        "tags": ["OAuth"],
+        "summary": "Revoke an OAuth client",
+        "description": "Revoke a client together with the grants consented to it and the tokens minted under them. Admin only: a non-admin caller gets 404, not 403, the same answer an unknown client id gets.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "client_abc123"
+            },
+            "required": true,
+            "name": "clientId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Client revoked"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {

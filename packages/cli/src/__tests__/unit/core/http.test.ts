@@ -7,13 +7,17 @@ import {
 
 jest.mock('../../../lib/config-file.js', () => ({
   resolveAppUrl: jest.fn().mockReturnValue('https://stage.app.walkeros.io'),
-  resolveToken: jest
-    .fn()
-    .mockReturnValue({ token: 'test-token', source: 'env' }),
   resolveDeployToken: jest.fn().mockReturnValue(null),
 }));
 
+jest.mock('../../../core/auth.js', () => ({
+  resolveAccessToken: jest.fn().mockResolvedValue('test-token'),
+}));
+
 import { resolveDeployToken } from '../../../lib/config-file.js';
+import { resolveAccessToken } from '../../../core/auth.js';
+
+const mockResolveAccessToken = jest.mocked(resolveAccessToken);
 
 describe('core/http', () => {
   const originalFetch = global.fetch;
@@ -22,6 +26,7 @@ describe('core/http', () => {
   beforeEach(() => {
     mockFetch = jest.fn().mockResolvedValue({ ok: true });
     global.fetch = mockFetch;
+    mockResolveAccessToken.mockResolvedValue('test-token');
   });
 
   afterEach(() => {
@@ -53,28 +58,48 @@ describe('core/http', () => {
       expect(headers['X-Custom']).toBe('value');
       expect(headers['Authorization']).toBe('Bearer test-token');
     });
+
+    it('sends no auth header when no token resolves', async () => {
+      mockResolveAccessToken.mockResolvedValue(null);
+
+      await apiFetch('/api/test');
+
+      const headers = mockFetch.mock.calls[0][1].headers;
+      expect(headers['Authorization']).toBeUndefined();
+    });
+
+    it('awaits the resolved token rather than embedding the promise', async () => {
+      // A missed `await` would stringify a Promise into the header, which is a
+      // silent auth failure rather than a type error once spread into an object.
+      await apiFetch('/api/test');
+
+      const headers = mockFetch.mock.calls[0][1].headers;
+      expect(headers['Authorization']).toBe('Bearer test-token');
+      expect(String(headers['Authorization'])).not.toContain('Promise');
+    });
   });
 
   describe('publicFetch', () => {
     it('prepends base URL without auth header', async () => {
-      await publicFetch('/api/auth/device/code', {
+      await publicFetch('/api/oauth/device_authorization', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://stage.app.walkeros.io/api/auth/device/code',
+        'https://stage.app.walkeros.io/api/oauth/device_authorization',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         }),
       );
+      expect(mockResolveAccessToken).not.toHaveBeenCalled();
     });
   });
 
   describe('deployFetch', () => {
     it('uses deploy token when available', async () => {
-      (resolveDeployToken as jest.Mock).mockReturnValueOnce('deploy-tok');
+      jest.mocked(resolveDeployToken).mockReturnValueOnce('deploy-tok');
 
       await deployFetch('/api/projects/p1/runners/heartbeat', {
         method: 'POST',
@@ -91,6 +116,14 @@ describe('core/http', () => {
 
       const headers = mockFetch.mock.calls[0][1].headers;
       expect(headers['Authorization']).toBe('Bearer test-token');
+    });
+
+    it('throws when neither a deploy token nor a session resolves', async () => {
+      mockResolveAccessToken.mockResolvedValue(null);
+
+      await expect(
+        deployFetch('/api/projects/p1/runners/heartbeat'),
+      ).rejects.toThrow('No authentication token available');
     });
   });
 

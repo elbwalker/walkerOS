@@ -41,12 +41,12 @@ jest.mock('@walkeros/cli', () => ({
   listFrames: jest.fn(),
   listPageFrames: jest.fn(),
   getFrame: jest.fn(),
-  requestDeviceCode: jest.fn(),
-  pollForToken: jest.fn(),
+  startDeviceAuthorization: jest.fn(),
+  completeDeviceLogin: jest.fn(),
   whoami: jest.fn(),
-  resolveToken: jest.fn(),
+  credentialSource: jest.fn(),
   resolveAppUrl: jest.fn(),
-  deleteConfig: jest.fn(),
+  logout: jest.fn(),
   feedback: jest.fn(),
   getFeedbackPreference: jest.fn(),
   setFeedbackPreference: jest.fn(),
@@ -248,8 +248,8 @@ describe('HttpToolClient', () => {
   });
 
   it('checkHealth returns reachable true with NO token set (tokenless probe)', async () => {
-    // resolveToken returns null → logged out; checkHealth must not require auth.
-    (cli.resolveToken as jest.Mock).mockReturnValue(null);
+    // credentialSource returns null → logged out; checkHealth must not require auth.
+    (cli.credentialSource as jest.Mock).mockReturnValue(null);
     (cli.resolveAppUrl as jest.Mock).mockReturnValue('https://app.test');
     const mockFetch = jest
       .fn()
@@ -277,16 +277,48 @@ describe('HttpToolClient', () => {
   });
 
   it('delegates sync config helpers without awaiting', () => {
-    (cli.resolveToken as jest.Mock).mockReturnValue({
-      token: 'tok_abc',
-      source: 'env',
-    });
-    (cli.deleteConfig as jest.Mock).mockReturnValue(true);
+    (cli.credentialSource as jest.Mock).mockReturnValue('env');
     (cli.getDefaultProject as jest.Mock).mockReturnValue('proj_1');
     const client = new HttpToolClient();
-    expect(client.resolveToken()).toEqual({ token: 'tok_abc', source: 'env' });
-    expect(client.deleteConfig()).toBe(true);
+    expect(client.credentialSource()).toBe('env');
     expect(client.getDefaultProject()).toBe('proj_1');
+  });
+
+  it('starts a device authorization against the resolved app URL', async () => {
+    (cli.resolveAppUrl as jest.Mock).mockReturnValue('https://app.test');
+    (cli.startDeviceAuthorization as jest.Mock).mockResolvedValue({
+      deviceCode: 'dc_1',
+    });
+
+    await new HttpToolClient().requestDeviceCode();
+
+    expect(cli.startDeviceAuthorization).toHaveBeenCalledWith(
+      'https://app.test',
+    );
+  });
+
+  it('resumes a device authorization through completeDeviceLogin', async () => {
+    (cli.completeDeviceLogin as jest.Mock).mockResolvedValue({
+      status: 'pending',
+    });
+
+    const result = await new HttpToolClient().pollForToken('dc_1', {
+      timeoutMs: 1000,
+    });
+
+    expect(cli.completeDeviceLogin).toHaveBeenCalledWith('dc_1', {
+      timeoutMs: 1000,
+    });
+    expect(result).toEqual({ status: 'pending' });
+  });
+
+  it('logs out through the revoking cli logout, not a bare config delete', async () => {
+    (cli.logout as jest.Mock).mockResolvedValue({ deleted: true });
+
+    await expect(new HttpToolClient().logout()).resolves.toEqual({
+      deleted: true,
+    });
+    expect(cli.logout).toHaveBeenCalled();
   });
 });
 

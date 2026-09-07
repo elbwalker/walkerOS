@@ -1,8 +1,5 @@
-import {
-  resolveAppUrl,
-  resolveToken,
-  resolveDeployToken,
-} from '../lib/config-file.js';
+import { resolveAppUrl, resolveDeployToken } from '../lib/config-file.js';
+import { resolveAccessToken } from './auth.js';
 import { clientContextHeaders } from './client-context.js';
 
 /**
@@ -52,7 +49,7 @@ export async function apiFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const baseUrl = resolveAppUrl();
-  const token = resolveToken()?.token;
+  const token = await resolveAccessToken();
   return fetch(`${baseUrl}${path}`, {
     ...init,
     headers: buildHeaders(token, init?.headers),
@@ -86,7 +83,7 @@ export async function deployFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const baseUrl = resolveAppUrl();
-  const token = resolveDeployToken() ?? resolveToken()?.token;
+  const token = resolveDeployToken() ?? (await resolveAccessToken());
   if (!token)
     throw new Error(
       'No authentication token available. Set WALKEROS_DEPLOY_TOKEN or run walkeros auth login.',

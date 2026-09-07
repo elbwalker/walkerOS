@@ -41,19 +41,19 @@ import {
   listFrames,
   listPageFrames,
   getFrame,
-  requestDeviceCode,
-  pollForToken,
+  startDeviceAuthorization,
+  completeDeviceLogin,
   whoami,
-  resolveToken,
+  credentialSource,
   resolveAppUrl,
-  deleteConfig,
+  logout,
   feedback,
   getFeedbackPreference,
   setFeedbackPreference,
 } from '@walkeros/cli';
 import type {
-  DeviceCodeResult,
-  PollResult,
+  DeviceAuthorization,
+  DeviceLoginResult,
   ListFlowsOptions,
   DeployOptions,
   ListDeploymentsOptions,
@@ -346,29 +346,29 @@ export class HttpToolClient implements ToolClient {
     return getFrame(options);
   }
 
-  async requestDeviceCode(): Promise<DeviceCodeResult> {
-    return requestDeviceCode();
+  async requestDeviceCode(): Promise<DeviceAuthorization> {
+    return startDeviceAuthorization(resolveAppUrl());
   }
   async pollForToken(
     deviceCode: string,
     options?: { timeoutMs?: number },
-  ): Promise<PollResult> {
-    return pollForToken(deviceCode, options);
+  ): Promise<DeviceLoginResult> {
+    return completeDeviceLogin(deviceCode, options);
   }
   async whoami(): Promise<unknown> {
     return whoami();
   }
-  resolveToken(): { token: string; source: 'env' | 'config' } | null {
-    return resolveToken();
+  credentialSource(): 'env' | 'config' | null {
+    return credentialSource();
   }
-  deleteConfig(): boolean {
-    return deleteConfig();
+  async logout(): Promise<{ deleted: boolean }> {
+    return logout();
   }
 
   /**
    * Unauthenticated reachability probe of the app's PUBLIC `/api/health`
-   * route. Uses a plain `fetch` (no `createApiClient`, which throws when no
-   * token is set) so diagnostics works logged-out. Resolves
+   * route. Uses a plain `fetch` (no `createApiClient`, whose every request
+   * rejects without a credential) so diagnostics works logged-out. Resolves
    * `{ reachable: false }` only on a real network/timeout failure.
    */
   async checkHealth(): Promise<{

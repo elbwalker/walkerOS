@@ -12,16 +12,16 @@ export { runCommand } from './commands/run/index.js';
 export { validateCommand } from './commands/validate/index.js';
 export {
   loginCommand,
-  requestDeviceCode,
-  pollForToken,
+  login,
+  completeDeviceLogin,
 } from './commands/login/index.js';
 export type {
-  DeviceCodeResult,
-  DeviceCodeOptions,
-  PollOptions,
-  PollResult,
+  LoginOptions,
+  LoginResult,
+  CompleteDeviceLoginOptions,
+  DeviceLoginResult,
 } from './commands/login/index.js';
-export { logoutCommand } from './commands/logout/index.js';
+export { logoutCommand, logout } from './commands/logout/index.js';
 export { whoamiCommand } from './commands/auth/index.js';
 export {
   listProjectsCommand,
@@ -83,7 +83,14 @@ export type {
 } from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
-export { getToken, getAuthHeaders, requireProjectId } from './core/auth.js';
+export {
+  resolveAccessToken,
+  getAuthHeaders,
+  credentialSource,
+  requireProjectId,
+} from './core/auth.js';
+export { startDeviceAuthorization } from './core/oauth-client.js';
+export type { DeviceAuthorization } from './core/oauth-client.js';
 export {
   apiFetch,
   publicFetch,
@@ -222,6 +229,7 @@ export type { FeedbackOptions } from './commands/feedback/index.js';
 export {
   readConfig,
   writeConfig,
+  clearAuthFields,
   deleteConfig,
   resolveToken,
   resolveAppUrl,

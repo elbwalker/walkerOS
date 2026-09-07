@@ -1,6 +1,6 @@
 import type {
-  DeviceCodeResult,
-  PollResult,
+  DeviceAuthorization,
+  DeviceLoginResult,
   ListFlowsOptions,
   DeployOptions,
   ListDeploymentsOptions,
@@ -557,14 +557,25 @@ export interface ToolClient {
   getFrame(options: { projectId: string; frameId: string }): Promise<FrameWire>;
 
   // Auth
-  requestDeviceCode(): Promise<DeviceCodeResult>;
+  requestDeviceCode(): Promise<DeviceAuthorization>;
+  /**
+   * Finish an authorization already under way. Returns a status only: the
+   * session it establishes is stored by the implementation, so a tool never
+   * holds token material.
+   */
   pollForToken(
     deviceCode: string,
     options?: { timeoutMs?: number },
-  ): Promise<PollResult>;
+  ): Promise<DeviceLoginResult>;
   whoami(): Promise<unknown>;
-  resolveToken(): { token: string; source: 'env' | 'config' } | null;
-  deleteConfig(): boolean;
+  /** Where a credential would come from, without resolving or refreshing it. */
+  credentialSource(): 'env' | 'config' | null;
+  /**
+   * Retire the session. Where the credential was issued to this process, that
+   * means revoking it with the server before dropping it locally; a plane
+   * holding a bearer it did not issue reports nothing deleted.
+   */
+  logout(): Promise<{ deleted: boolean }>;
 
   // Diagnostics: unauthenticated reachability probe of the app's public
   // `/api/health` route. Resolves `{ reachable: false }` only on a real

@@ -90,8 +90,8 @@ const HEALTH_TIMEOUT_MS = 5000;
 
 /**
  * Tokenless reachability + contract probe of the app's PUBLIC `/api/health`
- * route. Uses a plain `fetch` (never `createApiClient`, which throws logged
- * out) and defensively parses the JSON body. Resolves `{ reachable: false }`
+ * route. Uses a plain `fetch` (never `createApiClient`, whose every request
+ * rejects without a credential) and defensively parses the JSON body. Resolves `{ reachable: false }`
  * only on a real network/timeout failure; a non-2xx status still counts as
  * reachable.
  */

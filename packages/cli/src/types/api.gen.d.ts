@@ -9998,6 +9998,691 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/oauth/register': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Register a client
+     * @description RFC 7591 dynamic client registration. Unauthenticated: a client registers itself before it holds any credential. Issues public clients only (`token_endpoint_auth_method: none`), which prove themselves with PKCE. Errors use the RFC 7591 section 3.2.2 shape, not the standard error envelope.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['OAuthClientRegistrationRequest'];
+        };
+      };
+      responses: {
+        /** @description Client registered */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthClientRegistrationResponse'];
+          };
+        };
+        /** @description Invalid client metadata or redirect URI */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthRegistrationError'];
+          };
+        };
+        /** @description Registration ceiling reached (Retry-After header) */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/device_authorization': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start a device authorization
+     * @description RFC 8628 section 3.1. A client that cannot host a browser redirect asks for a device code and a user code here, then polls the token endpoint while the person approves the user code at `/oauth/device`. Unauthenticated, and public clients only: the code is worth nothing until a signed-in person approves it. Body is `application/x-www-form-urlencoded`; errors use the RFC 6749 section 5.2 shape, not the standard error envelope.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/x-www-form-urlencoded': components['schemas']['DeviceAuthorizationRequest'];
+        };
+      };
+      responses: {
+        /** @description Device authorization opened */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeviceAuthorizationResponse'];
+          };
+        };
+        /** @description invalid_request, unauthorized_client, invalid_scope or invalid_target */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+        /** @description invalid_client: unknown, revoked or confidential client */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/token': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Exchange a grant for tokens
+     * @description RFC 6749 section 3.2. Runs the authorization code, refresh token and device code grants. The client authenticates here: a public client with PKCE, a confidential one with HTTP Basic or a form secret. Body is `application/x-www-form-urlencoded` only; errors use the RFC 6749 section 5.2 shape, not the standard error envelope, and a failed Basic authentication is answered with a `WWW-Authenticate: Basic` challenge. Responses are never cacheable. Rate limited per `client_id`.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/x-www-form-urlencoded': components['schemas']['TokenRequest'];
+        };
+      };
+      responses: {
+        /** @description Tokens issued */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['TokenResponse'];
+          };
+        };
+        /** @description invalid_request, invalid_grant, invalid_scope, invalid_target, unsupported_grant_type, or a device grant status (authorization_pending, slow_down, access_denied, expired_token) */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+        /** @description invalid_client: unknown, revoked, or bad credentials */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+        /** @description Per-client token budget reached (Retry-After header) */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/revoke': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Revoke a token
+     * @description RFC 7009. Client authentication is the same as at the token endpoint. A refresh token revokes its whole rotation family, an access token only itself. An authenticated request always answers 200 with an empty body, unknown tokens included: a distinguishable answer would be an oracle. Body is `application/x-www-form-urlencoded`.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/x-www-form-urlencoded': components['schemas']['RevocationRequest'];
+        };
+      };
+      responses: {
+        /** @description Revoked, or nothing matched */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description invalid_request or unsupported_token_type */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+        /** @description invalid_client: unknown, revoked, or bad credentials */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/device/approve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Decide a device authorization
+     * @description The person's approve or deny decision on a pending device authorization. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token can never approve its own device. Requires the `X-CSRF-Token` minted with the consent page, bound to this user code.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['DeviceApprovalRequest'];
+        };
+      };
+      responses: {
+        /** @description Decision recorded */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeviceApprovalResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/authorize': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Decide a consent request
+     * @description The person's allow or deny decision on the consent screen at `/oauth/authorize`. The ticket is the HMAC-signed authorization request that screen was rendered from, so the decision cannot alter what was validated, and it is bound to the person it was minted for. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token can never approve a consent. The response says where to send the browser: the client's registered redirect URI, carrying `code` on allow and `error=access_denied` on deny.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['OAuthConsentDecisionRequest'];
+        };
+      };
+      responses: {
+        /** @description Decision recorded */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthConsentDecisionResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/grants': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List connected apps
+     * @description The apps the signed-in person has consented to, as the Connected apps page renders them. Revoked grants are absent. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token cannot read the connections its owner holds.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Connected apps */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListOAuthGrantsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    /**
+     * Disconnect every app
+     * @description Revoke every grant this person holds and the tokens hanging from them. Automation tokens hang from no grant and survive. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a read-scoped machine token cannot disconnect everything its owner has connected.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Apps disconnected */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/grants/{grantId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Disconnect one app
+     * @description Revoke one grant and the tokens hanging from it. Idempotent: an unknown grant, another person's grant and an already revoked one all answer 204, and the token sweep runs either way, so pressing Disconnect twice cleans up a token minted inside the first press's window. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          grantId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description App disconnected */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/oauth/clients': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List OAuth clients
+     * @description Every registered OAuth client, revoked ones included. No secret material is returned. Admin only: a non-admin caller gets 404, not 403, so the endpoint does not confirm its own existence.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OAuth client list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListOAuthClientsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Create a confidential OAuth client
+     * @description Create an OAuth client that authenticates with a secret. The raw secret is returned exactly once and is never retrievable afterwards. Admin only: a non-admin caller gets 404, not 403.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateOAuthClientRequest'];
+        };
+      };
+      responses: {
+        /** @description Client created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CreateOAuthClientResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/oauth/clients/{clientId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Revoke an OAuth client
+     * @description Revoke a client together with the grants consented to it and the tokens minted under them. Admin only: a non-admin caller gets 404, not 403, the same answer an unknown client id gets.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          clientId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Client revoked */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -12653,6 +13338,211 @@ export interface components {
         level: 'error' | 'warn' | 'info' | 'debug';
         message: string;
       }[];
+    };
+    OAuthClientRegistrationResponse: {
+      /** @example client_abc */
+      client_id: string;
+      /** @example 1725400000 */
+      client_id_issued_at: number;
+      client_name: string;
+      redirect_uris: string[];
+      /** @enum {string} */
+      token_endpoint_auth_method: 'none';
+      grant_types: string[];
+      response_types: string[];
+    };
+    OAuthRegistrationError: {
+      /** @enum {string} */
+      error: 'invalid_client_metadata' | 'invalid_redirect_uri';
+      error_description: string;
+    };
+    OAuthClientRegistrationRequest: {
+      /**
+       * @example [
+       *       "https://claude.ai/api/mcp/auth_callback"
+       *     ]
+       */
+      redirect_uris: string[];
+      client_name?: string;
+      /** @enum {string} */
+      token_endpoint_auth_method?: 'none';
+      grant_types?: ('authorization_code' | 'refresh_token')[];
+      response_types?: 'code'[];
+      /** Format: uri */
+      client_uri?: string;
+      /** Format: uri */
+      logo_uri?: string;
+      scope?: string;
+      software_id?: string;
+      software_version?: string;
+    };
+    DeviceAuthorizationResponse: {
+      device_code: string;
+      /** @example WDJB-MJHT */
+      user_code: string;
+      verification_uri: string;
+      verification_uri_complete: string;
+      /** @example 900 */
+      expires_in: number;
+      /** @example 5 */
+      interval: number;
+    };
+    OAuthError: {
+      /** @example invalid_client */
+      error: string;
+      error_description: string;
+    };
+    DeviceAuthorizationRequest: {
+      /** @example walkeros-cli */
+      client_id: string;
+      /** @example read write offline_access */
+      scope?: string;
+      /** @example https://app.walkeros.io/api */
+      resource?: string;
+    };
+    TokenResponse: {
+      access_token: string;
+      /** @enum {string} */
+      token_type: 'Bearer';
+      /** @example 3600 */
+      expires_in: number;
+      refresh_token?: string;
+      /** @example read write offline_access */
+      scope: string;
+    };
+    TokenRequest: {
+      /**
+       * @example authorization_code
+       * @enum {string}
+       */
+      grant_type:
+        | 'authorization_code'
+        | 'refresh_token'
+        | 'urn:ietf:params:oauth:grant-type:device_code';
+      /** @example walkeros-cli */
+      client_id?: string;
+      client_secret?: string;
+      code?: string;
+      redirect_uri?: string;
+      code_verifier?: string;
+      refresh_token?: string;
+      device_code?: string;
+      /** @example read offline_access */
+      scope?: string;
+      /** @example https://app.walkeros.io/api */
+      resource?: string;
+    };
+    RevocationRequest: {
+      token: string;
+      /** @enum {string} */
+      token_type_hint?: 'access_token' | 'refresh_token';
+      client_id?: string;
+      client_secret?: string;
+    };
+    DeviceApprovalResponse: {
+      /** @enum {boolean} */
+      success: true;
+      /** @enum {string} */
+      decision: 'approve' | 'deny';
+    };
+    DeviceApprovalRequest: {
+      /** @example WDJB-MJHT */
+      userCode: string;
+      /** @enum {string} */
+      decision: 'approve' | 'deny';
+    };
+    OAuthConsentDecisionResponse: {
+      /** @example https://claude.ai/api/mcp/auth_callback?code=abc&state=xyz */
+      redirectTo: string;
+    };
+    OAuthConsentDecisionRequest: {
+      ticket: string;
+      /** @enum {string} */
+      decision: 'allow' | 'deny';
+    };
+    ListOAuthGrantsResponse: {
+      grants: components['schemas']['OAuthGrantSummary'][];
+    };
+    OAuthGrantSummary: {
+      id: string;
+      clientId: string;
+      clientName: string;
+      scope: string[];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      lastUsedAt: string | null;
+    };
+    ListOAuthClientsResponse: {
+      clients: components['schemas']['OAuthClientSummary'][];
+    };
+    OAuthClientSummary: {
+      clientId: string;
+      /** @enum {string} */
+      kind: 'dcr' | 'cimd' | 'confidential' | 'builtin';
+      name: string;
+      redirectUris: string[];
+      grantTypes: string[];
+      /** @enum {string} */
+      tokenEndpointAuthMethod:
+        | 'none'
+        | 'client_secret_basic'
+        | 'client_secret_post';
+      allowedResources: ('mcp' | 'api')[];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      revokedAt: string | null;
+    };
+    CreateOAuthClientResponse: {
+      clientId: string;
+      /** @enum {string} */
+      kind: 'dcr' | 'cimd' | 'confidential' | 'builtin';
+      name: string;
+      redirectUris: string[];
+      grantTypes: string[];
+      /** @enum {string} */
+      tokenEndpointAuthMethod:
+        | 'none'
+        | 'client_secret_basic'
+        | 'client_secret_post';
+      allowedResources: ('mcp' | 'api')[];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      revokedAt: string | null;
+      clientSecret: string;
+    };
+    CreateOAuthClientRequest: {
+      name: string;
+      redirectUris: string[];
+      /**
+       * @default [
+       *       "authorization_code",
+       *       "refresh_token"
+       *     ]
+       */
+      grantTypes: ('authorization_code' | 'refresh_token')[];
+      /**
+       * @default [
+       *       "mcp",
+       *       "api"
+       *     ]
+       */
+      allowedResources: ('mcp' | 'api')[];
+      /**
+       * @default client_secret_basic
+       * @enum {string}
+       */
+      authMethod: 'client_secret_basic' | 'client_secret_post';
     };
   };
   responses: never;

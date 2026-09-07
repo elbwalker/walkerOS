@@ -1,4 +1,11 @@
-import { readFileSync, rmSync, mkdirSync } from 'fs';
+import {
+  readFileSync,
+  rmSync,
+  mkdirSync,
+  statSync,
+  writeFileSync,
+  chmodSync,
+} from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import {
@@ -184,5 +191,55 @@ describe('WalkerOSConfig telemetry fields', () => {
     const cfg = readConfig();
     expect(cfg?.installationId).toBe('xyz-789');
     expect(cfg?.token).toBeUndefined();
+  });
+});
+
+describe('config-file permissions', () => {
+  // Its own temp root, and deliberately NOT pre-created: the directory mode is
+  // one of the guarantees under test, and mkdirSync only applies a mode to a
+  // directory it creates.
+  const modeDir = join(tmpdir(), `config-file-mode-test-${Date.now()}`);
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv, XDG_CONFIG_HOME: modeDir };
+    rmSync(modeDir, { recursive: true, force: true });
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    rmSync(modeDir, { recursive: true, force: true });
+  });
+
+  function modeOf(path: string): number {
+    return statSync(path).mode & 0o777;
+  }
+
+  it('writes the config readable only by its owner', () => {
+    writeConfig({ token: 'sk-test-123' });
+    expect(modeOf(getConfigPath())).toBe(0o600);
+  });
+
+  it('creates the config directory traversable only by its owner', () => {
+    writeConfig({ token: 'sk-test-123' });
+    expect(modeOf(join(modeDir, 'walkeros'))).toBe(0o700);
+  });
+
+  it('narrows a pre-existing wide temp file instead of inheriting its mode', () => {
+    // The case `writeFileSync`'s `mode` argument does not cover: it applies
+    // only when the call CREATES the file, so a temp file left behind by an
+    // interrupted write would carry its old mode across the rename.
+    mkdirSync(join(modeDir, 'walkeros'), { recursive: true });
+    const tempPath = `${getConfigPath()}.tmp`;
+    writeFileSync(tempPath, 'stale');
+    // chmod, not writeFileSync's mode, so the umask cannot narrow the very
+    // width this test exists to start from.
+    chmodSync(tempPath, 0o666);
+    expect(modeOf(tempPath)).toBe(0o666);
+
+    writeConfig({ token: 'sk-test-123' });
+
+    expect(modeOf(getConfigPath())).toBe(0o600);
+    expect(readConfig()?.token).toBe('sk-test-123');
   });
 });

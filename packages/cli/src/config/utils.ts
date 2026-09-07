@@ -5,7 +5,8 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { mergeAuthHeaders } from '../core/http.js';
-import { resolveToken } from '../lib/config-file.js';
+import { resolveAccessToken } from '../core/auth.js';
+import { resolveAppUrl } from '../lib/config-file.js';
 
 /**
  * Check if a string is a valid URL
@@ -23,15 +24,34 @@ export function isUrl(str: string): boolean {
 }
 
 /**
- * Fetch content from a URL as a string, with auth headers.
+ * Whether a URL points at the configured walkerOS app.
+ *
+ * Compares origins rather than prefixes: a host such as
+ * `https://app.walkeros.io.example.com` starts with the app URL but belongs to
+ * somebody else, and the port is part of who a host is.
+ */
+function isAppOrigin(url: string): boolean {
+  try {
+    return new URL(url).origin === new URL(resolveAppUrl()).origin;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Fetch content from a URL as a string.
  * Shared helper for all URL-loading paths.
+ *
+ * The session bearer goes to the walkerOS app and nowhere else. A config input
+ * is any URL the person names, so attaching auth to all of them would hand
+ * their walkerOS session to whichever host they were pointed at.
  *
  * @param url - HTTP/HTTPS URL to fetch
  * @returns Response body as a string
  * @throws Error if fetch fails or response is not OK
  */
 export async function fetchContentString(url: string): Promise<string> {
-  const token = resolveToken()?.token;
+  const token = isAppOrigin(url) ? await resolveAccessToken() : null;
   const response = await fetch(url, {
     headers: mergeAuthHeaders(token),
   });
