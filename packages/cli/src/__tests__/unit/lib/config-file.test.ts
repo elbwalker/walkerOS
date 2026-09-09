@@ -1,10 +1,10 @@
 import {
   readFileSync,
+  readdirSync,
   rmSync,
   mkdirSync,
   statSync,
   writeFileSync,
-  chmodSync,
 } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -225,21 +225,27 @@ describe('config-file permissions', () => {
     expect(modeOf(join(modeDir, 'walkeros'))).toBe(0o700);
   });
 
-  it('narrows a pre-existing wide temp file instead of inheriting its mode', () => {
-    // The case `writeFileSync`'s `mode` argument does not cover: it applies
-    // only when the call CREATES the file, so a temp file left behind by an
-    // interrupted write would carry its old mode across the rename.
+  it('writes through a temp path of its own, leaving another writer\u2019s alone', () => {
+    // Only the token refresh takes the config lock, so two ordinary writers
+    // (a login and a `telemetry enable`, say) can be in here at once. On one
+    // shared name they would write over each other's temp file and rename it
+    // twice, and the slower one would fail outright when the faster renamed
+    // the file out from under its `chmod`.
     mkdirSync(join(modeDir, 'walkeros'), { recursive: true });
-    const tempPath = `${getConfigPath()}.tmp`;
-    writeFileSync(tempPath, 'stale');
-    // chmod, not writeFileSync's mode, so the umask cannot narrow the very
-    // width this test exists to start from.
-    chmodSync(tempPath, 0o666);
-    expect(modeOf(tempPath)).toBe(0o666);
+    const otherWriterTemp = `${getConfigPath()}.tmp`;
+    writeFileSync(otherWriterTemp, 'another writer');
 
     writeConfig({ token: 'sk-test-123' });
 
+    expect(readFileSync(otherWriterTemp, 'utf-8')).toBe('another writer');
     expect(modeOf(getConfigPath())).toBe(0o600);
     expect(readConfig()?.token).toBe('sk-test-123');
+  });
+
+  it('leaves no temp file behind', () => {
+    writeConfig({ token: 'sk-test-123' });
+    writeConfig({ token: 'sk-test-456' });
+
+    expect(readdirSync(join(modeDir, 'walkeros'))).toEqual(['config.json']);
   });
 });

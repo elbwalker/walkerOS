@@ -68,6 +68,7 @@ import type {
   FeedbackOptions,
 } from '@walkeros/cli';
 
+import { normalizeBaseUrl } from './base-url.js';
 import type {
   ToolClient,
   JourneysResult,
@@ -363,6 +364,17 @@ export class HttpToolClient implements ToolClient {
   }
   async logout(): Promise<{ deleted: boolean }> {
     return logout();
+  }
+
+  /**
+   * The app this local door talks to: `WALKEROS_APP_URL`, then the CLI config
+   * file, then the built-in default, which is exactly the chain every other
+   * method here already resolves its base URL through. Normalized, because
+   * neither the env var nor the config file is obliged to omit a trailing
+   * slash and the interface promises a base without one.
+   */
+  appBaseUrl(): string {
+    return normalizeBaseUrl(resolveAppUrl());
   }
 
   /**

@@ -164,6 +164,19 @@ export {
 } from './ui-parts.js';
 
 /**
+ * Addresses of app screens. Published because the app depends on this package
+ * and never the reverse, so this is the only place a link definition can live
+ * that both the tools and an app-side caller can reach.
+ */
+export {
+  links,
+  type FlowLinkTarget,
+  type StepLinkTarget,
+  type ThreadLinkTarget,
+  type DeploymentLinkTarget,
+} from './links.js';
+
+/**
  * Handler-bearing spec for every tool `createWalkerOSMcpServer` registers.
  *
  * Consumers that need to drive the tools WITHOUT an `McpServer` (e.g., the

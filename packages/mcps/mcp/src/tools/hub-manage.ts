@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { wrapUserData } from '../user-data.js';
+import { links } from '../links.js';
 import type {
   ToolClient,
   ReleaseRef,
@@ -553,6 +554,17 @@ async function handleReleases(
     ...(input.offset !== undefined && { offset: input.offset }),
   });
 
+  // The screen this index is of. Structured rather than only mentioned in a
+  // hint, so an agent can hand it on as data instead of re-typing it out of
+  // prose. Named `appUrl`, the one key every tool here emits a link under, so
+  // it can never collide with a `url` that some response already uses for
+  // something of its own.
+  const appUrl = links.release({
+    baseUrl: client.appBaseUrl(),
+    projectId,
+    flowId,
+  });
+
   return mcpResult(
     {
       releases: releases.map((release) => ({
@@ -583,6 +595,7 @@ async function handleReleases(
           : null,
       })),
       total,
+      ...(appUrl !== undefined && { appUrl }),
     },
     {
       next: [
@@ -677,7 +690,41 @@ async function handleStepHistory(
       ? [HUB_HINT_NO_MATCH]
       : [HUB_HINT_OPEN_RELEASE];
 
-  return mcpResult(serializeStepHistory(history), { next });
+  // The step on screen, linked only when the scan itself says the step is
+  // still there.
+  //
+  // `history.flow` is the caller's own filter echoed back, unvalidated, so a
+  // scan that named no flow gets no link (a step address without one resolves
+  // to nothing in the app) and a scan that named a wrong one would otherwise
+  // build an address the flow page opens and then refuses. Entries come back
+  // newest first, so an empty scan found the step in no release at all, and a
+  // newest entry of `removed` means the last thing that happened to it was its
+  // removal. Both are exactly the cases the app answers with its "not found in
+  // this flow" notice, and no link beats a link to a notice.
+  //
+  // The flow names on the ENTRIES are deliberately not used as the address
+  // instead: they say where the step USED to live. What remains is a step
+  // renamed since the newest release, which no signal in hand can catch; the
+  // app names that on screen.
+  const newest = history.entries[0];
+  const stepIsLive = newest !== undefined && newest.change !== 'removed';
+  const appUrl = stepIsLive
+    ? links.step({
+        baseUrl: client.appBaseUrl(),
+        projectId,
+        flowId,
+        step: history.step,
+        flow: history.flow,
+      })
+    : undefined;
+
+  return mcpResult(
+    {
+      ...serializeStepHistory(history),
+      ...(appUrl !== undefined && { appUrl }),
+    },
+    { next },
+  );
 }
 
 /**
@@ -851,8 +898,22 @@ async function handleThreads(
             HUB_HINT_RESOLVE_IN_APP,
           ];
 
+  // Where these are read. An anchored read links the anchor's own screen, and
+  // only a release anchor can be addressed from the shape held here. An
+  // unanchored read is the flow's whole discussion, which is read in the
+  // release history, so it links that.
+  const flowTarget = { baseUrl: client.appBaseUrl(), projectId, flowId };
+  const appUrl =
+    anchor === null
+      ? links.release(flowTarget)
+      : links.thread({ ...flowTarget, anchorType: anchor.anchorType });
+
   return mcpResult(
-    { threads: threads.map(serializeThread), hasMoreThreads },
+    {
+      threads: threads.map(serializeThread),
+      hasMoreThreads,
+      ...(appUrl !== undefined && { appUrl }),
+    },
     { next },
   );
 }

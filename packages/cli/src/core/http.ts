@@ -1,4 +1,5 @@
 import { resolveAppUrl, resolveDeployToken } from '../lib/config-file.js';
+import { requireSecureUrl } from '../lib/secure-url.js';
 import { resolveAccessToken } from './auth.js';
 import { clientContextHeaders } from './client-context.js';
 
@@ -43,6 +44,11 @@ function buildHeaders(
 /**
  * Authenticated fetch — resolves base URL + adds auth token.
  * Use for all API calls that require WALKEROS_TOKEN.
+ *
+ * The transport is checked only once a credential is actually going out.
+ * `resolveAppUrl` keeps answering with whatever is configured, which is what
+ * the paths that merely REPORT the target (diagnostics, health, telemetry)
+ * need from it.
  */
 export async function apiFetch(
   path: string,
@@ -50,6 +56,7 @@ export async function apiFetch(
 ): Promise<Response> {
   const baseUrl = resolveAppUrl();
   const token = await resolveAccessToken();
+  if (token) requireSecureUrl(baseUrl);
   return fetch(`${baseUrl}${path}`, {
     ...init,
     headers: buildHeaders(token, init?.headers),
@@ -88,6 +95,7 @@ export async function deployFetch(
     throw new Error(
       'No authentication token available. Set WALKEROS_DEPLOY_TOKEN or run walkeros auth login.',
     );
+  requireSecureUrl(baseUrl);
   return fetch(`${baseUrl}${path}`, {
     ...init,
     headers: buildHeaders(token, init?.headers),

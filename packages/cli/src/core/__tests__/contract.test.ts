@@ -75,8 +75,37 @@ function mockHealth(body: unknown, ok = true): void {
   })) as unknown as typeof fetch;
 }
 
+/**
+ * Like `mockHealth`, but records the URLs the probe fetched so a test can
+ * assert WHICH app was probed, not only what the body said.
+ */
+function mockHealthCapturingUrls(body: unknown): string[] {
+  const urls: string[] = [];
+  const mock: typeof fetch = async (input) => {
+    urls.push(String(input));
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  global.fetch = mock;
+  return urls;
+}
+
 describe('fetchHealth', () => {
   afterEach(() => jest.restoreAllMocks());
+
+  it('probes the baseUrl it is given', async () => {
+    const urls = mockHealthCapturingUrls({ status: 'ok' });
+    await fetchHealth('https://passed.test');
+    expect(urls).toEqual(['https://passed.test/api/health']);
+  });
+
+  it('probes the locally resolved app URL when no baseUrl is given', async () => {
+    const urls = mockHealthCapturingUrls({ status: 'ok' });
+    await fetchHealth();
+    expect(urls).toEqual(['https://app.test/api/health']);
+  });
 
   it('parses contractVersion and contractHash defensively', async () => {
     mockHealth({
@@ -111,6 +140,34 @@ describe('fetchHealth', () => {
 
 describe('compareContract', () => {
   afterEach(() => jest.restoreAllMocks());
+
+  it('probes input.baseUrl instead of the locally resolved app URL', async () => {
+    // A caller that is not the local CLI (the MCP's hosted door) names its own
+    // backend. Without this the verdict would describe whatever the local
+    // machine resolves, which on a hosted door is production.
+    const urls = mockHealthCapturingUrls({
+      status: 'ok',
+      contractVersion: '1.0.0',
+      contractHash: 'BAKED_HASH',
+    });
+    const out = await compareContract({
+      bakedVersion: '1.0.0',
+      bakedHash: 'BAKED_HASH',
+      baseUrl: 'https://stage.app.walkeros.io',
+    });
+    expect(urls).toEqual(['https://stage.app.walkeros.io/api/health']);
+    expect(out.verdict).toBe('in-sync');
+  });
+
+  it('probes the locally resolved app URL when baseUrl is omitted', async () => {
+    const urls = mockHealthCapturingUrls({
+      status: 'ok',
+      contractVersion: '1.0.0',
+      contractHash: 'BAKED_HASH',
+    });
+    await compareContract({ bakedVersion: '1.0.0', bakedHash: 'BAKED_HASH' });
+    expect(urls).toEqual(['https://app.test/api/health']);
+  });
 
   it('in-sync when live hash equals baked hash', async () => {
     mockHealth({

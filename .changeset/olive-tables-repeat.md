@@ -2,9 +2,9 @@
 '@walkeros/cli': minor
 ---
 
-`walkeros login` now uses the standard device authorization grant and refreshes
-its session automatically. Existing tokens keep working until they expire; run
-`walkeros login` once to switch.
+`walkeros auth login` now uses the standard device authorization grant and
+refreshes its session automatically. Existing tokens keep working until they
+expire; run `walkeros auth login` once to switch.
 
 Breaking: `getAuthHeaders` is async, and it rejects when the session needs a
 refresh that cannot be carried out rather than quietly returning no header.

@@ -14,10 +14,11 @@ jest.mock('../../../core/auth.js', () => ({
   resolveAccessToken: jest.fn().mockResolvedValue('test-token'),
 }));
 
-import { resolveDeployToken } from '../../../lib/config-file.js';
+import { resolveAppUrl, resolveDeployToken } from '../../../lib/config-file.js';
 import { resolveAccessToken } from '../../../core/auth.js';
 
 const mockResolveAccessToken = jest.mocked(resolveAccessToken);
+const mockResolveAppUrl = jest.mocked(resolveAppUrl);
 
 describe('core/http', () => {
   const originalFetch = global.fetch;
@@ -46,6 +47,24 @@ describe('core/http', () => {
             Authorization: 'Bearer test-token',
           }),
         }),
+      );
+    });
+
+    it('refuses to send the bearer over plain http off the local machine', async () => {
+      mockResolveAppUrl.mockReturnValueOnce('http://stage.app.walkeros.io');
+
+      await expect(apiFetch('/api/feedback')).rejects.toThrow(/plain http/);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('allows a loopback app URL over plain http', async () => {
+      mockResolveAppUrl.mockReturnValueOnce('http://localhost:3000');
+
+      await apiFetch('/api/feedback');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/feedback',
+        expect.anything(),
       );
     });
 
@@ -95,9 +114,30 @@ describe('core/http', () => {
       );
       expect(mockResolveAccessToken).not.toHaveBeenCalled();
     });
+
+    it('carries no credential, so plain http is the caller\u2019s to choose', async () => {
+      mockResolveAppUrl.mockReturnValueOnce('http://stage.app.walkeros.io');
+
+      await publicFetch('/api/oauth/device_authorization');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://stage.app.walkeros.io/api/oauth/device_authorization',
+        expect.anything(),
+      );
+    });
   });
 
   describe('deployFetch', () => {
+    it('refuses to send the deploy token over plain http off the local machine', async () => {
+      jest.mocked(resolveDeployToken).mockReturnValueOnce('deploy-tok');
+      mockResolveAppUrl.mockReturnValueOnce('http://stage.app.walkeros.io');
+
+      await expect(deployFetch('/api/projects/p1/x')).rejects.toThrow(
+        /plain http/,
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
     it('uses deploy token when available', async () => {
       jest.mocked(resolveDeployToken).mockReturnValueOnce('deploy-tok');
 

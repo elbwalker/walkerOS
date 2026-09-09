@@ -77,6 +77,26 @@ describe('fetchContentString auth scoping', () => {
     expect(calls[0]?.authorization).toBeUndefined();
   });
 
+  it('refuses to send the bearer to the app over plain http', async () => {
+    const { fetchFn, calls } = recorder();
+    globalThis.fetch = fetchFn;
+    process.env.WALKEROS_APP_URL = 'http://app.example.test';
+
+    await expect(
+      fetchContentString('http://app.example.test/api/flows/fl_1/bundle.js'),
+    ).rejects.toThrow(/plain http/);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('leaves a plain http URL that carries no bearer alone', async () => {
+    const { fetchFn, calls } = recorder();
+    globalThis.fetch = fetchFn;
+
+    await fetchContentString('http://attacker.example/flow.json');
+
+    expect(calls[0]?.authorization).toBeUndefined();
+  });
+
   it('returns the body it fetched', async () => {
     const { fetchFn } = recorder();
     globalThis.fetch = fetchFn;

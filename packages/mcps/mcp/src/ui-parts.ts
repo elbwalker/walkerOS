@@ -12,6 +12,19 @@ export interface FlowCanvasPayload {
   flowConfig: Record<string, unknown>;
   highlight?: { stepAddress: string; reason: string };
   suggestions?: SuggestionTile[];
+  /**
+   * Absolute link to this flow's page in the app, from `links.flow`.
+   *
+   * Named for the `appBaseUrl()` seam it is built from, and never `url`: that
+   * is a field several app responses already use for something of their own
+   * (a deployment's `url` is where it SERVES), and one key meaning one thing
+   * across every tool is what keeps a link from ever landing on top of it.
+   *
+   * Optional because a tool that cannot name the project or the flow emits no
+   * link rather than a guess, and because the in-app chat renders the canvas
+   * itself and has no use for a link to the page it is already on.
+   */
+  appUrl?: string;
 }
 
 export interface FlowCanvasToolResult extends FlowCanvasPayload {

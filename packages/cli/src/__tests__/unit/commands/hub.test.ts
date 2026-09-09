@@ -120,6 +120,25 @@ describe('hub programmatic API', () => {
     );
   });
 
+  it('setReleaseRationale clears a rationale with a null humanText', async () => {
+    mockApiFetch.mockResolvedValue(
+      ok({ versionId: 'ver_abc', humanText: null }),
+    );
+    await setReleaseRationale({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+      versionId: 'ver_abc',
+      text: null,
+    });
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      '/api/projects/proj_1/flows/flow_1/releases/annotations',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ versionId: 'ver_abc', humanText: null }),
+      }),
+    );
+  });
+
   it('listThreads sends includeMessages as the string the route parses', async () => {
     mockApiFetch.mockResolvedValue(ok({ threads: [], hasMoreThreads: false }));
     await listThreads({

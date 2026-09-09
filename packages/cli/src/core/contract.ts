@@ -94,10 +94,18 @@ const HEALTH_TIMEOUT_MS = 5000;
  * rejects without a credential) and defensively parses the JSON body. Resolves `{ reachable: false }`
  * only on a real network/timeout failure; a non-2xx status still counts as
  * reachable.
+ *
+ * `baseUrl` names the app to probe, without a trailing slash. Omitted, it
+ * falls back to `resolveAppUrl()`, the local machine's chain
+ * (`WALKEROS_APP_URL`, then the CLI config file, then the built-in default),
+ * which is what every `walkeros` binary invocation wants. A caller that is
+ * NOT the local CLI has to pass its own: an in-process host has no CLI config
+ * to read, so the fallback would silently probe a different backend than the
+ * one that caller talks to.
  */
-export async function fetchHealth(): Promise<HealthResult> {
+export async function fetchHealth(baseUrl?: string): Promise<HealthResult> {
   try {
-    const res = await fetch(`${resolveAppUrl()}/api/health`, {
+    const res = await fetch(`${baseUrl ?? resolveAppUrl()}/api/health`, {
       signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
     });
     const body: unknown = await res.json().catch(() => undefined);
@@ -134,10 +142,16 @@ export interface ContractComparison {
 export interface CompareContractInput {
   bakedVersion?: string;
   bakedHash?: string;
+  /**
+   * The app to probe, without a trailing slash. Omitted, the probe resolves
+   * the local machine's app URL; see {@link fetchHealth}.
+   */
+  baseUrl?: string;
 }
 
 /**
  * Compare the client's baked contract against the live app's `/api/health`.
+ * The app is `input.baseUrl` when given, otherwise the locally resolved one.
  *
  * - unreachable / missing `contractVersion`+`contractHash` → `unknown`
  * - baked hash == live hash → `in-sync`
@@ -151,7 +165,7 @@ export async function compareContract(
   const bakedVersion = input.bakedVersion ?? bakedContractVersion;
   const bakedHash = input.bakedHash ?? bakedContractHash;
 
-  const health = await fetchHealth();
+  const health = await fetchHealth(input.baseUrl);
   if (
     !health.reachable ||
     health.contractVersion === undefined ||

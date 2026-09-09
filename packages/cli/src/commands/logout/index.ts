@@ -5,6 +5,7 @@ import {
   getConfigPath,
   readConfig,
   resolveAppUrl,
+  type WalkerOSConfig,
 } from '../../lib/config-file.js';
 import type { GlobalOptions } from '../../types/global.js';
 
@@ -17,11 +18,16 @@ export async function logoutCommand(
 ): Promise<void> {
   const logger = createCLILogger(options);
 
-  const { deleted } = await logout();
+  const { deleted, superseded } = await logout();
   const configPath = getConfigPath();
 
   if (options.json) {
-    logger.json({ success: true, deleted });
+    logger.json({ success: true, deleted, superseded });
+  } else if (superseded) {
+    logger.info(
+      'A newer session was stored while logging out, and was kept. ' +
+        'Run `walkeros auth logout` again to remove it.',
+    );
   } else if (deleted) {
     logger.info(`Logged out. Session removed from ${configPath}`);
   } else {
@@ -31,6 +37,24 @@ export async function logoutCommand(
   process.exit(0);
 }
 
+export interface LogoutResult {
+  deleted: boolean;
+  /** A different session reached the config while the revocation was in flight. */
+  superseded: boolean;
+}
+
+/** Whether two reads of the config carry the same session. */
+function sameSession(
+  before: WalkerOSConfig | null,
+  after: WalkerOSConfig,
+): boolean {
+  return (
+    before?.accessToken === after.accessToken &&
+    before?.refreshToken === after.refreshToken &&
+    before?.token === after.token
+  );
+}
+
 /**
  * Revoke the stored refresh token, then drop the local config.
  *
@@ -38,13 +62,23 @@ export async function logoutCommand(
  * alive on the server that nothing can ever reach to retire. It is best
  * effort: a logout on a plane still has to clear the machine.
  */
-export async function logout(): Promise<{ deleted: boolean }> {
-  const config = readConfig();
-  const appUrl = resolveAppUrl();
+export async function logout(): Promise<LogoutResult> {
+  const before = readConfig();
 
-  if (config?.refreshToken) {
-    await revokeRefreshToken(appUrl, config.refreshToken);
+  if (before?.refreshToken) {
+    await revokeRefreshToken(resolveAppUrl(), before.refreshToken);
   }
 
-  return { deleted: deleteConfig() };
+  // Re-read: revocation is a network round trip, and a login that finished
+  // inside it stored a session this logout never saw. Deleting the file would
+  // take that session with it, so the newer credential wins.
+  //
+  // It narrows the window rather than closing it. Only the token refresh takes
+  // the config lock, and holding it across the revocation would be a protocol
+  // change, not a check.
+  const after = readConfig();
+  if (after && !sameSession(before, after))
+    return { deleted: false, superseded: true };
+
+  return { deleted: deleteConfig(), superseded: false };
 }

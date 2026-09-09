@@ -38,7 +38,7 @@ function noticeLegacyToken(): void {
   legacyNoticeShown = true;
   process.stderr.write(
     'walkerOS: using a static token from your config. ' +
-      'Run `walkeros login` to switch to a session that refreshes automatically.\n',
+      'Run `walkeros auth login` to switch to a session that refreshes automatically.\n',
   );
 }
 
@@ -55,7 +55,7 @@ function isFresh(config: WalkerOSConfig, nowMs: number): boolean {
  *
  * Priority: `WALKEROS_TOKEN`, then a legacy static token, then the OAuth
  * session. Returns null when nothing can be resolved, which callers render as
- * "run `walkeros login`".
+ * "run `walkeros auth login`".
  *
  * Throws when a refresh was needed but could not be carried out, which is a
  * different problem from having no session and must not be reported as one.
@@ -104,7 +104,7 @@ export async function resolveAccessToken(opts?: {
       //
       // Raised rather than returned as null, because null is how this function
       // says "there is no session", which sends callers down the wrong path:
-      // they tell the person to run `walkeros login` and send the request
+      // they tell the person to run `walkeros auth login` and send the request
       // unauthenticated, when the session is fine and only the network was not.
       const reason = error instanceof Error ? error.message : String(error);
       throw new Error(
@@ -144,7 +144,7 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
 
 /**
  * Where a credential would come from, without resolving or refreshing it.
- * For commands that want to send someone to `walkeros login` before spending
+ * For commands that want to send someone to `walkeros auth login` before spending
  * a network round trip.
  */
 export function credentialSource(): 'env' | 'config' | null {

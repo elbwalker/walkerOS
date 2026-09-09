@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { requireSecureUrl } from '../lib/secure-url.js';
 
 /**
  * OAuth 2.1 client for the walkerOS authorization server.
@@ -31,6 +32,14 @@ const REFRESH_TIMEOUT_MS = 10_000;
  * how long a logout stands still before clearing the machine.
  */
 const REVOKE_TIMEOUT_MS = 5_000;
+
+/**
+ * Ceiling on the request that opens a device authorization. Nothing has been
+ * issued yet, so this only bounds how long `walkeros auth login` stands still
+ * before it can show a code, but a server that accepts the connection and then
+ * says nothing would otherwise hold it for the HTTP client's own default.
+ */
+const DEVICE_AUTHORIZATION_TIMEOUT_MS = 10_000;
 
 const FORM_HEADERS = {
   'Content-Type': 'application/x-www-form-urlencoded',
@@ -108,16 +117,24 @@ function describe(response: Response, body: unknown): string {
   return `HTTP ${response.status}`;
 }
 
+/**
+ * Every request in this module either carries a credential or mints one, so
+ * the two rules that protect one are applied here rather than per call:
+ * plain http is refused off the local machine, and a redirect is an error
+ * rather than a hop, because following one would hand the token (or the code
+ * that buys it) to whichever host the answer named.
+ */
 function post(
   fetchFn: typeof fetch,
   url: string,
   form: Record<string, string>,
   signal?: AbortSignal,
 ): Promise<Response> {
-  return fetchFn(url, {
+  return fetchFn(requireSecureUrl(url), {
     method: 'POST',
     headers: { ...FORM_HEADERS },
     body: new URLSearchParams(form).toString(),
+    redirect: 'error',
     ...(signal ? { signal } : {}),
   });
 }
@@ -153,6 +170,7 @@ export async function startDeviceAuthorization(
       // cannot be replayed against the MCP resource.
       resource: `${appUrl}/api`,
     },
+    AbortSignal.timeout(DEVICE_AUTHORIZATION_TIMEOUT_MS),
   );
 
   const body = await readJson(response);

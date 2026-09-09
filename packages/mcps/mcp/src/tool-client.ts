@@ -577,6 +577,20 @@ export interface ToolClient {
    */
   logout(): Promise<{ deleted: boolean }>;
 
+  /**
+   * The base URL of the walkerOS app this door talks to, without a trailing
+   * slash. REQUIRED: a tool that puts a link in front of a person has to name
+   * the backend it actually reached, and a door that cannot name itself would
+   * emit links into a chat transcript that point somewhere else. Making it
+   * required means the compiler, not a runtime surprise, catches that.
+   *
+   * Each door answers from its own world: the CLI-backed client resolves the
+   * user's machine (`WALKEROS_APP_URL`, then the CLI config file, then the
+   * built-in default), while an in-process host returns the URL it is served
+   * on. Never derive this from the local CLI inside a tool.
+   */
+  appBaseUrl(): string;
+
   // Diagnostics: unauthenticated reachability probe of the app's public
   // `/api/health` route. Resolves `{ reachable: false }` only on a real
   // network/timeout failure, never on "not authenticated". Optional: clients

@@ -21,6 +21,20 @@
     "project_manage",
     "secret_manage"
   ],
+  "links": {
+    "$comment": "Deep links the tools emit, under the response key named here. They land in chat transcripts and notes nobody can reach back into, so a route rename or a view-key rename in the app has to fail a test at edit time instead of rotting in someone's history. The builders live in walkerOS packages/mcps/mcp/src/links.ts; the app checks these against its real routes and its url-state registry in src/lib/mcp/__tests__/link-routes.test.ts. A route template names its params as the BUILDER names them, and the app's folder may spell the same segment differently ([id] for {flowId}), so a template is matched by shape and position, never by param name.",
+    "responseKey": "appUrl",
+    "viewParamKey": "view",
+    "routes": {
+      "flowPage": "/projects/{projectId}/flows/{flowId}",
+      "deploymentPage": "/projects/{projectId}/deployments/{deploymentId}"
+    },
+    "views": {
+      "contract": [],
+      "releases": [],
+      "step": ["flow", "step"]
+    }
+  },
   "observeSession": {
     "name": "observe_session",
     "title": "Observe Session",

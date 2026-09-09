@@ -692,4 +692,142 @@ describe('hub_manage', () => {
       expect(hintsOf(result)).toEqual([HUB_HINT_NOTHING_WRITTEN]);
     });
   });
+
+  // A link belongs in the structured result, not only in prose: an agent
+  // reads it as data and hands it on without retyping it out of a sentence.
+  describe('links into the app', () => {
+    it('links the release history a release index is of', async () => {
+      const result = await withProject({
+        listReleases: async () => ({
+          releases: [release()],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        }),
+      }).handler({ action: 'releases', flowId: 'flow_1' });
+      expect(structured(result).appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/flows/flow_1?view=releases',
+      );
+    });
+
+    it('links the step a scan was narrowed to one flow by', async () => {
+      const result = await withProject({
+        listStepHistory: async () => stepHistory({ flow: 'web' }),
+      }).handler({
+        action: 'step_history',
+        flowId: 'flow_1',
+        step: 'destination.ga4',
+        flow: 'web',
+      });
+      expect(structured(result).appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/flows/flow_1?view=step&flow=web&step=destination.ga4',
+      );
+    });
+
+    it('links nothing for a scan that named no flow', async () => {
+      // `flow` on the response is the caller's own filter echoed back, and a
+      // step address without one opens nothing in the app.
+      const result = await withProject({
+        listStepHistory: async () => stepHistory(),
+      }).handler({
+        action: 'step_history',
+        flowId: 'flow_1',
+        step: 'destination.ga4',
+      });
+      expect(structured(result)).not.toHaveProperty('appUrl');
+    });
+
+    // The filter is echoed back unvalidated, so the scan's own result is the
+    // only evidence in hand that the step is still there. Both of these are
+    // what the app answers with its "not found in this flow" notice.
+    it('links nothing when the scan matched no release', async () => {
+      const result = await withProject({
+        listStepHistory: async () => stepHistory({ flow: 'web', entries: [] }),
+      }).handler({
+        action: 'step_history',
+        flowId: 'flow_1',
+        step: 'destination.typo',
+        flow: 'web',
+      });
+      expect(structured(result)).not.toHaveProperty('appUrl');
+    });
+
+    it('links nothing when the newest release removed the step', async () => {
+      const result = await withProject({
+        listStepHistory: async () =>
+          stepHistory({
+            flow: 'web',
+            entries: [
+              {
+                versionId: 'ver_b',
+                versionNumber: 15,
+                createdAt: '2026-09-02T00:00:00.000Z',
+                flow: 'web',
+                change: 'removed',
+                humanText: null,
+                generatedSummary: null,
+              },
+              {
+                versionId: 'ver_a',
+                versionNumber: 14,
+                createdAt: '2026-09-01T00:00:00.000Z',
+                flow: 'web',
+                change: 'added',
+                humanText: null,
+                generatedSummary: null,
+              },
+            ],
+          }),
+      }).handler({
+        action: 'step_history',
+        flowId: 'flow_1',
+        step: 'destination.ga4',
+        flow: 'web',
+      });
+      expect(structured(result)).not.toHaveProperty('appUrl');
+    });
+
+    it('sends a contract step to the contract view, which opens', async () => {
+      const result = await withProject({
+        listStepHistory: async () => stepHistory({ step: 'contract.checkout' }),
+      }).handler({
+        action: 'step_history',
+        flowId: 'flow_1',
+        step: 'contract.checkout',
+      });
+      expect(structured(result).appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/flows/flow_1?view=contract',
+      );
+    });
+
+    it('links the release history for a release-anchored discussion', async () => {
+      const result = await withProject({
+        getRelease: async () => detail(),
+        listThreads: async () => ({
+          threads: [thread()],
+          hasMoreThreads: false,
+        }),
+      }).handler({ action: 'threads', flowId: 'flow_1', versionId: 'ver_a' });
+      expect(structured(result).appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/flows/flow_1?view=releases',
+      );
+    });
+
+    it('links nothing for a step-anchored discussion, which has no screen', async () => {
+      const result = await withProject({
+        listThreads: async () => ({
+          threads: [
+            thread({ anchorType: 'step', anchorKey: 'destination.ga4' }),
+          ],
+          hasMoreThreads: false,
+        }),
+      }).handler({
+        action: 'threads',
+        flowId: 'flow_1',
+        anchorType: 'step',
+        anchorKey: 'destination.ga4',
+      });
+      expect(structured(result)).not.toHaveProperty('appUrl');
+    });
+  });
 });

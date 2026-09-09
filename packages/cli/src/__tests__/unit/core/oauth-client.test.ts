@@ -8,6 +8,12 @@ import {
 } from '../../../core/oauth-client.js';
 
 const APP_URL = 'https://app.example.test';
+
+/** The same app, reached over plain http: a remote host, so never allowed. */
+const HTTP_URL = 'http://app.example.test';
+
+/** A fetch that must never be called; every case here refuses before sending. */
+const F = (): typeof fetch => recorder(() => jsonResponse({})).fetchFn;
 const DEVICE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
 
 /** `withConfigLock` treats a lock held longer than this as abandoned. */
@@ -19,6 +25,7 @@ interface RecordedCall {
   contentType: string | undefined;
   form: Record<string, string>;
   signal: AbortSignal | null | undefined;
+  redirect: RequestRedirect | undefined;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -59,6 +66,7 @@ function recorder(...responses: Array<() => Response>) {
       contentType: headers['Content-Type'] ?? headers['content-type'],
       form: Object.fromEntries(new URLSearchParams(body)),
       signal: init?.signal,
+      redirect: init?.redirect,
     });
 
     const next = responses[index] ?? responses[responses.length - 1];
@@ -106,6 +114,22 @@ describe('oauth-client', () => {
         scope: CLI_SCOPE,
         resource: `${APP_URL}/api`,
       });
+    });
+
+    it('bounds the request with a signal, so a silent server cannot hold it', async () => {
+      const { fetchFn, calls } = recorder(() =>
+        jsonResponse({
+          device_code: 'dc_1',
+          user_code: 'ABCD-EFGH',
+          verification_uri: `${APP_URL}/oauth/device`,
+          expires_in: 600,
+          interval: 5,
+        }),
+      );
+
+      await startDeviceAuthorization(APP_URL, fetchFn);
+
+      expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
     });
 
     it('maps the snake_case response onto the camelCase result', async () => {
@@ -371,6 +395,54 @@ describe('oauth-client', () => {
       await expect(
         revokeRefreshToken(APP_URL, 'rt_old', fetchFn),
       ).resolves.toBeUndefined();
+    });
+  });
+  describe('credential transport', () => {
+    const deviceOk = () =>
+      jsonResponse({
+        device_code: 'dc_1',
+        user_code: 'ABCD-EFGH',
+        verification_uri: `${APP_URL}/oauth/device`,
+        expires_in: 600,
+        interval: 5,
+      });
+
+    it('treats a redirect as an error rather than a hop', async () => {
+      const { fetchFn, calls } = recorder(deviceOk);
+      await startDeviceAuthorization(APP_URL, fetchFn);
+      expect(calls[0]?.redirect).toBe('error');
+    });
+
+    it.each([
+      ['a device authorization', () => startDeviceAuthorization(HTTP_URL, F())],
+      ['a token poll', () => pollDeviceToken(HTTP_URL, 'dc_1', F())],
+      ['a refresh', () => refreshTokens(HTTP_URL, 'rt_1', F())],
+    ])('refuses %s over plain http off the local machine', async (_l, run) => {
+      await expect(run()).rejects.toThrow(/plain http/);
+    });
+
+    it('sends nothing at all when it refuses', async () => {
+      const { fetchFn, calls } = recorder(deviceOk);
+      await expect(
+        startDeviceAuthorization(HTTP_URL, fetchFn),
+      ).rejects.toThrow();
+      expect(calls).toHaveLength(0);
+    });
+
+    it('swallows the refusal on revocation, which must never block a logout', async () => {
+      const { fetchFn, calls } = recorder(() => jsonResponse({}));
+      await expect(
+        revokeRefreshToken(HTTP_URL, 'rt_1', fetchFn),
+      ).resolves.toBeUndefined();
+      expect(calls).toHaveLength(0);
+    });
+
+    it('allows plain http to loopback, the documented local flow', async () => {
+      const { fetchFn, calls } = recorder(deviceOk);
+      await startDeviceAuthorization('http://localhost:3000', fetchFn);
+      expect(calls[0]?.url).toBe(
+        'http://localhost:3000/api/oauth/device_authorization',
+      );
     });
   });
 });

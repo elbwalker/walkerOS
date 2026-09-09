@@ -1,5 +1,6 @@
 import { createApiClient } from '../../../core/api-client.js';
 import { resolveAccessToken } from '../../../core/auth.js';
+import { resolveAppUrl } from '../../../lib/config-file.js';
 
 jest.mock('../../../core/auth.js', () => ({
   resolveAccessToken: jest.fn(),
@@ -10,6 +11,7 @@ jest.mock('../../../lib/config-file.js', () => ({
 }));
 
 const mockResolveAccessToken = jest.mocked(resolveAccessToken);
+const mockResolveAppUrl = jest.mocked(resolveAppUrl);
 
 describe('createApiClient', () => {
   const originalFetch = global.fetch;
@@ -79,5 +81,24 @@ describe('createApiClient', () => {
     await expect(client.GET('/api/projects')).rejects.toThrow(
       'Not authenticated',
     );
+  });
+
+  it('refuses to send the bearer over plain http off the local machine', async () => {
+    mockResolveAccessToken.mockResolvedValue('at_first');
+    mockResolveAppUrl.mockReturnValueOnce('http://app.walkeros.io');
+    const client = createApiClient();
+
+    await expect(client.GET('/api/projects')).rejects.toThrow(/plain http/);
+    expect(sentAuthorization).toEqual([]);
+  });
+
+  it('allows a loopback app URL over plain http', async () => {
+    mockResolveAccessToken.mockResolvedValue('at_first');
+    mockResolveAppUrl.mockReturnValueOnce('http://localhost:3000');
+    const client = createApiClient();
+
+    await client.GET('/api/projects');
+
+    expect(sentAuthorization).toEqual(['Bearer at_first']);
   });
 });

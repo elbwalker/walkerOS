@@ -11,10 +11,11 @@ import {
   resolveAppUrl,
   getConfigPath,
 } from '../../lib/config-file.js';
+import { requireSecureUrl } from '../../lib/secure-url.js';
 import type { GlobalOptions } from '../../types/global.js';
 
 /**
- * `walkeros login` on the RFC 8628 device authorization grant.
+ * `walkeros auth login` on the RFC 8628 device authorization grant.
  *
  * The CLI never sees a password and never runs a local callback server: it
  * shows a code, the person approves it in a browser they already trust, and
@@ -47,6 +48,13 @@ const DEFAULT_POLL_TIMEOUT_MS = 900_000;
 
 /** RFC 8628 section 3.5: each `slow_down` adds five seconds. */
 const SLOW_DOWN_STEP_MS = 5000;
+
+/**
+ * Ceiling on the identity lookup. It runs AFTER the session is on disk, so a
+ * server that accepts the connection and then says nothing would otherwise
+ * hold `walkeros auth login` open long past its last useful work.
+ */
+const WHOAMI_TIMEOUT_MS = 10_000;
 
 const TIMED_OUT = 'Authorization timed out. Please try again.';
 
@@ -168,6 +176,7 @@ async function fetchEmail(
   try {
     const response = await fetchFn(`${appUrl}/api/auth/whoami`, {
       headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(WHOAMI_TIMEOUT_MS),
     });
     if (!response.ok) return undefined;
     const parsed = WhoamiSchema.safeParse(await response.json());
@@ -215,7 +224,7 @@ export async function completeDeviceLogin(
   options: CompleteDeviceLoginOptions = {},
 ): Promise<DeviceLoginResult> {
   const fetchFn = options.fetch ?? globalThis.fetch;
-  const appUrl = options.url || resolveAppUrl();
+  const appUrl = requireSecureUrl(options.url || resolveAppUrl());
   const deadline = Date.now() + (options.timeoutMs ?? DEFAULT_POLL_TIMEOUT_MS);
 
   let intervalMs = options.intervalMs ?? DEFAULT_POLL_INTERVAL_MS;
@@ -264,7 +273,7 @@ export async function completeDeviceLogin(
 
 export async function login(options: LoginOptions = {}): Promise<LoginResult> {
   const fetchFn = options.fetch ?? globalThis.fetch;
-  const appUrl = options.url || resolveAppUrl();
+  const appUrl = requireSecureUrl(options.url || resolveAppUrl());
 
   let authorization;
   try {

@@ -449,158 +449,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/auth/device/code': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Request device code
-     * @description Generate a device code and user code for the device authorization flow.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Device code generated */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeviceCodeResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/auth/device/approve': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Approve device code
-     * @description Approve a device authorization request using the user code. Requires authentication.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['ApproveDeviceRequest'];
-        };
-      };
-      responses: {
-        /** @description Device approved */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ApproveDeviceResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/auth/device/token': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Poll device token
-     * @description Poll for authorization status using the device code. Returns a token when approved.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['DeviceTokenRequest'];
-        };
-      };
-      responses: {
-        /** @description Authorization approved */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeviceTokenResponse'];
-          };
-        };
-        /** @description Pending, slow down, or expired */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/projects': {
     parameters: {
       query?: never;
@@ -4046,8 +3894,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * List my tokens
-     * @description List all API tokens for the authenticated user. Returns summaries (no raw token values).
+     * List my automation tokens
+     * @description The caller's live automation tokens, with the scope and audience each carries. No raw token value is ever returned; `tokenPrefix` is the only fragment of one that survives issuance. A connected app's access token lives in the same store and is deliberately absent: it is taken back by disconnecting the app.
      */
     get: {
       parameters: {
@@ -4058,13 +3906,13 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description List of tokens */
+        /** @description List of automation tokens */
         200: {
           headers: {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['ListApiTokensResponse'];
+            'application/json': components['schemas']['ListAutomationTokensResponse'];
           };
         };
         /** @description Unauthorized */
@@ -4080,8 +3928,8 @@ export interface paths {
     };
     put?: never;
     /**
-     * Create token
-     * @description Create a new API token. The raw token is returned once and cannot be retrieved again.
+     * Create automation token
+     * @description Mint an automation token for the authenticated user. The audience is `api` and `mcp`, so one token works against REST and against `/api/mcp`, and the chosen scope decides how far it gets at either: `read` is refused every non-safe REST method with 403 `INSUFFICIENT_SCOPE`. The raw token is returned once and cannot be retrieved again, so the answer carries `Cache-Control: no-store`.
      */
     post: {
       parameters: {
@@ -4092,7 +3940,7 @@ export interface paths {
       };
       requestBody?: {
         content: {
-          'application/json': components['schemas']['CreateApiTokenRequest'];
+          'application/json': components['schemas']['CreateAutomationTokenRequest'];
         };
       };
       responses: {
@@ -4102,7 +3950,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['CreateApiTokenResponse'];
+            'application/json': components['schemas']['CreateAutomationTokenResponse'];
           };
         };
         /** @description Validation error */
@@ -4140,6 +3988,52 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/tokens/revoke-all': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Revoke all access
+     * @description Revoke every grant this person holds, the tokens hanging from them, and every automation token they hold. Runner tokens survive: those are the credentials deployed flow containers run with, so revoking them would stop every container the person is running. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token cannot disconnect everything its owner has connected.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Access revoked */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/tokens/{tokenId}': {
     parameters: {
       query?: never;
@@ -4151,8 +4045,8 @@ export interface paths {
     put?: never;
     post?: never;
     /**
-     * Revoke token
-     * @description Revoke an API token (soft delete via revokedAt timestamp).
+     * Revoke automation token
+     * @description Revoke one of the caller's tokens. Idempotent and scoped to the caller: an unknown id, another person's token and an already revoked one all answer 204, since a distinguishable answer would tell the caller which ids exist.
      */
     delete: {
       parameters: {
@@ -7776,12 +7670,13 @@ export interface paths {
     };
     /**
      * List the frames of a page, or of the whole project
-     * @description A frame is a named rectangle with marks inside it, the spatial unit of a measurement plan. Naming a `pageKey` returns that page’s frames at any depth, marks and all, newest updated first: the walk starts at the page’s top-level frames and descends containment, so a child is reachable through its parent rather than by carrying a page of its own. Naming no page returns every live frame of the project WITHOUT its marks, which is what makes that read cheap enough to answer "what does this project have": the marks are the bulk of a frame and a listing never renders them. That lean read asks nothing about containment, so a frame whose parent cannot be resolved still appears. Requires member role.
+     * @description A frame is a named rectangle with marks inside it, the spatial unit of a measurement plan. Naming a `pageKey` returns that page’s frames at any depth, marks and all, newest updated first: the walk starts at the page’s top-level frames and descends containment, so a child is reachable through its parent rather than by carrying a page of its own. Naming no page returns every live frame of the project WITHOUT its marks, which is what makes that read cheap enough to answer "what does this project have": the marks are the bulk of a frame and a listing never renders them. That lean read asks nothing about containment, so a frame whose parent cannot be resolved still appears. `include=marks` asks that project-wide read for the marks anyway, for a surface that spans pages and cannot fetch a page at a time; it is a second, heavier read of the same rows, taken after the lean list has already painted, and omitting it returns exactly the lean rows. It says nothing to the page read, which carries marks either way. Requires member role.
      */
     get: {
       parameters: {
         query?: {
           pageKey?: string;
+          include?: 'marks';
         };
         header?: never;
         path: {
@@ -8300,6 +8195,347 @@ export interface paths {
       };
     };
     put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/canvases': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List the canvases of the project
+     * @description A canvas is a named, freely arranged board over a project’s frames, the surface on which a plan is laid out across pages rather than within one. This returns every live canvas by name WITHOUT its document: the document is the bulk of a canvas and a listing renders none of it, so opening a board is the single-canvas read. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The project’s canvases, without their documents */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CanvasListResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Create one canvas
+     * @description Create one empty canvas at version 1. The id is the client’s, so a board drawn before the first save keeps its identity when it arrives. A canvas comes into existence here and nowhere else: a document write to an id the project does not hold is a 404 rather than a create, which is what keeps a stray write from minting a board. A name another live canvas already holds is 409 `CANVAS_NAME_EXISTS`; the partial unique index is over live rows, so a name a deleted canvas still carries is free. An id that is not a canvas id is refused by the body schema as 400 `VALIDATION_ERROR`. An id that is not available, because a canvas, in this project or another, already holds it, is 400 `INVALID_CANVAS`, whose message says nothing about the project that holds it. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @example cnv_V1StGXR8Z5jdHi6BmyT7K */
+            id: string;
+            name: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The created canvas, with its empty document */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Canvas'];
+          };
+        };
+        /** @description Invalid body, or an id that is not available */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description A name another live canvas already holds */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/canvases/{canvasId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read one canvas
+     * @description One canvas with its whole document: the nodes with their positions, the edges, and the node keys the board suppresses. A canvas of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted canvas is gone to every read. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Canvas ID (cnv_...) */
+          canvasId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The canvas */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Canvas'];
+          };
+        };
+        /** @description The path segment does not address a canvas */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Replace the document of one canvas
+     * @description The whole board every time: a canvas is read and written as a unit, so there is no partial write to reconcile. `clientWriteId` is minted at compose time and is what makes a replayed drain exact: a write whose id already produced the stored version landed once and is answered with that version, writing nothing, so an offline queue drains repeatedly without turning one edit into two versions. A write against a version someone else has moved past answers 409 `CANVAS_VERSION_CONFLICT` carrying the head, which is what lets a client raise keep-mine against load-theirs on the board that conflicted instead of dropping what a person drew. A canvas this project does not hold, or one that was removed, is 404 `CANVAS_NOT_FOUND`: this door replaces a document and never creates one. Requires member role.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Canvas ID (cnv_...) */
+          canvasId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            document: components['schemas']['CanvasDocument'];
+            baseVersion: number;
+            clientWriteId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The stored version */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PutCanvasResponse'];
+          };
+        };
+        /** @description Invalid body, or a path segment that addresses no canvas */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description This project does not hold the named canvas */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description A stale base version, carrying the head */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CanvasConflictResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
     post?: never;
     delete?: never;
     options?: never;
@@ -9527,147 +9763,6 @@ export interface paths {
       };
     };
     delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/mcp/tokens': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List MCP tokens
-     * @description List the authenticated user's personal MCP tokens. No secret material is returned.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description MCP token list */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListMcpTokensResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Issue MCP token
-     * @description Issue a personal MCP token. The raw token is returned exactly once and is never retrievable afterwards.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateMcpTokenRequest'];
-        };
-      };
-      responses: {
-        /** @description MCP token issued */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CreateMcpTokenResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/mcp/tokens/{tokenId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Revoke MCP token
-     * @description Revoke a personal MCP token by id.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          tokenId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description MCP token revoked */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
     options?: never;
     head?: never;
     patch?: never;
@@ -10931,14 +11026,19 @@ export interface components {
         role: string;
         joinedAt: string;
       }[];
-      apiTokens: {
+      tokens: {
         id: string;
         name: string;
+        /** @example automation */
+        kind: string;
+        /** @example read write */
+        scope: string;
+        /** @example api mcp */
+        audience: string;
         projectId: string | null;
-        origin: string;
         createdAt: string;
         lastUsedAt: string | null;
-        expiresAt: string | null;
+        expiresAt: string;
         revokedAt: string | null;
       }[];
       sessions: {
@@ -10946,14 +11046,6 @@ export interface components {
         createdAt: string;
         expiresAt: string;
         lastTouchedAt: string;
-      }[];
-      mcpTokens: {
-        id: string;
-        name: string;
-        createdAt: string;
-        lastUsedAt: string | null;
-        expiresAt: string;
-        revokedAt: string | null;
       }[];
       mcpSessions: {
         id: string;
@@ -10988,19 +11080,27 @@ export interface components {
         cancelledAt: string | null;
       }[];
     };
-    ApiTokenSummary: {
+    AutomationTokenSummary: {
       /** @example tok_a1b2c3d4 */
       id: string;
       /** @example CI Pipeline */
       name: string;
-      /** @example sk-walkeros-abcd */
-      prefix: string;
-      /** @example manual */
-      origin: string;
-      /** @example null */
-      projectId: string | null;
-      /** @example null */
-      scopes: string[] | null;
+      /** @example wos_pat_a1b2 */
+      tokenPrefix: string;
+      /**
+       * @example [
+       *       "read",
+       *       "write"
+       *     ]
+       */
+      scope: string[];
+      /**
+       * @example [
+       *       "api",
+       *       "mcp"
+       *     ]
+       */
+      audience: string[];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -11015,7 +11115,7 @@ export interface components {
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
        */
-      expiresAt: string | null;
+      expiresAt: string;
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -12041,6 +12141,89 @@ export interface components {
       };
       head: components['schemas']['Frame'];
     };
+    CanvasDocument: {
+      /** @enum {number} */
+      v: 1;
+      nodes: components['schemas']['CanvasNodeEntry'][];
+      edges: components['schemas']['CanvasEdgeEntry'][];
+      hidden: string[];
+    };
+    CanvasNodeEntry: {
+      kind: string;
+      ref: string;
+      position: components['schemas']['CanvasPoint'];
+      parent?: string;
+      size?: {
+        width: number;
+        height: number;
+      };
+      label?: string;
+    };
+    CanvasPoint: {
+      x: number;
+      y: number;
+    };
+    CanvasEdgeEntry: {
+      id: string;
+      /** @enum {string} */
+      kind: 'navigation';
+      from: string;
+      to: string;
+      label?: string;
+    };
+    Canvas: {
+      /** @example cnv_V1StGXR8Z5jdHi6BmyT7K */
+      id: string;
+      projectId: string;
+      name: string;
+      document: components['schemas']['CanvasDocument'];
+      version: number;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      createdBy: string;
+      updatedBy: string;
+    };
+    CanvasLean: {
+      /** @example cnv_V1StGXR8Z5jdHi6BmyT7K */
+      id: string;
+      projectId: string;
+      name: string;
+      version: number;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      createdBy: string;
+      updatedBy: string;
+    };
+    CanvasListResponse: {
+      canvases: components['schemas']['CanvasLean'][];
+    };
+    PutCanvasResponse: {
+      version: number;
+    };
+    CanvasConflictResponse: {
+      error: {
+        /** @enum {string} */
+        code: 'CANVAS_VERSION_CONFLICT';
+        message: string;
+      };
+      head: components['schemas']['Canvas'];
+    };
     SummarizeReleaseResponse: {
       /** @enum {string} */
       mode: 'draft' | 'check';
@@ -12870,33 +13053,6 @@ export interface components {
       /** @enum {boolean} */
       ok: true;
     };
-    CreateMcpTokenRequest: {
-      name: string;
-      ttlSeconds?: number;
-    };
-    CreateMcpTokenResponse: {
-      id: string;
-      name: string;
-      token: string;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      expiresAt: string;
-    };
-    ListMcpTokensResponse: {
-      tokens: components['schemas']['McpTokenSummary'][];
-    };
-    McpTokenSummary: {
-      id: string;
-      name: string;
-      audience: string;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      lastUsedAt: string | null;
-      /** Format: date-time */
-      expiresAt: string;
-    };
     PackageCatalogResponse: {
       catalog: components['schemas']['PackageCatalogEntry'][];
       count: number;
@@ -13000,27 +13156,6 @@ export interface components {
         lastTouchedAt: string;
         isCurrent: boolean;
       }[];
-    };
-    DeviceCodeResponse: {
-      deviceCode: string;
-      userCode: string;
-      expiresIn: number;
-      interval: number;
-    };
-    ApproveDeviceResponse: {
-      success: boolean;
-    };
-    ApproveDeviceRequest: {
-      userCode: string;
-    };
-    DeviceTokenResponse: {
-      token: string;
-      email: string;
-      userId: string;
-    };
-    DeviceTokenRequest: {
-      deviceCode: string;
-      hostname?: string;
     };
     ListProjectsResponse: {
       projects: components['schemas']['Project'][];
@@ -13174,18 +13309,32 @@ export interface components {
       /** @enum {string} */
       createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
     };
-    ListApiTokensResponse: {
-      tokens: components['schemas']['ApiTokenSummary'][];
+    ListAutomationTokensResponse: {
+      tokens: components['schemas']['AutomationTokenSummary'][];
     };
-    CreateApiTokenResponse: {
+    CreateAutomationTokenResponse: {
       /** @example tok_a1b2c3d4 */
       id: string;
       /** @example CI Pipeline */
       name: string;
-      /** @example sk-walkeros-abcd1234... */
+      /** @example wos_pat_a1b2c3d4... */
       token: string;
-      /** @example sk-walkeros-abcd */
-      prefix: string;
+      /** @example wos_pat_a1b2 */
+      tokenPrefix: string;
+      /**
+       * @example [
+       *       "read",
+       *       "write"
+       *     ]
+       */
+      scope: string[];
+      /**
+       * @example [
+       *       "api",
+       *       "mcp"
+       *     ]
+       */
+      audience: string[];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -13195,15 +13344,18 @@ export interface components {
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
        */
-      expiresAt: string | null;
-      /** @example null */
-      projectId: string | null;
+      expiresAt: string;
     };
-    CreateApiTokenRequest: {
+    CreateAutomationTokenRequest: {
       /** @example CI Pipeline */
       name: string;
+      /**
+       * @example read write
+       * @enum {string}
+       */
+      scope: 'read' | 'read write';
       /** @example 90 */
-      expiresInDays?: number | null;
+      expiresInDays: 30 | 90 | 180 | 365;
     };
     BundleResponse: {
       bundleId: string;

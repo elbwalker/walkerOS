@@ -641,7 +641,7 @@ describe('frame_manage', () => {
       action: 'list',
     });
     expect(structured(result)).toMatchObject({
-      error: expect.stringContaining('No default project'),
+      error: expect.stringContaining('No project selected'),
     });
   });
 });

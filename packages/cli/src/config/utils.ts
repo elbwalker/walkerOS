@@ -7,6 +7,7 @@ import path from 'path';
 import { mergeAuthHeaders } from '../core/http.js';
 import { resolveAccessToken } from '../core/auth.js';
 import { resolveAppUrl } from '../lib/config-file.js';
+import { requireSecureUrl } from '../lib/secure-url.js';
 
 /**
  * Check if a string is a valid URL
@@ -52,6 +53,9 @@ function isAppOrigin(url: string): boolean {
  */
 export async function fetchContentString(url: string): Promise<string> {
   const token = isAppOrigin(url) ? await resolveAccessToken() : null;
+  // Only when a bearer is going along: an unauthenticated config download is
+  // the person naming any URL they like, and http is theirs to choose.
+  if (token) requireSecureUrl(url);
   const response = await fetch(url, {
     headers: mergeAuthHeaders(token),
   });

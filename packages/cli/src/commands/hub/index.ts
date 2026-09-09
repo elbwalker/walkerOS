@@ -111,7 +111,13 @@ export interface SetReleaseRationaleOptions {
   projectId?: string;
   flowId: string;
   versionId: string;
-  text: string;
+  /**
+   * The rationale to store. `null` CLEARS the one already there: `humanText`
+   * is the only field a client may write, and null is how the route says
+   * "remove it". Without it there would be no way back from a rationale
+   * written by mistake.
+   */
+  text: string | null;
 }
 
 export async function setReleaseRationale(

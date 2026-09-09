@@ -83,6 +83,7 @@ function stubClient(): ToolClient {
     whoami: notImpl,
     credentialSource: () => null,
     logout: async () => ({ deleted: false }),
+    appBaseUrl: () => 'https://app.walkeros.io',
     checkHealth: async () => ({ reachable: true }),
     submitFeedback: notImpl,
     getFeedbackPreference: () => undefined,

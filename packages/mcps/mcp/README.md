@@ -55,8 +55,23 @@ npm install @walkeros/mcp
 
 The server starts, registers all tools, and runs the whole local loop without
 any credentials. `auth` reports `{ "authenticated": false }` and the local tools
-work regardless. Only the walkerOS cloud tools need a login, either through the
-`auth` tool's device code flow or a `WALKEROS_TOKEN` environment variable.
+work regardless. Only the walkerOS cloud tools need a credential.
+
+Two ways to get one:
+
+- **`auth` with `action: "login"`** runs the RFC 8628 device authorization
+  grant. It answers with a URL, you approve it in a browser you are already
+  signed in to, and a second call with the same `deviceCode` resumes polling
+  until the approval lands. The session that results refreshes itself, and it
+  appears in the app under Account, Connected apps, where disconnecting it takes
+  effect on the next call. `auth` with `action: "logout"` revokes it.
+- **`WALKEROS_TOKEN`** carries an automation token (`wos_pat_...`) minted in the
+  app under Account, then Automation tokens. It is used as-is and never
+  refreshed, which is what a CI job or a headless server wants.
+
+There is no endpoint that mints a token from another token, and nothing issues
+`sk-walkeros-` or `mcp-walkeros-` values any more; rows carrying them keep
+verifying until they expire.
 
 ## Quick start
 
@@ -133,11 +148,11 @@ Read these before writing a configuration by hand.
 
 ## Environment variables
 
-| Variable              | Required | Default                   | Purpose                                               |
-| --------------------- | -------- | ------------------------- | ----------------------------------------------------- |
-| `WALKEROS_TOKEN`      | No       | none                      | Bearer token, an alternative to the `auth` tool login |
-| `WALKEROS_PROJECT_ID` | No       | none                      | Active project ID (`proj_...`)                        |
-| `WALKEROS_APP_URL`    | No       | `https://app.walkeros.io` | Base URL override                                     |
+| Variable              | Required | Default                   | Purpose                                                                   |
+| --------------------- | -------- | ------------------------- | ------------------------------------------------------------------------- |
+| `WALKEROS_TOKEN`      | No       | none                      | Automation token (`wos_pat_...`), an alternative to the `auth` tool login |
+| `WALKEROS_PROJECT_ID` | No       | none                      | Active project ID (`proj_...`)                                            |
+| `WALKEROS_APP_URL`    | No       | `https://app.walkeros.io` | Base URL override                                                         |
 
 ## Programmatic usage
 

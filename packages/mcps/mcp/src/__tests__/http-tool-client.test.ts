@@ -320,6 +320,29 @@ describe('HttpToolClient', () => {
     });
     expect(cli.logout).toHaveBeenCalled();
   });
+
+  it('names the app through the same resolution every other method uses', () => {
+    (cli.resolveAppUrl as jest.Mock).mockReturnValue(
+      'https://stage.app.walkeros.io',
+    );
+
+    expect(new HttpToolClient().appBaseUrl()).toBe(
+      'https://stage.app.walkeros.io',
+    );
+    expect(cli.resolveAppUrl).toHaveBeenCalled();
+  });
+
+  it('strips a trailing slash the env var or config file may carry', () => {
+    // A base a caller concatenates a path onto has to have one shape, and
+    // neither WALKEROS_APP_URL nor the CLI config file promises it.
+    (cli.resolveAppUrl as jest.Mock).mockReturnValue(
+      'https://stage.app.walkeros.io/',
+    );
+
+    expect(new HttpToolClient().appBaseUrl()).toBe(
+      'https://stage.app.walkeros.io',
+    );
+  });
 });
 
 describe('HttpToolClient hub and frames delegation', () => {

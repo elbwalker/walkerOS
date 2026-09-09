@@ -235,7 +235,8 @@ walkeros deploy list --type server
 
 ### Prerequisites
 
-- **Authentication:** Set `WALKEROS_TOKEN` env var or run `walkeros auth`
+- **Authentication:** Run `walkeros auth login`, or set `WALKEROS_TOKEN` to an
+  automation token
 - **Project:** Set `WALKEROS_PROJECT_ID` or use `--project`
 - **Flow must exist:** Create via the app UI or API first
 - **Server flows need an HTTP source** with `port` setting for health checks
@@ -334,7 +335,8 @@ walkeros previews delete flow_abc123 prv_xyz456 --yes
 
 ### Prerequisites
 
-- **Authentication:** `WALKEROS_TOKEN` env var or `walkeros auth`
+- **Authentication:** `walkeros auth login`, or `WALKEROS_TOKEN` set to an
+  automation token
 - **Project:** `WALKEROS_PROJECT_ID` or `--project`
 - **Target site** must be running a walkerOS-built `walker.js` with the preview
   preflight baked in (all bundles from `@walkeros/cli >= 3.0` include it)
@@ -419,7 +421,8 @@ Observe session ses_abc123 (live)
 
 ### Prerequisites
 
-- **Authentication:** `WALKEROS_TOKEN` env var or `walkeros auth`
+- **Authentication:** `walkeros auth login`, or `WALKEROS_TOKEN` set to an
+  automation token
 - **Project:** `WALKEROS_PROJECT_ID` or `--project`
 
 ---

@@ -2,6 +2,7 @@ import createClient from 'openapi-fetch';
 import type { paths } from '../types/api.gen.js';
 import { resolveAccessToken } from './auth.js';
 import { resolveAppUrl } from '../lib/config-file.js';
+import { requireSecureUrl } from '../lib/secure-url.js';
 import { clientContextHeaders } from './client-context.js';
 import { bakedContractVersion } from './contract.js';
 
@@ -59,7 +60,10 @@ export function createApiClient() {
     async onRequest({ request }) {
       const token = await resolveAccessToken();
       if (!token)
-        throw new Error('Not authenticated. Run `walkeros login` first.');
+        throw new Error('Not authenticated. Run `walkeros auth login` first.');
+      // Checked against the outgoing URL rather than the base one, so a path
+      // that resolved somewhere else still cannot take the bearer with it.
+      requireSecureUrl(request.url);
       request.headers.set('Authorization', `Bearer ${token}`);
       return request;
     },

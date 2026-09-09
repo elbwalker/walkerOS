@@ -22,7 +22,7 @@
       "environmentVariables": [
         {
           "name": "WALKEROS_TOKEN",
-          "description": "walkerOS API token. Optional, the local tools work without it and the auth tool can log in instead.",
+          "description": "walkerOS automation token (wos_pat_...) from Account, Automation tokens. Optional, the local tools work without it and the auth tool can log in instead.",
           "isRequired": false,
           "isSecret": true
         },

@@ -7,6 +7,7 @@ import {
   chmodSync,
   renameSync,
 } from 'fs';
+import { randomBytes } from 'crypto';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -14,7 +15,7 @@ export interface WalkerOSConfig {
   /**
    * Static bearer written by the pre-OAuth CLI. Honored until it expires, and
    * the first use in a process prints a one-line notice naming
-   * `walkeros login`, which replaces it with a refreshable session.
+   * `walkeros auth login`, which replaces it with a refreshable session.
    */
   token?: string;
   /** Short-lived bearer from the device authorization grant. */
@@ -76,19 +77,35 @@ export function readConfig(): WalkerOSConfig | null {
  * A reader that catches the file mid-write would see truncated JSON and treat
  * the person as logged out, so the content is written to a temp file and
  * renamed, which is atomic within a directory.
+ *
+ * The temp path is unique per write. Only the token refresh holds the config
+ * lock, so two ordinary writers (a login and a `telemetry enable`, say) can be
+ * in here at once: on one shared name they would write over each other's temp
+ * file and rename it twice, and the slower one would fail outright when the
+ * faster renamed the file out from under its `chmod`.
  */
 function replaceConfigFile(config: WalkerOSConfig): void {
   const dir = getConfigDir();
   mkdirSync(dir, { recursive: true, mode: 0o700 });
 
   const configPath = getConfigPath();
-  const tempPath = `${configPath}.tmp`;
-  writeFileSync(tempPath, JSON.stringify(config, null, 2), { mode: 0o600 });
-  // `writeFileSync`'s mode applies only when it CREATES the file, so a temp
-  // file left behind by an interrupted write would keep its old permissions
-  // and carry them across the rename onto the real config.
-  chmodSync(tempPath, 0o600);
-  renameSync(tempPath, configPath);
+  const tempPath = `${configPath}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
+  try {
+    writeFileSync(tempPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+    // `writeFileSync`'s mode is masked by the process umask, so it alone does
+    // not guarantee 0600 on the file the rename puts in place.
+    chmodSync(tempPath, 0o600);
+    renameSync(tempPath, configPath);
+  } catch (error) {
+    // A unique name is never reused, so a temp left behind by a failure would
+    // sit in the config directory forever.
+    try {
+      unlinkSync(tempPath);
+    } catch {
+      // Never created, or already renamed into place.
+    }
+    throw error;
+  }
 }
 
 /**
@@ -110,7 +127,7 @@ export function writeConfig(config: WalkerOSConfig): void {
  * Remove every credential field, keeping the rest of the config.
  *
  * Used when the stored session is known to be dead, so the next command can
- * say "run `walkeros login`" instead of failing against the API.
+ * say "run `walkeros auth login`" instead of failing against the API.
  */
 export function clearAuthFields(): void {
   const config = readConfig();
@@ -178,7 +195,7 @@ export function getFeedbackPreference(): boolean | undefined {
 export function setDefaultProject(projectId: string): void {
   const config = readConfig();
   if (!config) {
-    throw new Error('Not authenticated. Run `walkeros login` first.');
+    throw new Error('Not authenticated. Run `walkeros auth login` first.');
   }
   writeConfig({ ...config, defaultProjectId: projectId });
 }

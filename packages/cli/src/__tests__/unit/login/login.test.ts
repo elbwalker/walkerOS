@@ -445,4 +445,51 @@ describe('login (device authorization grant)', () => {
     expect(result.success).toBe(true);
     expect(stderrText()).toContain('Could not open browser');
   });
+  it('bounds the identity lookup, which runs after the session is stored', async () => {
+    const route = router(makeState());
+    let whoamiSignal: AbortSignal | null | undefined;
+    const fetchFn: typeof fetch = async (input, init) => {
+      if (String(input).endsWith('/api/auth/whoami'))
+        whoamiSignal = init?.signal;
+      return route(input, init);
+    };
+
+    const result = await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: fetchFn,
+      openUrl: noopOpen,
+    });
+
+    expect(result.success).toBe(true);
+    expect(whoamiSignal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('refuses an app URL that would carry the session over plain http', async () => {
+    const state = makeState();
+
+    await expect(
+      login({
+        url: 'http://app.example.test',
+        pollIntervalMs: 1,
+        fetch: router(state),
+        openUrl: noopOpen,
+      }),
+    ).rejects.toThrow(/plain http/);
+
+    expect(state.tokenCalls).toBe(0);
+    expect(readConfig()).toBeNull();
+  });
+
+  it('accepts a loopback app URL over plain http', async () => {
+    const result = await login({
+      url: 'http://127.0.0.1:3000',
+      pollIntervalMs: 1,
+      fetch: router(makeState()),
+      openUrl: noopOpen,
+    });
+
+    expect(result.success).toBe(true);
+    expect(readConfig()?.appUrl).toBe('http://127.0.0.1:3000');
+  });
 });

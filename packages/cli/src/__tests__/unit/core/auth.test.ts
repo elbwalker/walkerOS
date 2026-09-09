@@ -111,10 +111,10 @@ describe('core/auth', () => {
       await resolveAccessToken();
 
       const notices = write.mock.calls.filter((call) =>
-        String(call[0]).includes('walkeros login'),
+        String(call[0]).includes('walkeros auth login'),
       );
       expect(notices).toHaveLength(1);
-      expect(String(notices[0]?.[0])).toContain('walkeros login');
+      expect(String(notices[0]?.[0])).toContain('walkeros auth login');
     });
 
     it('returns a fresh access token without any network call', async () => {
@@ -287,7 +287,7 @@ describe('core/auth', () => {
       expect(failure).toContain('Could not reach');
       expect(failure).toContain(APP_URL);
       expect(failure).toContain('session was kept');
-      expect(failure).not.toContain('walkeros login');
+      expect(failure).not.toContain('walkeros auth login');
     });
 
     it('returns null for an expired session with no refresh token', async () => {
