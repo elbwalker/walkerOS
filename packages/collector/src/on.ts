@@ -9,7 +9,7 @@ import { isArray, FatalError } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
 import { mergeEnvironments } from './destination';
-import { buildReportError } from './report-error';
+import { buildReportError, errorMeta } from './report-error';
 import { reconcilePending } from './pending';
 import { flushSourceQueueOn, isSourceStarted } from './source';
 
@@ -75,7 +75,7 @@ function logOnCallbackError(
   collector.logger.scope('on').error('on callback failed', {
     kind,
     ...extra,
-    error,
+    ...errorMeta(error),
   });
 }
 

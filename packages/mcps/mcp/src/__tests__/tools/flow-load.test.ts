@@ -280,7 +280,7 @@ describe('flow_load tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).toContain('No project selected');
       expect(parsed.error).not.toContain('Flow not found');
       expect(getFlow).not.toHaveBeenCalled();
     });

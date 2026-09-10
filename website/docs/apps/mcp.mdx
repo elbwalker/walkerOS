@@ -72,13 +72,15 @@ Everything in this loop runs locally, no account:
 
 | Variable | Used by | Required | Default | Purpose |
 |----------|---------|----------|---------|---------|
-| `WALKEROS_TOKEN` | mcp | No | none | Bearer token fallback (alternative to `auth` tool login) |
+| `WALKEROS_TOKEN` | mcp | No | none | An automation token (`wos_pat_...`) from Account, Automation tokens. An alternative to the `auth` tool login, for a machine with no browser |
 | `WALKEROS_PROJECT_ID` | mcp | No | none | Active project ID (`proj_...`) |
 | `WALKEROS_APP_URL` | mcp | No | `https://app.walkeros.io` | Base URL override |
 
 `@walkeros/mcp-source-browser` works without any environment variables.
 All tools are always registered. To authenticate with the walkerOS cloud, use
-the `auth` tool (device code flow) or set `WALKEROS_TOKEN` as a fallback.
+the `auth` tool, which runs the device authorization grant and holds a session
+that refreshes itself, or set `WALKEROS_TOKEN` to an automation token when
+nobody is there to approve anything.
 
 ---
 
@@ -123,9 +125,9 @@ export const POST = handler;`}
 />
 
 To use the raw tool registry without the MCP protocol (e.g., with the Vercel
-AI SDK), import \`TOOL_DEFINITIONS\` and provide your own \`ToolClient\`
-implementation. The stdio binary stays available via \`@walkeros/mcp/stdio\`
-and the \`walkeros-mcp\` bin entry, unchanged for end users.
+AI SDK), import `TOOL_DEFINITIONS` and provide your own `ToolClient`
+implementation. The stdio binary stays available via `@walkeros/mcp/stdio`
+and the `walkeros-mcp` bin entry.
 
 ### Tools
 
@@ -274,7 +276,7 @@ example summaries. Use `section` parameter for full content.
 Report the MCP runtime surface. Read-only, takes no parameters, and works even
 when logged out. Reach for it when a request fails, to see which versions and
 backend you are on. The response includes the MCP version, the CLI version, the
-resolved app URL and whether it came from `WALKEROS_APP_URL` or the default, app
+app URL the client resolved and whether `WALKEROS_APP_URL` is what set it, app
 `/api/health` reachability, the bundled OpenAPI contract version, and which
 source served the last package catalog lookup.
 
@@ -288,8 +290,16 @@ These tools manage flows in the hosted app: shared projects, deploys, secrets, a
 
 ##### `auth`
 
-Authenticate with the walkerOS cloud. Uses device code flow — the user receives
-a URL to open in a browser to complete login.
+Authenticate with the walkerOS cloud through the RFC 8628 device authorization
+grant. No terminal and no callback server: the tool answers with a URL, the
+person approves it in a browser they are already signed in to, and a second call
+with the same `deviceCode` resumes polling until the approval lands. The session
+that results refreshes itself, and it shows up under Account, Connected apps,
+where disconnecting it takes effect on the next call.
+
+On the hosted door there is nothing to log in to, because every request carries
+its own bearer: `auth` reports `authenticated: false` there and
+`action: "login"` fails.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -460,6 +470,53 @@ When the flow has no active Observe session the result is
 `{ "sessionId": null, "journeys": [], "gaps": [] }`. Start an Observe session and
 drive traffic first, then read again.
 
+##### `hub_manage`
+
+Read a flow's release history and the reasoning behind it: what each release
+changed, and why. `release_get` returns a diff the server computes against the
+release before it, and a diff is never accepted from a caller. Writes are
+additive: `rationale_set` records why a release happened, `note_add` appends to a
+discussion, and there is no delete. Threads are resolved by a person in the app,
+never here. Steps are addressed as `type.name`, the same form `flow_simulate`
+takes. Needs the `hub` feature.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"releases"` \| `"release_get"` \| `"step_history"` \| `"rationale_set"` \| `"threads"` \| `"note_add"` \| `"knowledge"` | Yes | Which part of the release history to read or write |
+| `projectId` | string | No | Project ID (`proj_...`). Optional: falls back to the default project when omitted. |
+| `flowId` | string | No | Flow ID (`flow_...`). Required for every action except `knowledge`, which hangs on a page rather than a flow and refuses this field. |
+| `versionId` | string | No | Release version ID (`ver_...`) from action `releases`. Addresses one release for `release_get` and `rationale_set`. Pass this or `versionNumber`. |
+| `versionNumber` | number | No | Spine release number for this flow, the `versionNumber` field of action `releases`. Alternative to `versionId`. Not the same as a row's `deploymentAttempt`. |
+| `step` | string | No | Step key as `type.name`, e.g. `destination.ga4` or `contract.checkout`. Required for `step_history`. |
+| `flow` | string | No | Named flow inside the config, e.g. `web` or `server`. Optional for `step_history`: omit to scan every named flow. Ignored for contract steps, which are top-level. |
+| `text` | string | No | The text to write (1-4000 chars). Required for `rationale_set` and `note_add`. As rationale it replaces the note already on the release and never touches the machine summary. As a note it is appended to a thread and nothing is ever replaced. |
+| `limit` | number | No | Page size. Releases to list for action `releases` (max 100), or releases to scan for `step_history` (max 50). For `step_history` this bounds releases, not entries: a step present in several named flows yields one entry per flow per release, and the scan stops at 200 entries with `entriesTruncated` set. Narrow with `flow` to avoid that. For `threads` it bounds threads, and a read that carries messages is held to 20 of them. Knowledge entries are bounded the same way. |
+| `offset` | number | No | Releases to skip. Action `releases` only. |
+| `anchorType` | `"step"` \| `"entity_action"` \| `"release"` \| `"contract"` \| `"tag"` | No | What a thread hangs on. Defaults to `release`, the only anchor the app writes today. Pair it with `anchorKey`, since a key means a different thing under each type. |
+| `anchorKey` | string | No | What the anchor addresses within its type: a release version ID (`ver_...`) for `release`, a `type.name` step key for `step`. For a release you can pass `versionId` or `versionNumber` instead. Omit entirely on action `threads` to read every thread on the flow. |
+| `anchorLabel` | string | No | How the anchor reads on screen, stored once when a thread is opened so a later rename leaves it readable. Derived for a release (`v14`). Pass it only when opening a thread on another anchor type. |
+| `threadId` | string | No | Thread ID (`thr_...`) from action `threads`. Pass it to `note_add` to reply in that thread, omit it to open a new thread on the anchor. |
+| `status` | `"open"` \| `"resolved"` | No | Read only threads in this state. Action `threads` only, omit for both. |
+| `pageKey` | string | No | The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action `knowledge` to every frame that page holds, at any depth. Omit it to read the whole project. |
+| `frameId` | string | No | One frame (`frm_...`), the named rectangle a note hangs on. Action `knowledge` only. Narrower than `pageKey`, since a page holds several frames. |
+| `markId` | string | No | One mark within `frameId`. Action `knowledge` only, and refused without `frameId`, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies. |
+
+##### `frame_manage`
+
+Read the frames of a measurement plan: named rectangles with marks inside them,
+drawn in Tag Mode or in the app. A frame name is documentation, the marks inside
+it carry the meaning. Read-only, because a frame's geometry only means something
+next to the pixels it was drawn on, so frames are edited where the page is.
+Use `hub_manage` with action `knowledge` to read what people wrote on a frame.
+Needs the `frames` feature.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `"list"` \| `"page"` \| `"get"` | Yes | `list` returns every frame of the project without marks, `page` returns one page's frames with their marks, `get` returns one frame with its marks. |
+| `projectId` | string | No | Project ID (`proj_...`). Optional: falls back to the default project when omitted. |
+| `pageKey` | string | No | The page as its frames address it (the `source.key` of a page frame, usually the page URL without query). Required for `page`. |
+| `frameId` | string | No | Frame ID (`frm_...`). Required for `get`. Use action `list` or `page` to find one. |
+
 ### Resources
 
 | URI | Description |
@@ -481,6 +538,162 @@ drive traffic first, then read again.
 | `add-step` | Add a source, destination, transformer, or store to a flow |
 | `setup-mapping` | Configure event mapping for a step |
 | `manage-contract` | Create/update event contracts (bidirectional with mappings) |
+
+### Links back into the app
+
+Cloud tools that answer about something you can look at return a link to that
+screen, so the answer and the screen arrive together instead of leaving you to
+go find it.
+
+| Tool | Actions that return a link | Screen |
+|------|----------------------------|--------|
+| `flow_manage` | `get`, `create` | the flow page |
+| `deploy_manage` | `deploy`, `get` | the deployment's detail page |
+| `hub_manage` | `releases`, `step_history`, `threads` | the flow's release history, or the step |
+
+The link is a full URL in the response field **`appUrl`**. It is `appUrl` and
+never `url`, because a deployment response already carries `url` and that means
+where the deployment is serving.
+
+```json
+{
+  "releases": [{ "versionId": "ver_...", "versionNumber": 7, "status": "active" }],
+  "total": 12,
+  "appUrl": "https://app.walkeros.io/projects/proj_x/flows/flow_y?view=releases"
+}
+```
+
+The address is the app's own: `/projects/{projectId}/flows/{flowId}` for a
+flow, `/projects/{projectId}/deployments/{deploymentId}` for a deployment, and
+a `view` query param for a screen on the flow page (`releases`, `contract`,
+`step`, and the rest). A step is `?view=step&flow=<named flow>&step=<type.name>`,
+the same `flow` and `step` vocabulary `hub_manage` takes as parameters.
+
+Two things worth knowing:
+
+- **The link points at the app the door is connected to.** The hosted door
+  answers with its own origin; the local door answers with whatever
+  `WALKEROS_APP_URL` or your CLI config resolves to. Run `diagnostics` if you
+  are unsure which backend you are on.
+- **No link is better than a wrong one.** When a tool cannot name a screen that
+  exists, the response simply carries no `appUrl`. A step scan that named no
+  flow, a step whose last change was its removal, and a thread anchored to
+  anything but a release all fall in that bucket.
+
+## Two doors, one tool set
+
+Every `@walkeros/mcp` tool is registered on both doors, and both doors run the
+same code against the same app.
+
+| Door | How it runs | Auth |
+|------|-------------|------|
+| Local | `npx @walkeros/mcp` over stdio, or the Claude Code plugin. The local tools run on your own machine, the cloud tools call the app over HTTPS. | `auth` tool login, or `WALKEROS_TOKEN` |
+| Hosted | `POST https://app.walkeros.io/api/mcp` over Streamable HTTP. Tools run inside the app. | OAuth, discovered from the endpoint itself |
+
+Three things behave differently.
+
+**File paths.** `flow_load`, `flow_validate`, `flow_bundle`, `flow_simulate`,
+`flow_push`, and `flow_examples` accept a file path, and a path names the
+filesystem of the machine running the door. On the local door that is your
+machine. On the hosted door it is the app server, which cannot read your files.
+Give the hosted door inline JSON or a flow ID instead of a path.
+
+**Login.** `auth` runs the device authorization grant on the local door. The
+hosted door authenticates every request with its own bearer instead, so there is
+nothing to log in to: `auth` reports `authenticated: false` there and
+`action: "login"` fails. Skip the tool on that door.
+
+**The selected project.** `project_manage` action `set_default` is remembered
+differently by each door. The local door writes it to your CLI config file, so it
+survives restarts. The hosted door holds it only for as long as the connection
+lasts, and a reconnect starts with no project selected. Passing `projectId` on
+the call always works and is the form to prefer on the hosted door. A call with
+no project names both remedies in its error, so an assistant can recover without
+guessing.
+
+## Connect Claude Desktop, claude.ai or Cursor
+
+The hosted door is one HTTPS endpoint: `https://app.walkeros.io/api/mcp`. It is
+the only value a client needs. No token, no header, no advanced field.
+
+The endpoint runs an OAuth 2.1 authorization server, and a standard MCP client
+finds it on its own. You paste the URL, the client discovers who authorizes it
+and registers itself, a browser opens on a consent screen, you press Allow, and
+the client holds a token it refreshes without ever asking again.
+
+### Claude Desktop and claude.ai
+
+1. Settings, then Connectors.
+2. Add custom connector.
+3. URL: `https://app.walkeros.io/api/mcp`. Leave every advanced setting alone.
+4. The consent screen opens. Allow.
+5. The walkerOS tools appear in the client.
+
+### Claude Code
+
+<CodeSnippet
+  code={`claude mcp add --transport http walkeros https://app.walkeros.io/api/mcp`}
+  language="bash"
+/>
+
+Then run `/mcp` inside Claude Code and choose to sign in. A browser opens on the
+consent screen, Allow, and the browser hands back to Claude Code on a local
+port. `/mcp` then lists the walkerOS tools.
+
+### Cursor and other MCP clients
+
+Any client that speaks Streamable HTTP MCP takes the same URL,
+`https://app.walkeros.io/api/mcp`, in its MCP server settings. Everything else
+is discovered.
+
+### What the consent screen asks for
+
+| Permission | What it means |
+|---|---|
+| Read your projects and flows | List and read projects, flows, deployments, settings and observation data. |
+| Change and deploy flows | Create, edit, deploy and delete flows, and manage project secrets and previews. |
+| Stay connected | Keep working without signing in again, until you disconnect it. |
+
+Consent is per person, once, and it applies to every project that person belongs
+to. Which project a given action touches stays a choice made in the
+conversation, not at connect time.
+
+If you are not signed in to walkerOS in that browser, the magic-link login runs
+first and hands back to the consent screen afterwards.
+
+### Disconnecting
+
+Account, then Connected apps, lists every connected client with the permissions
+it was given and when it last called. Disconnect takes effect on that app's very
+next request, and it can be connected again at any time.
+
+### A credential for a machine
+
+A script, a CI job or a self-hosted MCP server has nobody to press Allow. Mint
+an automation token instead, under Account, then Automation tokens: pick read or
+read and write, pick a lifetime, and copy the `wos_pat_...` value once. Pass it
+as `WALKEROS_TOKEN`, or as `Authorization: Bearer` against either door.
+
+### What your plan has to include
+
+A connected client acts as you: it reads and changes every project you are a
+member of, within what your plan enables. The endpoint needs the `mcp` feature,
+`hub_manage` needs `hub`, and `frame_manage` needs `frames`. A call to a feature
+your plan does not include answers `FEATURE_NOT_AVAILABLE` and names the
+feature. Connecting before the plan includes MCP is fine; the consent screen
+says so, and no reconnect is needed after an upgrade.
+
+### If something goes wrong
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| The client says it cannot authenticate | The URL is wrong, or points at an environment that is down | Check it is exactly `https://app.walkeros.io/api/mcp` |
+| The browser opens on the login page instead of the consent screen | Not signed in to walkerOS in that browser | Sign in; the consent screen follows on its own |
+| Tools are listed but every call is refused | The plan does not include the `mcp` feature | Upgrade the project's plan |
+| The app suddenly asks to reconnect | It was disconnected under Account, Connected apps | Reconnect it, or leave it disconnected |
+
+Against stage, substitute `https://stage.app.walkeros.io/api/mcp`; against a
+local app, `http://localhost:3000/api/mcp`.
 
 ---
 

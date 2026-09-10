@@ -51,15 +51,17 @@ best-practice) so the call is unambiguous when multiple MCP servers are bound.
 
 ### Out of scope for this pattern
 
-The eight cloud/auth/side-effect tools (`walkeros:auth`,
+The twelve cloud/auth/side-effect tools (`walkeros:auth`,
 `walkeros:project_manage`, `walkeros:flow_manage`, `walkeros:deploy_manage`,
-`walkeros:secret_manage`, `walkeros:feedback`, `walkeros:flow_load`,
-`walkeros:flow_push`) carry authentication, cloud state, or side effects.
-`walkeros:flow_push` in particular sends a **real event to real destinations**
-(real API calls to live endpoints), so calling it "freely" would produce real,
-duplicated sends; use `walkeros:flow_simulate` to test without sending. Do
-**not** drive these tools from this code-execution filtering pattern; they
-belong in an interactive, authorized session.
+`walkeros:secret_manage`, `walkeros:observe_session`,
+`walkeros:observe_journeys`, `walkeros:hub_manage`, `walkeros:frame_manage`,
+`walkeros:feedback`, `walkeros:flow_load`, `walkeros:flow_push`) carry
+authentication, cloud state, or side effects. `walkeros:flow_push` in particular
+sends a **real event to real destinations** (real API calls to live endpoints),
+so calling it "freely" would produce real, duplicated sends; use
+`walkeros:flow_simulate` to test without sending. Do **not** drive these tools
+from this code-execution filtering pattern; they belong in an interactive,
+authorized session.
 
 ## The Recommended Pattern
 

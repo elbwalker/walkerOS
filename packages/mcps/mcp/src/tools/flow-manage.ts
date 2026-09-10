@@ -8,6 +8,7 @@ import {
   keepStructural,
 } from '../user-data.js';
 import { flowCanvasResult } from '../ui-parts.js';
+import { links } from '../links.js';
 
 /** Peek at a Flow.Json root (v4) and decide whether the bubble should render
  *  as web-flavoured or server-flavoured. The platform is recorded on
@@ -43,6 +44,20 @@ import {
   NO_DEFAULT_PROJECT_ERROR,
   resolveDefaultProject,
 } from './project-context.js';
+
+/**
+ * The flow's page in the app, or nothing when the response carried no id (a
+ * shape this module already tolerates everywhere else it reads `id`). The base
+ * URL comes from the door, so one definition serves both of them.
+ */
+function flowPageUrl(
+  client: ToolClient,
+  projectId: string,
+  flowId: string | undefined,
+): string | undefined {
+  if (flowId === undefined) return undefined;
+  return links.flow({ baseUrl: client.appBaseUrl(), projectId, flowId });
+}
 
 function safeSummary<T extends { name?: string }>(flow: T): T {
   return flow.name !== undefined
@@ -401,11 +416,13 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
             config?: Record<string, unknown>;
           },
         );
+        const appUrl = flowPageUrl(client, resolvedProjectId, safe.id);
         return flowCanvasResult({
           flowId: safe.id,
           configName: safe.name ?? 'default',
           platform: pickPlatform(safe.config),
           flowConfig: safe.config ?? {},
+          ...(appUrl !== undefined && { appUrl }),
           suggestions: [
             {
               label: 'Validate this flow',
@@ -438,11 +455,17 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
             config?: Record<string, unknown>;
           },
         );
+        const createdAppUrl = flowPageUrl(
+          client,
+          resolvedProjectId,
+          safeCreated.id,
+        );
         return flowCanvasResult({
           flowId: safeCreated.id,
           configName: safeCreated.name ?? 'default',
           platform: pickPlatform(safeCreated.config),
           flowConfig: safeCreated.config ?? {},
+          ...(createdAppUrl !== undefined && { appUrl: createdAppUrl }),
           suggestions: [
             {
               label: 'Validate this flow',
@@ -459,9 +482,13 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
 
       case 'update': {
         assertParam(flowId, 'flowId', 'update');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
+        }
         const updated = await client.updateFlow({
           flowId,
-          projectId,
+          projectId: resolvedProjectId,
           name,
           content,
           mergePatch: patch ?? true,
@@ -494,16 +521,27 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
 
       case 'delete': {
         assertParam(flowId, 'flowId', 'delete');
-        const deleted = await client.deleteFlow({ flowId, projectId });
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
+        }
+        const deleted = await client.deleteFlow({
+          flowId,
+          projectId: resolvedProjectId,
+        });
         return mcpResult(deleted);
       }
 
       case 'duplicate': {
         assertParam(flowId, 'flowId', 'duplicate');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
+        }
         const duplicated = await client.duplicateFlow({
           flowId,
           name,
-          projectId,
+          projectId: resolvedProjectId,
         });
         return mcpResult(
           safeDetail(duplicated as { name?: string; config?: unknown }),
@@ -526,8 +564,12 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       case 'preview_get': {
         assertParam(flowId, 'flowId', 'preview_get');
         assertParam(previewId, 'previewId', 'preview_get');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
+        }
         const data = await client.getPreview({
-          projectId,
+          projectId: resolvedProjectId,
           flowId,
           previewId,
         });
@@ -563,8 +605,12 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
       case 'preview_delete': {
         assertParam(flowId, 'flowId', 'preview_delete');
         assertParam(previewId, 'previewId', 'preview_delete');
+        const resolvedProjectId = resolveDefaultProject(client, projectId);
+        if (!resolvedProjectId) {
+          return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
+        }
         const data = await client.deletePreview({
-          projectId,
+          projectId: resolvedProjectId,
           flowId,
           previewId,
         });

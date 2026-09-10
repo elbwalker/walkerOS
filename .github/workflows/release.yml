@@ -222,31 +222,79 @@ jobs:
           CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
           echo "cli=$CLI_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Verify CLI published to npm
+      - name: Verify CLI and its walkerOS dependencies published to npm
         env:
           CLI_VERSION: ${{ steps.versions.outputs.cli }}
         run: |
-          # The image builds below run `npm install @walkeros/cli@$CLI_VERSION`
-          # in a fresh container: no local cache, no .npmrc. Ask the registry the
-          # same way, rather than through the runner's `npm view`, whose packument
-          # cache is primed by `changeset publish` moments earlier and can serve a
-          # pre-publish document for minutes (and whose setup-node .npmrc carries
-          # an unset _authToken under Trusted Publishing). The budget must clear
-          # the registry's ~5min packument max-age.
-          URL="https://registry.npmjs.org/@walkeros%2Fcli/${CLI_VERSION}"
-          for i in $(seq 1 30); do
-            CODE="$(curl -sS -o /tmp/npm-probe.json -w '%{http_code}' \
-              -H 'Cache-Control: no-cache' "$URL" || echo 000)"
-            if [ "$CODE" = "200" ]; then
-              echo "Verified: @walkeros/cli@${CLI_VERSION} resolves on the registry"
-              exit 0
+          # The image builds run `npm install @walkeros/cli@$CLI_VERSION` in a
+          # fresh container, which resolves the CLI's whole dependency closure.
+          # `changeset publish` lands those packages on the registry out of
+          # order, so wait for every @walkeros/* dependency too, not just the
+          # CLI. They all carry one version (the `fixed` group in
+          # .changeset/config.json).
+          #
+          # Wait for the tarball, not just the metadata. The packument lists a
+          # version minutes before its tarball is fetchable, and the tarball is
+          # what `npm install` downloads. Probe both, uncached, from this runner:
+          # buildkit shares its network, so a 200 here predicts a 200 there.
+          if ! PKGS="$(node -e '
+            const m = require("./packages/cli/package.json");
+            const deps = { ...m.dependencies, ...m.peerDependencies };
+            const walkeros = Object.keys(deps).filter((n) => n.startsWith("@walkeros/"));
+            process.stdout.write(["@walkeros/cli", ...walkeros].join(" "));
+          ')"; then
+            echo "::error::Could not read packages/cli/package.json to build the wait list"
+            exit 1
+          fi
+
+          # An empty list would pass this gate having verified nothing.
+          case " $PKGS " in
+            *" @walkeros/cli "*) ;;
+            *)
+              echo "::error::Wait list is missing @walkeros/cli (got: '$PKGS')"
+              exit 1
+              ;;
+          esac
+          echo "Waiting for: $PKGS"
+
+          for PKG in $PKGS; do
+            ENCODED="${PKG/\//%2F}"
+            URL="https://registry.npmjs.org/${ENCODED}"
+            OK=0
+            for i in $(seq 1 30); do
+              CODE="$(curl -sS -o /tmp/npm-probe.json -w '%{http_code}' \
+                -H 'Accept: application/vnd.npm.install-v1+json' "$URL" \
+                || echo 000)"
+              TARBALL=""
+              if [ "$CODE" = "200" ]; then
+                TARBALL="$(node -e '
+                  const doc = JSON.parse(
+                    require("fs").readFileSync("/tmp/npm-probe.json", "utf8"),
+                  );
+                  process.stdout.write(
+                    doc.versions?.[process.argv[1]]?.dist?.tarball ?? "",
+                  );
+                ' "$CLI_VERSION")"
+              fi
+              TCODE="-"
+              if [ -n "$TARBALL" ]; then
+                TCODE="$(curl -sS -o /dev/null -w '%{http_code}' -L "$TARBALL" \
+                  || echo 000)"
+                if [ "$TCODE" = "200" ]; then
+                  echo "Verified: ${PKG}@${CLI_VERSION} (metadata + tarball)"
+                  OK=1
+                  break
+                fi
+              fi
+              echo "  ${PKG} attempt $i/30 (meta $CODE, tarball $TCODE): waiting..."
+              sleep 15
+            done
+            if [ "$OK" != "1" ]; then
+              echo "::error::${PKG}@${CLI_VERSION} not installable after ~7min (meta $CODE, tarball $TCODE)"
+              exit 1
             fi
-            echo "Attempt $i/30 (HTTP $CODE): waiting for npm propagation..."
-            sleep 15
           done
-          echo "::error::@walkeros/cli@${CLI_VERSION} not resolvable after ~7min (last HTTP $CODE)"
-          head -c 2000 /tmp/npm-probe.json || true
-          exit 1
+          echo "All packages the CLI install needs are on the registry."
 
       # Log in before the existence probes: anonymous `docker manifest inspect`
       # is rate limited, and a 429 is indistinguishable from "missing" below.

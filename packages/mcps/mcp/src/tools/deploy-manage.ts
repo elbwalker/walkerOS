@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
 import { redactDisplayNames } from '../user-data.js';
+import { links } from '../links.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
@@ -11,6 +12,7 @@ import {
   type DeploymentSummaryForResolver,
   type ListDeploymentsForResolver,
 } from './_resolvers.js';
+import { resolveDefaultProject } from './project-context.js';
 import {
   validateActionInput,
   assertParam,
@@ -81,6 +83,77 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
+/**
+ * The deployment's ID, however the response spells it: the deploy start body
+ * carries `deploymentId`, the detail read carries `id`.
+ *
+ * The `slug` both bodies also carry is deliberately NOT an address here. The
+ * detail route resolves a slug, but the page's live-status stream matches on
+ * the id alone, so a slug link opens a page whose status stream fails on a
+ * deployment that is still deploying. A response carrying neither id spelling
+ * gets no link.
+ */
+function deploymentAddress(data: unknown): string | undefined {
+  if (data === null || typeof data !== 'object' || Array.isArray(data))
+    return undefined;
+  const record: Record<string, unknown> = { ...data };
+  for (const key of ['id', 'deploymentId']) {
+    const value = record[key];
+    if (typeof value === 'string' && value !== '') return value;
+  }
+  return undefined;
+}
+
+/**
+ * The deployment's page in the app.
+ *
+ * The project is resolved the way every other project-bound tool resolves it,
+ * falling back to the door's default. That fallback is for the LINK only:
+ * nothing here changes which project the call itself reads, and a door with no
+ * default simply yields no link rather than a wrong one.
+ */
+function deploymentUrl(
+  client: ToolClient,
+  projectId: string | undefined,
+  data: unknown,
+): string | undefined {
+  const resolvedProjectId = resolveDefaultProject(client, projectId);
+  if (resolvedProjectId === undefined) return undefined;
+  const deploymentId = deploymentAddress(data);
+  if (deploymentId === undefined) return undefined;
+  return links.deployment({
+    baseUrl: client.appBaseUrl(),
+    projectId: resolvedProjectId,
+    deploymentId,
+  });
+}
+
+/**
+ * Attach the link to a response body without disturbing what it already
+ * carries.
+ *
+ * The key is `appUrl`, and it may never be `url`. A deployment response
+ * ALREADY carries `url`, and it means where this deployment is SERVING: the
+ * app sets it to the deployment's target while published or active. Writing
+ * the app page over it would silently replace a live endpoint with a UI link,
+ * with nothing to signal that the meaning of the field had changed. `appUrl`
+ * also names the `appBaseUrl()` seam it is built from.
+ *
+ * A non-object body (nothing the app returns today, but the client types are
+ * `unknown`) is passed through untouched rather than wrapped.
+ */
+function withAppUrl(data: unknown, appUrl: string | undefined): unknown {
+  if (
+    appUrl === undefined ||
+    data === null ||
+    typeof data !== 'object' ||
+    Array.isArray(data)
+  ) {
+    return data;
+  }
+  return { ...data, appUrl };
+}
+
 function listForResolver(
   client: ToolClient,
   projectId: string | undefined,
@@ -140,12 +213,24 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
     switch (action) {
       case 'deploy': {
         assertParam(flowId, 'flowId', 'deploy');
+        // `projectId` travels with the deploy itself, not just with the link.
+        // Without it the deploy resolved the door's default while the link
+        // resolved the explicit id, so an explicit projectId that differed
+        // from the default deployed in one project and linked into another,
+        // and the project-scoped deployment route answered that link with a
+        // 404.
         const result = await client.deploy({
           flowId,
+          projectId,
           wait: wait ?? true,
           flowName,
         });
-        return mcpResult(redactDisplayNames(result), {
+        // The deployment's own page, whether this call waited for a terminal
+        // status or returned the id straight away. It is where the status the
+        // hint tells the agent to re-read is shown, so the person can watch it
+        // instead of asking again.
+        const appUrl = deploymentUrl(client, projectId, result);
+        return mcpResult(withAppUrl(redactDisplayNames(result), appUrl), {
           next: [
             'Use deploy_manage with action "get" to check deployment status',
           ],
@@ -176,7 +261,8 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
           slug: resolvedSlug,
           projectId,
         });
-        return mcpResult(redactDisplayNames(data));
+        const appUrl = deploymentUrl(client, projectId, data);
+        return mcpResult(withAppUrl(redactDisplayNames(data), appUrl));
       }
 
       case 'delete': {

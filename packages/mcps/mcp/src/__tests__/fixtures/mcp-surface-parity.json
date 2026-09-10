@@ -12,6 +12,8 @@
     "flow_push",
     "flow_simulate",
     "flow_validate",
+    "frame_manage",
+    "hub_manage",
     "observe_journeys",
     "observe_session",
     "package_get",
@@ -19,6 +21,20 @@
     "project_manage",
     "secret_manage"
   ],
+  "links": {
+    "$comment": "Deep links the tools emit, under the response key named here. They land in chat transcripts and notes nobody can reach back into, so a route rename or a view-key rename in the app has to fail a test at edit time instead of rotting in someone's history. The builders live in walkerOS packages/mcps/mcp/src/links.ts; the app checks these against its real routes and its url-state registry in src/lib/mcp/__tests__/link-routes.test.ts. A route template names its params as the BUILDER names them, and the app's folder may spell the same segment differently ([id] for {flowId}), so a template is matched by shape and position, never by param name.",
+    "responseKey": "appUrl",
+    "viewParamKey": "view",
+    "routes": {
+      "flowPage": "/projects/{projectId}/flows/{flowId}",
+      "deploymentPage": "/projects/{projectId}/deployments/{deploymentId}"
+    },
+    "views": {
+      "contract": [],
+      "releases": [],
+      "step": ["flow", "step"]
+    }
+  },
   "observeSession": {
     "name": "observe_session",
     "title": "Observe Session",
@@ -102,6 +118,253 @@
       "statusNoWindow": ["NO_WINDOW", "SIMULATE_FIRST"],
       "stopEnded": ["ENDED"],
       "stopNoWindow": ["NO_WINDOW"]
+    }
+  },
+  "hubManage": {
+    "name": "hub_manage",
+    "title": "Release History and Rationale",
+    "description": "Read a flow’s release history and the reasoning behind it: what each release changed, and why. Actions: releases (lean index of a flow’s releases, newest first, no snapshots), release_get (one release in full: its rationale plus a server-computed diff against the release before it), step_history (which releases added, changed, or removed one step), rationale_set (write the human rationale for one release; additive, nothing is ever deleted), threads (the discussion anchored to one release, or every open discussion on the flow), note_add (add a message to a thread, or open a new one on a release), knowledge (read what people wrote on the marks of a page in Tag Mode: one page, one mark, or the whole project). Threads are resolved by a person in the app, never here: this tool can only add to a discussion. Knowledge is read-only here for the same reason, and is addressed by frame and mark rather than by flow. Steps are addressed as \"type.name\", the same form flow_simulate takes, for example \"destination.ga4\", \"transformer.router\", \"source.browser\", \"store.session\", or \"contract.checkout\" for a contract entry. This tool carries history only: use flow_manage for the current config and package_get for step schemas.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "releases",
+            "release_get",
+            "step_history",
+            "rationale_set",
+            "threads",
+            "note_add",
+            "knowledge"
+          ],
+          "description": "Which part of the release history to read or write"
+        },
+        "projectId": {
+          "description": "Project ID. Optional: falls back to the default project when omitted.",
+          "type": "string"
+        },
+        "flowId": {
+          "description": "Flow ID (flow_...). Required for every action except \"knowledge\", which hangs on a page rather than a flow and refuses this field.",
+          "type": "string"
+        },
+        "versionId": {
+          "description": "Release version ID (ver_...) from action \"releases\". Addresses one release for release_get and rationale_set. Pass this or versionNumber.",
+          "type": "string",
+          "minLength": 1
+        },
+        "versionNumber": {
+          "description": "Spine release number for this flow, the `versionNumber` field of action \"releases\". Alternative to versionId. Not the same as a row's deploymentAttempt.",
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "step": {
+          "description": "Step key as \"type.name\", e.g. \"destination.ga4\" or \"contract.checkout\". Required for step_history.",
+          "type": "string"
+        },
+        "flow": {
+          "description": "Named flow inside the config, e.g. \"web\" or \"server\". Optional for step_history: omit to scan every named flow. Ignored for contract steps, which are top-level.",
+          "type": "string"
+        },
+        "text": {
+          "description": "The text to write (1-4000 chars). Required for rationale_set and note_add. As rationale it replaces the note already on the release and never touches the machine summary; as a note it is appended to a thread and nothing is ever replaced.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "limit": {
+          "description": "Page size. Releases to list for action \"releases\" (max 100), or releases to SCAN for step_history (max 50). For step_history this bounds releases, not entries: a step present in several named flows yields one entry per flow per release, and the scan stops at 200 entries with entriesTruncated set. Narrow with \"flow\" to avoid that. For threads it bounds threads, and a read that carries messages is held to 20 of them. Knowledge entries are bounded the same way.",
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "offset": {
+          "description": "Releases to skip. Action \"releases\" only.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "anchorType": {
+          "description": "What a thread hangs on. Defaults to \"release\", the only anchor the app writes today. Pair it with anchorKey; a key means a different thing under each type.",
+          "type": "string",
+          "enum": ["step", "entity_action", "release", "contract", "tag"]
+        },
+        "anchorKey": {
+          "description": "What the anchor addresses within its type: a release version ID (ver_...) for \"release\", a \"type.name\" step key for \"step\". For a release you can pass versionId or versionNumber instead. Omit entirely on action \"threads\" to read every thread on the flow.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "anchorLabel": {
+          "description": "How the anchor reads on screen, stored once when a thread is opened so a later rename leaves it readable. Derived for a release (\"v14\"); pass it only when opening a thread on another anchor type.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "threadId": {
+          "description": "Thread ID (thr_...) from action \"threads\". Pass it to note_add to reply in that thread; omit it to open a new thread on the anchor.",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "description": "Read only threads in this state. Action \"threads\" only; omit for both.",
+          "type": "string",
+          "enum": ["open", "resolved"]
+        },
+        "pageKey": {
+          "description": "The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action \"knowledge\" to every frame that page holds, at any depth; omit it to read the whole project.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "frameId": {
+          "description": "One frame (frm_...), the named rectangle a note hangs on. Action \"knowledge\" only. Narrower than pageKey, since a page holds several frames.",
+          "type": "string",
+          "pattern": "^frm_[A-Za-z0-9_-]{21}$"
+        },
+        "markId": {
+          "description": "One mark within \"frameId\". Action \"knowledge\" only, and refused without frameId, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": ["action"],
+      "additionalProperties": false
+    },
+    "denialHint": "The \"hub\" feature is not enabled for this project. Tell the person that \"hub\" needs a plan or project entitlement that unlocks it, which is changed in the app, not through this tool.",
+    "notFoundHint": "Use action \"releases\" to find version ids and action \"threads\" to find thread ids.",
+    "hints": {
+      "CONFIRM_INDEX": "Use action \"releases\" to confirm it appears in the index.",
+      "ENTRY_NAMES_FLOW": "An entry names the flow it was written against in flowId, and validity says which release was live at the time.",
+      "KEEP_ONE_THREAD": "Pass its threadId back to action \"note_add\" to keep the conversation in one place instead of opening another thread.",
+      "KNOWLEDGE_INDEX": "This is an index: message bodies are omitted. Pass markId with frameId to read one mark in full.",
+      "KNOWLEDGE_PAGE_CAPPED": "More knowledge matches than was returned. Narrow with pageKey, then frameId, then markId, rather than treating this as everything that was written.",
+      "KNOWLEDGE_READ_ONLY": "This tool only reads knowledge. Answering a note, and settling it, are done by a person in the app.",
+      "MASKED_ONLY": "The diff is empty because the only changes are inside masked values. Say that the change is not visible here rather than that nothing changed.",
+      "MESSAGES_TRUNCATED": "A thread here is marked hasMoreMessages: only its newest messages were returned. Say the discussion is longer than what you read rather than summarizing it as complete.",
+      "MESSAGE_VISIBLE": "The message is now visible in this thread in the app.",
+      "NOTHING_DISCUSSED": "Nothing is being discussed on this flow. Use action \"note_add\" with a versionId to start a thread on a release.",
+      "NOTHING_WRITTEN": "Nothing has been written here. Notes are left on the page in Tag Mode, not through this tool.",
+      "NO_MATCH": "No scanned release touched this step. Check the step key against knownSteps, or raise limit to scan further back.",
+      "NO_THREAD_ON_ANCHOR": "No thread hangs on this anchor yet. Use action \"note_add\" to open one.",
+      "OPEN_RELEASE": "Use action \"release_get\" on one of these versionIds to read the full diff and rationale.",
+      "RATIONALE_VISIBLE": "The rationale is now visible on this release in the app.",
+      "READ_BACK": "Use action \"threads\" to read the discussion back.",
+      "READ_FRAME": "Use frame_manage action \"get\" with the frameId to read the frame and its marks.",
+      "RELEASE_GET": "Use action \"release_get\" with a versionId or versionNumber to read one release in full, with its diff.",
+      "REPLY_OR_OPEN": "Use action \"note_add\" with a threadId to reply in one of these threads, or without one to open another.",
+      "RESOLVE_IN_APP": "Resolving a thread into a release is done by a person in the app, not through this tool.",
+      "ROWS_ARE_DEPLOYMENTS": "Rows are deployments, not releases: the same versionId on several rows is a redeploy of identical content, so count distinct versionId values, and note that total counts deployments.",
+      "SCAN_CAPPED": "The scan stopped at the entry cap, so older releases were not compared. Narrow with \"flow\" to see the whole history of one occurrence.",
+      "STAYS_RESOLVED": "This thread is resolved and stayed resolved: a reply never retracts the release link.",
+      "STEP_HISTORY": "Use action \"step_history\" to see which releases touched one step.",
+      "THREADS_INDEX": "This is an index: message bodies are omitted. Pass a versionId, or anchorType with anchorKey, to read one discussion in full.",
+      "THREADS_PAGE_CAPPED": "More threads match than were returned (the page is capped at 20 when messages are attached). Narrow with anchorType and anchorKey, or with status, rather than treating this as the complete list.",
+      "THREAD_OPEN": "The thread is now open on this anchor in the app.",
+      "TRACE_STEP": "Use action \"step_history\" to trace one step across releases.",
+      "WRITE_RATIONALE": "This release has no human rationale. Read the diff, then use action \"rationale_set\" to record why it changed."
+    },
+    "hintOrder": {
+      "releases": ["RELEASE_GET", "ROWS_ARE_DEPLOYMENTS", "STEP_HISTORY"],
+      "releaseGetMaskedOnly": ["MASKED_ONLY"],
+      "releaseGetWithRationale": ["TRACE_STEP"],
+      "releaseGetNoRationale": ["WRITE_RATIONALE"],
+      "stepHistoryCapped": ["SCAN_CAPPED"],
+      "stepHistoryEmpty": ["NO_MATCH"],
+      "stepHistoryMatched": ["OPEN_RELEASE"],
+      "rationaleSet": ["RATIONALE_VISIBLE", "CONFIRM_INDEX"],
+      "threadsIndexEmpty": ["NOTHING_DISCUSSED"],
+      "threadsAnchorEmpty": ["NO_THREAD_ON_ANCHOR"],
+      "threadsIndexCapped": ["THREADS_PAGE_CAPPED", "THREADS_INDEX"],
+      "threadsAnchorTruncated": [
+        "MESSAGES_TRUNCATED",
+        "REPLY_OR_OPEN",
+        "RESOLVE_IN_APP"
+      ],
+      "noteAddReplyOpen": ["MESSAGE_VISIBLE", "READ_BACK"],
+      "noteAddReplyResolved": ["MESSAGE_VISIBLE", "STAYS_RESOLVED"],
+      "noteAddOpen": ["THREAD_OPEN", "KEEP_ONE_THREAD"],
+      "knowledgeEmpty": ["NOTHING_WRITTEN"],
+      "knowledgeIndexCapped": [
+        "KNOWLEDGE_PAGE_CAPPED",
+        "KNOWLEDGE_INDEX",
+        "ENTRY_NAMES_FLOW",
+        "KNOWLEDGE_READ_ONLY",
+        "READ_FRAME"
+      ],
+      "knowledgeMarkTruncated": [
+        "MESSAGES_TRUNCATED",
+        "ENTRY_NAMES_FLOW",
+        "KNOWLEDGE_READ_ONLY",
+        "READ_FRAME"
+      ]
+    }
+  },
+  "frameManage": {
+    "name": "frame_manage",
+    "title": "Frames",
+    "description": "Read the frames of a measurement plan: named rectangles with marks inside them, drawn in Tag Mode or in the app. Actions: list (every frame of the project, without marks), page (the frames of one page at any depth, with marks), get (one frame with its marks). Read-only: frames are drawn and edited in Tag Mode or the app, never here. A frame name is documentation; the marks inside it carry the meaning. A frame that extends another stores only what it adds. Use hub_manage action \"knowledge\" with a frameId or markId to read what people wrote on a frame. A markId is an id read from the marks of a frame here: mark ids come back literal so they can be passed straight back, while the text around them is wrapped as data. An entity action is an object carrying its id beside the raw attribute text, because the id is the address and the raw text is not.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    },
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["list", "page", "get"],
+          "description": "list the project’s frames, read one page with marks, or read one frame"
+        },
+        "projectId": {
+          "description": "Project ID. Optional: falls back to the default project when omitted.",
+          "type": "string"
+        },
+        "pageKey": {
+          "description": "The page as its frames address it (the `source.key` of a page frame, usually the page URL without query). Required for page.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "frameId": {
+          "description": "Frame ID (frm_...). Required for get. Use action \"list\" or \"page\" to find one.",
+          "type": "string",
+          "pattern": "^frm_[A-Za-z0-9_-]{21}$"
+        }
+      },
+      "required": ["action"],
+      "additionalProperties": false
+    },
+    "denialHint": "The \"frames\" feature is not enabled for this project. Tell the person that \"frames\" needs a plan or project entitlement that unlocks it, which is changed in the app, not through this tool.",
+    "notFoundHint": "Use action \"list\" or \"page\" to find frame ids.",
+    "hints": {
+      "EXTENDS_BASE": "This frame extends another and stores only what it adds; read the base frame (extends) for the rest.",
+      "MARK_SPACE": "Marks are in their frame’s own 0..1 space; a child frame sits inside its parent through placements[].rect.",
+      "NAMES_ARE_DOCUMENTATION": "Frame names are documentation; the marks inside a frame carry the meaning.",
+      "NONE_ON_PAGE": "No frames on this page. Check the pageKey against the source.key values from action \"list\".",
+      "NONE_YET": "This project has no frames yet. Frames are drawn in Tag Mode or the app, not through this tool.",
+      "OPEN_PAGE_OR_GET": "Use action \"page\" with a pageKey (a frame’s source.key) to read a page with marks, or action \"get\" with a frameId.",
+      "READ_KNOWLEDGE": "Use hub_manage action \"knowledge\" with frameId (and markId) to read what people wrote here. A markId is an id from these marks, and an entity action is addressed by its own id, never by its raw text."
+    },
+    "hintOrder": {
+      "list": ["OPEN_PAGE_OR_GET", "NAMES_ARE_DOCUMENTATION"],
+      "listEmpty": ["NONE_YET"],
+      "page": ["MARK_SPACE", "READ_KNOWLEDGE"],
+      "pageEmpty": ["NONE_ON_PAGE"],
+      "getVariation": ["EXTENDS_BASE", "READ_KNOWLEDGE"],
+      "getBase": ["READ_KNOWLEDGE"]
     }
   }
 }

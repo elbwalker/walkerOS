@@ -120,11 +120,15 @@ function processEvent(
   const prefix = settings.prefix || 'dataLayer';
   const eventName = `${prefix} ${transformedEvent.name}`;
 
-  // Create partial WalkerOS event structure (collector will enrich it)
+  // Create partial WalkerOS event structure (collector will enrich it).
+  // The source identity is stamped here: without it the collector falls back to
+  // `type: 'collector'`, and destinations that echo events back into the
+  // dataLayer lose the `source.type !== 'dataLayer'` guard against feedback loops.
   const { name: _name, ...data } = transformedEvent;
   const partialEvent: WalkerOS.DeepPartialEvent = {
     name: eventName,
     data: data as WalkerOS.Properties,
+    source: { type: 'dataLayer', platform: 'web' },
   };
 
   // Push to collector

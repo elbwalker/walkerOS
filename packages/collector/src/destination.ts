@@ -49,6 +49,7 @@ import {
   bumpDropped,
   ensureDestStatus,
   buildReportError,
+  errorMeta,
 } from './report-error';
 import { reconcilePending } from './pending';
 import {
@@ -745,7 +746,7 @@ export async function pushToDestinations(
               // Log the error with destination scope
               const destType = destination.type || 'unknown';
               collector.logger.scope(destType).error('Push failed', {
-                error: err,
+                ...errorMeta(err),
                 event: processedEvent!.name,
               });
               error = err; // oh no

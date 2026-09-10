@@ -7,7 +7,11 @@ export * from './utils.js';
 export * from './local-packages.js';
 export * from './input-detector.js';
 export * from './stdin.js';
-export { getToken, getAuthHeaders } from './auth.js';
+export {
+  resolveAccessToken,
+  getAuthHeaders,
+  credentialSource,
+} from './auth.js';
 export {
   apiFetch,
   publicFetch,

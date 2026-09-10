@@ -67,11 +67,23 @@ function stubClient(): ToolClient {
     getDeploymentBySlug: notImpl,
     deleteDeployment: notImpl,
     listJourneys: notImpl,
+    listReleases: notImpl,
+    getRelease: notImpl,
+    listStepHistory: notImpl,
+    setReleaseRationale: notImpl,
+    listThreads: notImpl,
+    createThread: notImpl,
+    addThreadMessage: notImpl,
+    listKnowledge: notImpl,
+    listFrames: notImpl,
+    listPageFrames: notImpl,
+    getFrame: notImpl,
     requestDeviceCode: notImpl,
     pollForToken: notImpl,
     whoami: notImpl,
-    resolveToken: () => null,
-    deleteConfig: () => false,
+    credentialSource: () => null,
+    logout: async () => ({ deleted: false }),
+    appBaseUrl: () => 'https://app.walkeros.io',
     checkHealth: async () => ({ reachable: true }),
     submitFeedback: notImpl,
     getFeedbackPreference: () => undefined,
@@ -89,7 +101,7 @@ describe('createWalkerOSMcpServer', () => {
     expect(server.server).toBeDefined();
   });
 
-  it('registers all 17 tools', () => {
+  it('registers all 19 tools', () => {
     const server = createWalkerOSMcpServer({
       client: stubClient(),
       version: '0.0.0',
@@ -111,6 +123,8 @@ describe('createWalkerOSMcpServer', () => {
         'flow_push',
         'flow_simulate',
         'flow_validate',
+        'frame_manage',
+        'hub_manage',
         'observe_journeys',
         'observe_session',
         'package_get',

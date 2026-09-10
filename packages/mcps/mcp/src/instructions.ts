@@ -25,6 +25,8 @@ export const SERVER_INSTRUCTIONS = `walkerOS is an open-source, privacy-first ev
 13. \`observe_session({ action: "start", flowId: "..." })\` - open an Observe session: a time-boxed window on one flow that runtimes attach to as arms
 14. \`flow_manage({ action: "preview_regrant", flowId: "...", previewId: "...", origins: [...] })\` - mint an activation link; minted while the flow is observed, it pairs with that Observe session automatically, so the previewed page streams into the same feed
 15. \`observe_journeys({ flowId: "..." })\` - read what arrived; it is the only read, and it never judges whether events are correct
+16. \`hub_manage({ action: "releases", flowId: "..." })\` - read what changed across releases and why; \`release_get\` carries a server-computed diff, \`rationale_set\` records why
+17. \`frame_manage({ action: "page", pageKey: "..." })\` - read the frames of a page with their marks; read-only, edited in Tag Mode or the app
 
 ## Architecture: Source → Collector → Destination(s)
 

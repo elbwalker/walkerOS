@@ -1091,7 +1091,7 @@ The `auth` command group manages authentication with the walkerOS cloud service.
 
 ### Login
 
-Log in to walkerOS via an OAuth browser flow. The CLI requests a device code, opens your browser for authorization, and polls for the resulting token.
+Log in to walkerOS through the RFC 8628 device authorization grant. The CLI asks the app for a one-time code, opens your browser on the approval page, and polls until you approve. No password reaches the CLI and no local callback server is opened, so this works the same over SSH, inside Docker and in a cloud IDE.
 
 <CodeSnippet
   code={`walkeros auth login`}
@@ -1101,16 +1101,20 @@ Log in to walkerOS via an OAuth browser flow. The CLI requests a device code, op
 Output:
 ```
 ! Your one-time code: ABCD-1234
-  Authorize here: https://app.walkeros.io/auth/device?code=ABCD-1234
+  Authorize here: https://app.walkeros.io/oauth/device?user_code=ABCD-1234
 
   Opening browser...
   Waiting for authorization... (press Ctrl+C to cancel)
 
 ✓ Logged in as user@example.com
-  Token stored in ~/.config/walkeros/config.json
+  Session stored in ~/.config/walkeros/config.json
 ```
 
-The token is stored in `~/.config/walkeros/config.json` with `0600` permissions. You can also set the `WALKEROS_TOKEN` environment variable instead of using `auth login`.
+The session is stored in `~/.config/walkeros/config.json` with `0600` permissions: a short-lived access token, its expiry, and a refresh token the CLI rotates on its own, so a login lasts until you log out. Several walkerOS processes can share one config file, so a refresh runs under a lock beside it (`config.json.lock`) and exactly one of them spends the single-use refresh token.
+
+The connection appears in the app under Account, Connected apps, where disconnecting it stops the CLI on its next call.
+
+For a machine with nobody to approve anything, set `WALKEROS_TOKEN` to an automation token instead (Account, then Automation tokens). It is used as-is and never refreshed.
 
 | Option | Description |
 |--------|-------------|
@@ -1121,7 +1125,7 @@ The token is stored in `~/.config/walkeros/config.json` with `0600` permissions.
 
 ### Logout
 
-Remove stored credentials from disk.
+Revoke the stored refresh token, then remove the credentials from disk. Revocation runs first, because deleting the file alone would leave a credential alive on the server that nothing can reach to retire; it is best effort, so a logout with no network still clears the machine.
 
 <CodeSnippet
   code={`walkeros auth logout`}
@@ -1159,11 +1163,14 @@ Project: proj_def456
 
 ### Token resolution
 
-The CLI resolves authentication tokens in this order:
+The CLI resolves a credential in this order, first match wins:
 
-1. `WALKEROS_TOKEN` environment variable
-2. Config file (`~/.config/walkeros/config.json`, written by `auth login`)
-3. Not authenticated (cloud commands will fail)
+1. `WALKEROS_TOKEN` environment variable. Used as-is, never refreshed.
+2. A static `token` in the config file, written by an older CLI. Honored until it expires, with a one-line notice pointing at `walkeros auth login`.
+3. The OAuth session in the config file, written by `auth login`. Refreshed automatically when the access token is close to expiry.
+4. Nothing, and cloud commands report "Not authenticated. Run `walkeros auth login` first."
+
+A refresh that cannot reach the app is reported as such and leaves the saved session in place, so the next command tries again rather than sending you back to the browser.
 
 ## Projects commands
 
@@ -2137,7 +2144,7 @@ These options work with all commands:
 
 | Variable | Purpose |
 |----------|---------|
-| `WALKEROS_TOKEN` | API token for cloud commands (overrides `auth login` config) |
+| `WALKEROS_TOKEN` | Automation token (`wos_pat_...`) for cloud commands, from Account then Automation tokens. Overrides the `auth login` session |
 | `WALKEROS_PROJECT_ID` | Default project ID for `projects`, `flows`, and `deploy` commands |
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
 | `WALKEROS_DEPLOY_TOKEN` | Deploy token for container heartbeat authentication |
@@ -2275,8 +2282,8 @@ walkeros auth whoami
 # Re-authenticate
 walkeros auth login
 
-# Or set token directly
-export WALKEROS_TOKEN=sk-walkeros-xxx`}
+# Or use an automation token from Account, Automation tokens
+export WALKEROS_TOKEN=wos_pat_xxx`}
   language="bash"
 />
 

@@ -105,7 +105,7 @@ describe('flow_manage tool — preview actions', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).toContain('No project selected');
       expect(parsed.error).not.toContain('Project not found');
       expect(listPreviews).not.toHaveBeenCalled();
     });
@@ -394,7 +394,7 @@ describe('flow_manage tool — preview actions', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).toContain('No project selected');
       expect(parsed.error).not.toContain('Project not found');
       expect(createPreview).not.toHaveBeenCalled();
     });
@@ -737,7 +737,10 @@ describe('flow_manage tool — preview actions', () => {
 
     it('preview_get strips token and projectId from a raw API response', async () => {
       const getPreview = jest.fn().mockResolvedValue(rawApiPreview);
-      registerFlowManageTool(server as never, stubClient({ getPreview }));
+      registerFlowManageTool(
+        server as never,
+        stubClient({ getPreview, getDefaultProject: () => 'proj_default' }),
+      );
       const tool = server.getTool('flow_manage')!;
       const result = (await tool.handler(
         { action: 'preview_get', flowId: 'cfg_1', previewId: 'prv_raw' },

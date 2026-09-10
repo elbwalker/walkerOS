@@ -156,3 +156,14 @@ export const PROJECT_MANAGE_REQUIREMENTS: ActionRequirementMap = {
   },
   create: { required: ['name'] },
 };
+
+export const FRAME_MANAGE_REQUIREMENTS: ActionRequirementMap = {
+  page: {
+    required: ['pageKey'],
+    hint: 'Use action "list" to see the source keys of the project’s frames.',
+  },
+  get: {
+    required: ['frameId'],
+    hint: 'Use action "list" or "page" to find a frameId.',
+  },
+};

@@ -449,158 +449,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/auth/device/code': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Request device code
-     * @description Generate a device code and user code for the device authorization flow.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Device code generated */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeviceCodeResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/auth/device/approve': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Approve device code
-     * @description Approve a device authorization request using the user code. Requires authentication.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['ApproveDeviceRequest'];
-        };
-      };
-      responses: {
-        /** @description Device approved */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ApproveDeviceResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/auth/device/token': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Poll device token
-     * @description Poll for authorization status using the device code. Returns a token when approved.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['DeviceTokenRequest'];
-        };
-      };
-      responses: {
-        /** @description Authorization approved */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeviceTokenResponse'];
-          };
-        };
-        /** @description Pending, slow down, or expired */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/projects': {
     parameters: {
       query?: never;
@@ -2835,7 +2683,7 @@ export interface paths {
     put?: never;
     /**
      * Deploy settings
-     * @description Start a deployment for a specific settings entry. Detects platform from the settings.
+     * @description Start a deployment for a specific settings entry. Detects platform from the settings. The body is optional and carries only `humanText`, the reason for the change, which becomes the description of the release this deploy produces; it is ignored when the release already has one.
      */
     post: {
       parameters: {
@@ -2848,7 +2696,11 @@ export interface paths {
         };
         cookie?: never;
       };
-      requestBody?: never;
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['DeploySettingsRequest'];
+        };
+      };
       responses: {
         /** @description Deployment started */
         201: {
@@ -4042,8 +3894,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * List my tokens
-     * @description List all API tokens for the authenticated user. Returns summaries (no raw token values).
+     * List my automation tokens
+     * @description The caller's live automation tokens, with the scope and audience each carries. No raw token value is ever returned; `tokenPrefix` is the only fragment of one that survives issuance. A connected app's access token lives in the same store and is deliberately absent: it is taken back by disconnecting the app.
      */
     get: {
       parameters: {
@@ -4054,13 +3906,13 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description List of tokens */
+        /** @description List of automation tokens */
         200: {
           headers: {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['ListApiTokensResponse'];
+            'application/json': components['schemas']['ListAutomationTokensResponse'];
           };
         };
         /** @description Unauthorized */
@@ -4076,8 +3928,8 @@ export interface paths {
     };
     put?: never;
     /**
-     * Create token
-     * @description Create a new API token. The raw token is returned once and cannot be retrieved again.
+     * Create automation token
+     * @description Mint an automation token for the authenticated user. The audience is `api` and `mcp`, so one token works against REST and against `/api/mcp`, and the chosen scope decides how far it gets at either: `read` is refused every non-safe REST method with 403 `INSUFFICIENT_SCOPE`. The raw token is returned once and cannot be retrieved again, so the answer carries `Cache-Control: no-store`.
      */
     post: {
       parameters: {
@@ -4088,7 +3940,7 @@ export interface paths {
       };
       requestBody?: {
         content: {
-          'application/json': components['schemas']['CreateApiTokenRequest'];
+          'application/json': components['schemas']['CreateAutomationTokenRequest'];
         };
       };
       responses: {
@@ -4098,7 +3950,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['CreateApiTokenResponse'];
+            'application/json': components['schemas']['CreateAutomationTokenResponse'];
           };
         };
         /** @description Validation error */
@@ -4136,6 +3988,52 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/tokens/revoke-all': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Revoke all access
+     * @description Revoke every grant this person holds, the tokens hanging from them, and every automation token they hold. Runner tokens survive: those are the credentials deployed flow containers run with, so revoking them would stop every container the person is running. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token cannot disconnect everything its owner has connected.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Access revoked */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/tokens/{tokenId}': {
     parameters: {
       query?: never;
@@ -4147,8 +4045,8 @@ export interface paths {
     put?: never;
     post?: never;
     /**
-     * Revoke token
-     * @description Revoke an API token (soft delete via revokedAt timestamp).
+     * Revoke automation token
+     * @description Revoke one of the caller's tokens. Idempotent and scoped to the caller: an unknown id, another person's token and an already revoked one all answer 204, since a distinguishable answer would tell the caller which ids exist.
      */
     delete: {
       parameters: {
@@ -5987,8 +5885,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['BillingDetailsResponse'] &
-              (Record<string, never> | null);
+            'application/json':
+              | components['schemas']['BillingDetailsResponse']
+              | null;
           };
         };
         /** @description Unauthorized */
@@ -6576,13 +6475,14 @@ export interface paths {
     };
     /**
      * List flow releases
-     * @description List the release history for a flow across all of its deployment lineages, newest first, paginated. Each entry is a deployed version joined to its parent deployment (slug and type). Requires member role.
+     * @description List the release history for a flow across all of its deployment lineages, newest first, paginated. Each entry is a deployed version joined to its parent deployment (slug and type). `rationale=true` joins each row's stored rationale summary on, which requires the `hub` feature; without it the `rationale` key is absent from every row rather than null, and no feature beyond member role is needed. Requires member role.
      */
     get: {
       parameters: {
         query?: {
           limit?: number;
           offset?: number | null;
+          rationale?: 'true' | 'false';
         };
         header?: never;
         path: {
@@ -6600,6 +6500,184 @@ export interface paths {
           };
           content: {
             'application/json': components['schemas']['ListFlowReleasesResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/releases/{versionId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read one release in full
+     * @description One release of this flow with its rationale and its diff. The path segment is either the spine version id (`ver_...`) or the flow-unique spine number, and the route decides which it was, so a caller holding only the number needs no lookup first. The diff is computed server-side from the two stored snapshots and is never accepted from a caller; its predecessor is the next LOWER spine number, not the previous row by time, because spine rows are reused across redeploys of identical content. `diff.text` is rendered from masked content, so an empty string can still mean the releases differ inside an inline secret: `diff.contentIdentical`, compared over the unmasked hashes, is the trustworthy answer. `diff` is null for the flow's oldest release. An unknown address, a sibling flow's version, and an autosave revision all answer 404 alike. Requires member role and the `hub` feature.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Spine version id of the release (ver_...) or its spine number */
+          versionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The release, its rationale, and its diff */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReleaseDetailResponse'];
+          };
+        };
+        /** @description Invalid release reference */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/releases/{versionId}/content': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read a release snapshot
+     * @description The flow config one release of this flow froze, addressed by its spine version id. This is the only route that serves a release snapshot: the positional `/versions/{versionNumber}` route numbers the autosave revisions, a disjoint set of rows, so a release number handed to it addresses an unrelated revision or nothing. Inline secret literals are masked. An unknown id, a sibling flow's version, and an autosave revision all answer 404 alike. Requires member role and the `hub` feature.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          /** @description Spine version ID of the release (ver_...) */
+          versionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The release snapshot */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ReleaseContentResponse'];
+          };
+        };
+        /** @description Invalid version id */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
         /** @description Unauthorized */
@@ -7197,6 +7275,1272 @@ export interface paths {
         };
       };
     };
+    trace?: never;
+  };
+  '/api/projects/{projectId}/knowledge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List knowledge captured in this project
+     * @description What people wrote on the frames of a page, most recently active first. Two kinds come back together and `kind` separates them: a `thread` carries its text in messages, a `description` carries one body and cannot be replied to. `pageKey` narrows to a whole page, resolved server-side to every frame that page holds at any depth; `frameId` narrows to one frame; `markId` narrows to one mark within it and is refused without `frameId`, since a mark id alone addresses nothing. `includeMessages=true` attaches message bodies and holds the page to a much smaller ceiling, so `hasMoreEntries` is what separates a complete answer from a truncated one. `validity` says when an entry was true and `freshness` compares that against the flow’s newest release; neither is a verdict. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          pageKey?: string;
+          frameId?: string;
+          markId?: string;
+          includeMessages?: 'true' | 'false';
+          limit?: number;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Knowledge in this project */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListKnowledgeResponse'];
+          };
+        };
+        /** @description Invalid query, or a mark filter with no frame */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Open a thread on a mark or a frame
+     * @description Open a thread on one mark of one frame, or on the frame itself with `anchorType` `page` and no `markId`, with its first message. A thread never exists empty, so `text` is required and may not be blank. `clientThreadId` and `clientMessageId` are minted by the client at compose time and are what make a replay idempotent: repeating a known `clientThreadId` hands back the existing thread and writes nothing, so an offline queue can drain repeatedly without duplicating what a person wrote once. `flowId` binds the capture to a flow or is explicitly null; a flow this project cannot see answers 404, never 403. A frame this project does not hold answers 404 with `FRAME_NOT_FOUND`, which a draining client waits on and retries, because the frame’s own write may not have landed yet. The server decides the composed anchor key, the born release, the author and the source: a client cannot assert any of them. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @example tag
+             * @enum {string}
+             */
+            anchorType: 'tag' | 'page';
+            /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+            frameId: string;
+            markId?: string;
+            anchorLabel?: string;
+            flowId: string | null;
+            subjectKey?: string;
+            spatial?: components['schemas']['KnowledgeSpatial'];
+            /** @example ct_7f3a91 */
+            clientThreadId: string;
+            text: string;
+            /** @example ct_7f3a91 */
+            clientMessageId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The thread, with its first message */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['KnowledgeThreadResponse'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The named flow or frame is not in this project */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/knowledge/{threadId}/messages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reply to a knowledge thread
+     * @description Append a message to a thread and get the whole thread back, so a surface renders the new exchange without a second read. `text` may not be blank: a message cannot be cleared, so empty is invalid rather than a way to erase one. Repeating a `clientMessageId` already on the thread appends nothing and leaves `updatedAt` alone, so a retrying drain never keeps bumping a thread to the top of every list. A description has no conversation and cannot be replied to; addressing one answers 404. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Thread ID (thr_...) */
+          threadId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            text: string;
+            /** @example ct_7f3a91 */
+            clientMessageId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The thread, with the new message */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['KnowledgeThreadResponse'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/knowledge/description': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Write the description of a mark or a frame
+     * @description Write the one description of one anchor, a mark or the frame itself, replacing whatever it said before. There is no id to mint: the anchor is the key, so a replayed write lands on the same row by construction, which is why this is a PUT. An empty `body` is refused rather than stored, so a drain that arrives with nothing to say can never erase what a person wrote. The response is 200 whether the description was opened or replaced. Requires member role.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @example tag
+             * @enum {string}
+             */
+            anchorType: 'tag' | 'page';
+            /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+            frameId: string;
+            markId?: string;
+            anchorLabel?: string;
+            flowId: string | null;
+            subjectKey?: string;
+            spatial?: components['schemas']['KnowledgeSpatial'];
+            body: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The stored description */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['KnowledgeDescriptionResponse'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The named flow or frame is not in this project */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/frames': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List the frames of a page, or of the whole project
+     * @description A frame is a named rectangle with marks inside it, the spatial unit of a measurement plan. Naming a `pageKey` returns that page’s frames at any depth, marks and all, newest updated first: the walk starts at the page’s top-level frames and descends containment, so a child is reachable through its parent rather than by carrying a page of its own. Naming no page returns every live frame of the project WITHOUT its marks, which is what makes that read cheap enough to answer "what does this project have": the marks are the bulk of a frame and a listing never renders them. That lean read asks nothing about containment, so a frame whose parent cannot be resolved still appears. `include=marks` asks that project-wide read for the marks anyway, for a surface that spans pages and cannot fetch a page at a time; it is a second, heavier read of the same rows, taken after the lean list has already painted, and omitting it returns exactly the lean rows. It says nothing to the page read, which carries marks either way. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          pageKey?: string;
+          include?: 'marks';
+        };
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The page’s frames with their marks, or the project’s frames without them */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json':
+              | components['schemas']['FrameListResponse']
+              | components['schemas']['FrameLeanListResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/frames/{frameId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read one frame
+     * @description One frame with its marks. A frame of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted frame is gone to every read. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The frame */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Frame'];
+          };
+        };
+        /** @description The path segment does not address a frame */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Create or replace one frame
+     * @description The path is the identity, so the body carries no id: a create is a write to an absent row at `baseVersion` 0 and everything else is a replace. `clientWriteId` is minted at compose time and is what makes a replayed drain exact: a write whose id already produced the stored version landed once and is answered with that version, writing nothing, so an offline queue drains repeatedly without turning one edit into two versions. A write against a version someone else has moved past answers 409 `FRAME_VERSION_CONFLICT` carrying the head, which is what lets a client raise keep-mine against load-theirs on the one frame that conflicted instead of dropping what a person drew. A name another live frame already holds is a distinct 409 `FRAME_NAME_EXISTS`. A relation naming a frame this project does not hold, or one that would place a frame inside itself, is 400 `INVALID_FRAME`. The screenshot is never touched here: a frame write carries no capture. Requires member role.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            frame: components['schemas']['FrameInput'];
+            baseVersion: number;
+            clientWriteId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The stored version */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PutFrameResponse'];
+          };
+        };
+        /** @description Invalid body, a bad relation, or a path segment that addresses no frame */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description A stale base version, carrying the head, or a name another live frame already holds. Only the version conflict carries `head`: a name clash needs no frame to resolve, since the client already knows the name it sent. */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json':
+              | components['schemas']['FrameConflictResponse']
+              | components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    /**
+     * Delete one frame
+     * @description Soft-delete the frame and, transitively, every variation of what this delete removes. Children are not variations and survive: each live frame under a removed one is re-parented to its nearest live ancestor in the same transaction, and one left with no live ancestor becomes top-level and inherits the page it hung under, so nothing is left unreachable. Those re-parents are server writes that bump their own versions, so a client still holding a pre-delete version meets a conflict carrying the new parent. A frame this project does not hold answers 404: a delete that removed nothing is not a delete that succeeded. Requires member role.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The frame is deleted */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description The path segment does not address a frame */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/frames/{frameId}/screenshot': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Store the capture of one frame
+     * @description Store one screenshot and set it on its frame. The image arrives as base64 rather than multipart, because the extension relay carries string bodies only. The server decides everything about the bytes: it decodes them, counts the DECODED length against a 4 MB cap, reads the type from the file’s own magic bytes, and hashes them, so nothing the client claims about size or type is consulted. Captures are deduplicated by content within a project: identical pixels resolve to one asset and one upload, and `reused` says whether that happened, which is the common answer rather than the rare one because re-capturing an unchanged frame produces identical bytes. A body past the cap is 413 `PAYLOAD_TOO_LARGE` and one that is not a PNG is 415 `UNSUPPORTED_MEDIA_TYPE`. The capture bumps no frame version: it is not an edit, so an upload never conflicts with the frame write the client queued beside it. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            imageBase64: string;
+            meta: components['schemas']['FrameScreenshotMeta'];
+          };
+        };
+      };
+      responses: {
+        /** @description The asset the bytes resolved to, and whether it already existed */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ScreenshotUploadResponse'];
+          };
+        };
+        /** @description Invalid body, or a path segment that addresses no frame */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description This project does not hold the named frame */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The decoded image is past the 4 MB cap */
+        413: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The bytes are not a PNG */
+        415: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/assets/{assetId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read one stored capture
+     * @description The bytes of one frame screenshot, for the app canvas. The extension keeps its own capture locally and never reads assets back. Same-origin and session-authenticated: the response carries `Cross-Origin-Resource-Policy: same-origin`, so no other site can embed a tenant capture off the reader’s session. The bytes are immutable by construction, since the object key is their own content hash, which is why they are cacheable for a year, and `private` keeps a shared cache from serving one tenant’s capture to the next request for the same URL. An asset another project holds answers 404, never 403. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Asset ID (fas_...) */
+          assetId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The image bytes */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'image/png': string;
+          };
+        };
+        /** @description The path segment does not address an asset */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/canvases': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List the canvases of the project
+     * @description A canvas is a named, freely arranged board over a project’s frames, the surface on which a plan is laid out across pages rather than within one. This returns every live canvas by name WITHOUT its document: the document is the bulk of a canvas and a listing renders none of it, so opening a board is the single-canvas read. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The project’s canvases, without their documents */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CanvasListResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Create one canvas
+     * @description Create one empty canvas at version 1. The id is the client’s, so a board drawn before the first save keeps its identity when it arrives. A canvas comes into existence here and nowhere else: a document write to an id the project does not hold is a 404 rather than a create, which is what keeps a stray write from minting a board. A name another live canvas already holds is 409 `CANVAS_NAME_EXISTS`; the partial unique index is over live rows, so a name a deleted canvas still carries is free. An id that is not a canvas id is refused by the body schema as 400 `VALIDATION_ERROR`. An id that is not available, because a canvas, in this project or another, already holds it, is 400 `INVALID_CANVAS`, whose message says nothing about the project that holds it. Requires member role.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @example cnv_V1StGXR8Z5jdHi6BmyT7K */
+            id: string;
+            name: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The created canvas, with its empty document */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Canvas'];
+          };
+        };
+        /** @description Invalid body, or an id that is not available */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description A name another live canvas already holds */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/canvases/{canvasId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read one canvas
+     * @description One canvas with its whole document: the nodes with their positions, the edges, and the node keys the board suppresses. A canvas of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted canvas is gone to every read. Requires member role.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Canvas ID (cnv_...) */
+          canvasId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The canvas */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Canvas'];
+          };
+        };
+        /** @description The path segment does not address a canvas */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Replace the document of one canvas
+     * @description The whole board every time: a canvas is read and written as a unit, so there is no partial write to reconcile. `clientWriteId` is minted at compose time and is what makes a replayed drain exact: a write whose id already produced the stored version landed once and is answered with that version, writing nothing, so an offline queue drains repeatedly without turning one edit into two versions. A write against a version someone else has moved past answers 409 `CANVAS_VERSION_CONFLICT` carrying the head, which is what lets a client raise keep-mine against load-theirs on the board that conflicted instead of dropping what a person drew. A canvas this project does not hold, or one that was removed, is 404 `CANVAS_NOT_FOUND`: this door replaces a document and never creates one. Requires member role.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Canvas ID (cnv_...) */
+          canvasId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            document: components['schemas']['CanvasDocument'];
+            baseVersion: number;
+            clientWriteId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The stored version */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PutCanvasResponse'];
+          };
+        };
+        /** @description Invalid body, or a path segment that addresses no canvas */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description This project does not hold the named canvas */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description A stale base version, carrying the head */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CanvasConflictResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/api/projects/{projectId}/flows/{flowId}/releases/step-history': {
@@ -8424,147 +9768,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/mcp/tokens': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List MCP tokens
-     * @description List the authenticated user's personal MCP tokens. No secret material is returned.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description MCP token list */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListMcpTokensResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Issue MCP token
-     * @description Issue a personal MCP token. The raw token is returned exactly once and is never retrievable afterwards.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateMcpTokenRequest'];
-        };
-      };
-      responses: {
-        /** @description MCP token issued */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CreateMcpTokenResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/mcp/tokens/{tokenId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Revoke MCP token
-     * @description Revoke a personal MCP token by id.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          tokenId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description MCP token revoked */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/projects/{projectId}/runners': {
     parameters: {
       query?: never;
@@ -8890,6 +10093,691 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/oauth/register': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Register a client
+     * @description RFC 7591 dynamic client registration. Unauthenticated: a client registers itself before it holds any credential. Issues public clients only (`token_endpoint_auth_method: none`), which prove themselves with PKCE. Errors use the RFC 7591 section 3.2.2 shape, not the standard error envelope.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['OAuthClientRegistrationRequest'];
+        };
+      };
+      responses: {
+        /** @description Client registered */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthClientRegistrationResponse'];
+          };
+        };
+        /** @description Invalid client metadata or redirect URI */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthRegistrationError'];
+          };
+        };
+        /** @description Registration ceiling reached (Retry-After header) */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/device_authorization': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start a device authorization
+     * @description RFC 8628 section 3.1. A client that cannot host a browser redirect asks for a device code and a user code here, then polls the token endpoint while the person approves the user code at `/oauth/device`. Unauthenticated, and public clients only: the code is worth nothing until a signed-in person approves it. Body is `application/x-www-form-urlencoded`; errors use the RFC 6749 section 5.2 shape, not the standard error envelope.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/x-www-form-urlencoded': components['schemas']['DeviceAuthorizationRequest'];
+        };
+      };
+      responses: {
+        /** @description Device authorization opened */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeviceAuthorizationResponse'];
+          };
+        };
+        /** @description invalid_request, unauthorized_client, invalid_scope or invalid_target */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+        /** @description invalid_client: unknown, revoked or confidential client */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/token': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Exchange a grant for tokens
+     * @description RFC 6749 section 3.2. Runs the authorization code, refresh token and device code grants. The client authenticates here: a public client with PKCE, a confidential one with HTTP Basic or a form secret. Body is `application/x-www-form-urlencoded` only; errors use the RFC 6749 section 5.2 shape, not the standard error envelope, and a failed Basic authentication is answered with a `WWW-Authenticate: Basic` challenge. Responses are never cacheable. Rate limited per `client_id`.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/x-www-form-urlencoded': components['schemas']['TokenRequest'];
+        };
+      };
+      responses: {
+        /** @description Tokens issued */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['TokenResponse'];
+          };
+        };
+        /** @description invalid_request, invalid_grant, invalid_scope, invalid_target, unsupported_grant_type, or a device grant status (authorization_pending, slow_down, access_denied, expired_token) */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+        /** @description invalid_client: unknown, revoked, or bad credentials */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+        /** @description Per-client token budget reached (Retry-After header) */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/revoke': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Revoke a token
+     * @description RFC 7009. Client authentication is the same as at the token endpoint. A refresh token revokes its whole rotation family, an access token only itself. An authenticated request always answers 200 with an empty body, unknown tokens included: a distinguishable answer would be an oracle. Body is `application/x-www-form-urlencoded`.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/x-www-form-urlencoded': components['schemas']['RevocationRequest'];
+        };
+      };
+      responses: {
+        /** @description Revoked, or nothing matched */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description invalid_request or unsupported_token_type */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+        /** @description invalid_client: unknown, revoked, or bad credentials */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthError'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/device/approve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Decide a device authorization
+     * @description The person's approve or deny decision on a pending device authorization. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token can never approve its own device. Requires the `X-CSRF-Token` minted with the consent page, bound to this user code.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['DeviceApprovalRequest'];
+        };
+      };
+      responses: {
+        /** @description Decision recorded */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeviceApprovalResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/authorize': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Decide a consent request
+     * @description The person's allow or deny decision on the consent screen at `/oauth/authorize`. The ticket is the HMAC-signed authorization request that screen was rendered from, so the decision cannot alter what was validated, and it is bound to the person it was minted for. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token can never approve a consent. The response says where to send the browser: the client's registered redirect URI, carrying `code` on allow and `error=access_denied` on deny.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['OAuthConsentDecisionRequest'];
+        };
+      };
+      responses: {
+        /** @description Decision recorded */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['OAuthConsentDecisionResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/grants': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List connected apps
+     * @description The apps the signed-in person has consented to, as the Connected apps page renders them. Revoked grants are absent. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token cannot read the connections its owner holds.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Connected apps */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListOAuthGrantsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    /**
+     * Disconnect every app
+     * @description Revoke every grant this person holds and the tokens hanging from them. Automation tokens hang from no grant and survive. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a read-scoped machine token cannot disconnect everything its owner has connected.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Apps disconnected */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/oauth/grants/{grantId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Disconnect one app
+     * @description Revoke one grant and the tokens hanging from it. Idempotent: an unknown grant, another person's grant and an already revoked one all answer 204, and the token sweep runs either way, so pressing Disconnect twice cleans up a token minted inside the first press's window. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          grantId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description App disconnected */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/oauth/clients': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List OAuth clients
+     * @description Every registered OAuth client, revoked ones included. No secret material is returned. Admin only: a non-admin caller gets 404, not 403, so the endpoint does not confirm its own existence.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OAuth client list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListOAuthClientsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Create a confidential OAuth client
+     * @description Create an OAuth client that authenticates with a secret. The raw secret is returned exactly once and is never retrievable afterwards. Admin only: a non-admin caller gets 404, not 403.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateOAuthClientRequest'];
+        };
+      };
+      responses: {
+        /** @description Client created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CreateOAuthClientResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/oauth/clients/{clientId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Revoke an OAuth client
+     * @description Revoke a client together with the grants consented to it and the tokens minted under them. Admin only: a non-admin caller gets 404, not 403, the same answer an unknown client id gets.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          clientId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Client revoked */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -9138,14 +11026,19 @@ export interface components {
         role: string;
         joinedAt: string;
       }[];
-      apiTokens: {
+      tokens: {
         id: string;
         name: string;
+        /** @example automation */
+        kind: string;
+        /** @example read write */
+        scope: string;
+        /** @example api mcp */
+        audience: string;
         projectId: string | null;
-        origin: string;
         createdAt: string;
         lastUsedAt: string | null;
-        expiresAt: string | null;
+        expiresAt: string;
         revokedAt: string | null;
       }[];
       sessions: {
@@ -9153,14 +11046,6 @@ export interface components {
         createdAt: string;
         expiresAt: string;
         lastTouchedAt: string;
-      }[];
-      mcpTokens: {
-        id: string;
-        name: string;
-        createdAt: string;
-        lastUsedAt: string | null;
-        expiresAt: string;
-        revokedAt: string | null;
       }[];
       mcpSessions: {
         id: string;
@@ -9195,19 +11080,27 @@ export interface components {
         cancelledAt: string | null;
       }[];
     };
-    ApiTokenSummary: {
+    AutomationTokenSummary: {
       /** @example tok_a1b2c3d4 */
       id: string;
       /** @example CI Pipeline */
       name: string;
-      /** @example sk-walkeros-abcd */
-      prefix: string;
-      /** @example manual */
-      origin: string;
-      /** @example null */
-      projectId: string | null;
-      /** @example null */
-      scopes: string[] | null;
+      /** @example wos_pat_a1b2 */
+      tokenPrefix: string;
+      /**
+       * @example [
+       *       "read",
+       *       "write"
+       *     ]
+       */
+      scope: string[];
+      /**
+       * @example [
+       *       "api",
+       *       "mcp"
+       *     ]
+       */
+      audience: string[];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -9222,7 +11115,7 @@ export interface components {
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
        */
-      expiresAt: string | null;
+      expiresAt: string;
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -9269,6 +11162,10 @@ export interface components {
        * @example 2026-01-26T14:30:00.000Z
        */
       updatedAt: string;
+    };
+    DeploySettingsRequest: {
+      flow?: string;
+      humanText?: string;
     };
     DeploySettingsResponse: {
       deploymentId: string;
@@ -9438,9 +11335,9 @@ export interface components {
         | 'active'
         | 'stopped'
         | 'failed';
-      currentVersion: components['schemas']['DeploymentVersionDetail'];
+      currentVersion: components['schemas']['DeploymentVersionDetail'] | null;
       versions: components['schemas']['DeploymentVersionHistoryEntry'][];
-      error: components['schemas']['DeploymentError'];
+      error: components['schemas']['DeploymentError'] | null;
       recentErrors?:
         | {
             message: string;
@@ -9485,7 +11382,7 @@ export interface components {
       /** Format: date-time */
       publishedAt: string;
       publishedBy: string | null;
-    } | null;
+    };
     DeploymentVersionHistoryEntry: {
       versionNumber: number;
       status: string;
@@ -9506,7 +11403,7 @@ export interface components {
        */
       phase: 'preflight' | 'deploy' | 'bundle' | 'publish' | 'provision';
       detail?: string;
-    } | null;
+    };
     CreateDeploymentResponse: {
       /** @example dep_a1b2c3d4 */
       id: string;
@@ -9711,9 +11608,48 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
       createdBy: string | null;
+      createdByLabel: string | null;
+      rationale?: components['schemas']['ReleaseRationaleSummary'] | null;
     };
-    ListVersionAnnotationsResponse: {
-      annotations: components['schemas']['VersionAnnotation'][];
+    ReleaseRationaleSummary: {
+      hasHumanText: boolean;
+      hasGeneratedSummary: boolean;
+      firstLine: string | null;
+    };
+    ReleaseContentResponse: {
+      /** @example ver_a1b2c3d4 */
+      versionId: string;
+      /** @example 22 */
+      versionNumber: number;
+      content: components['schemas']['FlowConfig'];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /** @enum {string} */
+      createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
+    };
+    ReleaseDiff: {
+      /** @example ver_a1b2c3d4 */
+      prevVersionId: string;
+      prevVersionNumber: number;
+      text: string;
+      contentIdentical: boolean;
+    };
+    ReleaseDetailResponse: {
+      /** @example ver_a1b2c3d4 */
+      versionId: string;
+      versionNumber: number;
+      contentHash: string | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      createdBy: string;
+      rationale: components['schemas']['VersionAnnotation'] | null;
+      diff: components['schemas']['ReleaseDiff'] | null;
     };
     VersionAnnotation: {
       /** @example ver_a1b2c3d4 */
@@ -9732,6 +11668,9 @@ export interface components {
        * @example 2026-01-26T14:30:00.000Z
        */
       updatedAt: string;
+    };
+    ListVersionAnnotationsResponse: {
+      annotations: components['schemas']['VersionAnnotation'][];
     };
     UpsertVersionAnnotationResponse: {
       /** @example ver_a1b2c3d4 */
@@ -9841,6 +11780,449 @@ export interface components {
       messageCount: number;
       messages?: components['schemas']['HubMessage'][];
       hasMoreMessages?: boolean;
+    };
+    ListKnowledgeResponse: {
+      entries: components['schemas']['KnowledgeEntry'][];
+      hasMoreEntries: boolean;
+    };
+    KnowledgeEntry:
+      | components['schemas']['KnowledgeThread']
+      | components['schemas']['KnowledgeDescription'];
+    KnowledgeThread: {
+      id: string;
+      anchorKey: string;
+      anchorLabel: string;
+      frameId: string | null;
+      frameName: string | null;
+      flowId: string | null;
+      subjectKey: string | null;
+      spatial: components['schemas']['KnowledgeSpatial'] | null;
+      validity: components['schemas']['KnowledgeValidity'];
+      /** @enum {string} */
+      freshness: 'current' | 'subject_changed' | 'unknown';
+      author: components['schemas']['KnowledgeAuthor'];
+      /** @enum {string} */
+      source: 'tag_mode' | 'hub' | 'mcp';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'thread';
+      /**
+       * @example tag
+       * @enum {string}
+       */
+      anchorType:
+        | 'step'
+        | 'entity_action'
+        | 'release'
+        | 'contract'
+        | 'tag'
+        | 'page';
+      /**
+       * @example open
+       * @enum {string}
+       */
+      status: 'open' | 'resolved';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      messageCount: number;
+      messages?: components['schemas']['KnowledgeMessage'][];
+      hasMoreMessages?: boolean;
+    };
+    KnowledgeSpatial: {
+      at: {
+        x: number;
+        y: number;
+      };
+      element?: {
+        [key: string]: unknown;
+      };
+    };
+    KnowledgeValidity:
+      | {
+          /** @enum {string} */
+          tier: 'release';
+          versionId: string;
+          versionNumber: number;
+          promoted: boolean;
+        }
+      | {
+          /** @enum {string} */
+          tier: 'draft';
+          versionId?: string;
+        }
+      | {
+          /** @enum {string} */
+          tier: 'none';
+        };
+    KnowledgeAuthor: {
+      /** @enum {string} */
+      kind: 'user' | 'preview' | 'agent';
+      id: string | null;
+      label: string;
+    };
+    KnowledgeMessage: {
+      id: string;
+      /** @example user_a1b2c3d4 */
+      author: string;
+      /** @example ayla@elbwalker.com */
+      authorLabel: string;
+      text: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      clientMessageId: string | null;
+    };
+    KnowledgeDescription: {
+      id: string;
+      anchorKey: string;
+      anchorLabel: string;
+      frameId: string | null;
+      frameName: string | null;
+      flowId: string | null;
+      subjectKey: string | null;
+      spatial: components['schemas']['KnowledgeSpatial'] | null;
+      validity: components['schemas']['KnowledgeValidity'];
+      /** @enum {string} */
+      freshness: 'current' | 'subject_changed' | 'unknown';
+      author: components['schemas']['KnowledgeAuthor'];
+      /** @enum {string} */
+      source: 'tag_mode' | 'hub' | 'mcp';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'description';
+      /**
+       * @example tag
+       * @enum {string}
+       */
+      anchorType: 'tag' | 'page';
+      body: string;
+    };
+    KnowledgeThreadResponse: {
+      id: string;
+      anchorKey: string;
+      anchorLabel: string;
+      frameId: string | null;
+      frameName: string | null;
+      flowId: string | null;
+      subjectKey: string | null;
+      spatial: components['schemas']['KnowledgeSpatial'] | null;
+      validity: components['schemas']['KnowledgeValidity'];
+      /** @enum {string} */
+      freshness: 'current' | 'subject_changed' | 'unknown';
+      author: components['schemas']['KnowledgeAuthor'];
+      /** @enum {string} */
+      source: 'tag_mode' | 'hub' | 'mcp';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /** @enum {string} */
+      kind: 'thread';
+      /**
+       * @example tag
+       * @enum {string}
+       */
+      anchorType:
+        | 'step'
+        | 'entity_action'
+        | 'release'
+        | 'contract'
+        | 'tag'
+        | 'page';
+      /**
+       * @example open
+       * @enum {string}
+       */
+      status: 'open' | 'resolved';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      messageCount: number;
+      messages?: components['schemas']['KnowledgeMessage'][];
+      hasMoreMessages?: boolean;
+    };
+    KnowledgeDescriptionResponse: {
+      id: string;
+      anchorKey: string;
+      anchorLabel: string;
+      frameId: string | null;
+      frameName: string | null;
+      flowId: string | null;
+      subjectKey: string | null;
+      spatial: components['schemas']['KnowledgeSpatial'] | null;
+      validity: components['schemas']['KnowledgeValidity'];
+      /** @enum {string} */
+      freshness: 'current' | 'subject_changed' | 'unknown';
+      author: components['schemas']['KnowledgeAuthor'];
+      /** @enum {string} */
+      source: 'tag_mode' | 'hub' | 'mcp';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /** @enum {string} */
+      kind: 'description';
+      /**
+       * @example tag
+       * @enum {string}
+       */
+      anchorType: 'tag' | 'page';
+      body: string;
+    };
+    FrameInput: {
+      name: string;
+      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+      parentId: string | null;
+      placements: components['schemas']['FramePlacement'][];
+      size: components['schemas']['PlanSize'];
+      marks: {
+        [key: string]: unknown;
+      };
+      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+      extends: string | null;
+      source: components['schemas']['FrameSource'];
+      /** @enum {string} */
+      origin: 'drawn' | 'imported' | 'observed';
+      flowId: string | null;
+    };
+    FramePlacement: {
+      id: string;
+      rect: components['schemas']['PlanRect'];
+      selector?: string;
+      anchor?: {
+        [key: string]: unknown;
+      };
+    };
+    PlanRect: {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+    };
+    PlanSize: {
+      width: number;
+      height: number;
+    };
+    FrameSource:
+      | {
+          /** @enum {string} */
+          kind: 'page';
+          key: string;
+          url: string;
+        }
+      | {
+          /** @enum {string} */
+          kind: 'figma';
+          fileKey: string;
+          nodeId: string;
+        }
+      | {
+          /** @enum {string} */
+          kind: 'image';
+        }
+      | null;
+    Frame: {
+      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+      id: string;
+      projectId: string;
+      name: string;
+      parentId: string | null;
+      placements: components['schemas']['FramePlacement'][];
+      size: components['schemas']['PlanSize'];
+      marks: {
+        [key: string]: unknown;
+      };
+      extends: string | null;
+      source: components['schemas']['FrameSource'];
+      /** @enum {string} */
+      origin: 'drawn' | 'imported' | 'observed';
+      flowId: string | null;
+      screenshot: components['schemas']['FrameScreenshot'] | null;
+      version: number;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      createdBy: string;
+      updatedBy: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      deletedAt: string | null;
+    };
+    FrameScreenshot: {
+      assetId: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      capturedAt: string;
+      size: components['schemas']['PlanSize'];
+      dpr: number;
+      capturedRect: components['schemas']['PlanRect'];
+    };
+    FrameLean: {
+      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+      id: string;
+      projectId: string;
+      name: string;
+      parentId: string | null;
+      placements: components['schemas']['FramePlacement'][];
+      size: components['schemas']['PlanSize'];
+      extends: string | null;
+      source: components['schemas']['FrameSource'];
+      /** @enum {string} */
+      origin: 'drawn' | 'imported' | 'observed';
+      flowId: string | null;
+      screenshot: components['schemas']['FrameScreenshot'] | null;
+      version: number;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      createdBy: string;
+      updatedBy: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      deletedAt: string | null;
+    };
+    FrameListResponse: {
+      frames: components['schemas']['Frame'][];
+    };
+    FrameLeanListResponse: {
+      frames: components['schemas']['FrameLean'][];
+    };
+    PutFrameResponse: {
+      version: number;
+    };
+    FrameConflictResponse: {
+      error: {
+        /** @enum {string} */
+        code: 'FRAME_VERSION_CONFLICT';
+        message: string;
+      };
+      head: components['schemas']['Frame'];
+    };
+    CanvasDocument: {
+      /** @enum {number} */
+      v: 1;
+      nodes: components['schemas']['CanvasNodeEntry'][];
+      edges: components['schemas']['CanvasEdgeEntry'][];
+      hidden: string[];
+    };
+    CanvasNodeEntry: {
+      kind: string;
+      ref: string;
+      position: components['schemas']['CanvasPoint'];
+      parent?: string;
+      size?: {
+        width: number;
+        height: number;
+      };
+      label?: string;
+    };
+    CanvasPoint: {
+      x: number;
+      y: number;
+    };
+    CanvasEdgeEntry: {
+      id: string;
+      /** @enum {string} */
+      kind: 'navigation';
+      from: string;
+      to: string;
+      label?: string;
+    };
+    Canvas: {
+      /** @example cnv_V1StGXR8Z5jdHi6BmyT7K */
+      id: string;
+      projectId: string;
+      name: string;
+      document: components['schemas']['CanvasDocument'];
+      version: number;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      createdBy: string;
+      updatedBy: string;
+    };
+    CanvasLean: {
+      /** @example cnv_V1StGXR8Z5jdHi6BmyT7K */
+      id: string;
+      projectId: string;
+      name: string;
+      version: number;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      createdBy: string;
+      updatedBy: string;
+    };
+    CanvasListResponse: {
+      canvases: components['schemas']['CanvasLean'][];
+    };
+    PutCanvasResponse: {
+      version: number;
+    };
+    CanvasConflictResponse: {
+      error: {
+        /** @enum {string} */
+        code: 'CANVAS_VERSION_CONFLICT';
+        message: string;
+      };
+      head: components['schemas']['Canvas'];
     };
     SummarizeReleaseResponse: {
       /** @enum {string} */
@@ -9965,8 +12347,8 @@ export interface components {
       observedFlowName: string | null;
       serverFlowName: string | null;
       serverEndpoint: string | null;
-      web: components['schemas']['ObserveSessionWeb'];
-      server: components['schemas']['ObserveSessionServer'];
+      web: components['schemas']['ObserveSessionWeb'] | null;
+      server: components['schemas']['ObserveSessionServer'] | null;
       /** Format: date-time */
       expiresAt: string;
       recordsReceived: number;
@@ -9984,12 +12366,12 @@ export interface components {
       /** Format: uri */
       url?: string;
       binding?: string;
-    } | null;
+    };
     ObserveSessionServer: {
       /** Format: uri */
       endpoint: string | null;
       env: components['schemas']['ObserveSessionServerEnv'];
-    } | null;
+    };
     ObserveSessionServerEnv: {
       /** Format: uri */
       WALKEROS_OBSERVER_URL: string;
@@ -10671,33 +13053,6 @@ export interface components {
       /** @enum {boolean} */
       ok: true;
     };
-    CreateMcpTokenRequest: {
-      name: string;
-      ttlSeconds?: number;
-    };
-    CreateMcpTokenResponse: {
-      id: string;
-      name: string;
-      token: string;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      expiresAt: string;
-    };
-    ListMcpTokensResponse: {
-      tokens: components['schemas']['McpTokenSummary'][];
-    };
-    McpTokenSummary: {
-      id: string;
-      name: string;
-      audience: string;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      lastUsedAt: string | null;
-      /** Format: date-time */
-      expiresAt: string;
-    };
     PackageCatalogResponse: {
       catalog: components['schemas']['PackageCatalogEntry'][];
       count: number;
@@ -10801,27 +13156,6 @@ export interface components {
         lastTouchedAt: string;
         isCurrent: boolean;
       }[];
-    };
-    DeviceCodeResponse: {
-      deviceCode: string;
-      userCode: string;
-      expiresIn: number;
-      interval: number;
-    };
-    ApproveDeviceResponse: {
-      success: boolean;
-    };
-    ApproveDeviceRequest: {
-      userCode: string;
-    };
-    DeviceTokenResponse: {
-      token: string;
-      email: string;
-      userId: string;
-    };
-    DeviceTokenRequest: {
-      deviceCode: string;
-      hostname?: string;
     };
     ListProjectsResponse: {
       projects: components['schemas']['Project'][];
@@ -10975,18 +13309,32 @@ export interface components {
       /** @enum {string} */
       createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
     };
-    ListApiTokensResponse: {
-      tokens: components['schemas']['ApiTokenSummary'][];
+    ListAutomationTokensResponse: {
+      tokens: components['schemas']['AutomationTokenSummary'][];
     };
-    CreateApiTokenResponse: {
+    CreateAutomationTokenResponse: {
       /** @example tok_a1b2c3d4 */
       id: string;
       /** @example CI Pipeline */
       name: string;
-      /** @example sk-walkeros-abcd1234... */
+      /** @example wos_pat_a1b2c3d4... */
       token: string;
-      /** @example sk-walkeros-abcd */
-      prefix: string;
+      /** @example wos_pat_a1b2 */
+      tokenPrefix: string;
+      /**
+       * @example [
+       *       "read",
+       *       "write"
+       *     ]
+       */
+      scope: string[];
+      /**
+       * @example [
+       *       "api",
+       *       "mcp"
+       *     ]
+       */
+      audience: string[];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -10996,15 +13344,18 @@ export interface components {
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
        */
-      expiresAt: string | null;
-      /** @example null */
-      projectId: string | null;
+      expiresAt: string;
     };
-    CreateApiTokenRequest: {
+    CreateAutomationTokenRequest: {
       /** @example CI Pipeline */
       name: string;
+      /**
+       * @example read write
+       * @enum {string}
+       */
+      scope: 'read' | 'read write';
       /** @example 90 */
-      expiresInDays?: number | null;
+      expiresInDays: 30 | 90 | 180 | 365;
     };
     BundleResponse: {
       bundleId: string;
@@ -11079,6 +13430,21 @@ export interface components {
     DeclineInvitationResponse: {
       message: string;
     };
+    ScreenshotUploadResponse: {
+      /** @example fas_V1StGXR8Z5jdHi6BmyT7K */
+      assetId: string;
+      reused: boolean;
+    };
+    FrameScreenshotMeta: {
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      capturedAt: string;
+      size: components['schemas']['PlanSize'];
+      dpr: number;
+      capturedRect: components['schemas']['PlanRect'];
+    };
     HeartbeatRequest: {
       /** @example a1b2c3d4e5f6 */
       instanceId: string;
@@ -11124,6 +13490,211 @@ export interface components {
         level: 'error' | 'warn' | 'info' | 'debug';
         message: string;
       }[];
+    };
+    OAuthClientRegistrationResponse: {
+      /** @example client_abc */
+      client_id: string;
+      /** @example 1725400000 */
+      client_id_issued_at: number;
+      client_name: string;
+      redirect_uris: string[];
+      /** @enum {string} */
+      token_endpoint_auth_method: 'none';
+      grant_types: string[];
+      response_types: string[];
+    };
+    OAuthRegistrationError: {
+      /** @enum {string} */
+      error: 'invalid_client_metadata' | 'invalid_redirect_uri';
+      error_description: string;
+    };
+    OAuthClientRegistrationRequest: {
+      /**
+       * @example [
+       *       "https://claude.ai/api/mcp/auth_callback"
+       *     ]
+       */
+      redirect_uris: string[];
+      client_name?: string;
+      /** @enum {string} */
+      token_endpoint_auth_method?: 'none';
+      grant_types?: ('authorization_code' | 'refresh_token')[];
+      response_types?: 'code'[];
+      /** Format: uri */
+      client_uri?: string;
+      /** Format: uri */
+      logo_uri?: string;
+      scope?: string;
+      software_id?: string;
+      software_version?: string;
+    };
+    DeviceAuthorizationResponse: {
+      device_code: string;
+      /** @example WDJB-MJHT */
+      user_code: string;
+      verification_uri: string;
+      verification_uri_complete: string;
+      /** @example 900 */
+      expires_in: number;
+      /** @example 5 */
+      interval: number;
+    };
+    OAuthError: {
+      /** @example invalid_client */
+      error: string;
+      error_description: string;
+    };
+    DeviceAuthorizationRequest: {
+      /** @example walkeros-cli */
+      client_id: string;
+      /** @example read write offline_access */
+      scope?: string;
+      /** @example https://app.walkeros.io/api */
+      resource?: string;
+    };
+    TokenResponse: {
+      access_token: string;
+      /** @enum {string} */
+      token_type: 'Bearer';
+      /** @example 3600 */
+      expires_in: number;
+      refresh_token?: string;
+      /** @example read write offline_access */
+      scope: string;
+    };
+    TokenRequest: {
+      /**
+       * @example authorization_code
+       * @enum {string}
+       */
+      grant_type:
+        | 'authorization_code'
+        | 'refresh_token'
+        | 'urn:ietf:params:oauth:grant-type:device_code';
+      /** @example walkeros-cli */
+      client_id?: string;
+      client_secret?: string;
+      code?: string;
+      redirect_uri?: string;
+      code_verifier?: string;
+      refresh_token?: string;
+      device_code?: string;
+      /** @example read offline_access */
+      scope?: string;
+      /** @example https://app.walkeros.io/api */
+      resource?: string;
+    };
+    RevocationRequest: {
+      token: string;
+      /** @enum {string} */
+      token_type_hint?: 'access_token' | 'refresh_token';
+      client_id?: string;
+      client_secret?: string;
+    };
+    DeviceApprovalResponse: {
+      /** @enum {boolean} */
+      success: true;
+      /** @enum {string} */
+      decision: 'approve' | 'deny';
+    };
+    DeviceApprovalRequest: {
+      /** @example WDJB-MJHT */
+      userCode: string;
+      /** @enum {string} */
+      decision: 'approve' | 'deny';
+    };
+    OAuthConsentDecisionResponse: {
+      /** @example https://claude.ai/api/mcp/auth_callback?code=abc&state=xyz */
+      redirectTo: string;
+    };
+    OAuthConsentDecisionRequest: {
+      ticket: string;
+      /** @enum {string} */
+      decision: 'allow' | 'deny';
+    };
+    ListOAuthGrantsResponse: {
+      grants: components['schemas']['OAuthGrantSummary'][];
+    };
+    OAuthGrantSummary: {
+      id: string;
+      clientId: string;
+      clientName: string;
+      scope: string[];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      lastUsedAt: string | null;
+    };
+    ListOAuthClientsResponse: {
+      clients: components['schemas']['OAuthClientSummary'][];
+    };
+    OAuthClientSummary: {
+      clientId: string;
+      /** @enum {string} */
+      kind: 'dcr' | 'cimd' | 'confidential' | 'builtin';
+      name: string;
+      redirectUris: string[];
+      grantTypes: string[];
+      /** @enum {string} */
+      tokenEndpointAuthMethod:
+        | 'none'
+        | 'client_secret_basic'
+        | 'client_secret_post';
+      allowedResources: ('mcp' | 'api')[];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      revokedAt: string | null;
+    };
+    CreateOAuthClientResponse: {
+      clientId: string;
+      /** @enum {string} */
+      kind: 'dcr' | 'cimd' | 'confidential' | 'builtin';
+      name: string;
+      redirectUris: string[];
+      grantTypes: string[];
+      /** @enum {string} */
+      tokenEndpointAuthMethod:
+        | 'none'
+        | 'client_secret_basic'
+        | 'client_secret_post';
+      allowedResources: ('mcp' | 'api')[];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      revokedAt: string | null;
+      clientSecret: string;
+    };
+    CreateOAuthClientRequest: {
+      name: string;
+      redirectUris: string[];
+      /**
+       * @default [
+       *       "authorization_code",
+       *       "refresh_token"
+       *     ]
+       */
+      grantTypes: ('authorization_code' | 'refresh_token')[];
+      /**
+       * @default [
+       *       "mcp",
+       *       "api"
+       *     ]
+       */
+      allowedResources: ('mcp' | 'api')[];
+      /**
+       * @default client_secret_basic
+       * @enum {string}
+       */
+      authMethod: 'client_secret_basic' | 'client_secret_post';
     };
   };
   responses: never;

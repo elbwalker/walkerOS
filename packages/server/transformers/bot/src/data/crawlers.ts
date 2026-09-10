@@ -43,14 +43,26 @@
  *   Majestic:        https://mj12bot.com/
  *   Screaming Frog:  https://www.screamingfrog.co.uk/seo-spider/user-guide/configuration/
  *   UptimeRobot:     https://help.uptimerobot.com/en/articles/11358489-what-is-the-uptimerobot-user-agent-string
+ *   Datadog:         https://docs.datadoghq.com/synthetics/guide/identify_synthetics_bots/
+ *   Better Stack:    https://betterstack.com/docs/uptime/frequently-asked-questions/
+ *   HetrixTools:     https://hetrixtools.com/uptime-monitor-bot/
+ *   updown.io:       https://updown.io/about
+ *   GTmetrix:        https://gtmetrix.com/blog/anonymizing-your-user-agent/
  *   Meta:            https://developers.facebook.com/docs/sharing/webmasters/web-crawlers
  *   X:               https://developer.x.com/en/docs/x-for-websites/cards/guides/getting-started
  *   Slack:           https://api.slack.com/robots
  *   WhatsApp:        https://developers.facebook.com/documentation/business-messaging/whatsapp/link-previews/
  *
  * Entries without a readable vendor page (SeznamBot, Yeti, Discordbot,
- * TelegramBot, Pingdom, StatusCake, DotBot) rest on the self-reference in the
- * UA string itself. Reviewed quarterly.
+ * TelegramBot, Pingdom, StatusCake, DotBot, Site24x7, New Relic Synthetics,
+ * Oh Dear) rest on the self-reference in the UA string itself. `Uptrends`
+ * additionally rests on production traffic observed carrying the token.
+ * Reviewed quarterly.
+ *
+ * Monitor tokens are opt-out-able in a way search-crawler tokens are not:
+ * Uptrends, Datadog and GTmetrix all let an operator override the UA to a
+ * plain browser string, and a monitor configured that way is indistinguishable
+ * from a person here. A miss is expected; a false positive is not.
  *
  * Deliberately excluded: `Googlebot-News`, `Google-Extended` and
  * `Applebot-Extended` are robots.txt directives that never appear in a UA
@@ -139,6 +151,32 @@ export const crawlers: CrawlerEntry[] = [
   { match: 'UptimeRobot', product: 'UptimeRobot', category: 'monitor' },
   { match: 'Pingdom', product: 'Pingdom', category: 'monitor' },
   { match: 'StatusCake', product: 'StatusCake', category: 'monitor' },
+  { match: 'Uptrends', product: 'Uptrends', category: 'monitor' },
+  { match: 'Site24x7', product: 'Site24x7', category: 'monitor' },
+  // Datadog's two check types carry two different tokens, neither a substring
+  // of the other: API tests send `Datadog/Synthetics`, browser tests append
+  // `DatadogSynthetics` to a real browser UA.
+  {
+    match: 'DatadogSynthetics',
+    product: 'Datadog Synthetics',
+    category: 'monitor',
+  },
+  {
+    match: 'Datadog/Synthetics',
+    product: 'Datadog Synthetics',
+    category: 'monitor',
+  },
+  {
+    match: 'NewRelicSynthetics',
+    product: 'New Relic Synthetics',
+    category: 'monitor',
+  },
+  // Token, not product name: Better Stack still ships the Better Uptime UA.
+  { match: 'Better Uptime Bot', product: 'Better Stack', category: 'monitor' },
+  { match: 'HetrixTools', product: 'HetrixTools', category: 'monitor' },
+  { match: 'updown.io', product: 'updown.io', category: 'monitor' },
+  { match: 'OhDear', product: 'Oh Dear', category: 'monitor' },
+  { match: 'GTmetrix', product: 'GTmetrix', category: 'monitor' },
 
   // --- Link unfurlers ---
   {

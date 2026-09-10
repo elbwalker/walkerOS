@@ -133,6 +133,7 @@ describe('deploy_manage tool', () => {
 
       expect(deploy).toHaveBeenCalledWith({
         flowId: 'flow_1',
+        projectId: undefined,
         wait: true,
         flowName: 'my-flow',
       });
@@ -148,6 +149,7 @@ describe('deploy_manage tool', () => {
 
       expect(deploy).toHaveBeenCalledWith({
         flowId: 'flow_1',
+        projectId: undefined,
         wait: true,
         flowName: undefined,
       });
@@ -198,6 +200,7 @@ describe('deploy_manage tool', () => {
 
       expect(deploy).toHaveBeenCalledWith({
         flowId: 'flow_1',
+        projectId: undefined,
         wait: false,
         flowName: undefined,
       });
@@ -498,6 +501,172 @@ describe('deploy_manage tool', () => {
       expect(result.isError).toBe(true);
       expect(result.structuredContent.code).toBe('NOT_FOUND');
       expect(deleteDeployment).not.toHaveBeenCalled();
+    });
+  });
+
+  // A link belongs in the structured result, not only in prose: an agent reads
+  // it as data and hands it on without retyping it out of a sentence.
+  describe('links into the app', () => {
+    it('links the deployment page a deploy just started', async () => {
+      const deploy = jest
+        .fn()
+        .mockResolvedValue({ deploymentId: 'dep_1', slug: 'abc123456789' });
+      registerDeployTool(server as never, stubClient({ deploy }));
+
+      const tool = server.getTool('deploy_manage')!;
+      const result = (await tool.handler({
+        action: 'deploy',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+      })) as { structuredContent: { appUrl?: string } };
+
+      expect(result.structuredContent.appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/deployments/dep_1',
+      );
+    });
+
+    it('deploys in the project it links into', async () => {
+      // The link resolves `explicit ?? default`. A deploy that resolved the
+      // default instead would run in one project and link into another, and
+      // the project-scoped deployment page would answer that link with a 404.
+      const deploy = jest.fn().mockResolvedValue({ deploymentId: 'dep_1' });
+      registerDeployTool(
+        server as never,
+        stubClient({ deploy, getDefaultProject: () => 'proj_default' }),
+      );
+
+      const tool = server.getTool('deploy_manage')!;
+      const result = (await tool.handler({
+        action: 'deploy',
+        projectId: 'proj_explicit',
+        flowId: 'flow_abc',
+      })) as { structuredContent: { appUrl?: string } };
+
+      expect(deploy).toHaveBeenCalledWith(
+        expect.objectContaining({ projectId: 'proj_explicit' }),
+      );
+      expect(result.structuredContent.appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_explicit/deployments/dep_1',
+      );
+    });
+
+    it('links the deployment page a get read', async () => {
+      const listDeployments = jest
+        .fn()
+        .mockResolvedValue({ deployments: [DEPLOYMENT_ONE] });
+      const getDeploymentBySlug = jest
+        .fn()
+        .mockResolvedValue({ id: 'dep_1', slug: DEPLOYMENT_ONE.slug });
+      registerDeployTool(
+        server as never,
+        stubClient({ listDeployments, getDeploymentBySlug }),
+      );
+
+      const tool = server.getTool('deploy_manage')!;
+      const result = (await tool.handler({
+        action: 'get',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+      })) as { structuredContent: { appUrl?: string } };
+
+      expect(result.structuredContent.appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/deployments/dep_1',
+      );
+    });
+
+    // The API's own `url` is where the deployment SERVES. Overwriting it with
+    // the app page would swap a live endpoint for a UI link with nothing to
+    // say the meaning had changed, so the link travels under its own key.
+    it('leaves the serving url a get returned untouched', async () => {
+      const listDeployments = jest
+        .fn()
+        .mockResolvedValue({ deployments: [DEPLOYMENT_ONE] });
+      const getDeploymentBySlug = jest.fn().mockResolvedValue({
+        id: 'dep_1',
+        slug: DEPLOYMENT_ONE.slug,
+        status: 'active',
+        url: 'https://collect.example.com',
+      });
+      registerDeployTool(
+        server as never,
+        stubClient({ listDeployments, getDeploymentBySlug }),
+      );
+
+      const tool = server.getTool('deploy_manage')!;
+      const result = (await tool.handler({
+        action: 'get',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+      })) as { structuredContent: { url?: string; appUrl?: string } };
+
+      expect(result.structuredContent.url).toBe('https://collect.example.com');
+      expect(result.structuredContent.appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/deployments/dep_1',
+      );
+    });
+
+    it('leaves the serving url a finished deploy returned untouched', async () => {
+      // The hosted shape: `wait: true` merges the terminal status onto the
+      // start body, so the deploy response carries `url` as well.
+      const deploy = jest.fn().mockResolvedValue({
+        deploymentId: 'dep_1',
+        slug: 'abc123456789',
+        status: 'active',
+        url: 'https://collect.example.com',
+      });
+      registerDeployTool(server as never, stubClient({ deploy }));
+
+      const tool = server.getTool('deploy_manage')!;
+      const result = (await tool.handler({
+        action: 'deploy',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+      })) as { structuredContent: { url?: string; appUrl?: string } };
+
+      expect(result.structuredContent.url).toBe('https://collect.example.com');
+      expect(result.structuredContent.appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/deployments/dep_1',
+      );
+    });
+
+    it('links nothing for a response carrying only a slug', async () => {
+      // The detail route resolves a slug, but the page's live-status stream
+      // matches on the id alone, so a slug link opens a page whose stream
+      // fails mid-deploy.
+      const listDeployments = jest
+        .fn()
+        .mockResolvedValue({ deployments: [DEPLOYMENT_ONE] });
+      const getDeploymentBySlug = jest
+        .fn()
+        .mockResolvedValue({ slug: DEPLOYMENT_ONE.slug, status: 'active' });
+      registerDeployTool(
+        server as never,
+        stubClient({ listDeployments, getDeploymentBySlug }),
+      );
+
+      const tool = server.getTool('deploy_manage')!;
+      const result = (await tool.handler({
+        action: 'get',
+        projectId: 'proj_1',
+        flowId: 'flow_abc',
+      })) as { structuredContent: Record<string, unknown> };
+
+      expect(result.structuredContent).not.toHaveProperty('appUrl');
+    });
+
+    it('links nothing when no project can be named', async () => {
+      // The stub door has no default project, and none was passed. A link
+      // built on a guessed project would point into someone else's work.
+      const deploy = jest.fn().mockResolvedValue({ deploymentId: 'dep_1' });
+      registerDeployTool(server as never, stubClient({ deploy }));
+
+      const tool = server.getTool('deploy_manage')!;
+      const result = (await tool.handler({
+        action: 'deploy',
+        flowId: 'flow_abc',
+      })) as { structuredContent: Record<string, unknown> };
+
+      expect(result.structuredContent).not.toHaveProperty('appUrl');
     });
   });
 

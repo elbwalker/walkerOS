@@ -191,10 +191,54 @@ describe('flow_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).toContain('No project selected');
       expect(parsed.error).not.toContain('Flow not found');
       expect(getFlow).not.toHaveBeenCalled();
     });
+
+    /**
+     * Six of the eleven actions once skipped the project resolver and fell
+     * straight through to a service error with no remedy in it, which is how a
+     * real session lost a config. The roster is the point of this case: an
+     * action added without the guard fails here instead of in someone's chat.
+     *
+     * `list` is deliberately absent. Without a project it lists across every
+     * project the caller belongs to, which is an answer rather than a failure.
+     */
+    it.each([
+      ['get', { flowId: 'flow_1' }],
+      ['update', { flowId: 'flow_1' }],
+      ['delete', { flowId: 'flow_1' }],
+      ['duplicate', { flowId: 'flow_1' }],
+      ['create', { name: 'New flow' }],
+      ['preview_list', { flowId: 'flow_1' }],
+      ['preview_get', { flowId: 'flow_1', previewId: 'prev_1' }],
+      ['preview_create', { flowId: 'flow_1', flowName: 'My Flow' }],
+      ['preview_delete', { flowId: 'flow_1', previewId: 'prev_1' }],
+      ['preview_regrant', { flowId: 'flow_1', previewId: 'prev_1' }],
+    ])(
+      'action %s refuses without a project and names the remedy',
+      async (action, params) => {
+        registerFlowManageTool(
+          server as never,
+          stubClient({ getDefaultProject: () => null }),
+        );
+
+        const tool = server.getTool('flow_manage')!;
+        const result = (await tool.handler({
+          action,
+          ...(params as Record<string, unknown>),
+        })) as { isError: boolean; content: Array<{ text: string }> };
+
+        expect(result.isError).toBe(true);
+        const parsed = JSON.parse(result.content[0].text);
+        // Both remedies. Either one alone still leaves a caller stuck: the
+        // per-call argument is the one that always works, and the selection is
+        // the one that saves repeating it.
+        expect(parsed.error).toContain('Pass projectId on this call');
+        expect(parsed.error).toContain('set_default');
+      },
+    );
 
     it('uses the default project when no projectId provided', async () => {
       const flow = { id: 'flow_1', name: 'My Flow', content: {} };
@@ -290,7 +334,7 @@ describe('flow_manage tool', () => {
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toContain('No default project set');
+      expect(parsed.error).toContain('No project selected');
       expect(parsed.error).not.toContain('Project not found');
       expect(createFlow).not.toHaveBeenCalled();
     });
@@ -357,7 +401,10 @@ describe('flow_manage tool', () => {
     it('defaults patch to true (passes mergePatch: true)', async () => {
       const updated = { id: 'flow_1', name: 'Updated' };
       const updateFlow = jest.fn().mockResolvedValue(updated);
-      registerFlowManageTool(server as never, stubClient({ updateFlow }));
+      registerFlowManageTool(
+        server as never,
+        stubClient({ updateFlow, getDefaultProject: () => 'proj_default' }),
+      );
 
       const tool = server.getTool('flow_manage')!;
       const result = (await tool.handler({
@@ -368,7 +415,7 @@ describe('flow_manage tool', () => {
 
       expect(updateFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',
-        projectId: undefined,
+        projectId: 'proj_default',
         name: 'Updated',
         content: undefined,
         mergePatch: true,
@@ -395,7 +442,10 @@ describe('flow_manage tool', () => {
 
     it('calls deleteFlow', async () => {
       const deleteFlow = jest.fn().mockResolvedValue({ success: true });
-      registerFlowManageTool(server as never, stubClient({ deleteFlow }));
+      registerFlowManageTool(
+        server as never,
+        stubClient({ deleteFlow, getDefaultProject: () => 'proj_default' }),
+      );
 
       const tool = server.getTool('flow_manage')!;
       const result = (await tool.handler({
@@ -405,7 +455,7 @@ describe('flow_manage tool', () => {
 
       expect(deleteFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',
-        projectId: undefined,
+        projectId: 'proj_default',
       });
       expect(result.structuredContent.success).toBe(true);
     });
@@ -444,6 +494,60 @@ describe('flow_manage tool', () => {
         projectId: 'proj_1',
       });
       expect(result.structuredContent.id).toBe('flow_dup');
+    });
+  });
+
+  // A link belongs in the structured result, not only in prose: an agent reads
+  // it as data and hands it on without retyping it out of a sentence.
+  describe('links into the app', () => {
+    it('links the flow page a get read', async () => {
+      const getFlow = jest
+        .fn()
+        .mockResolvedValue({ id: 'flow_1', name: 'My Flow', content: {} });
+      registerFlowManageTool(server as never, stubClient({ getFlow }));
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler({
+        action: 'get',
+        flowId: 'flow_1',
+        projectId: 'proj_1',
+      })) as { structuredContent: { appUrl?: string } };
+
+      expect(result.structuredContent.appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/flows/flow_1',
+      );
+    });
+
+    it('links the flow page a create just made', async () => {
+      const createFlow = jest
+        .fn()
+        .mockResolvedValue({ id: 'flow_new', name: 'New Flow' });
+      registerFlowManageTool(server as never, stubClient({ createFlow }));
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler({
+        action: 'create',
+        name: 'New Flow',
+        projectId: 'proj_1',
+      })) as { structuredContent: { appUrl?: string } };
+
+      expect(result.structuredContent.appUrl).toBe(
+        'https://app.walkeros.io/projects/proj_1/flows/flow_new',
+      );
+    });
+
+    it('links nothing when the response carried no flow id', async () => {
+      const getFlow = jest.fn().mockResolvedValue({ name: 'My Flow' });
+      registerFlowManageTool(server as never, stubClient({ getFlow }));
+
+      const tool = server.getTool('flow_manage')!;
+      const result = (await tool.handler({
+        action: 'get',
+        flowId: 'flow_1',
+        projectId: 'proj_1',
+      })) as { structuredContent: Record<string, unknown> };
+
+      expect(result.structuredContent).not.toHaveProperty('appUrl');
     });
   });
 

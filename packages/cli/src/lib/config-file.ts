@@ -4,12 +4,26 @@ import {
   mkdirSync,
   unlinkSync,
   existsSync,
+  chmodSync,
+  renameSync,
 } from 'fs';
+import { randomBytes } from 'crypto';
 import { join } from 'path';
 import { homedir } from 'os';
 
 export interface WalkerOSConfig {
+  /**
+   * Static bearer written by the pre-OAuth CLI. Honored until it expires, and
+   * the first use in a process prints a one-line notice naming
+   * `walkeros auth login`, which replaces it with a refreshable session.
+   */
   token?: string;
+  /** Short-lived bearer from the device authorization grant. */
+  accessToken?: string;
+  /** ISO 8601 instant at which `accessToken` stops being accepted. */
+  accessTokenExpiresAt?: string;
+  /** Single-use credential that buys a new `accessToken`. */
+  refreshToken?: string;
   email?: string;
   appUrl?: string;
   anonymousFeedback?: boolean;
@@ -58,14 +72,75 @@ export function readConfig(): WalkerOSConfig | null {
 }
 
 /**
- * Write config to disk with 0600 permissions
+ * Replace the config file wholesale, atomically and with 0600 permissions.
+ *
+ * A reader that catches the file mid-write would see truncated JSON and treat
+ * the person as logged out, so the content is written to a temp file and
+ * renamed, which is atomic within a directory.
+ *
+ * The temp path is unique per write. Only the token refresh holds the config
+ * lock, so two ordinary writers (a login and a `telemetry enable`, say) can be
+ * in here at once: on one shared name they would write over each other's temp
+ * file and rename it twice, and the slower one would fail outright when the
+ * faster renamed the file out from under its `chmod`.
  */
-export function writeConfig(config: WalkerOSConfig): void {
+function replaceConfigFile(config: WalkerOSConfig): void {
   const dir = getConfigDir();
-  mkdirSync(dir, { recursive: true });
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
 
   const configPath = getConfigPath();
-  writeFileSync(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+  const tempPath = `${configPath}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
+  try {
+    writeFileSync(tempPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+    // `writeFileSync`'s mode is masked by the process umask, so it alone does
+    // not guarantee 0600 on the file the rename puts in place.
+    chmodSync(tempPath, 0o600);
+    renameSync(tempPath, configPath);
+  } catch (error) {
+    // A unique name is never reused, so a temp left behind by a failure would
+    // sit in the config directory forever.
+    try {
+      unlinkSync(tempPath);
+    } catch {
+      // Never created, or already renamed into place.
+    }
+    throw error;
+  }
+}
+
+/**
+ * Merge `config` into the stored config and write the result.
+ *
+ * Merging rather than replacing, because the file holds fields owned by
+ * unrelated commands: a writer that knows only about tokens would otherwise
+ * drop `defaultProjectId`, `installationId`, `telemetryEnabled` and
+ * `anonymousFeedback` every time somebody logs in.
+ *
+ * A key passed explicitly as `undefined` is removed from the written file,
+ * which is how login drops the legacy static token it replaces.
+ */
+export function writeConfig(config: WalkerOSConfig): void {
+  replaceConfigFile({ ...(readConfig() ?? {}), ...config });
+}
+
+/**
+ * Remove every credential field, keeping the rest of the config.
+ *
+ * Used when the stored session is known to be dead, so the next command can
+ * say "run `walkeros auth login`" instead of failing against the API.
+ */
+export function clearAuthFields(): void {
+  const config = readConfig();
+  if (!config) return;
+  const {
+    token: _token,
+    accessToken: _accessToken,
+    accessTokenExpiresAt: _accessTokenExpiresAt,
+    refreshToken: _refreshToken,
+    email: _email,
+    ...rest
+  } = config;
+  replaceConfigFile(rest);
 }
 
 /**
@@ -79,8 +154,7 @@ export function writeTelemetryOnlyConfig(partial: {
   installationId?: string;
   telemetryEnabled?: boolean;
 }): void {
-  const existing = readConfig() ?? {};
-  writeConfig({ ...existing, ...partial });
+  writeConfig(partial);
 }
 
 /**
@@ -121,7 +195,7 @@ export function getFeedbackPreference(): boolean | undefined {
 export function setDefaultProject(projectId: string): void {
   const config = readConfig();
   if (!config) {
-    throw new Error('Not authenticated. Run `walkeros login` first.');
+    throw new Error('Not authenticated. Run `walkeros auth login` first.');
   }
   writeConfig({ ...config, defaultProjectId: projectId });
 }
@@ -143,7 +217,7 @@ export function clearDefaultProject(): void {
   const config = readConfig();
   if (!config) return;
   const { defaultProjectId: _removed, ...rest } = config;
-  writeConfig(rest);
+  replaceConfigFile(rest);
 }
 
 /**

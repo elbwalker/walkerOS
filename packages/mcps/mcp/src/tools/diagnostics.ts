@@ -1,16 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult } from '@walkeros/core';
-import {
-  VERSION as CLI_VERSION,
-  resolveAppUrl,
-  compareContract,
-} from '@walkeros/cli';
+import { VERSION as CLI_VERSION, compareContract } from '@walkeros/cli';
 import type { ContractComparison } from '@walkeros/cli';
 import openapiSpec from '@walkeros/cli/openapi/spec.json';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { getPackageBaseUrl, getLastCatalogSource } from '../catalog.js';
+import { normalizeBaseUrl } from '../base-url.js';
 
 // The bundled OpenAPI contract version, embedded at build time via the import
 // above (no runtime module resolution). This is the client's bundled baseline,
@@ -53,12 +50,26 @@ async function diagnosticsHandlerBody(
   client: ToolClient,
   packageVersion: string,
 ) {
+  // The backend comes from the CLIENT, never from the local CLI: the local
+  // door resolves the user's machine, the hosted door is served by the app it
+  // reports, and a tool that resolved this itself would name the wrong backend
+  // on one of them.
+  const resolved = client.appBaseUrl();
+
   // Provenance via the same helper the catalog uses; do not add a parallel
-  // process.env check.
-  const appUrlSource: 'env' | 'default' = getPackageBaseUrl()
-    ? 'env'
-    : 'default';
-  const resolved = resolveAppUrl();
+  // process.env check. It is a claim about the OVERRIDE only, and a proven
+  // one: `env` means this process's WALKEROS_APP_URL is the URL the client
+  // actually named. A client that ignores the variable (the hosted door does,
+  // it is served on its own URL) therefore never reports `env` merely because
+  // the variable happens to be set in its environment.
+  // Normalized on both sides of the comparison: `resolved` is a base without a
+  // trailing slash, and the env var is under no such obligation, so comparing
+  // raw would report `default` for a slashed value that did set the URL.
+  const envAppUrl = getPackageBaseUrl();
+  const appUrlSource: 'env' | 'default' =
+    envAppUrl !== undefined && normalizeBaseUrl(envAppUrl) === resolved
+      ? 'env'
+      : 'default';
 
   // checkHealth is optional on ToolClient: clients that cannot probe
   // reachability omit it, in which case diagnostics degrades to
@@ -71,21 +82,29 @@ async function diagnosticsHandlerBody(
   const healthUnavailable = !client.checkHealth;
 
   // Contract drift verdict: compare the client's baked baseline against the
-  // live app's /api/health. Degrade to 'unknown' if the probe throws so a
-  // network blip never breaks diagnostics.
-  const contractComparison: ContractComparison = await compareContract().catch(
-    () => ({
-      verdict: 'unknown' as const,
-      bakedVersion: CONTRACT_OPENAPI_VERSION,
-    }),
-  );
+  // live app's /api/health. The probe gets the SAME `resolved` this response
+  // prints as appUrl.resolved, never its own resolution: left to itself it
+  // reads the local machine (WALKEROS_APP_URL, the CLI config file on disk,
+  // then a hardcoded production default), so a hosted door, which has no CLI
+  // config, would report a verdict about a backend it is not served by. Two
+  // answers in one response must not describe two different backends.
+  // `resolved` is already free of a trailing slash (ToolClient.appBaseUrl
+  // promises that, and both doors normalize), so no normalizeBaseUrl here.
+  // Degrade to 'unknown' if the probe throws so a network blip never breaks
+  // diagnostics.
+  const contractComparison: ContractComparison = await compareContract({
+    baseUrl: resolved,
+  }).catch(() => ({
+    verdict: 'unknown' as const,
+    bakedVersion: CONTRACT_OPENAPI_VERSION,
+  }));
 
   const catalogInfo = getLastCatalogSource();
 
   const warnings: string[] = [];
   if (appUrlSource === 'default') {
     warnings.push(
-      'WALKEROS_APP_URL is not set; using the default app URL. Set it to target a specific backend.',
+      'WALKEROS_APP_URL did not set the app URL; appUrl.resolved is the backend the client resolved on its own. On a local MCP, set WALKEROS_APP_URL to target a specific backend.',
     );
   }
   if (healthUnavailable) {

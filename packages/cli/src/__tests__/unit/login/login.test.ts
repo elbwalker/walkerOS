@@ -1,763 +1,495 @@
-import { jest } from '@jest/globals';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync, readFileSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import type {
-  LoginOptions,
-  DeviceCodeOptions,
-  PollOptions,
-} from '../../../commands/login/index.js';
+import { login } from '../../../commands/login/index.js';
+import {
+  readConfig,
+  writeConfig,
+  getConfigPath,
+} from '../../../lib/config-file.js';
 
-// No-op browser opener for tests
+const APP_URL = 'https://app.example.test';
+
+/** Mirrors `MIN_SERVER_POLL_INTERVAL_MS` in the command under test. */
+const MIN_SERVER_POLL_INTERVAL_MS = 1000;
+
 const noopOpen = async () => {};
 
-/** Create a fake Response-like object */
-function fakeResponse(body: unknown, init?: { status?: number }) {
-  const status = init?.status ?? 200;
-  return {
-    ok: status >= 200 && status < 300,
+interface RouteState {
+  /** Queued answers for the token endpoint, consumed in order. */
+  tokenAnswers: Array<() => Response>;
+  deviceAnswer: () => Response;
+  whoamiAnswer: () => Response;
+  tokenCalls: number;
+  /** When each token poll went out, so pacing can be asserted. */
+  tokenCallTimes: number[];
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
     status,
-    json: async () => body,
-    text: async () => JSON.stringify(body),
-  } as unknown as Response;
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
-function createMockFetch(
-  handler: (url: string) => Response,
-): typeof globalThis.fetch {
-  return (async (url: string | URL | Request) => {
-    const urlStr = typeof url === 'string' ? url : url.toString();
-    return handler(urlStr);
-  }) as typeof globalThis.fetch;
+function oauthError(error: string, status = 400): () => Response {
+  return () => jsonResponse({ error, error_description: error }, status);
 }
 
-describe('login (device code flow)', () => {
-  let login: (options?: LoginOptions) => Promise<{
-    success: boolean;
-    email?: string;
-    configPath?: string;
-    error?: string;
-  }>;
-  let requestDeviceCode: (options?: DeviceCodeOptions) => Promise<{
-    deviceCode: string;
-    userCode: string;
-    verificationUri: string;
-    verificationUriComplete?: string;
-    expiresIn: number;
-    interval: number;
-  }>;
-  let pollForToken: (
-    deviceCode: string,
-    options?: PollOptions,
-  ) => Promise<
-    | {
-        success: true;
-        status: 'authenticated';
-        email: string;
-        configPath: string;
-      }
-    | { success: false; status: 'pending' }
-    | { success: false; status: 'error'; error: string }
-  >;
-  let tmpDir: string;
-  let origXdg: string | undefined;
+function deviceOk(interval = 0): () => Response {
+  return () =>
+    jsonResponse({
+      device_code: 'dc_1',
+      user_code: 'ABCD-EFGH',
+      verification_uri: `${APP_URL}/oauth/device`,
+      verification_uri_complete: `${APP_URL}/oauth/device?user_code=ABCD-EFGH`,
+      expires_in: 600,
+      interval,
+    });
+}
 
-  beforeEach(async () => {
-    // Override the global fake timers from node.setup.mjs
-    jest.useRealTimers();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+function tokenOk(): () => Response {
+  return () =>
+    jsonResponse({
+      access_token: 'at_1',
+      token_type: 'Bearer',
+      expires_in: 3600,
+      refresh_token: 'rt_1',
+    });
+}
 
-    // Isolate config writes to a temp directory
-    tmpDir = mkdtempSync(join(tmpdir(), 'walkeros-login-test-'));
-    origXdg = process.env.XDG_CONFIG_HOME;
-    process.env.XDG_CONFIG_HOME = tmpDir;
+function whoamiOk(email = 'user@example.test'): () => Response {
+  return () => jsonResponse({ userId: 'user_1', email, projectId: null });
+}
 
-    const loginModule = await import('../../../commands/login/index.js');
-    login = loginModule.login;
-    requestDeviceCode = loginModule.requestDeviceCode;
-    pollForToken = loginModule.pollForToken;
+function router(state: RouteState): typeof fetch {
+  return async (input) => {
+    const url = String(input);
+    if (url.endsWith('/api/oauth/device_authorization'))
+      return state.deviceAnswer();
+    if (url.endsWith('/api/oauth/token')) {
+      const answer =
+        state.tokenAnswers[state.tokenCalls] ??
+        state.tokenAnswers[state.tokenAnswers.length - 1];
+      state.tokenCalls += 1;
+      state.tokenCallTimes.push(Date.now());
+      if (!answer) throw new Error('no token answer configured');
+      return answer();
+    }
+    if (url.endsWith('/api/auth/whoami')) return state.whoamiAnswer();
+    throw new Error(`unexpected request to ${url}`);
+  };
+}
+
+function makeState(overrides: Partial<RouteState> = {}): RouteState {
+  return {
+    deviceAnswer: deviceOk(),
+    tokenAnswers: [tokenOk()],
+    whoamiAnswer: whoamiOk(),
+    tokenCalls: 0,
+    tokenCallTimes: [],
+    ...overrides,
+  };
+}
+
+describe('login (device authorization grant)', () => {
+  let dir: string;
+  const originalEnv = process.env;
+  let stderr: jest.SpyInstance;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'walkeros-login-'));
+    process.env = { ...originalEnv };
+    process.env.XDG_CONFIG_HOME = dir;
+    delete process.env.WALKEROS_TOKEN;
+    process.env.WALKEROS_APP_URL = APP_URL;
+    stderr = jest.spyOn(process.stderr, 'write').mockReturnValue(true);
   });
 
   afterEach(() => {
+    process.env = originalEnv;
+    rmSync(dir, { recursive: true, force: true });
     jest.restoreAllMocks();
-    // Restore env and clean up temp dir
-    if (origXdg !== undefined) {
-      process.env.XDG_CONFIG_HOME = origXdg;
-    } else {
-      delete process.env.XDG_CONFIG_HOME;
-    }
-    rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('polls until approved and returns token', async () => {
-    let pollCount = 0;
+  function stderrText(): string {
+    return stderr.mock.calls.map((call) => String(call[0])).join('');
+  }
 
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          deviceCode: 'a'.repeat(64),
-          userCode: 'BCDF-GHJK',
-          verificationUri: 'https://app.test/auth/device',
-          verificationUriComplete:
-            'https://app.test/auth/device?user_code=BCDF-GHJK',
-          expiresIn: 900,
-          interval: 0,
-        });
-      }
-
-      if (url.includes('/api/auth/device/token')) {
-        pollCount++;
-        if (pollCount === 1) {
-          return fakeResponse(
-            { error: 'authorization_pending' },
-            { status: 400 },
-          );
-        }
-        return fakeResponse({
-          token: 'sk-walkeros-' + 'b'.repeat(64),
-          email: 'test@example.com',
-          userId: 'user_123',
-        });
-      }
-
-      return fakeResponse({ error: 'not found' }, { status: 404 });
+  it('polls through pending and slow_down, then stores the session', async () => {
+    const state = makeState({
+      tokenAnswers: [
+        oauthError('authorization_pending'),
+        oauthError('slow_down'),
+        tokenOk(),
+      ],
     });
 
     const result = await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(state),
       openUrl: noopOpen,
-      fetch: mockFetch,
-      maxPollAttempts: 10,
+    });
+
+    expect(result).toEqual({
+      success: true,
+      email: 'user@example.test',
+      configPath: getConfigPath(),
+    });
+    expect(state.tokenCalls).toBe(3);
+  });
+
+  it('paces polling at the clamped minimum when a server states an interval of zero', async () => {
+    // `WALKEROS_APP_URL` is user-settable, so this number comes from whichever
+    // host the person is pointed at. Unclamped, a stated zero would let a
+    // remote value turn this loop into an unthrottled POST flood for the whole
+    // life of the device code. No `pollIntervalMs` override here: the pacing
+    // under test is exactly the one a real login would get.
+    const state = makeState({
+      tokenAnswers: [oauthError('authorization_pending'), tokenOk()],
+    });
+
+    const result = await login({
+      url: APP_URL,
+      fetch: router(state),
+      openUrl: noopOpen,
+      maxPollAttempts: 2,
     });
 
     expect(result.success).toBe(true);
-    expect(result.email).toBe('test@example.com');
-    expect(pollCount).toBe(2);
+    // Two polls really happened, so the elapsed time is the loop waiting and
+    // not one slow request: the fetch double answers instantly.
+    expect(state.tokenCalls).toBe(2);
+    const [first, second] = state.tokenCallTimes;
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+    // The gap between them is the clamp doing its work. A hot loop puts these
+    // microseconds apart.
+    expect(second! - first!).toBeGreaterThanOrEqual(
+      MIN_SERVER_POLL_INTERVAL_MS - 50,
+    );
   });
 
-  it('returns expired error when code expires', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          deviceCode: 'a'.repeat(64),
-          userCode: 'BCDF-GHJK',
-          verificationUri: 'https://app.test/auth/device',
-          verificationUriComplete:
-            'https://app.test/auth/device?user_code=BCDF-GHJK',
-          expiresIn: 0,
-          interval: 0,
-        });
-      }
-
-      if (url.includes('/api/auth/device/token')) {
-        return fakeResponse({ error: 'expired_token' }, { status: 400 });
-      }
-
-      return fakeResponse({ error: 'not found' }, { status: 404 });
+  it('keeps a server interval that is already above the minimum', async () => {
+    // The control for the clamp: it is a floor, not a replacement. Flattening
+    // it to the minimum would pass the zero case above and fail here, so the
+    // pair is what pins `Math.max` semantics rather than either test alone.
+    const state = makeState({
+      deviceAnswer: deviceOk(2),
+      tokenAnswers: [oauthError('authorization_pending')],
     });
+
+    const started = Date.now();
+    await login({
+      url: APP_URL,
+      fetch: router(state),
+      openUrl: noopOpen,
+      maxPollAttempts: 1,
+    });
+
+    expect(state.tokenCalls).toBe(1);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(1900);
+  });
+
+  it('writes the three session fields and no legacy token', async () => {
+    writeConfig({ token: 'legacy-static-token' });
+
+    await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(makeState()),
+      openUrl: noopOpen,
+    });
+
+    const stored = readConfig();
+    expect(stored?.accessToken).toBe('at_1');
+    expect(stored?.refreshToken).toBe('rt_1');
+    expect(Date.parse(stored?.accessTokenExpiresAt ?? '')).toBeGreaterThan(
+      Date.now(),
+    );
+    expect(stored?.token).toBeUndefined();
+
+    // The on-disk file must not carry the key at all, not merely an undefined
+    // value, or a later read would resurrect the legacy path.
+    const raw: unknown = JSON.parse(readFileSync(getConfigPath(), 'utf-8'));
+    expect(raw).not.toHaveProperty('token');
+  });
+
+  it('drops a previous refresh token when the server rotates none', async () => {
+    writeConfig({
+      accessToken: 'at_old',
+      accessTokenExpiresAt: new Date(Date.now() + 1000).toISOString(),
+      refreshToken: 'rt_previous_session',
+    });
+    const state = makeState({
+      tokenAnswers: [
+        () =>
+          jsonResponse({
+            access_token: 'at_1',
+            token_type: 'Bearer',
+            expires_in: 3600,
+          }),
+      ],
+    });
+
+    await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(state),
+      openUrl: noopOpen,
+    });
+
+    expect(readConfig()?.refreshToken).toBeUndefined();
+  });
+
+  it('drops a previous email when the identity lookup fails', async () => {
+    // `walkeros feedback` sends the stored address as the reporter's identity,
+    // so a leftover one attributes this session to the previous account.
+    writeConfig({ email: 'previous@example.test' });
+    const state = makeState({
+      whoamiAnswer: () => jsonResponse({ error: 'nope' }, 500),
+    });
+
+    await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(state),
+      openUrl: noopOpen,
+    });
+
+    expect(readConfig()?.email).toBeUndefined();
+  });
+
+  it('preserves unrelated config that login does not own', async () => {
+    writeConfig({
+      defaultProjectId: 'proj_keep',
+      installationId: 'install_keep',
+      telemetryEnabled: true,
+      anonymousFeedback: false,
+    });
+
+    await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(makeState()),
+      openUrl: noopOpen,
+    });
+
+    const stored = readConfig();
+    expect(stored?.defaultProjectId).toBe('proj_keep');
+    expect(stored?.installationId).toBe('install_keep');
+    expect(stored?.telemetryEnabled).toBe(true);
+    expect(stored?.anonymousFeedback).toBe(false);
+    expect(stored?.accessToken).toBe('at_1');
+  });
+
+  it('reports a timeout when the device code expires', async () => {
+    const state = makeState({ tokenAnswers: [oauthError('expired_token')] });
+
+    await expect(
+      login({
+        url: APP_URL,
+        pollIntervalMs: 1,
+        fetch: router(state),
+        openUrl: noopOpen,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: 'Authorization timed out. Please try again.',
+    });
+    expect(existsSync(getConfigPath())).toBe(false);
+  });
+
+  it('reports a denial distinctly from a timeout', async () => {
+    // The control for the expiry test: two different terminal outcomes must
+    // not collapse into the same message.
+    const state = makeState({ tokenAnswers: [oauthError('access_denied')] });
 
     const result = await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(state),
       openUrl: noopOpen,
-      fetch: mockFetch,
-      maxPollAttempts: 10,
     });
+
     expect(result.success).toBe(false);
-    expect(result.error).toContain('expired');
+    expect(result.error).toBe('Authorization was denied.');
   });
 
-  it('handles slow_down by continuing to poll', async () => {
-    let pollCount = 0;
-
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          deviceCode: 'a'.repeat(64),
-          userCode: 'BCDF-GHJK',
-          verificationUri: 'https://app.test/auth/device',
-          verificationUriComplete:
-            'https://app.test/auth/device?user_code=BCDF-GHJK',
-          expiresIn: 900,
-          interval: 0,
-        });
-      }
-
-      if (url.includes('/api/auth/device/token')) {
-        pollCount++;
-        if (pollCount === 1) {
-          return fakeResponse({ error: 'slow_down' }, { status: 400 });
-        }
-        return fakeResponse({
-          token: 'sk-walkeros-' + 'c'.repeat(64),
-          email: 'slow@example.com',
-          userId: 'user_456',
-        });
-      }
-
-      return fakeResponse({ error: 'not found' }, { status: 404 });
+  it('stops polling and reports the error on an unrecognized failure', async () => {
+    const state = makeState({
+      tokenAnswers: [oauthError('invalid_client', 401)],
     });
 
     const result = await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(state),
       openUrl: noopOpen,
-      fetch: mockFetch,
-      maxPollAttempts: 10,
     });
-    expect(result.success).toBe(true);
-    expect(pollCount).toBe(2);
-  }, 10_000);
 
-  it('times out when max poll attempts exceeded', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          deviceCode: 'a'.repeat(64),
-          userCode: 'BCDF-GHJK',
-          verificationUri: 'https://app.test/auth/device',
-          verificationUriComplete:
-            'https://app.test/auth/device?user_code=BCDF-GHJK',
-          expiresIn: 900,
-          interval: 0,
-        });
-      }
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('invalid_client');
+    expect(state.tokenCalls).toBe(1);
+  });
 
-      return fakeResponse({ error: 'authorization_pending' }, { status: 400 });
+  it('gives up after maxPollAttempts', async () => {
+    const state = makeState({
+      tokenAnswers: [oauthError('authorization_pending')],
     });
 
     const result = await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(state),
       openUrl: noopOpen,
-      fetch: mockFetch,
       maxPollAttempts: 3,
     });
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('timed out');
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Authorization timed out. Please try again.',
+    });
+    expect(state.tokenCalls).toBe(3);
   });
 
-  it('returns error when device code request fails', async () => {
-    const mockFetch = createMockFetch(() => {
-      return fakeResponse({ error: 'server error' }, { status: 500 });
+  it('returns an error when the device authorization request fails', async () => {
+    const state = makeState({
+      deviceAnswer: oauthError('invalid_client', 401),
+    });
+
+    await expect(
+      login({
+        url: APP_URL,
+        pollIntervalMs: 1,
+        fetch: router(state),
+        openUrl: noopOpen,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: 'Failed to request device code',
+    });
+  });
+
+  it('shows the user code and opens the complete verification URL', async () => {
+    const opened: string[] = [];
+
+    await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(makeState()),
+      openUrl: async (url) => {
+        opened.push(url);
+      },
+    });
+
+    expect(opened).toEqual([`${APP_URL}/oauth/device?user_code=ABCD-EFGH`]);
+    const text = stderrText();
+    expect(text).toContain('ABCD-EFGH');
+    expect(text).toContain(`${APP_URL}/oauth/device?user_code=ABCD-EFGH`);
+  });
+
+  it('falls back to the plain verification URL when no complete form is given', async () => {
+    const state = makeState({
+      deviceAnswer: () =>
+        jsonResponse({
+          device_code: 'dc_1',
+          user_code: 'ABCD-EFGH',
+          verification_uri: `${APP_URL}/oauth/device`,
+          expires_in: 600,
+          interval: 0,
+        }),
+    });
+    const opened: string[] = [];
+
+    await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(state),
+      openUrl: async (url) => {
+        opened.push(url);
+      },
+    });
+
+    expect(opened).toEqual([`${APP_URL}/oauth/device`]);
+  });
+
+  it('still succeeds when the identity lookup fails, without an email', async () => {
+    const state = makeState({
+      whoamiAnswer: () => jsonResponse({ error: 'nope' }, 500),
     });
 
     const result = await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(state),
       openUrl: noopOpen,
-      fetch: mockFetch,
-    });
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('Failed to request device code');
-  });
-
-  it('opens verificationUriComplete in browser when available', async () => {
-    let openedUrl = '';
-    const captureOpen = async (url: string) => {
-      openedUrl = url;
-    };
-
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          deviceCode: 'a'.repeat(64),
-          userCode: 'BCDF-GHJK',
-          verificationUri: 'https://app.test/auth/device',
-          verificationUriComplete:
-            'https://app.test/auth/device?user_code=BCDF-GHJK',
-          expiresIn: 900,
-          interval: 0,
-        });
-      }
-
-      return fakeResponse({
-        token: 'sk-walkeros-' + 'd'.repeat(64),
-        email: 'url@example.com',
-        userId: 'user_789',
-      });
-    });
-
-    await login({
-      openUrl: captureOpen,
-      fetch: mockFetch,
-      maxPollAttempts: 10,
-    });
-
-    expect(openedUrl).toBe('https://app.test/auth/device?user_code=BCDF-GHJK');
-  });
-
-  it('displays verificationUriComplete to the user', async () => {
-    const stderrWrites: string[] = [];
-    const origWrite = process.stderr.write;
-    process.stderr.write = ((chunk: string) => {
-      stderrWrites.push(chunk);
-      return true;
-    }) as typeof process.stderr.write;
-
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          deviceCode: 'a'.repeat(64),
-          userCode: 'BCDF-GHJK',
-          verificationUri: 'https://app.test/auth/device',
-          verificationUriComplete:
-            'https://app.test/auth/device?user_code=BCDF-GHJK',
-          expiresIn: 900,
-          interval: 0,
-        });
-      }
-      return fakeResponse({
-        token: 'sk-walkeros-' + 'f'.repeat(64),
-        email: 'test@example.com',
-        userId: 'user_123',
-      });
-    });
-
-    try {
-      await login({
-        openUrl: noopOpen,
-        fetch: mockFetch,
-        maxPollAttempts: 10,
-      });
-    } finally {
-      process.stderr.write = origWrite;
-    }
-
-    const output = stderrWrites.join('');
-    expect(output).toContain(
-      'https://app.test/auth/device?user_code=BCDF-GHJK',
-    );
-  });
-
-  it('falls back to verificationUri when verificationUriComplete is missing', async () => {
-    let openedUrl = '';
-    const captureOpen = async (url: string) => {
-      openedUrl = url;
-    };
-
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          deviceCode: 'a'.repeat(64),
-          userCode: 'BCDF-GHJK',
-          verificationUri: 'https://app.test/auth/device',
-          expiresIn: 900,
-          interval: 0,
-        });
-      }
-
-      return fakeResponse({
-        token: 'sk-walkeros-' + 'e'.repeat(64),
-        email: 'fallback@example.com',
-        userId: 'user_101',
-      });
-    });
-
-    await login({
-      openUrl: captureOpen,
-      fetch: mockFetch,
-      maxPollAttempts: 10,
-    });
-
-    expect(openedUrl).toBe('https://app.test/auth/device');
-  });
-
-  // === requestDeviceCode tests ===
-
-  it('requestDeviceCode returns code data on success', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          deviceCode: 'dc_' + 'a'.repeat(64),
-          userCode: 'ABCD-EFGH',
-          verificationUri: 'https://app.test/auth/device',
-          verificationUriComplete:
-            'https://app.test/auth/device?user_code=ABCD-EFGH',
-          expiresIn: 900,
-          interval: 5,
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await requestDeviceCode({
-      url: 'https://app.test',
-      fetch: mockFetch,
-    });
-
-    expect(result.deviceCode).toBe('dc_' + 'a'.repeat(64));
-    expect(result.userCode).toBe('ABCD-EFGH');
-    expect(result.verificationUri).toBe('https://app.test/auth/device');
-    expect(result.verificationUriComplete).toBe(
-      'https://app.test/auth/device?user_code=ABCD-EFGH',
-    );
-    expect(result.expiresIn).toBe(900);
-    expect(result.interval).toBe(5);
-  });
-
-  it('requestDeviceCode throws on fetch failure', async () => {
-    const mockFetch = createMockFetch(() => {
-      return fakeResponse({ error: 'server error' }, { status: 500 });
-    });
-
-    await expect(
-      requestDeviceCode({ url: 'https://app.test', fetch: mockFetch }),
-    ).rejects.toThrow('Failed to request device code');
-  });
-
-  // === pollForToken tests ===
-
-  it('pollForToken returns success when token received', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        return fakeResponse({
-          token: 'sk-walkeros-' + 'x'.repeat(64),
-          email: 'poll@example.com',
-          userId: 'user_poll',
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 10000,
-      intervalMs: 10,
     });
 
     expect(result.success).toBe(true);
-    expect(result.status).toBe('authenticated');
-    if (result.success) {
-      expect(result.email).toBe('poll@example.com');
-      expect(result.configPath).toBeDefined();
-    }
+    expect(result.email).toBeUndefined();
+    expect(readConfig()?.accessToken).toBe('at_1');
   });
 
-  it('pollForToken returns pending on timeout', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        return fakeResponse(
-          { error: 'authorization_pending' },
-          { status: 400 },
-        );
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 100,
-      intervalMs: 30,
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.status).toBe('pending');
-  });
-
-  it('pollForToken handles slow_down by increasing interval', async () => {
-    let pollCount = 0;
-
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        pollCount++;
-        if (pollCount === 1) {
-          return fakeResponse({ error: 'slow_down' }, { status: 400 });
-        }
-        return fakeResponse({
-          token: 'sk-walkeros-' + 'y'.repeat(64),
-          email: 'slow@example.com',
-          userId: 'user_slow',
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 30000,
-      intervalMs: 10,
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.status).toBe('authenticated');
-    expect(pollCount).toBe(2);
-  }, 10_000);
-
-  it('pollForToken returns error on denied', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        return fakeResponse({ error: 'access_denied' }, { status: 400 });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 10000,
-      intervalMs: 10,
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.status).toBe('error');
-    if (!result.success && result.status === 'error') {
-      expect(result.error).toBe('access_denied');
-    }
-  });
-
-  it('pollForToken returns error on expired token', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        return fakeResponse({ error: 'expired_token' }, { status: 400 });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 10000,
-      intervalMs: 10,
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.status).toBe('error');
-    if (!result.success && result.status === 'error') {
-      expect(result.error).toBe('expired_token');
-    }
-  });
-
-  // === Bounded-fetch + malformed-JSON safety ===
-
-  it('pollForToken passes an AbortSignal to fetch', async () => {
-    const receivedInits: RequestInit[] = [];
-    const mockFetch: typeof globalThis.fetch = (async (
-      url: string | URL | Request,
-      init?: RequestInit,
-    ) => {
-      const urlStr = typeof url === 'string' ? url : url.toString();
-      if (urlStr.includes('/api/auth/device/token')) {
-        receivedInits.push(init ?? {});
-        return fakeResponse({
-          token: 'sk-walkeros-' + 'a'.repeat(64),
-          email: 'signal@example.com',
-          userId: 'user_signal',
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    }) as typeof globalThis.fetch;
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 10000,
-      intervalMs: 10,
-    });
-
-    expect(result.success).toBe(true);
-    expect(receivedInits.length).toBeGreaterThan(0);
-    const lastInit = receivedInits[receivedInits.length - 1];
-    expect(lastInit.signal).toBeDefined();
-    expect(typeof (lastInit.signal as AbortSignal).aborted).toBe('boolean');
-  });
-
-  it('pollForToken aborts in-flight fetch when deadline passes', async () => {
-    // The fetch hangs forever unless aborted. If the bounded timeout works,
-    // the pollForToken call resolves with pending (timeout) rather than hanging.
-    let aborted = false;
-    const mockFetch: typeof globalThis.fetch = (async (
-      url: string | URL | Request,
-      init?: RequestInit,
-    ) => {
-      const urlStr = typeof url === 'string' ? url : url.toString();
-      if (urlStr.includes('/api/auth/device/token')) {
-        const signal = init?.signal;
-        return await new Promise<Response>((_resolve, reject) => {
-          if (signal) {
-            signal.addEventListener('abort', () => {
-              aborted = true;
-              const abortError = new Error('The operation was aborted');
-              abortError.name = 'AbortError';
-              reject(abortError);
-            });
-          }
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    }) as typeof globalThis.fetch;
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 150,
-      intervalMs: 10,
-    });
-
-    expect(aborted).toBe(true);
-    expect(result.success).toBe(false);
-    // AbortError at the deadline is a timeout, not a real error
-    expect(['pending', 'error']).toContain(result.status);
-  }, 5000);
-
-  it('pollForToken returns error shape on non-JSON token response', async () => {
-    const htmlResponse = {
-      ok: true,
-      status: 200,
-      json: async () => {
-        throw new SyntaxError('Unexpected token < in JSON at position 0');
+  it('keeps a browser that will not open from failing the login', async () => {
+    const result = await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: router(makeState()),
+      openUrl: async () => {
+        throw new Error('no display');
       },
-      text: async () => '<html>server error</html>',
-    } as unknown as Response;
-
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        return htmlResponse;
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
     });
 
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 10000,
-      intervalMs: 10,
+    expect(result.success).toBe(true);
+    expect(stderrText()).toContain('Could not open browser');
+  });
+  it('bounds the identity lookup, which runs after the session is stored', async () => {
+    const route = router(makeState());
+    let whoamiSignal: AbortSignal | null | undefined;
+    const fetchFn: typeof fetch = async (input, init) => {
+      if (String(input).endsWith('/api/auth/whoami'))
+        whoamiSignal = init?.signal;
+      return route(input, init);
+    };
+
+    const result = await login({
+      url: APP_URL,
+      pollIntervalMs: 1,
+      fetch: fetchFn,
+      openUrl: noopOpen,
     });
 
-    expect(result.success).toBe(false);
-    expect(result.status).toBe('error');
-    if (!result.success && result.status === 'error') {
-      expect(result.error).toMatch(/malformed/i);
-    }
+    expect(result.success).toBe(true);
+    expect(whoamiSignal).toBeInstanceOf(AbortSignal);
   });
 
-  it('pollForToken returns error shape when ok response is missing token field', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        // ok: true but no token/email at all
-        return fakeResponse({ something: 'else' });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 200,
-      intervalMs: 10,
-    });
-
-    expect(result.success).toBe(false);
-    // Without a token/email and without an error field, this is just pending until timeout
-    // but should NOT have thrown or written config.
-    expect(['pending', 'error']).toContain(result.status);
-  });
-
-  it('pollForToken returns error shape when token field is wrong type', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        return fakeResponse({
-          token: 12345, // not a string
-          email: 'x@example.com',
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 10000,
-      intervalMs: 10,
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.status).toBe('error');
-    if (!result.success && result.status === 'error') {
-      expect(result.error).toMatch(/malformed/i);
-    }
-  });
-
-  // === Zod schema validation (TokenResponseSchema + DeviceCodeResponseSchema) ===
-
-  it('requestDeviceCode throws when deviceCode field is missing (Zod)', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          userCode: 'X',
-          verificationUri: 'https://app.test/device',
-          expiresIn: 900,
-          interval: 5,
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
+  it('refuses an app URL that would carry the session over plain http', async () => {
+    const state = makeState();
 
     await expect(
-      requestDeviceCode({ url: 'https://app.test', fetch: mockFetch }),
-    ).rejects.toThrow(/malformed|invalid/i);
+      login({
+        url: 'http://app.example.test',
+        pollIntervalMs: 1,
+        fetch: router(state),
+        openUrl: noopOpen,
+      }),
+    ).rejects.toThrow(/plain http/);
+
+    expect(state.tokenCalls).toBe(0);
+    expect(readConfig()).toBeNull();
   });
 
-  it('requestDeviceCode throws when expiresIn is a string instead of number (Zod)', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/code')) {
-        return fakeResponse({
-          deviceCode: 'dc_abc',
-          userCode: 'BCDF-GHJK',
-          verificationUri: 'https://app.test/device',
-          expiresIn: '900', // wrong type
-          interval: 5,
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
+  it('accepts a loopback app URL over plain http', async () => {
+    const result = await login({
+      url: 'http://127.0.0.1:3000',
+      pollIntervalMs: 1,
+      fetch: router(makeState()),
+      openUrl: noopOpen,
     });
 
-    await expect(
-      requestDeviceCode({ url: 'https://app.test', fetch: mockFetch }),
-    ).rejects.toThrow(/malformed|invalid/i);
-  });
-
-  it('pollForToken rejects numeric token via Zod (schema negative case)', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        return fakeResponse({
-          token: 4242, // number not string
-          email: 'n@example.com',
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 10000,
-      intervalMs: 10,
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.status).toBe('error');
-    if (!result.success && result.status === 'error') {
-      expect(result.error).toMatch(/malformed/i);
-    }
-  });
-
-  it('pollForToken rejects response missing email via Zod', async () => {
-    const mockFetch = createMockFetch((url) => {
-      if (url.includes('/api/auth/device/token')) {
-        return fakeResponse({
-          token: 'sk-walkeros-' + 'z'.repeat(64),
-          // email missing
-        });
-      }
-      return fakeResponse({ error: 'not found' }, { status: 404 });
-    });
-
-    const result = await pollForToken('dc_test_code', {
-      url: 'https://app.test',
-      fetch: mockFetch,
-      timeoutMs: 10000,
-      intervalMs: 10,
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.status).toBe('error');
-    if (!result.success && result.status === 'error') {
-      expect(result.error).toMatch(/malformed|email/i);
-    }
+    expect(result.success).toBe(true);
+    expect(readConfig()?.appUrl).toBe('http://127.0.0.1:3000');
   });
 });

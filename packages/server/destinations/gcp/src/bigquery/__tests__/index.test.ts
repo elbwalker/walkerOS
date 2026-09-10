@@ -574,20 +574,19 @@ describe('Server Destination BigQuery', () => {
   });
 
   describe('gRPC deadline (config.timeout)', () => {
-    // The Storage Write API appendRows runs on the long-lived bidi stream opened
-    // by createStreamConnection. The deadline is therefore applied at the
-    // stream-connection level (gax CallOptions.timeout), which governs every
-    // appendRows/getResult on that stream, and at the unary getWriteStream call.
-    // The deadline derives from the standard per-step config.timeout, the same
-    // value the collector uses to race the push, not a destination-custom knob.
+    // config.timeout bounds two things: the collector's per-delivery race
+    // (its own default, in the collector) and, here, the UNARY getWriteStream
+    // schema fetch. It is never applied to the appendRows bidi stream: a gax
+    // deadline there bounds the stream's total lifetime and would kill a
+    // healthy connection on expiry. The stream keeps the SDK's own default.
 
-    test('init forwards the standard config.timeout as the gax deadline on the appendRows stream and schema fetch', async () => {
+    test('init forwards config.timeout to the unary schema fetch but never to the appendRows stream', async () => {
       await callInit({ projectId, datasetId, tableId }, undefined, 5000);
 
       const streamCall = __getMockCalls().find(
         (c) => c.method === 'createStreamConnection',
       );
-      expect(streamCall?.args[1]).toEqual({ timeout: 5000 });
+      expect(streamCall?.args[1]).toBeUndefined();
 
       const schemaCall = __getMockCalls().find(
         (c) => c.method === 'getWriteStream',
@@ -595,13 +594,13 @@ describe('Server Destination BigQuery', () => {
       expect(schemaCall?.args[1]).toEqual({ timeout: 5000 });
     });
 
-    test('init applies the default deadline when config.timeout is unset', async () => {
+    test('init applies the default unary deadline when config.timeout is unset', async () => {
       await callInit({ projectId, datasetId, tableId });
 
       const streamCall = __getMockCalls().find(
         (c) => c.method === 'createStreamConnection',
       );
-      expect(streamCall?.args[1]).toEqual({ timeout: 10000 });
+      expect(streamCall?.args[1]).toBeUndefined();
 
       const schemaCall = __getMockCalls().find(
         (c) => c.method === 'getWriteStream',
@@ -611,14 +610,15 @@ describe('Server Destination BigQuery', () => {
 
     test('init treats config.timeout: 0 as "use the default" (no zero-ms deadline)', async () => {
       // A zero-ms deadline would expire immediately; 0 is not a "disabled"
-      // sentinel. Resolution falls back to the default so writer.ts always gets
-      // a positive deadline, mirroring the collector's resolveDestinationTimeout.
+      // sentinel. Resolution falls back to the default so the unary call
+      // always gets a positive deadline, mirroring the collector's
+      // resolveDestinationTimeout.
       await callInit({ projectId, datasetId, tableId }, undefined, 0);
 
       const streamCall = __getMockCalls().find(
         (c) => c.method === 'createStreamConnection',
       );
-      expect(streamCall?.args[1]).toEqual({ timeout: 10000 });
+      expect(streamCall?.args[1]).toBeUndefined();
 
       const schemaCall = __getMockCalls().find(
         (c) => c.method === 'getWriteStream',
@@ -991,6 +991,88 @@ describe('Server Destination BigQuery', () => {
       expect(leaked).toHaveLength(1);
       expect(leaked[0]).toBe(settings.connection);
       expect(brokenConnection.listenerCount('error')).toBe(0);
+    });
+
+    test('a re-opened appendRows stream carries no gax deadline (push path)', async () => {
+      const config = await callInit(
+        { projectId, datasetId, tableId },
+        undefined,
+        5000,
+      );
+      if (!config) throw new Error('init returned void');
+      const { settings } = config;
+      if (!settings) throw new Error('settings missing after init');
+
+      __getLastConnection().__emitConnectionError(new Error('stream gone'));
+      expect(settings.writerBroken).toBe(true);
+
+      __resetMockCalls();
+
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          rule: undefined,
+          data: undefined,
+          env: testEnv,
+          id: 'test-bq',
+        }),
+      );
+      expect(settings.writerBroken).toBe(false);
+
+      // The re-open runs through the reopenWriter closure built in init with
+      // the resolved timeout: the fresh stream must be as unbounded as the
+      // first one, while the unary schema fetch keeps the deadline.
+      const streamCalls = __getMockCalls().filter(
+        (c) => c.method === 'createStreamConnection',
+      );
+      expect(streamCalls).toHaveLength(1);
+      expect(streamCalls[0]?.args[1]).toBeUndefined();
+
+      const schemaCall = __getMockCalls().find(
+        (c) => c.method === 'getWriteStream',
+      );
+      expect(schemaCall?.args[1]).toEqual({ timeout: 5000 });
+    });
+
+    test('a re-opened appendRows stream carries no gax deadline (batch path)', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+
+      const config = await callInit(
+        { projectId, datasetId, tableId },
+        undefined,
+        5000,
+      );
+      if (!config) throw new Error('init returned void');
+      const { settings } = config;
+      if (!settings) throw new Error('settings missing after init');
+
+      __getLastConnection().__emitConnectionError(new Error('stream gone'));
+      expect(settings.writerBroken).toBe(true);
+
+      __resetMockCalls();
+
+      const logger = createMockLogger();
+      const events = [createEvent(), createEvent()];
+      const data: Array<undefined> = events.map(() => undefined);
+      const entries = events.map((e) => ({ event: e }));
+
+      await destination.pushBatch(
+        { key: 'k', events, data, entries },
+        createMockContext({
+          config,
+          env: testEnv,
+          logger,
+          id: 'test-bq',
+        }),
+      );
+      expect(settings.writerBroken).toBe(false);
+
+      const streamCalls = __getMockCalls().filter(
+        (c) => c.method === 'createStreamConnection',
+      );
+      expect(streamCalls).toHaveLength(1);
+      expect(streamCalls[0]?.args[1]).toBeUndefined();
     });
   });
 });

@@ -1,4 +1,40 @@
 {
+  "$schema": "https://context7.com/schema/context7.json",
   "url": "https://context7.com/elbwalker/walkeros",
-  "public_key": "pk_i1Ela9ZtaZmC1cYI8QQpR"
+  "public_key": "pk_i1Ela9ZtaZmC1cYI8QQpR",
+  "projectTitle": "walkerOS",
+  "description": "Open-source, observable tag management and event data collection: compose Source -> Collector -> Destination pipelines as JSON flow configs, then see, diff, and prove every event from source to destination. CLI, MCP servers, and skills for coding agents.",
+  "folders": ["website/docs", "skills", "packages"],
+  "excludeFolders": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "**/__tests__",
+    "**/__mocks__",
+    "**/examples",
+    "website/build",
+    "website/skills-generated",
+    "website/src",
+    "website/static",
+    "apps"
+  ],
+  "excludeFiles": [
+    "package-lock.json",
+    "CHANGELOG.md",
+    "tsup.config.ts",
+    "jest.config.mjs",
+    "jest.config.js"
+  ],
+  "rules": [
+    "Packages are `@walkeros/*`, the CLI binary is `walkeros`. walker.js-era package names are historical; never suggest them.",
+    "walkerOS collects events and routes them. It is not a product analytics tool, a consent management platform, or a BI layer.",
+    "Name events as entity-action pairs, entity first, two words: `product add`, `page view`, `order complete`.",
+    "In the browser, tag HTML with `data-elb`, `data-elbaction`, `data-elb-<entity>`, `data-elbcontext`, `data-elbglobals`. Never build tracking on CSS selectors.",
+    "Migrating from GTM: keep the existing dataLayer via the dataLayer source and add `data-elb` tagging incrementally.",
+    "Keep events vendor-neutral. Vendor-specific shapes belong in each destination's `mapping`, never in the tagging.",
+    "Consent is configuration: set `consent` requirements on destinations so events reach a vendor only with granted states.",
+    "Never write a flow config from memory. With the walkerOS MCP use `package_search`, `package_get`, then `flow_validate`; otherwise read the package docs first.",
+    "Prove before deploying: `walkeros push flow.json --event '{\"name\":\"product add\"}' --simulate destination.NAME` shows what a destination would send."
+  ]
 }

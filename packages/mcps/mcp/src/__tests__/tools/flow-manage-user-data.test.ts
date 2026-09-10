@@ -1,9 +1,10 @@
 import { describe, it, expect } from '@jest/globals';
 import { createFlowManageToolSpec } from '../../tools/flow-manage';
+import { stubClient } from '../support/stub-client.js';
 import type { ToolClient } from '../../tool-client';
 
 function makeClient(overrides: Partial<ToolClient> = {}): ToolClient {
-  const base = {
+  const base: Partial<ToolClient> = {
     listFlows: async () => ({
       flows: [
         {
@@ -62,7 +63,7 @@ function makeClient(overrides: Partial<ToolClient> = {}): ToolClient {
     deleteFlow: async () => ({ ok: true }),
     getDefaultProject: () => 'p1',
   };
-  return { ...base, ...overrides } as unknown as ToolClient;
+  return stubClient({ ...base, ...overrides });
 }
 
 describe('flow_manage outputs user_data-delimited strings', () => {
@@ -149,7 +150,7 @@ describe('flow_manage outputs user_data-delimited strings', () => {
           updatedAt: new Date().toISOString(),
         };
       },
-    } as unknown as Partial<ToolClient>);
+    });
     const spec = createFlowManageToolSpec(client);
     const got = (await spec.handler({
       action: 'get',

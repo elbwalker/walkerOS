@@ -1,5 +1,15 @@
 # walkeros
 
+## 4.6.0
+
+### Patch Changes
+
+- Updated dependencies [8802281]
+- Updated dependencies [fd5949e]
+- Updated dependencies [403ff6c]
+- Updated dependencies [23e9034]
+  - @walkeros/cli@4.6.0
+
 ## 4.5.0
 
 ### Patch Changes

@@ -30,7 +30,7 @@ import {
   runTransformerChain,
   cloneIngest,
 } from './transformer';
-import { buildReportError } from './report-error';
+import { buildReportError, errorMeta } from './report-error';
 import { isStateDelivery, shouldDeliver, setMark } from './on';
 import { reconcilePending } from './pending';
 
@@ -95,7 +95,7 @@ export async function flushSourceQueueOn(
       collector.logger.scope('source').error('source on flush failed', {
         sourceId: id,
         type,
-        error: err,
+        ...errorMeta(err),
       });
       return undefined;
     })(type, data);
@@ -458,7 +458,7 @@ export async function initSource(
               (err) => {
                 collector.logger
                   .scope('source:many')
-                  .error(`many branch ${idx} failed`, { error: err });
+                  .error(`many branch ${idx} failed`, errorMeta(err));
                 return { ok: true } as Elb.PushResult;
               },
             )(),
@@ -598,7 +598,7 @@ export async function initSource(
       collector.status.failed++;
       collector.logger.scope('source').error('source factory failed', {
         sourceId,
-        error: err,
+        ...errorMeta(err),
       });
       return undefined;
     },
@@ -662,7 +662,7 @@ export async function initSources(
         collector.status.failed++;
         collector.logger.scope('source').error('source init failed', {
           sourceId,
-          error: err,
+          ...errorMeta(err),
         });
       })();
     }

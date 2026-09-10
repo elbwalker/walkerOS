@@ -20,6 +20,8 @@ import { registerDeployTool } from './tools/deploy-manage.js';
 import { registerSecretManageTool } from './tools/secret-manage.js';
 import { registerObserveJourneysTool } from './tools/observe-journeys.js';
 import { registerObserveSessionTool } from './tools/observe-session.js';
+import { registerHubManageTool } from './tools/hub-manage.js';
+import { registerFrameManageTool } from './tools/frame-manage.js';
 import { registerPackageSchemaResources } from './resources/package-schemas.js';
 import { registerReferenceResources } from './resources/references.js';
 import { registerAddStepPrompt } from './prompts/add-step.js';
@@ -128,6 +130,8 @@ export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   registerSecretManageTool(server, opts.client);
   registerObserveSessionTool(server, opts.client);
   registerObserveJourneysTool(server, opts.client);
+  registerHubManageTool(server, opts.client);
+  registerFrameManageTool(server, opts.client);
   registerFeedbackTool(server, opts.client);
   registerDiagnosticsTool(server, opts.client, packageVersion);
 

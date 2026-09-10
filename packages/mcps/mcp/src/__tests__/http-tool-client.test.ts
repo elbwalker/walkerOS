@@ -30,12 +30,23 @@ jest.mock('@walkeros/cli', () => ({
   startObserveSession: jest.fn(),
   getObserveSession: jest.fn(),
   endObserveSession: jest.fn(),
-  requestDeviceCode: jest.fn(),
-  pollForToken: jest.fn(),
+  listReleases: jest.fn(),
+  getRelease: jest.fn(),
+  listStepHistory: jest.fn(),
+  setReleaseRationale: jest.fn(),
+  listThreads: jest.fn(),
+  createThread: jest.fn(),
+  addThreadMessage: jest.fn(),
+  listKnowledge: jest.fn(),
+  listFrames: jest.fn(),
+  listPageFrames: jest.fn(),
+  getFrame: jest.fn(),
+  startDeviceAuthorization: jest.fn(),
+  completeDeviceLogin: jest.fn(),
   whoami: jest.fn(),
-  resolveToken: jest.fn(),
+  credentialSource: jest.fn(),
   resolveAppUrl: jest.fn(),
-  deleteConfig: jest.fn(),
+  logout: jest.fn(),
   feedback: jest.fn(),
   getFeedbackPreference: jest.fn(),
   setFeedbackPreference: jest.fn(),
@@ -43,7 +54,7 @@ jest.mock('@walkeros/cli', () => ({
 
 import * as cli from '@walkeros/cli';
 import { HttpToolClient } from '../http-tool-client.js';
-import type { ObserveSessionResult } from '../tool-client.js';
+import type { HubThreadWire, ObserveSessionResult } from '../tool-client.js';
 
 const observeSession: ObserveSessionResult = {
   id: 'ses_1',
@@ -237,8 +248,8 @@ describe('HttpToolClient', () => {
   });
 
   it('checkHealth returns reachable true with NO token set (tokenless probe)', async () => {
-    // resolveToken returns null → logged out; checkHealth must not require auth.
-    (cli.resolveToken as jest.Mock).mockReturnValue(null);
+    // credentialSource returns null → logged out; checkHealth must not require auth.
+    (cli.credentialSource as jest.Mock).mockReturnValue(null);
     (cli.resolveAppUrl as jest.Mock).mockReturnValue('https://app.test');
     const mockFetch = jest
       .fn()
@@ -266,15 +277,285 @@ describe('HttpToolClient', () => {
   });
 
   it('delegates sync config helpers without awaiting', () => {
-    (cli.resolveToken as jest.Mock).mockReturnValue({
-      token: 'tok_abc',
-      source: 'env',
-    });
-    (cli.deleteConfig as jest.Mock).mockReturnValue(true);
+    (cli.credentialSource as jest.Mock).mockReturnValue('env');
     (cli.getDefaultProject as jest.Mock).mockReturnValue('proj_1');
     const client = new HttpToolClient();
-    expect(client.resolveToken()).toEqual({ token: 'tok_abc', source: 'env' });
-    expect(client.deleteConfig()).toBe(true);
+    expect(client.credentialSource()).toBe('env');
     expect(client.getDefaultProject()).toBe('proj_1');
+  });
+
+  it('starts a device authorization against the resolved app URL', async () => {
+    (cli.resolveAppUrl as jest.Mock).mockReturnValue('https://app.test');
+    (cli.startDeviceAuthorization as jest.Mock).mockResolvedValue({
+      deviceCode: 'dc_1',
+    });
+
+    await new HttpToolClient().requestDeviceCode();
+
+    expect(cli.startDeviceAuthorization).toHaveBeenCalledWith(
+      'https://app.test',
+    );
+  });
+
+  it('resumes a device authorization through completeDeviceLogin', async () => {
+    (cli.completeDeviceLogin as jest.Mock).mockResolvedValue({
+      status: 'pending',
+    });
+
+    const result = await new HttpToolClient().pollForToken('dc_1', {
+      timeoutMs: 1000,
+    });
+
+    expect(cli.completeDeviceLogin).toHaveBeenCalledWith('dc_1', {
+      timeoutMs: 1000,
+    });
+    expect(result).toEqual({ status: 'pending' });
+  });
+
+  it('logs out through the revoking cli logout, not a bare config delete', async () => {
+    (cli.logout as jest.Mock).mockResolvedValue({ deleted: true });
+
+    await expect(new HttpToolClient().logout()).resolves.toEqual({
+      deleted: true,
+    });
+    expect(cli.logout).toHaveBeenCalled();
+  });
+
+  it('names the app through the same resolution every other method uses', () => {
+    (cli.resolveAppUrl as jest.Mock).mockReturnValue(
+      'https://stage.app.walkeros.io',
+    );
+
+    expect(new HttpToolClient().appBaseUrl()).toBe(
+      'https://stage.app.walkeros.io',
+    );
+    expect(cli.resolveAppUrl).toHaveBeenCalled();
+  });
+
+  it('strips a trailing slash the env var or config file may carry', () => {
+    // A base a caller concatenates a path onto has to have one shape, and
+    // neither WALKEROS_APP_URL nor the CLI config file promises it.
+    (cli.resolveAppUrl as jest.Mock).mockReturnValue(
+      'https://stage.app.walkeros.io/',
+    );
+
+    expect(new HttpToolClient().appBaseUrl()).toBe(
+      'https://stage.app.walkeros.io',
+    );
+  });
+});
+
+describe('HttpToolClient hub and frames delegation', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('delegates listReleases', async () => {
+    const wire = { releases: [], total: 0, limit: 20, offset: 0 };
+    jest.mocked(cli.listReleases).mockResolvedValue(wire);
+    await expect(
+      new HttpToolClient().listReleases({
+        projectId: 'proj_1',
+        flowId: 'flow_1',
+        limit: 5,
+      }),
+    ).resolves.toEqual(wire);
+    expect(cli.listReleases).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+      limit: 5,
+    });
+  });
+
+  it('delegates getRelease', async () => {
+    const wire = {
+      versionId: 'ver_1',
+      versionNumber: 3,
+      contentHash: null,
+      createdAt: '2026-09-01T00:00:00.000Z',
+      createdBy: 'user_1',
+      rationale: null,
+      diff: null,
+    };
+    jest.mocked(cli.getRelease).mockResolvedValue(wire);
+    await expect(
+      new HttpToolClient().getRelease({
+        projectId: 'proj_1',
+        flowId: 'flow_1',
+        ref: { versionNumber: 3 },
+      }),
+    ).resolves.toEqual(wire);
+    expect(cli.getRelease).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+      ref: { versionNumber: 3 },
+    });
+  });
+
+  it('delegates listStepHistory', async () => {
+    const wire = {
+      step: 'destination.ga4',
+      flow: null,
+      entries: [],
+      scanned: 0,
+      truncated: false,
+      entriesTruncated: false,
+    };
+    jest.mocked(cli.listStepHistory).mockResolvedValue(wire);
+    await expect(
+      new HttpToolClient().listStepHistory({
+        projectId: 'proj_1',
+        flowId: 'flow_1',
+        step: 'destination.ga4',
+      }),
+    ).resolves.toEqual(wire);
+    expect(cli.listStepHistory).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+      step: 'destination.ga4',
+    });
+  });
+
+  it('delegates setReleaseRationale', async () => {
+    const wire = {
+      versionId: 'ver_1',
+      humanText: 'why',
+      generatedSummary: null,
+      author: 'user_1',
+      createdAt: '2026-09-01T00:00:00.000Z',
+      updatedAt: '2026-09-01T00:00:00.000Z',
+    };
+    jest.mocked(cli.setReleaseRationale).mockResolvedValue(wire);
+    await expect(
+      new HttpToolClient().setReleaseRationale({
+        projectId: 'proj_1',
+        flowId: 'flow_1',
+        versionId: 'ver_1',
+        text: 'why',
+      }),
+    ).resolves.toEqual(wire);
+    expect(cli.setReleaseRationale).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+      versionId: 'ver_1',
+      text: 'why',
+    });
+  });
+
+  it('delegates listThreads', async () => {
+    const wire = { threads: [], hasMoreThreads: false };
+    jest.mocked(cli.listThreads).mockResolvedValue(wire);
+    await expect(
+      new HttpToolClient().listThreads({
+        projectId: 'proj_1',
+        flowId: 'flow_1',
+        includeMessages: false,
+      }),
+    ).resolves.toEqual(wire);
+    expect(cli.listThreads).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+      includeMessages: false,
+    });
+  });
+
+  it('delegates createThread and addThreadMessage', async () => {
+    const wire: HubThreadWire = {
+      id: 'thr_1',
+      anchorType: 'release',
+      anchorKey: 'ver_1',
+      anchorLabel: 'v3',
+      status: 'open',
+      resolvedByVersionId: null,
+      resolvedByVersionNumber: null,
+      resolvedAt: null,
+      resolvedBy: null,
+      createdBy: 'user_1',
+      createdAt: '2026-09-01T00:00:00.000Z',
+      updatedAt: '2026-09-01T00:00:00.000Z',
+      messageCount: 1,
+    };
+    jest.mocked(cli.createThread).mockResolvedValue(wire);
+    jest.mocked(cli.addThreadMessage).mockResolvedValue(wire);
+    const client = new HttpToolClient();
+    await expect(
+      client.createThread({
+        projectId: 'proj_1',
+        flowId: 'flow_1',
+        anchorType: 'release',
+        anchorKey: 'ver_1',
+        text: 'hi',
+      }),
+    ).resolves.toEqual(wire);
+    await expect(
+      client.addThreadMessage({
+        projectId: 'proj_1',
+        flowId: 'flow_1',
+        threadId: 'thr_1',
+        text: 'hi',
+      }),
+    ).resolves.toEqual(wire);
+    expect(cli.createThread).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+      anchorType: 'release',
+      anchorKey: 'ver_1',
+      text: 'hi',
+    });
+    expect(cli.addThreadMessage).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+      threadId: 'thr_1',
+      text: 'hi',
+    });
+  });
+
+  it('delegates listKnowledge', async () => {
+    const wire = { entries: [], hasMoreEntries: false };
+    jest.mocked(cli.listKnowledge).mockResolvedValue(wire);
+    await expect(
+      new HttpToolClient().listKnowledge({
+        projectId: 'proj_1',
+        includeMessages: true,
+        frameId: 'frm_V1StGXR8Z5jdHi6BmyT7K',
+        markId: 'm1',
+      }),
+    ).resolves.toEqual(wire);
+    expect(cli.listKnowledge).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      includeMessages: true,
+      frameId: 'frm_V1StGXR8Z5jdHi6BmyT7K',
+      markId: 'm1',
+    });
+  });
+
+  it('delegates the three frame reads', async () => {
+    jest.mocked(cli.listFrames).mockResolvedValue({ frames: [] });
+    jest.mocked(cli.listPageFrames).mockResolvedValue({ frames: [] });
+    const client = new HttpToolClient();
+    await expect(client.listFrames({ projectId: 'proj_1' })).resolves.toEqual({
+      frames: [],
+    });
+    await expect(
+      client.listPageFrames({
+        projectId: 'proj_1',
+        pageKey: 'https://shop.example/',
+      }),
+    ).resolves.toEqual({ frames: [] });
+    expect(cli.listFrames).toHaveBeenCalledWith({ projectId: 'proj_1' });
+    expect(cli.listPageFrames).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      pageKey: 'https://shop.example/',
+    });
+
+    // The client adds nothing to a failure: the tool layer reads the code.
+    const refused = Object.assign(new Error('Frame not found'), {
+      code: 'NOT_FOUND',
+    });
+    jest.mocked(cli.getFrame).mockRejectedValue(refused);
+    await expect(
+      client.getFrame({
+        projectId: 'proj_1',
+        frameId: 'frm_V1StGXR8Z5jdHi6BmyT7K',
+      }),
+    ).rejects.toBe(refused);
   });
 });
