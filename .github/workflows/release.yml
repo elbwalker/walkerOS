@@ -233,10 +233,10 @@ jobs:
           # CLI. They all carry one version (the `fixed` group in
           # .changeset/config.json).
           #
-          # Probe the abbreviated packument without a cache-buster: that is the
-          # document npm resolves a version against, and a version only a
-          # no-cache request can see is one the container's npm cannot. The
-          # retry budget clears the registry's ~5min packument max-age.
+          # Wait for the tarball, not just the metadata. The packument lists a
+          # version minutes before its tarball is fetchable, and the tarball is
+          # what `npm install` downloads. Probe both, uncached, from this runner:
+          # buildkit shares its network, so a 200 here predicts a 200 there.
           if ! PKGS="$(node -e '
             const m = require("./packages/cli/package.json");
             const deps = { ...m.dependencies, ...m.peerDependencies };
@@ -265,21 +265,32 @@ jobs:
               CODE="$(curl -sS -o /tmp/npm-probe.json -w '%{http_code}' \
                 -H 'Accept: application/vnd.npm.install-v1+json' "$URL" \
                 || echo 000)"
-              if [ "$CODE" = "200" ] && node -e '
-                const doc = JSON.parse(
-                  require("fs").readFileSync("/tmp/npm-probe.json", "utf8"),
-                );
-                process.exit(doc.versions?.[process.argv[1]] ? 0 : 1);
-              ' "$CLI_VERSION"; then
-                echo "Verified: ${PKG}@${CLI_VERSION} resolves on the registry"
-                OK=1
-                break
+              TARBALL=""
+              if [ "$CODE" = "200" ]; then
+                TARBALL="$(node -e '
+                  const doc = JSON.parse(
+                    require("fs").readFileSync("/tmp/npm-probe.json", "utf8"),
+                  );
+                  process.stdout.write(
+                    doc.versions?.[process.argv[1]]?.dist?.tarball ?? "",
+                  );
+                ' "$CLI_VERSION")"
               fi
-              echo "  ${PKG} attempt $i/30 (HTTP $CODE): waiting for npm propagation..."
+              TCODE="-"
+              if [ -n "$TARBALL" ]; then
+                TCODE="$(curl -sS -o /dev/null -w '%{http_code}' -L "$TARBALL" \
+                  || echo 000)"
+                if [ "$TCODE" = "200" ]; then
+                  echo "Verified: ${PKG}@${CLI_VERSION} (metadata + tarball)"
+                  OK=1
+                  break
+                fi
+              fi
+              echo "  ${PKG} attempt $i/30 (meta $CODE, tarball $TCODE): waiting..."
               sleep 15
             done
             if [ "$OK" != "1" ]; then
-              echo "::error::${PKG}@${CLI_VERSION} not visible to npm after ~7min (last HTTP $CODE)"
+              echo "::error::${PKG}@${CLI_VERSION} not installable after ~7min (meta $CODE, tarball $TCODE)"
               exit 1
             fi
           done
