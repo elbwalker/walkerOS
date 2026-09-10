@@ -1,5 +1,12 @@
 # @walkeros/storybook-demo
 
+## 4.6.0
+
+### Patch Changes
+
+- @walkeros/web-source-browser@4.6.0
+- @walkeros/core@4.6.0
+
 ## 4.5.0
 
 ### Patch Changes

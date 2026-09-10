@@ -1,5 +1,18 @@
 # @walkeros/walker.js
 
+## 4.6.0
+
+### Patch Changes
+
+- Updated dependencies [8802281]
+- Updated dependencies [403ff6c]
+  - @walkeros/collector@4.6.0
+  - @walkeros/web-source-datalayer@4.6.0
+  - @walkeros/web-source-browser@4.6.0
+  - @walkeros/web-source-session@4.6.0
+  - @walkeros/core@4.6.0
+  - @walkeros/web-core@4.6.0
+
 ## 4.5.0
 
 ### Patch Changes

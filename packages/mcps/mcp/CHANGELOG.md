@@ -1,5 +1,60 @@
 # @walkeros/mcp
 
+## 4.6.0
+
+### Minor Changes
+
+- fd5949e: Tools now hand back an `appUrl` link to the screen they are talking
+  about. `flow_manage` get and create link the flow page, `deploy_manage` deploy
+  and get link the deployment, and `hub_manage` releases, threads and step
+  history link the release history or the step. Links are absolute, built from
+  the base URL the connected door reports, and omitted rather than guessed when
+  the address cannot be built. `deploy_manage` deploy now also passes an
+  explicit `projectId` through to the deploy itself, so it no longer deploys
+  into the default project when one was named.
+- 23e9034: The `auth` tool logs in through the standard device authorization
+  grant and keeps the session refreshed.
+
+  Breaking, for anyone implementing `ToolClient`: `resolveToken` is replaced by
+  `credentialSource`, `deleteConfig` by an async `logout` that revokes the
+  session before dropping it, and `requestDeviceCode`/`pollForToken` return the
+  CLI's device authorization types.
+
+### Patch Changes
+
+- fd5949e: `fetchHealth` and `compareContract` accept an optional base URL, so a
+  caller that is not the local CLI can probe its own backend instead of the one
+  resolved from `WALKEROS_APP_URL` and the CLI config file. Omitting it keeps
+  today's resolution.
+
+  `diagnostics` passes the app URL it reports, so the contract verdict and
+  `appUrl.resolved` always describe the same backend. A hosted MCP no longer
+  probes production while naming its own deployment.
+
+- fd5949e: `diagnostics` reports the app URL the tool client actually talks to,
+  so a hosted MCP names its own deployment instead of the local CLI's default.
+
+  `ToolClient` gains a required `appBaseUrl()` method returning that base
+  without a trailing slash, so a custom implementation of that interface must
+  add it.
+
+- 403ff6c: The MCP server carries `hub_manage`, which reads a flow's release
+  history, its rationale and the threads on it, and a read-only `frame_manage`,
+  which reads the frames of a measurement plan. The CLI gains the matching
+  programmatic calls. `ToolClient` gains eleven required methods, so a custom
+  implementation of that interface must add them.
+- fd5949e: A tool call with no project now names how to fix it, instead of
+  stating that a project is missing and stopping there. Five more `flow_manage`
+  actions (`update`, `delete`, `duplicate`, `preview_get`, `preview_delete`)
+  resolve the selected project first, so they no longer fail with a raw server
+  error when `projectId` is omitted.
+- Updated dependencies [8802281]
+- Updated dependencies [fd5949e]
+- Updated dependencies [403ff6c]
+- Updated dependencies [23e9034]
+  - @walkeros/cli@4.6.0
+  - @walkeros/core@4.6.0
+
 ## 4.5.0
 
 ### Patch Changes

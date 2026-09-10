@@ -1,5 +1,12 @@
 # @walkeros/server-destination-klaviyo
 
+## 4.6.0
+
+### Patch Changes
+
+- @walkeros/server-core@4.6.0
+- @walkeros/core@4.6.0
+
 ## 4.5.0
 
 ### Patch Changes

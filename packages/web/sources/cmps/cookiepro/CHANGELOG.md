@@ -1,5 +1,13 @@
 # @walkeros/web-source-cmp-cookiepro
 
+## 4.6.0
+
+### Patch Changes
+
+- Updated dependencies [8802281]
+  - @walkeros/collector@4.6.0
+  - @walkeros/core@4.6.0
+
 ## 4.5.0
 
 ### Patch Changes
