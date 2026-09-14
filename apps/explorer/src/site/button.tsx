@@ -2,12 +2,11 @@ import React from 'react';
 
 export type SiteButtonVariant = 'primary' | 'secondary' | 'pill';
 
-export interface SiteButtonProps {
+export interface SiteButtonProps extends React.HTMLAttributes<HTMLElement> {
   children: React.ReactNode;
   variant?: SiteButtonVariant;
   /** Renders an anchor when set, a button otherwise. */
   href?: string;
-  onClick?: () => void;
   className?: string;
 }
 
@@ -22,21 +21,21 @@ export function SiteButton({
   children,
   variant = 'primary',
   href,
-  onClick,
   className = '',
+  ...rest
 }: SiteButtonProps) {
   const classes = `elb-oa-btn elb-oa-btn--${variant} ${className}`.trim();
 
   if (href) {
     return (
-      <a className={classes} href={href} onClick={onClick}>
+      <a className={classes} href={href} {...rest}>
         {children}
       </a>
     );
   }
 
   return (
-    <button className={classes} type="button" onClick={onClick}>
+    <button className={classes} type="button" {...rest}>
       {children}
     </button>
   );

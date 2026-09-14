@@ -1134,6 +1134,10 @@ install away from the same accident.
 shiki atoms would pull the tool module graph into the `./site` entry, which is
 what that separate entry exists to prevent.
 
+`SiteButton` forwards extra attributes (such as `data-*` tracking attributes) to
+the rendered link or button. `SectionHead` renders its children after the sub
+line, so a section can carry more than one paragraph.
+
 ---
 
 ## Change Log

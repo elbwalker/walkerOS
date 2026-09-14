@@ -6,8 +6,9 @@
 
 @import 'tailwindcss';
 @import '@walkeros/explorer/styles.css';
-/* Open Air site tokens (--oa-*). Ground, ink and accent for the whole site. */
-@import '@walkeros/explorer/tokens.css';
+/* Open Air site tokens (--oa-*) and site components. Ground, ink and accent for
+   the whole site. */
+@import '@walkeros/explorer/site.css';
 
 /* DaisyUI plugin configuration */
 @plugin "daisyui" {

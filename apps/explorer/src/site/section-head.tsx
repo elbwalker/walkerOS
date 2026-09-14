@@ -22,6 +22,7 @@ export function SectionHead({
   sub,
   as: Heading = 'h2',
   className = '',
+  children,
   ...rest
 }: SectionHeadProps) {
   return (
@@ -29,6 +30,7 @@ export function SectionHead({
       {kicker ? <p className="elb-oa-section-head__kicker">{kicker}</p> : null}
       <Heading className="elb-oa-section-head__headline">{headline}</Heading>
       {sub ? <p className="elb-oa-section-head__sub">{sub}</p> : null}
+      {children}
     </div>
   );
 }

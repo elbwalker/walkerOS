@@ -20,6 +20,11 @@
   .elb-oa-section-head__headline {
     font-size: clamp(26px, 3vw, 34px);
   }
+
+  // The column already bounds the measure.
+  .elb-oa-section-head {
+    max-width: none;
+  }
 }
 
 @media (max-width: 940px) {

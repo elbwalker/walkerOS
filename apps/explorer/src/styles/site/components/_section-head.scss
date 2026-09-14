@@ -31,4 +31,8 @@
     color: var(--oa-ink-2);
     margin: 0;
   }
+
+  &__sub + &__sub {
+    margin-top: 16px;
+  }
 }
