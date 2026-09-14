@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { loadJsonConfig } from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
 import { redactNestedStrings, keepStructural } from '../user-data.js';
@@ -10,9 +11,11 @@ import {
   NO_DEFAULT_PROJECT_ERROR,
   resolveDefaultProject,
 } from './project-context.js';
-import { RuntimeRefusal, type FlowRuntime } from '../runtime/types.js';
 
-import { flowConfigOf, isCloudId } from '../cloud-flow.js';
+/** `flow_` and `cfg_` are reserved walkerOS API id namespaces. A source
+ *  matching either is a cloud flow/config id, loaded via the client, not a
+ *  local file path or URL. */
+const API_ID_PREFIX = /^(flow|cfg)_/;
 
 const WEB_SKELETON = {
   version: 4,
@@ -71,25 +74,18 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
-export function createFlowLoadToolSpec(
-  client: ToolClient,
-  runtime: FlowRuntime,
-): ToolSpec {
+export function createFlowLoadToolSpec(client: ToolClient): ToolSpec {
   return {
     name: 'flow_load',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowLoadHandlerBody(client, runtime, input),
+    handler: (input) => flowLoadHandlerBody(client, input),
   };
 }
 
-async function flowLoadHandlerBody(
-  client: ToolClient,
-  runtime: FlowRuntime,
-  input: unknown,
-) {
+async function flowLoadHandlerBody(client: ToolClient, input: unknown) {
   const { source, platform } = (input ?? {}) as {
     source?: string;
     platform?: 'web' | 'server';
@@ -98,7 +94,7 @@ async function flowLoadHandlerBody(
   // Load by cloud flow/config id (flow_… / cfg_…) via the same client seam
   // flow_manage `get` uses. Its NOT_FOUND surfaces directly, never remapped
   // to the local "file not found" hint below.
-  if (source && isCloudId(source)) {
+  if (source && API_ID_PREFIX.test(source)) {
     const resolvedProjectId = resolveDefaultProject(client, undefined);
     if (!resolvedProjectId) {
       return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
@@ -108,8 +104,9 @@ async function flowLoadHandlerBody(
         flowId: source,
         projectId: resolvedProjectId,
       });
+      const config = (flow as { config?: Record<string, unknown> }).config;
       return mcpResult(
-        redactNestedStrings(flowConfigOf(flow), { skip: keepStructural }),
+        redactNestedStrings(config ?? {}, { skip: keepStructural }),
         {
           next: ['Use flow_validate to check', 'Use add-step prompt to modify'],
         },
@@ -121,9 +118,7 @@ async function flowLoadHandlerBody(
 
   try {
     if (source) {
-      // Every file or URL read goes through the runtime, which decides what
-      // this process may load.
-      const config = await runtime.load(source);
+      const config = await loadJsonConfig(source);
       return mcpResult(redactNestedStrings(config, { skip: keepStructural }), {
         next: ['Use flow_validate to check', 'Use add-step prompt to modify'],
       });
@@ -146,7 +141,6 @@ async function flowLoadHandlerBody(
       ],
     });
   } catch (error) {
-    if (error instanceof RuntimeRefusal) return mcpError(error, error.hint);
     const msg = error instanceof Error ? error.message : '';
     if (msg.includes('not found') || msg.includes('ENOENT'))
       return mcpError(error, 'Check configPath — expected a flow.json file');
@@ -154,12 +148,8 @@ async function flowLoadHandlerBody(
   }
 }
 
-export function registerFlowLoadTool(
-  server: McpServer,
-  client: ToolClient,
-  runtime: FlowRuntime,
-) {
-  const spec = createFlowLoadToolSpec(client, runtime);
+export function registerFlowLoadTool(server: McpServer, client: ToolClient) {
+  const spec = createFlowLoadToolSpec(client);
   server.registerTool(
     spec.name,
     {

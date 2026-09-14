@@ -1,4 +1,3 @@
-import { createLocalRuntime } from '../../runtime/local.js';
 import { registerFlowValidateTool } from '../../tools/validate.js';
 import { ValidateOutputShape } from '../../schemas/output.js';
 import type { ValidateResult } from '@walkeros/cli';
@@ -67,19 +66,7 @@ describe('flow_validate tool', () => {
 
   beforeEach(() => {
     server = createMockServer();
-    registerFlowValidateTool(server as any, createLocalRuntime());
-    mockValidate.mockReset();
-    // The local runtime resolves the input through the cli loader before
-    // validating. Stand in for it: parse JSON, otherwise return a marker for
-    // what reading that source would have produced.
-    mockLoadJsonConfig.mockReset();
-    mockLoadJsonConfig.mockImplementation(async (input: string) => {
-      try {
-        return JSON.parse(input);
-      } catch {
-        return { loadedFrom: input };
-      }
-    });
+    registerFlowValidateTool(server as any);
   });
 
   it('registers with correct name, title, and annotations', () => {
@@ -119,17 +106,16 @@ describe('flow_validate tool', () => {
       flow: undefined,
     });
 
-    expect(mockValidate).toHaveBeenCalledWith(
-      'event',
-      { name: 'page view' },
-      { flow: undefined, path: undefined },
-    );
+    expect(mockValidate).toHaveBeenCalledWith('event', '{"name":"page view"}', {
+      flow: undefined,
+      path: undefined,
+    });
     expect(result.structuredContent.valid).toBe(true);
     expect(result.structuredContent.errors).toEqual([]);
     expect(result.isError).toBeUndefined();
   });
 
-  it('resolves a file path through the runtime loader, then validates the document', async () => {
+  it('passes file path string to validate', async () => {
     const mockResult: ValidateResult = {
       valid: true,
       type: 'flow',
@@ -146,12 +132,10 @@ describe('flow_validate tool', () => {
       flow: 'myFlow',
     });
 
-    expect(mockLoadJsonConfig).toHaveBeenCalledWith('/path/to/flow.json');
-    expect(mockValidate).toHaveBeenCalledWith(
-      'flow',
-      { loadedFrom: '/path/to/flow.json' },
-      { flow: 'myFlow', path: undefined },
-    );
+    expect(mockValidate).toHaveBeenCalledWith('flow', '/path/to/flow.json', {
+      flow: 'myFlow',
+      path: undefined,
+    });
   });
 
   it('returns summary "Valid" on success', async () => {
@@ -227,11 +211,10 @@ describe('flow_validate tool', () => {
       path: 'destinations.snowplow',
     });
 
-    expect(mockValidate).toHaveBeenCalledWith(
-      'flow',
-      { loadedFrom: '/path/to/flow.json' },
-      { flow: undefined, path: 'destinations.snowplow' },
-    );
+    expect(mockValidate).toHaveBeenCalledWith('flow', '/path/to/flow.json', {
+      flow: undefined,
+      path: 'destinations.snowplow',
+    });
   });
 
   it('accepts entry type in output when path is used', async () => {
@@ -445,9 +428,7 @@ describe('flow_validate tool', () => {
         flow: undefined,
       });
 
-      // The input is resolved once through the runtime loader; the deprecated
-      // package pass adds no second load for a non-flow type.
-      expect(mockLoadJsonConfig).toHaveBeenCalledTimes(1);
+      expect(mockLoadJsonConfig).not.toHaveBeenCalled();
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.valid).toBe(true);
     });

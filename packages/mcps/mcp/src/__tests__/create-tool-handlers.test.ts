@@ -61,15 +61,4 @@ describe('createToolHandlers', () => {
       expect(typeof spec.handler).toBe('function');
     }
   });
-
-  it('defaults to the hosted runtime, so building a flow is refused', async () => {
-    const specs = createToolHandlers(stubClient());
-    const res = await specs['flow_simulate'].handler({
-      configPath: '{"version":4,"flows":{}}',
-      step: 'destination.x',
-      event: { name: 'order complete' },
-    });
-    expect((res as { isError?: boolean }).isError).toBe(true);
-    expect(JSON.stringify(res)).toMatch(/hosted/i);
-  });
 });

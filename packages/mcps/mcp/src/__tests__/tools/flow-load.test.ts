@@ -1,4 +1,3 @@
-import { createLocalRuntime } from '../../runtime/local.js';
 import { registerFlowLoadTool } from '../../tools/flow-load.js';
 import { stubClient } from '../support/stub-client.js';
 
@@ -7,8 +6,6 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  // The real narrowing helper: cloud-id resolution reads the flow record through it.
-  isObject: jest.requireActual('@walkeros/core').isObject,
   mcpResult: jest.fn((result, hints) => ({
     content: [
       {
@@ -60,7 +57,7 @@ describe('flow_load tool', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     server = createMockServer();
-    registerFlowLoadTool(server as any, stubClient(), createLocalRuntime());
+    registerFlowLoadTool(server as any, stubClient());
   });
 
   it('registers with correct name and annotations', () => {
@@ -212,7 +209,6 @@ describe('flow_load tool', () => {
       registerFlowLoadTool(
         server as any,
         stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
-        createLocalRuntime(),
       );
 
       const tool = server.getTool('flow_load');
@@ -240,7 +236,6 @@ describe('flow_load tool', () => {
       registerFlowLoadTool(
         server as any,
         stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
-        createLocalRuntime(),
       );
 
       const tool = server.getTool('flow_load');
@@ -263,11 +258,7 @@ describe('flow_load tool', () => {
       const getFlow = jest.fn();
       mockLoadJsonConfig.mockResolvedValue({ version: 4, flows: {} });
       server = createMockServer();
-      registerFlowLoadTool(
-        server as any,
-        stubClient({ getFlow }),
-        createLocalRuntime(),
-      );
+      registerFlowLoadTool(server as any, stubClient({ getFlow }));
 
       const tool = server.getTool('flow_load');
       await tool.handler({ source });
@@ -282,7 +273,6 @@ describe('flow_load tool', () => {
       registerFlowLoadTool(
         server as never,
         stubClient({ getFlow, getDefaultProject: () => null }),
-        createLocalRuntime(),
       );
 
       const tool = server.getTool('flow_load');
@@ -303,7 +293,6 @@ describe('flow_load tool', () => {
       registerFlowLoadTool(
         server as any,
         stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
-        createLocalRuntime(),
       );
 
       const tool = server.getTool('flow_load');
@@ -338,7 +327,6 @@ describe('flow_load tool', () => {
       registerFlowLoadTool(
         server as any,
         stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
-        createLocalRuntime(),
       );
 
       const tool = server.getTool('flow_load');

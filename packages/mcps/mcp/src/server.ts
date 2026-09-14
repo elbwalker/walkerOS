@@ -29,8 +29,6 @@ import { registerSetupMappingPrompt } from './prompts/setup-mapping.js';
 import { registerManageContractPrompt } from './prompts/manage-contract.js';
 import { SERVER_INSTRUCTIONS } from './instructions.js';
 import { createMcpEmitter, type McpEmitter } from './telemetry.js';
-import type { FlowRuntime } from './runtime/types.js';
-import { createHostedRuntime } from './runtime/hosted.js';
 
 export interface Logger {
   debug?(message: string, meta?: Record<string, unknown>): void;
@@ -44,15 +42,6 @@ export interface CreateServerOptions {
   logger?: Logger;
   version?: string;
   catalogBaseUrl?: string;
-  /**
-   * The capability runtime the flow tools read, build and run flows through.
-   * Omitted, the HOSTED runtime is used, the safe default for any shared or
-   * network-reached process: inline JSON and saved flow ids only, no local
-   * files, no URLs, no in-process bundle, simulate or push. Pass
-   * `createLocalRuntime()` only on the user's own machine (stdio, the CLI) to
-   * keep local file, URL and execution behaviour. See `FlowRuntime`.
-   */
-  runtime?: FlowRuntime;
 }
 
 /**
@@ -126,7 +115,6 @@ function wrapRegisteredToolsWithTelemetry(server: McpServer): void {
 
 export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   const packageVersion = opts.version ?? '0.0.0';
-  const runtime = opts.runtime ?? createHostedRuntime(opts.client);
   const server = new McpServer(
     {
       name: 'walkeros-flow',
@@ -147,12 +135,12 @@ export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   registerFeedbackTool(server, opts.client);
   registerDiagnosticsTool(server, opts.client, packageVersion);
 
-  registerFlowValidateTool(server, runtime);
-  registerFlowBundleTool(server, opts.client, runtime);
-  registerFlowSimulateTool(server, opts.client, runtime);
-  registerFlowPushTool(server, runtime);
-  registerFlowExamplesTool(server, runtime);
-  registerFlowLoadTool(server, opts.client, runtime);
+  registerFlowValidateTool(server);
+  registerFlowBundleTool(server, opts.client);
+  registerFlowSimulateTool(server, opts.client);
+  registerFlowPushTool(server);
+  registerFlowExamplesTool(server);
+  registerFlowLoadTool(server, opts.client);
 
   registerPackageSearchTool(server);
   registerGetPackageSchemaTool(server);

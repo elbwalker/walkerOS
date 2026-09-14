@@ -1,4 +1,3 @@
-import { createLocalRuntime } from '../../runtime/local.js';
 import { registerFlowExamplesTool } from '../../tools/examples.js';
 import { ExamplesListOutputShape } from '../../schemas/output.js';
 
@@ -110,7 +109,7 @@ describe('flow_examples tool', () => {
 
   beforeEach(() => {
     server = createMockServer();
-    registerFlowExamplesTool(server as any, createLocalRuntime());
+    registerFlowExamplesTool(server as any);
     mockLoadJsonConfig.mockReset();
     mockFetchPackage.mockReset();
   });

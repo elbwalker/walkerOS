@@ -1,5 +1,9 @@
 import type { ToolClient } from '../tool-client.js';
-import { flowConfigOf, isCloudId } from '../cloud-flow.js';
+
+/** `flow_` and `cfg_` are reserved walkerOS API id namespaces. A configPath
+ *  matching either is a cloud flow/config id, resolved via the client rather
+ *  than treated as a local file path, URL, or inline JSON. */
+const API_ID_PREFIX = /^(flow|cfg)_/;
 
 /**
  * Resolve a `configPath` for tools that consume it (simulate, bundle). When it
@@ -12,8 +16,9 @@ export async function resolveConfigPath(
   client: Pick<ToolClient, 'getFlow'>,
   configPath: string,
 ): Promise<string> {
-  if (!isCloudId(configPath)) return configPath;
+  if (!API_ID_PREFIX.test(configPath)) return configPath;
 
   const flow = await client.getFlow({ flowId: configPath });
-  return JSON.stringify(flowConfigOf(flow));
+  const config = (flow as { config?: Record<string, unknown> }).config;
+  return JSON.stringify(config ?? {});
 }

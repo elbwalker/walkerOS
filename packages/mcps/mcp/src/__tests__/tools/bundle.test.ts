@@ -1,4 +1,3 @@
-import { createLocalRuntime } from '../../runtime/local.js';
 import { registerFlowBundleTool } from '../../tools/bundle.js';
 import { BundleOutputShape } from '../../schemas/output.js';
 
@@ -18,8 +17,6 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  // The real narrowing helper: cloud-id resolution reads the flow record through it.
-  isObject: jest.requireActual('@walkeros/core').isObject,
   mcpResult: jest.fn((result, hints) => ({
     content: [
       {
@@ -69,11 +66,7 @@ describe('flow_bundle tool', () => {
   beforeEach(() => {
     server = createMockServer();
     getFlow = jest.fn();
-    registerFlowBundleTool(
-      server as any,
-      stubClient({ getFlow }),
-      createLocalRuntime(),
-    );
+    registerFlowBundleTool(server as any, stubClient({ getFlow }));
   });
 
   it('registers with correct name, title, and annotations', () => {

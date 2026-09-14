@@ -1,4 +1,3 @@
-import { createLocalRuntime } from '../../runtime/local.js';
 jest.mock('@walkeros/cli/dev', () => ({
   schemas: {
     ValidateInputShape: {
@@ -12,8 +11,6 @@ jest.mock('@walkeros/cli/dev', () => ({
 
 jest.mock('@walkeros/cli', () => ({
   validate: jest.fn(),
-  // The local runtime resolves the input through this loader first.
-  loadJsonConfig: jest.fn(async (input: string) => JSON.parse(input)),
 }));
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
@@ -39,7 +36,7 @@ describe('flow_validate leaves issue messages literal', () => {
       details: {},
     });
 
-    const spec = createFlowValidateToolSpec(createLocalRuntime());
+    const spec = createFlowValidateToolSpec();
     const r = (await spec.handler({
       type: 'flow',
       input: '{"bad": true}',
@@ -77,7 +74,7 @@ describe('flow_validate leaves issue messages literal', () => {
       details: {},
     });
 
-    const spec = createFlowValidateToolSpec(createLocalRuntime());
+    const spec = createFlowValidateToolSpec();
     const r = (await spec.handler({
       type: 'flow',
       input: '{}',

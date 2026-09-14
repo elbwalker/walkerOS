@@ -1,4 +1,3 @@
-import { createLocalRuntime } from '../../runtime/local.js';
 import { registerFlowPushTool } from '../../tools/push.js';
 import { PushOutputShape } from '../../schemas/output.js';
 
@@ -63,7 +62,7 @@ describe('flow_push tool', () => {
 
   beforeEach(() => {
     server = createMockServer();
-    registerFlowPushTool(server as any, createLocalRuntime());
+    registerFlowPushTool(server as any);
   });
 
   it('registers with correct name, title, and annotations', () => {

@@ -1,7 +1,5 @@
 import type { ToolClient } from './tool-client.js';
 import type { ToolSpec } from './tool-spec.js';
-import type { FlowRuntime } from './runtime/types.js';
-import { createHostedRuntime } from './runtime/hosted.js';
 
 declare module '@walkeros/core' {
   interface SourceMap {
@@ -59,22 +57,6 @@ export {
   createStreamableHttpHandler,
   type CreateStreamableHttpHandlerOptions,
 } from './http.js';
-
-/**
- * The capability runtimes. `createWalkerOSMcpServer` and `createToolHandlers`
- * default to the hosted runtime; pass `createLocalRuntime()` only on the
- * user's own machine.
- */
-export type {
-  FlowRuntime,
-  BundleOptions,
-  SimulateOptions,
-  SimulateStepType,
-  PushOptions,
-} from './runtime/types.js';
-export { RuntimeRefusal } from './runtime/types.js';
-export { createLocalRuntime } from './runtime/local.js';
-export { createHostedRuntime } from './runtime/hosted.js';
 export {
   TOOL_DEFINITIONS,
   type ToolDefinition,
@@ -203,14 +185,11 @@ export {
  * Handlers are closed over `client`, so the caller can bind a single
  * `ToolClient` (such as the zero-hop `ServiceToolClient`) once per session.
  * `packageVersion` is reported by the `diagnostics` tool and defaults to
- * `'0.0.0'` when omitted. `runtime` defaults to the hosted runtime, the safe
- * choice for any shared process; pass `createLocalRuntime()` only on the
- * user's own machine.
+ * `'0.0.0'` when omitted.
  */
 export function createToolHandlers(
   client: ToolClient,
   packageVersion = '0.0.0',
-  runtime: FlowRuntime = createHostedRuntime(client),
 ): Record<string, ToolSpec> {
   const specs: ToolSpec[] = [
     createAuthToolSpec(client),
@@ -223,12 +202,12 @@ export function createToolHandlers(
     createHubManageToolSpec(client),
     createFrameManageToolSpec(client),
     createFeedbackToolSpec(client),
-    createFlowValidateToolSpec(runtime),
-    createFlowBundleToolSpec(client, runtime),
-    createFlowSimulateToolSpec(client, runtime),
-    createFlowPushToolSpec(runtime),
-    createFlowExamplesToolSpec(runtime),
-    createFlowLoadToolSpec(client, runtime),
+    createFlowValidateToolSpec(),
+    createFlowBundleToolSpec(client),
+    createFlowSimulateToolSpec(client),
+    createFlowPushToolSpec(),
+    createFlowExamplesToolSpec(),
+    createFlowLoadToolSpec(client),
     createPackageSearchToolSpec(),
     createPackageGetToolSpec(),
     createDiagnosticsToolSpec(client, packageVersion),
