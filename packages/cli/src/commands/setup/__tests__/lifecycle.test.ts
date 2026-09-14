@@ -1,6 +1,10 @@
+import path from 'path';
+import os from 'os';
+import fs from 'fs-extra';
 import type { Flow, Logger } from '@walkeros/core';
 import { setupCommand } from '../index';
 import { loadFlowConfig } from '../../../config/loader.js';
+import { loadStepPackage } from '../../../core/step-loader.js';
 import { createMockLogger } from '../../../__tests__/helpers/mock-logger.js';
 
 jest.mock('../../../config/loader.js');
@@ -8,6 +12,11 @@ jest.mock('../../../core/output.js', () => {
   const actual = jest.requireActual('../../../core/output.js');
   return { ...actual, writeResult: jest.fn().mockResolvedValue(undefined) };
 });
+jest.mock('../../../core/step-loader.js', () => ({
+  loadStepPackage: jest.fn(),
+}));
+
+const mockedLoadStep = jest.mocked(loadStepPackage);
 
 /**
  * Bug G fixture: a destination that exposes the full lifecycle. Each
@@ -18,120 +27,103 @@ jest.mock('../../../core/output.js', () => {
 type Call = { fn: 'init' | 'setup' | 'destroy'; config: unknown };
 const calls: Call[] = [];
 
-jest.mock(
-  '@walkeros/__test-lifecycle-destination',
-  () => ({
-    __esModule: true,
-    default: {
-      type: 'lifecycle',
-      push: () => {},
-      init: async (ctx: { config: unknown }) => {
-        calls.push({ fn: 'init', config: ctx.config });
-        // Return a brand-new config object that setup/destroy must receive.
-        return { resolved: true, originalSettings: ctx.config };
-      },
-      setup: async (ctx: { config: unknown }) => {
-        calls.push({ fn: 'setup', config: ctx.config });
-        return { ok: true };
-      },
-      destroy: async (ctx: { config: unknown }) => {
-        calls.push({ fn: 'destroy', config: ctx.config });
-      },
+const lifecycleModule: Record<string, unknown> = {
+  default: {
+    type: 'lifecycle',
+    push: () => {},
+    init: async (ctx: { config: unknown }) => {
+      calls.push({ fn: 'init', config: ctx.config });
+      // Return a brand-new config object that setup/destroy must receive.
+      return { resolved: true, originalSettings: ctx.config };
     },
-  }),
-  { virtual: true },
-);
+    setup: async (ctx: { config: unknown }) => {
+      calls.push({ fn: 'setup', config: ctx.config });
+      return { ok: true };
+    },
+    destroy: async (ctx: { config: unknown }) => {
+      calls.push({ fn: 'destroy', config: ctx.config });
+    },
+  },
+};
 
-jest.mock(
-  '@walkeros/__test-init-void-destination',
-  () => ({
-    __esModule: true,
-    default: {
-      type: 'init-void',
-      push: () => {},
-      init: async (ctx: { config: { settings?: { mutated?: boolean } } }) => {
-        // Mutate input config in place; legal but rare path. Returning
-        // void must keep the original config object as the resolved one.
-        if (ctx.config && typeof ctx.config === 'object') {
-          ctx.config.settings = {
-            ...(ctx.config.settings ?? {}),
-            mutated: true,
-          };
-        }
-        // No return statement → undefined.
-      },
-      setup: async (ctx: { config: unknown }) => {
-        calls.push({ fn: 'setup', config: ctx.config });
-        return { ok: true };
-      },
-      destroy: async (ctx: { config: unknown }) => {
-        calls.push({ fn: 'destroy', config: ctx.config });
-      },
+const initVoidModule: Record<string, unknown> = {
+  default: {
+    type: 'init-void',
+    push: () => {},
+    init: async (ctx: { config: { settings?: { mutated?: boolean } } }) => {
+      // Mutate input config in place; legal but rare path. Returning
+      // void must keep the original config object as the resolved one.
+      if (ctx.config && typeof ctx.config === 'object') {
+        ctx.config.settings = {
+          ...(ctx.config.settings ?? {}),
+          mutated: true,
+        };
+      }
+      // No return statement → undefined.
     },
-  }),
-  { virtual: true },
-);
+    setup: async (ctx: { config: unknown }) => {
+      calls.push({ fn: 'setup', config: ctx.config });
+      return { ok: true };
+    },
+    destroy: async (ctx: { config: unknown }) => {
+      calls.push({ fn: 'destroy', config: ctx.config });
+    },
+  },
+};
 
-jest.mock(
-  '@walkeros/__test-init-aborts-destination',
-  () => ({
-    __esModule: true,
-    default: {
-      type: 'init-aborts',
-      push: () => {},
-      init: async () => {
-        calls.push({ fn: 'init', config: undefined });
-        return false;
-      },
-      setup: async (ctx: { config: unknown }) => {
-        calls.push({ fn: 'setup', config: ctx.config });
-        return { ok: true };
-      },
-      destroy: async (ctx: { config: unknown }) => {
-        calls.push({ fn: 'destroy', config: ctx.config });
-      },
+const initAbortsModule: Record<string, unknown> = {
+  default: {
+    type: 'init-aborts',
+    push: () => {},
+    init: async () => {
+      calls.push({ fn: 'init', config: undefined });
+      return false;
     },
-  }),
-  { virtual: true },
-);
+    setup: async (ctx: { config: unknown }) => {
+      calls.push({ fn: 'setup', config: ctx.config });
+      return { ok: true };
+    },
+    destroy: async (ctx: { config: unknown }) => {
+      calls.push({ fn: 'destroy', config: ctx.config });
+    },
+  },
+};
 
-jest.mock(
-  '@walkeros/__test-no-init-destination',
-  () => ({
-    __esModule: true,
-    default: {
-      type: 'no-init',
-      push: () => {},
-      // No init, no destroy: setup-only path stays unchanged.
-      setup: async (ctx: { config: unknown }) => {
-        calls.push({ fn: 'setup', config: ctx.config });
-        return { ok: true };
-      },
+const noInitModule: Record<string, unknown> = {
+  default: {
+    type: 'no-init',
+    push: () => {},
+    // No init, no destroy: setup-only path stays unchanged.
+    setup: async (ctx: { config: unknown }) => {
+      calls.push({ fn: 'setup', config: ctx.config });
+      return { ok: true };
     },
-  }),
-  { virtual: true },
-);
+  },
+};
 
 // Captures the literal config init received, so the env-marker resolver
 // test can verify markers were replaced before init was invoked.
 const envInitCalls: { config: unknown; env: unknown }[] = [];
-jest.mock(
-  '@walkeros/__test-env-marker-destination',
-  () => ({
-    __esModule: true,
-    default: {
-      type: 'env-marker',
-      push: () => {},
-      init: async (ctx: { config: unknown; env: unknown }) => {
-        envInitCalls.push({ config: ctx.config, env: ctx.env });
-        return { resolved: true };
-      },
-      setup: async (_ctx: unknown) => ({ ok: true }),
-      destroy: async () => {},
+const envMarkerModule: Record<string, unknown> = {
+  default: {
+    type: 'env-marker',
+    push: () => {},
+    init: async (ctx: { config: unknown; env: unknown }) => {
+      envInitCalls.push({ config: ctx.config, env: ctx.env });
+      return { resolved: true };
     },
-  }),
-  { virtual: true },
-);
+    setup: async (_ctx: unknown) => ({ ok: true }),
+    destroy: async () => {},
+  },
+};
+
+const moduleFixtures: Record<string, Record<string, unknown>> = {
+  '@walkeros/__test-lifecycle-destination': lifecycleModule,
+  '@walkeros/__test-init-void-destination': initVoidModule,
+  '@walkeros/__test-init-aborts-destination': initAbortsModule,
+  '@walkeros/__test-no-init-destination': noInitModule,
+  '@walkeros/__test-env-marker-destination': envMarkerModule,
+};
 
 const mockedLoadFlowConfig = jest.mocked(loadFlowConfig);
 
@@ -167,14 +159,32 @@ function mockLoad(flow: Flow): void {
 
 describe('setupCommand: init → setup → destroy lifecycle (Bug G)', () => {
   let logger: Logger.Instance;
+  let installDir: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     calls.length = 0;
     logger = createMockLogger();
+    installDir = await fs.mkdtemp(path.join(os.tmpdir(), 'setup-lc-install-'));
+    mockedLoadStep.mockImplementation(async (flow, _kind, id) => {
+      const pkg = flow.destinations?.[id]?.package;
+      const module = pkg !== undefined ? moduleFixtures[pkg] : undefined;
+      if (pkg === undefined || module === undefined) {
+        throw new Error(`no module fixture for package "${String(pkg)}"`);
+      }
+      return {
+        module,
+        packageName: pkg,
+        normalizedFlow: flow,
+        packageDir: path.join(installDir, 'node_modules', pkg),
+        installDir,
+      };
+    });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     mockedLoadFlowConfig.mockReset();
+    mockedLoadStep.mockReset();
+    await fs.remove(installDir);
   });
 
   test('runs init before setup, then destroy, with the resolved config flowing through', async () => {

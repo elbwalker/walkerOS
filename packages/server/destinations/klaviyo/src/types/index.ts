@@ -17,6 +17,11 @@ export interface Settings {
   identify?: WalkerOSMapping.Value;
   /** Default currency for revenue events (ISO 4217, e.g. 'USD', 'EUR'). */
   currency?: string;
+  /**
+   * Destination-level dedup key mapping, defaults to the walkerOS event id.
+   * Rule-level `mapping.uniqueId` overrides it per event.
+   */
+  uniqueId?: WalkerOSMapping.Value;
   /** Runtime state -- not user-facing. Mutated by init/push. */
   _eventsApi?: KlaviyoEventsApiMock;
   _profilesApi?: KlaviyoProfilesApiMock;
@@ -40,8 +45,15 @@ export type InitSettings = Partial<Settings>;
 export interface Mapping {
   /** Per-event identify mapping. Resolves to profile attributes for upsert. */
   identify?: WalkerOSMapping.Value;
-  /** Revenue value mapping. Resolves to numeric value for Klaviyo's $value. */
+  /** Revenue value mapping. Resolves to the event's numeric `value` attribute. */
   value?: WalkerOSMapping.Value;
+  /**
+   * Dedup key mapping. Resolves to Klaviyo's `uniqueId` (`unique_id` on the
+   * wire): repeats of the same value for one profile and metric keep only the
+   * first event. Omit it and Klaviyo falls back to the event time truncated to
+   * the second.
+   */
+  uniqueId?: WalkerOSMapping.Value;
 }
 
 /**

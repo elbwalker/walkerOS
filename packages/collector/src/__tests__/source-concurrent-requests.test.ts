@@ -6,6 +6,7 @@ import type {
   RespondOptions,
   Transformer,
 } from '@walkeros/core';
+import { testScope } from './testScope';
 
 /**
  * Adversarial concurrency stress: 100 interleaved withScope invocations
@@ -33,7 +34,7 @@ describe('Source concurrent requests', () => {
       sources: {
         testSource: {
           config: {
-            ingest: { map: { requestId: 'id' } },
+            ingest: { map: { requestId: 'body.id' } },
           },
           next: 'interleave',
           code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
@@ -41,12 +42,16 @@ describe('Source concurrent requests', () => {
               const respond: RespondFn = (options = {}) => {
                 respondById[raw.id].push(options);
               };
-              await context.withScope(raw, respond, async (env) => {
-                await env.push({
-                  name: 'page view',
-                  data: { id: raw.id },
-                });
-              });
+              await context.withScope(
+                testScope({ body: { id: raw.id } }),
+                respond,
+                async (env) => {
+                  await env.push({
+                    name: 'page view',
+                    data: { id: raw.id },
+                  });
+                },
+              );
             };
             return {
               type: 'test',

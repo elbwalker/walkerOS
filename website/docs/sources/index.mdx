@@ -34,6 +34,21 @@ Sources capture events in their native format and send them to the collector:
   ]}
 />
 
+## Server source contracts
+
+Every server source normalizes its platform's request into one shared shape
+before mapping, and accepts one shared set of POST body forms. Two pages define
+them:
+
+* **[Request scope](/docs/sources/scope)**: the eight fields `config.ingest`
+  resolves against, identical on every server source.
+* **[Event envelope](/docs/sources/envelope)**: how many events a request body
+  carries, the batch cap, and the response contract.
+
+Web and queue sources have no inbound request to adapt, so neither applies to
+them: browser and dataLayer sources push directly, and `config.ingest` is inert
+there.
+
 ## Available sources
 
 ### Web
@@ -57,6 +72,26 @@ Integrates with existing analytics implementations:
 * Gradual migration support
 
 [Learn more →](./web/dataLayer/)
+
+#### Session
+
+Session lifecycle detection, emitting session start and session end:
+
+* Storage-backed session identity across page loads
+* Configurable timeout and lifetime
+* Feeds session context to every downstream event
+
+[Learn more →](./web/session/)
+
+#### Consent management
+
+Consent state from a CMP, forwarded to the collector:
+
+* CookieFirst, Usercentrics and CookiePro adapters
+* Consent changes propagate to destinations at runtime
+* Events queue until consent resolves
+
+[Learn more →](./web/cmps/)
 
 ### Server
 
@@ -97,10 +132,30 @@ AWS Lambda HTTP handler for event collection:
 Google Cloud Functions HTTP handler for event collection:
 
 * Plug-and-play: Direct assignment to Cloud Functions handler
-* Batch processing support
+* Batches via the shared [event envelope](/docs/sources/envelope)
 * Configurable CORS
 
 [Learn more →](./server/gcp)
+
+#### AWS SQS
+
+Queue consumer for events delivered through Amazon SQS:
+
+* Decouples ingestion from processing
+* Batch record handling
+* Retries and dead-letter handling stay with the queue
+
+[Learn more →](./server/sqs)
+
+#### Google Pub/Sub
+
+Pull subscriber and push webhook for Google Pub/Sub:
+
+* Pull for long-running workers, push for HTTP endpoints
+* Configurable decoders for the message payload
+* Redelivery governed by the subscription
+
+[Learn more →](./server/pubsub)
 
 ## Basic setup
 

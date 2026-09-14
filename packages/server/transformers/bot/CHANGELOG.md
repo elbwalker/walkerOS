@@ -1,5 +1,41 @@
 # @walkeros/server-transformer-bot
 
+## 4.6.0
+
+### Patch Changes
+
+- 403ff6c: Bot detection now names nine more uptime and synthetic monitoring
+  services, including Uptrends, Site24x7, Datadog Synthetics, New Relic
+  Synthetics and Better Stack. Their requests report as `monitor` with the
+  product name instead of generic automation, and several that previously passed
+  as human traffic are now flagged.
+  - @walkeros/core@4.6.0
+
+## 4.5.0
+
+### Minor Changes
+
+- 71d83a3: `settings.context` now accepts any `Mapping.Value`, not just the enum
+  literals, and resolves it per request against `{ event, ingest }`, so one
+  instance serves every transport:
+  `[{ "key": "ingest.transport" }, { "value": "beacon" }]` reads the sender's
+  annotation and pins `beacon` without it. The widening introduces no
+  silent-degradation path: a result outside the vocabulary falls back to `auto`
+  and reports `context_undetermined`, and a bare string that is neither a
+  literal nor a dot path is rejected by the schema.
+
+### Patch Changes
+
+- 7dc6cb1: Bot detection now scores all sixteen request signals instead of the
+  user agent alone, and emits one `botScore` with a `botCategory`, `botProduct`
+  and reason codes. This replaces the old output: `agentScore` is removed, score
+  values changed, and `settings.output` takes `string | false`. New settings:
+  `context` and `suspiciousAt`.
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

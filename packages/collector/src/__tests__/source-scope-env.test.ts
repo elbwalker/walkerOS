@@ -6,6 +6,7 @@ import type {
   RespondOptions,
   Transformer,
 } from '@walkeros/core';
+import { testScope } from './testScope';
 
 /**
  * Per-scope env regression: `context.withScope` must build a fresh
@@ -34,7 +35,7 @@ describe('Source.Context.withScope per-scope binding', () => {
       sources: {
         testSource: {
           config: {
-            ingest: { map: { scope: 'scope', value: 'value' } },
+            ingest: { map: { scope: 'query.scope', value: 'query.value' } },
           },
           next: 'spy',
           code: async (context): Promise<Source.Instance<TestSourceTypes>> => {
@@ -42,16 +43,20 @@ describe('Source.Context.withScope per-scope binding', () => {
               const respond: RespondFn = (options = {}) => {
                 respondCallsByScope[raw.scope].push(options);
               };
-              await context.withScope(raw, respond, async (env) => {
-                // Sanity check: env carries the right ingest.
-                expect(env.ingest.scope).toBe(raw.scope);
-                expect(env.respond).toBe(respond);
-                await env.push({
-                  name: 'page view',
-                  data: { scope: raw.scope, value: raw.value },
-                });
-                // Per-scope respond is called by the destination via env.respond.
-              });
+              await context.withScope(
+                testScope({ query: { scope: raw.scope, value: raw.value } }),
+                respond,
+                async (env) => {
+                  // Sanity check: env carries the right ingest.
+                  expect(env.ingest.scope).toBe(raw.scope);
+                  expect(env.respond).toBe(respond);
+                  await env.push({
+                    name: 'page view',
+                    data: { scope: raw.scope, value: raw.value },
+                  });
+                  // Per-scope respond is called by the destination via env.respond.
+                },
+              );
             };
 
             return {

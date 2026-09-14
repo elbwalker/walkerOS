@@ -116,6 +116,8 @@ describe('sourceCloudFunction', () => {
       expect(source.config.settings).toEqual({
         cors: true,
         timeout: 30000,
+        maxBatchSize: 100,
+        enablePixelTracking: true,
       });
       expect(typeof source.push).toBe('function');
     });
@@ -139,6 +141,8 @@ describe('sourceCloudFunction', () => {
       expect(source.config.settings).toEqual({
         cors: false,
         timeout: 30000,
+        maxBatchSize: 100,
+        enablePixelTracking: true,
       });
     });
   });
@@ -166,10 +170,31 @@ describe('sourceCloudFunction', () => {
       expect(mockPush).not.toHaveBeenCalled();
     });
 
-    it('should reject non-POST methods', async () => {
+    it('serves the tracking pixel for GET', async () => {
       const source = await sourceCloudFunction(
         createSourceContext(
           {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+      const req = createMockRequest('GET');
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/gif');
+    });
+
+    it('rejects GET with 405 when pixel tracking is disabled', async () => {
+      const source = await sourceCloudFunction(
+        createSourceContext(
+          { settings: { enablePixelTracking: false } },
           {
             push: mockPush as never,
             command: mockCommand as never,
@@ -338,11 +363,112 @@ describe('sourceCloudFunction', () => {
 
       await source.push(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
+      // A rejected push is a server fault, not client input: the collector
+      // resolves pipeline failures, so a rejection is exceptional.
+      expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Processing failed',
       });
+    });
+  });
+
+  describe('provenance forwarding', () => {
+    it('forwards every body field, including source', async () => {
+      const source = await sourceCloudFunction(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const req = createMockRequest('POST', {
+        event: 'page view',
+        data: { title: 'Test Page' },
+        source: { release: { web: 'r1' }, trace: 't1' },
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'page view',
+          data: { title: 'Test Page' },
+          source: { release: { web: 'r1' }, trace: 't1' },
+        }),
+      );
+      // The wire-level `event` key must not leak into the pushed event.
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.objectContaining({ event: expect.anything() }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('accepts the name field and forwards it unchanged', async () => {
+      const source = await sourceCloudFunction(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const req = createMockRequest('POST', {
+        name: 'page view',
+        data: { title: 'Test Page' },
+        source: { release: { web: 'r1' } },
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'page view',
+          data: { title: 'Test Page' },
+          source: { release: { web: 'r1' } },
+        }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('prefers name over the legacy event alias', async () => {
+      const source = await sourceCloudFunction(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      const req = createMockRequest('POST', {
+        name: 'page view',
+        event: 'legacy name',
+      });
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'page view' }),
+      );
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.objectContaining({ event: expect.anything() }),
+      );
     });
   });
 
@@ -446,7 +572,7 @@ describe('sourceCloudFunction', () => {
   });
 
   describe('error handling', () => {
-    it('should push empty event for invalid request format', async () => {
+    it('forwards a non-event object body verbatim so a before chain can rewrite it', async () => {
       const source = await sourceCloudFunction(
         createSourceContext(
           {},
@@ -463,7 +589,9 @@ describe('sourceCloudFunction', () => {
 
       await source.push(req, res);
 
-      expect(mockPush).toHaveBeenCalledWith({});
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({ invalid: 'format' }),
+      );
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });

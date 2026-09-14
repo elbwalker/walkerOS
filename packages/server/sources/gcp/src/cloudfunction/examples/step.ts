@@ -8,7 +8,7 @@ export const postEvent: Flow.StepExample = {
   in: {
     method: 'POST',
     body: {
-      event: 'page view',
+      name: 'page view',
       data: { title: 'Home', url: 'https://example.com/' },
     },
     headers: { 'content-type': 'application/json' },
@@ -32,7 +32,7 @@ export const orderEvent: Flow.StepExample = {
   in: {
     method: 'POST',
     body: {
-      event: 'order complete',
+      name: 'order complete',
       data: { id: 'ORD-700', total: 99.99, currency: 'EUR' },
     },
     headers: { 'content-type': 'application/json' },
@@ -43,6 +43,32 @@ export const orderEvent: Flow.StepExample = {
       {
         name: 'order complete',
         data: { id: 'ORD-700', total: 99.99, currency: 'EUR' },
+      },
+    ],
+  ],
+};
+
+export const cloudFunctionPostForwardsSource: Flow.StepExample = {
+  title: 'POST with provenance',
+  description:
+    'A POST body carrying a source map is forwarded in full, so release and trace provenance survive the crossing.',
+  trigger: { type: 'POST' },
+  in: {
+    method: 'POST',
+    body: {
+      name: 'page view',
+      data: { title: 'Home' },
+      source: { release: { web: 'r1' } },
+    },
+    headers: { 'content-type': 'application/json' },
+  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: { title: 'Home' },
+        source: { release: { web: 'r1' } },
       },
     ],
   ],

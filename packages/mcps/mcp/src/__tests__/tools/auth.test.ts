@@ -70,7 +70,7 @@ describe('auth tool', () => {
         userId: 'usr_1',
       });
       const client = stubClient({
-        resolveToken: () => ({ token: 'tok_123', source: 'config' }),
+        credentialSource: () => 'config',
         whoami,
       });
       registerAuthTool(server as never, client);
@@ -85,10 +85,10 @@ describe('auth tool', () => {
       expect(result.structuredContent.email).toBe('user@example.com');
     });
 
-    it('returns not authenticated when no token', async () => {
+    it('returns not authenticated when no credential is available', async () => {
       const whoami = jest.fn();
       const client = stubClient({
-        resolveToken: () => null,
+        credentialSource: () => null,
         whoami,
       });
       registerAuthTool(server as never, client);
@@ -144,12 +144,7 @@ describe('auth tool', () => {
 
     it('only calls pollForToken when deviceCode is provided (retry)', async () => {
       const requestDeviceCode = jest.fn();
-      const pollForToken = jest.fn().mockResolvedValue({
-        success: true,
-        status: 'authenticated',
-        email: 'user@example.com',
-        configPath: '/home/.config/walkeros/config.json',
-      });
+      const pollForToken = jest.fn().mockResolvedValue({ status: 'ok' });
       const client = stubClient({ requestDeviceCode, pollForToken });
       registerAuthTool(server as never, client);
 
@@ -168,10 +163,7 @@ describe('auth tool', () => {
 
     it('returns pending with deviceCode on retry timeout', async () => {
       const requestDeviceCode = jest.fn();
-      const pollForToken = jest.fn().mockResolvedValue({
-        success: false,
-        status: 'pending',
-      });
+      const pollForToken = jest.fn().mockResolvedValue({ status: 'pending' });
       const client = stubClient({ requestDeviceCode, pollForToken });
       registerAuthTool(server as never, client);
 
@@ -183,6 +175,7 @@ describe('auth tool', () => {
         structuredContent: {
           authenticated: boolean;
           status: string;
+          message: string;
           deviceCode: string;
         };
       };
@@ -194,13 +187,59 @@ describe('auth tool', () => {
       expect(result.structuredContent.authenticated).toBe(false);
       expect(result.structuredContent.status).toBe('pending');
       expect(result.structuredContent.deviceCode).toBe('dev_timeout');
+      expect(result.structuredContent.message).toContain('shortly');
+    });
+
+    it('asks for a longer wait on slow_down, still returning the device code', async () => {
+      // The control for the pending case above: both are "keep waiting", so
+      // the differing advice must come from the status and not from the branch
+      // that renders it.
+      const pollForToken = jest.fn().mockResolvedValue({ status: 'slow_down' });
+      const client = stubClient({ pollForToken });
+      registerAuthTool(server as never, client);
+
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({
+        action: 'login',
+        deviceCode: 'dev_slow',
+      })) as {
+        structuredContent: {
+          authenticated: boolean;
+          status: string;
+          message: string;
+          deviceCode: string;
+        };
+      };
+
+      expect(result.structuredContent.authenticated).toBe(false);
+      expect(result.structuredContent.status).toBe('pending');
+      expect(result.structuredContent.deviceCode).toBe('dev_slow');
+      expect(result.structuredContent.message).toContain('longer');
+    });
+
+    it.each([
+      ['denied', 'denied'],
+      ['expired', 'expired'],
+    ])('reports %s as a distinct error', async (status, expected) => {
+      const pollForToken = jest.fn().mockResolvedValue({ status });
+      const client = stubClient({ pollForToken });
+      registerAuthTool(server as never, client);
+
+      const tool = server.getTool('auth')!;
+      const result = (await tool.handler({
+        action: 'login',
+        deviceCode: 'dev_terminal',
+      })) as { isError: boolean; content: Array<{ text: string }> };
+
+      expect(result.isError).toBe(true);
+      const parsed: unknown = JSON.parse(result.content[0]!.text);
+      expect(parsed).toHaveProperty('error', expect.stringContaining(expected));
     });
 
     it('returns error when poll fails with error status', async () => {
       const pollForToken = jest.fn().mockResolvedValue({
-        success: false,
         status: 'error',
-        error: 'access_denied',
+        error: 'invalid_client',
       });
       const client = stubClient({ pollForToken });
       registerAuthTool(server as never, client);
@@ -208,12 +247,12 @@ describe('auth tool', () => {
       const tool = server.getTool('auth')!;
       const result = (await tool.handler({
         action: 'login',
-        deviceCode: 'dev_denied',
+        deviceCode: 'dev_broken',
       })) as { isError: boolean; content: Array<{ text: string }> };
 
       expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.error).toBe('access_denied');
+      const parsed: unknown = JSON.parse(result.content[0]!.text);
+      expect(parsed).toHaveProperty('error', 'invalid_client');
     });
   });
 
@@ -228,10 +267,10 @@ describe('auth tool', () => {
       }
     });
 
-    it('calls deleteConfig and returns success', async () => {
+    it('revokes the session through logout and returns success', async () => {
       delete process.env.WALKEROS_TOKEN;
-      const deleteConfig = jest.fn().mockReturnValue(true);
-      const client = stubClient({ deleteConfig });
+      const logout = jest.fn().mockResolvedValue({ deleted: true });
+      const client = stubClient({ logout });
       registerAuthTool(server as never, client);
 
       const tool = server.getTool('auth')!;
@@ -239,15 +278,15 @@ describe('auth tool', () => {
         structuredContent: { loggedOut: boolean; message: string };
       };
 
-      expect(deleteConfig).toHaveBeenCalled();
+      expect(logout).toHaveBeenCalled();
       expect(result.structuredContent.loggedOut).toBe(true);
       expect(result.structuredContent.message).toContain('Logged out');
     });
 
     it('returns success even when no config existed', async () => {
       delete process.env.WALKEROS_TOKEN;
-      const deleteConfig = jest.fn().mockReturnValue(false);
-      const client = stubClient({ deleteConfig });
+      const logout = jest.fn().mockResolvedValue({ deleted: false });
+      const client = stubClient({ logout });
       registerAuthTool(server as never, client);
 
       const tool = server.getTool('auth')!;
@@ -261,8 +300,8 @@ describe('auth tool', () => {
 
     it('clears WALKEROS_TOKEN env var and mentions it in the message', async () => {
       process.env.WALKEROS_TOKEN = 'tok_env_abc';
-      const deleteConfig = jest.fn().mockReturnValue(true);
-      const client = stubClient({ deleteConfig });
+      const logout = jest.fn().mockResolvedValue({ deleted: true });
+      const client = stubClient({ logout });
       registerAuthTool(server as never, client);
 
       const tool = server.getTool('auth')!;
@@ -270,7 +309,7 @@ describe('auth tool', () => {
         structuredContent: { loggedOut: boolean; message: string };
       };
 
-      expect(deleteConfig).toHaveBeenCalled();
+      expect(logout).toHaveBeenCalled();
       expect(process.env.WALKEROS_TOKEN).toBeUndefined();
       expect(result.structuredContent.loggedOut).toBe(true);
       expect(result.structuredContent.message).toContain('Config removed');
@@ -279,10 +318,10 @@ describe('auth tool', () => {
 
     it('subsequent status call reports unauthenticated after logout with env token', async () => {
       process.env.WALKEROS_TOKEN = 'tok_env_xyz';
-      const deleteConfig = jest.fn().mockReturnValue(true);
+      const logout = jest.fn().mockResolvedValue({ deleted: true });
       const client = stubClient({
-        deleteConfig,
-        resolveToken: () => null,
+        logout,
+        credentialSource: () => null,
       });
       registerAuthTool(server as never, client);
 
@@ -298,8 +337,8 @@ describe('auth tool', () => {
 
     it('clears env token even when no config existed', async () => {
       process.env.WALKEROS_TOKEN = 'tok_env_only';
-      const deleteConfig = jest.fn().mockReturnValue(false);
-      const client = stubClient({ deleteConfig });
+      const logout = jest.fn().mockResolvedValue({ deleted: false });
+      const client = stubClient({ logout });
       registerAuthTool(server as never, client);
 
       const tool = server.getTool('auth')!;

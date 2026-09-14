@@ -1,0 +1,8 @@
+{
+  "name": "claudebot",
+  "class": "agent",
+  "provenance": "Vendor user-agent string of record: https://support.claude.com/en/articles/8896518 (fetched 2026-08-21) documents the token but not the full header; the wrapper around it is the form attested in server logs, not printed by Anthropic",
+  "signals": {
+    "userAgent": "Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)"
+  }
+}

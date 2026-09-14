@@ -2,7 +2,7 @@ import { requireProjectId } from '../../core/auth.js';
 import { apiFetch } from '../../core/http.js';
 import { handleCliError, throwApiResponseError } from '../../core/api-error.js';
 import { writeResult } from '../../core/output.js';
-import { resolveToken } from '../../lib/config-file.js';
+import { credentialSource } from '../../core/auth.js';
 import type { GlobalOptions } from '../../types/global.js';
 import type { components } from '../../types/api.gen.js';
 import { getFlow } from '../flows/index.js';
@@ -325,7 +325,7 @@ export async function observeStartCommand(
 ): Promise<void> {
   try {
     // No credentials at all: funnel straight to login, no network round trip.
-    if (!resolveToken()?.token) {
+    if (credentialSource() === null) {
       printLoginCta();
       return;
     }

@@ -1,0 +1,11 @@
+{
+  "name": "python-urllib-server",
+  "class": "bot",
+  "context": "server",
+  "provenance": "Captured 2026-08-21 via header-echo.mjs from python-urllib, server context, same-origin http://localhost:3999",
+  "signals": {
+    "userAgent": "Python-urllib/3.11",
+    "acceptEncoding": "identity",
+    "method": "GET"
+  }
+}

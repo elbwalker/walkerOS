@@ -7,6 +7,7 @@ import type {
   RespondOptions,
   WalkerOS,
 } from '@walkeros/core';
+import { testScope } from './testScope';
 
 type RawIngest = { method: string; path: string };
 
@@ -79,24 +80,28 @@ describe('Source cache MISS race (collector)', () => {
                   senderCalls.push(options);
                 });
 
-                return context.withScope(rawData, respond, async (env) => {
-                  // Dispatch into the collector pipeline. The responder
-                  // destination calls respond(fileBody) via env.respond.
-                  const pushResult = await env.push({
-                    name: 'page view',
-                    data: {},
-                  });
+                return context.withScope(
+                  testScope(rawData),
+                  respond,
+                  async (env) => {
+                    // Dispatch into the collector pipeline. The responder
+                    // destination calls respond(fileBody) via env.respond.
+                    const pushResult = await env.push({
+                      name: 'page view',
+                      data: {},
+                    });
 
-                  // Source fallback: this mirrors the express source's
-                  // transparent-GIF default. It runs AFTER env.push
-                  // resolves and must not overwrite the responder's body.
-                  respond({
-                    body: 'FALLBACK',
-                    headers: { 'Content-Type': 'image/gif' },
-                  });
+                    // Source fallback: this mirrors the express source's
+                    // transparent-GIF default. It runs AFTER env.push
+                    // resolves and must not overwrite the responder's body.
+                    respond({
+                      body: 'FALLBACK',
+                      headers: { 'Content-Type': 'image/gif' },
+                    });
 
-                  return pushResult;
-                });
+                    return pushResult;
+                  },
+                );
               },
             };
           },

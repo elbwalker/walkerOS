@@ -36,6 +36,22 @@ const { collector, elb } = await startFlow({
 | `INFO`  | 2     | Errors, warnings, and informational      |
 | `DEBUG` | 3     | All messages including debug information |
 
+### Choosing a level on public endpoints
+
+A collector endpoint is exposed to the open internet, so log level decides
+whether ambient noise becomes an alert.
+
+| Situation | Level |
+|-----------|-------|
+| Ambient internet noise: unparseable bodies, unknown paths, oversized payloads | `debug`, plus a status counter |
+| An event the pipeline rejects as invalid | `warn` with the reason, counted as `rejected` |
+| A settled `ok: false` arriving after an HTTP ack was already sent | `warn` |
+| Handler faults and rejected push promises | `error` |
+
+The collector already logs thrown pipeline failures at error, so sources do
+not duplicate that. Nothing a scanner can trigger should reach `error`.
+
+
 ## Using the logger
 
 The logger is automatically available in destination and source contexts:

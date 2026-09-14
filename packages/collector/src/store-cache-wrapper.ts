@@ -6,6 +6,7 @@ import {
   wrapCacheEnvelope,
 } from '@walkeros/core';
 import { buildBaseState } from './observerEmit';
+import { errorMeta } from './report-error';
 
 /**
  * Options passed to `wrapStoreWithCache`. Pre-resolved by `initStores` phase
@@ -336,7 +337,7 @@ export function wrapStoreWithCache(
   ): void {
     const message = `store-cache(${storeId}): cache ${op} failed for "${key}"; backing succeeded, continuing`;
     if (logger) {
-      logger.warn(message, { error });
+      logger.warn(message, errorMeta(error));
     } else {
       // Defensive fallback so unit tests that do not thread a logger still
       // surface the failure rather than swallowing it silently. Production

@@ -1,6 +1,10 @@
 import type { Config, Settings, Destination, Env } from '../types';
 import type { Collector } from '@walkeros/core';
-import { createEvent, createMockContext, createMockLogger } from '@walkeros/core';
+import {
+  createEvent,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
 import * as examples from '../examples';
 
 const { env } = examples;
@@ -78,6 +82,23 @@ describe('Firehose', () => {
     expect(config.settings.firehose?.client?.config).toEqual({
       region: 'eu-central-1',
     });
+  });
+
+  test('init keeps config fields other than settings', async () => {
+    const config = (await destination.init({
+      config: {
+        settings: settingsConfig,
+        before: 'fingerprint',
+        consent: { marketing: true },
+      },
+      collector: mockCollector,
+      env: testEnv,
+      logger: createMockLogger(),
+      id: 'test-firehose',
+    })) as Config;
+
+    expect(config.before).toBe('fingerprint');
+    expect(config.consent).toEqual({ marketing: true });
   });
 
   test('push', async () => {

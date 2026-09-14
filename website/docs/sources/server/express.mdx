@@ -140,6 +140,62 @@ Server sources require platform-specific handlers. For containerized deployments
 Health check endpoints (`/health` and `/ready`) are provided by the [runner](/docs/apps/runner), not by individual sources. This means health checks work regardless of which source type you use.
 :::
 
+### Response modes (`async`)
+
+`config.async` controls whether a request is acknowledged before or after its
+event settles in the pipeline, resolved per HTTP method:
+
+<CodeSnippet
+  code={`"async": false                       // everything synchronous
+"async": true                        // everything respond-first
+"async": { "GET": false, "POST": true } // explicit per-method form (the default)
+"async": { "GET": true }             // GET respond-first, POST keeps its default`}
+  language="json"
+/>
+
+| Value | GET | POST |
+|---|---|---|
+| unset (default) | synchronous | respond-first |
+| `true` | respond-first | respond-first |
+| `false` | synchronous | synchronous |
+| `{ "GET": true }` | respond-first | respond-first (its default) |
+| `{ "POST": false }` | synchronous (its default) | synchronous |
+
+**Synchronous** awaits delivery before answering. On GET, a step (the file
+transformer, a cache destination) can respond with real content before the
+pixel GIF fallback applies, so asset serving works out of the box. On POST,
+the response reflects the outcome: 400 for invalid input, 500 for a processing
+failure, and batch envelopes answer per-index outcomes.
+
+**Respond-first** answers immediately: a 2xx means "accepted", not
+"delivered". Delivery continues in the background and failures surface through
+`collector.status` and the logs. This is the POST default (fast ingestion) and
+opt-in for GET, for hot pixel endpoints that must not wait for the in-process
+push.
+
+### Responses
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Accepted (respond-first mode: accepted for processing, not proof of delivery) or, in synchronous mode, processed |
+| 400 | Rejected client input: unparseable JSON (body echoes the parser message) or, on synchronous POST, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
+| 404 | Path not configured in `paths` |
+| 405 | Method not allowed on the path |
+| 413 | Body exceeds the 1mb limit |
+| 415 | Unsupported charset |
+| 500 | On synchronous POST: the pipeline failed to process a valid event. Otherwise: unexpected server fault |
+
+GET pixel requests always answer the GIF with 200 in every mode, because an image
+endpoint cannot carry a useful 400. Rejected pixel input is visible through the
+`rejected` counter instead.
+
+Rejected input, unparseable bodies and invalid events alike, is counted on
+`collector.status.sources.<id>.rejected` and logged at debug or warn with the
+reason. Ambient scanner traffic never reaches the error log level.
+
+Responses carry `X-Content-Type-Options: nosniff`, and the source does not send
+`X-Powered-By`.
+
 ## Ingest metadata
 
 Extract request metadata (IP, user agent, headers) and forward it through the pipeline to transformers and destinations.
@@ -175,12 +231,84 @@ const { collector } = await startFlow({
 
 | Path | Description |
 |------|-------------|
-| `ip` | Client IP address |
-| `headers.*` | HTTP headers (user-agent, origin, referer, etc.) |
-| `protocol` | Request protocol (http/https) |
-| `method` | HTTP method (GET, POST, etc.) |
-| `hostname` | Request hostname |
-| `url` | Full request URL |
+| `ip` | Express's `req.ip`. The source never enables Express's `trust proxy`, so this is always the socket peer address; behind a proxy that is the proxy, not the visitor, see [Client IP behind a proxy](#client-ip-behind-a-proxy) |
+| `headers.*` | HTTP headers, lowercased names (user-agent, origin, referer, etc.) |
+| `method` | Uppercase HTTP method |
+| `path` | Pathname, no query string |
+| `query.*` | Query parameter, repeated keys joined with `,` |
+| `url` | Absolute request URL, or `''` when there is no `host` header |
+| `body` | Parsed request body |
+| `raw` | The Express `Request` itself |
+
+These are the shared [request scope](/docs/sources/scope) fields. `protocol` and
+`hostname` are no longer top-level paths: use `headers.host`,
+`headers.x-forwarded-proto`, or `raw.protocol` / `raw.hostname`.
+
+## Client IP behind a proxy
+
+`ip` is Express's `req.ip`. This source never enables Express's `trust proxy`
+setting, so `req.ip` is always the socket peer address. Behind a load balancer,
+a CDN or a serverless platform that is the last proxy in the chain, never the
+visitor. The `X-Forwarded-For` header carries the real address, but it is a
+comma-separated chain whose left side is written by the client, so parsing it
+means deciding how many trailing hops you trust, a per-deployment security
+judgment.
+
+The recommended pattern needs no source setting at all: let the infrastructure
+that terminates the connection hand you the client address as a single-value
+header it controls, and map that header with the ingest map you already have.
+
+| Platform | Header | How it gets there |
+|---|---|---|
+| Google external HTTPS LB | `X-Client-IP` | Custom request header `X-Client-IP:{client_ip_address}` on the backend service |
+| Cloudflare | `CF-Connecting-IP` | Set automatically |
+| Fastly | `Fastly-Client-IP` | Must be forced in VCL: `set req.http.Fastly-Client-IP = client.ip;` (Fastly preserves a client-supplied value otherwise) |
+| Akamai | `True-Client-IP` | Enable in the property |
+| nginx | `X-Real-IP` | `proxy_set_header X-Real-IP $remote_addr;` |
+
+<CodeSnippet
+  code={`"sources": {
+  "express": {
+    "package": "@walkeros/server-source-express",
+    "config": {
+      "settings": { "port": 8080 },
+      "ingest": { "map": { "ip": { "key": "headers.x-client-ip" } } }
+    }
+  }
+}`}
+  language="json"
+/>
+
+:::warning Trust only a header your own infrastructure controls
+A client can send any header name itself, including these. The pattern is safe
+only when your proxy sets or overwrites the header on every request, so verify
+that override once against your platform before trusting it. Never map a
+client-reachable header like a raw `X-Forwarded-For` as the client IP: its
+leftmost entries are forgeable.
+:::
+
+On a platform that only provides raw `X-Forwarded-For` and no configurable
+header, prefer accepting an absent IP: the pipeline treats a missing signal as
+"measured less", never as a wrong value. Extract a hop from the chain only when
+your proxy's documentation guarantees the position you select. The example
+below is written for the Google-style contract where the proxy appends
+`<client-ip>, <proxy-ip>` to whatever the client sent, so the second entry from
+the right is proxy-verified. Under a proxy that appends only its own address,
+the same position is attacker-controlled, so verify the contract, never infer
+it from observed traffic:
+
+<CodeSnippet
+  code={`"ip": {
+  "key": "headers.x-forwarded-for",
+  "fn": "$code:(v)=>{const a=(v||'').split(',').map(s=>s.trim()).filter(Boolean);return a.length>=2?a[a.length-2]:''}"
+}`}
+  language="json"
+/>
+
+The example takes the entry one hop in from the right, which is the
+proxy-verified client entry under the contract above. Adjust the offset to your
+own proxy's documented behavior and confirm it with a request from a known
+address before trusting it.
 
 ## Advanced mapping
 
@@ -193,12 +321,12 @@ Use walkerOS mapping features for complex extraction:
     ip: { key: 'ip' },
 
     // Custom function
-    country: { fn: (req) => geoip.lookup(req.ip)?.country },
+    country: { fn: (scope) => geoip.lookup(scope.ip)?.country },
 
     // Conditional extraction
     devMode: {
       key: 'headers.x-debug',
-      condition: (req) => req.hostname === 'localhost',
+      condition: (scope) => scope.headers.host?.startsWith('localhost'),
     },
 
     // Nested structure
@@ -218,6 +346,6 @@ Use walkerOS mapping features for complex extraction:
 <CodeSnippet
   code={`curl -X POST http://localhost:8080/collect \\
   -H "Content-Type: application/json" \\
-  -d '{"event":"page view","data":{"title":"Home"}}'`}
+  -d '{"name":"page view","data":{"title":"Home"}}'`}
   language="bash"
 />

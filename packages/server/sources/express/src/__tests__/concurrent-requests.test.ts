@@ -1,6 +1,6 @@
 import { startFlow } from '@walkeros/collector';
 import { Source } from '@walkeros/core';
-import type { Destination, Ingest, WalkerOS } from '@walkeros/core';
+import type { Destination, Ingest, RespondFn, WalkerOS } from '@walkeros/core';
 import type { Request, Response } from 'express';
 import { sourceExpress } from '../index';
 import type { Types as ExpressTypes } from '../types';
@@ -115,6 +115,112 @@ describe('Express concurrent requests', () => {
 
     // Every request got exactly one response with status 200.
     for (const { captures } of calls) {
+      expect(captures).toHaveLength(1);
+      expect(captures[0].status).toBe(200);
+      const body = captures[0].body as { success: boolean };
+      expect(body.success).toBe(true);
+    }
+  });
+
+  it('keeps sync GETs and respond-first POSTs isolated under the method defaults', async () => {
+    type ResponderTypes = Destination.Types<
+      unknown,
+      unknown,
+      { respond?: RespondFn }
+    >;
+
+    // Serves per-request content for asset events; ignores ingestion events.
+    const responder: Destination.Instance<ResponderTypes> = {
+      type: 'responder',
+      config: {},
+      push: async (event, ctx) => {
+        if (event.name === 'asset get') {
+          ctx.env?.respond?.({
+            body: `FILE:${String(event.data?.id)}`,
+            status: 200,
+            headers: { 'Content-Type': 'application/javascript' },
+          });
+        }
+      },
+    };
+
+    const { collector } = await startFlow({
+      consent: { functional: true },
+      sources: {
+        express: {
+          code: sourceExpress,
+          config: {
+            settings: { paths: ['/collect'] },
+          },
+        },
+      },
+      destinations: {
+        responder: { code: responder },
+      },
+    });
+
+    const expressSource = Source.getSource<ExpressTypes>(collector, 'express');
+
+    const mockGet = (id: number): Request =>
+      ({
+        method: 'GET',
+        url: `/collect?name=asset%20get&data[id]=${id}`,
+        headers: {},
+        get: () => undefined,
+      }) as unknown as Request;
+
+    const mockPost = (id: number): Request =>
+      ({
+        method: 'POST',
+        url: '/collect',
+        headers: { 'content-type': 'application/json' },
+        body: { name: 'page view', data: { id } },
+      }) as unknown as Request;
+
+    const mockResponse = () => {
+      const captures: { status: number; body: unknown }[] = [];
+      let currentStatus = 200;
+      const res = {
+        status: (code: number) => {
+          currentStatus = code;
+          return res;
+        },
+        set: () => res,
+        send: (body?: unknown) => {
+          captures.push({ status: currentStatus, body });
+          return res;
+        },
+        json: (body: unknown) => {
+          captures.push({ status: currentStatus, body });
+          return res;
+        },
+      };
+      return { res: res as unknown as Response, captures };
+    };
+
+    const N = 10;
+    const gets = Array.from({ length: N }, (_, id) => {
+      const { res, captures } = mockResponse();
+      return { id, req: mockGet(id), res, captures };
+    });
+    const posts = Array.from({ length: N }, (_, id) => {
+      const { res, captures } = mockResponse();
+      return { id, req: mockPost(id), res, captures };
+    });
+
+    await Promise.all(
+      [...gets, ...posts].map(({ req, res }) => expressSource.push(req, res)),
+    );
+
+    // Each GET got its own served bytes, never the GIF, never a sibling's.
+    for (const { id, captures } of gets) {
+      expect(captures).toHaveLength(1);
+      expect(captures[0].status).toBe(200);
+      expect(captures[0].body).toBe(`FILE:${id}`);
+    }
+
+    // Each POST got the respond-first ack, never a served file body.
+    for (const { captures } of posts) {
       expect(captures).toHaveLength(1);
       expect(captures[0].status).toBe(200);
       const body = captures[0].body as { success: boolean };

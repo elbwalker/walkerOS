@@ -60,14 +60,11 @@ export type PartialConfig = CoreSource.PartialConfig<Types>;
 
 // Lambda source doesn't follow standard Source.Init pattern due to Lambda handler interface
 
-export interface EventRequest {
-  event: string;
-  data?: WalkerOS.AnyObject;
-  context?: WalkerOS.AnyObject;
-  user?: WalkerOS.AnyObject;
-  globals?: WalkerOS.AnyObject;
-  consent?: WalkerOS.AnyObject;
-}
+// `event` is a temporary alias for `name`, kept for the migration window and
+// removed at the next major. `name` takes precedence when both are present.
+export type EventRequest = WalkerOS.DeepPartialEvent & {
+  event?: string;
+};
 
 export interface EventResponse {
   success: boolean;

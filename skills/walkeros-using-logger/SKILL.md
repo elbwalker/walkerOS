@@ -319,6 +319,34 @@ const { elb } = await startFlow({
 - [packages/core/src/mockLogger.ts](../../packages/core/src/mockLogger.ts) -
   Testing utilities
 
+## Choosing a level on public endpoints
+
+A server source endpoint is exposed to the open internet. Level choice decides
+whether ambient scanner noise turns into pages.
+
+| Situation                                         | Level                  | Also                                              |
+| ------------------------------------------------- | ---------------------- | ------------------------------------------------- |
+| Unparseable body, unknown path, oversized payload | `debug`                | count on `collector.status.sources.<id>.rejected` |
+| Event the collector rejects as invalid            | `warn` with the reason | counted as `rejected`, answered 400               |
+| Settled `ok: false` arriving after the HTTP ack   | `warn`                 | nothing to answer, the ack already went out       |
+| Handler fault, rejected push promise              | `error`                | answered 500                                      |
+
+Rules that follow from the table:
+
+- **Never `error` for anything a stranger can trigger.** On Cloud Run an
+  error-level stack trace on stderr opens an Error Reporting issue, so scanner
+  traffic becomes an alert.
+- **Do not duplicate the collector's error logs.** The collector already logs
+  thrown pipeline failures at error. A source that logs them again doubles every
+  real fault.
+- **A rejected push and a settled `ok: false` are different things.** If a
+  helper collapses both into one return shape, log the thrown case inside that
+  helper at error, because the call site can no longer tell them apart.
+
+Reference pattern: `packages/server/sources/express/src/index.ts`, the
+error-boundary middleware for body-parser failures and the 400/500 split in the
+synchronous POST branch.
+
 **Best Practice Examples:**
 
 - [packages/server/destinations/datamanager/src/push.ts](../../packages/server/destinations/datamanager/src/push.ts) -

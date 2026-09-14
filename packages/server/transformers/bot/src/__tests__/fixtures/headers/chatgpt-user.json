@@ -1,0 +1,8 @@
+{
+  "name": "chatgpt-user",
+  "class": "agent",
+  "provenance": "Vendor user-agent string of record: https://developers.openai.com/api/docs/bots (fetched 2026-08-21)",
+  "signals": {
+    "userAgent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot"
+  }
+}

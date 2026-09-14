@@ -1,5 +1,25 @@
 # @walkeros/web-source-browser
 
+## 4.6.0
+
+### Patch Changes
+
+- Updated dependencies [8802281]
+  - @walkeros/collector@4.6.0
+  - @walkeros/core@4.6.0
+  - @walkeros/web-core@4.6.0
+
+## 4.5.0
+
+### Patch Changes
+
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+  - @walkeros/collector@4.5.0
+  - @walkeros/web-core@4.5.0
+
 ## 4.4.0
 
 ### Minor Changes

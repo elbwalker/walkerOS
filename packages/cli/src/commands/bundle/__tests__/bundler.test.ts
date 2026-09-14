@@ -30,8 +30,8 @@ jest.mock('../nft-trace', () => {
     traceAndCopy: jest.fn(actual.traceAndCopy),
   };
 });
-jest.mock('../package-manager.js', () => {
-  const actual = jest.requireActual('../package-manager.js');
+jest.mock('../../../core/package-manager.js', () => {
+  const actual = jest.requireActual('../../../core/package-manager.js');
   return {
     ...actual,
     downloadPackagesWithResolution: jest.fn(
@@ -49,7 +49,7 @@ jest.mock('../../../core/build-cache.js', () => {
 });
 
 import { traceAndCopy } from '../nft-trace';
-import { downloadPackagesWithResolution } from '../package-manager.js';
+import { downloadPackagesWithResolution } from '../../../core/package-manager.js';
 import { getCachedBuild } from '../../../core/build-cache.js';
 
 const mockTraceAndCopy = traceAndCopy as jest.MockedFunction<

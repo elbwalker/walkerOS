@@ -1,4 +1,8 @@
-import { InitSourceSchema, initSourceJsonSchema } from '../source';
+import {
+  InitSourceSchema,
+  initSourceJsonSchema,
+  PartialConfigSchema,
+} from '../source';
 
 interface JsonNode {
   properties?: Record<string, unknown>;
@@ -40,5 +44,24 @@ describe('InitSourceSchema', () => {
     const def = json.definitions?.SourceInitSource;
     expect(def).toBeDefined();
     expect(def?.properties?.state).toBeDefined();
+  });
+});
+
+describe('Source.Config async', () => {
+  it.each([[true], [false]])('accepts boolean async %p', (value) => {
+    const result = PartialConfigSchema.safeParse({ async: value });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a per-method record', () => {
+    const result = PartialConfigSchema.safeParse({
+      async: { GET: false, POST: true },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a non-boolean record value', () => {
+    const result = PartialConfigSchema.safeParse({ async: { GET: 'yes' } });
+    expect(result.success).toBe(false);
   });
 });

@@ -50,12 +50,17 @@ No signup, no token, no API:
 
 ### Mode B: local config + dashboard
 
-Adds heartbeat registration. The runner appears in your project dashboard:
+Adds heartbeat registration. The runner appears in your project dashboard.
+
+`WALKEROS_TOKEN` is an **automation token**: mint one in the app under Account,
+then Automation tokens, and copy the `wos_pat_...` value. A flow deployed from
+the app's self-hosted tab gets its own bound runner token (`wos_run_...`)
+printed straight into the `docker run` snippet there; either kind works here.
 
 <CodeSnippet
   code={`docker run -v ./flow.json:/app/flow.json \\
   -e BUNDLE=/app/flow.json \\
-  -e WALKEROS_TOKEN=sk-walkeros-xxx \\
+  -e WALKEROS_TOKEN=wos_pat_xxx \\
   -e PROJECT_ID=proj_xxx \\
   -p 8080:8080 \\
   walkeros/flow`}
@@ -68,7 +73,7 @@ Config is fetched from the API. Polls for updates, hot-swaps on new versions:
 
 <CodeSnippet
   code={`docker run \\
-  -e WALKEROS_TOKEN=sk-walkeros-xxx \\
+  -e WALKEROS_TOKEN=wos_pat_xxx \\
   -e PROJECT_ID=proj_xxx \\
   -e FLOW_ID=flow_xxx \\
   -v runner-cache:/app/cache \\
@@ -84,7 +89,7 @@ Config is fetched from the API. Polls for updates, hot-swaps on new versions:
 | `MODE` | `collect` | `collect` (HTTP event server) or `serve` (static file server) |
 | `PORT` | `8080` | Server port |
 | `BUNDLE` | `/app/flow/bundle.mjs` | Local config/bundle path or URL |
-| `WALKEROS_TOKEN` | none | API token for registration and config fetch |
+| `WALKEROS_TOKEN` | none | Automation token (`wos_pat_...`) or a bound runner token (`wos_run_...`), for registration and config fetch |
 | `PROJECT_ID` | none | Project ID (required with `WALKEROS_TOKEN`) |
 | `FLOW_ID` | none | Flow ID for remote config (requires token + project) |
 | `FLOW_NAME` | none | Flow name for multi-flow configs (selects which flow to run) |
@@ -173,7 +178,7 @@ The runner writes the last working bundle to `CACHE_DIR` (`/app/cache`). This pr
 <CodeSnippet
   code={`# Volume mount for cache persistence
 docker run \\
-  -e WALKEROS_TOKEN=sk-walkeros-xxx \\
+  -e WALKEROS_TOKEN=wos_pat_xxx \\
   -e PROJECT_ID=proj_xxx \\
   -e FLOW_ID=flow_xxx \\
   -v runner-cache:/app/cache \\

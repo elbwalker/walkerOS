@@ -12,7 +12,7 @@ export const lambdaPost: Flow.StepExample = {
       requestId: 'req-123',
     },
     body: JSON.stringify({
-      event: 'page view',
+      name: 'page view',
       data: { title: 'Home' },
     }),
     isBase64Encoded: false,
@@ -42,7 +42,7 @@ export const apiGatewayV1Post: Flow.StepExample = {
     },
     queryStringParameters: null,
     body: JSON.stringify({
-      event: 'page view',
+      name: 'page view',
       data: { title: 'Home' },
     }),
     isBase64Encoded: false,
@@ -78,6 +78,36 @@ export const lambdaGet: Flow.StepExample = {
       {
         e: 'page view',
         d: '{"title":"Home"}',
+      },
+    ],
+  ],
+};
+
+export const lambdaPostForwardsSource: Flow.StepExample = {
+  title: 'Lambda POST with provenance',
+  description:
+    'A POST body carrying a source map is forwarded in full, so release and trace provenance survive the crossing.',
+  trigger: { type: 'POST' },
+  in: {
+    version: '2.0',
+    requestContext: {
+      http: { method: 'POST', path: '/collect' },
+      requestId: 'req-321',
+    },
+    body: JSON.stringify({
+      name: 'page view',
+      data: { title: 'Home' },
+      source: { release: { web: 'r1' } },
+    }),
+    isBase64Encoded: false,
+  },
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: { title: 'Home' },
+        source: { release: { web: 'r1' } },
       },
     ],
   ],

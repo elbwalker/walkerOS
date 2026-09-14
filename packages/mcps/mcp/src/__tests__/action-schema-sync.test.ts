@@ -58,6 +58,7 @@ import {
   DEPLOY_MANAGE_REQUIREMENTS,
   PROJECT_MANAGE_REQUIREMENTS,
   SECRET_MANAGE_REQUIREMENTS,
+  FRAME_MANAGE_REQUIREMENTS,
 } from '../action-requirements.js';
 import type {
   ActionRequirementMap,
@@ -67,6 +68,7 @@ import { createFlowManageToolSpec } from '../tools/flow-manage.js';
 import { createDeployManageToolSpec } from '../tools/deploy-manage.js';
 import { createProjectManageToolSpec } from '../tools/project-manage.js';
 import { createSecretManageToolSpec } from '../tools/secret-manage.js';
+import { createFrameManageToolSpec } from '../tools/frame-manage.js';
 import { createFlowSimulateToolSpec } from '../tools/simulate.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { stubClient } from './support/stub-client.js';
@@ -144,6 +146,15 @@ const mapDrivenTools: MapDrivenTool[] = [
       name: 'SLACK_WEBHOOK_URL',
       value: 'https://example.test/hook',
       secretId: 'sec_1',
+    },
+  },
+  {
+    name: 'frame_manage',
+    spec: createFrameManageToolSpec(stubClient()),
+    map: FRAME_MANAGE_REQUIREMENTS,
+    satisfied: {
+      pageKey: 'https://shop.example/cart',
+      frameId: 'frm_V1StGXR8Z5jdHi6BmyT7K',
     },
   },
 ];

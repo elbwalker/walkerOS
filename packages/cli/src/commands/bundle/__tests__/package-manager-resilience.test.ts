@@ -4,7 +4,7 @@ import {
   extractWithResilience,
   manifestWithResilience,
   PACOTE_RETRY_ATTEMPTS,
-} from '../package-manager';
+} from '../../../core/package-manager';
 
 /**
  * Build a fully-typed pacote manifest result so tests never cast. The shape is

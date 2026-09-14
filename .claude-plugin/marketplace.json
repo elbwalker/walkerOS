@@ -1,0 +1,15 @@
+{
+  "name": "elbwalker",
+  "owner": {
+    "name": "elbwalker",
+    "url": "https://github.com/elbwalker"
+  },
+  "description": "Claude Code plugins for walkerOS, the open-source event data collection platform.",
+  "plugins": [
+    {
+      "name": "walkeros",
+      "source": "./",
+      "description": "Skills and MCP tools for walkerOS - build sources, destinations, transformers, and flows."
+    }
+  ]
+}

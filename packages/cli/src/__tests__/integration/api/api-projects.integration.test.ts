@@ -7,7 +7,7 @@
 import '../../helpers/setup-msw.js';
 
 jest.mock('../../../core/auth.js', () => ({
-  getToken: jest.fn().mockReturnValue('test-token'),
+  resolveAccessToken: jest.fn().mockResolvedValue('test-token'),
   requireProjectId: jest.fn().mockReturnValue('proj_test123'),
 }));
 jest.mock('../../../lib/config-file.js', () => ({

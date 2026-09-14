@@ -210,6 +210,14 @@ export interface SourceStatus {
   count: number;
   lastAt?: number;
   duration: number;
+  /**
+   * Monotonic count of inbound input rejected before entering the pipeline:
+   * the source bumps it for HTTP-boundary rejections (unparseable body,
+   * oversized payload, unsupported charset), the collector bumps it for
+   * events rejected as invalid at the pipeline gate. Absent means no
+   * rejections were tracked.
+   */
+  rejected?: number;
 }
 
 export interface DestinationStatus {

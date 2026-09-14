@@ -1,0 +1,10 @@
+{
+  "name": "spoofed-chrome-wildcard-accept",
+  "class": "spoof",
+  "provenance": "Captured 2026-08-24 from curl 7.88.1 called with -A set to the Chrome 152 User-Agent from chrome-pixel, requesting a pixel path on a local header-echo server. Verbatim apart from the dropped Host header: a browser identity string over a script header set, which is what the typed-accept and declared-signal checks exist to separate. Deliberately not class \"bot\", because an unwired pipeline cannot tell this apart from a browser and the routing suite scores it instead.",
+  "signals": {
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "accept": "*/*",
+    "method": "GET"
+  }
+}

@@ -115,6 +115,36 @@ function routeEventToDlq(
 }
 
 /**
+ * Extract loggable metadata from an unknown error: the message plus, when
+ * present, the error's `name` (skipped for the default 'Error', which adds no
+ * signal) and its transport `code` (gRPC status number or HTTP status). Keeps
+ * connection-error lines diagnosable from logs alone (WHICH status killed a
+ * stream), without serializing whole error objects into the log payload.
+ */
+export function errorMeta(err: unknown): {
+  error: string;
+  name?: string;
+  code?: string | number;
+} {
+  const meta: { error: string; name?: string; code?: string | number } = {
+    error: err instanceof Error ? err.message : String(err),
+  };
+  if (err instanceof Error && err.name && err.name !== 'Error') {
+    meta.name = err.name;
+  }
+  if (typeof err === 'object' && err !== null && 'code' in err) {
+    const withCode: { code?: unknown } = err;
+    if (
+      typeof withCode.code === 'number' ||
+      typeof withCode.code === 'string'
+    ) {
+      meta.code = withCode.code;
+    }
+  }
+  return meta;
+}
+
+/**
  * Builds the step-general `reportError` callback for one step's context.
  *
  * This is the runtime behind `Context.Base.reportError`. It is captured ONCE
@@ -157,7 +187,7 @@ export function buildReportError(
           collector.status.failed++;
         }
         logger.error('report error', {
-          error: err instanceof Error ? err.message : String(err),
+          ...errorMeta(err),
           event: event.name,
         });
         return;
@@ -167,9 +197,7 @@ export function buildReportError(
       // not failed.
       collector.status.connectionErrors[key] =
         (collector.status.connectionErrors[key] ?? 0) + 1;
-      logger.error('connection error', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      logger.error('connection error', errorMeta(err));
     } catch {
       // Contained: reportError runs on a detached tick and must never throw.
     }

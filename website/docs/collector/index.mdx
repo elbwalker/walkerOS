@@ -228,6 +228,13 @@ pipeline failure. Contributing sites:
 * transformer init failures,
 * destination init failures.
 
+Rejected client input does NOT increment `status.failed` either. An event
+the pipeline declares invalid (a missing or malformed `name`) resolves as
+`{ ok: false, invalid: true, error }`, logs one warn without a stack, and
+counts on `collector.status.sources.<id>.rejected`. That keeps `failed` a
+measure of walkerOS faults rather than of whatever the public internet
+posts at a collector endpoint.
+
 User-supplied callback throws are visibility-only: they log at error
 level but do NOT increment `status.failed`. This keeps the counter a
 clean pipeline-health signal. Sites in this group:

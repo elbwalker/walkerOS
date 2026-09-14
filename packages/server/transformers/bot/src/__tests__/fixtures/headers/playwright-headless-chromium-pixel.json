@@ -1,0 +1,20 @@
+{
+  "name": "playwright-headless-chromium-pixel",
+  "class": "bot",
+  "context": "pixel",
+  "provenance": "Captured 2026-08-21 via header-echo.mjs from playwright-headless-chromium, pixel context, same-origin http://localhost:3999",
+  "signals": {
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+    "acceptLanguage": "en-US,en;q=0.9",
+    "acceptEncoding": "gzip, deflate, br, zstd",
+    "secFetchSite": "same-origin",
+    "secFetchMode": "no-cors",
+    "secFetchDest": "image",
+    "secChUa": "\"Not?A_Brand\";v=\"24\", \"Chromium\";v=\"152\"",
+    "secChUaMobile": "?0",
+    "secChUaPlatform": "\"Linux\"",
+    "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    "referer": "http://localhost:3999/?label=playwright-headless-chromium",
+    "method": "GET"
+  }
+}

@@ -1,6 +1,7 @@
 import { startFlow } from '..';
 import { Source } from '@walkeros/core';
 import type { Transformer, WalkerOS, Elb } from '@walkeros/core';
+import { testScope } from './testScope';
 
 type ConditionalRawIngest = { path: string };
 
@@ -267,9 +268,13 @@ describe('Source Transformer Chains (source.next)', () => {
                 type: 'test',
                 config: config as Source.Config<ConditionalSourceTypes>,
                 push: async (rawData: ConditionalRawIngest) => {
-                  await context.withScope(rawData, undefined, async (env) => {
-                    await env.push({});
-                  });
+                  await context.withScope(
+                    testScope(rawData),
+                    undefined,
+                    async (env) => {
+                      await env.push({});
+                    },
+                  );
                 },
               };
             },

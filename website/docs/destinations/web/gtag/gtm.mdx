@@ -36,6 +36,7 @@ await startFlow({
     gtag: {
       code: destinationGtag,
       config: {
+        loadScript: true, // walkerOS installs the container; omit it when GTM is already on the page
         settings: {
           gtm: {
             containerId: 'GTM-XXXXXXX',
@@ -48,5 +49,20 @@ await startFlow({
 });`}
   language="typescript"
 />
+
+Set `loadScript: true` when walkerOS should install the container for you. It
+loads `gtm.js` and pushes the `gtm.js` start event into the dataLayer, which is
+what Google's own snippet does.
+
+Leave `loadScript` unset when the container is already on the page, for example
+when you are feeding an existing GTM setup while you migrate. walkerOS then
+neither loads the container nor pushes the `gtm.js` bootstrap event: it adopts
+the configured dataLayer (creating it if it does not exist yet) and pushes your
+mapped events into it, so your existing triggers keep firing exactly as often
+as before.
+
+`loadScript` is set once per destination and applies to every flavor configured
+on it. On a destination that also configures `ga4` or `ads`, the same flag
+governs whether those scripts are loaded too.
 
 <Configuration type="destination" data={data} />

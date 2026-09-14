@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import type { ZodRawShape } from 'zod';
 import { schemas } from '@walkeros/cli/dev';
+import {
+  HUB_MANAGE_DESCRIPTION,
+  HUB_MANAGE_INPUT_SCHEMA,
+} from './tools/hub-manage.js';
+import {
+  FRAME_MANAGE_DESCRIPTION,
+  FRAME_MANAGE_INPUT_SCHEMA,
+} from './tools/frame-manage.js';
 
 export interface ToolAnnotations {
   readOnlyHint: boolean;
@@ -385,6 +393,34 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: 'hub_manage',
+    title: 'Release History and Rationale',
+    // Description and schema are imported rather than retyped, so the two
+    // copies of this tool's surface are one object and cannot drift apart.
+    description: HUB_MANAGE_DESCRIPTION,
+    inputSchema: HUB_MANAGE_INPUT_SCHEMA,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: 'frame_manage',
+    title: 'Frames',
+    // Description and schema are imported rather than retyped, so the two
+    // copies of this tool's surface are one object and cannot drift apart.
+    description: FRAME_MANAGE_DESCRIPTION,
+    inputSchema: FRAME_MANAGE_INPUT_SCHEMA,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
       openWorldHint: true,
     },
   },

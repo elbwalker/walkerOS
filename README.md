@@ -168,6 +168,36 @@ walkerOS exposes a Model Context Protocol (MCP) interface. AI agents can read
 your event schema, suggest tracking definitions, and generate integration code -
 making your event layer programmable, not just configurable.
 
+In Claude Code, one plugin installs both MCP servers and the walkerOS skills:
+
+```
+/plugin marketplace add elbwalker/walkerOS
+/plugin install walkeros@elbwalker
+```
+
+For any other MCP client, add the servers to its configuration:
+
+```json
+{
+  "mcpServers": {
+    "walkeros-flow": {
+      "command": "npx",
+      "args": ["@walkeros/mcp"]
+    },
+    "walkeros-source-browser": {
+      "command": "npx",
+      "args": ["@walkeros/mcp-source-browser"]
+    }
+  }
+}
+```
+
+Loading a flow, validating it, and simulating an event all run locally, no
+account needed. See the [MCP docs](https://www.walkeros.io/docs/apps/mcp).
+
+Coming from Google Tag Manager? See
+[walkerOS vs. GTM](https://www.walkeros.io/docs/comparisons/gtm).
+
 ## Contributing
 
 ⭐️ Help us grow and star us. See our

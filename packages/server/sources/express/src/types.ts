@@ -20,6 +20,7 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export type CorsOptions = z.infer<typeof CorsOptionsSchema>;
 export type RouteConfig = z.infer<typeof RouteConfigSchema>;
 export type RouteMethod = 'GET' | 'POST';
+export type AsyncByMethod = Partial<Record<RouteMethod, boolean>>;
 export type InitSettings = Partial<Settings>;
 
 export interface Mapping {
@@ -29,11 +30,13 @@ export interface Mapping {
 // Express-specific push type (uses Express Request/Response types)
 //
 // Ack contract: a 2xx response means the event was *accepted*, not that it was
-// *delivered*. With `config.async` (the default, `true`) the handler responds
-// first and pushes to the collector without blocking the response; rejected
-// pushes are logged and destination errors are DLQ'd inside the collector. GET
-// (the tracking pixel) and POST both honor the flag: set `config.async: false`
-// to make the response wait for delivery to settle before replying.
+// *delivered*. `config.async` resolves per method (boolean for both methods, a
+// `{ GET?, POST? }` record per method, defaults `{ GET: false, POST: true }`).
+// Respond-first (`true`) answers before the push settles; rejected pushes are
+// logged and destination errors are DLQ'd inside the collector. Synchronous
+// (`false`) awaits delivery: a GET lets a step respond with real content
+// before the GIF fallback, a POST reflects the outcome (400/500, batch
+// outcomes) instead of the blind accepted ack.
 export type Push = (req: Request, res: Response) => Promise<void>;
 
 export interface Env extends CoreSource.Env {

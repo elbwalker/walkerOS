@@ -30,19 +30,30 @@ import {
   startObserveSession,
   getObserveSession,
   endObserveSession,
-  requestDeviceCode,
-  pollForToken,
+  listReleases,
+  getRelease,
+  listStepHistory,
+  setReleaseRationale,
+  listThreads,
+  createThread,
+  addThreadMessage,
+  listKnowledge,
+  listFrames,
+  listPageFrames,
+  getFrame,
+  startDeviceAuthorization,
+  completeDeviceLogin,
   whoami,
-  resolveToken,
+  credentialSource,
   resolveAppUrl,
-  deleteConfig,
+  logout,
   feedback,
   getFeedbackPreference,
   setFeedbackPreference,
 } from '@walkeros/cli';
 import type {
-  DeviceCodeResult,
-  PollResult,
+  DeviceAuthorization,
+  DeviceLoginResult,
   ListFlowsOptions,
   DeployOptions,
   ListDeploymentsOptions,
@@ -57,6 +68,7 @@ import type {
   FeedbackOptions,
 } from '@walkeros/cli';
 
+import { normalizeBaseUrl } from './base-url.js';
 import type {
   ToolClient,
   JourneysResult,
@@ -64,6 +76,19 @@ import type {
   ObserveSessionResult,
   ObserveSessionRef,
   StartObserveSessionOptions,
+  ReleaseRef,
+  ReleaseIndexWire,
+  ReleaseDetailWire,
+  StepHistoryWire,
+  VersionAnnotationWire,
+  ThreadAnchorType,
+  ThreadStatus,
+  HubThreadWire,
+  ListThreadsWire,
+  ListKnowledgeWire,
+  FrameWire,
+  FrameListWire,
+  FrameLeanListWire,
 } from './tool-client.js';
 
 /**
@@ -234,29 +259,128 @@ export class HttpToolClient implements ToolClient {
     return endObserveSession(options);
   }
 
-  async requestDeviceCode(): Promise<DeviceCodeResult> {
-    return requestDeviceCode();
+  async listReleases(options: {
+    projectId: string;
+    flowId: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ReleaseIndexWire> {
+    return listReleases(options);
+  }
+  async getRelease(options: {
+    projectId: string;
+    flowId: string;
+    ref: ReleaseRef;
+  }): Promise<ReleaseDetailWire> {
+    return getRelease(options);
+  }
+  async listStepHistory(options: {
+    projectId: string;
+    flowId: string;
+    step: string;
+    flow?: string;
+    limit?: number;
+  }): Promise<StepHistoryWire> {
+    return listStepHistory(options);
+  }
+  async setReleaseRationale(options: {
+    projectId: string;
+    flowId: string;
+    versionId: string;
+    text: string;
+  }): Promise<VersionAnnotationWire> {
+    return setReleaseRationale(options);
+  }
+  async listThreads(options: {
+    projectId: string;
+    flowId: string;
+    anchorType?: ThreadAnchorType;
+    anchorKey?: string;
+    status?: ThreadStatus;
+    includeMessages: boolean;
+    limit?: number;
+  }): Promise<ListThreadsWire> {
+    return listThreads(options);
+  }
+  async createThread(options: {
+    projectId: string;
+    flowId: string;
+    anchorType: ThreadAnchorType;
+    anchorKey: string;
+    anchorLabel?: string;
+    text: string;
+  }): Promise<HubThreadWire> {
+    return createThread(options);
+  }
+  async addThreadMessage(options: {
+    projectId: string;
+    flowId: string;
+    threadId: string;
+    text: string;
+  }): Promise<HubThreadWire> {
+    return addThreadMessage(options);
+  }
+  async listKnowledge(options: {
+    projectId: string;
+    pageKey?: string;
+    frameId?: string;
+    markId?: string;
+    includeMessages: boolean;
+    limit?: number;
+  }): Promise<ListKnowledgeWire> {
+    return listKnowledge(options);
+  }
+
+  async listFrames(options: { projectId: string }): Promise<FrameLeanListWire> {
+    return listFrames(options);
+  }
+  async listPageFrames(options: {
+    projectId: string;
+    pageKey: string;
+  }): Promise<FrameListWire> {
+    return listPageFrames(options);
+  }
+  async getFrame(options: {
+    projectId: string;
+    frameId: string;
+  }): Promise<FrameWire> {
+    return getFrame(options);
+  }
+
+  async requestDeviceCode(): Promise<DeviceAuthorization> {
+    return startDeviceAuthorization(resolveAppUrl());
   }
   async pollForToken(
     deviceCode: string,
     options?: { timeoutMs?: number },
-  ): Promise<PollResult> {
-    return pollForToken(deviceCode, options);
+  ): Promise<DeviceLoginResult> {
+    return completeDeviceLogin(deviceCode, options);
   }
   async whoami(): Promise<unknown> {
     return whoami();
   }
-  resolveToken(): { token: string; source: 'env' | 'config' } | null {
-    return resolveToken();
+  credentialSource(): 'env' | 'config' | null {
+    return credentialSource();
   }
-  deleteConfig(): boolean {
-    return deleteConfig();
+  async logout(): Promise<{ deleted: boolean }> {
+    return logout();
+  }
+
+  /**
+   * The app this local door talks to: `WALKEROS_APP_URL`, then the CLI config
+   * file, then the built-in default, which is exactly the chain every other
+   * method here already resolves its base URL through. Normalized, because
+   * neither the env var nor the config file is obliged to omit a trailing
+   * slash and the interface promises a base without one.
+   */
+  appBaseUrl(): string {
+    return normalizeBaseUrl(resolveAppUrl());
   }
 
   /**
    * Unauthenticated reachability probe of the app's PUBLIC `/api/health`
-   * route. Uses a plain `fetch` (no `createApiClient`, which throws when no
-   * token is set) so diagnostics works logged-out. Resolves
+   * route. Uses a plain `fetch` (no `createApiClient`, whose every request
+   * rejects without a credential) so diagnostics works logged-out. Resolves
    * `{ reachable: false }` only on a real network/timeout failure.
    */
   async checkHealth(): Promise<{

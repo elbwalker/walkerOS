@@ -161,7 +161,29 @@ export const sourcePubSubPush: Source.Init<Types> = async (context) => {
         return;
       }
 
-      await env.push(decoded);
+      const result = await env.push(decoded);
+      if (result?.ok === false) {
+        if (result.invalid === true) {
+          // Permanently-invalid message: a retry can never fix it. Answer
+          // 400 (a nack, same as the decoder-failure path) and leave poison
+          // handling to the subscription's dead-letter policy. The collector
+          // already warned and counted the rejection.
+          res.status(400).json({
+            success: false,
+            error: result.error ?? 'Invalid event',
+          });
+          return;
+        }
+        logger.warn(
+          'Pub/Sub push: event not processed, answering 500 for redelivery',
+          { id: body.message.messageId },
+        );
+        res.status(500).json({
+          success: false,
+          error: 'Event was not processed.',
+        });
+        return;
+      }
       res.status(200).json({ success: true, id: body.message.messageId });
     } catch (error) {
       logger.error('Pub/Sub push handler failed', {

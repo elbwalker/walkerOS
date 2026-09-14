@@ -1,16 +1,17 @@
 import './support/version.js';
 
 // Mock @walkeros/cli to keep its ESM-only transitive deps (chalk) out of the
-// transform path. The diagnostics tool reads VERSION + resolveAppUrl from it;
-// resolveAppUrl mirrors the real env-vs-default precedence so the appUrl
-// assertions exercise real provenance logic.
+// transform path. The diagnostics tool reads VERSION and compareContract from
+// it; the app URL no longer comes from the CLI at all, it comes from the
+// client, which `localDoor` below stands in for.
 const MOCK_CLI_VERSION = '5.4.3-test';
 const mockCompareContract = jest.fn();
 jest.mock('@walkeros/cli', () => ({
   VERSION: '5.4.3-test',
-  resolveAppUrl: () =>
-    process.env.WALKEROS_APP_URL ?? 'https://app.walkeros.io',
-  compareContract: () => mockCompareContract(),
+  // Forwards its input: the tool has to hand the probe the same backend it
+  // prints as appUrl.resolved, and a mock that swallowed the argument could
+  // not tell a threaded URL from none at all.
+  compareContract: (input: unknown) => mockCompareContract(input),
 }));
 
 import { createRequire } from 'module';
@@ -18,6 +19,8 @@ import { dirname, join } from 'path';
 import { readFileSync } from 'fs';
 import { createDiagnosticsToolSpec } from '../tools/diagnostics.js';
 import { stubClient } from './support/stub-client.js';
+import type { ToolClient } from '../tool-client.js';
+import { normalizeBaseUrl } from '../base-url.js';
 import { clearCatalogCache, fetchCatalog } from '../catalog.js';
 import { SERVER_INSTRUCTIONS } from '../instructions.js';
 
@@ -50,8 +53,25 @@ interface DiagnosticsResult {
   _hints?: { next?: string[]; warnings?: string[] };
 }
 
+/**
+ * A stub standing in for the LOCAL door: its `appBaseUrl` resolves the same
+ * env-then-default chain the CLI-backed client hands the tool, normalized the
+ * same way, so the appUrl assertions exercise real provenance rather than a
+ * constant. `HttpToolClient`'s own delegation is pinned in
+ * `http-tool-client.test.ts`.
+ */
+function localDoor(overrides: Partial<ToolClient> = {}): ToolClient {
+  return stubClient({
+    appBaseUrl: () =>
+      normalizeBaseUrl(
+        process.env.WALKEROS_APP_URL ?? 'https://app.walkeros.io',
+      ),
+    ...overrides,
+  });
+}
+
 async function runDiagnostics(
-  client = stubClient(),
+  client = localDoor(),
   packageVersion = '7.7.7',
 ): Promise<DiagnosticsResult> {
   const spec = createDiagnosticsToolSpec(client, packageVersion);
@@ -117,8 +137,41 @@ describe('diagnostics tool', () => {
     expect(out.appUrl.resolved).toBe('https://app.test');
   });
 
+  it('keeps the env provenance for a slashed WALKEROS_APP_URL', async () => {
+    // A valid URL may carry a trailing slash, and the interface promises a
+    // base without one. Comparing the raw env value against the normalized
+    // base would report `default` and warn that the variable did not set the
+    // URL, when it plainly did.
+    process.env.WALKEROS_APP_URL = 'https://stage.app.walkeros.io/';
+    const out = await runDiagnostics();
+    expect(out.appUrl.resolved).toBe('https://stage.app.walkeros.io');
+    expect(out.appUrl.source).toBe('env');
+    expect(out._hints?.warnings ?? []).not.toContainEqual(
+      expect.stringContaining('WALKEROS_APP_URL'),
+    );
+  });
+
+  it('reports the app URL the client names, not the local CLI resolution', async () => {
+    // The hosted door runs inside the app it reports and ignores the local
+    // env var entirely. Resolving the URL in the tool would name the wrong
+    // backend here, which is the whole point of the client seam.
+    process.env.WALKEROS_APP_URL = 'https://app.test';
+    const out = await runDiagnostics(
+      stubClient({ appBaseUrl: () => 'https://stage.app.walkeros.io' }),
+    );
+    expect(out.appUrl.resolved).toBe('https://stage.app.walkeros.io');
+  });
+
+  it('withholds the env provenance from a client that did not use the env var', async () => {
+    process.env.WALKEROS_APP_URL = 'https://app.test';
+    const out = await runDiagnostics(
+      stubClient({ appBaseUrl: () => 'https://stage.app.walkeros.io' }),
+    );
+    expect(out.appUrl.source).toBe('default');
+  });
+
   it('reports app.reachable true when checkHealth resolves reachable', async () => {
-    const client = stubClient({
+    const client = localDoor({
       checkHealth: async () => ({ reachable: true, status: 'ok' }),
     });
     const out = await runDiagnostics(client);
@@ -127,7 +180,7 @@ describe('diagnostics tool', () => {
   });
 
   it('reports app.reachable false and still returns when checkHealth rejects', async () => {
-    const client = stubClient({
+    const client = localDoor({
       checkHealth: async () => {
         throw new Error('network down');
       },
@@ -142,7 +195,7 @@ describe('diagnostics tool', () => {
   it('reports app.reachable false and still returns when checkHealth is absent', async () => {
     // An external ToolClient implementation may omit the optional checkHealth
     // method; diagnostics must degrade to reachable: false without throwing.
-    const { checkHealth: _omit, ...withoutHealth } = stubClient();
+    const { checkHealth: _omit, ...withoutHealth } = localDoor();
     const out = await runDiagnostics(withoutHealth);
     expect(out.app.reachable).toBe(false);
     expect(
@@ -165,6 +218,21 @@ describe('diagnostics tool', () => {
     const out = await runDiagnostics();
     expect(out.contract.verdict).toBe('client-older');
     expect(out.contract.action).toBe('upgrade @walkeros/cli to >= 1.3.0');
+  });
+
+  it('probes the contract at the app URL it reports, not a self-resolved one', async () => {
+    // The hosted door is served on its own URL and has no CLI config file, so
+    // a probe left to resolve itself would read the local machine and report a
+    // verdict about production. Two answers in one response must not describe
+    // two different backends.
+    process.env.WALKEROS_APP_URL = 'https://app.test';
+    const out = await runDiagnostics(
+      stubClient({ appBaseUrl: () => 'https://stage.app.walkeros.io' }),
+    );
+    expect(mockCompareContract).toHaveBeenCalledWith({
+      baseUrl: 'https://stage.app.walkeros.io',
+    });
+    expect(out.appUrl.resolved).toBe('https://stage.app.walkeros.io');
   });
 
   it('degrades the verdict to unknown when compareContract reports unreachable', async () => {

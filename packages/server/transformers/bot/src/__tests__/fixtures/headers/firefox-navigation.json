@@ -1,0 +1,17 @@
+{
+  "name": "firefox-navigation",
+  "class": "human",
+  "context": "navigation",
+  "provenance": "Captured 2026-08-24 from a headed Firefox 150.0.2 (Playwright build firefox-1522, launched with headless:false under Xvfb, locale en-US) navigating to a local header-echo server. Verbatim apart from the dropped Host, Connection, Upgrade-Insecure-Requests and Priority headers. Firefox sends no Sec-CH-UA family at all, which is the false-positive trap this fixture guards.",
+  "signals": {
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0",
+    "acceptLanguage": "en-US",
+    "acceptEncoding": "gzip, deflate, br, zstd",
+    "secFetchSite": "none",
+    "secFetchMode": "navigate",
+    "secFetchDest": "document",
+    "secFetchUser": "?1",
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "method": "GET"
+  }
+}

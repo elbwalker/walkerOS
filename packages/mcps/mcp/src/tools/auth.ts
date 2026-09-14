@@ -7,7 +7,7 @@ import type { ToolSpec } from '../tool-spec.js';
 
 const TITLE = 'Authentication';
 const DESCRIPTION =
-  'Manage walkerOS authentication. Check login status, log in via device code flow, or log out. ' +
+  'Manage walkerOS authentication. Check login status, log in via the device authorization grant, or log out. ' +
   'No terminal or browser required, the MCP client handles the authorization URL.';
 
 const inputSchema = {
@@ -48,8 +48,7 @@ async function authHandlerBody(client: ToolClient, input: unknown) {
   try {
     switch (action) {
       case 'status': {
-        const resolved = client.resolveToken();
-        if (!resolved) {
+        if (!client.credentialSource()) {
           return mcpResult(
             { authenticated: false },
             { next: ['Use auth with action "login" to authenticate'] },
@@ -64,37 +63,51 @@ async function authHandlerBody(client: ToolClient, input: unknown) {
 
       case 'login': {
         if (deviceCode) {
-          const pollResult = await client.pollForToken(deviceCode, {
+          const poll = await client.pollForToken(deviceCode, {
             timeoutMs: 60000,
           });
 
-          if (pollResult.success) {
+          if (poll.status === 'ok') {
             return mcpResult(
-              { authenticated: true, email: pollResult.email },
+              { authenticated: true },
               {
                 next: [
+                  'Use auth with action "status" to see which account you are on',
                   'Use project_manage with action "list" to see your projects',
                 ],
               },
             );
           }
 
-          if (pollResult.status === 'pending') {
+          // The approval is still outstanding, so the code is still good and
+          // the same one comes back for the next attempt. `slow_down` is the
+          // server asking for a wider gap before that attempt.
+          if (poll.status === 'pending' || poll.status === 'slow_down') {
             return mcpResult({
               authenticated: false,
               status: 'pending',
-              message: 'Still waiting for authorization. Try again shortly.',
+              message:
+                poll.status === 'slow_down'
+                  ? 'Still waiting, and the server asked for a longer gap between checks. Try again in a minute.'
+                  : 'Still waiting for authorization. Try again shortly.',
               deviceCode,
             });
           }
 
-          return mcpError(
-            new Error(pollResult.error || 'Authorization failed'),
-          );
+          if (poll.status === 'denied')
+            return mcpError(new Error('Authorization was denied.'));
+          if (poll.status === 'expired')
+            return mcpError(
+              new Error(
+                'The one-time code expired. Run auth with action "login" for a new one.',
+              ),
+            );
+
+          return mcpError(new Error(poll.error));
         }
 
         const code = await client.requestDeviceCode();
-        const loginUrl = code.verificationUriComplete || code.verificationUri;
+        const loginUrl = code.verificationUriComplete;
 
         return mcpResult({
           authenticated: false,
@@ -106,7 +119,7 @@ async function authHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'logout': {
-        const deleted = client.deleteConfig();
+        const { deleted } = await client.logout();
         const hadEnvToken =
           typeof process.env.WALKEROS_TOKEN === 'string' &&
           process.env.WALKEROS_TOKEN.length > 0;

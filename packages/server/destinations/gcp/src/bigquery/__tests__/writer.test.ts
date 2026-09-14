@@ -127,7 +127,7 @@ describe('openWriter', () => {
     });
   });
 
-  test('forwards timeout as the gax deadline to createStreamConnection and getWriteStream', async () => {
+  test('never passes CallOptions to createStreamConnection, even when a timeout is set', async () => {
     const logger = createMockLogger();
     await openWriter(
       { projectId: 'p', datasetId: 'd', tableId: 't', timeout: 7500 },
@@ -136,20 +136,37 @@ describe('openWriter', () => {
     const streamCall = __getMockCalls().find(
       (c) => c.method === 'createStreamConnection',
     );
-    expect(streamCall?.args[1]).toEqual({ timeout: 7500 });
+    // A gax CallOptions.timeout on the appendRows bidi stream is the stream's
+    // TOTAL deadline: it kills the connection when it expires no matter how
+    // healthy the stream is. The stream must keep the SDK's own long-lived
+    // default; per-delivery bounds are the collector's job.
+    expect(streamCall).toBeDefined();
+    expect(streamCall?.args[1]).toBeUndefined();
+  });
+
+  test('forwards timeout as the gax deadline to the unary getWriteStream only', async () => {
+    const logger = createMockLogger();
+    await openWriter(
+      { projectId: 'p', datasetId: 'd', tableId: 't', timeout: 7500 },
+      logger,
+    );
     const schemaCall = __getMockCalls().find(
       (c) => c.method === 'getWriteStream',
     );
     expect(schemaCall?.args[1]).toEqual({ timeout: 7500 });
   });
 
-  test('omits the deadline when timeout is unset', async () => {
+  test('omits all deadlines when timeout is unset', async () => {
     const logger = createMockLogger();
     await openWriter({ projectId: 'p', datasetId: 'd', tableId: 't' }, logger);
     const streamCall = __getMockCalls().find(
       (c) => c.method === 'createStreamConnection',
     );
     expect(streamCall?.args[1]).toBeUndefined();
+    const schemaCall = __getMockCalls().find(
+      (c) => c.method === 'getWriteStream',
+    );
+    expect(schemaCall?.args[1]).toBeUndefined();
   });
 
   test('closeWriter calls close on writer and writeClient', async () => {

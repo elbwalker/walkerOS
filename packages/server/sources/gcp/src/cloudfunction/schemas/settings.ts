@@ -12,6 +12,18 @@ export const SettingsSchema = z.object({
     )
     .optional(),
 
+  maxBatchSize: z
+    .number()
+    .int()
+    .min(1)
+    .describe('Maximum number of events accepted in a single batch request')
+    .default(100),
+
+  enablePixelTracking: z
+    .boolean()
+    .describe('Serve a tracking pixel for GET requests')
+    .default(true),
+
   timeout: z
     .number()
     .int()

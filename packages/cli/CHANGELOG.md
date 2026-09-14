@@ -1,5 +1,79 @@
 # @walkeros/cli
 
+## 4.6.0
+
+### Minor Changes
+
+- 23e9034: `walkeros auth login` now uses the standard device authorization
+  grant and refreshes its session automatically. Existing tokens keep working
+  until they expire; run `walkeros auth login` once to switch.
+
+  Breaking: `getAuthHeaders` is async, and it rejects when the session needs a
+  refresh that cannot be carried out rather than quietly returning no header.
+  `createApiClient` no longer throws when unauthenticated, the request it makes
+  does. Removed exports: `getToken`, `requestDeviceCode`, `pollForToken`, and
+  the `DeviceCodeResult`, `DeviceCodeOptions`, `PollOptions` and `PollResult`
+  types; `startDeviceAuthorization` and `completeDeviceLogin` replace the last
+  two.
+
+### Patch Changes
+
+- 8802281: The BigQuery destination no longer applies `config.timeout` as a
+  deadline on the Storage Write API append stream, which killed healthy
+  connections roughly every ten seconds and caused reconnect churn, latency
+  spikes, and intermittent 5xx responses. Error logs now show the error's
+  message, name and status code in CLI output, and no longer include event
+  payloads.
+- fd5949e: `fetchHealth` and `compareContract` accept an optional base URL, so a
+  caller that is not the local CLI can probe its own backend instead of the one
+  resolved from `WALKEROS_APP_URL` and the CLI config file. Omitting it keeps
+  today's resolution.
+
+  `diagnostics` passes the app URL it reports, so the contract verdict and
+  `appUrl.resolved` always describe the same backend. A hosted MCP no longer
+  probes production while naming its own deployment.
+
+- 403ff6c: The MCP server carries `hub_manage`, which reads a flow's release
+  history, its rationale and the threads on it, and a read-only `frame_manage`,
+  which reads the frames of a measurement plan. The CLI gains the matching
+  programmatic calls. `ToolClient` gains eleven required methods, so a custom
+  implementation of that interface must add them.
+- Updated dependencies [8802281]
+  - @walkeros/collector@4.6.0
+  - @walkeros/server-core@4.6.0
+  - @walkeros/core@4.6.0
+  - @walkeros/server-destination-api@4.6.0
+  - @walkeros/transformer-validate@4.6.0
+
+## 4.5.0
+
+### Minor Changes
+
+- 5977896: `walkeros setup` now resolves a component's package the same way
+  `walkeros bundle` does: the flow's pinned version is downloaded from the
+  registry (sharing the bundle cache) and imported from there. Setup works via
+  npx without a local install; `path:` packages are supported for local
+  development.
+
+### Patch Changes
+
+- 3571ca1: Add package READMEs and npm keywords. The MCP packages now ship
+  install instructions for Claude Code, Cursor, and VS Code plus MCP registry
+  metadata (mcpName).
+- f7536a6: A `path` entry in `config.bundle.packages` now counts as the package
+  pin, so bundling and setup use the local package instead of failing when steps
+  still declare conflicting inline versions of it.
+- Updated dependencies [3571ca1]
+- Updated dependencies [63845bb]
+- Updated dependencies [4de76ed]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/transformer-validate@4.5.0
+  - @walkeros/core@4.5.0
+  - @walkeros/server-destination-api@4.5.0
+  - @walkeros/collector@4.5.0
+  - @walkeros/server-core@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

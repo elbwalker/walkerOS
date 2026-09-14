@@ -3,7 +3,7 @@ import {
   collectAllSpecs,
   type VersionSpec,
   type Package,
-} from '../package-manager';
+} from '../../../core/package-manager';
 import { applyStepPackages } from '../bundler';
 import type { BuildOptions } from '../../../types/bundle.js';
 import { createMockLogger } from '@walkeros/core';

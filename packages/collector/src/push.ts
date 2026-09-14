@@ -5,12 +5,13 @@ import {
   FatalError,
   getGrantedConsent,
   getSpanId,
+  InvalidEventError,
   processEventMapping,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
 import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
-import { bumpDropped } from './report-error';
+import { bumpDropped, errorMeta } from './report-error';
 import { createEvent, enrichEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
 import { buildBaseState, journeyFields } from './observerEmit';
@@ -294,11 +295,39 @@ export function createPush<T extends Collector.Instance>(
         },
         (err: unknown) => {
           if (err instanceof FatalError) throw err;
+          if (err instanceof InvalidEventError) {
+            // Client input fault, not a pipeline failure: warn without a
+            // stack, count it as a source rejection, and hand the caller a
+            // discriminated result it can map to a 4xx response.
+            // `id` is destructured inside the try body, which this sibling
+            // callback does not see, so the source id comes from `options`.
+            const sourceId = options.id;
+            if (sourceId) {
+              if (!collector.status.sources[sourceId]) {
+                collector.status.sources[sourceId] = { count: 0, duration: 0 };
+              }
+              const sourceStatus = collector.status.sources[sourceId];
+              sourceStatus.rejected = (sourceStatus.rejected ?? 0) + 1;
+            }
+            collector.logger.warn('invalid event rejected', {
+              error: err.message,
+            });
+            return createPushResult({
+              ok: false,
+              invalid: true,
+              error: err.message,
+            });
+          }
           collector.status.failed++;
+          // Identify the event by NAME only. The log context is serialized
+          // into stderr, the error ring and the managed-run jsonl sink, so it
+          // stays primitive and low-cardinality: the full event (user,
+          // consent, data) and the raw ingest payload would be a PII egress,
+          // and per-event values would make every failure look distinct to
+          // the ring's message dedup.
           collector.logger.error('push failed', {
-            event,
-            ingest: options.ingest,
-            error: err,
+            ...errorMeta(err),
+            event: event.name,
           });
           return createPushResult({ ok: false });
         },

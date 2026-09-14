@@ -1,21 +1,40 @@
 import { createApiClient } from '../../../core/api-client.js';
-import { getToken } from '../../../core/auth.js';
+import { resolveAccessToken } from '../../../core/auth.js';
+import { resolveAppUrl } from '../../../lib/config-file.js';
 
 jest.mock('../../../core/auth.js', () => ({
-  getToken: jest.fn(),
+  resolveAccessToken: jest.fn(),
 }));
 
 jest.mock('../../../lib/config-file.js', () => ({
   resolveAppUrl: jest.fn().mockReturnValue('https://app.walkeros.io'),
 }));
 
-const mockGetToken = jest.mocked(getToken);
+const mockResolveAccessToken = jest.mocked(resolveAccessToken);
+const mockResolveAppUrl = jest.mocked(resolveAppUrl);
 
 describe('createApiClient', () => {
-  afterEach(() => jest.clearAllMocks());
+  const originalFetch = global.fetch;
+  let sentAuthorization: Array<string | null>;
+
+  beforeEach(() => {
+    sentAuthorization = [];
+    global.fetch = jest.fn(async (input: RequestInfo | URL) => {
+      const request = input instanceof Request ? input : null;
+      sentAuthorization.push(request?.headers.get('authorization') ?? null);
+      return new Response(JSON.stringify({ projects: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.clearAllMocks();
+  });
 
   it('creates a client with GET and POST methods', () => {
-    mockGetToken.mockReturnValue('sk-walkeros-test');
     const client = createApiClient();
     expect(client).toBeDefined();
     expect(typeof client.GET).toBe('function');
@@ -24,8 +43,62 @@ describe('createApiClient', () => {
     expect(typeof client.DELETE).toBe('function');
   });
 
-  it('throws when no token available', () => {
-    mockGetToken.mockReturnValue(undefined);
-    expect(() => createApiClient()).toThrow('WALKEROS_TOKEN not set');
+  it('does not resolve a token until a request is made', () => {
+    createApiClient();
+    expect(mockResolveAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('attaches the resolved bearer to the outgoing request', async () => {
+    mockResolveAccessToken.mockResolvedValue('at_first');
+    const client = createApiClient();
+
+    await client.GET('/api/projects');
+
+    expect(sentAuthorization).toEqual(['Bearer at_first']);
+  });
+
+  it('resolves the token per request, so a refresh reaches a long-lived client', async () => {
+    // The stdio MCP server builds one client and keeps it for hours. A token
+    // captured at construction would go stale and never recover.
+    mockResolveAccessToken
+      .mockResolvedValueOnce('at_first')
+      .mockResolvedValueOnce('at_refreshed');
+    const client = createApiClient();
+
+    await client.GET('/api/projects');
+    await client.GET('/api/projects');
+
+    expect(sentAuthorization).toEqual([
+      'Bearer at_first',
+      'Bearer at_refreshed',
+    ]);
+  });
+
+  it('throws when no token resolves', async () => {
+    mockResolveAccessToken.mockResolvedValue(null);
+    const client = createApiClient();
+
+    await expect(client.GET('/api/projects')).rejects.toThrow(
+      'Not authenticated',
+    );
+  });
+
+  it('refuses to send the bearer over plain http off the local machine', async () => {
+    mockResolveAccessToken.mockResolvedValue('at_first');
+    mockResolveAppUrl.mockReturnValueOnce('http://app.walkeros.io');
+    const client = createApiClient();
+
+    await expect(client.GET('/api/projects')).rejects.toThrow(/plain http/);
+    expect(sentAuthorization).toEqual([]);
+  });
+
+  it('allows a loopback app URL over plain http', async () => {
+    mockResolveAccessToken.mockResolvedValue('at_first');
+    mockResolveAppUrl.mockReturnValueOnce('http://localhost:3000');
+    const client = createApiClient();
+
+    await client.GET('/api/projects');
+
+    expect(sentAuthorization).toEqual(['Bearer at_first']);
   });
 });

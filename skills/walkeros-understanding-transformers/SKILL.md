@@ -31,7 +31,7 @@ or deliver (destinations)—they modify events in-flight.
 | ------------------------------------------ | ------ | -------------------------------------------------- |
 | `@walkeros/transformer-validate`           | both   | Enforce JSON Schema contracts on events at runtime |
 | `@walkeros/transformer-ga4`                | server | Decode GA4 Measurement Protocol hits into events   |
-| `@walkeros/server-transformer-bot`         | server | Annotate bot / AI-agent scores                     |
+| `@walkeros/server-transformer-bot`         | server | Annotate an automation score and client category   |
 | `@walkeros/server-transformer-fingerprint` | server | Derive a stable visitor fingerprint                |
 
 ### Contract validation

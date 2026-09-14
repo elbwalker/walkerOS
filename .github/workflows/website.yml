@@ -12,6 +12,18 @@ on:
       - 'website/**'
       - '.github/workflows/website.yml'
   workflow_dispatch:
+    inputs:
+      prune_mode:
+        description:
+          'Remote prune: guarded (default), dry-run (list stale files only), or
+          force (override the safety cap, e.g. for the first cleanup of
+          accumulated stale files)'
+        type: choice
+        options:
+          - guarded
+          - dry-run
+          - force
+        default: guarded
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,6 +43,11 @@ jobs:
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      # Job-scoped so the build and the validator agree on the baseUrl. Empty
+      # on push/dispatch, where docusaurus.config.ts falls back to '/'.
+      DOCUSAURUS_BASEURL:
+        ${{ github.event_name == 'pull_request' && format('/preview/pr-{0}/',
+        github.event.pull_request.number) || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,21 +59,16 @@ jobs:
           cache: 'npm'
       - run: npm ci
 
-      - name: Build website (production)
-        if: github.event_name != 'pull_request'
+      - name: Build website
         run: npm run build:website
-
-      - name: Build website (PR preview)
-        if: github.event_name == 'pull_request'
-        run: npm run build:website
-        env:
-          DOCUSAURUS_BASEURL: /preview/pr-${{ github.event.pull_request.number }}/
 
       - name: Validate docs and LLM export
         run: npm run validate
 
       - name: Deploy to production
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if:
+          github.ref == 'refs/heads/main' && (github.event_name == 'push' ||
+          github.event_name == 'workflow_dispatch')
         working-directory: website
         run: node scripts/deploy-bunny.mjs
         env:
@@ -64,6 +76,10 @@ jobs:
           BUNNY_STORAGE_PASSWORD: ${{ secrets.BUNNY_WEBSITE_STORAGE_PASSWORD }}
           BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
           BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}
+          PRUNE_DRY_RUN:
+            ${{ github.event.inputs.prune_mode == 'dry-run' && '1' || '' }}
+          PRUNE_FORCE:
+            ${{ github.event.inputs.prune_mode == 'force' && '1' || '' }}
 
       - name: Deploy PR preview
         if: github.event_name == 'pull_request'

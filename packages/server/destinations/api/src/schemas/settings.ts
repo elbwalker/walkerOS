@@ -7,6 +7,12 @@ export const SettingsSchema = z.object({
     .describe('Custom HTTP headers to include with requests')
     .optional(),
   method: z.string().describe('HTTP method to use (default: POST)').optional(),
+  transform: z
+    .any()
+    .describe(
+      'Function to transform event data before sending (like (data, config, mapping) => JSON.stringify(data))',
+    )
+    .optional(),
   timeout: z
     .number()
     .positive()

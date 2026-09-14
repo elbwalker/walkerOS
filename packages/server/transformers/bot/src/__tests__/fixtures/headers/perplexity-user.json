@@ -1,0 +1,8 @@
+{
+  "name": "perplexity-user",
+  "class": "agent",
+  "provenance": "Vendor user-agent string of record: https://docs.perplexity.ai/guides/bots (fetched 2026-08-21)",
+  "signals": {
+    "userAgent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)"
+  }
+}

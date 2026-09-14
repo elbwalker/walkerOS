@@ -246,10 +246,76 @@ describe('sourceFetch', () => {
       const response = await source.push(request);
       const responseBody = await response.json();
 
-      expect(response.status).toBe(400);
+      // A rejected push is a server fault, not client input: the collector
+      // resolves pipeline failures, so a rejection is exceptional.
+      expect(response.status).toBe(500);
       expect(responseBody).toMatchObject({
         success: false,
         error: 'Collector error',
+      });
+    });
+
+    it('answers 400 with the reason when the push settles an invalid-input rejection', async () => {
+      const invalidPush = jest.fn().mockResolvedValue({
+        ok: false,
+        invalid: true,
+        error: 'Event name is required',
+      });
+
+      const source = await sourceFetch(
+        createSourceContext(
+          {},
+          {
+            push: invalidPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const response = await source.push(
+        new Request('https://example.com/collect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        }),
+      );
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        success: false,
+        error: 'Event name is required',
+      });
+    });
+
+    it('answers 500 when the push settles a non-invalid failure', async () => {
+      const failingPush = jest.fn().mockResolvedValue({ ok: false });
+
+      const source = await sourceFetch(
+        createSourceContext(
+          {},
+          {
+            push: failingPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const response = await source.push(
+        new Request('https://example.com/collect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'page view' }),
+        }),
+      );
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toMatchObject({
+        success: false,
+        error: 'Event was not processed',
       });
     });
   });

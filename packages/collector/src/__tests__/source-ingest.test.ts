@@ -17,7 +17,7 @@ describe('Source withScope ingest extraction', () => {
             return {
               type: 'express',
               config: config as Source.Config,
-              push: (async (rawData: unknown) => {
+              push: (async (rawData: Source.Scope) => {
                 await context.withScope(rawData, undefined, async (env) => {
                   await env.push({ name: 'page view', data: {} });
                 });

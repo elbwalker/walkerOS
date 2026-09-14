@@ -19,6 +19,8 @@ services:
       - ./flow.json:/app/flow.json
     environment:
       - BUNDLE=/app/flow.json
+      # An automation token (wos_pat_...) from Account, Automation tokens, or a
+      # bound runner token (wos_run_...) from a flow's self-hosted deploy tab.
       - WALKEROS_TOKEN=${WALKEROS_TOKEN}
       - PROJECT_ID=${PROJECT_ID}
       - PORT=8080

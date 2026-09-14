@@ -33,6 +33,7 @@ export const defaultEvent: KlaviyoStepExample = {
   description:
     'An event is sent to Klaviyo as a metric with an inline profile resolved from the user email and id.',
   in: getEvent('product view', {
+    id: 'a1b2c3d4e5f60100',
     timestamp: 1700000100,
     user: { id: 'us3r', email: 'user@example.com' },
   }),
@@ -60,6 +61,7 @@ export const defaultEvent: KlaviyoStepExample = {
             },
             properties: {},
             time: new Date(1700000100).toISOString(),
+            uniqueId: 'a1b2c3d4e5f60100',
           },
         },
       },
@@ -76,6 +78,7 @@ export const mappedEventName: KlaviyoStepExample = {
   description:
     'A product view is mapped to the Klaviyo Viewed Product metric with properties such as product name and price.',
   in: getEvent('product view', {
+    id: 'a1b2c3d4e5f60101',
     timestamp: 1700000101,
     user: { id: 'us3r', email: 'user@example.com' },
     data: {
@@ -122,6 +125,7 @@ export const mappedEventName: KlaviyoStepExample = {
               Price: 9.99,
             },
             time: new Date(1700000101).toISOString(),
+            uniqueId: 'a1b2c3d4e5f60101',
           },
         },
       },
@@ -138,6 +142,7 @@ export const revenueEvent: KlaviyoStepExample = {
   description:
     'An order complete is sent to Klaviyo as Placed Order with value and currency for revenue attribution.',
   in: getEvent('order complete', {
+    id: 'a1b2c3d4e5f60102',
     timestamp: 1700000102,
     user: { id: 'us3r', email: 'user@example.com' },
     data: {
@@ -154,7 +159,6 @@ export const revenueEvent: KlaviyoStepExample = {
     data: {
       map: {
         OrderId: 'data.id',
-        value: 'data.total',
         ItemNames: 'data.itemNames',
       },
     },
@@ -186,11 +190,12 @@ export const revenueEvent: KlaviyoStepExample = {
             },
             properties: {
               OrderId: 'ORD-123',
-              value: 99.99,
               ItemNames: ['Widget A', 'Widget B'],
             },
             time: new Date(1700000102).toISOString(),
+            value: 99.99,
             valueCurrency: 'EUR',
+            uniqueId: 'a1b2c3d4e5f60102',
           },
         },
       },
@@ -207,6 +212,7 @@ export const userLoginIdentify: KlaviyoStepExample = {
   description:
     'A user login upserts the Klaviyo profile with name, organization, and custom properties without firing an event.',
   in: getEvent('user login', {
+    id: 'a1b2c3d4e5f60103',
     timestamp: 1700000103,
     user: { id: 'us3r', email: 'user@acme.com' },
     data: {
@@ -264,6 +270,7 @@ export const destinationIdentify: KlaviyoStepExample = {
   description:
     'Destination-level identify upserts the Klaviyo profile with a first name before each event is sent.',
   in: getEvent('page view', {
+    id: 'a1b2c3d4e5f60104',
     timestamp: 1700000104,
     user: { id: 'us3r', email: 'user@example.com', firstName: 'Jane' },
   }),
@@ -311,6 +318,7 @@ export const destinationIdentify: KlaviyoStepExample = {
             },
             properties: {},
             time: new Date(1700000104).toISOString(),
+            uniqueId: 'a1b2c3d4e5f60104',
           },
         },
       },
@@ -326,6 +334,7 @@ export const emailOnly: KlaviyoStepExample = {
   description:
     'A newsletter signup uses only the email address as the Klaviyo profile identifier, with no external id.',
   in: getEvent('newsletter signup', {
+    id: 'a1b2c3d4e5f60105',
     timestamp: 1700000105,
     user: { email: 'subscriber@example.com' },
   }),
@@ -355,6 +364,7 @@ export const emailOnly: KlaviyoStepExample = {
             },
             properties: {},
             time: new Date(1700000105).toISOString(),
+            uniqueId: 'a1b2c3d4e5f60105',
           },
         },
       },
@@ -369,9 +379,112 @@ export const emailOnly: KlaviyoStepExample = {
 export const wildcardIgnored: KlaviyoStepExample = {
   public: false,
   in: getEvent('debug noise', {
+    id: 'a1b2c3d4e5f60106',
     timestamp: 1700000106,
     user: { id: 'us3r', email: 'user@example.com' },
   }),
   mapping: { ignore: true },
   out: [],
+};
+
+/**
+ * Deduplicated order -- `settings.uniqueId` resolves Klaviyo's `unique_id`,
+ * the key Klaviyo deduplicates on. Without it Klaviyo falls back to the
+ * event time truncated to the second, which admits only one event per
+ * profile per metric per second and silently drops or duplicates the rest.
+ */
+export const dedupedOrder: KlaviyoStepExample = {
+  title: 'Deduplicated order',
+  description:
+    'An order carries a stable unique id so Klaviyo keeps only the first copy when the same order arrives from another producer.',
+  in: getEvent('order complete', {
+    id: 'a1b2c3d4e5f60107',
+    timestamp: 1700000107,
+    user: { id: 'us3r', email: 'user@example.com' },
+    data: { id: 'ORD-123', total: 49.5 },
+  }),
+  mapping: {
+    name: 'Placed Order',
+    data: { map: { OrderId: 'data.id' } },
+    settings: { uniqueId: 'data.id' },
+  },
+  out: [
+    [
+      'eventsApi.createEvent',
+      {
+        data: {
+          type: 'event',
+          attributes: {
+            profile: {
+              data: {
+                type: 'profile',
+                attributes: {
+                  email: 'user@example.com',
+                  externalId: 'us3r',
+                },
+              },
+            },
+            metric: {
+              data: {
+                type: 'metric',
+                attributes: { name: 'Placed Order' },
+              },
+            },
+            properties: { OrderId: 'ORD-123' },
+            time: new Date(1700000107).toISOString(),
+            uniqueId: 'ORD-123',
+          },
+        },
+      },
+    ],
+  ],
+};
+
+/**
+ * Numeric dedup key -- order ids are commonly numbers. Coercing them keeps
+ * the dedup key instead of dropping it, which would silently return Klaviyo
+ * to its time-to-the-second fallback and re-admit duplicates.
+ */
+export const numericUniqueId: KlaviyoStepExample = {
+  public: false,
+  in: getEvent('order complete', {
+    id: 'a1b2c3d4e5f60108',
+    timestamp: 1700000108,
+    user: { id: 'us3r', email: 'user@example.com' },
+    data: { id: 90210 },
+  }),
+  mapping: {
+    name: 'Placed Order',
+    settings: { uniqueId: 'data.id' },
+  },
+  out: [
+    [
+      'eventsApi.createEvent',
+      {
+        data: {
+          type: 'event',
+          attributes: {
+            profile: {
+              data: {
+                type: 'profile',
+                attributes: {
+                  email: 'user@example.com',
+                  externalId: 'us3r',
+                },
+              },
+            },
+            metric: {
+              data: {
+                type: 'metric',
+                attributes: { name: 'Placed Order' },
+              },
+            },
+            properties: {},
+            time: new Date(1700000108).toISOString(),
+            uniqueId: '90210',
+          },
+        },
+      },
+    ],
+  ],
 };

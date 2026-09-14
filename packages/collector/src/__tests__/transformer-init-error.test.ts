@@ -86,9 +86,33 @@ describe('transformer init throws (Category A)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         transformer: 'bad',
-        error: expect.any(Error),
+        error: 'init boom',
       }),
     );
+  });
+
+  test('the failure context serializes the message, not a blind empty error', async () => {
+    const collector = createTestCollector();
+    const throwingTransformer: Transformer.Instance = {
+      type: 'mock',
+      config: {},
+      push: jest.fn(),
+      init: jest.fn(() => {
+        throw new Error('init boom');
+      }),
+    };
+    collector.transformers = { bad: throwingTransformer };
+
+    await runTransformerChain(collector, collector.transformers, ['bad'], {
+      name: 'page view',
+    });
+
+    const context = findLoggerError(collector, 'transformer init failed')?.[1];
+
+    expect(context).toEqual({ transformer: 'bad', error: 'init boom' });
+    // A raw Error serializes to `"error":{}`, blanking the cause in the
+    // output an operator reads.
+    expect(JSON.stringify(context)).toContain('init boom');
   });
 });
 

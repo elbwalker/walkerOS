@@ -1,0 +1,11 @@
+{
+  "name": "curl-server",
+  "class": "bot",
+  "context": "server",
+  "provenance": "Captured 2026-08-21 via header-echo.mjs from curl, server context, same-origin http://localhost:3999",
+  "signals": {
+    "userAgent": "curl/7.88.1",
+    "accept": "*/*",
+    "method": "GET"
+  }
+}

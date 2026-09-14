@@ -30,8 +30,6 @@ import { createCommand } from '../command';
 
 type MockedPushToDestinations = jest.MockedFunction<typeof pushToDestinations>;
 
-const SPAN_HEX = /^[0-9a-f]{16}$/;
-
 function createTestCollector(): Collector.Instance {
   const mockLogger = createMockLogger();
 
@@ -101,17 +99,74 @@ describe('push boundary', () => {
     const errorMock = (collector.logger as ReturnType<typeof createMockLogger>)
       .error as jest.Mock;
     expect(errorMock).toHaveBeenCalledTimes(1);
-    // The wrap mints the span id and hands the pipeline an id-stamped copy,
-    // so the failure log carries the event as the pipeline saw it: the
-    // caller's fields plus the minted id.
+    // The failure log identifies the event by NAME only. The full event and
+    // the ingest payload are deliberately absent; see the context-shape tests
+    // below for why.
     expect(errorMock).toHaveBeenCalledWith(
       'push failed',
       expect.objectContaining({
-        event: { ...event, id: expect.stringMatching(SPAN_HEX) },
-        ingest,
-        error: expect.any(Error),
+        event: 'page view',
+        error: 'boom',
       }),
     );
+  });
+
+  test('push failure context is primitives only: no event object, no ingest payload', async () => {
+    const collector = collectorWithIdentity();
+    const push = createPush(collector, identityPrepare);
+
+    mockedPushToDestinations.mockImplementation(() => {
+      throw new Error('boom');
+    });
+
+    // A realistic payload-bearing event: the log line must identify it
+    // without carrying the buyer's address into stderr and the jsonl sink.
+    const event: WalkerOS.DeepPartialEvent = {
+      name: 'order complete',
+      data: { total: 42 },
+      user: { id: 'buyer@example.com' },
+    };
+
+    await push(event, {
+      id: 'test-source',
+      ingest: createIngest('test-source'),
+    });
+
+    const errorMock = (collector.logger as ReturnType<typeof createMockLogger>)
+      .error as jest.Mock;
+    const context: unknown = errorMock.mock.calls[0][1];
+
+    expect(context).toEqual({ error: 'boom', event: 'order complete' });
+    // What actually reaches Loki and the on-disk jsonl is the serialized
+    // form, so assert on that too: no PII, whatever the key names.
+    expect(JSON.stringify(context)).not.toContain('buyer@example.com');
+  });
+
+  test('the same failure on different events yields byte-identical context (ring dedup)', async () => {
+    const collector = collectorWithIdentity();
+    const push = createPush(collector, identityPrepare);
+
+    const err = new Error('boom');
+    mockedPushToDestinations.mockImplementation(() => {
+      throw err;
+    });
+
+    const options = { id: 'test-source' };
+    await push({ name: 'page view', data: { path: '/a' } }, options);
+    await push({ name: 'page view', data: { path: '/b' } }, options);
+    await push({ name: 'order complete', data: { path: '/c' } }, options);
+
+    const errorMock = (collector.logger as ReturnType<typeof createMockLogger>)
+      .error as jest.Mock;
+    const [first, second, third] = errorMock.mock.calls.map((call: unknown[]) =>
+      JSON.stringify(call[1]),
+    );
+
+    // Same event name, different payloads: identical context, so the error
+    // ring dedups instead of evicting distinct errors per failing event.
+    expect(second).toBe(first);
+    // A different event name is the ONLY thing that varies.
+    expect(third).toBe(first!.replace('page view', 'order complete'));
   });
 
   test('does not log or count when push succeeds', async () => {
@@ -178,10 +233,30 @@ describe('command boundary', () => {
       'command failed',
       expect.objectContaining({
         command: 'walker sentinel',
-        data,
-        error: expect.any(Error),
+        error: 'handler exploded',
       }),
     );
+  });
+
+  test('command failure context carries the command id only, never the data payload', async () => {
+    const collector = createTestCollector();
+    const throwingHandler = jest.fn(async () => {
+      throw new Error('handler exploded');
+    });
+
+    const command = createCommand(collector, throwingHandler);
+
+    await command('walker consent', { email: 'buyer@example.com' });
+
+    const errorMock = (collector.logger as ReturnType<typeof createMockLogger>)
+      .error as jest.Mock;
+    const context: unknown = errorMock.mock.calls[0][1];
+
+    expect(context).toEqual({
+      error: 'handler exploded',
+      command: 'walker consent',
+    });
+    expect(JSON.stringify(context)).not.toContain('buyer@example.com');
   });
 
   test('does not log or count when command succeeds', async () => {

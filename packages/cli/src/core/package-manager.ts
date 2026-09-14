@@ -4,10 +4,10 @@ import fs from 'fs-extra';
 import { readFile } from 'fs/promises';
 import os from 'os';
 import semver from 'semver';
-import { resolveLocalPackage, copyLocalPackage } from '../../core/index.js';
+import { resolveLocalPackage, copyLocalPackage } from './local-packages.js';
 import type { Logger } from '@walkeros/core';
-import { getPackageCacheKey } from '../../core/cache-utils.js';
-import { getTmpPath } from '../../core/tmp.js';
+import { getPackageCacheKey } from './cache-utils.js';
+import { getTmpPath } from './tmp.js';
 
 export interface NpmConfig {
   registry: string;

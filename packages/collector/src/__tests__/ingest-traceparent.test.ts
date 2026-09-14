@@ -1,12 +1,19 @@
 import { Source } from '@walkeros/core';
-import type { FlowState, Ingest, Transformer, WalkerOS } from '@walkeros/core';
+import type {
+  FlowState,
+  Ingest,
+  Mapping,
+  Transformer,
+  WalkerOS,
+} from '@walkeros/core';
 import { startFlow } from '..';
+import { testScope } from './testScope';
 
 const VALID = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
 const TRACE = '4bf92f3577b34da6a3ce929d0e0e4736';
 const SPAN = '00f067aa0ba902b7';
 
-type ServerPush = (raw: unknown) => Promise<void>;
+type ServerPush = (raw: Source.Scope | undefined) => Promise<void>;
 type ServerTypes = Source.Types<unknown, unknown, ServerPush>;
 
 /**
@@ -14,20 +21,24 @@ type ServerTypes = Source.Types<unknown, unknown, ServerPush>;
  * downstream transformer observes. Exercises `extractIngest` via the
  * genuine `withScope` pipeline rather than reaching into the closure.
  */
-async function captureScopeIngest(rawData: unknown): Promise<Ingest> {
+async function captureScopeIngest(
+  rawData: Source.Scope | undefined,
+  ingest?: Mapping.Data,
+): Promise<Ingest> {
   let captured: Ingest | undefined;
 
   const { collector } = await startFlow({
     sources: {
       server: {
         next: 'spy',
+        config: ingest ? { ingest } : {},
         code: async (context): Promise<Source.Instance<ServerTypes>> => {
           const push: ServerPush = async (raw) => {
             await context.withScope(raw, undefined, async (env) => {
               await env.push({ name: 'page view', data: {} });
             });
           };
-          return { type: 'server', config: {}, push };
+          return { type: 'server', config: context.config, push };
         },
       },
     },
@@ -56,41 +67,35 @@ async function captureScopeIngest(rawData: unknown): Promise<Ingest> {
 }
 
 describe('extractIngest traceparent adoption', () => {
-  it('stamps trace + parentEventId from plain-object headers', async () => {
-    const ingest = await captureScopeIngest({
-      headers: { traceparent: VALID },
-    });
-    expect(ingest._meta.trace).toBe(TRACE);
-    expect(ingest._meta.parentEventId).toBe(SPAN);
-  });
-
-  it('stamps trace + parentEventId from a Fetch Headers instance', async () => {
-    const headers = new Headers({ traceparent: VALID });
-    const ingest = await captureScopeIngest({ headers });
-    expect(ingest._meta.trace).toBe(TRACE);
-    expect(ingest._meta.parentEventId).toBe(SPAN);
-  });
-
-  it('finds an uppercase header key via case-insensitive fallback', async () => {
-    const ingest = await captureScopeIngest({
-      headers: { Traceparent: VALID },
-    });
+  it('stamps trace + parentEventId from the scope header bag', async () => {
+    const ingest = await captureScopeIngest(
+      testScope({ headers: { traceparent: VALID } }),
+    );
     expect(ingest._meta.trace).toBe(TRACE);
     expect(ingest._meta.parentEventId).toBe(SPAN);
   });
 
   it('leaves _meta untouched for an invalid traceparent value', async () => {
-    const ingest = await captureScopeIngest({
-      headers: { traceparent: 'not-a-valid-traceparent' },
-    });
+    const ingest = await captureScopeIngest(
+      testScope({ headers: { traceparent: 'not-a-valid-traceparent' } }),
+    );
     expect(ingest._meta.trace).toBeUndefined();
     expect(ingest._meta.parentEventId).toBeUndefined();
   });
 
-  it('leaves _meta untouched when no headers are present', async () => {
-    const ingest = await captureScopeIngest({ ip: '1.2.3.4' });
+  it('leaves _meta untouched when no traceparent is present', async () => {
+    const ingest = await captureScopeIngest(testScope({ ip: '1.2.3.4' }));
     expect(ingest._meta.trace).toBeUndefined();
     expect(ingest._meta.parentEventId).toBeUndefined();
+  });
+
+  // The contract in one line: a scope path resolves the same on every source.
+  it('resolves a config.ingest key mapping against the scope', async () => {
+    const ingest = await captureScopeIngest(
+      testScope({ headers: { 'user-agent': 'UA' } }),
+      { map: { ua: { key: 'headers.user-agent' } } },
+    );
+    expect(ingest.ua).toBe('UA');
   });
 
   it('propagates the adopted trace onto every FlowState record end-to-end', async () => {
@@ -136,7 +141,7 @@ describe('extractIngest traceparent adoption', () => {
     collector.observers.add((state) => states.push(state));
 
     const source = Source.getSource<ServerTypes>(collector, 'server');
-    await source.push({ headers: { traceparent: VALID } });
+    await source.push(testScope({ headers: { traceparent: VALID } }));
 
     // The created event adopts the header-derived trace.
     expect(pushed[0]?.source.trace).toBe(TRACE);

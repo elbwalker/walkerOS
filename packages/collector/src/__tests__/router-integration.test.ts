@@ -1,6 +1,7 @@
 import { startFlow } from '..';
 import { Source } from '@walkeros/core';
 import type { Transformer, WalkerOS, Elb } from '@walkeros/core';
+import { testScope } from './testScope';
 
 type RawIngest = {
   path: string;
@@ -45,9 +46,13 @@ describe('native next routing', () => {
               type: 'test',
               config: config as Source.Config<TestSourceTypes>,
               push: async (rawData: RawIngest) => {
-                await context.withScope(rawData, undefined, async (env) => {
-                  await env.push({});
-                });
+                await context.withScope(
+                  testScope(rawData),
+                  undefined,
+                  async (env) => {
+                    await env.push({});
+                  },
+                );
               },
             };
           },

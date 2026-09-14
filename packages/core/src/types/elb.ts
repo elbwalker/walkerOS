@@ -63,6 +63,10 @@ export interface PushResult {
   failed?: Record<string, Destination.Ref>;
   /** Event was intentionally not forwarded: a transformer chain stopped it. */
   dropped?: boolean;
+  /** Event was rejected as invalid input: a client/producer fault, not a pipeline failure. */
+  invalid?: boolean;
+  /** Human-readable failure reason when ok is false. */
+  error?: string;
 }
 
 // Simplified Layer type for core collector

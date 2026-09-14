@@ -39,11 +39,12 @@ export interface OpenWriterArgs {
   // Raw passthrough auth/client options for the WriterClient (the escape hatch).
   bigquery?: BigQueryOptions;
   /**
-   * gRPC deadline in milliseconds, derived from the standard per-step
-   * `config.timeout`. Applied as the gax `CallOptions.timeout` on the appendRows
-   * bidi stream (via createStreamConnection) and the unary getWriteStream schema
-   * fetch, so a hanging call is cancelled by gRPC and rejects instead of running
-   * detached.
+   * Deadline in ms for unary control-plane calls (the getWriteStream schema
+   * fetch), derived from the standard per-step `config.timeout`. Never applied
+   * to the appendRows stream: a gax deadline on a bidi stream bounds the WHOLE
+   * stream lifetime, not one append. Per-delivery bounds live in the collector
+   * (it races every push at `config.timeout`); the stream stays on the SDK
+   * default so it can live for hours.
    */
   timeout?: number;
   /**
@@ -99,11 +100,13 @@ export async function openWriter(
     destinationTable,
   });
 
-  // gax call options carrying the per-request deadline. The StreamConnection
-  // stores these and applies them to the underlying appendRows bidi stream, so
-  // every appendRows/getResult on this writer inherits the deadline. When the
-  // deadline fires, gRPC cancels the call and getResult() rejects (no detached
-  // promise). Left undefined when no timeout is configured.
+  // gax call options carrying the deadline for UNARY control-plane calls
+  // (the getWriteStream schema fetch). Never passed to createStreamConnection:
+  // a CallOptions.timeout on the appendRows bidi stream is the stream's TOTAL
+  // deadline, killing a healthy connection when it expires. The stream keeps
+  // the SDK's own long-lived default; individual deliveries are bounded by the
+  // collector's per-push race (config.timeout), not by a transport deadline.
+  // Left undefined when no timeout is configured.
   const callOptions: CallOptions | undefined =
     timeout === undefined ? undefined : { timeout };
 
@@ -125,13 +128,10 @@ export async function openWriter(
     // implicit `_default` stream without calling CreateWriteStream. Passing
     // managedwriter.DefaultStream as streamType triggers a CreateWriteStream
     // call with type='DEFAULT', which BQ rejects as TYPE_UNSPECIFIED.
-    connection = await writeClient.createStreamConnection(
-      {
-        destinationTable,
-        streamId: managedwriter.DefaultStream,
-      },
-      callOptions,
-    );
+    connection = await writeClient.createStreamConnection({
+      destinationTable,
+      streamId: managedwriter.DefaultStream,
+    });
 
     // Attach the connection-error listener on the StreamConnection (NOT the
     // inner gRPC `_connection`) BEFORE building the JSONWriter, so any `'error'`
@@ -218,8 +218,10 @@ export interface EnsureWriterSettings {
  *    them (each DLQ-routes correctly), and the memo clears in a finally so a
  *    later push retries.
  *
- * The single openWriter carries the gax CallOptions.timeout, so each attempt is
- * time-bounded. pushBatch shares this function, so it inherits both bounds.
+ * A re-open's unary schema fetch is bounded by the gax CallOptions.timeout;
+ * the re-open as a whole runs in-band on a push, under the collector's
+ * per-delivery race. pushBatch shares this function, so it inherits both
+ * bounds.
  */
 export function ensureWriter(
   settings: EnsureWriterSettings,

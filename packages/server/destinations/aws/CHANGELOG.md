@@ -1,5 +1,27 @@
 # @walkeros/server-destination-aws
 
+## 4.6.0
+
+### Patch Changes
+
+- 403ff6c: The Firehose destination no longer discards every config field except
+  `settings` during init, which silently dropped `before`, `consent`, `mapping`,
+  `data` and `next`. A `before` transformer chain configured on the destination
+  never ran, and a `consent` requirement was never enforced. The SNS destination
+  in the same package was already correct.
+  - @walkeros/server-core@4.6.0
+  - @walkeros/core@4.6.0
+
+## 4.5.0
+
+### Patch Changes
+
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+  - @walkeros/server-core@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

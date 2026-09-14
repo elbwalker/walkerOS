@@ -1,5 +1,28 @@
 # @walkeros/server-destination-gcp
 
+## 4.6.0
+
+### Patch Changes
+
+- 8802281: The BigQuery destination no longer applies `config.timeout` as a
+  deadline on the Storage Write API append stream, which killed healthy
+  connections roughly every ten seconds and caused reconnect churn, latency
+  spikes, and intermittent 5xx responses. Error logs now show the error's
+  message, name and status code in CLI output, and no longer include event
+  payloads.
+  - @walkeros/server-core@4.6.0
+  - @walkeros/core@4.6.0
+
+## 4.5.0
+
+### Patch Changes
+
+- Updated dependencies [63845bb]
+- Updated dependencies [79cdcb0]
+- Updated dependencies [756b571]
+  - @walkeros/core@4.5.0
+  - @walkeros/server-core@4.5.0
+
 ## 4.4.0
 
 ### Patch Changes

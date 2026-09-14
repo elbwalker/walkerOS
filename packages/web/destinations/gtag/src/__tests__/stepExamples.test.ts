@@ -155,6 +155,7 @@ describe('gtag web destination -- step examples', () => {
       // GA4 is active. Build a composite bootstrap if ads/gtm also needed.
       if (mappingSettings.ads || mappingSettings.gtm) {
         const composite: Destination.Config = {
+          loadScript: true,
           settings: {
             ...((ga4InitIn.settings || {}) as Record<string, unknown>),
             ...(mappingSettings.ads
@@ -209,6 +210,7 @@ describe('gtag web destination -- step examples', () => {
     } else {
       // ads + gtm together
       bootstrapConfig = {
+        loadScript: true,
         settings: {
           ads: { conversionId: 'AW-123456789', currency: 'EUR' },
           gtm: { containerId: 'GTM-XXXXXXX' },

@@ -10,5 +10,5 @@ export function getConfig(
   if (settings.firehose)
     settings.firehose = getConfigFirehose(settings.firehose, env);
 
-  return { settings };
+  return { ...partialConfig, settings };
 }

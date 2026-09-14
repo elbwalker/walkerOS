@@ -2,6 +2,7 @@ import { startFlow } from '..';
 import { Source } from '@walkeros/core';
 import type { WalkerOS, Destination } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
+import { testScope } from './testScope';
 
 type RawIngest = { method: string; path: string };
 
@@ -49,9 +50,13 @@ describe('Source cache integration', () => {
                 const respond: RespondFn = (options?: RespondOptions) => {
                   allResponses.push(options);
                 };
-                await context.withScope(rawData, respond, async (env) => {
-                  await env.push({ name: 'page view', data: {} });
-                });
+                await context.withScope(
+                  testScope(rawData),
+                  respond,
+                  async (env) => {
+                    await env.push({ name: 'page view', data: {} });
+                  },
+                );
               },
             };
           },
@@ -113,9 +118,13 @@ describe('Source cache integration', () => {
               type: 'test',
               config: config as Source.Config<TestSourceTypes>,
               push: async (rawData: RawIngest) => {
-                await context.withScope(rawData, undefined, async (env) => {
-                  await env.push({ name: 'page view', data: {} });
-                });
+                await context.withScope(
+                  testScope(rawData),
+                  undefined,
+                  async (env) => {
+                    await env.push({ name: 'page view', data: {} });
+                  },
+                );
               },
             };
           },
@@ -170,7 +179,7 @@ describe('Source cache integration', () => {
               config: config as Source.Config<TestSourceTypes>,
               push: async (rawData: RawIngest) => {
                 await context.withScope(
-                  rawData,
+                  testScope(rawData),
                   (() => {}) as RespondFn,
                   async (env) => {
                     await env.push({ name: 'page view', data: {} });
@@ -249,7 +258,7 @@ describe('Source cache integration', () => {
               config: config as Source.Config<TestSourceTypes>,
               push: async (rawData: RawIngest) => {
                 await context.withScope(
-                  rawData,
+                  testScope(rawData),
                   (() => {}) as RespondFn,
                   async (env) => {
                     await env.push({ name: 'page view', data: {} });
@@ -328,7 +337,7 @@ describe('Source cache integration', () => {
               config: config as Source.Config<TestSourceTypes>,
               push: async (rawData: RawIngest) => {
                 await context.withScope(
-                  rawData,
+                  testScope(rawData),
                   (() => {}) as RespondFn,
                   async (env) => {
                     await env.push({ name: 'page view', data: {} });
@@ -407,9 +416,13 @@ describe('Source cache integration', () => {
                   respondPayloads.push(options);
                   respondResolve?.();
                 };
-                await context.withScope(rawData, respond, async (env) => {
-                  await env.push({ name: 'page view', data: {} });
-                });
+                await context.withScope(
+                  testScope(rawData),
+                  respond,
+                  async (env) => {
+                    await env.push({ name: 'page view', data: {} });
+                  },
+                );
                 // Wait for respond to be called (may be async due to applyUpdate)
                 await respondPromise;
               },

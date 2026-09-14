@@ -308,6 +308,35 @@ describe('Destination', () => {
     expect(destination.dlq).toContainEqual([event, new Error('kaputt')]);
   });
 
+  test('push failure log context carries the error message, not a raw Error', async () => {
+    const event = createEvent();
+    mockPush.mockImplementation(() => {
+      throw new Error('kaputt');
+    });
+
+    // Route every scope() to one known mock so the scoped 'Push failed'
+    // call is observable.
+    const scoped = createMockLogger();
+    const rootLogger = createMockLogger();
+    rootLogger.scope = jest.fn().mockReturnValue(scoped);
+
+    await pushToDestinations(
+      createWalkerjs({ logger: rootLogger }),
+      event,
+      {},
+      { destination: createDestination() },
+    );
+
+    const call = (scoped.error as jest.Mock).mock.calls.find(
+      (args) => args[0] === 'Push failed',
+    );
+    expect(call).toBeDefined();
+    expect(call?.[1]).toEqual({ error: 'kaputt', event: event.name });
+    // A raw Error has no enumerable own properties: serialized it collapses
+    // to `"error":{}` and the cause is gone.
+    expect(JSON.stringify(call?.[1])).toContain('kaputt');
+  });
+
   test('skip on denied consent', async () => {
     // Destination requires marketing consent
     const destinationWithConsent = createDestination({

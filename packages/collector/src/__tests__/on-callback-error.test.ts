@@ -65,7 +65,7 @@ describe('on.ts user-callback throws (Category B)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         kind: 'destination',
-        error: expect.any(Error),
+        error: 'dest on boom',
       }),
     );
   });
@@ -87,7 +87,7 @@ describe('on.ts user-callback throws (Category B)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         kind: 'generic',
-        error: expect.any(Error),
+        error: 'generic boom',
       }),
     );
   });
@@ -114,7 +114,7 @@ describe('on.ts user-callback throws (Category B)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         kind: 'source',
-        error: expect.any(Error),
+        error: 'source on boom',
       }),
     );
   });
@@ -136,7 +136,7 @@ describe('on.ts user-callback throws (Category B)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         kind: 'consent',
-        error: expect.any(Error),
+        error: 'consent boom',
       }),
     );
   });
@@ -157,7 +157,7 @@ describe('on.ts user-callback throws (Category B)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         kind: 'ready',
-        error: expect.any(Error),
+        error: 'ready boom',
       }),
     );
   });
@@ -178,7 +178,7 @@ describe('on.ts user-callback throws (Category B)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         kind: 'run',
-        error: expect.any(Error),
+        error: 'run boom',
       }),
     );
   });
@@ -201,7 +201,7 @@ describe('on.ts user-callback throws (Category B)', () => {
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
         kind: 'session',
-        error: expect.any(Error),
+        error: 'session boom',
       }),
     );
   });

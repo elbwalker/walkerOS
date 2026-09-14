@@ -1,0 +1,70 @@
+/**
+ * A quiet toolbar above the doc title: one muted label and three brand marks.
+ *
+ * No borders and no fill at rest, so the row reads as a caption rather than a
+ * button bar and never competes with the heading below it. Hover is the only
+ * lift. Every colour comes from the Infima emphasis scale, which inverts with
+ * the theme, so one set of rules covers light and dark.
+ */
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.note {
+  margin-right: 0.5rem;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.75rem;
+  line-height: 1.75rem;
+  white-space: nowrap;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.375rem;
+  color: var(--ifm-color-emphasis-600);
+  text-decoration: none;
+  transition:
+    color var(--ifm-transition-fast) ease,
+    background-color var(--ifm-transition-fast) ease;
+}
+
+.action:hover,
+.action:focus-visible {
+  color: var(--ifm-color-emphasis-900);
+  /* 300 rather than 200: the page background is already emphasis-200 light, so
+     the lighter chip is invisible on the theme this site actually ships. */
+  background-color: var(--ifm-color-emphasis-300);
+  text-decoration: none;
+}
+
+/**
+ * Sized per mark rather than uniformly. The three have different silhouettes:
+ * the Markdown mark is a 13:8 rectangle, the OpenAI knot is a square with open
+ * counters, and the Claude burst fills its square to the edges. Matching their
+ * box sizes would leave the burst reading largest and the rectangle smallest,
+ * so each is tuned to the same optical weight instead.
+ */
+.markdownMark {
+  width: 1.4375rem;
+  height: 0.875rem;
+}
+
+.openaiMark {
+  width: 1rem;
+  height: 1rem;
+}
+
+.claudeMark {
+  width: 0.9375rem;
+  height: 0.9375rem;
+}

@@ -5,7 +5,13 @@ import type {
   KlaviyoEventsApiMock,
   KlaviyoProfilesApiMock,
 } from './types';
-import { getMappingValue, isObject, isString, isArray } from '@walkeros/core';
+import {
+  getMappingValue,
+  isObject,
+  isString,
+  isArray,
+  isNumber,
+} from '@walkeros/core';
 
 export const push: PushFn = async function (
   event,
@@ -84,7 +90,14 @@ export const push: PushFn = async function (
       ? { ...(data as Record<string, unknown>) }
       : {};
 
-    // Handle revenue value
+    // Handle revenue value.
+    //
+    // Klaviyo reads revenue from the event's `value` / `valueCurrency`
+    // attributes (serialized by klaviyo-api as `value` / `value_currency`),
+    // NOT from `properties`. A number nested in `properties` is stored as a
+    // segmentable custom property and is ignored by revenue reporting, so
+    // emitting `valueCurrency` without a sibling `value` denominates nothing.
+    let value: number | undefined;
     let valueCurrency: string | undefined;
     if (mappingSettings.value !== undefined) {
       const resolvedValue = await getMappingValue(
@@ -96,11 +109,24 @@ export const push: PushFn = async function (
       );
       const numericValue = toNumber(resolvedValue);
       if (numericValue !== undefined) {
-        properties.value = numericValue;
+        value = numericValue;
         if (settings.currency) {
           valueCurrency = settings.currency;
         }
       }
+    }
+
+    // Klaviyo's dedup key. Repeats of the same uniqueId for one profile and
+    // metric keep only the first event, which is what lets the same order
+    // arrive from several producers (browser, import, a second server)
+    // without being counted twice. Defaults to the walkerOS event id, so
+    // omitting it never falls back to Klaviyo's time-to-the-second window.
+    let uniqueId: string | undefined;
+    const uniqueIdMapping = mappingSettings.uniqueId ?? settings.uniqueId;
+    if (uniqueIdMapping !== undefined) {
+      uniqueId = resolveId(
+        await getMappingValue(event, uniqueIdMapping, { collector }),
+      );
     }
 
     const eventBody: Record<string, unknown> = {
@@ -121,7 +147,9 @@ export const push: PushFn = async function (
           },
           properties,
           time: timestamp.toISOString(),
+          ...(value !== undefined ? { value } : {}),
           ...(valueCurrency ? { valueCurrency } : {}),
+          ...(uniqueId ? { uniqueId } : {}),
         },
       },
     };
@@ -135,6 +163,17 @@ export const push: PushFn = async function (
 function resolveString(value: unknown): string | undefined {
   if (isString(value) && value.length > 0) return value;
   return undefined;
+}
+
+/**
+ * Resolve an identifier that Klaviyo types as a string. Order ids are commonly
+ * numeric, and dropping one would silently return Klaviyo to its
+ * time-to-the-second dedup fallback, so coerce finite numbers rather than
+ * rejecting them.
+ */
+function resolveId(value: unknown): string | undefined {
+  if (isNumber(value) && Number.isFinite(value)) return String(value);
+  return resolveString(value);
 }
 
 function toNumber(value: unknown): number | undefined {

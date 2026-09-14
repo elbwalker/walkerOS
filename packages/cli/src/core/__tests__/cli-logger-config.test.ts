@@ -43,7 +43,9 @@ describe('createCLILoggerConfig (collector ring tap)', () => {
 
     const snapshot = errorRing.snapshot();
     expect(snapshot).toHaveLength(1);
-    expect(snapshot[0].message).toBe('[bq] Push failed');
+    expect(snapshot[0].message).toBe(
+      '[bq] Push failed {"event":"order complete"}',
+    );
     expect(snapshot[0].count).toBe(1);
   });
 
