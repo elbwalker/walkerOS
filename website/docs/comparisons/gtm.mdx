@@ -1,95 +1,149 @@
 ---
 title: walkerOS vs. Google Tag Manager
 sidebar_position: 3
-description: Compare walkerOS and Google Tag Manager to understand which solution fits your needs.
+description: How walkerOS and Google Tag Manager differ, where GTM still wins, and how to run both while you migrate.
 ---
 
-Google Tag Manager (GTM) has been the industry standard for tag management. But
-as privacy regulations tighten and development practices evolve, many teams are
-looking for alternatives. Here's how walkerOS compares.
+Most teams looking at walkerOS already run Google Tag Manager, and the first
+question is the fair one: GTM already sends one event to many tools, and it
+already has a consent trigger. So why add anything?
 
-## Quick comparison
+Because those are two different jobs. GTM is good at routing. It was never built
+to be the place your data gets its shape.
 
-| Feature                | GTM                    | walkerOS                  |
-| ---------------------- | ---------------------- | ------------------------- |
-| Open-source            | No                     | Yes                       |
-| Self-hosted option     | Yes (sGTM)             | Yes                       |
-| Server-side runtime    | Sandboxed environment  | Full Node.js              |
-| Config location        | Google's UI            | Your codebase             |
-| Privacy/GDPR           | Requires configuration | Built-in consent handling |
-| Version control        | Limited UI history     | Git-native                |
-| Developer experience   | GUI-based              | Code-first                |
-| Composable tagging     | No                     | Yes (tag once, use everywhere) |
-| Learning curve         | Low (GUI)              | Medium (code)             |
-| Works with Google tags | Yes                    | Yes                       |
+## Where the two actually differ
 
-## Who should use what?
+GTM's model stops at the edge of what it owns. Everything outside that edge is a
+hand-off: the same event gets re-typed by a different person, in a different
+tool, with nothing checking that the two agree. Three gaps follow from that.
 
-### Choose GTM if
+**Nothing enforces a schema.** Event names and data layer keys are a naming
+convention, not a contract. Nothing rejects a misspelling, a renamed field, or a
+value that arrives as a string this week and a number next week. In a container
+that has been alive for a few years, the naming convention is the only thing
+holding the meaning, and it lives in people's heads.
 
-- You prefer GUI-based configuration over code
-- You're heavily invested in the Google ecosystem
-- You need quick setup without developer resources
-- Your team is already trained on GTM
+**The logic lives inside the tags.** A mature container carries a lot of custom
+HTML and custom JavaScript. Those script blocks are opaque to code review, and
+they are opaque to the container's own consent gate: it can see that a tag
+fired, not what the script inside it did. That is how containers end up with
+tags firing ahead of the consent state someone believed was gating them.
 
-### Choose walkerOS if
+**GTM sits downstream of collection.** Something has to push structured data into
+the data layer before GTM can act on it. That something is usually hand-written,
+page by page, team by team, and it is where most tracking bugs are born. GTM
+routes what it is given. It does not decide what it is given.
 
-- Data privacy and ownership is a priority
-- You want version-controlled, reviewable tracking
-- You need self-hosted infrastructure
-- You're building with modern component frameworks (React, Vue, etc.)
-- You want tracking to be part of your development workflow
+walkerOS is that layer underneath. One typed event, defined once, carried through
+the whole path with its consent state attached, and checked before it reaches
+anything.
 
-## Key differences
+## One event that gets stopped
 
-### Data ownership & privacy
+The concrete version of "checked before it reaches anything": walkerOS can drop a
+non-conforming event inside the pipeline, before any destination sees it.
 
-**GTM:** With client-side GTM, data flows through Google's servers. Server-side
-GTM (sGTM) lets you host your own endpoint, but your configuration still lives
-in Google's UI and the runtime is sandboxed.
+```json
+{
+  "transformers": {
+    "validate": {
+      "package": "@walkeros/transformer-validate",
+      "config": {
+        "settings": { "contract": ["$contract.web"], "mode": "strict" }
+      },
+      "next": "ga4"
+    }
+  }
+}
+```
 
-**walkerOS:** Self-hosted by default. Your data never touches third-party
-servers unless you explicitly send it there. Config lives in your codebase.
-Built-in consent management ensures you only track what you're allowed to.
+In `strict` mode an event that fails its contract stops the chain. It is not
+tagged for someone to notice in a report later, it does not arrive downstream. In
+`pass` mode the verdict is written onto the event instead, so a later step can
+route on it. See the
+[validate transformer](/docs/transformers/validate) and
+[contracts](/docs/getting-started/flow/contract).
 
-### Developer experience
+Being honest about the boundary: a developer writes that contract today. walkerOS
+does not derive it from a planning document on its own, so the thing doing the
+blocking is a rule someone authored, not a plan enforcing itself.
 
-**GTM:** GUI-based configuration. Changes are made through a web interface,
-making code review difficult. Version history exists but isn't Git-integrated.
+## Your existing setup keeps working
 
-**walkerOS:** Config-as-code approach. Tracking is defined in your codebase,
-reviewed in pull requests, and deployed with your application. If it works in
-staging, it works in production.
+This is not a weekend rip-and-replace, and GTM does not have to be switched off.
 
-### Flexibility
+walkerOS becomes the collection layer, and GTM becomes one destination among
+many, fed from the same typed events through the
+[GTM destination](/docs/destinations/web/gtag/gtm). Marketing keeps adding tags
+in the interface they already know. What GTM stops being asked to do is carry
+collection logic itself: the custom scripts, the hand-rolled consent checks, and
+the schema workarounds that pile up once the container is the only place data
+gets shaped.
 
-**GTM:** Optimized for Google products (GA4, Google Ads). Third-party
-integrations require custom templates or JavaScript.
+You can move one page, one entity, or one destination at a time, and re-tag with
+`data-elb` attributes at whatever pace suits your release train.
 
-**walkerOS:** Vendor-agnostic. Send events to any destination: analytics tools,
-data warehouses, marketing platforms, or your own APIs. Switch providers without
-changing your tracking code.
+## Where GTM wins
 
-### Cost
+Worth saying plainly, because these are real and they are why GTM won in the
+first place.
 
-**GTM:** Client-side GTM is free but data flows through Google. Server-side GTM
-requires hosting infrastructure. Both are free software, costs come from hosting.
+- **Marketing ships without a developer.** A campaign pixel is a point-and-click
+  change in a web interface. With walkerOS it is a configuration change, which
+  means a diff and a reviewer.
+- **The template gallery.** Hundreds of vendor-maintained tag templates you can
+  add without writing anything.
+- **Nobody has to learn a repository.** No git, no pull request, no build step.
+- **Your team is already trained.** That is a genuine cost of switching, and it
+  is not a small one.
 
-**walkerOS:** Free and open-source. Self-host on your own infrastructure. Both
-solutions have similar hosting costs for server-side use - the difference is
-runtime flexibility, not price.
+If your tracking is a handful of standard tags on a stable site and nobody is
+asking hard questions about the data, GTM alone is a reasonable answer and this
+page is not trying to talk you out of it.
 
-## Can they work together?
+## Cost
 
-Yes! You don't have to choose one or the other. walkerOS can push events to GTM
-via the [GTM destination](/docs/destinations/web/gtag/gtm), letting you:
+On the web, both are free. GTM is free, walkerOS is open source.
 
-- Use walkerOS for structured, consent-aware event collection
-- Keep GTM if your team is already familiar with it
-- Gradually migrate away from GTM at your own pace
+Server-side, both cost money: a GTM server container runs on infrastructure you
+rent too. The difference is what the money buys. GTM is a closed system, so when
+the standard setup runs out you pay for workarounds. walkerOS is open, so your
+own developers can extend it.
+
+"GTM is free" is true for simple, standard setups. Teams that collect data
+seriously usually discover that collection stopped being a single free layer some
+time ago.
+
+## Testing and debugging
+
+GTM gives you a preview pane. walkerOS moves testing into the pipeline itself.
+
+The [CLI](/docs/apps/cli) runs a real event through your exact flow with
+destinations mocked, before anything deploys:
+
+```bash
+walkeros push flow.json --event '{"name":"page view"}' --simulate
+```
+
+Because it is scriptable, that runs in CI on every change. For live checking,
+[Observe](/docs/getting-started/observe) attaches a running flow and shows
+records as they arrive.
+
+The honest trade: there is no single point-and-click preview pane. Verification is
+tooling you run, not a window you open.
+
+## What this page is not claiming
+
+- walkerOS does not validate your data against a planning document. Contracts are
+  authored by a developer.
+- Moving collection does not move your reports. Whatever consumes the data
+  downstream still has to be pointed somewhere new.
+- Configuration changes get a review step. That is the point, and it is also
+  slower than clicking publish.
+- None of this removes the work of deciding what to measure.
 
 ## Getting started
 
-Ready to try walkerOS? Check out the [quickstart guide](/docs/) to get up and
-running, or explore the [GTM destination](/docs/destinations/web/gtag/gtm) to
-see how they work together.
+Try the [quickstart](/docs/), or look at the
+[GTM destination](/docs/destinations/web/gtag/gtm) to see how the two run side by
+side while you migrate.
