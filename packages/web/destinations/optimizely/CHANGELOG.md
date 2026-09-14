@@ -1,5 +1,12 @@
 # @walkeros/web-destination-optimizely
 
+## 4.6.1
+
+### Patch Changes
+
+- @walkeros/core@4.6.1
+- @walkeros/web-core@4.6.1
+
 ## 4.6.0
 
 ### Patch Changes

@@ -1,3 +1,4 @@
+import { createLocalRuntime } from '../../runtime/local.js';
 import { registerFlowValidateTool } from '../../tools/validate.js';
 import { ValidateOutputShape } from '../../schemas/output.js';
 import type { ValidateResult } from '@walkeros/cli';
@@ -66,7 +67,19 @@ describe('flow_validate tool', () => {
 
   beforeEach(() => {
     server = createMockServer();
-    registerFlowValidateTool(server as any);
+    registerFlowValidateTool(server as any, createLocalRuntime());
+    mockValidate.mockReset();
+    // The local runtime resolves the input through the cli loader before
+    // validating. Stand in for it: parse JSON, otherwise return a marker for
+    // what reading that source would have produced.
+    mockLoadJsonConfig.mockReset();
+    mockLoadJsonConfig.mockImplementation(async (input: string) => {
+      try {
+        return JSON.parse(input);
+      } catch {
+        return { loadedFrom: input };
+      }
+    });
   });
 
   it('registers with correct name, title, and annotations', () => {
@@ -106,16 +119,17 @@ describe('flow_validate tool', () => {
       flow: undefined,
     });
 
-    expect(mockValidate).toHaveBeenCalledWith('event', '{"name":"page view"}', {
-      flow: undefined,
-      path: undefined,
-    });
+    expect(mockValidate).toHaveBeenCalledWith(
+      'event',
+      { name: 'page view' },
+      { flow: undefined, path: undefined },
+    );
     expect(result.structuredContent.valid).toBe(true);
     expect(result.structuredContent.errors).toEqual([]);
     expect(result.isError).toBeUndefined();
   });
 
-  it('passes file path string to validate', async () => {
+  it('resolves a file path through the runtime loader, then validates the document', async () => {
     const mockResult: ValidateResult = {
       valid: true,
       type: 'flow',
@@ -132,10 +146,12 @@ describe('flow_validate tool', () => {
       flow: 'myFlow',
     });
 
-    expect(mockValidate).toHaveBeenCalledWith('flow', '/path/to/flow.json', {
-      flow: 'myFlow',
-      path: undefined,
-    });
+    expect(mockLoadJsonConfig).toHaveBeenCalledWith('/path/to/flow.json');
+    expect(mockValidate).toHaveBeenCalledWith(
+      'flow',
+      { loadedFrom: '/path/to/flow.json' },
+      { flow: 'myFlow', path: undefined },
+    );
   });
 
   it('returns summary "Valid" on success', async () => {
@@ -211,10 +227,11 @@ describe('flow_validate tool', () => {
       path: 'destinations.snowplow',
     });
 
-    expect(mockValidate).toHaveBeenCalledWith('flow', '/path/to/flow.json', {
-      flow: undefined,
-      path: 'destinations.snowplow',
-    });
+    expect(mockValidate).toHaveBeenCalledWith(
+      'flow',
+      { loadedFrom: '/path/to/flow.json' },
+      { flow: undefined, path: 'destinations.snowplow' },
+    );
   });
 
   it('accepts entry type in output when path is used', async () => {
@@ -428,20 +445,14 @@ describe('flow_validate tool', () => {
         flow: undefined,
       });
 
-      expect(mockLoadJsonConfig).not.toHaveBeenCalled();
+      // The input is resolved once through the runtime loader; the deprecated
+      // package pass adds no second load for a non-flow type.
+      expect(mockLoadJsonConfig).toHaveBeenCalledTimes(1);
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.valid).toBe(true);
     });
 
-    it('skips deprecated-package check when input cannot be loaded', async () => {
-      const mockResult: ValidateResult = {
-        valid: false,
-        type: 'flow',
-        errors: [{ path: 'input', message: 'invalid json' }],
-        warnings: [],
-        details: {},
-      };
-      mockValidate.mockResolvedValue(mockResult);
+    it('surfaces the load error when a flow input cannot be loaded', async () => {
       mockLoadJsonConfig.mockRejectedValue(new Error('parse error'));
 
       const tool = server.getTool('flow_validate');
@@ -451,11 +462,9 @@ describe('flow_validate tool', () => {
         flow: undefined,
       });
 
-      const parsed = JSON.parse(result.content[0].text);
-      // existing errors preserved; no crash even though load failed
-      expect(parsed.errors).toHaveLength(1);
-      expect(parsed.errors[0].path).toBe('input');
-      expect(parsed.errors[0].message).toContain('invalid json');
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('parse error');
+      expect(mockValidate).not.toHaveBeenCalled();
     });
   });
 });

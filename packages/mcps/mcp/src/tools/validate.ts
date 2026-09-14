@@ -1,4 +1,4 @@
-import { validate, loadJsonConfig } from '@walkeros/cli';
+import { validate } from '@walkeros/cli';
 import type { ValidateResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -6,6 +6,43 @@ import { mcpResult, mcpError } from '@walkeros/core';
 import { ValidateOutputShape } from '../schemas/output.js';
 
 import type { ToolSpec } from '../tool-spec.js';
+import {
+  HINT_OUT_OF_PROCESS,
+  refusalHint,
+  RuntimeRefusal,
+  type FlowRuntime,
+} from '../runtime/types.js';
+import { isCloudId } from '../cloud-flow.js';
+
+type ValidateType = 'contract' | 'event' | 'flow' | 'mapping';
+
+/**
+ * Resolve the validate input through the runtime. For `type: 'event'`, a bare
+ * string the runtime cannot resolve is the event-name shorthand and becomes
+ * `{ name }`; the shorthand reads nothing, so it holds under every runtime.
+ * Every other failure surfaces: a `RuntimeRefusal` (a policy decision), a
+ * failed saved-id lookup, and any load error for a flow, mapping or contract.
+ */
+async function loadValidateInput(
+  runtime: FlowRuntime,
+  input: string,
+  type: ValidateType,
+): Promise<unknown> {
+  if (!input || input.trim() === '') throw new Error(`${type} is required`);
+  const trimmed = input.trim();
+  const looksLikeJson = trimmed.startsWith('{') || trimmed.startsWith('[');
+  try {
+    return await runtime.load(input);
+  } catch (error) {
+    if (error instanceof RuntimeRefusal || isCloudId(trimmed)) throw error;
+    if (looksLikeJson) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to parse ${type}. ${message}`);
+    }
+    if (type === 'event') return { name: trimmed };
+    throw error;
+  }
+}
 
 /**
  * Detect deprecated `@walkeros/store-memory` references in a flow.json.
@@ -53,7 +90,7 @@ function detectDeprecatedStorePackages(
 const TITLE = 'Validate Flow';
 const DESCRIPTION =
   'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
-  'Accepts JSON strings, file paths, or URLs as input. ' +
+  'Accepts JSON strings, file paths, or URLs as input; on the hosted server only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
   'Returns validation results with errors, warnings, and details.';
 
 const inputSchema = schemas.ValidateInputShape;
@@ -65,31 +102,35 @@ const annotations = {
   openWorldHint: false,
 } as const;
 
-export function createFlowValidateToolSpec(): ToolSpec {
+export function createFlowValidateToolSpec(runtime: FlowRuntime): ToolSpec {
   return {
     name: 'flow_validate',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowValidateHandlerBody(input),
+    handler: (input) => flowValidateHandlerBody(runtime, input),
   };
 }
 
-async function flowValidateHandlerBody(input: unknown) {
+async function flowValidateHandlerBody(runtime: FlowRuntime, input: unknown) {
   const {
     type,
     input: validateInput,
     flow,
     path,
   } = (input ?? {}) as {
-    type: 'contract' | 'event' | 'flow' | 'mapping';
+    type: ValidateType;
     input: string;
     flow?: string;
     path?: string;
   };
   try {
-    const result: ValidateResult = await validate(type, validateInput, {
+    // Resolve the input through the runtime and validate the parsed document.
+    // Handed a string, the cli `validate` would read files and URLs itself;
+    // handing it the parsed object keeps every read behind the runtime.
+    const resolved = await loadValidateInput(runtime, validateInput, type);
+    const result: ValidateResult = await validate(type, resolved, {
       flow,
       path,
     });
@@ -98,29 +139,25 @@ async function flowValidateHandlerBody(input: unknown) {
     // references in flow configs. MCP-layer concern — keeps core
     // validation package-agnostic.
     let augmented = result;
-    if (type === 'flow' && typeof validateInput === 'string') {
-      try {
-        const config = await loadJsonConfig<unknown>(validateInput);
-        const deprecatedErrors = detectDeprecatedStorePackages(config);
-        if (deprecatedErrors.length > 0) {
-          augmented = {
-            ...result,
-            valid: false,
-            errors: [...result.errors, ...deprecatedErrors],
-          };
-        }
-      } catch {
-        // Load failed (invalid JSON, missing file, etc.). The CLI validate
-        // call already surfaces that; skip the deprecated-package check.
+    if (type === 'flow') {
+      const deprecatedErrors = detectDeprecatedStorePackages(resolved);
+      if (deprecatedErrors.length > 0) {
+        augmented = {
+          ...result,
+          valid: false,
+          errors: [...result.errors, ...deprecatedErrors],
+        };
       }
     }
 
     const hints = augmented.valid
       ? {
-          next: [
-            'Use flow_simulate to test event flow',
-            'Use flow_bundle to build',
-          ],
+          next: runtime.simulate
+            ? [
+                'Use flow_simulate to test event flow',
+                'Use flow_bundle to build',
+              ]
+            : [HINT_OUT_OF_PROCESS],
         }
       : {
           next: [
@@ -134,13 +171,19 @@ async function flowValidateHandlerBody(input: unknown) {
   } catch (error) {
     return mcpError(
       error,
-      'Check the input parameter — expected a JSON string, file path, or URL',
+      refusalHint(
+        error,
+        'Check the input parameter — expected a JSON string, file path, or URL',
+      ),
     );
   }
 }
 
-export function registerFlowValidateTool(server: McpServer) {
-  const spec = createFlowValidateToolSpec();
+export function registerFlowValidateTool(
+  server: McpServer,
+  runtime: FlowRuntime,
+) {
+  const spec = createFlowValidateToolSpec(runtime);
   server.registerTool(
     spec.name,
     {

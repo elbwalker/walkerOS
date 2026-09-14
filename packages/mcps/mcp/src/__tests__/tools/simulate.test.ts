@@ -1,3 +1,4 @@
+import { createLocalRuntime } from '../../runtime/local.js';
 import { z } from 'zod';
 import { registerFlowSimulateTool } from '../../tools/simulate.js';
 import { SimulateOutputShape } from '../../schemas/output.js';
@@ -39,6 +40,8 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
+  // The real narrowing helper: cloud-id resolution reads the flow record through it.
+  isObject: jest.requireActual('@walkeros/core').isObject,
   mcpResult: jest.fn((result, hints) => ({
     content: [
       {
@@ -96,7 +99,11 @@ describe('flow_simulate tool', () => {
   beforeEach(() => {
     server = createMockServer();
     getFlow = jest.fn();
-    registerFlowSimulateTool(server as any, stubClient({ getFlow }));
+    registerFlowSimulateTool(
+      server as any,
+      stubClient({ getFlow }),
+      createLocalRuntime(),
+    );
     jest.clearAllMocks();
   });
 
@@ -107,10 +114,10 @@ describe('flow_simulate tool', () => {
     const config = tool.config as any;
     expect(config.title).toBe('Simulate Flow');
     expect(config.annotations).toEqual({
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
     });
   });
 

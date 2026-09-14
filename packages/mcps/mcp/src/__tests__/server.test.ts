@@ -31,7 +31,18 @@ jest.mock('@walkeros/cli/dev', () => {
   };
 });
 
+// A real client handshake below fires the telemetry hook; keep it inert.
+jest.mock('../telemetry.js', () => ({
+  createMcpEmitter: jest.fn(async () => ({
+    emitStart: jest.fn(async () => undefined),
+    emitInvoke: jest.fn(async () => undefined),
+    emitError: jest.fn(async () => undefined),
+  })),
+}));
+
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createWalkerOSMcpServer } from '../server.js';
 import type { ToolClient } from '../tool-client.js';
 
@@ -133,5 +144,34 @@ describe('createWalkerOSMcpServer', () => {
         'secret_manage',
       ].sort(),
     );
+  });
+
+  it('uses the hosted runtime when runtime is omitted', async () => {
+    const server = createWalkerOSMcpServer({
+      client: stubClient(),
+      version: '0.0.0',
+    });
+    // Through the public protocol surface, not the SDK's private registry.
+    const [serverTransport, clientTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test', version: '0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+    try {
+      const res = await client.callTool({
+        name: 'flow_simulate',
+        arguments: {
+          configPath: '{"version":4,"flows":{}}',
+          step: 'destination.x',
+          event: { name: 'order complete' },
+        },
+      });
+      expect(res.isError).toBe(true);
+      expect(JSON.stringify(res.content)).toMatch(/hosted/i);
+    } finally {
+      await Promise.allSettled([client.close(), server.close()]);
+    }
   });
 });

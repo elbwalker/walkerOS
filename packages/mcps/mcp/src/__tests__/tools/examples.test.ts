@@ -1,4 +1,9 @@
-import { registerFlowExamplesTool } from '../../tools/examples.js';
+import { createLocalRuntime } from '../../runtime/local.js';
+import { HINT_OUT_OF_PROCESS } from '../../runtime/types.js';
+import {
+  MAX_PACKAGE_LOOKUPS,
+  registerFlowExamplesTool,
+} from '../../tools/examples.js';
 import { ExamplesListOutputShape } from '../../schemas/output.js';
 
 jest.mock('@walkeros/cli', () => ({
@@ -109,7 +114,7 @@ describe('flow_examples tool', () => {
 
   beforeEach(() => {
     server = createMockServer();
-    registerFlowExamplesTool(server as any);
+    registerFlowExamplesTool(server as any, createLocalRuntime());
     mockLoadJsonConfig.mockReset();
     mockFetchPackage.mockReset();
   });
@@ -508,5 +513,80 @@ describe('flow_examples tool', () => {
     expect(result.structuredContent.count).toBe(1);
     expect(result.structuredContent.examples[0].exampleName).toBe('inlineOne');
     expect(result.structuredContent.examples[0].source).toBe('inline');
+  });
+
+  it('looks up a package shared by several steps once', async () => {
+    mockLoadJsonConfig.mockResolvedValue({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          transformers: {
+            first: { package: '@walkeros/transformer-ga4' },
+            second: { package: '@walkeros/transformer-ga4' },
+          },
+        },
+      },
+    } as any);
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/transformer-ga4',
+      version: '1.0.0',
+      type: 'transformer',
+      schemas: {},
+      examples: { step: { purchase: { in: { name: 'order complete' } } } },
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(mockFetchPackage).toHaveBeenCalledTimes(1);
+    expect(result.structuredContent.count).toBe(2);
+  });
+
+  it('caps package lookups per request and warns about skipped packages', async () => {
+    const destinations = Object.fromEntries(
+      Array.from({ length: MAX_PACKAGE_LOOKUPS + 5 }, (_, i) => [
+        `step${i}`,
+        { package: `@walkeros/web-destination-pkg${i}` },
+      ]),
+    );
+    mockLoadJsonConfig.mockResolvedValue({
+      version: 4,
+      flows: { default: { config: { platform: 'web' }, destinations } },
+    } as any);
+    mockFetchPackage.mockRejectedValue(new Error('HTTP 404'));
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(mockFetchPackage).toHaveBeenCalledTimes(MAX_PACKAGE_LOOKUPS);
+    expect(JSON.stringify(result.structuredContent._hints.warnings)).toMatch(
+      new RegExp(`first ${MAX_PACKAGE_LOOKUPS} packages`),
+    );
+  });
+
+  it('suggests flow_simulate only when the runtime can simulate', async () => {
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
+    const local = createLocalRuntime();
+    const readOnlyServer = createMockServer();
+    registerFlowExamplesTool(readOnlyServer as any, {
+      load: (input) => local.load(input),
+    });
+
+    const withSimulate = await server
+      .getTool('flow_examples')
+      .handler({ configPath: './flow.json' });
+    const withoutSimulate = await readOnlyServer
+      .getTool('flow_examples')
+      .handler({ configPath: './flow.json' });
+
+    expect(withSimulate.structuredContent._hints.next).toEqual([
+      'Use flow_simulate with step and event to simulate',
+    ]);
+    expect(withoutSimulate.structuredContent._hints.next).toEqual([
+      HINT_OUT_OF_PROCESS,
+    ]);
   });
 });
