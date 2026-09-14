@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { loadJsonConfig } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
 import type { Flow } from '@walkeros/core';
@@ -7,6 +6,7 @@ import { ExamplesListOutputShape } from '../schemas/output.js';
 import { getPackageBaseUrl, CLIENT_HEADER } from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
+import { refusalHint, type FlowRuntime } from '../runtime/types.js';
 
 const TITLE = 'Flow Examples';
 const DESCRIPTION =
@@ -15,6 +15,7 @@ const DESCRIPTION =
   'Inline examples on a step take precedence; steps without inline examples ' +
   'fall back to the examples shipped by their referenced package. ' +
   'Each result is tagged with its source ("inline" or "package"). ' +
+  'On the hosted server a saved flow id (flow_ or cfg_) is accepted as configPath. ' +
   'Use this to discover available test fixtures and simulation data.';
 
 const inputSchema = {
@@ -48,18 +49,18 @@ const annotations = {
   openWorldHint: false,
 } as const;
 
-export function createFlowExamplesToolSpec(): ToolSpec {
+export function createFlowExamplesToolSpec(runtime: FlowRuntime): ToolSpec {
   return {
     name: 'flow_examples',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowExamplesHandlerBody(input),
+    handler: (input) => flowExamplesHandlerBody(runtime, input),
   };
 }
 
-async function flowExamplesHandlerBody(input: unknown) {
+async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
   const { configPath, flow, step, full, includeHidden } = (input ?? {}) as {
     configPath: string;
     flow?: string;
@@ -68,7 +69,7 @@ async function flowExamplesHandlerBody(input: unknown) {
     includeHidden?: boolean;
   };
   try {
-    const rawConfig = await loadJsonConfig<Flow.Json>(configPath);
+    const rawConfig = (await runtime.load(configPath)) as Flow.Json;
 
     // Resolve flow name
     const flowNames = Object.keys(rawConfig.flows || {});
@@ -209,12 +210,18 @@ async function flowExamplesHandlerBody(input: unknown) {
     }
     return mcpResult(result, hints);
   } catch (error) {
-    return mcpError(error, 'Check configPath — expected a flow.json file');
+    return mcpError(
+      error,
+      refusalHint(error, 'Check configPath — expected a flow.json file'),
+    );
   }
 }
 
-export function registerFlowExamplesTool(server: McpServer) {
-  const spec = createFlowExamplesToolSpec();
+export function registerFlowExamplesTool(
+  server: McpServer,
+  runtime: FlowRuntime,
+) {
+  const spec = createFlowExamplesToolSpec(runtime);
   server.registerTool(
     spec.name,
     {

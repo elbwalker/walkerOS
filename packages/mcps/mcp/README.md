@@ -162,13 +162,16 @@ can mount the protocol over HTTP instead of running the stdio binary:
 ```typescript
 import {
   createWalkerOSMcpServer,
+  createHostedRuntime,
   HttpToolClient,
   createStreamableHttpHandler,
 } from '@walkeros/mcp';
 
+const client = new HttpToolClient();
 const server = createWalkerOSMcpServer({
-  client: new HttpToolClient(),
+  client,
   version: '1.0.0',
+  runtime: createHostedRuntime(client),
 });
 
 export const POST = createStreamableHttpHandler(server, {
@@ -176,10 +179,19 @@ export const POST = createStreamableHttpHandler(server, {
 });
 ```
 
+The server reads, bundles and runs flows only through a runtime, which decides
+what the process it lives in may do. `createHostedRuntime(client)` is the
+default when `runtime` is omitted and the right choice for anything reached over
+the network: it loads inline JSON and saved flow ids, refuses local file paths
+and URLs, and never bundles, simulates or pushes in the host process.
+`createLocalRuntime()` keeps every capability, including local files, URLs and
+in-process execution, and belongs only on the user's own machine; the stdio
+binary uses it.
+
 To use the tool registry without the MCP protocol, for example with the Vercel
-AI SDK, import `TOOL_DEFINITIONS` and supply your own `ToolClient`. The stdio
-binary stays available as `@walkeros/mcp/stdio` and the `walkeros-mcp` bin
-entry.
+AI SDK, call `createToolHandlers(client, version, runtime)` or import
+`TOOL_DEFINITIONS` and supply your own `ToolClient`. The stdio binary stays
+available as `@walkeros/mcp/stdio` and the `walkeros-mcp` bin entry.
 
 ## Documentation
 

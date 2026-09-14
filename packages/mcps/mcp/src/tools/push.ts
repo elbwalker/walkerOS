@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { push } from '@walkeros/cli';
 import type { PushResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -7,6 +6,11 @@ import { mcpResult, mcpError } from '@walkeros/core';
 import { PushOutputShape } from '../schemas/output.js';
 
 import type { ToolSpec } from '../tool-spec.js';
+import {
+  refusalHint,
+  unavailableOperation,
+  type FlowRuntime,
+} from '../runtime/types.js';
 
 const TITLE = 'Push Events';
 const DESCRIPTION =
@@ -32,27 +36,32 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
-export function createFlowPushToolSpec(): ToolSpec {
+export function createFlowPushToolSpec(runtime: FlowRuntime): ToolSpec {
   return {
     name: 'flow_push',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowPushHandlerBody(input),
+    handler: (input) => flowPushHandlerBody(runtime, input),
   };
 }
 
-async function flowPushHandlerBody(input: unknown) {
+async function flowPushHandlerBody(runtime: FlowRuntime, input: unknown) {
   const { configPath, event, flow, platform } = (input ?? {}) as {
     configPath: string;
     event: Record<string, unknown>;
     flow?: string;
     platform?: 'web' | 'server';
   };
+  // Push compiles the config, imports it, and makes real outbound calls. A
+  // runtime that must not do that in its process provides no `push`.
+  if (!runtime.push) {
+    const refusal = unavailableOperation('push');
+    return mcpError(refusal, refusal.hint);
+  }
   try {
-    const result: PushResult = await push(configPath, event, {
-      json: true,
+    const result: PushResult = await runtime.push(configPath, event, {
       flow,
       platform,
     });
@@ -68,13 +77,16 @@ async function flowPushHandlerBody(input: unknown) {
   } catch (error) {
     return mcpError(
       error,
-      'Check configPath and event format. For web flows, use flow_simulate.',
+      refusalHint(
+        error,
+        'Check configPath and event format. For web flows, use flow_simulate.',
+      ),
     );
   }
 }
 
-export function registerFlowPushTool(server: McpServer) {
-  const spec = createFlowPushToolSpec();
+export function registerFlowPushTool(server: McpServer, runtime: FlowRuntime) {
+  const spec = createFlowPushToolSpec(runtime);
   server.registerTool(
     spec.name,
     {

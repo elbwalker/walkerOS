@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { loadJsonConfig } from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
 import { redactNestedStrings, keepStructural } from '../user-data.js';
@@ -11,11 +10,9 @@ import {
   NO_DEFAULT_PROJECT_ERROR,
   resolveDefaultProject,
 } from './project-context.js';
+import { RuntimeRefusal, type FlowRuntime } from '../runtime/types.js';
 
-/** `flow_` and `cfg_` are reserved walkerOS API id namespaces. A source
- *  matching either is a cloud flow/config id, loaded via the client, not a
- *  local file path or URL. */
-const API_ID_PREFIX = /^(flow|cfg)_/;
+import { flowConfigOf, isCloudId } from '../cloud-flow.js';
 
 const WEB_SKELETON = {
   version: 4,
@@ -74,18 +71,25 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
-export function createFlowLoadToolSpec(client: ToolClient): ToolSpec {
+export function createFlowLoadToolSpec(
+  client: ToolClient,
+  runtime: FlowRuntime,
+): ToolSpec {
   return {
     name: 'flow_load',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowLoadHandlerBody(client, input),
+    handler: (input) => flowLoadHandlerBody(client, runtime, input),
   };
 }
 
-async function flowLoadHandlerBody(client: ToolClient, input: unknown) {
+async function flowLoadHandlerBody(
+  client: ToolClient,
+  runtime: FlowRuntime,
+  input: unknown,
+) {
   const { source, platform } = (input ?? {}) as {
     source?: string;
     platform?: 'web' | 'server';
@@ -94,7 +98,7 @@ async function flowLoadHandlerBody(client: ToolClient, input: unknown) {
   // Load by cloud flow/config id (flow_… / cfg_…) via the same client seam
   // flow_manage `get` uses. Its NOT_FOUND surfaces directly, never remapped
   // to the local "file not found" hint below.
-  if (source && API_ID_PREFIX.test(source)) {
+  if (source && isCloudId(source)) {
     const resolvedProjectId = resolveDefaultProject(client, undefined);
     if (!resolvedProjectId) {
       return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
@@ -104,9 +108,8 @@ async function flowLoadHandlerBody(client: ToolClient, input: unknown) {
         flowId: source,
         projectId: resolvedProjectId,
       });
-      const config = (flow as { config?: Record<string, unknown> }).config;
       return mcpResult(
-        redactNestedStrings(config ?? {}, { skip: keepStructural }),
+        redactNestedStrings(flowConfigOf(flow), { skip: keepStructural }),
         {
           next: ['Use flow_validate to check', 'Use add-step prompt to modify'],
         },
@@ -118,7 +121,9 @@ async function flowLoadHandlerBody(client: ToolClient, input: unknown) {
 
   try {
     if (source) {
-      const config = await loadJsonConfig(source);
+      // Every file or URL read goes through the runtime, which decides what
+      // this process may load.
+      const config = await runtime.load(source);
       return mcpResult(redactNestedStrings(config, { skip: keepStructural }), {
         next: ['Use flow_validate to check', 'Use add-step prompt to modify'],
       });
@@ -141,6 +146,7 @@ async function flowLoadHandlerBody(client: ToolClient, input: unknown) {
       ],
     });
   } catch (error) {
+    if (error instanceof RuntimeRefusal) return mcpError(error, error.hint);
     const msg = error instanceof Error ? error.message : '';
     if (msg.includes('not found') || msg.includes('ENOENT'))
       return mcpError(error, 'Check configPath — expected a flow.json file');
@@ -148,8 +154,12 @@ async function flowLoadHandlerBody(client: ToolClient, input: unknown) {
   }
 }
 
-export function registerFlowLoadTool(server: McpServer, client: ToolClient) {
-  const spec = createFlowLoadToolSpec(client);
+export function registerFlowLoadTool(
+  server: McpServer,
+  client: ToolClient,
+  runtime: FlowRuntime,
+) {
+  const spec = createFlowLoadToolSpec(client, runtime);
   server.registerTool(
     spec.name,
     {
