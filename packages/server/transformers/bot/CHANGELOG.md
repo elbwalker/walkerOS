@@ -1,5 +1,11 @@
 # @walkeros/server-transformer-bot
 
+## 4.6.1
+
+### Patch Changes
+
+- @walkeros/core@4.6.1
+
 ## 4.6.0
 
 ### Patch Changes
