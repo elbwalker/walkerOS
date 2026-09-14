@@ -14,8 +14,8 @@ export default function Hero() {
       </h1>
       <p className={styles.lede}>
         Tag it once in the markup, and every place that component gets reused is
-        already tracked. No dataLayer call to remember, no click listener to
-        wire up by hand, nothing to forget.
+        already tracked. You don't have to remember a dataLayer call or wire up
+        a click listener by hand.
       </p>
       <ButtonRow>
         <SiteButton href="/docs/" {...click('docs')}>

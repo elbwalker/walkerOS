@@ -5,8 +5,8 @@ description: Compare walkerOS and RudderStack to understand which solution fits 
 ---
 
 [RudderStack](https://www.rudderstack.com/) is a warehouse-first customer data
-platform with both open-source and cloud offerings. It's often positioned as an
-open-source alternative to Segment. Here's how it compares to walkerOS.
+platform with both open-source and cloud offerings. It is often positioned as an
+open-source alternative to Segment.
 
 ## Quick comparison
 
@@ -35,30 +35,30 @@ open-source alternative to Segment. Here's how it compares to walkerOS.
 ### Choose walkerOS if
 
 - You want something lightweight and quick to set up
-- You prefer truly open-source (MIT) without feature restrictions
+- You prefer open-source under MIT without feature restrictions
 - You want composable, component-level tagging for web
-- When cost matters, walkerOS is free with no event limits
+- Cost matters (walkerOS is free with no event limits)
 - You need focused event collection without full CDP complexity
 
 ## Key differences
 
 ### Open-source approach
 
-**RudderStack:** Open-source core, but advanced features (Transformations, Live
-Events) require the cloud version or aren't available in Control Plane Lite.
-The open-source version has limitations.
+**RudderStack:** The core is open-source, but advanced features (Transformations,
+Live Events) require the cloud version or aren't available in Control Plane
+Lite, so the open-source version has limitations.
 
-**walkerOS:** Fully open-source under MIT license. All features available, no
-restrictions. Use it however you want.
+**walkerOS:** Fully open-source under the MIT license, with all features
+available and no restrictions on use.
 
 ### Complexity and setup
 
-**RudderStack:** Requires Docker or Kubernetes for self-hosting. Separate data
-plane and control plane concepts. More infrastructure to manage for the full
-feature set.
+**RudderStack:** Self-hosting requires Docker or Kubernetes and separates the
+data plane from the control plane, so the full feature set means more
+infrastructure to manage.
 
-**walkerOS:** Simpler architecture. Get started quickly without complex
-infrastructure requirements. Designed for developers who want control without
+**walkerOS:** A simpler architecture you can start with quickly, without complex
+infrastructure. It is designed for developers who want control without that
 overhead.
 
 ### Cost
@@ -67,38 +67,38 @@ overhead.
 $750/month with usage-based pricing (events, not MTUs). Self-hosted is "free"
 but requires infrastructure investment.
 
-**walkerOS:** The software is free and open-source with no event limits. You pay
-for your own infrastructure costs. Optional paid services include implementation
+**walkerOS:** The software is free and open-source with no event limits, and you
+pay for your own infrastructure. Optional paid services include implementation
 support (setup fees) and SLAs for teams that want help getting started or need
 guaranteed support.
 
 ### Focus
 
-**RudderStack:** Warehouse-first CDP. Built around the idea that your data
-warehouse is the source of truth. Strong focus on data teams and analytics
-infrastructure.
+**RudderStack:** A warehouse-first CDP, built on the idea that your data
+warehouse is the source of truth, with a strong focus on data teams and
+analytics infrastructure.
 
-**walkerOS:** Event collection and routing. Focused on capturing events well and
-sending them where they need to go: warehouses, analytics tools, marketing
-platforms, or your own APIs.
+**walkerOS:** Event collection and routing. It captures events and sends them
+where they need to go: warehouses, analytics tools, marketing platforms, or your
+own APIs.
 
 ### Integrations
 
-**RudderStack:** 200+ pre-built integrations. Great if you need broad coverage
-out of the box.
+**RudderStack:** 200+ pre-built integrations, which gives broad coverage out of
+the box.
 
-**walkerOS:** Fewer pre-built destinations, but full flexibility to build custom
-ones. Better for teams with specific requirements or who prefer owning their
+**walkerOS:** Fewer pre-built destinations, but you can build custom ones. That
+suits teams with specific requirements or teams that prefer to own their
 integration code.
 
 ## Can they work together?
 
-Yes! You can use walkerOS for event collection and send data to RudderStack as a
-destination. This gives you walkerOS's composable tagging and consent handling
-on the frontend, while leveraging RudderStack's warehouse integrations and
-transformations on the backend.
+Yes. You can use walkerOS for event collection and send the data to RudderStack
+as a destination. walkerOS then handles composable tagging and consent on the
+frontend, and RudderStack's warehouse integrations and transformations run on
+the backend.
 
 ## Getting started
 
-Ready to try walkerOS? Check out the [quickstart guide](/docs/) to set up
-lightweight event collection without CDP complexity.
+The [quickstart guide](/docs/) shows how to set up lightweight event collection
+without CDP complexity.

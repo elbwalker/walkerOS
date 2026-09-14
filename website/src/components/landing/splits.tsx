@@ -83,9 +83,10 @@ function TagDemo() {
         </div>
       </div>
       <p className={`${styles.cap} ${styles['demo-cap']}`}>
-        The attribute is part of the component's source, not a config maintained
-        elsewhere. Ship the component once, and every click it captures reaches
-        every destination, without anyone touching a tag manager.
+        The attribute sits in the component's source instead of a config someone
+        maintains elsewhere. Ship the component once, and every click it
+        captures reaches every destination, without anyone touching a tag
+        manager.
       </p>
     </div>
   );
@@ -99,8 +100,8 @@ export default function Splits() {
         {...section('tagging')}
         text={
           <SectionHead
-            kicker="Tracking lives in the component, not a separate step"
-            headline="Tag a component once. Every instance is tracked, forever."
+            kicker="Tracking lives in the component"
+            headline="Tag a component once, and every instance is tracked."
             sub={
               <>
                 <b>The usual way:</b> whether it's a GTM click listener bound to
@@ -118,9 +119,9 @@ export default function Splits() {
               <b>The walkerOS way:</b> <code>data-elb</code> attributes live
               directly in the markup, right where the component is built. Tag
               the button component once, and every place that component is used,
-              on this page or the next hundred, is already tracked. No separate
-              tagging pass, no drift between what ships and what's measured, no
-              re-tagging when a component gets reused somewhere new.
+              on this page or the next hundred, is already tracked. There is no
+              separate tagging pass, and what ships stays in line with what's
+              measured, even when the component is reused somewhere new.
             </p>
           </SectionHead>
         }
@@ -133,7 +134,7 @@ export default function Splits() {
         text={
           <SectionHead
             kicker="The vendor becomes a destination"
-            headline="Instrument once. Every vendor is a mapping, not a rewrite."
+            headline="Instrument once, and every vendor is just a mapping."
             sub={
               <>
                 <b>The usual way:</b> tracking code calls a vendor's SDK
@@ -146,10 +147,10 @@ export default function Splits() {
           >
             <p className={SUB}>
               <b>The walkerOS way:</b> the app only ever emits one event, named
-              with a strict <code>entity action</code> grammar. A destination
-              config, not app code, maps it into GA4's shape, Meta's shape, or a
-              warehouse row. Add a destination, drop one, or swap one out, and
-              the app never changes.
+              with a strict <code>entity action</code> grammar. Destination
+              configs map it into GA4's shape, Meta's shape, or a warehouse row,
+              so you can add, drop, or swap a destination without changing the
+              app.
             </p>
           </SectionHead>
         }
@@ -161,7 +162,7 @@ export default function Splits() {
               { entity: 'button', action: 'click' },
             ]}
             code={mappingCode}
-            caption="40+ destination adapters ship with the project. Removing GA4 or adding a warehouse is a block in this file, not a re-instrumentation project across every page."
+            caption="40+ destination adapters ship with the project. Removing GA4 or adding a warehouse means editing a block in this file instead of re-instrumenting every page."
           />
         }
       />
@@ -177,8 +178,8 @@ export default function Splits() {
               <>
                 <b>The usual way:</b> data leaves the browser for a Google-owned
                 tag manager before anyone's consent choice is even in the
-                picture, and compliance gets bolted on afterward as a separate
-                layer, hoping it catches everything.
+                picture, and compliance is added afterward as a separate layer
+                that may not catch everything.
               </>
             }
           >
@@ -200,8 +201,8 @@ export default function Splits() {
               <span className={styles['gate-node']}>Meta CAPI</span>
             </div>
             <p className={styles.cap}>
-              Unresolved consent → the event queues or drops, per destination,
-              per rule. Never a silent send.
+              If consent is unresolved, the event queues or drops, depending on
+              the destination and rule, and nothing is sent silently.
             </p>
           </Panel>
         }
@@ -212,7 +213,7 @@ export default function Splits() {
         {...section('trace')}
         text={
           <SectionHead
-            kicker="One place to look, not three teams to ask"
+            kicker="One place to look instead of three teams to ask"
             headline="The fields that matter to your business aren't in any vendor's schema."
             sub={
               <>
@@ -229,7 +230,7 @@ export default function Splits() {
               <b>The walkerOS way:</b> your own fields go in the same typed
               contract as the standard ones, required the same way and validated
               the same way. A pull request that leaves <code>loyalty_tier</code>{' '}
-              out fails before it merges. No one has to remember to check.
+              out fails before it merges, so no one has to remember to check.
             </p>
           </SectionHead>
         }
@@ -243,8 +244,8 @@ export default function Splits() {
                 and analytics read reports from it. <code>loyalty_tier</code> is
                 required here, and a validate step enforces it, replacing a
                 manual check. Run <code>walkeros validate --strict</code> in CI,
-                and a missing or misspelled field fails the build, not a report
-                someone reads weeks later.
+                and a missing or misspelled field fails the build instead of
+                showing up in a report someone reads weeks later.
               </>
             }
           />

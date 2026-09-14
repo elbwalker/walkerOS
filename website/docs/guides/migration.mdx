@@ -41,9 +41,9 @@ packages.
 <CodeSnippet
   code={`{
   "dependencies": {
-    "@walkeros/collector": "^0.0.7",
-    "@walkeros/web-source-browser": "^0.0.7",
-    "@walkeros/web-destination-gtag": "^0.0.7"
+    "@walkeros/collector": "^4.6.0",
+    "@walkeros/web-source-browser": "^4.6.0",
+    "@walkeros/web-destination-gtag": "^4.6.0"
   }
 }`}
   language="json"
@@ -161,10 +161,10 @@ config: {
 
 **Benefits:**
 
-* Single configuration describing entire tracking setup
-* Full type safety with proper config linking
-* No manual destination registration needed
-* Clean separation between code and configuration
+* One configuration describes the entire tracking setup
+* Full type safety, with configs linked to their packages
+* No manual destination registration
+* Code and configuration stay separate
 
 ## Migration checklist
 
@@ -229,7 +229,7 @@ Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
 
 #### Option 2: use new behavior (recommended for new projects)
 
-Use `data-elbaction` for more precise, performance-optimized tracking:
+Use `data-elbaction` for more precise tracking that fires fewer events:
 
 <CodeSnippet
   code={`<!-- @walkeros - New behavior -->

@@ -15,9 +15,9 @@ const problems = [
       "Tracking code is written against one vendor's exact shape. Switch vendors, and every call site gets rewritten, or another tag gets bolted onto a container that's already too full.",
   },
   {
-    claim: '3. Compliance is bolted on, not built in',
+    claim: '3. Compliance is checked after the fact',
     witness:
-      "Data leaves the browser before anyone's consent choice is in the picture, and compliance gets checked afterward, hoping it catches everything.",
+      "Data leaves the browser before anyone's consent choice is in the picture, and the compliance check that runs afterward may not catch everything.",
   },
   {
     claim: "4. Your own fields aren't in anyone's schema",

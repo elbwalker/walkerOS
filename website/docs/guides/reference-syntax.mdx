@@ -37,7 +37,7 @@ $secret.NAME           inject a secret value (resolved at deploy time)
 $code:(event) => ...   inline JavaScript (resolved at bundle time)
 ```
 
-## `$var.` — variables
+## `$var.`: variables {#var--variables}
 
 Look up a value in the `variables` map at config, flow, or step level. Step
 overrides flow overrides config.
@@ -102,7 +102,7 @@ matchers, consent objects), pick a name that signals the shape, for example
 the convention consistent within a single config; we don't enforce a global
 prefix or suffix rule.
 
-## `$env.` — environment variables
+## `$env.`: environment variables {#env--environment-variables}
 
 Read from `process.env` at runtime. Optionally provide a literal fallback with
 the `:default` suffix.
@@ -123,7 +123,7 @@ Use `$env.` for non-secret config (IDs, hostnames, regions). For credentials,
 tokens, and private keys managed by the secret manager, use `$secret.`: the
 deploy pipeline only injects values referenced as `$secret.NAME`.
 
-## `$contract.` — contract references
+## `$contract.`: contract references {#contract--contract-references}
 
 Inject a fragment of a named contract entry. Same whole-string and deep-path
 rules as `$var.`. The contract is fully resolved (extend + wildcards) before
@@ -162,7 +162,7 @@ See [Contract](/docs/getting-started/flow/contract) for the full structure.
 }
 ```
 
-## `$store.` — store wiring
+## `$store.`: store wiring {#store--store-wiring}
 
 Inject a store instance declared under `stores`. Wired through a component's
 `env` so the bundler can resolve to the real store at build time.
@@ -188,7 +188,7 @@ Inject a store instance declared under `stores`. Wired through a component's
 Store IDs are plain identifiers (camelCase). The `.` is the separator, not a
 path walker, store IDs do not contain dots.
 
-## `$secret.` — secrets
+## `$secret.`: secrets {#secret--secrets}
 
 Inject a secret resolved at deploy time. Secrets are stored outside the config
 and never written into customer databases alongside the flow.
@@ -221,7 +221,7 @@ runner's environment at runtime. A managed secret referenced as `$env.NAME` is
 **not** injected, so reach for `$secret.` whenever the value comes from the
 secret manager. Secrets resolve on server flows only.
 
-## `$code:` — inline code
+## `$code:`: inline code {#code--inline-code}
 
 Embed a JavaScript function as a string. The bundler compiles the payload into
 real JS at build time. Everything after `$code:` is the raw function body.

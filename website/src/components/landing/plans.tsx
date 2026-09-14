@@ -8,7 +8,7 @@ const tiers = [
     slug: 'self-hosted',
     for: 'community',
     name: 'Self-hosted',
-    desc: 'Everything on this page. Clone it, read it, run it. Support via GitHub Discussions and the community around the project.',
+    desc: 'Everything on this page, yours to clone, read, and run. Support comes from GitHub Discussions and the community around the project.',
     items: [
       'MIT licensed, no seat limits',
       'All sources, destinations, and transformers',
@@ -21,7 +21,7 @@ const tiers = [
     slug: 'implementation',
     for: 'fixed scope',
     name: 'Implementation',
-    desc: 'A project, not a subscription. We align your teams on what to measure and why, define the entity-action event model and mapping config, then build it with your team and hand over a pipeline your engineers own from day one.',
+    desc: 'A project rather than a subscription. We align your teams on what to measure and why, define the entity-action event model and mapping config, then build it with your team and hand over a pipeline your engineers own from day one.',
     items: [
       'Business questions mapped to entity action events',
       'Event model and mapping design for your stack',

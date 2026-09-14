@@ -11,9 +11,10 @@ export default function Workshop() {
           <Badge>Live workshop · free</Badge>
           <h3>Tag a real website, live, in the browser.</h3>
           <p>
-            One hour, one real page, tagged live in the Tag Mode extension.
-            Entity and action, properties off the DOM, context that bubbles,
-            globals that don't: the mental model, not the diagram version.
+            In one hour, you tag one real page live in the Tag Mode extension
+            and learn the mental model in practice rather than from a diagram:
+            entity and action, properties read off the DOM, context that
+            bubbles, and globals that don't.
           </p>
           <p className={styles.when}>
             60 min (45 + Q&amp;A) · free · live, not recorded · bring your own

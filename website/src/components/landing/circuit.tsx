@@ -7,7 +7,7 @@ const stages = [
   {
     label: 'sources',
     name: 'Browser DOM · dataLayer · CMPs · server',
-    desc: 'Where an interaction is captured: a click, a page view, a server-side call. Nothing vendor-specific yet.',
+    desc: 'Where an interaction is captured: a click, a page view, a server-side call. Nothing is vendor-specific yet.',
   },
   {
     label: 'collector',
@@ -18,7 +18,7 @@ const stages = [
   {
     label: 'destinations',
     name: 'GA4 · Meta · your warehouse · your own API',
-    desc: "40+ adapters ship with the project. Swap one out and the event that reaches it doesn't change: a config entry, not a rebuild.",
+    desc: '40+ adapters ship with the project. Swapping one out takes a config entry, and the event that reaches it stays the same.',
   },
 ];
 
@@ -28,7 +28,7 @@ export default function Circuit() {
       <SectionHead
         className={styles['head-2']}
         kicker="The architecture"
-        headline="Three parts. Nothing hidden between them."
+        headline="Three parts, with nothing hidden between them."
         sub="Every interaction becomes one typed event, once. What happens before and after is the whole system: where an event comes from, what it's allowed to carry, and where it's allowed to go."
       />
       <div

@@ -4,44 +4,44 @@ sidebar_position: 3
 description: How walkerOS and Google Tag Manager differ, where GTM still wins, and how to run both while you migrate.
 ---
 
-Most teams looking at walkerOS already run Google Tag Manager, and the first
-question is the fair one: GTM already sends one event to many tools, and it
-already has a consent trigger. So why add anything?
+Most teams looking at walkerOS already run Google Tag Manager, so the first
+question is a fair one: GTM already sends one event to many tools and has a
+consent trigger, so why add anything?
 
-Because those are two different jobs. GTM is good at routing. It was never built
-to be the place your data gets its shape.
+They are two different jobs. GTM is good at routing, and it was never built to
+be the place where your data gets its shape.
 
-## Where the two actually differ
+## Where the two differ
 
 GTM's model stops at the edge of what it owns. Everything outside that edge is a
 hand-off: the same event gets re-typed by a different person, in a different
 tool, with nothing checking that the two agree. Three gaps follow from that.
 
-**Nothing enforces a schema.** Event names and data layer keys are a naming
-convention, not a contract. Nothing rejects a misspelling, a renamed field, or a
-value that arrives as a string this week and a number next week. In a container
-that has been alive for a few years, the naming convention is the only thing
-holding the meaning, and it lives in people's heads.
+**Nothing enforces a schema.** Event names and data layer keys follow a naming
+convention, and no contract backs it. Nothing rejects a misspelling, a renamed
+field, or a value that arrives as a string this week and a number next week. In
+a container that has been alive for a few years, the convention is the only
+thing holding the meaning, and it lives in people's heads.
 
 **The logic lives inside the tags.** A mature container carries a lot of custom
-HTML and custom JavaScript. Those script blocks are opaque to code review, and
-they are opaque to the container's own consent gate: it can see that a tag
-fired, not what the script inside it did. That is how containers end up with
-tags firing ahead of the consent state someone believed was gating them.
+HTML and custom JavaScript. Code review can't see inside those script blocks, and
+neither can the container's own consent gate, which sees that a tag fired but
+not what its script did. That is how containers end up with tags firing ahead of
+the consent state someone believed was gating them.
 
 **GTM sits downstream of collection.** Something has to push structured data into
-the data layer before GTM can act on it. That something is usually hand-written,
-page by page, team by team, and it is where most tracking bugs are born. GTM
-routes what it is given. It does not decide what it is given.
+the data layer before GTM can act on it. That code is usually hand-written, page
+by page and team by team, and most tracking bugs start there. GTM only routes
+what it receives.
 
-walkerOS is that layer underneath. One typed event, defined once, carried through
-the whole path with its consent state attached, and checked before it reaches
-anything.
+walkerOS is that layer underneath. You define a typed event once, and it carries
+its consent state along the whole path and gets checked before it reaches
+anything downstream.
 
 ## One event that gets stopped
 
-The concrete version of "checked before it reaches anything": walkerOS can drop a
-non-conforming event inside the pipeline, before any destination sees it.
+walkerOS can drop a non-conforming event inside the pipeline, before any
+destination sees it.
 
 ```json
 {
@@ -57,62 +57,59 @@ non-conforming event inside the pipeline, before any destination sees it.
 }
 ```
 
-In `strict` mode an event that fails its contract stops the chain. It is not
-tagged for someone to notice in a report later, it does not arrive downstream. In
-`pass` mode the verdict is written onto the event instead, so a later step can
-route on it. See the
+In `strict` mode an event that fails its contract stops the chain and never
+arrives downstream. In `pass` mode the verdict is written onto the event instead,
+so a later step can route on it. See the
 [validate transformer](/docs/transformers/validate) and
 [contracts](/docs/getting-started/flow/contract).
 
-Being honest about the boundary: a developer writes that contract today. walkerOS
-does not derive it from a planning document on its own, so the thing doing the
-blocking is a rule someone authored, not a plan enforcing itself.
+A developer writes that contract today. walkerOS does not derive it from a
+planning document on its own, so the event is blocked by a rule someone authored
+rather than by the plan itself.
 
 ## Your existing setup keeps working
 
-This is not a weekend rip-and-replace, and GTM does not have to be switched off.
+You do not have to switch GTM off or replace everything at once.
 
-walkerOS becomes the collection layer, and GTM becomes one destination among
-many, fed from the same typed events through the
+walkerOS becomes the collection layer, and GTM becomes one of many destinations,
+fed the same typed events through the
 [GTM destination](/docs/destinations/web/gtag/gtm). Marketing keeps adding tags
-in the interface they already know. What GTM stops being asked to do is carry
-collection logic itself: the custom scripts, the hand-rolled consent checks, and
-the schema workarounds that pile up once the container is the only place data
-gets shaped.
+in the interface it already knows. GTM just no longer carries the collection
+logic: the custom scripts, hand-rolled consent checks, and schema workarounds
+that pile up when the container is the only place data gets shaped.
 
 You can move one page, one entity, or one destination at a time, and re-tag with
 `data-elb` attributes at whatever pace suits your release train.
 
 ## Where GTM wins
 
-Worth saying plainly, because these are real and they are why GTM won in the
-first place.
+These advantages are real, and they are why GTM won in the first place.
 
 - **Marketing ships without a developer.** A campaign pixel is a point-and-click
   change in a web interface. With walkerOS it is a configuration change, which
   means a diff and a reviewer.
-- **The template gallery.** Hundreds of vendor-maintained tag templates you can
-  add without writing anything.
-- **Nobody has to learn a repository.** No git, no pull request, no build step.
-- **Your team is already trained.** That is a genuine cost of switching, and it
-  is not a small one.
+- **The template gallery.** It has hundreds of vendor-maintained tag templates
+  you can add without writing anything.
+- **Nobody has to learn a repository.** There is no git, pull request, or build
+  step involved.
+- **Your team is already trained.** Retraining is a real cost of switching, and
+  not a small one.
 
 If your tracking is a handful of standard tags on a stable site and nobody is
-asking hard questions about the data, GTM alone is a reasonable answer and this
-page is not trying to talk you out of it.
+asking hard questions about the data, GTM alone is a reasonable answer.
 
 ## Cost
 
-On the web, both are free. GTM is free, walkerOS is open source.
+On the web, both are free: GTM costs nothing, and walkerOS is open source.
 
-Server-side, both cost money: a GTM server container runs on infrastructure you
-rent too. The difference is what the money buys. GTM is a closed system, so when
-the standard setup runs out you pay for workarounds. walkerOS is open, so your
-own developers can extend it.
+Server-side, both cost money, since a GTM server container also runs on
+infrastructure you rent. What differs is what the money buys. GTM is a closed
+system, so when the standard setup runs out you pay for workarounds, while
+walkerOS is open and your own developers can extend it.
 
 "GTM is free" is true for simple, standard setups. Teams that collect data
-seriously usually discover that collection stopped being a single free layer some
-time ago.
+seriously usually find that collection stopped being a single free layer a while
+ago.
 
 ## Testing and debugging
 
@@ -125,21 +122,21 @@ destinations mocked, before anything deploys:
 walkeros push flow.json --event '{"name":"page view"}' --simulate
 ```
 
-Because it is scriptable, that runs in CI on every change. For live checking,
-[Observe](/docs/getting-started/observe) attaches a running flow and shows
-records as they arrive.
+Because the command is scriptable, it runs in CI on every change. For live
+checking, [Observe](/docs/getting-started/observe) attaches to a running flow and
+shows records as they arrive.
 
-The honest trade: there is no single point-and-click preview pane. Verification is
-tooling you run, not a window you open.
+The trade-off is that there is no single point-and-click preview pane: you verify
+by running tools.
 
 ## What this page is not claiming
 
-- walkerOS does not validate your data against a planning document. Contracts are
-  authored by a developer.
+- walkerOS does not validate your data against a planning document. A developer
+  authors the contracts.
 - Moving collection does not move your reports. Whatever consumes the data
   downstream still has to be pointed somewhere new.
-- Configuration changes get a review step. That is the point, and it is also
-  slower than clicking publish.
+- Configuration changes go through review. That is intended, and it is slower
+  than clicking publish.
 - None of this removes the work of deciding what to measure.
 
 ## Getting started

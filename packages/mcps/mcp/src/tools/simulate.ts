@@ -1,10 +1,4 @@
 import { z } from 'zod';
-import {
-  simulateSource,
-  simulateTransformer,
-  simulateDestination,
-  simulateCollector,
-} from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
@@ -14,12 +8,28 @@ import { SimulateOutputShape } from '../schemas/output.js';
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { resolveConfigPath } from './resolve-config-path.js';
-import { getOrBuildBundle } from './bundle-cache.js';
+import {
+  refusalHint,
+  unavailableOperation,
+  type FlowRuntime,
+  type SimulateStepType,
+} from '../runtime/types.js';
 
 interface DestinationSummary {
   received: boolean;
   calls: number;
   payload?: unknown;
+}
+
+const STEP_TYPES: readonly SimulateStepType[] = [
+  'source',
+  'transformer',
+  'collector',
+  'destination',
+];
+
+function isStepType(value: string): value is SimulateStepType {
+  return STEP_TYPES.some((t) => t === value);
 }
 
 const TITLE = 'Simulate Flow';
@@ -85,24 +95,34 @@ const inputSchema = {
 };
 
 const annotations = {
-  readOnlyHint: true,
+  // Not read-only: simulation compiles the config and runs it in process, which
+  // executes caller-controlled flow code. An MCP client must treat it as a tool
+  // with side effects, never auto-approve it as a pure read.
+  readOnlyHint: false,
   destructiveHint: false,
   idempotentHint: true,
   openWorldHint: false,
 } as const;
 
-export function createFlowSimulateToolSpec(client: ToolClient): ToolSpec {
+export function createFlowSimulateToolSpec(
+  client: ToolClient,
+  runtime: FlowRuntime,
+): ToolSpec {
   return {
     name: 'flow_simulate',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowSimulateHandlerBody(client, input),
+    handler: (input) => flowSimulateHandlerBody(client, runtime, input),
   };
 }
 
-async function flowSimulateHandlerBody(client: ToolClient, input: unknown) {
+async function flowSimulateHandlerBody(
+  client: ToolClient,
+  runtime: FlowRuntime,
+  input: unknown,
+) {
   const { configPath, event, flow, platform, step, verbose, ingest, state } =
     (input ?? {}) as {
       configPath: string;
@@ -119,6 +139,13 @@ async function flowSimulateHandlerBody(client: ToolClient, input: unknown) {
         timing?: number;
       };
     };
+  // Simulation compiles the config and imports the bundle, running caller
+  // controlled flow code. A runtime that must not do that in its process
+  // provides no `simulate`, whatever the input looks like.
+  if (!runtime.simulate) {
+    const refusal = unavailableOperation('simulate');
+    return mcpError(refusal, refusal.hint);
+  }
   try {
     if (!event) {
       throw new Error(
@@ -154,78 +181,19 @@ async function flowSimulateHandlerBody(client: ToolClient, input: unknown) {
     const stepType = step.substring(0, dotIndex);
     const stepId = step.substring(dotIndex + 1);
 
+    if (!isStepType(stepType)) {
+      throw new Error(
+        `Unknown step type "${stepType}". Use "source", "collector", "transformer", or "destination".`,
+      );
+    }
+
     // Accept a cloud flow/config id as configPath, resolving it to inline JSON.
     const resolvedConfigPath = await resolveConfigPath(client, configPath);
 
-    // Reuse a prebuilt bundle across calls with the same resolved config. The
-    // simulate fns take their fast `mode: 'prebuilt'` branch when given a
-    // bundlePath, skipping the per-call rebuild. On any bundle failure fall back
-    // to undefined so the simulate fn rebuilds and surfaces its canonical error.
-    let bundlePath: string | undefined;
-    try {
-      bundlePath = await getOrBuildBundle(resolvedConfigPath);
-    } catch {
-      bundlePath = undefined;
-    }
-
-    let result: Simulation.Result;
-
-    switch (stepType) {
-      case 'source':
-        result = await simulateSource(resolvedConfigPath, resolvedEvent, {
-          sourceId: stepId,
-          bundlePath,
-          flow,
-          silent: true,
-        });
-        break;
-
-      case 'transformer':
-        result = await simulateTransformer(
-          resolvedConfigPath,
-          resolvedEvent as WalkerOS.DeepPartialEvent,
-          {
-            transformerId: stepId,
-            bundlePath,
-            flow,
-            silent: true,
-            ingest,
-          },
-        );
-        break;
-
-      case 'collector':
-        result = await simulateCollector(
-          resolvedConfigPath,
-          resolvedEvent as WalkerOS.DeepPartialEvent,
-          {
-            collectorName: stepId,
-            bundlePath,
-            flow,
-            silent: true,
-            state,
-          },
-        );
-        break;
-
-      case 'destination':
-        result = await simulateDestination(
-          resolvedConfigPath,
-          resolvedEvent as WalkerOS.DeepPartialEvent,
-          {
-            destinationId: stepId,
-            bundlePath,
-            flow,
-            silent: true,
-          },
-        );
-        break;
-
-      default:
-        throw new Error(
-          `Unknown step type "${stepType}". Use "source", "collector", "transformer", or "destination".`,
-        );
-    }
+    const result: Simulation.Result = await runtime.simulate(
+      resolvedConfigPath,
+      { stepType, stepId, event: resolvedEvent, flow, ingest, state },
+    );
 
     const success = !result.error;
     const errorMessage = result.error?.message;
@@ -337,15 +305,16 @@ async function flowSimulateHandlerBody(client: ToolClient, input: unknown) {
         'pending until that event fires. For simulation, either remove require from ' +
         'the config or simulate with a flow that omits require on the target destination.';
     }
-    return mcpError(error, hint);
+    return mcpError(error, refusalHint(error, hint));
   }
 }
 
 export function registerFlowSimulateTool(
   server: McpServer,
   client: ToolClient,
+  runtime: FlowRuntime,
 ) {
-  const spec = createFlowSimulateToolSpec(client);
+  const spec = createFlowSimulateToolSpec(client, runtime);
   server.registerTool(
     spec.name,
     {

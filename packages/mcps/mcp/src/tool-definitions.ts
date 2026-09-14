@@ -218,7 +218,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     title: 'Validate Flow',
     description:
       'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
-      'Accepts JSON strings, file paths, or URLs as input. ' +
+      'Accepts JSON strings, file paths, or URLs as input; on the hosted server a saved flow id (flow_ or cfg_) is accepted too. ' +
       'Returns validation results with errors, warnings, and details.',
     inputSchema: schemas.ValidateInputShape as unknown as ZodRawShape,
     annotations: {
@@ -275,7 +275,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       verbose: z.boolean().optional(),
     },
     annotations: {
-      readOnlyHint: true,
+      // Not read-only: simulation compiles and runs the flow in process.
+      readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: false,
@@ -307,6 +308,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     description:
       'List all step examples in a walkerOS flow configuration. ' +
       'Shows example names, step locations, and in/out shapes. ' +
+      'On the hosted server a saved flow id (flow_ or cfg_) is accepted as configPath. ' +
       'Use this to discover available test fixtures and simulation data.',
     inputSchema: {
       configPath: z.string().min(1),

@@ -21,38 +21,37 @@ export default function Faq() {
           <div className={styles['faq-a']}>
             <p>
               GTM fans one event out to many vendor tags and has a consent
-              trigger, so it overlaps with the job. It doesn't hold up as a
-              collection layer under scrutiny: no enforced schema (meaning lives
-              in variable-naming convention, not a validated contract), logic
-              hidden inside hand-written Custom HTML tags the platform's own
-              consent gate can't see into, and it's a router sitting downstream
-              of collection, not a source of truth. Something has to already
-              push structured data into <code>dataLayer</code> before GTM can
-              act on it.
+              trigger, so it overlaps with the job. As a collection layer it
+              falls short in three ways. Nothing enforces a schema, so meaning
+              lives in a variable-naming convention instead of a validated
+              contract. Logic hides inside hand-written Custom HTML tags that
+              the platform's own consent gate can't see into. And GTM is a
+              router downstream of collection rather than a source of truth:
+              something has to push structured data into <code>dataLayer</code>{' '}
+              before GTM can act on it.
             </p>
             <p>
-              Server-side GTM doesn't close the gap either. It solves a real,
-              different problem: moving tags off the browser, onto
-              infrastructure you control, past blockers and Safari's ITP. But
-              the framework underneath is unchanged, still a tag, trigger, and
-              variable per vendor, still hand-maintained per page, just
-              relocated to a server you now run. walkerOS replaces the framework
-              itself, not just where it executes, and can sit alongside a
-              server-side GTM container if one's already in place.
+              Server-side GTM doesn't close that gap. It solves a different,
+              real problem by moving tags off the browser onto infrastructure
+              you control, past blockers and Safari's ITP. The framework
+              underneath stays the same, with a tag, trigger, and variable per
+              vendor, maintained by hand per page, only now on a server you run.
+              walkerOS replaces that framework, and it can run alongside a
+              server-side GTM container if you already have one.
             </p>
             <p>
-              For some organizations a Google-owned tag manager is ruled out by
-              policy, full stop, not a preference to weigh. Others self-host on
-              principle, so there's no new subprocessor to add to a DPA or send
-              to legal for review. walkerOS runs inside your own cloud either
-              way, so the decision is answered before it needs to be made.
+              Some organizations rule out a Google-owned tag manager by policy.
+              Others self-host on principle, so they don't have to add a new
+              subprocessor to a DPA or send one to legal for review. walkerOS
+              runs inside your own cloud, which settles both cases before they
+              come up.
             </p>
             <p>
-              Honest caveat: GTM genuinely solves fan-out well enough that most
-              teams never look past it, until the tag count, the missing
-              contract, and the dev work of hand-filling <code>dataLayer</code>{' '}
-              for every new event become the actual problem. That's the exact
-              dependency on developers GTM was supposed to remove.
+              GTM handles fan-out well enough that most teams never look past
+              it, until the tag count, the missing contract, and the developer
+              work of filling <code>dataLayer</code> by hand for every new event
+              become the problem. That is the same dependency on developers GTM
+              was supposed to remove.
             </p>
           </div>
         </details>
@@ -63,18 +62,18 @@ export default function Faq() {
           </summary>
           <div className={styles['faq-a']}>
             <p>
-              No, and GTM gets easier to work in, not harder. It becomes one
-              destination among many instead of the collection layer itself, so
-              it goes back to doing the one job it was built for: firing tags.
+              No. GTM becomes one destination among many instead of the
+              collection layer itself, so it goes back to the one job it was
+              built for, firing tags, and gets easier to work in.
               Point-and-click tag additions still work for marketing, wired off
               the same typed events.
             </p>
             <p>
-              What it stops being asked to do is carry the collection logic: the
-              custom scripts, hand-rolled consent checks, and schema hacks that
-              pile up in a container once it's the only place data gets shaped.
-              Less bloat, less code nobody wants to touch, more control over
-              what's actually in there.
+              GTM no longer has to carry the collection logic: the custom
+              scripts, hand-rolled consent checks, and schema hacks that pile up
+              in a container once it's the only place data gets shaped. The
+              container ends up smaller, with less code nobody wants to touch
+              and more control over what's in it.
             </p>
           </div>
         </details>
@@ -87,10 +86,10 @@ export default function Faq() {
             <p>
               Because adopting walkerOS doesn't ask you to stop building. Teams
               that build their own measurement platform still don't want to
-              reinvent the collection layer from scratch. Self-hosted,
-              MIT-licensed, no vendor lock-in, so it slots in as one component
-              under an architecture you own, not a platform relationship you're
-              locked into.
+              reinvent the collection layer from scratch. walkerOS is
+              self-hosted and MIT licensed, so it slots in as one component
+              under an architecture you own, without tying you to a platform
+              vendor.
             </p>
           </div>
         </details>
