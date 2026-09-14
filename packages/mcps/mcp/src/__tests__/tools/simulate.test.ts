@@ -115,9 +115,9 @@ describe('flow_simulate tool', () => {
     expect(config.title).toBe('Simulate Flow');
     expect(config.annotations).toEqual({
       readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
     });
   });
 

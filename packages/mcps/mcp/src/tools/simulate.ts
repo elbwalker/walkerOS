@@ -95,13 +95,14 @@ const inputSchema = {
 };
 
 const annotations = {
-  // Not read-only: simulation compiles the config and runs it in process, which
-  // executes caller-controlled flow code. An MCP client must treat it as a tool
-  // with side effects, never auto-approve it as a pure read.
+  // Simulation downloads the packages a config names and runs caller-controlled
+  // flow code in process. Destinations are mocked, but that code is not, so the
+  // hints stay conservative: side effects possible, repeat calls not assumed
+  // safe, external systems reachable.
   readOnlyHint: false,
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: false,
+  destructiveHint: true,
+  idempotentHint: false,
+  openWorldHint: true,
 } as const;
 
 export function createFlowSimulateToolSpec(

@@ -6,7 +6,14 @@ import { ExamplesListOutputShape } from '../schemas/output.js';
 import { getPackageBaseUrl, CLIENT_HEADER } from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
-import { refusalHint, type FlowRuntime } from '../runtime/types.js';
+import {
+  HINT_OUT_OF_PROCESS,
+  refusalHint,
+  type FlowRuntime,
+} from '../runtime/types.js';
+
+/** Upper bound on distinct package example lookups per call. */
+export const MAX_PACKAGE_LOOKUPS = 25;
 
 const TITLE = 'Flow Examples';
 const DESCRIPTION =
@@ -15,14 +22,16 @@ const DESCRIPTION =
   'Inline examples on a step take precedence; steps without inline examples ' +
   'fall back to the examples shipped by their referenced package. ' +
   'Each result is tagged with its source ("inline" or "package"). ' +
-  'On the hosted server a saved flow id (flow_ or cfg_) is accepted as configPath. ' +
+  'On the hosted server configPath accepts only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
   'Use this to discover available test fixtures and simulation data.';
 
 const inputSchema = {
   configPath: z
     .string()
     .min(1)
-    .describe('Path to flow configuration file, URL, or inline JSON string'),
+    .describe(
+      'Inline JSON string, file path, or URL of a flow configuration (hosted server: inline JSON or a saved flow id only)',
+    ),
   flow: z.string().optional().describe('Flow name for multi-flow configs'),
   step: z
     .string()
@@ -165,6 +174,27 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
       return undefined;
     };
 
+    // One lookup per distinct package, capped per call, so a config naming
+    // many packages cannot fan out into an unbounded number of fetches.
+    const packageLookups = new Map<
+      string,
+      Promise<Flow.StepExamples | undefined>
+    >();
+    let skippedPackages = false;
+    const examplesForPackage = (
+      packageName: string,
+    ): Promise<Flow.StepExamples | undefined> => {
+      const existing = packageLookups.get(packageName);
+      if (existing) return existing;
+      if (packageLookups.size >= MAX_PACKAGE_LOOKUPS) {
+        skippedPackages = true;
+        return Promise.resolve(undefined);
+      }
+      const lookup = loadPackageExamples(packageName);
+      packageLookups.set(packageName, lookup);
+      return lookup;
+    };
+
     const stepTypes = [
       { key: 'sources' as const, type: 'source' },
       { key: 'transformers' as const, type: 'transformer' },
@@ -188,7 +218,7 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
         // No inline examples: fall back to the referenced package's shipped
         // examples (only for refs that actually name a package).
         if (!ref.package) continue;
-        const packageExamples = await loadPackageExamples(ref.package);
+        const packageExamples = await examplesForPackage(ref.package);
         if (packageExamples)
           examples.push(...toItems(packageExamples, type, name, 'package'));
       }
@@ -200,14 +230,25 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
       examples,
     };
 
-    const hints: { next: string[]; warnings?: string[] } = {
-      next: ['Use flow_simulate with step and event to simulate'],
-    };
+    const warnings: string[] = [];
     if (examples.length === 0) {
-      hints.warnings = [
+      warnings.push(
         'No examples found. Add examples to step entries, or reference a package that ships examples (see package_get).',
-      ];
+      );
     }
+    if (skippedPackages) {
+      warnings.push(
+        `Package examples were looked up for the first ${MAX_PACKAGE_LOOKUPS} packages only. Use step to narrow the result.`,
+      );
+    }
+    const hints: { next: string[]; warnings?: string[] } = {
+      next: [
+        runtime.simulate
+          ? 'Use flow_simulate with step and event to simulate'
+          : HINT_OUT_OF_PROCESS,
+      ],
+      ...(warnings.length > 0 ? { warnings } : {}),
+    };
     return mcpResult(result, hints);
   } catch (error) {
     return mcpError(

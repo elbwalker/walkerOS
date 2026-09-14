@@ -194,6 +194,49 @@ describe('read tools under the hosted runtime', () => {
     expect(JSON.stringify(res)).toMatch(/Flow not found/);
     expect(mocked.validate).not.toHaveBeenCalled();
   });
+
+  it('flow_validate surfaces a local load error for a non-event type', async () => {
+    mocked.loadJsonConfig.mockRejectedValueOnce(
+      new Error('Configuration file not found: ./missing.json'),
+    );
+    const res = await createFlowValidateToolSpec(local).handler({
+      type: 'flow',
+      input: './missing.json',
+    });
+    expect((res as { isError?: boolean }).isError).toBe(true);
+    expect(JSON.stringify(res)).toMatch(/Configuration file not found/);
+    expect(mocked.validate).not.toHaveBeenCalled();
+  });
+
+  it('flow_validate keeps the event-name shorthand locally', async () => {
+    mocked.loadJsonConfig.mockRejectedValueOnce(
+      new Error('Configuration file not found: page view'),
+    );
+    await createFlowValidateToolSpec(local).handler({
+      type: 'event',
+      input: 'page view',
+    });
+    expect(mocked.validate).toHaveBeenCalledWith(
+      'event',
+      { name: 'page view' },
+      expect.anything(),
+    );
+  });
+
+  it('flow_validate suggests no in-process next step under the hosted runtime', async () => {
+    mocked.validate.mockResolvedValueOnce({
+      valid: true,
+      type: 'flow',
+      errors: [],
+      warnings: [],
+      details: {},
+    });
+    const res = await createFlowValidateToolSpec(hosted).handler({
+      type: 'flow',
+      input: INLINE,
+    });
+    expect(JSON.stringify(res)).not.toMatch(/flow_simulate|flow_bundle/);
+  });
 });
 
 describe('build/run tools under the hosted runtime', () => {

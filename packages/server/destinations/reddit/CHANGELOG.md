@@ -1,5 +1,12 @@
 # @walkeros/server-destination-reddit
 
+## 4.6.1
+
+### Patch Changes
+
+- @walkeros/core@4.6.1
+- @walkeros/server-core@4.6.1
+
 ## 4.6.0
 
 ### Patch Changes

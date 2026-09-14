@@ -1,5 +1,14 @@
 # @walkeros/storybook-addon
 
+## 4.6.1
+
+### Patch Changes
+
+- @walkeros/collector@4.6.1
+- @walkeros/core@4.6.1
+- @walkeros/web-core@4.6.1
+- @walkeros/web-source-browser@4.6.1
+
 ## 4.6.0
 
 ### Patch Changes

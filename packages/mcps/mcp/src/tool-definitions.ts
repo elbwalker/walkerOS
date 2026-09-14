@@ -218,7 +218,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     title: 'Validate Flow',
     description:
       'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
-      'Accepts JSON strings, file paths, or URLs as input; on the hosted server a saved flow id (flow_ or cfg_) is accepted too. ' +
+      'Accepts JSON strings, file paths, or URLs as input; on the hosted server only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
       'Returns validation results with errors, warnings, and details.',
     inputSchema: schemas.ValidateInputShape as unknown as ZodRawShape,
     annotations: {
@@ -277,9 +277,9 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     annotations: {
       // Not read-only: simulation compiles and runs the flow in process.
       readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
     },
   },
   {
@@ -308,7 +308,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     description:
       'List all step examples in a walkerOS flow configuration. ' +
       'Shows example names, step locations, and in/out shapes. ' +
-      'On the hosted server a saved flow id (flow_ or cfg_) is accepted as configPath. ' +
+      'On the hosted server configPath accepts only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
       'Use this to discover available test fixtures and simulation data.',
     inputSchema: {
       configPath: z.string().min(1),
@@ -329,6 +329,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     title: 'Load or Create Flow',
     description:
       'Load an existing flow configuration from a local file path, URL, or walkerOS API (by flow ID). ' +
+      'On the hosted server only inline JSON or a saved flow id is accepted, no file paths or URLs. ' +
       'Or create a new empty flow by specifying a platform (web or server). ' +
       'Use the add-step prompt to add sources, destinations, transformers, or stores to the flow.',
     inputSchema: {

@@ -1,5 +1,15 @@
 # @walkeros/cli
 
+## 4.6.1
+
+### Patch Changes
+
+- @walkeros/collector@4.6.1
+- @walkeros/core@4.6.1
+- @walkeros/server-core@4.6.1
+- @walkeros/server-destination-api@4.6.1
+- @walkeros/transformer-validate@4.6.1
+
 ## 4.6.0
 
 ### Minor Changes

@@ -39,6 +39,7 @@ const SERVER_SKELETON = {
 const TITLE = 'Load or Create Flow';
 const DESCRIPTION =
   'Load an existing flow configuration from a local file path, URL, or walkerOS API (by flow ID). ' +
+  'On the hosted server only inline JSON or a saved flow id is accepted, no file paths or URLs. ' +
   'Or create a new empty flow by specifying a platform (web or server). ' +
   'Use the add-step prompt to add sources, destinations, transformers, or stores to the flow.';
 

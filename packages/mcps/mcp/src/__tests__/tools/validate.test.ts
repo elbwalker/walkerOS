@@ -452,15 +452,7 @@ describe('flow_validate tool', () => {
       expect(parsed.valid).toBe(true);
     });
 
-    it('skips deprecated-package check when input cannot be loaded', async () => {
-      const mockResult: ValidateResult = {
-        valid: false,
-        type: 'flow',
-        errors: [{ path: 'input', message: 'invalid json' }],
-        warnings: [],
-        details: {},
-      };
-      mockValidate.mockResolvedValue(mockResult);
+    it('surfaces the load error when a flow input cannot be loaded', async () => {
       mockLoadJsonConfig.mockRejectedValue(new Error('parse error'));
 
       const tool = server.getTool('flow_validate');
@@ -470,11 +462,9 @@ describe('flow_validate tool', () => {
         flow: undefined,
       });
 
-      const parsed = JSON.parse(result.content[0].text);
-      // existing errors preserved; no crash even though load failed
-      expect(parsed.errors).toHaveLength(1);
-      expect(parsed.errors[0].path).toBe('input');
-      expect(parsed.errors[0].message).toContain('invalid json');
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('parse error');
+      expect(mockValidate).not.toHaveBeenCalled();
     });
   });
 });

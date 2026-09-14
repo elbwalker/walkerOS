@@ -7,36 +7,40 @@ import { ValidateOutputShape } from '../schemas/output.js';
 
 import type { ToolSpec } from '../tool-spec.js';
 import {
+  HINT_OUT_OF_PROCESS,
   refusalHint,
   RuntimeRefusal,
   type FlowRuntime,
 } from '../runtime/types.js';
 import { isCloudId } from '../cloud-flow.js';
 
+type ValidateType = 'contract' | 'event' | 'flow' | 'mapping';
+
 /**
- * Resolve the validate input through the runtime. A bare string the runtime
- * cannot resolve is the event-name shorthand and becomes `{ name }`, exactly
- * as the cli's own loader treats it; the shorthand reads nothing, so it holds
- * under every runtime. Two failures are never a shorthand: a `RuntimeRefusal`
- * (a policy decision) and a failed saved-id lookup (the id names a real
- * record, so its error must surface, not be masked as an event name).
+ * Resolve the validate input through the runtime. For `type: 'event'`, a bare
+ * string the runtime cannot resolve is the event-name shorthand and becomes
+ * `{ name }`; the shorthand reads nothing, so it holds under every runtime.
+ * Every other failure surfaces: a `RuntimeRefusal` (a policy decision), a
+ * failed saved-id lookup, and any load error for a flow, mapping or contract.
  */
 async function loadValidateInput(
   runtime: FlowRuntime,
   input: string,
-  name: string,
+  type: ValidateType,
 ): Promise<unknown> {
-  if (!input || input.trim() === '') throw new Error(`${name} is required`);
+  if (!input || input.trim() === '') throw new Error(`${type} is required`);
   const trimmed = input.trim();
+  const looksLikeJson = trimmed.startsWith('{') || trimmed.startsWith('[');
   try {
     return await runtime.load(input);
   } catch (error) {
     if (error instanceof RuntimeRefusal || isCloudId(trimmed)) throw error;
-    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
-      return { name: trimmed };
+    if (looksLikeJson) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to parse ${type}. ${message}`);
     }
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to parse ${name}. ${message}`);
+    if (type === 'event') return { name: trimmed };
+    throw error;
   }
 }
 
@@ -86,7 +90,7 @@ function detectDeprecatedStorePackages(
 const TITLE = 'Validate Flow';
 const DESCRIPTION =
   'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
-  'Accepts JSON strings, file paths, or URLs as input; on the hosted server a saved flow id (flow_ or cfg_) is accepted too. ' +
+  'Accepts JSON strings, file paths, or URLs as input; on the hosted server only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
   'Returns validation results with errors, warnings, and details.';
 
 const inputSchema = schemas.ValidateInputShape;
@@ -116,7 +120,7 @@ async function flowValidateHandlerBody(runtime: FlowRuntime, input: unknown) {
     flow,
     path,
   } = (input ?? {}) as {
-    type: 'contract' | 'event' | 'flow' | 'mapping';
+    type: ValidateType;
     input: string;
     flow?: string;
     path?: string;
@@ -148,10 +152,12 @@ async function flowValidateHandlerBody(runtime: FlowRuntime, input: unknown) {
 
     const hints = augmented.valid
       ? {
-          next: [
-            'Use flow_simulate to test event flow',
-            'Use flow_bundle to build',
-          ],
+          next: runtime.simulate
+            ? [
+                'Use flow_simulate to test event flow',
+                'Use flow_bundle to build',
+              ]
+            : [HINT_OUT_OF_PROCESS],
         }
       : {
           next: [
