@@ -1,4 +1,3 @@
-import { bundle } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
@@ -7,6 +6,11 @@ import { BundleOutputShape } from '../schemas/output.js';
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { resolveConfigPath } from './resolve-config-path.js';
+import {
+  refusalHint,
+  unavailableOperation,
+  type FlowRuntime,
+} from '../runtime/types.js';
 
 const TITLE = 'Bundle Flow';
 const DESCRIPTION =
@@ -25,31 +29,44 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
-export function createFlowBundleToolSpec(client: ToolClient): ToolSpec {
+export function createFlowBundleToolSpec(
+  client: ToolClient,
+  runtime: FlowRuntime,
+): ToolSpec {
   return {
     name: 'flow_bundle',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
     annotations,
-    handler: (input) => flowBundleHandlerBody(client, input),
+    handler: (input) => flowBundleHandlerBody(client, runtime, input),
   };
 }
 
-async function flowBundleHandlerBody(client: ToolClient, input: unknown) {
+async function flowBundleHandlerBody(
+  client: ToolClient,
+  runtime: FlowRuntime,
+  input: unknown,
+) {
   const { configPath, flow, stats, output } = (input ?? {}) as {
     configPath: string;
     flow?: string;
     stats?: boolean;
     output?: string;
   };
+  // Bundling compiles the config and resolves every package it names. A
+  // runtime that must not do that in its process provides no `bundle`.
+  if (!runtime.bundle) {
+    const refusal = unavailableOperation('bundle');
+    return mcpError(refusal, refusal.hint);
+  }
   try {
     // Accept a cloud flow/config id as configPath, resolving it to inline JSON.
     const resolvedConfigPath = await resolveConfigPath(client, configPath);
-    const result = await bundle(resolvedConfigPath, {
+    const result = await runtime.bundle(resolvedConfigPath, {
       flowName: flow,
       stats: stats ?? true,
-      buildOverrides: output ? { output } : undefined,
+      output,
     });
 
     if (!result) {
@@ -76,12 +93,19 @@ async function flowBundleHandlerBody(client: ToolClient, input: unknown) {
       },
     );
   } catch (error) {
-    return mcpError(error, 'Run flow_validate for detailed error messages');
+    return mcpError(
+      error,
+      refusalHint(error, 'Run flow_validate for detailed error messages'),
+    );
   }
 }
 
-export function registerFlowBundleTool(server: McpServer, client: ToolClient) {
-  const spec = createFlowBundleToolSpec(client);
+export function registerFlowBundleTool(
+  server: McpServer,
+  client: ToolClient,
+  runtime: FlowRuntime,
+) {
+  const spec = createFlowBundleToolSpec(client, runtime);
   server.registerTool(
     spec.name,
     {

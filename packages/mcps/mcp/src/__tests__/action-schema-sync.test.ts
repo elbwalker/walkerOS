@@ -1,3 +1,4 @@
+import { createLocalRuntime } from '../runtime/local.js';
 import './support/version.js';
 
 // Mock @walkeros/core so mcpError/mcpResult render a parseable shape: we read
@@ -219,7 +220,7 @@ describe('action ↔ schema ↔ handler contract is in sync', () => {
   }
 
   describe('flow_simulate.step', () => {
-    const spec = createFlowSimulateToolSpec(stubClient());
+    const spec = createFlowSimulateToolSpec(stubClient(), createLocalRuntime());
 
     it('registers step as a required (non-optional) zod string', () => {
       const stepSchema = spec.inputSchema.step as z.ZodType;

@@ -4,6 +4,7 @@ import { setClientContext } from '@walkeros/cli';
 import { createWalkerOSMcpServer, getMcpEmitterSingleton } from './server.js';
 import { HttpToolClient } from './http-tool-client.js';
 import { createMcpEmitter } from './telemetry.js';
+import { createLocalRuntime } from './runtime/local.js';
 
 declare const __VERSION__: string;
 
@@ -31,9 +32,12 @@ process.on('unhandledRejection', (reason) => {
 });
 
 async function main() {
+  // stdio runs on the user's own machine: the local runtime keeps file, URL and
+  // in-process bundle, simulate and push behaviour exactly as before.
   const server = createWalkerOSMcpServer({
     client: new HttpToolClient(),
     version: __VERSION__,
+    runtime: createLocalRuntime(),
   });
   const transport = new StdioServerTransport();
   await server.connect(transport);

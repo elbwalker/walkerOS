@@ -1,3 +1,4 @@
+import { createLocalRuntime } from '../../runtime/local.js';
 import { registerFlowSimulateTool } from '../../tools/simulate.js';
 
 jest.mock('@walkeros/cli/dev', () => ({
@@ -39,6 +40,8 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
+  // The real narrowing helper: cloud-id resolution reads the flow record through it.
+  isObject: jest.requireActual('@walkeros/core').isObject,
   mcpResult: jest.fn((result, hints) => ({
     structuredContent: hints ? { ...result, _hints: hints } : result,
     content: [{ type: 'text', text: JSON.stringify(result) }],
@@ -61,7 +64,7 @@ import { stubClient } from '../support/stub-client.js';
 import {
   __resetBundleCacheForTests,
   getOrBuildBundle,
-} from '../../tools/bundle-cache.js';
+} from '../../runtime/bundle-cache.js';
 
 const mockSimulateDestination = jest.mocked(simulateDestination);
 
@@ -94,7 +97,11 @@ describe('flow_simulate bundle cache', () => {
   beforeEach(async () => {
     server = createMockServer();
     getFlow = jest.fn();
-    registerFlowSimulateTool(server as never, stubClient({ getFlow }));
+    registerFlowSimulateTool(
+      server as never,
+      stubClient({ getFlow }),
+      createLocalRuntime(),
+    );
     jest.clearAllMocks();
     await __resetBundleCacheForTests();
     mockSimulateDestination.mockResolvedValue(destResult());
