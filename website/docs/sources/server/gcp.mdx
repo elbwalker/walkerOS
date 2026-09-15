@@ -39,7 +39,7 @@ Google Cloud Functions source for walkerOS. Lightweight runtime adapter with plu
 import { startFlow } from '@walkeros/collector';
 import { http } from '@google-cloud/functions-framework';
 
-const { sources } = await startFlow({
+const { collector } = await startFlow({
   sources: {
     gcp: {
       code: sourceCloudFunction,
@@ -54,7 +54,7 @@ const { sources } = await startFlow({
 });
 
 // Plug-and-play: source.push IS the Cloud Function handler
-http('walkerHandler', sources.gcp.push);`}
+http('walkerHandler', collector.sources.gcp.push);`}
   language="typescript"
 />
 
@@ -140,7 +140,7 @@ Extract request metadata and forward it through the pipeline.
 `config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the request scope (no `req.` prefix). A bare object like `{ ip: 'ip' }` is silently inert: without the `map` operator the source passes the whole request through and no field is extracted.
 
 <CodeSnippet
-  code={`const { sources } = await startFlow({
+  code={`const { collector } = await startFlow({
   sources: {
     gcp: {
       code: sourceCloudFunction,

@@ -52,7 +52,7 @@ settings: { paths: ['/events'] }
   code={`import { sourceFetch } from '@walkeros/server-source-fetch';
 import { startFlow } from '@walkeros/collector';
 
-const { sources } = await startFlow({
+const { collector } = await startFlow({
   sources: {
     fetch: {
       code: sourceFetch,
@@ -63,7 +63,7 @@ const { sources } = await startFlow({
   },
 });
 
-export default { fetch: sources.fetch.push };`}
+export default { fetch: collector.sources.fetch.push };`}
   language="typescript"
 />
 
@@ -116,7 +116,7 @@ Extract request metadata and forward it through the pipeline.
 `config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the `Request` (no `req.` prefix), or `{ fn }` for header access via `.get()`. A bare object like `{ url: 'url' }` is silently inert: without the `map` operator the source passes the whole request through and no field is extracted.
 
 <CodeSnippet
-  code={`const { sources } = await startFlow({
+  code={`const { collector } = await startFlow({
   sources: {
     fetch: {
       code: sourceFetch,

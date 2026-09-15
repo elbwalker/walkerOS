@@ -1,0 +1,9 @@
+// Entry point: Open Air tokens only, no component CSS.
+//
+// Consumers that want the design language's variables without explorer's
+// component styles import this:
+//   @import '@walkeros/explorer/tokens.css';
+//
+// Compiles to dist/tokens.css.
+
+@use './variables';

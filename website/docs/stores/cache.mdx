@@ -8,7 +8,7 @@ sidebar_position: 5
 
 Store-level cache wraps any `Flow.Store` with a read-through, write-through cache tier. It absorbs round-trips to slow backings (Google Sheets, HTTP APIs, S3) without changing how components call the store.
 
-The wrapping is transparent: a transformer wired to `$store.crm` does not know whether reads hit a memory cache, a Redis tier, or the underlying API. The wrapper is a `Store.Instance` itself, so all the rules from [Stores](./index.mdx) still apply.
+The wrapping is transparent: a transformer wired to `$store.crm` does not know whether reads hit a memory cache, a GCS tier, or the underlying Sheets API. The wrapper is a `Store.Instance` itself, so all the rules from [Stores](./index.mdx) still apply.
 
 :::tip
 Store-level cache is different from the [event-level Cache](../collector/cache.mdx) configured on sources, transformers, and destinations. Event cache short-circuits the pipeline on hit. Store cache memoizes `get`/`set`/`delete` calls on a single store. Both can be used in the same flow.
@@ -73,36 +73,38 @@ First rule caches only keys starting with `session:` for five minutes. The secon
 <CodeSnippet
   code={`{
   "stores": {
-    "redis": {
-      "package": "@walkeros/server-store-redis",
-      "config": { "settings": { "url": "$env.REDIS_URL" } },
+    "files": {
+      "package": "@walkeros/server-store-gcs",
+      "config": { "settings": { "bucket": "my-cache-bucket", "prefix": "cache/" } },
       "cache": { "rules": [{ "ttl": 300 }] }
     },
-    "api": {
-      "package": "@walkeros/server-store-api",
-      "config": { "settings": { "endpoint": "$env.API_URL" } },
+    "crm": {
+      "package": "@walkeros/server-store-sheets",
+      "config": { "settings": { "id": "1AbC...", "sheet": "Customers" } },
       "cache": {
-        "store": "redis",
+        "store": "files",
         "rules": [{ "ttl": 86400 }]
       }
     }
   },
   "transformers": {
-    "enrich": {
-      "package": "@walkeros/transformer-enrich",
-      "env": { "store": "$store.api" }
+    "crmLookup": {
+      "code": {
+        "type": "crm-lookup",
+        "push": "$code:async (event, context) => { if (!event.user.id) return; const crm = await context.env.store.get(event.user.id); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
+      },
+      "env": { "store": "$store.crm" }
     }
   }
 }`}
   language="json"
 />
 
-The lookup chain on `api.get(K)`:
+The lookup chain on `crm.get(K)`:
 
-1. Check the `api` wrapper's tier (Redis). HIT, return.
-2. On Redis MISS, fall through to the next layer. The Redis wrapper's own tier (the built-in memory `__cache`) is checked first. HIT, return and **populate Redis**.
-3. On both MISS, call the underlying API.
-4. The value flows back up. Each traversed tier is populated on the unwind: memory `__cache`, then Redis, then the `api` tier.
+1. Check the `crm` wrapper's tier, the `files` store. The `files` wrapper checks its own tier (the built-in memory `__cache`) first, then GCS. HIT, return. A GCS HIT also populates memory.
+2. On MISS in both, call the underlying Sheets store.
+3. The value flows back up. Each traversed tier is populated on the unwind: `crm` writes it to `files`, which writes GCS and then memory.
 
 Subsequent reads hit the topmost tier that has a fresh value.
 
@@ -124,7 +126,7 @@ Each wrapped store gets an automatic namespace prefix (the store id by default) 
 Read this section before relying on the cache for anything correctness-sensitive.
 
 - **Read-your-writes (in-process):** yes. `wrapped.set(K, V)` populates the local cache on success, so a subsequent `wrapped.get(K)` in the same process sees `V`.
-- **Cross-process consistency:** eventual, bounded by the longest TTL in the chain. If memory TTL is 60s and Redis TTL is 300s, a value changed in the backing by another writer is served stale from memory for up to 60s, from Redis for up to 300s. There is no invalidation channel.
+- **Cross-process consistency:** eventual, bounded by the longest TTL in the chain. If memory TTL is 60s and GCS TTL is 300s, a value changed in the backing by another writer is served stale from memory for up to 60s, from GCS for up to 300s. There is no invalidation channel.
 - **Tier-skipping repopulation:** a MISS in tier N that HITs in tier N+1 repopulates tier N on the unwind. Subsequent reads hit tier N.
 
 Set TTLs accordingly. Use short TTLs (1-60s) for mostly-static lookups behind a fast backing; use long TTLs (minutes-hours) for cold, expensive lookups where staleness is tolerable.
@@ -193,6 +195,6 @@ The dedicated `@walkeros/store-memory` package was removed once the built-in `__
 
 ## Related
 
-- [Stores](./index.mdx) — store interface, `$store.` wiring, lifecycle.
-- [Collector: Cache](../collector/cache.mdx) — event-level cache on sources, transformers, destinations.
-- [Reference Syntax](../guides/reference-syntax.mdx) — `$store.`, `$env.`, `$var.` references.
+- [Stores](./index.mdx): store interface, `$store.` wiring, lifecycle.
+- [Collector: Cache](../collector/cache.mdx): event-level cache on sources, transformers, destinations.
+- [Reference Syntax](../guides/reference-syntax.mdx): `$store.`, `$env.`, `$var.` references.

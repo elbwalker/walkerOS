@@ -136,6 +136,12 @@ Server sources require platform-specific handlers. For containerized deployments
 | GET | `/collect` | Pixel tracking (returns 1x1 GIF) |
 | OPTIONS | `/collect` | CORS preflight |
 
+POST bodies are read by content type. An `application/json` body must parse, or
+the request is answered with 400. A `text/plain` body is parsed as JSON when it
+is JSON (`navigator.sendBeacon` sends JSON as `text/plain`) and otherwise kept as
+the raw string on `ingest.body`, so a `before` transformer can decode it, for
+example batched gtag.js hits with the [GA4 transformer](/docs/transformers/ga4).
+
 :::tip Health checks
 Health check endpoints (`/health` and `/ready`) are provided by the [runner](/docs/apps/runner), not by individual sources. This means health checks work regardless of which source type you use.
 :::
@@ -178,7 +184,7 @@ push.
 | Status | Meaning |
 |--------|---------|
 | 200 | Accepted (respond-first mode: accepted for processing, not proof of delivery) or, in synchronous mode, processed |
-| 400 | Rejected client input: unparseable JSON (body echoes the parser message) or, on synchronous POST, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
+| 400 | Rejected client input: an unparseable `application/json` body (body echoes the parser message) or, on synchronous POST, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
 | 404 | Path not configured in `paths` |
 | 405 | Method not allowed on the path |
 | 413 | Body exceeds the 1mb limit |
@@ -237,7 +243,7 @@ const { collector } = await startFlow({
 | `path` | Pathname, no query string |
 | `query.*` | Query parameter, repeated keys joined with `,` |
 | `url` | Absolute request URL, or `''` when there is no `host` header |
-| `body` | Parsed request body |
+| `body` | Parsed request body, or the raw string for a `text/plain` body that is not JSON |
 | `raw` | The Express `Request` itself |
 
 These are the shared [request scope](/docs/sources/scope) fields. `protocol` and

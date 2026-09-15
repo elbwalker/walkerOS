@@ -27,7 +27,7 @@ Every source, transformer, and destination in a walkerOS flow is a **step**. Eac
 They serve multiple purposes simultaneously:
 
 - **Documentation**: developers see real data shapes, not just type signatures
-- **Testing**: CI runs examples as regression tests via `walkeros push --simulate`
+- **Testing**: your tests use examples as fixtures, and `walkeros validate` checks that connected steps have compatible examples
 - **Simulation**: debug your pipeline before deployment
 - **LLM context**: AI tools use examples to suggest correct mappings
 
@@ -96,7 +96,7 @@ Some destinations need to react to walker commands (consent updates, user identi
 
 Supported commands: \`config\`, \`consent\`, \`user\`, \`run\`. When `command` is set, `mapping` is ignored, because commands don't flow through event mapping. See the [walkeros-using-step-examples skill](https://github.com/elbwalker/walkerOS/blob/main/skills/walkeros-using-step-examples/SKILL.md#command-step-example) for the full test-runner pattern.
 
-You can add as many named examples as you need. Each name becomes addressable from the CLI with `--example`.
+You can add as many named examples as you need. Tests refer to each example by its name, and the MCP `flow_examples` tool lists them by name for each step.
 
 ## Three type zones
 
@@ -183,41 +183,34 @@ Examples are stripped by the bundler at build time. They never appear in your pr
 
 ## Using examples with the CLI
 
-### Simulate a single example
+### Simulate a step with an example's input
 
-Run a named example through the pipeline:
+Push an event through one step with its external calls mocked. `--event` takes the input itself, so pass an example's `in` value:
 
 <CodeSnippet
-  code={`# Run the "page view" example from the ga4 destination
+  code={`# Push the "page view" example's in value through the ga4 destination
 walkeros push flow.json --simulate destination.ga4 --event '{"name":"page view","data":{"title":"Home"}}'`}
   language="bash"
 />
 
-The CLI feeds `in` to the step, runs it through the pipeline, and compares the actual output against `out`. Mismatches are reported as errors.
+The CLI does not read `examples` here and does not compare anything against `out`. It reports whether the push succeeded and how long it took, and exits with code 1 only when the push fails with an error. A mapping that produces the wrong output still exits 0. To assert on `out`, run the examples in your own tests (see [Using examples in tests](#using-examples-in-tests)).
 
 ### Validate examples
 
-Check that examples match expected shapes without running the full pipeline:
+`walkeros validate` checks examples statically. It does not run any step:
 
 <CodeSnippet
   code={`walkeros validate flow.json`}
   language="bash"
 />
 
-### Cross-step validation
+For steps connected through `next` (source to transformer, transformer to transformer) or a destination's `before` chain, it checks that at least one `out` of the upstream step is structurally compatible with an `in` of the downstream step. Both values must have the same type. Two objects are compatible when they share at least half of the keys of the object with fewer keys; any two arrays are compatible regardless of their content. This is a shape check, not an equality check.
 
-Cross-step example validation is included automatically when validating a flow. It verifies that connected steps (source → transformer → destination) have structurally compatible `out`/`in` pairs:
-
-<CodeSnippet
-  code={`walkeros validate flow.json`}
-  language="bash"
-/>
-
-Cross-step validation checks that:
-- Source `out` types match transformer `in` types
-- Transformer `out` types match destination `in` types
-- Steps without examples produce warnings
-- Contract compliance when contracts are defined
+- No compatible pair is an error.
+- A connection is only checked when both steps declare `examples`. If either step has no `examples` key, nothing is checked and no warning is produced.
+- When both steps declare `examples` but one side has no usable value, the connection produces a warning. An upstream `out` counts when it is a non-empty array, string, or object (such as a walkerOS event); `out: false` and empty values are skipped. A downstream `in` counts unless its example sets `command`.
+- Steps without `next` or `before` are not checked.
+- When the config defines a `contract`, each destination and transformer example `in` that carries `entity` and `action` is validated against it. Violations are warnings, or errors with `--strict`.
 
 ## Using examples in tests
 

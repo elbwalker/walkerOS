@@ -2,7 +2,11 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config, Plugin } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plugin-llms-txt';
-import { version as coreVersion } from '../packages/core/package.json';
+// The site's own version, kept in lockstep with every @walkeros/* package by
+// the changesets "fixed" group. Reading it here rather than from core keeps
+// the version in the same file that triggers the website deploy, whose push
+// filter watches website/**.
+import { version as walkerosVersion } from './package.json';
 import restoreExpressionIndent from './src/remark/restore-expression-indent';
 import normalizeExportLinks from './src/remark/normalize-export-links';
 import prependExportContext from './src/remark/prepend-export-context';
@@ -67,7 +71,7 @@ const config: Config = {
   onBrokenLinks: 'throw',
 
   customFields: {
-    coreVersion,
+    walkerosVersion,
   },
 
   // Even if you don't use internationalization, you can use this field to set
@@ -198,8 +202,9 @@ const config: Config = {
 
   themeConfig: {
     colorMode: {
-      defaultMode: 'dark',
+      defaultMode: 'light',
       disableSwitch: false,
+      respectPrefersColorScheme: true,
     },
     autoCollapsedSidebar: true,
     docs: {
@@ -216,74 +221,85 @@ const config: Config = {
       },
       items: [
         {
+          type: 'dropdown',
+          label: 'walkerOS for ...',
+          position: 'left',
+          items: [
+            { to: '/for/tracking-specialists/', label: 'Tracking specialists' },
+            { to: '/for/developers/', label: 'Developers' },
+            { to: '/for/data-analysts/', label: 'Data analysts' },
+            { to: '/for/data-leads/', label: 'Data leads' },
+          ],
+        },
+        {
+          to: '/#tagging',
+          label: 'Features',
+          position: 'left',
+          // Anchor on the home page, never an active section.
+          activeBaseRegex: '^$',
+        },
+        {
+          href: 'https://www.elbwalker.com/services',
+          label: 'Services',
+          position: 'left',
+        },
+        {
           type: 'docSidebar',
           sidebarId: 'docsSidebar',
           position: 'left',
-          label: 'Documentation',
+          label: 'Docs',
         },
-        { to: '/playground/', label: 'Playground', position: 'left' },
         {
-          type: 'docSidebar',
-          sidebarId: 'skillsSidebar',
-          docsPluginId: 'skills',
+          to: '/#faq',
+          label: 'FAQ',
           position: 'left',
-          label: 'Skills',
+          // Anchor on the home page, never an active section.
+          activeBaseRegex: '^$',
         },
         {
           href: vars.github,
           label: 'GitHub',
           position: 'right',
         },
+        {
+          type: 'html',
+          position: 'right',
+          value:
+            '<a class="elb-oa-btn elb-oa-btn--pill" href="/docs/getting-started/quickstart/">npx walkeros init</a>',
+        },
       ],
     },
     footer: {
-      style: 'dark',
+      style: 'light',
       links: [
         {
-          title: 'Learn',
+          title: 'Product',
           items: [
-            {
-              label: 'Documentation',
-              to: '/docs/',
-            },
-            {
-              label: 'Playground',
-              to: '/playground/',
-            },
-            {
-              label: 'Comparisons',
-              to: '/docs/comparisons/',
-            },
-            {
-              label: 'Storybook demo',
-              href: 'https://storybook.walkeros.io/',
-            },
+            { label: 'Docs', to: '/docs/' },
+            { label: 'Quickstart', to: '/docs/getting-started/quickstart/' },
+            { label: 'Destinations', to: '/docs/destinations/' },
+            { label: 'Changelog', href: `${vars.github}releases` },
+            { label: 'Playground', to: '/playground/' },
+            { label: 'Skills', to: '/skills/' },
           ],
         },
         {
-          title: 'Community',
+          title: 'Journey',
           items: [
-            {
-              label: 'GitHub',
-              href: `${vars.github}discussions`,
-            },
-            {
-              label: 'LinkedIn',
-              href: `${vars.linkedin}`,
-            },
+            { label: 'Plan', to: '/docs/getting-started/event-model/' },
+            { label: 'Tag', to: '/docs/sources/web/browser/' },
+            { label: 'Collect', to: '/docs/collector/' },
+            { label: 'Deploy', to: '/docs/getting-started/deploy/' },
+            { label: 'Observe', to: '/docs/getting-started/observe/' },
           ],
         },
         {
           title: 'Company',
           items: [
-            {
-              label: 'About us',
-              href: 'https://www.elbwalker.com/company',
-            },
-            {
-              label: 'Services',
-              href: 'https://www.elbwalker.com/services',
-            },
+            { label: 'Services', href: 'https://www.elbwalker.com/services' },
+            { label: 'Workshops', to: '/#workshop' },
+            { label: 'About', href: 'https://www.elbwalker.com/company' },
+            { label: 'Contact', href: 'mailto:hello@elbwalker.com' },
             {
               label: 'Privacy Policy',
               href: 'https://www.elbwalker.com/legal/privacy',
@@ -296,6 +312,15 @@ const config: Config = {
               label: 'Imprint',
               href: 'https://www.elbwalker.com/legal/imprint',
             },
+          ],
+        },
+        {
+          title: 'Open source',
+          items: [
+            { label: 'GitHub', href: vars.github },
+            { label: 'npm', href: 'https://www.npmjs.com/org/walkeros' },
+            { label: 'Discussions', href: `${vars.github}discussions` },
+            { label: 'License', href: `${vars.github}blob/main/LICENSE` },
           ],
         },
       ],

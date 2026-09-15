@@ -71,7 +71,7 @@ destination, all at once.
 ### How `require` works
 
 1. Sources are registered immediately and their `Instance.init()` runs eagerly
-   after registration. `require` does not block init — it gates `on()`
+   after registration. `require` does not block init; it gates `on()`
    delivery. Lifecycle events targeted at a source with unmet `require` are
    buffered in `Instance.queueOn`.
 2. Destinations with `require` are held as **pending** during initialization

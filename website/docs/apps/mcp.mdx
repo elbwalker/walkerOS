@@ -512,7 +512,7 @@ takes. Needs the `hub` feature.
 | `status` | `"open"` \| `"resolved"` | No | Read only threads in this state. Action `threads` only, omit for both. |
 | `pageKey` | string | No | The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action `knowledge` to every frame that page holds, at any depth. Omit it to read the whole project. |
 | `frameId` | string | No | One frame (`frm_...`), the named rectangle a note hangs on. Action `knowledge` only. Narrower than `pageKey`, since a page holds several frames. |
-| `markId` | string | No | One mark within `frameId`. Action `knowledge` only, and refused without `frameId`, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies. |
+| `markId` | string | No | One tag within `frameId`, by its tag id (the `id` of an entry in `frame_manage` `marks.tags`). Action `knowledge` only, and refused without `frameId`, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies. |
 
 ##### `frame_manage`
 
