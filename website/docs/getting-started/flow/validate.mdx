@@ -98,7 +98,7 @@ Summary: 0 error(s), 1 warning(s)`}
   language="bash"
 />
 
-Contract violations are warnings by default; add `--strict` to turn them into errors (exit code 1) and fail CI before a broken event shape ships. A tag manager drops the same broken field silently, in production.
+Contract violations are warnings by default; add `--strict` to turn them into errors (exit code 1; any other warning under `--strict` exits with code 2) and fail CI before a broken event shape ships. A tag manager drops the same broken field silently, in production.
 
 ## Next steps
 

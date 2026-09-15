@@ -221,11 +221,15 @@ const config: Config = {
       },
       items: [
         {
-          to: '/#path',
+          type: 'dropdown',
           label: 'walkerOS for ...',
           position: 'left',
-          // Anchor on the home page, never an active section.
-          activeBaseRegex: '^$',
+          items: [
+            { to: '/for/tracking-specialists/', label: 'Tracking specialists' },
+            { to: '/for/developers/', label: 'Developers' },
+            { to: '/for/data-analysts/', label: 'Data analysts' },
+            { to: '/for/data-leads/', label: 'Data leads' },
+          ],
         },
         {
           to: '/#tagging',

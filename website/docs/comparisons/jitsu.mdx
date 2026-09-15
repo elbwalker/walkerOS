@@ -120,8 +120,12 @@ platforms, or require EU data residency, walkerOS is the better fit.
 
 ## Can they work together?
 
-Yes. You can use walkerOS for event collection and send the data to Jitsu as a
-destination. walkerOS then handles composable tagging, consent, and structured
+Yes. You can use walkerOS for event collection and forward the events to Jitsu.
+walkerOS has no dedicated Jitsu destination: point the
+[API destination](/docs/destinations/api/server) at Jitsu's HTTP ingest endpoint
+and shape the request body with mapping, or, for a Segment-compatible endpoint,
+set `host` on the [Segment destination](/docs/destinations/server/segment).
+walkerOS then handles composable tagging, consent, and structured
 events on the frontend, and Jitsu streams to the warehouse on the backend.
 
 ## Getting started

@@ -364,8 +364,10 @@ Link transformers together using `next`:
   code={`{
   "transformers": {
     "enrich": {
-      "package": "@walkeros/transformer-enricher",
-      "config": { "apiUrl": "https://api.example.com" },
+      "code": {
+        "type": "enrich",
+        "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, enriched: true } } })"
+      },
       "next": "fingerprint"
     },
     "fingerprint": {
@@ -390,8 +392,18 @@ For explicit control over the transformer chain order, use an array instead of a
   },
   "transformers": {
     "fingerprint": { "package": "@walkeros/server-transformer-fingerprint" },
-    "enrich": { "package": "@walkeros/transformer-enricher" },
-    "redact": { "package": "@walkeros/transformer-redact" }
+    "enrich": {
+      "code": {
+        "type": "enrich",
+        "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, enriched: true } } })"
+      }
+    },
+    "redact": {
+      "code": {
+        "type": "redact",
+        "push": "$code:(event) => ({ event: { ...event, user: { ...event.user, email: undefined } } })"
+      }
+    }
   }
 }`}
   language="json"
@@ -419,10 +431,25 @@ For explicit control over the transformer chain order, use an array instead of a
     }
   },
   "transformers": {
-    "decoder": { "package": "@walkeros/transformer-decoder" },
+    "decoder": {
+      "code": {
+        "type": "decoder",
+        "push": "$code:(event) => ({ event: { ...event, name: String(event.name).toLowerCase() } })"
+      }
+    },
     "fingerprint": { "package": "@walkeros/server-transformer-fingerprint" },
-    "redact": { "package": "@walkeros/transformer-redact" },
-    "auditLog": { "package": "@walkeros/transformer-audit" }
+    "redact": {
+      "code": {
+        "type": "redact",
+        "push": "$code:(event) => ({ event: { ...event, user: { ...event.user, email: undefined } } })"
+      }
+    },
+    "auditLog": {
+      "code": {
+        "type": "audit-log",
+        "push": "$code:(event, context) => { context.logger.info('delivered', event.name); }"
+      }
+    }
   },
   "destinations": {
     "analytics": {
@@ -497,7 +524,10 @@ The same transformer can appear in both a pre-collector and a post-collector cha
       "package": "@walkeros/server-transformer-fingerprint"
     },
     "enrich": {
-      "package": "@walkeros/transformer-enricher"
+      "code": {
+        "type": "enrich",
+        "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, enriched: true } } })"
+      }
     }
   },
   "destinations": {
@@ -646,7 +676,7 @@ Use `code` object instead of `package`:
     "enrich": {
       "code": {
         "type": "enricher",
-        "push": "$code:(event) => ({ ...event, data: { ...event.data, timestamp: Date.now() } })"
+        "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, timestamp: Date.now() } } })"
       },
       "config": {}
     }

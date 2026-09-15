@@ -6,70 +6,90 @@ sidebar_position: 3
 
 # Docker
 
-## Try the demo
+The `walkeros/flow` image runs a flow bundle you build with the CLI. This quickstart builds a small collector, runs it in a container, and sends it an event.
+
+You need [Docker](https://docs.docker.com/get-docker/), Node.js, and network access to npm (the CLI downloads the packages your flow names).
+
+## 1. Create a flow
+
+Save this as `flow.json`. The Express source receives events on `/collect`, and the demo destination logs each event's `name` and `data`:
 
 <CodeSnippet
-  code={`docker run -p 8080:8080 -e BUNDLE=/app/demos/demo-collect.mjs walkeros/flow:latest`}
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "sources": {
+        "http": { "package": "@walkeros/server-source-express" }
+      },
+      "destinations": {
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "config": { "settings": { "values": ["name", "data"] } }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## 2. Bundle it
+
+<CodeSnippet
+  code={`npm install -g @walkeros/cli
+walkeros bundle flow.json -o dist/`}
   language="bash"
 />
 
-Output:
+This writes `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The packages stay in `node_modules/`, so the container needs the whole directory, not `flow.mjs` alone.
+
+## 3. Run the container
+
+Mount the bundle directory at `/app/flow`, where the image expects `flow.mjs`:
 
 <CodeSnippet
-  code={`INFO [runner] Loading flow from /app/demos/demo-collect.mjs
-INFO [runner] Flow running
-INFO [runner] Port: 8080`}
+  code={`docker run --rm -p 8080:8080 \\
+  -v $(pwd)/dist:/app/flow:ro \\
+  walkeros/flow:latest`}
   language="bash"
 />
 
-Test it:
+The image's entrypoint checks that the bundle file exists before it starts. If it exits with `bundle not found`, check the mount path.
+
+## 4. Send an event
+
+In another terminal:
 
 <CodeSnippet
   code={`curl -X POST http://localhost:8080/collect \\
-  -H "Content-Type: application/json" \\
-  -d '{"name":"page view","data":{"title":"Test Page"}}'`}
-  language="bash"
-/>
-
-## HTTP event collection
-
-<CodeSnippet
-  code={`docker run -d -p 8080:8080 \\
-  -e BUNDLE=/app/demos/demo-collect.mjs \\
-  walkeros/flow
-
-# Send event
-curl -X POST http://localhost:8080/collect \\
   -H "Content-Type: application/json" \\
   -d '{"name":"page view","data":{"title":"Home"}}'`}
   language="bash"
 />
 
-## Built-in demos
+The response is `{"success":true,"timestamp":...}`, and the container log shows the event:
 
-The Docker image includes demo bundles at `/app/demos/`:
+<CodeSnippet
+  code={`[demo] {
+  "name": "page view",
+  "data": {
+    "title": "Home"
+  }
+}`}
+  language="bash"
+/>
 
-- `demo-collect.mjs` - Server collector demo
-- `demo-serve.js` - Web bundle demo
+`GET http://localhost:8080/health` returns `{"status":"ok"}` while the container runs.
 
-## Custom flow
+## Build a custom image
 
-### Build your flow
-
-Docker runtime requires **pre-built bundles**, not JSON configs.
-
-**Workflow:**
-
-1. Create a [flow.json](/docs/getting-started/flow/) config
-2. Bundle with CLI: `walkeros bundle flow.json --output flow.mjs`
-3. Run in Docker: `docker run -e BUNDLE=/app/flow.mjs`
-
-### Build custom image
+Bake the bundle into your own image instead of mounting it:
 
 <CodeSnippet
   code={`FROM walkeros/flow:latest
-COPY flow.mjs /app/flow.mjs
-ENV BUNDLE=/app/flow.mjs`}
+COPY dist/ /app/flow/`}
   language="docker"
 />
 
@@ -82,31 +102,41 @@ docker run -p 8080:8080 my-walker`}
 ## Docker compose
 
 <CodeSnippet
-  code={`version: '3.8'
-
-services:
+  code={`services:
   walkeros:
     image: walkeros/flow:latest
-    environment:
-      BUNDLE: /app/demos/demo-collect.mjs
+    volumes:
+      - ./dist:/app/flow:ro
     ports:
       - '8080:8080'
     restart: unless-stopped`}
   language="yaml"
 />
 
+## Single-file archive
+
+To ship one file instead of a directory, bundle to an archive and point `BUNDLE` at it. The runtime extracts it into `/app/flow/` at startup, so leave that directory writable:
+
+<CodeSnippet
+  code={`walkeros bundle flow.json -o flow.tar.gz
+
+docker run --rm -p 8080:8080 \\
+  -v $(pwd)/flow.tar.gz:/app/bundle/flow.tar.gz:ro \\
+  -e BUNDLE=/app/bundle/flow.tar.gz \\
+  walkeros/flow:latest`}
+  language="bash"
+/>
+
 ## Environment variables
 
-| Variable     | Description                                         | Default           |
-| ------------ | --------------------------------------------------- | ----------------- |
-| `BUNDLE`     | Path to pre-bundled flow file                       | Required          |
-| `PORT`       | Server port                                         | 8080              |
-| `HOST`       | Server host                                         | 0.0.0.0           |
-| `SERVE_NAME` | Filename in URL (serve mode)                        | walker.js         |
-| `SERVE_PATH` | URL directory (serve mode)                          | (empty = root)    |
+| Variable | Description                                                 | Default              |
+| -------- | ----------------------------------------------------------- | -------------------- |
+| `BUNDLE` | Path inside the container to `flow.mjs` or a `.tar.gz` archive | `/app/flow/flow.mjs` |
+| `PORT`   | Server port                                                 | `8080`               |
 
 ## Next steps
 
+- [Docker deployment guide](/docs/apps/docker)
+- [Runner](/docs/apps/runner): remote config, heartbeats, and hot-swap
 - [Available sources](../../sources/)
 - [Available destinations](../../destinations/)
-- [Docker Package README](https://github.com/elbwalker/walkerOS/tree/main/packages/docker)

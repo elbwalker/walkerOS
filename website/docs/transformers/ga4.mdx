@@ -16,9 +16,9 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
   npm="@walkeros/transformer-ga4"
 />
 
-Decoder transformer that turns Google Analytics 4 Measurement Protocol v2 hits (`/g/collect`, `/mp/collect`) into walkerOS events. Drop it in a server source's `before` chain to ingest existing `gtag`/Google Tag traffic without changing the front-end. One HTTP request can carry many GA4 events; the transformer returns one walkerOS event per GA4 event in the hit.
+Decoder transformer that turns Google Analytics 4 Measurement Protocol v2 hits (`/g/collect`, `/mp/collect`) into walkerOS events. Drop it in a server source's `before` chain to ingest traffic from an existing `gtag`/Google Tag setup: you point the tag at your own collector, and your `gtag('event', ...)` calls stay as they are. One HTTP request can carry many GA4 events; the transformer returns one walkerOS event per GA4 event in the hit.
 
-This is the v1 release (`0.1.0`) with an explicit scope: server-side decoding via `source-express`, GA4 v2 only, replace-not-merge mapping semantics. See [Caveats](#caveats) and [Roadmap](#roadmap) for the boundaries.
+The scope: server-side decoding in front of a server source, GA4 v2 only. See [Caveats](#caveats) and [Roadmap](#roadmap) for the boundaries.
 
 ## Installation
 
@@ -27,9 +27,32 @@ This is the v1 release (`0.1.0`) with an explicit scope: server-side decoding vi
   language="bash"
 />
 
+## Send gtag hits to your collector
+
+gtag.js sends GA4 hits to `/g/collect` on the host it is configured with. To send them to your walkerOS collector instead of Google, set `server_container_url` on the GA4 config to your collector's origin:
+
+```javascript
+gtag('config', 'G-XXXXXXXXXX', {
+  server_container_url: 'https://collect.example.com',
+});
+```
+
+Hits then arrive at `https://collect.example.com/g/collect`. If the URL carries a path (for example `https://example.com/metrics`), gtag.js appends `/g/collect` to it, and that full path is what the server source must listen on. Hits go to your collector instead of Google, so GA4 only receives what your flow forwards.
+
+If gtag runs through the walkerOS [gtag destination](/docs/destinations/web/gtag/ga4), set the same value in its settings: `settings.ga4.server_container_url` (or `settings.ga4.transport_url`), which it passes to the `config` command.
+
+The request URL, method, and body format described on this page are gtag.js behaviour, not a walkerOS contract, and can change with gtag.js releases. Confirm them in your browser's Network tab (filter for `collect`) before you rely on them.
+
 ## Wire it up
 
-The transformer reads `ctx.ingest.url` (required) and `ctx.ingest.body` (optional) from the source it sits in front of. The recommended pairing is `@walkeros/server-source-express`:
+The transformer reads `ctx.ingest.url` (required) and `ctx.ingest.body` (optional) from the source it sits in front of. gtag.js can send several events in one POST body, so the source must keep a body that is not JSON as `ingest.body`. These server sources do, so pick by runtime:
+
+- `@walkeros/server-source-express`, the source `walkeros run` and the `walkeros/flow` Docker image serve. A `text/plain` body that is valid JSON is parsed, and any other `text/plain` body reaches the transformer as the raw string.
+- `@walkeros/server-source-fetch`, for a runtime that serves a `(Request) => Response` handler (Cloudflare Workers, Deno, Bun, or Node.js 18+ with a fetch adapter). See [Batched POST hits](#batched-post-hits) for the wiring.
+- `@walkeros/server-source-gcp` (`sourceCloudFunction`) on Google Cloud Functions.
+- `@walkeros/server-source-aws` (`sourceLambda`) on AWS Lambda. It decodes batched POSTs and GET hits, but answers a POST without a body with 400, so single-event hits sent that way are lost.
+
+The example below uses the express source. It listens on `/collect` by default, so set `paths` to the path gtag.js sends to. Without it, GA4 hits get a 404:
 
 <Tabs groupId="mode">
   <TabItem value="bundled" label="Bundled" default>
@@ -44,6 +67,10 @@ The transformer reads `ctx.ingest.url` (required) and `ctx.ingest.body` (optiona
         "http": {
           "package": "@walkeros/server-source-express",
           "config": {
+            "settings": {
+              "port": 8080,
+              "paths": ["/g/collect"]
+            },
             "ingest": {
               "map": {
                 "url": { "key": "url" },
@@ -81,6 +108,10 @@ await startFlow({
     http: {
       code: sourceExpress,
       config: {
+        settings: {
+          port: 8080,
+          paths: ['/g/collect'],
+        },
         ingest: {
           map: {
             url: { key: 'url' },
@@ -112,12 +143,80 @@ The transformer expects the source to populate `ctx.ingest` with these keys:
 | Key    | Type     | Required | Notes                                                |
 | ------ | -------- | -------- | ---------------------------------------------------- |
 | `url`  | `string` | yes      | Full request URL including the query string.        |
-| `path` | `string` | yes      | Request path, drives the `/g/collect` `before` match. |
+| `path` | `string` | no       | Request path. Use it to gate the `before` chain when the source also receives other traffic. |
 | `body` | `string` | no       | Raw POST body. Multi-event batches are `\n`-separated lines. |
 
-`config.ingest` must use the `map` operator with **direct `req` field paths** (no `req.` prefix), as shown above. A bare object like `{ "url": "req.url" }` is silently inert: without an operator the source returns `req` itself, `ctx.ingest` stays empty, and raw GA4 params reach the collector as a nameless event.
+`config.ingest` must use the `map` operator with **direct field paths on the request scope** (no `req.` prefix), as shown above. A bare object like `{ "url": "req.url" }` is silently inert: without an operator no field is extracted, `ctx.ingest` stays empty, and the transformer drops the hit.
 
-If `url` is missing or not a string the transformer drops the event silently. If `body` is JSON-parsed by the source before reaching the transformer, pass the original raw string through or skip the transformer.
+If `url` is missing or not a string the transformer drops the event silently.
+
+### GA4 hits and walkerOS events on one source
+
+With `before: "ga4"` every request on the source runs through the decoder, and a request without GA4 parameters is dropped. To receive walkerOS events on the same source, listen on both paths and gate the chain on `ingest.path`:
+
+```json
+"http": {
+  "package": "@walkeros/server-source-express",
+  "config": {
+    "settings": { "port": 8080, "paths": ["/collect", "/g/collect"] },
+    "ingest": {
+      "map": {
+        "url": { "key": "url" },
+        "path": { "key": "path" },
+        "method": { "key": "method" },
+        "body": { "key": "body" }
+      }
+    }
+  },
+  "before": {
+    "match": { "key": "ingest.path", "operator": "eq", "value": "/g/collect" },
+    "next": "ga4"
+  }
+}
+```
+
+### Batched POST hits
+
+gtag.js sends a single event as a POST with the parameters in the query string and no body, and several events as one POST whose body holds one event per line (check this in the Network tab, as above). The body arrives as `text/plain`, and `@walkeros/server-source-express` keeps a `text/plain` body that is not JSON as `ingest.body`, so the express example above decodes GET hits, body-less POST hits, and batched POST hits alike.
+
+`@walkeros/server-source-fetch`, `sourceCloudFunction` (`@walkeros/server-source-gcp`), and `sourceLambda` (`@walkeros/server-source-aws`) also keep a body that is not JSON as `ingest.body`, so batched hits decode there with the same `ingest` and `before` settings (the Lambda source rejects a POST without a body, see above). The fetch source also takes `paths`, but has no `port` setting: it is a `(Request) => Response` handler you hand to your runtime. On Cloudflare Workers:
+
+```typescript
+import { startFlow } from '@walkeros/collector';
+import { sourceFetch } from '@walkeros/server-source-fetch';
+import { transformerGa4 } from '@walkeros/transformer-ga4';
+import { destinationDemo } from '@walkeros/destination-demo';
+
+const { collector } = await startFlow({
+  sources: {
+    http: {
+      code: sourceFetch,
+      config: {
+        settings: { paths: ['/g/collect'] },
+        ingest: {
+          map: {
+            url: { key: 'url' },
+            path: { key: 'path' },
+            method: { key: 'method' },
+            body: { key: 'body' },
+          },
+        },
+      },
+      before: 'ga4',
+    },
+  },
+  transformers: {
+    ga4: { code: transformerGa4 },
+  },
+  destinations: {
+    log: { code: destinationDemo },
+  },
+});
+
+export default { fetch: collector.sources.http.push };
+```
+
+`walkeros run` and the `walkeros/flow` Docker image only serve a source that exposes a Node HTTP handler, which the fetch source does not, so a bundled flow with the fetch source needs a runtime that calls its `push` with each `Request`.
 
 <Configuration type="transformer" data={data} />
 
@@ -145,7 +244,7 @@ If `url` is missing or not a string the transformer drops the event silently. If
 | `begin_checkout`      | `order start`      | `currency`, `value`, `coupon`     |
 | `add_shipping_info`   | `order shipping`   | `currency`, `value`, `tier`       |
 | `add_payment_info`    | `order payment`    | `currency`, `value`, `type`       |
-| `purchase`            | `order complete`   | `id`, `currency`, `total`, `tax`, `shipping` |
+| `purchase`            | `order complete`   | `id`, `currency`, `total`, `tax`, `shipping`, `coupon` |
 | `refund`              | `order refund`     | `id`, `currency`, `total`         |
 | `add_to_wishlist`     | `wishlist add`     | `currency`, `value`               |
 
@@ -199,7 +298,39 @@ Any GA4 event name not listed above falls through to `'*'` and produces a generi
 
 ## Override a default field
 
-User config **replaces** the matching default rule per event name. Other events keep their defaults. To swap a field on `purchase`:
+User config applies per event name; other events keep their defaults. A rule with `extend` or `remove` patches the matching default rule. A rule with neither replaces it.
+
+### Patch a default rule
+
+`extend` is deep-merged onto the default rule, so you add or change individual fields and keep the rest. `remove` strips fields from the produced `data`. To add `affiliation` to `purchase` and drop `currency`:
+
+```json
+{
+  "transformers": {
+    "ga4": {
+      "package": "@walkeros/transformer-ga4",
+      "config": {
+        "settings": {
+          "mapping": {
+            "purchase": {
+              "extend": {
+                "data": { "map": { "affiliation": "params.ep.affiliation" } }
+              },
+              "remove": ["currency"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`id`, `total`, `tax`, `shipping`, and `coupon` stay as the default defines them. A `null` value in `extend` clears an inherited field, for example `"extend": { "name": null }`.
+
+### Replace a default rule
+
+Without `extend` or `remove`, the whole rule is taken from your config:
 
 ```json
 {
@@ -228,7 +359,7 @@ User config **replaces** the matching default rule per event name. Other events 
 }
 ```
 
-Because v1 uses replace semantics, the entire `purchase` rule is taken from user config: copy any default fields you want to keep. Additive per-field merge is on the [roadmap](#roadmap).
+The default `tax`, `shipping`, and `coupon` fields are gone in this example: a replacing rule keeps only what it lists.
 
 ## Drop an event
 
@@ -286,18 +417,29 @@ By default only Measurement IDs starting with `G-` are accepted; Ads (`AW-`) and
 
 The string is compiled to a `RegExp` at init time.
 
+## Batch size limit
+
+Every decoded event continues through the pipeline as its own push, and a source's batch limit (such as the express `maxBatchSize`) only covers JSON batches, not a raw `text/plain` body. The transformer therefore caps the events in one request with `settings.maxEvents` (default `100`). It counts the non-empty lines of the POST body before decoding, and a request with more lines than the cap is dropped whole: no event from it is decoded, and one `warn` log line records the line count and the cap. The source still answers the client with success, so that log line is the only sign of the drop. Raise the cap only if your own server-to-server calls send larger batches:
+
+```json
+"settings": {
+  "maxEvents": 250
+}
+```
+
 ## Caveats
 
-- **Replace semantics, not merge.** A user mapping rule fully replaces the matching default rule. There is no per-field merge inside `data.map` in v1.
+- **Replace unless `extend` or `remove` is set.** A user mapping rule without either keyword fully replaces the matching default rule.
 - **GA4 v2 only.** Assumes the v2 Measurement Protocol layout (`ep.`, `epn.`, `up.`, `upn.`, `prN`, `gcs`). v1 is out of scope.
 - **`G-` tids only by default.** Override `tidPattern` to capture Ads and DC traffic.
 - **Basic `gcs` only.** Maps `G1XX` to `marketing`/`analytics` booleans. Functional/preferences flags and the newer `gcd` parameter are not decoded.
 - **Body must be raw text.** The transformer parses POST bodies as URL-encoded form lines. Pre-parsed JSON bodies will not decode.
+- **Batched POST hits need a raw body.** The source must keep a `text/plain` body that is not JSON as `ingest.body`. The express, fetch, Cloud Function, and Lambda sources do; the Lambda source rejects a POST without a body. See [Batched POST hits](#batched-post-hits).
+- **At most 100 events per request by default.** A POST body with more lines than `settings.maxEvents` is dropped whole. See [Batch size limit](#batch-size-limit).
 - **Ingest contract is required.** Source wiring must populate `ctx.ingest.url` (required) and `ctx.ingest.body` (optional) for batched hits.
 
 ## Roadmap
 
-- **Additive per-field merge** so partial overrides extend the default rule instead of replacing it
 - **Web ingest via interception sources** for capturing `gtag` traffic from the browser
 - **More vendor decoders** (Segment, Snowplow, Adobe) following the same `before`-chain pattern
 - **Richer consent decoding** (`gcd`, functional/preferences flags)

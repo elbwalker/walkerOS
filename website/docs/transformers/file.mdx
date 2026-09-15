@@ -33,25 +33,29 @@ Serves static files from a [store](/docs/stores) backend. Reads the file by `ing
 import { transformerFile } from '@walkeros/server-transformer-file';
 import { storeFsInit } from '@walkeros/server-store-fs';
 
+// Reference this same object in stores and in env: the collector swaps it
+// for the initialized store instance at startup.
+const files = {
+  code: storeFsInit,
+  config: { settings: { basePath: './public' }, file: true },
+};
+
 await startFlow({
-  stores: {
-    files: {
-      code: storeFsInit,
-      config: { settings: { basePath: './public' } },
-    },
-  },
+  stores: { files },
   transformers: {
     file: {
       code: transformerFile,
       config: {
         settings: { prefix: '/static' },
       },
-      env: { store: '$store.files' },
+      env: { store: files },
     },
   },
 });`}
   language="typescript"
 />
+
+The `'$store.files'` string only works in a bundled `flow.json`, where the CLI resolves it. In `startFlow` it stays a string and the transformer fails.
 
   </TabItem>
   <TabItem value="bundled" label="Bundled">
