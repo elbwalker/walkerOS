@@ -151,32 +151,35 @@ of any backing store. No separate memory store declaration is needed.
 
 ### Integrated mode (TypeScript)
 
-Pass store instances directly — no `$store.` prefix needed:
+Pass the store definition object itself, no `$store.` prefix:
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
 import { storeFsInit } from '@walkeros/server-store-fs';
 import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';
 
-const { collector } = await startFlow({
-  stores: {
-    data: {
-      code: storeFsInit,
-      config: { settings: { basePath: './data' } },
-      cache: { rules: [{ ttl: 60 }] },
-    },
-  },
+const data = {
+  code: storeFsInit,
+  config: { settings: { basePath: './data' } },
+  cache: { rules: [{ ttl: 60 }] },
+};
+
+await startFlow({
+  stores: { data },
   transformers: {
     fingerprint: {
       code: transformerFingerprint,
-      env: { store: collector.stores.data }, // Direct reference
+      env: { store: data }, // same object as stores.data
     },
   },
 });
 ```
 
-Note: In integrated mode, you wire the store instance directly in `env` rather
-than using the `$store.` string prefix (that's a bundler feature).
+Note: In integrated mode, put the same store definition object in `stores` and
+in `env`. The collector replaces it with the initialized instance at startup,
+matched by object identity (a copy does not match), and only for top-level `env`
+keys. The `$store.` string prefix is a bundler feature: in `startFlow` it stays
+a plain string.
 
 ## Available stores
 

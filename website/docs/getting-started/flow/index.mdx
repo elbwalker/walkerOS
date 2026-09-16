@@ -30,8 +30,8 @@ A flow configuration uses the `Flow.Json` format with two required fields:
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
-            "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+            "@walkeros/web-source-browser": { "version": "^4", "imports": ["sourceBrowser"] },
+            "@walkeros/web-destination-api": { "version": "^4", "imports": ["destinationAPI"] }
           }
         }
       },
@@ -40,8 +40,7 @@ A flow configuration uses the `Flow.Json` format with two required fields:
           "package": "@walkeros/web-source-browser",
           "config": {
             "settings": {
-              "pageview": true,
-              "session": true
+              "pageview": true
             }
           }
         }
@@ -171,7 +170,7 @@ Build-time configuration lives under `flow.<name>.config.bundle`. The `packages`
     "bundle": {
       "packages": {
         "@walkeros/web-source-browser": {
-          "version": "0.4.0",
+          "version": "^4",
           "imports": ["sourceBrowser"]
         },
         "@walkeros/web-destination-api": {
@@ -188,7 +187,7 @@ Build-time configuration lives under `flow.<name>.config.bundle`. The `packages`
 />
 
 **`packages` properties:**
-- **`version`** - npm version (semver or "latest", defaults to "latest")
+- **`version`** - An exact npm version, a semver range, or a tag. Defaults to `"latest"`. A major range such as `"^4"` picks up new minor and patch releases without jumping to the next major version. `walkeros validate` warns about packages that set neither `version` nor `path`, and `--strict` turns that warning into a failing exit code.
 - **`imports`** - Array of named exports to import
 - **`path`** - Local filesystem path (takes precedence over `version`)
 
@@ -223,7 +222,7 @@ When configuring individual steps (sources, transformers, or destinations), the 
   code={`{
   "sources": {
     "browser": {
-      "package": "@walkeros/web-source-browser@2.1.0",
+      "package": "@walkeros/web-source-browser@^4",
       "config": { "settings": { "pageview": true } }
     }
   }
@@ -339,7 +338,7 @@ Transformers process events between sources and destinations. They validate, enr
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint",
       "config": {
-        "settings": { "format": true }
+        "settings": { "fields": ["ingest.ip", "ingest.userAgent"] }
       }
     }
   }
@@ -364,8 +363,10 @@ Link transformers together using `next`:
   code={`{
   "transformers": {
     "enrich": {
-      "package": "@walkeros/transformer-enricher",
-      "config": { "apiUrl": "https://api.example.com" },
+      "code": {
+        "type": "enrich",
+        "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, enriched: true } } })"
+      },
       "next": "fingerprint"
     },
     "fingerprint": {
@@ -390,8 +391,18 @@ For explicit control over the transformer chain order, use an array instead of a
   },
   "transformers": {
     "fingerprint": { "package": "@walkeros/server-transformer-fingerprint" },
-    "enrich": { "package": "@walkeros/transformer-enricher" },
-    "redact": { "package": "@walkeros/transformer-redact" }
+    "enrich": {
+      "code": {
+        "type": "enrich",
+        "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, enriched: true } } })"
+      }
+    },
+    "redact": {
+      "code": {
+        "type": "redact",
+        "push": "$code:(event) => ({ event: { ...event, user: { ...event.user, email: undefined } } })"
+      }
+    }
   }
 }`}
   language="json"
@@ -419,10 +430,25 @@ For explicit control over the transformer chain order, use an array instead of a
     }
   },
   "transformers": {
-    "decoder": { "package": "@walkeros/transformer-decoder" },
+    "decoder": {
+      "code": {
+        "type": "decoder",
+        "push": "$code:(event) => ({ event: { ...event, name: String(event.name).toLowerCase() } })"
+      }
+    },
     "fingerprint": { "package": "@walkeros/server-transformer-fingerprint" },
-    "redact": { "package": "@walkeros/transformer-redact" },
-    "auditLog": { "package": "@walkeros/transformer-audit" }
+    "redact": {
+      "code": {
+        "type": "redact",
+        "push": "$code:(event) => ({ event: { ...event, user: { ...event.user, email: undefined } } })"
+      }
+    },
+    "auditLog": {
+      "code": {
+        "type": "audit-log",
+        "push": "$code:(event, context) => { context.logger.info('delivered', event.name); }"
+      }
+    }
   },
   "destinations": {
     "analytics": {
@@ -497,7 +523,10 @@ The same transformer can appear in both a pre-collector and a post-collector cha
       "package": "@walkeros/server-transformer-fingerprint"
     },
     "enrich": {
-      "package": "@walkeros/transformer-enricher"
+      "code": {
+        "type": "enrich",
+        "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, enriched: true } } })"
+      }
     }
   },
   "destinations": {
@@ -646,7 +675,7 @@ Use `code` object instead of `package`:
     "enrich": {
       "code": {
         "type": "enricher",
-        "push": "$code:(event) => ({ ...event, data: { ...event.data, timestamp: Date.now() } })"
+        "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, timestamp: Date.now() } } })"
       },
       "config": {}
     }
@@ -729,8 +758,9 @@ For browser bundles, you can configure the collector's window variable name via
 
 The `window.elb` function is owned by the browser source: set `elb` in the
 browser source's `config.settings` to change its global name (default:
-`"elb"`). The former `windowElb` setting is deprecated; when set, its value is
-forwarded to the browser source's `settings.elb` with a warning.
+`"elb"`). If `config.settings.windowElb` is set, the CLI forwards its value to
+the browser source's `settings.elb` and logs a warning; if that source already
+sets `elb`, `windowElb` is ignored.
 
 ## Multi-flow configuration
 
@@ -748,7 +778,7 @@ For managing dev/staging/production flows in one file:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+            "@walkeros/destination-demo": { "version": "^4", "imports": ["destinationDemo"] }
           }
         }
       },
@@ -767,7 +797,7 @@ For managing dev/staging/production flows in one file:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] }
+            "@walkeros/server-destination-gcp": { "version": "^4", "imports": ["destinationGCP"] }
           }
         }
       },
@@ -815,7 +845,7 @@ Flows in the same file can reference each other's `config` block via `$flow.<nam
         "platform": "server",
         "url": "https://collect.example.com",
         "bundle": {
-          "packages": { "@walkeros/server-source-express": {} }
+          "packages": { "@walkeros/server-source-express": { "version": "^4" } }
         }
       },
       "sources": {
@@ -830,8 +860,8 @@ Flows in the same file can reference each other's `config` block via `$flow.<nam
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/web-source-browser": {},
-            "@walkeros/web-destination-api": {}
+            "@walkeros/web-source-browser": { "version": "^4" },
+            "@walkeros/web-destination-api": { "version": "^4" }
           }
         }
       },
@@ -877,8 +907,20 @@ Reference variables defined in `variables` for shared values across your config:
           "package": "@walkeros/web-destination-api",
           "config": {
             "settings": {
-              "endpoint": "https://api.example.com/$var.apiVersion/collect",
-              "currency": "$var.currency"
+              "url": "https://api.example.com/$var.apiVersion/collect"
+            },
+            "mapping": {
+              "order": {
+                "complete": {
+                  "data": {
+                    "map": {
+                      "id": "data.id",
+                      "total": "data.total",
+                      "currency": { "value": "$var.currency" }
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -1033,9 +1075,9 @@ Here's a production-ready flow that accepts HTTP events and sends them to BigQue
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-            "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] },
-            "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+            "@walkeros/server-source-express": { "version": "^4", "imports": ["sourceExpress"] },
+            "@walkeros/server-destination-gcp": { "version": "^4", "imports": ["destinationGCP"] },
+            "@walkeros/destination-demo": { "version": "^4", "imports": ["destinationDemo"] }
           }
         }
       },

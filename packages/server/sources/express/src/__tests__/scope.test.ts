@@ -37,6 +37,21 @@ describe('buildScope', () => {
     expect(buildScope(req).raw).toBe(req);
   });
 
+  it.each([
+    [
+      'a JSON text body as its value',
+      '{"name":"page view"}',
+      { name: 'page view' },
+    ],
+    [
+      'a non-JSON text body unchanged',
+      'en=page_view\nen=scroll',
+      'en=page_view\nen=scroll',
+    ],
+  ])('resolves %s', (_label, body, expected) => {
+    expect(buildScope(stubRequest({ body })).body).toEqual(expected);
+  });
+
   it('omits ip when the platform reports none', () => {
     expect(buildScope(stubRequest({ ip: undefined })).ip).toBeUndefined();
   });

@@ -73,8 +73,9 @@ export const ValuesSchema = z
  * Loop - Tuple for array processing
  * Format: [source, transform]
  *
- * IMPORTANT: z.tuple() generates JSON Schema with minItems/maxItems = 2
- * This is how Explorer distinguishes Loop from Set
+ * IMPORTANT: the JSON Schema carries minItems/maxItems = 2, set explicitly in
+ * meta because z.tuple() emits neither for draft-7, which makes Ajv strict mode
+ * warn about the tuple.
  *
  * Example: ['nested', { map: { id: 'data.id' } }]
  * Means: Iterate over event.nested array, transform each item
@@ -92,6 +93,8 @@ const LoopSchema: z.ZodTypeAny = z
     title: 'Mapping.Loop',
     description:
       'Loop tuple [source, transform] for iterating and transforming arrays.',
+    minItems: 2,
+    maxItems: 2,
   });
 
 /**

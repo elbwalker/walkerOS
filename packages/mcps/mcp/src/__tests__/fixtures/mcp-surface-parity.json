@@ -231,7 +231,7 @@
           "pattern": "^frm_[A-Za-z0-9_-]{21}$"
         },
         "markId": {
-          "description": "One mark within \"frameId\". Action \"knowledge\" only, and refused without frameId, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies.",
+          "description": "One tag within \"frameId\", by its tag id (the id of an entry in frame_manage marks.tags). Action \"knowledge\" only, and refused without frameId, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies.",
           "type": "string",
           "minLength": 1,
           "maxLength": 200
@@ -312,7 +312,7 @@
   "frameManage": {
     "name": "frame_manage",
     "title": "Frames",
-    "description": "Read the frames of a measurement plan: named rectangles with marks inside them, drawn in Tag Mode or in the app. Actions: list (every frame of the project, without marks), page (the frames of one page at any depth, with marks), get (one frame with its marks). Read-only: frames are drawn and edited in Tag Mode or the app, never here. A frame name is documentation; the marks inside it carry the meaning. A frame that extends another stores only what it adds. Use hub_manage action \"knowledge\" with a frameId or markId to read what people wrote on a frame. A markId is an id read from the marks of a frame here: mark ids come back literal so they can be passed straight back, while the text around them is wrapped as data. An entity action is an object carrying its id beside the raw attribute text, because the id is the address and the raw text is not.",
+    "description": "Read the frames of a measurement plan: named rectangles with marks inside them, drawn in Tag Mode or in the app. Actions: list (every frame of the project, without marks), page (the frames of one page at any depth, with marks), get (one frame with its marks). Read-only: frames are drawn and edited in Tag Mode or the app, never here. A frame name is documentation; the marks inside it carry the meaning. A frame that extends another stores only what it adds, so its tags may carry only the fields they change. Marks are { tags, note }: tags is one flat list of tags, each with an id, a kind such as entity, property or action, a name, and a parentId naming the tag it sits under; note is the frame’s own description and thread. Use hub_manage action \"knowledge\" with a frameId or markId to read what people wrote on a frame. A markId is a tag id: a tag’s id, parentId and threadRef come back literal when they have the shape the app mints, so they can be passed straight back; every other string value in the marks is wrapped as data, and object keys come back as they are.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -351,12 +351,12 @@
     "notFoundHint": "Use action \"list\" or \"page\" to find frame ids.",
     "hints": {
       "EXTENDS_BASE": "This frame extends another and stores only what it adds; read the base frame (extends) for the rest.",
-      "MARK_SPACE": "Marks are in their frame’s own 0..1 space; a child frame sits inside its parent through placements[].rect.",
+      "MARK_SPACE": "Tag geometry is fractional: a rect is 0..1 of its frame, and an at is 0..1 of its parent tag’s box, or of the frame for a root tag; a child frame sits inside its parent through placements[].rect.",
       "NAMES_ARE_DOCUMENTATION": "Frame names are documentation; the marks inside a frame carry the meaning.",
       "NONE_ON_PAGE": "No frames on this page. Check the pageKey against the source.key values from action \"list\".",
       "NONE_YET": "This project has no frames yet. Frames are drawn in Tag Mode or the app, not through this tool.",
       "OPEN_PAGE_OR_GET": "Use action \"page\" with a pageKey (a frame’s source.key) to read a page with marks, or action \"get\" with a frameId.",
-      "READ_KNOWLEDGE": "Use hub_manage action \"knowledge\" with frameId (and markId) to read what people wrote here. A markId is an id from these marks, and an entity action is addressed by its own id, never by its raw text."
+      "READ_KNOWLEDGE": "Use hub_manage action \"knowledge\" with frameId (and markId) to read what people wrote here. A markId is a tag id from these marks, and a tag’s threadRef is the id of its thread entry there."
     },
     "hintOrder": {
       "list": ["OPEN_PAGE_OR_GET", "NAMES_ARE_DOCUMENTATION"],

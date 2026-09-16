@@ -285,6 +285,12 @@ export function getEntities(
   return entities;
 }
 
+// An entity name becomes part of the "entity action" event name and of the
+// [data-elb-<entity>] selector, so only CSS identifier characters are valid.
+// Anything else (a space, `;`, quotes, brackets) would make querySelectorAll
+// throw, so such a value is treated like a missing entity.
+const entityName = /^[\w\u0080-\uffff-]+$/;
+
 function getEntity(
   prefix: string,
   element: Element,
@@ -294,7 +300,8 @@ function getEntity(
   const entity = getAttribute(element, getElbAttributeName(prefix));
 
   // It's not a (valid) entity element or should be filtered
-  if (!entity || (filter && !filter[entity])) return null;
+  if (!entity || !entityName.test(entity) || (filter && !filter[entity]))
+    return null;
 
   const scopeElems = [element]; // All related elements
   const dataSelector = `[${getElbAttributeName(
@@ -322,11 +329,14 @@ function getEntity(
     // Get all linked child elements if link is a parent
     // Note: Searches entire document including shadow roots.
     // Acceptable because link-parent usage is rare in practice.
+    // The id is compared by value, a quoted selector would break on `"` or `\`.
     if (linkState === 'parent')
       queryAllComposed(
         element.ownerDocument.body,
-        `[${linkName}="${linkId}:child"]`,
+        `[${linkName}]`,
         (wormhole) => {
+          if (wormhole.getAttribute(linkName) !== `${linkId}:child`) return;
+
           scopeElems.push(wormhole);
 
           // A linked child can also be an entity
@@ -382,11 +392,13 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
     if (linkState === 'child') {
       // Link-parent lookup does not cross shadow boundaries.
       // Uses simple queryAll (no shadow recursion) since this runs
-      // during per-event entity traversal.
+      // during per-event entity traversal. The id is compared by value, like
+      // the link-child lookup in getEntity.
       const doc = elem.ownerDocument;
       let found: HTMLElement | null = null;
-      queryAll(doc, `[${linkName}="${linkId}:parent"]`, (el) => {
-        if (!found) found = el as HTMLElement;
+      queryAll(doc, `[${linkName}]`, (el) => {
+        if (!found && el.getAttribute(linkName) === `${linkId}:parent`)
+          found = el as HTMLElement;
       });
       return found;
     }

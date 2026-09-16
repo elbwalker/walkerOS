@@ -4,6 +4,7 @@ import { clone, createLogger } from '@walkeros/core';
 import { examples } from '../dev';
 import type { Env } from '../types';
 import { resetConsentState } from '../index';
+import { SettingsSchema } from '../schemas';
 
 const INIT_DATE_MS = 1700000000000;
 import { resetLoadedScripts } from '../shared/gtag';
@@ -110,6 +111,15 @@ describe('gtag web destination -- step examples', () => {
     });
 
     expect(calls).toEqual(gtmInitOut);
+  });
+
+  it.each([
+    ['ga4Init', ga4InitIn],
+    ['adsInit', adsInitIn],
+    ['gtmInit', gtmInitIn],
+  ])('%s settings satisfy the settings schema', (_name, config) => {
+    const result = SettingsSchema.safeParse(config.settings);
+    expect(result.error?.issues).toBeUndefined();
   });
 
   const stepEntries = Object.entries(examples.step).filter(

@@ -1,5 +1,7 @@
 import type { Preview, Decorator } from '@storybook/react-vite';
 import '../src/styles/index.scss';
+// Open Air site layer, so Site/* stories render in the design language.
+import '../src/styles/site/index.scss';
 import './monaco-setup';
 
 // Theme decorator - wraps all stories with proper theme container

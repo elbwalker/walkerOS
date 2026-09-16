@@ -77,7 +77,10 @@ Pre-collector transformer caches with `stop: true` halt the entire pipeline on H
 ```json
 "transformers": {
   "enricher": {
-    "package": "@walkeros/server-transformer-enricher",
+    "code": {
+      "type": "enricher",
+      "push": "$code:async (event) => ({ event: { ...event, data: { ...event.data, enriched: true } } })"
+    },
     "cache": {
       "rules": [
         { "key": ["event.name"], "ttl": 60 }
@@ -93,8 +96,8 @@ Destination cache skips the push on HIT, preventing duplicate events from reachi
 
 ```json
 "destinations": {
-  "ga4": {
-    "package": "@walkeros/web-destination-ga4",
+  "gtag": {
+    "package": "@walkeros/web-destination-gtag",
     "cache": {
       "rules": [
         { "key": ["event.name", "event.data.id"], "ttl": 300 }
@@ -140,12 +143,15 @@ By default, cache uses a shared in-memory store. Reference a custom store for pe
 ```json
 {
   "stores": {
-    "redis": { "package": "@walkeros/server-store-redis" }
+    "files": {
+      "package": "@walkeros/server-store-fs",
+      "config": { "settings": { "basePath": "./cache" } }
+    }
   },
   "sources": {
     "express": {
       "cache": {
-        "store": "redis",
+        "store": "files",
         "rules": [...]
       }
     }
@@ -153,7 +159,9 @@ By default, cache uses a shared in-memory store. Reference a custom store for pe
 }
 ```
 
-Custom stores can be either synchronous (in-memory) or asynchronous (file system, Redis, HTTP, the cache wrapper). Cache lookups await the underlying `store.get` internally, so HIT/MISS semantics behave identically regardless of which backing you wire.
+The filesystem store keeps entries on the local disk of one instance. To share cache entries across instances, use `@walkeros/server-store-s3` or `@walkeros/server-store-gcs` instead. The Sheets store cannot hold cache entries.
+
+Custom stores can be either synchronous (in-memory) or asynchronous (file system, S3, GCS, the cache wrapper). Cache lookups await the underlying `store.get` internally, so HIT/MISS semantics behave identically regardless of which backing you wire.
 
 ## Migration from prior v4 cache
 

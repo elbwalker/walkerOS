@@ -15,7 +15,7 @@ export const sourceConfig = omitSchemaProperties(
 
 # Sources
 
-Sources are the **entry points** for event data in walkerOS. They capture events
+Sources are the entry points for event data in walkerOS. They capture events
 from different environments and formats, then transform them into standardized
 events that the collector can process.
 
@@ -58,7 +58,7 @@ there.
 Captures events from web pages using DOM attributes:
 
 * DOM interactions (clicks, form submissions, visibility)
-* Automatic session and pageview tracking
+* Automatic pageview tracking
 * Custom data attributes (`data-elb-*`)
 
 [Learn more →](./web/browser/)
@@ -172,7 +172,6 @@ code: sourceBrowser,
 config: {
   settings: {
     pageview: true,
-    session: true,
     prefix: 'data-elb',
   },
 },
@@ -230,7 +229,7 @@ if (event === 'consent') {
   language="typescript"
 />
 
-**Available Events:**
+Available events:
 
 * `consent` - Consent state changes
 * `session` - Session lifecycle events

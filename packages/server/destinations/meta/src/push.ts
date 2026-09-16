@@ -1,4 +1,3 @@
-import type { WalkerOS } from '@walkeros/core';
 import type {
   BodyParameters,
   CustomerInformationParameters,
@@ -9,6 +8,7 @@ import type {
 import { getMappingValue, isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashEvent } from './hash';
+import { getUnknownUserDataKeys } from './userData';
 
 export const push: PushFn = async function (
   event,
@@ -32,7 +32,7 @@ export const push: PushFn = async function (
     ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
 
-  const userData: CustomerInformationParameters = {
+  const mappedUserData = {
     // Destination config
     ...(isObject(configData) && isObject(configData.user_data)
       ? configData.user_data
@@ -42,6 +42,20 @@ export const push: PushFn = async function (
     // Event mapping
     ...(isObject(eventData.user_data) ? eventData.user_data : {}),
   };
+
+  // Unknown keys are never hashed, so drop them instead of sending cleartext
+  const unknownKeys = getUnknownUserDataKeys(mappedUserData);
+  if (unknownKeys.length)
+    logger.warn(
+      'Unknown Meta user_data keys dropped, use parameter names such as em and ph',
+      { keys: unknownKeys },
+    );
+
+  const userData: CustomerInformationParameters = Object.fromEntries(
+    Object.entries(mappedUserData).filter(
+      ([key]) => !unknownKeys.includes(key),
+    ),
+  );
 
   if (userData.fbclid) {
     userData.fbc = formatClickId(
@@ -62,14 +76,14 @@ export const push: PushFn = async function (
   if (action_source === 'website' && event.source?.url)
     serverEvent.event_source_url = event.source.url;
 
-  const hashedServerEvent = await hashEvent(serverEvent, doNotHash);
+  const hashedServerEvent = await hashEvent(serverEvent, doNotHash, logger);
 
   const body: BodyParameters = { data: [hashedServerEvent] };
 
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
 
-  const endpoint = `${url}${pixelId}/events`;
+  const endpoint = `${url.replace(/\/+$/, '')}/${pixelId}/events`;
   logger.debug('Calling Meta API', {
     endpoint,
     method: 'POST',
@@ -108,8 +122,4 @@ function formatClickId(clickId: unknown, time?: number): string | undefined {
   const creationTime = time || Date.now();
 
   return `${version}.${subdomainIndex}.${creationTime}.${clickId}`;
-}
-
-function lower(str: WalkerOS.Property): string {
-  return String(str).toLocaleLowerCase();
 }

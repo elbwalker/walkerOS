@@ -126,8 +126,8 @@ Three pipeline components (Source / Transformer / Destination) plus Stores as
 key-value storage that other components consume via `env`. They have no `push`,
 no `next`, no `before`; they sit alongside the pipeline rather than inside it.
 
-- Referenced via `$store.storeId` in `env` values (bundled mode) or passed
-  directly as store instances (integrated mode)
+- Referenced via `$store.storeId` in `env` values (bundled mode) or by passing
+  the same store definition object used in `stores` (integrated mode)
 - **Init first, destroy last** - stores are available before any source,
   transformer, or destination starts, and outlive them on shutdown
 - **No chains** - stores don't participate in the event pipeline. Components
@@ -435,8 +435,8 @@ ASCII diagram and detailed explanation.
 }
 ```
 
-Step examples enable `it.each` testing, CLI simulation with `--example`, and
-deep validation with `--deep`. See
+Step examples enable `it.each` testing and cross-step checks in
+`walkeros validate`. See
 [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the complete
 lifecycle.
 

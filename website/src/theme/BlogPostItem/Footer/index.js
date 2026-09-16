@@ -5,7 +5,7 @@ import { tagger } from '@site/src/components/walkerjs';
 export default function FooterWrapper(props) {
   return (
     <>
-      <span {...tagger.action('visible', 'read')}>
+      <span {...tagger().action('visible', 'read').get()}>
         <Footer {...props} />
       </span>
     </>

@@ -102,8 +102,11 @@ To absorb the Sheets quota, wire the store with the built-in cache via `Flow.Sto
     }
   },
   "transformers": {
-    "enrich": {
-      "package": "@walkeros/transformer-enrich",
+    "crmLookup": {
+      "code": {
+        "type": "crm-lookup",
+        "push": "$code:async (event, context) => { const userId = event.user?.id; if (!userId) return; const crm = await context.env.store.get(userId); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
+      },
       "env": { "store": "$store.crm" }
     }
   }
@@ -111,7 +114,7 @@ To absorb the Sheets quota, wire the store with the built-in cache via `Flow.Sto
   language="json"
 />
 
-Use `ttl: 5000` for demos (fast iteration), `ttl: 60000` or higher for production-ish loads. Without a cache, every event hits Sheets directly and trips the 60 req/min quota in under one second.
+The consumer here is an inline `code` transformer; any transformer or destination that reads its `env.store` works the same way. `ttl` is in seconds. Use a short `ttl` such as `5` for demos (fast iteration), `60` or higher for production-ish loads. Without a cache, every event hits Sheets directly and trips the 60 req/min quota in under one second.
 
 The cache config lives at `packages/core/src/types/cache.ts`. See the [`understanding-stores`](https://github.com/elbwalker/walkerOS/tree/main/skills/understanding-stores) skill for the broader store/cache pattern.
 

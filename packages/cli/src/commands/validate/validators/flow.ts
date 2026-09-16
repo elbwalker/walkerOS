@@ -457,11 +457,12 @@ function checkCompatibility(
   warnings: ValidationWarning[],
 ): void {
   const fromOuts = Object.entries(conn.from.examples)
-    .filter(([, ex]) => ex.out !== undefined && ex.out.length > 0)
+    .filter(([, ex]) => hasComparableOut(ex.out))
     .map(([name, ex]) => ({ name, value: ex.out }));
 
+  // A command example's `in` is a walker command payload, never a pushed event
   const toIns = Object.entries(conn.to.examples)
-    .filter(([, ex]) => ex.in !== undefined)
+    .filter(([, ex]) => ex.in !== undefined && !ex.command)
     .map(([name, ex]) => ({ name, value: ex.in }));
 
   const path = `${conn.from.type}.${conn.from.name} → ${conn.to.type}.${conn.to.name}`;
@@ -494,6 +495,15 @@ function checkCompatibility(
       code: 'INCOMPATIBLE_EXAMPLES',
     });
   }
+}
+
+/**
+ * An `out` takes part in the compatibility check when it is a non-empty array
+ * or string, or a non-empty object such as a single walkerOS event.
+ */
+function hasComparableOut(out: unknown): boolean {
+  if (Array.isArray(out) || typeof out === 'string') return out.length > 0;
+  return isObject(out) && Object.keys(out).length > 0;
 }
 
 function isStructurallyCompatible(a: unknown, b: unknown): boolean {

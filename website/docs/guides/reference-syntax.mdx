@@ -37,7 +37,7 @@ $secret.NAME           inject a secret value (resolved at deploy time)
 $code:(event) => ...   inline JavaScript (resolved at bundle time)
 ```
 
-## `$var.` — variables
+## `$var.`: variables {#var--variables}
 
 Look up a value in the `variables` map at config, flow, or step level. Step
 overrides flow overrides config.
@@ -48,6 +48,7 @@ walks the value.
 
 ```json
 {
+  "version": 4,
   "variables": {
     "measurementId": "G-XXXXXX",
     "ga4Items": {
@@ -57,8 +58,10 @@ walks the value.
   },
   "flows": {
     "web": {
+      "config": { "platform": "web" },
       "destinations": {
         "gtag": {
+          "package": "@walkeros/web-destination-gtag",
           "config": {
             "settings": {
               "ga4": { "measurementId": "$var.measurementId" }
@@ -73,10 +76,11 @@ walks the value.
           }
         },
         "api": {
+          "package": "@walkeros/web-destination-api",
           "config": {
             "settings": {
-              "endpoint": "$var.api.url",
-              "version": "$var.api.version"
+              "url": "$var.api.url",
+              "headers": { "X-Api-Version": "$var.api.version" }
             }
           }
         }
@@ -102,7 +106,7 @@ matchers, consent objects), pick a name that signals the shape, for example
 the convention consistent within a single config; we don't enforce a global
 prefix or suffix rule.
 
-## `$env.` — environment variables
+## `$env.`: environment variables {#env--environment-variables}
 
 Read from `process.env` at runtime. Optionally provide a literal fallback with
 the `:default` suffix.
@@ -123,7 +127,7 @@ Use `$env.` for non-secret config (IDs, hostnames, regions). For credentials,
 tokens, and private keys managed by the secret manager, use `$secret.`: the
 deploy pipeline only injects values referenced as `$secret.NAME`.
 
-## `$contract.` — contract references
+## `$contract.`: contract references {#contract--contract-references}
 
 Inject a fragment of a named contract entry. Same whole-string and deep-path
 rules as `$var.`. The contract is fully resolved (extend + wildcards) before
@@ -133,6 +137,7 @@ See [Contract](/docs/getting-started/flow/contract) for the full structure.
 
 ```json
 {
+  "version": 4,
   "contract": {
     "default": {
       "schema": {
@@ -149,11 +154,15 @@ See [Contract](/docs/getting-started/flow/contract) for the full structure.
   },
   "flows": {
     "web": {
-      "destinations": {
-        "ga4": {
-          "validate": {
-            "events": "$contract.default.events",
-            "schema": "$contract.default.schema"
+      "config": { "platform": "web" },
+      "transformers": {
+        "validate": {
+          "package": "@walkeros/transformer-validate",
+          "config": {
+            "settings": {
+              "contract": ["$contract.default"],
+              "mode": "strict"
+            }
           }
         }
       }
@@ -162,22 +171,32 @@ See [Contract](/docs/getting-started/flow/contract) for the full structure.
 }
 ```
 
-## `$store.` — store wiring
+A deep path such as `$contract.default.schema` injects only that part of the
+resolved entry, here the full-event JSON Schema, which the validate transformer
+also accepts as a `contract` entry.
+
+## `$store.`: store wiring {#store--store-wiring}
 
 Inject a store instance declared under `stores`. Wired through a component's
 `env` so the bundler can resolve to the real store at build time.
 
 ```json
 {
+  "version": 4,
   "flows": {
     "server": {
+      "config": { "platform": "server" },
       "stores": {
-        "cache": { "package": "@walkeros/server-store-fs" }
+        "assets": {
+          "package": "@walkeros/server-store-fs",
+          "config": { "settings": { "basePath": "./public" }, "file": true }
+        }
       },
-      "sources": {
-        "http": {
-          "package": "@walkeros/server-source-http",
-          "env": { "store": "$store.cache" }
+      "transformers": {
+        "file": {
+          "package": "@walkeros/server-transformer-file",
+          "config": { "settings": { "prefix": "/static" } },
+          "env": { "store": "$store.assets" }
         }
       }
     }
@@ -188,20 +207,24 @@ Inject a store instance declared under `stores`. Wired through a component's
 Store IDs are plain identifiers (camelCase). The `.` is the separator, not a
 path walker, store IDs do not contain dots.
 
-## `$secret.` — secrets
+## `$secret.`: secrets {#secret--secrets}
 
 Inject a secret resolved at deploy time. Secrets are stored outside the config
 and never written into customer databases alongside the flow.
 
 ```json
 {
+  "version": 4,
   "flows": {
-    "web": {
+    "server": {
+      "config": { "platform": "server" },
       "destinations": {
         "api": {
+          "package": "@walkeros/server-destination-api",
           "config": {
             "settings": {
-              "headers": { "Authorization": "Bearer $secret.API_TOKEN" }
+              "url": "https://api.example.com/events",
+              "headers": { "Authorization": "$secret.API_AUTHORIZATION" }
             }
           }
         }
@@ -214,6 +237,11 @@ and never written into customer databases alongside the flow.
 Secret names are uppercase: `[A-Z0-9_]+`. The `.` is the separator, secrets
 have no internal structure.
 
+A `$secret.` reference must be the entire string value. Inside a longer string
+it is not resolved and stays literal text. When a header needs a prefix,
+store the complete value in the secret, for example `Bearer abc123` for
+`API_AUTHORIZATION` above.
+
 Use `$secret.` for credentials, tokens, and private keys (for example a service
 account JSON on `config.credentials`). The app's deploy pipeline detects
 `$secret.NAME` references and injects the managed secret value into the server
@@ -221,7 +249,7 @@ runner's environment at runtime. A managed secret referenced as `$env.NAME` is
 **not** injected, so reach for `$secret.` whenever the value comes from the
 secret manager. Secrets resolve on server flows only.
 
-## `$code:` — inline code
+## `$code:`: inline code {#code--inline-code}
 
 Embed a JavaScript function as a string. The bundler compiles the payload into
 real JS at build time. Everything after `$code:` is the raw function body.

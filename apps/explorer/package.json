@@ -13,8 +13,16 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
+    "./site": {
+      "types": "./dist/site/index.d.ts",
+      "import": "./dist/site/index.mjs",
+      "require": "./dist/site/index.js"
+    },
     "./styles.css": "./dist/styles.css",
-    "./styles": "./dist/styles.css"
+    "./styles": "./dist/styles.css",
+    "./tokens.css": "./dist/tokens.css",
+    "./tokens": "./dist/tokens.css",
+    "./site.css": "./dist/site.css"
   },
   "files": [
     "dist/**",

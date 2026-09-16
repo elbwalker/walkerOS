@@ -1,0 +1,15 @@
+// Badge - pill label for story headers, promos and section eyebrows.
+
+.elb-oa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--oa-sans);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--oa-signal-ink);
+  background: var(--oa-signal-soft);
+  border-radius: var(--oa-r-pill);
+  padding: 6px 14px;
+}

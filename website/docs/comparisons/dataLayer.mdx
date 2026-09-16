@@ -7,8 +7,7 @@ description: Compare walkerOS HTML tagging with manual dataLayer.push calls.
 import { PromotionPlayground } from '@walkeros/explorer';
 
 Google's `dataLayer` has been the standard way to push data to Google Tag
-Manager. But it requires manual work for every event. Here's how walkerOS
-tagging compares.
+Manager, but every event needs manual work.
 
 ## Quick comparison
 
@@ -42,7 +41,7 @@ tagging compares.
 ### How tagging works
 
 **dataLayer.push:** You write JavaScript to collect values, build the event
-object, and push it at the right time. Every event needs manual code.
+object, and push it at the right time. Every event needs its own code.
 
 ```javascript
 dataLayer.push({
@@ -55,44 +54,45 @@ dataLayer.push({
 });
 ```
 
-You must gather all values yourself and ensure the push happens after DOM ready
-and consent is granted.
+You gather all values yourself and make sure the push happens after DOM ready
+and after consent is granted.
 
 **walkerOS tagging:** You add HTML attributes to your components. walkerOS reads
 the DOM, detects interactions, checks consent, and pushes events automatically.
 
 <PromotionPlayground />
 
-Tag the button once. walkerOS handles listening for clicks, collecting data from
-attributes, checking consent, and pushing to any destination.
+You tag the button once, and walkerOS listens for clicks, collects data from the
+attributes, checks consent, and pushes to any destination.
 
 ### Component integration
 
 **dataLayer.push:** Tracking is often hard-coded separately from components, or
 managed entirely in GTM. New features frequently launch without tracking because
-it's an afterthought.
+nobody thought of it until later.
 
 **walkerOS tagging:** Tracking lives in your HTML alongside your components.
-When you build a component, you tag it once. It works everywhere that component
-appears: different pages, different contexts, same tracking.
+When you build a component, you tag it once, and the same tracking works on
+every page and in every context where that component appears.
 
 ### Maintenance
 
-**dataLayer.push:** Every event needs individual updates. Change a product
-schema? Update every push call. Add a new field? Touch every file.
+**dataLayer.push:** Every event needs individual updates. A changed product
+schema means updating every push call, and a new field means touching every
+file.
 
-**walkerOS tagging:** Global attributes apply everywhere automatically.
-Component-level tagging means one change updates all instances. Event metadata
-(timing, session, consent state) is added automatically.
+**walkerOS tagging:** Global attributes apply everywhere automatically, and
+because tagging happens at the component level, one change updates all
+instances. walkerOS also adds event metadata (timing, session, consent state)
+on its own.
 
 ## Can they work together?
 
-Yes! You can use the [GTM destination](/docs/destinations/web/gtag/gtm) to send
-walkerOS events into the dataLayer for your existing GTM tags. This lets you
-adopt walkerOS tagging while keeping your current GTM setup working.
+Yes. The [GTM destination](/docs/destinations/web/gtag/gtm) sends walkerOS
+events into the dataLayer for your existing GTM tags, so you can adopt walkerOS
+tagging while your current GTM setup keeps working.
 
 ## Getting started
 
-Ready to try walkerOS tagging? Check out the
-[tagging guide](/docs/sources/web/browser/tagging/html-attributes) to see how HTML attributes
-replace manual push calls.
+The [tagging guide](/docs/sources/web/browser/tagging/html-attributes) shows how
+HTML attributes replace manual push calls.

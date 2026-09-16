@@ -1,9 +1,27 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Flow, WalkerOS } from '@walkeros/core';
+import { runInNewContext } from 'vm';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, isObject } from '@walkeros/core';
 import { examples } from '../dev';
 
 type Captured = [callable: string, ...args: unknown[]];
+
+// Functions in examples are published as `{ $code: fn.toString() }` in
+// walkerOS.json and evaluated without the module scope they were written in.
+function serializeMapping(
+  mapping: Flow.StepExample['mapping'],
+): Flow.StepExample['mapping'] {
+  if (mapping === undefined) return mapping;
+  return JSON.parse(
+    JSON.stringify(mapping, (_, value) =>
+      typeof value === 'function' ? { $code: value.toString() } : value,
+    ),
+    (_, value) =>
+      isObject(value) && typeof value.$code === 'string'
+        ? runInNewContext(`(${value.$code})`)
+        : value,
+  );
+}
 
 /**
  * Meta Conversions API destination invokes `env.sendServer(url, body)` exactly
@@ -21,9 +39,11 @@ describe('Step Examples', () => {
     });
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+  async function run(
+    example: Flow.StepExample,
+    mapping: Flow.StepExample['mapping'],
+  ) {
     const event = example.in as WalkerOS.Event;
-    const mapping = example.mapping;
 
     const testEnv = clone(examples.env.push);
     testEnv.sendServer = mockSendServer;
@@ -38,17 +58,28 @@ describe('Step Examples', () => {
     await elb('walker destination', {
       code: { ...dest, env: testEnv },
       config: {
-        settings: { accessToken: 's3cr3t', pixelId: 'p1x3l1d' },
+        settings: { accessToken: 's3cr3t', pixelId: '1234567890' },
         mapping: mappingConfig,
       },
     });
 
     await elb(event);
 
-    const captured: Captured[] = mockSendServer.mock.calls.map(
+    return mockSendServer.mock.calls.map(
       (args) => ['sendServer', ...args] as Captured,
     );
+  }
 
-    expect(captured).toEqual(example.out);
+  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+    expect(await run(example, example.mapping)).toEqual(example.out);
   });
+
+  it.each(Object.entries(examples.step))(
+    '%s works with serialized functions',
+    async (name, example) => {
+      expect(await run(example, serializeMapping(example.mapping))).toEqual(
+        example.out,
+      );
+    },
+  );
 });
