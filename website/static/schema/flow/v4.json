@@ -151,6 +151,35 @@
       "title": "Flow.Bundle",
       "description": "Bundle configuration (packages + overrides + traceInclude)."
     },
+    "FlowObserve": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "description": "Managed-telemetry verbosity. 'off' disables telemetry entirely, 'standard' emits structural records, 'trace' emits full payloads.",
+          "type": "string",
+          "enum": ["off", "standard", "trace"]
+        },
+        "sample": {
+          "description": "Deterministic sample fraction in [0, 1]. Defaults to 1.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "url": {
+          "description": "Observer base URL for the web connect form. Public, safe to commit. Paired with binding.",
+          "type": "string",
+          "minLength": 1
+        },
+        "binding": {
+          "description": "Public project binding a web observe credential must match. Paired with url; public, safe to commit.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "title": "Flow.Observe",
+      "description": "Observability configuration: public web connect pair (url + binding) and managed-telemetry knobs (level + sample)."
+    },
     "FlowConfig": {
       "type": "object",
       "properties": {
@@ -179,12 +208,20 @@
               "$ref": "#/definitions/FlowBundle"
             }
           ]
+        },
+        "observe": {
+          "description": "Observability configuration: public web connect pair, managed-telemetry level and sample.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FlowObserve"
+            }
+          ]
         }
       },
       "required": ["platform"],
       "additionalProperties": false,
       "title": "Flow.Config",
-      "description": "Per-flow configuration block: platform identity, optional public URL, settings, bundle."
+      "description": "Per-flow configuration block: platform identity, optional public URL, settings, bundle, observe."
     },
     "FlowCode": {
       "type": "object",
@@ -605,6 +642,8 @@
     "MappingLoop": {
       "title": "Mapping.Loop",
       "description": "Loop tuple [source, transform] for iterating and transforming arrays.",
+      "minItems": 2,
+      "maxItems": 2,
       "type": "array",
       "items": [
         {
@@ -704,34 +743,6 @@
       "title": "Mapping.ValueConfig",
       "description": "Object-form value transformation with map/loop/set/condition/consent etc."
     },
-    "Validate": {
-      "type": "object",
-      "properties": {
-        "format": {
-          "description": "Validate event structure against the standard event format",
-          "type": "boolean"
-        },
-        "events": {
-          "description": "Per entity-action JSON Schemas to validate matching events against",
-          "allOf": [
-            {
-              "$ref": "#/definitions/ValidateEvents"
-            }
-          ]
-        },
-        "schema": {
-          "description": "A single JSON Schema applied to every event this step handles",
-          "allOf": [
-            {
-              "$ref": "#/definitions/JsonSchema"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false,
-      "title": "Validate",
-      "description": "Step-level validation: { format?, events?, schema? }"
-    },
     "FlowSource": {
       "type": "object",
       "properties": {
@@ -810,13 +821,6 @@
           "allOf": [
             {
               "$ref": "#/definitions/EventCacheConfig"
-            }
-          ]
-        },
-        "validate": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/Validate"
             }
           ]
         }
@@ -1006,13 +1010,6 @@
               "$ref": "#/definitions/EventCacheConfig"
             }
           ]
-        },
-        "validate": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/Validate"
-            }
-          ]
         }
       },
       "additionalProperties": false,
@@ -1101,13 +1098,6 @@
           "allOf": [
             {
               "$ref": "#/definitions/EventCacheConfig"
-            }
-          ]
-        },
-        "validate": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/Validate"
             }
           ]
         }
@@ -1358,13 +1348,6 @@
                     "$ref": "#/definitions/EventCacheConfig"
                   }
                 ]
-              },
-              "validate": {
-                "allOf": [
-                  {
-                    "$ref": "#/definitions/Validate"
-                  }
-                ]
               }
             },
             "additionalProperties": false,
@@ -1459,13 +1442,6 @@
                     "$ref": "#/definitions/EventCacheConfig"
                   }
                 ]
-              },
-              "validate": {
-                "allOf": [
-                  {
-                    "$ref": "#/definitions/Validate"
-                  }
-                ]
               }
             },
             "additionalProperties": false,
@@ -1558,13 +1534,6 @@
                 "allOf": [
                   {
                     "$ref": "#/definitions/EventCacheConfig"
-                  }
-                ]
-              },
-              "validate": {
-                "allOf": [
-                  {
-                    "$ref": "#/definitions/Validate"
                   }
                 ]
               }

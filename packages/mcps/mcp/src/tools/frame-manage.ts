@@ -34,9 +34,9 @@ import { errorHint } from './feature-gate.js';
  * caller wanted. `page` opens one page's frames with their marks, and `get`
  * opens exactly one frame.
  *
- * It composes with `hub_manage` through ids: a mark id read here is the
- * `markId` that tool's "knowledge" action takes, which is why mark ids stay
- * literal while everything else inside a mark is wrapped as user data.
+ * It composes with `hub_manage` through ids: a tag id read here is the
+ * `markId` that tool's "knowledge" action takes, which is why tag ids stay
+ * literal while everything else inside the marks is wrapped as user data.
  */
 
 // Caps and patterns the server enforces. Duplicated here so the schema can
@@ -54,10 +54,10 @@ export const FRAME_MANAGE_DESCRIPTION =
   'Read the frames of a measurement plan: named rectangles with marks inside them, drawn in Tag Mode or in the app. ' +
   'Actions: list (every frame of the project, without marks), page (the frames of one page at any depth, with marks), get (one frame with its marks). ' +
   'Read-only: frames are drawn and edited in Tag Mode or the app, never here. ' +
-  'A frame name is documentation; the marks inside it carry the meaning. A frame that extends another stores only what it adds. ' +
+  'A frame name is documentation; the marks inside it carry the meaning. A frame that extends another stores only what it adds, so its tags may carry only the fields they change. ' +
+  'Marks are { tags, note }: tags is one flat list of tags, each with an id, a kind such as entity, property or action, a name, and a parentId naming the tag it sits under; note is the frame’s own description and thread. ' +
   'Use hub_manage action "knowledge" with a frameId or markId to read what people wrote on a frame. ' +
-  'A markId is an id read from the marks of a frame here: mark ids come back literal so they can be passed straight back, while the text around them is wrapped as data. ' +
-  'An entity action is an object carrying its id beside the raw attribute text, because the id is the address and the raw text is not.';
+  'A markId is a tag id: a tag’s id, parentId and threadRef come back literal when they have the shape the app mints, so they can be passed straight back; every other string value in the marks is wrapped as data, and object keys come back as they are.';
 
 /**
  * Exported so the declarative registry holds the same object rather than a
@@ -111,9 +111,9 @@ export const FRAME_HINT_NAMES_ARE_DOCUMENTATION =
 export const FRAME_HINT_NONE_YET =
   'This project has no frames yet. Frames are drawn in Tag Mode or the app, not through this tool.';
 export const FRAME_HINT_MARK_SPACE =
-  'Marks are in their frame’s own 0..1 space; a child frame sits inside its parent through placements[].rect.';
+  'Tag geometry is fractional: a rect is 0..1 of its frame, and an at is 0..1 of its parent tag’s box, or of the frame for a root tag; a child frame sits inside its parent through placements[].rect.';
 export const FRAME_HINT_READ_KNOWLEDGE =
-  'Use hub_manage action "knowledge" with frameId (and markId) to read what people wrote here. A markId is an id from these marks, and an entity action is addressed by its own id, never by its raw text.';
+  'Use hub_manage action "knowledge" with frameId (and markId) to read what people wrote here. A markId is a tag id from these marks, and a tag’s threadRef is the id of its thread entry there.';
 export const FRAME_HINT_NONE_ON_PAGE =
   'No frames on this page. Check the pageKey against the source.key values from action "list".';
 export const FRAME_HINT_EXTENDS_BASE =
@@ -177,171 +177,125 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * The address of one action inside an entity, composed exactly as the app
- * composes it in `components/src/tag-plan/model.ts` (`actionChipId`). Byte
- * exactness is the whole contract: the id embeds the raw text verbatim, and
- * neutralising anything in it would name a mark that was never stored.
+ * The rule for everything inside a marks document, in one place.
+ *
+ *  - An ADDRESS stays literal, because another tool consumes it and it has to
+ *    be passed back exactly as it came. A sanitised address names a tag the app
+ *    never stored, so cleaning one trades a working lookup for a silent miss.
+ *  - Everything else is text a person or a page wrote, and is always wrapped,
+ *    so it cannot close the envelope and be read as instructions.
+ *
+ * Marks are a passthrough record: the server checks nothing inside them, so a
+ * client writes whatever keys and values it likes, and a name that means
+ * "identifier" in a flow config means nothing here. An address is therefore
+ * decided by WHERE a value lives and by WHAT it looks like, never by the
+ * spelling of its key alone.
+ *
+ * Where: a marks document is `{ tags, note }`. `tags` is one flat list of tags,
+ * related through `parentId`, and `note` is the frame's own description and
+ * thread. Only the top-level fields of a tag in that list, and of that note, can
+ * be addresses. Below them nothing is, whatever it is called: `id` inside an
+ * anchor is `el.id` read off the host page, and `id` on a thread message is a
+ * row id no tool takes, so both are text like their siblings.
+ *
+ * What: a value in an address position stays literal only when it has the shape
+ * the app mints for that address. Nothing upstream enforces the shape, so a
+ * sentence stored under `id` is text and is wrapped like any other. A real
+ * address that falls outside the shape comes back wrapped too, which costs a
+ * lookup and never leaks an instruction.
+ *
+ * A key this file does not name, at any level, is walked as text. Object keys
+ * themselves are carried as they are.
  */
-function actionMarkId(entityId: string, raw: string): string {
-  return `${entityId}#action.${raw}`;
-}
 
 /**
- * The rule for everything inside a mark, in one place.
+ * A tag id as the app mints it, and nothing wider:
  *
- *  - An IDENTIFIER stays literal wherever it appears, including as an element
- *    of an array, because it is an address another tool consumes and has to be
- *    passed back exactly as it came.
- *  - User-authored PROSE is always wrapped, so it cannot close the envelope and
- *    be read as instructions.
- *  - Where an identifier EMBEDS user text, the identifier is still literal. A
- *    sanitised id names a mark the app never stored, so cleaning it would trade
- *    a working address for a silent lookup failure.
+ *  - `<prefix>_<n>` from the editor (`nextMarkId` in `tag-plan/frames.ts`,
+ *    `freshId` in `tag-plan/write.ts`);
+ *  - `e_<entity>`, `...#data.v<n>` and `...#action.<n>` from a contract or observed
+ *    events (`tag-plan/contract.ts`, `tag-plan/infer.ts`);
+ *  - `<entity>-<n>`, a nested `.../<entity>-<n>`, `...#data.<n>`, `...#action.<n>`,
+ *    `...#context.<n>`, `globals#<n>` and `page#action.<n>` from a page read
+ *    (`tag-plan/walker-plan.ts`).
  *
- * Marks are a passthrough record, so this cannot lean on a shared list of
- * "structural" key names: a client writes whatever keys it likes, and a name
- * that means "identifier" in a flow config means nothing here. Only the names
- * below are addresses in a mark, and every one of them is consumed by
- * `hub_manage`.
+ * No colon, which keeps the hub key `<frameId>:<markId>` parseable, and no
+ * whitespace, quote or angle bracket. An entity name outside `[A-Za-z0-9_-]`
+ * makes the last two minters spell an id this does not match, which then wraps.
  */
+const TAG_ID_PATTERN =
+  /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*(?:#(?:data\.v?[0-9]+|action\.[0-9]+|context\.[0-9]+|[0-9]+))?$/;
 
-/** Keys whose value is a single address. */
-const MARK_ADDRESS_KEYS = new Set([
-  // The mark id itself, and a component of the data and action addresses.
-  'id',
-  // The first half of an ambient address, `ambient.<kind>.<key>`, and the
-  // discriminator a reader branches on.
-  'kind',
-  // An entity's pointer at another entity, which is that entity's mark id.
-  'link',
-  // The thread a note became, which action "note_add" takes as threadId.
-  'threadRef',
+/** The longest mark id the hub accepts (`MAX_MARK_ID_LENGTH` in the app's
+ *  `src/lib/hub/knowledge.ts`), so a longer value cannot be a markId. */
+const MAX_TAG_ID_CHARS = 200;
+
+/** A hub thread id as the app mints it: `thr_` plus a 21-character lowercase
+ *  alphanumeric nanoid (`src/lib/id.ts`, `src/lib/hub/knowledge.ts`). */
+const THREAD_ID_PATTERN = /^thr_[a-z0-9]{21}$/;
+
+const isTagId = (value: string): boolean =>
+  value.length <= MAX_TAG_ID_CHARS && TAG_ID_PATTERN.test(value);
+
+const isThreadId = (value: string): boolean => THREAD_ID_PATTERN.test(value);
+
+/** The fields of a tag that are addresses, each with the shape it must have. */
+const TAG_ADDRESSES: ReadonlyMap<string, (value: string) => boolean> = new Map([
+  // The tag id: the markId `hub_manage` action "knowledge" takes, which the
+  // app joins to the frame id as the anchor key `<frameId>:<markId>`.
+  ['id', isTagId],
+  // The tag this one sits under, which is that tag's id: the only relation
+  // between tags, so a reader joins it to `id` to rebuild the tree, and it is
+  // a markId in its own right.
+  ['parentId', isTagId],
+  // The hub thread this tag's note thread became: the `id` of the thread
+  // entry `hub_manage` action "knowledge" returns for this tag.
+  ['threadRef', isThreadId],
 ]);
 
-/** Keys whose value is an ARRAY of addresses. A skip predicate cannot express
- *  this: array elements have no key of their own to exempt them by. */
-const MARK_ADDRESS_LIST_KEYS = new Set([
-  // The entities a context band covers, by their mark ids.
-  'covers',
-]);
+/** The fields of the frame note that are addresses. The note belongs to the
+ *  frame, which `hub_manage` addresses by frameId, so its one address is the hub
+ *  thread it became, read the same way as a tag's. */
+const NOTE_ADDRESSES: ReadonlyMap<string, (value: string) => boolean> = new Map(
+  [['threadRef', isThreadId]],
+);
 
-/**
- * Subtrees where NOTHING is an address, whatever it is called.
- *
- * A name in the sets above means "address" at the level a mark lives at, and
- * something else further down. `id` is the clearest case: on a mark it is the
- * mark id, but inside an anchor it is `el.id` read straight off the host page,
- * which no tool takes back and the app uses only as a display label. Matching
- * on the bare name would hand that page string back unwrapped while its own
- * `testid` and `name` siblings wrapped, which is one small object with two
- * different treatments.
- *
- * So the exemption is anchored to WHERE mark ids live rather than to the
- * spelling of a key. An anchor is page data end to end, the same class of thing
- * this tool already drops from a placement, and nothing an anchor holds is
- * consumed as an address. Everything under one is text.
- *
- * Both keys carry the same `Anchor` shape: a mark's own anchor, and the
- * per-action anchors keyed by raw action text.
- */
-const MARK_PAGE_DATA_KEYS = new Set(['anchor', 'actionAnchors']);
-
-/**
- * Whether a record's KEYS are prose rather than addresses.
- *
- * Object keys are never wrapped, which is deliberate and load-bearing: it is
- * what keeps a `notes` key usable, since those keys ARE composed mark ids. The
- * same mechanism hands back any key that is page text instead. So a record is
- * one of two things, and only prose-keyed ones are reshaped into pairs.
- *
- * `data` is the case where one name is both. On an ambient node the property
- * name is the second half of `ambient.<kind>.<key>`, so it is an address and
- * the record keeps its shape. On a context there is no `kind` to compose with
- * and no id built from its property names, so the same name is prose. The test
- * is therefore for the `kind` that does the composing, not for the shape of the
- * parent, which is what makes it a statement about meaning rather than a guess.
- */
-function isProseKeyedRecord(
-  key: string,
-  owner: Record<string, unknown>,
-): boolean {
-  return key === 'data' && typeof owner.kind !== 'string';
-}
-
-/**
- * Walks a mark document applying the rule above.
- *
- * Actions are the one case that needs more than an exemption. They are stored
- * as bare page attribute text, so the text must stay wrapped, yet the address
- * derived from it has to be readable. The derived id is therefore emitted
- * BESIDE the still-wrapped text rather than in place of it, the same shape a
- * `notes` key already has. The pairing is keyed off shape rather than position,
- * so an entity nested under another is covered without this file knowing the
- * plan's layout, and `actions` is the only stored field of that name.
- */
-function walkMarks(value: unknown, inPageData = false): unknown {
-  if (typeof value === 'string') return wrapUserData(value);
-  if (Array.isArray(value)) {
-    return value.map((item) => walkMarks(item, inPageData));
-  }
-  if (!isRecord(value)) return value;
-
-  const entityId = typeof value.id === 'string' ? value.id : undefined;
+/** Walks a marks document applying the rule above. */
+function walkMarks(marks: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value)) {
-    if (MARK_PAGE_DATA_KEYS.has(key)) {
-      out[key] = walkMarks(child, true);
-    } else if (
-      !inPageData &&
-      isRecord(child) &&
-      isProseKeyedRecord(key, value)
-    ) {
-      out[key] = proseKeyedPairs(child);
+  for (const [key, value] of Object.entries(marks)) {
+    if (key === 'tags' && Array.isArray(value)) {
+      out[key] = value.map((tag) => walkAddressed(tag, TAG_ADDRESSES));
+    } else if (key === 'note') {
+      out[key] = walkAddressed(value, NOTE_ADDRESSES);
     } else {
-      out[key] = walkMarkEntry(key, child, entityId, inPageData);
+      out[key] = redactNestedStrings(value);
     }
   }
   return out;
 }
 
-/** A prose-keyed record as pairs, so the key is wrapped like the value it
- *  labels instead of riding out as a literal object key. */
-function proseKeyedPairs(record: Record<string, unknown>) {
-  return Object.entries(record).map(([key, value]) => ({
-    key: wrapUserData(key),
-    value: walkMarks(value),
-  }));
-}
-
-function walkMarkEntry(
-  key: string,
-  child: unknown,
-  entityId: string | undefined,
-  inPageData: boolean,
+/**
+ * One record whose own fields named in `addresses` stay literal when their
+ * value has that address's shape. A value there without the shape, a string or
+ * not, is not an address, so it is walked like anything else rather than passed
+ * through unseen, and so is everything below the record's own fields. A value
+ * that is not a record has no fields to address and is text.
+ */
+function walkAddressed(
+  value: unknown,
+  addresses: ReadonlyMap<string, (value: string) => boolean>,
 ): unknown {
-  // Inside a page-data subtree no name is an address, so every rule below is
-  // skipped and the value is text like anything else.
-  if (inPageData) return walkMarks(child, true);
-
-  if (MARK_ADDRESS_KEYS.has(key) && typeof child === 'string') return child;
-
-  if (MARK_ADDRESS_LIST_KEYS.has(key) && Array.isArray(child)) {
-    // A non-string element is not an address, so it is walked like anything
-    // else rather than passed through unseen.
-    return child.map((item) =>
-      typeof item === 'string' ? item : walkMarks(item),
-    );
+  if (!isRecord(value)) return redactNestedStrings(value);
+  const out: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(value)) {
+    const isAddress = addresses.get(key);
+    out[key] =
+      isAddress !== undefined && typeof field === 'string' && isAddress(field)
+        ? field
+        : redactNestedStrings(field);
   }
-
-  if (key === 'actions' && entityId !== undefined && Array.isArray(child)) {
-    return child.map((raw) =>
-      typeof raw === 'string'
-        ? { id: actionMarkId(entityId, raw), raw: wrapUserData(raw) }
-        : walkMarks(raw),
-    );
-  }
-
-  return walkMarks(child);
+  return out;
 }
 
 function serializeFrame(frame: FrameWire) {

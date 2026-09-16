@@ -79,7 +79,7 @@ The image's entrypoint exits unless `BUNDLE` points at an existing file, so in D
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | Server port |
-| `BUNDLE` | `/app/flow/flow.mjs` | Local config/bundle path or URL |
+| `BUNDLE` | `/app/flow/flow.mjs` | Local config or bundle path. `walkeros run` also accepts a URL; the Docker image does not. |
 | `WALKEROS_TOKEN` | none | Automation token (`wos_pat_...`) or a bound runner token (`wos_run_...`), for registration and config fetch |
 | `WALKEROS_DEPLOY_TOKEN` | none | Deploy token; takes precedence over `WALKEROS_TOKEN` when both are set |
 | `WALKEROS_PROJECT_ID` | none | Project ID (required with `WALKEROS_FLOW_ID`) |

@@ -1,19 +1,21 @@
-import { buildScopeFromNodeRequest } from '@walkeros/core';
+import { buildScopeFromNodeRequest, normalizeBody } from '@walkeros/core';
 import type { Source } from '@walkeros/core';
 import type { Request } from 'express';
 
 /**
  * Builds the normalized scope from an Express request.
  *
- * The body is taken as-is: the route's JSON parser has already parsed it,
- * including `text/plain` beacons, so no second parse belongs here.
+ * The route parsers leave an application/json body parsed and a text/plain
+ * body as a string. The string is resolved here, once: JSON when it parses
+ * (sendBeacon payloads), otherwise kept raw for a `source.before` chain to
+ * decode, as on the other server sources.
  *
  * @param req The Express request.
  * @returns The normalized scope.
  */
 export function buildScope(req: Request): Source.Scope {
   return buildScopeFromNodeRequest(req, {
-    body: req.body,
+    body: normalizeBody(req.body),
     defaultProtocol: 'http',
   });
 }

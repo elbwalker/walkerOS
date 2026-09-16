@@ -1,3 +1,4 @@
+import { schemas, z, zodToSchema } from '@walkeros/core/dev';
 import { validateEntry } from '../../../commands/validate/validators/entry.js';
 
 const mockFetch = jest.fn();
@@ -137,6 +138,99 @@ describe('validateEntry (dot-notation)', () => {
     const result = await validateEntry('destinations.snowplow', badFlow);
     expect(result.valid).toBe(false);
   });
+
+  it('compiles a settings schema embedding a mapping value without strict-mode warnings', async () => {
+    const settingsSchema = zodToSchema(
+      z.object({
+        user_data: z
+          .record(z.string(), schemas.MappingSchemas.ValueSchema)
+          .optional(),
+      }),
+    );
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ version: '0.0.12' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ schemas: { settings: settingsSchema } }),
+      });
+    const metaFlow = {
+      version: 4,
+      flows: {
+        default: {
+          destinations: {
+            meta: {
+              package: '@walkeros/server-destination-meta',
+              config: {
+                settings: {
+                  user_data: { em: 'user.email', ph: ['user.phone', {}] },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await validateEntry('destinations.meta', metaFlow);
+
+      expect(result.valid).toBe(true);
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('strict mode'),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it.each([
+    [
+      { url: 'https://graph.facebook.com/v22.0', email: 'user@example.com' },
+      true,
+    ],
+    [{ url: 42 }, false],
+  ])(
+    'validates settings with url and email formats (%j -> valid %s)',
+    async (settings, expected) => {
+      const settingsSchema = zodToSchema(
+        z.object({
+          url: z.string().url().optional(),
+          email: z.string().email().optional(),
+        }),
+      );
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ version: '0.0.12' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({ schemas: { settings: settingsSchema } }),
+        });
+      const formatFlow = {
+        version: 4,
+        flows: {
+          default: {
+            destinations: {
+              meta: {
+                package: '@walkeros/server-destination-meta',
+                config: { settings },
+              },
+            },
+          },
+        },
+      };
+
+      const result = await validateEntry('destinations.meta', formatFlow);
+
+      expect(result.valid).toBe(expected);
+    },
+  );
 
   it('should error when entry key not found', async () => {
     const result = await validateEntry('destinations.nonexistent', flowConfig);

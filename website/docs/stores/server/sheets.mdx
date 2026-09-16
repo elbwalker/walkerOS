@@ -105,7 +105,7 @@ To absorb the Sheets quota, wire the store with the built-in cache via `Flow.Sto
     "crmLookup": {
       "code": {
         "type": "crm-lookup",
-        "push": "$code:async (event, context) => { if (!event.user.id) return; const crm = await context.env.store.get(event.user.id); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
+        "push": "$code:async (event, context) => { const userId = event.user?.id; if (!userId) return; const crm = await context.env.store.get(userId); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
       },
       "env": { "store": "$store.crm" }
     }

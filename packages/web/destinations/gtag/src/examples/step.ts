@@ -24,10 +24,10 @@ export const ga4Init: Flow.StepExample = {
     'Configures a GA4 property via its measurementId. gtag already exists here, so no `js` is sent: that would be a second, false initialisation signal.',
   in: {
     settings: {
-      ga4: { measurementId: 'G-XXXXXX-1' },
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
     },
   },
-  out: [['gtag', 'config', 'G-XXXXXX-1', {}]],
+  out: [['gtag', 'config', 'G-XXXXXXXXXX', {}]],
 };
 
 /**
@@ -125,7 +125,7 @@ export const purchase: Flow.StepExample = {
         data_taxes: 73.76,
         data_total: 555,
         context_shopping: 'complete',
-        send_to: 'G-XXXXXX-1',
+        send_to: 'G-XXXXXXXXXX',
       },
     ],
   ],
@@ -173,7 +173,7 @@ export const addToCart: Flow.StepExample = {
         data_color: 'black',
         data_size: 'l',
         data_price: 420,
-        send_to: 'G-XXXXXX-1',
+        send_to: 'G-XXXXXXXXXX',
       },
     ],
   ],
@@ -185,7 +185,7 @@ export const pageView: Flow.StepExample = {
     'A page view event is forwarded as a GA4 page_view event with no additional mapping.',
   in: getEvent('page view', { timestamp: 1700000102 }),
   mapping: undefined,
-  out: [['gtag', 'event', 'page_view', { send_to: 'G-XXXXXX-1' }]],
+  out: [['gtag', 'event', 'page_view', { send_to: 'G-XXXXXXXXXX' }]],
 };
 
 /**
@@ -418,7 +418,7 @@ export const ga4WithIncludeAll: Flow.StepExample = {
         event_timestamp: 1700000106,
         event_timing: 3.14,
         // send_to is always set for GA4
-        send_to: 'G-XXXXXX-1',
+        send_to: 'G-XXXXXXXXXX',
       },
     ],
   ],
@@ -467,7 +467,7 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
         data_shipping: 5.22,
         data_taxes: 73.76,
         data_total: 555,
-        send_to: 'G-XXXXXX-1',
+        send_to: 'G-XXXXXXXXXX',
       },
     ],
     [

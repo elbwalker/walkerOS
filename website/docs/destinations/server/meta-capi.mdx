@@ -1,8 +1,8 @@
 ---
 title: Meta Conversions API
-description: "Server-side Meta advertising events for enhanced privacy and tracking accuracy"
+description: "Send server-side events to the Meta Conversions API with normalized, SHA-256 hashed customer information"
 path: /docs/destinations/server/meta-capi
-sidebar_position: 3
+sidebar_position: 23
 package: '@walkeros/server-destination-meta'
 ---
 import data from '@walkeros/server-destination-meta/walkerOS.json';
@@ -14,14 +14,14 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/meta" npm="@walkeros/server-destination-meta" />
 
-Server-side event delivery to Meta's Conversions API for enhanced tracking accuracy and privacy compliance.
+Sends walkerOS events from your server to the Meta Conversions API. Customer information such as email and phone number is normalized and SHA-256 hashed before the request leaves your server.
 
 <WhereThisFits
   pre={<>Meta CAPI is a <strong>server destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Meta CAPI', highlight: true } },
   }}
-  post={<>Sends events server-side to Meta's Conversions API, bypassing browser limitations for improved data quality and privacy-compliant tracking.</>}
+  post={<>It receives events from the collector and posts each one to the Conversions API endpoint of your Meta Pixel.</>}
 />
 
 ## Installation
@@ -45,7 +45,7 @@ await startFlow({
       config: {
         settings: {
           accessToken: 'YOUR_ACCESS_TOKEN',
-          pixelId: 'YOUR_PIXEL_ID',
+          pixelId: '1234567890',
         },
       },
     },
@@ -67,7 +67,7 @@ Add to your `flow.json` destinations:
     "config": {
       "settings": {
         "accessToken": "YOUR_ACCESS_TOKEN",
-        "pixelId": "YOUR_PIXEL_ID"
+        "pixelId": "1234567890"
       }
     }
   }
@@ -81,3 +81,45 @@ Add to your `flow.json` destinations:
 </Tabs>
 
 <Configuration type="destination" data={data} />
+
+## How it works
+
+Every event becomes one `POST` request to `{url}/{pixelId}/events`, with the access token in an `Authorization: Bearer` header. The default `url` is `https://graph.facebook.com/v22.0`, and a trailing slash is optional. The destination does not batch events.
+
+The server event is built from the walkerOS event:
+
+| Field | Value |
+| --- | --- |
+| `event_name` | The walkerOS event name, such as `order complete`. Set `name` in a mapping rule to send a Meta event name such as `Purchase`. |
+| `event_id` | The walkerOS `event.id`. If the Meta Pixel tracks the same event in the browser, give it the same ID so Meta can deduplicate the two. |
+| `event_time` | The event timestamp converted from milliseconds to seconds. |
+| `action_source` | `settings.action_source`, or `website` if it is not set. |
+| `event_source_url` | `event.source.url`, added only when `action_source` is `website`. |
+
+Keys returned by `data` mappings are added to the top level of the server event. `user_data` combines `settings.user_data` with the `user_data` mapped in the destination `config.data` and in the rule's `data`. When the same key is mapped in more than one place, the rule's value wins.
+
+If `user_data` contains `fbclid`, the destination replaces it with `fbc` in the format `fb.1.{creationTime}.{fbclid}`. The creation time is the session start in milliseconds when the collector has a session, and the event timestamp otherwise.
+
+If `test_event_code` is set, it is added to the request body.
+
+A response outside the 2xx range, a network error, or a timeout makes the push throw with the response details. The destination does not retry.
+
+### Customer information hashing
+
+`user_data` keys must be Meta's parameter names from [Meta's customer information parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters), such as `em` for email and `ph` for phone. `fbclid` is also accepted and becomes `fbc`. The settings schema and the TypeScript types list only these parameter names, so a key like `email` is rejected by this package's schema and by type checking. Any other key that reaches `user_data`, for example through a `data` mapping, is dropped before the request is sent, with a warning that lists the key names but never their values.
+
+The destination normalizes and SHA-256 hashes these keys. Arrays are handled item by item.
+
+| Key | Normalization before hashing |
+| --- | --- |
+| `em` | Trim and lowercase. |
+| `ph` | Keep only digits and drop leading zeros. The destination cannot add a country code, so the mapped value must include one. |
+| `fn`, `ln` | Lowercase, remove punctuation, and trim. Accented and non-Latin letters are kept. |
+| `db` | Only year-first dates are normalized: `1997-02-16` becomes `19970216`. Other formats such as `02/16/1997` are only trimmed and cannot match, so map dates as `YYYYMMDD`. The destination logs a warning when a date is not 8 digits after normalization. |
+| `ge` | First letter, lowercased (`Female` becomes `f`). |
+| `ct`, `st` | Lowercase and remove everything except letters and digits. Full state names are not converted to codes. |
+| `zp` | Lowercase and remove spaces and dashes. U.S. ZIP+4 codes such as `94035-1234` or `940351234` keep the first 5 digits. |
+| `country` | Trim and lowercase. Map the ISO 3166-1 alpha-2 code, since country names are not converted. |
+| `external_id` | None. The value is hashed as it is. |
+
+The other parameters, such as `client_ip_address`, `client_user_agent`, `fbc`, or `fbp`, are sent unchanged. If a value is already hashed, add its key to `doNotHash` and the destination sends it exactly as mapped.

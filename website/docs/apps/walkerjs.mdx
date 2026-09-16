@@ -118,11 +118,12 @@ Walker.js supports multiple configuration approaches with different priorities:
 
   // Browser source settings
   browser: {
-    run: true, // Auto-start DOM tracking
-    session: true, // Enable session tracking
     scope: document.body, // Tracking scope
     pageview: true, // Enable automatic page views
   },
+
+  // Session source (default: true)
+  session: true, // or session source settings, e.g. { storage: true }
 
   // DataLayer integration
   dataLayer: true, // Enable dataLayer
@@ -279,9 +280,9 @@ console: { push: console.log },
 },
 },
 browser: {
-session: true,
 pageview: true,
 },
+session: true,
 });`}
   language="javascript"
 />
@@ -353,12 +354,16 @@ Walker.js configuration maps directly to full modes:
 // walker.js equivalent in Integrated mode
 import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
+import { sourceSession } from '@walkeros/web-source-session';
 
 const { elb } = await startFlow({
   sources: {
     browser: {
       code: sourceBrowser,
-      config: { settings: { pageview: true, session: true } },
+      config: { settings: { pageview: true } },
+    },
+    session: {
+      code: sourceSession,
     },
   },
   destinations: {
@@ -381,7 +386,10 @@ const { elb } = await startFlow({
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
-          "config": { "settings": { "pageview": true, "session": true } }
+          "config": { "settings": { "pageview": true } }
+        },
+        "session": {
+          "package": "@walkeros/web-source-session"
         }
       },
       "destinations": {

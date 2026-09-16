@@ -10,6 +10,9 @@ const meta: Meta<typeof LimitsBlock> = {
   title: 'Site/LimitsBlock',
   component: LimitsBlock,
   tags: ['autodocs'],
+  argTypes: {
+    heading: { control: 'text' },
+  },
 };
 export default meta;
 
@@ -21,16 +24,6 @@ export const Default: Story = {
       'Verification runs on one page at a time, in one browser, when you run it.',
       'There is no scheduled job watching a site in the background.',
       'An existing tag manager can stay in place; migration is additive and gradual.',
-    ],
-  },
-};
-
-export const CustomHeading: Story = {
-  args: {
-    heading: 'Not included',
-    items: [
-      'No hosted dashboard.',
-      'No analysis surface: events land in the tools you already use.',
     ],
   },
 };

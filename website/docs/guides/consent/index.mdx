@@ -1,6 +1,6 @@
 ---
 title: Consent management
-description: Privacy-compliant consent handling and management with walkerOS
+description: How walkerOS records consent and uses it to gate sources, destinations, and events
 path: /docs/guides/consent
 sidebar_position: 2
 ---
@@ -8,112 +8,258 @@ sidebar_position: 2
 
 # Consent management
 
-Managing user consent is critical for legal compliance and user privacy.
-WalkerOS follows a **privacy-by-design** approach and offers multiple ways to
-handle consent and manage data processing to ensure the user's privacy is
-respected.
+walkerOS checks consent before events leave a flow. You record the user's
+choices in the collector, and each source and destination declares which
+consent it needs. Events that lack consent are either held or dropped,
+depending on where you set the requirement.
 
 :::warning
 
-We don't give any legal advice. Make sure to consult a legal expert to ensure
-that your implementation is compliant with the laws and regulations that apply
-to your business.
+This page is not legal advice. Consult a legal expert about the laws and
+regulations that apply to your business.
 
 :::
 
-Typically, a Consent Management Platform (CMP) handles the consent. This is an
-asynchronous process. The CMP has to be loaded, a user has to make a choice,
-and/or the state has to be updated. walkerOS provides
-[CMP source packages](/docs/sources/web/cmps) that automate
-this. They listen for CMP events and call the consent command for you.
+## Record consent
 
-To set/update the consent state, the CMP should actively push the
-`consent command` with a group or an individual tool's permission state
-(`true/false`). If only one condition applies, consent is granted. Updating only
-one value won't override existing states.
+A Consent Management Platform (CMP) usually collects the user's choice. That
+happens asynchronously: the CMP has to load, and the user may decide late or
+not at all. walkerOS provides [CMP source packages](/docs/sources/web/cmps)
+that listen for CMP events and send the consent command for you.
+
+Without a CMP source, send the `walker consent` command yourself:
 
 <CodeSnippet
   code={`elb('walker consent', { functional: true, marketing: false });`}
   language="javascript"
 />
 
-Consent keys can be defined arbitrarily (typically known as *functional*,
-*analytics*, and *marketing*). However, you can also use individual names for
-each vendor.
+Consent keys are free-form. Common groups are `functional`, `analytics`, and
+`marketing`, and you can also use one key per vendor. The command stores each
+value as a boolean and only updates the keys it contains, so
+`elb('walker consent', { marketing: true })` leaves an existing `functional`
+state as it is.
 
-The walker handles the **race conditions**: Previously pushed events get
-processed in the correct order after granting the consent state with the
-destinations as well as new ones.
+## Configure consent in a flow
 
-### Destinations
+This web flow uses a CMP source to record consent and allows the gtag
+destination to receive events only with marketing consent:
 
-With each event, the consent states get checked. Every event will be added to an
-ordered queue if consent isn't granted yet and the destination's queue isn't
-disabled. The queue resets with each `walker run` command. And will be
-(re-)processed with each `walker consent` update. The key must match the key
-used in each `destination.config.consent`.
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "web" },
+      "sources": {
+        "cmp": {
+          "package": "@walkeros/web-source-cmp-cookiefirst"
+        },
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": {
+            "settings": { "pageview": true }
+          }
+        }
+      },
+      "destinations": {
+        "gtag": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "consent": { "marketing": true },
+            "require": ["consent"],
+            "settings": {
+              "ga4": { "measurementId": "G-XXXXXXXXXX" }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
 
-:::note
+### Gate a destination with `consent`
 
-The queued events properties `consent`, `globals`, and `user` will be
-**updated** to the current state before being processed.
+A destination's `config.consent` lists the consent keys it needs. The collector
+checks every event against it before the destination sees the event:
 
-:::
+- One granted key is enough. With `{ "analytics": true, "marketing": true }`,
+  the destination receives events if either `analytics` or `marketing` is
+  granted.
+- Events without the required consent wait in the destination's queue. Once
+  consent is granted, they are delivered in their original order.
+- The collector initializes the destination when the first event passes the
+  check.
+- The queue holds up to 1000 events per destination by default. When it is
+  full, the oldest events go first. Change the limit with
+  `config.queueMax`. See [buffer bounds](/docs/collector#buffer-bounds).
 
-:::note
+`config.queue` does not switch off this consent queue. The collector also keeps
+the events of the current run, so a destination added later still receives
+them. `"queue": false` skips only that replay for the destination.
 
-A destination only requires one granted consent state to process events.
+### Gate a source with `consent`
 
-:::
+The collector drops events from a source when they lack the consent in the
+source's `config.consent`. Sources have no consent queue, so granting consent
+later does not bring these events back:
 
-To revoke consent and stop sharing events with a destination, all matching rules
-have to be set to `false`:
+<CodeSnippet
+  code={`"browser": {
+  "package": "@walkeros/web-source-browser",
+  "config": {
+    "consent": { "functional": true },
+    "settings": { "pageview": true }
+  }
+}`}
+  language="json"
+/>
+
+Use source gating when events must not enter the flow at all without consent.
+Use destination gating when events should wait for a decision.
+
+### Wait for the CMP with `require`
+
+`"require": ["consent"]` holds a destination back, and holds a source's `on()`
+delivery back, until the collector has a consent state. Any recorded state counts, whether granted or denied, so
+`require` does not check values. Combine it with `config.consent`, which
+decides which events the destination receives. See
+[conditional activation](/docs/sources/web/cmps#conditional-activation-with-require)
+for how `require` works.
+
+### Set an initial consent state
+
+The flow's `collector` block (next to `sources` and `destinations`) sets the
+state before any CMP reports:
+
+<CodeSnippet
+  code={`"collector": {
+  "consent": { "functional": true }
+}`}
+  language="json"
+/>
+
+An initial state is a recorded consent state, so it satisfies
+`"require": ["consent"]` as soon as the flow starts.
+
+## How queued events are processed
+
+The collector re-checks a destination's queue whenever a new event or a state
+command (such as `walker consent`, `walker user`, or `walker globals`) reaches
+the destinations. Before the check, each queued event is updated:
+
+- `consent` is replaced with the current collector state. Once the event
+  passes, it carries only the granted keys.
+- `user` is merged with the collector's user data. Values already on the event
+  take precedence.
+- `globals` keeps the values the event was captured with.
+
+The queues belong to the current run. A `walker run` command starts a new run
+and clears the destination queues along with the replay buffer, so events still
+waiting for consent are lost. The collector already runs by default, so do not
+send `walker run` in reaction to a consent change.
+
+## Revoke consent
+
+To stop sending events to a destination, set its required keys to `false`:
 
 <CodeSnippet
   code={`elb('walker consent', { marketing: false });`}
   language="javascript"
 />
 
-## on consent
+Once none of a destination's required keys is granted, new events are queued
+for it instead of delivered. If consent is granted again during the same run,
+those queued events are delivered. Events that were already sent are not
+affected.
 
-To start walker.js only after a consent choice, use the `on consent` command:
+## Consent on a single event
+
+An event can carry its own `consent`. It is merged over the collector state for
+this event, and the event's values win:
 
 <CodeSnippet
-  code={`// Wait for functional consent to run
-elb('walker on', {
-type: 'consent',
-rules: {
-functional: () => {
-elb('walker run');
-},
-},
-});
-
-// Later, a CMP has to update the consent state
-elb('walker consent', { functional: true });`}
+  code={`elb({ name: 'order complete', consent: { marketing: true } });`}
   language="javascript"
 />
 
-Another example of how to use the `on consent` command might be to update
-[Googles consent mode v2](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic):
+If the event is still queued, the next check replaces its `consent` with the
+collector state, as described above.
+
+To send a single field only with consent, use
+[consent in a mapping value](/docs/mapping/value#consent).
+
+## React to consent changes
+
+Use the `walker on` command with the `consent` type to run code when consent
+changes. `rules` is an object with one handler per consent key:
 
 <CodeSnippet
   code={`elb('walker on', {
-type: 'consent',
-rules: (consent, context) => {
-// Check if marketing consent is granted
-if (consent.marketing) {
-gtag('consent', 'update', {
-ad_user_data: 'granted',
-ad_personalization: 'granted',
-ad_storage: 'granted',
-analytics_storage: 'granted',
-});
-}
-},
+  type: 'consent',
+  rules: {
+    marketing: (consent, context) => {
+      if (consent.marketing) {
+        // marketing was granted
+      } else {
+        // marketing was denied
+      }
+    },
+  },
 });`}
   language="javascript"
 />
 
-The consent mode will be updated via `gtag` as soon as marketing consent is
-granted.
+A handler receives the consent state and a context with `collector` and
+`logger`:
+
+- It runs when its key is part of a `walker consent` command, for a denial as
+  well as a grant, and receives only the values of that command. Check the
+  value inside the handler.
+- When it is registered, and when the collector starts, it receives the full
+  consent state and runs if its key is set. Until the collector runs, no
+  handler is called.
+- `rules` must be an object keyed by consent name. A bare function has no key
+  and is never called.
+
+To start or stop sending events based on consent, use `config.consent` and
+`require` instead of handlers. See [on](/docs/collector/commands#on) for all
+subscription types.
+
+## Google Consent Mode
+
+The [gtag destination](/docs/destinations/web/gtag) supports Google Consent
+Mode v2 through its `como` setting, which is on by default. The destination
+turns consent commands into `gtag('consent', 'update', ...)` calls, and holds
+commands sent before it initializes until initialization. The default mapping
+is:
+
+| walkerOS key | Consent Mode parameters                             |
+| ------------ | --------------------------------------------------- |
+| `marketing`  | `ad_storage`, `ad_user_data`, `ad_personalization`  |
+| `functional` | `analytics_storage`                                 |
+
+Pass an object to use your own keys:
+
+<CodeSnippet
+  code={`"gtag": {
+  "package": "@walkeros/web-destination-gtag",
+  "config": {
+    "consent": { "analytics": true, "marketing": true },
+    "settings": {
+      "como": {
+        "marketing": ["ad_storage", "ad_user_data", "ad_personalization"],
+        "analytics": "analytics_storage"
+      },
+      "ga4": { "measurementId": "G-XXXXXXXXXX" }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Set `"como": false` to turn it off. Do not call `gtag('consent', 'update')`
+yourself while `como` is on, because Google then receives duplicate or
+conflicting updates.

@@ -136,7 +136,7 @@ The collector is added automatically. To pin a specific version (recommended for
 
 <CodeSnippet
   code={`"packages": {
-  "@walkeros/collector": { "version": "1.0.0" },
+  "@walkeros/collector": { "version": "4.6.1" },
   "@walkeros/web-source-browser": {},
   "@walkeros/destination-demo": {}
 }`}
@@ -272,8 +272,8 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -343,8 +343,8 @@ Create `server-collect.json`:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -493,13 +493,13 @@ Create `api-flow.json` with a destination that makes real HTTP calls:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/web-destination-api": {}
+            "@walkeros/server-destination-api": { "version": "^4" }
           }
         }
       },
       "destinations": {
         "api": {
-          "package": "@walkeros/web-destination-api",
+          "package": "@walkeros/server-destination-api",
           "config": {
             "settings": {
               "url": "https://your-endpoint.com/events",
@@ -1717,8 +1717,8 @@ Create `collect.json`:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -1911,8 +1911,8 @@ Create `server-collect.json`:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -1952,8 +1952,8 @@ Create `web-track.json`:
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/web-source-browser": {},
-            "@walkeros/web-destination-api": {}
+            "@walkeros/web-source-browser": { "version": "^4" },
+            "@walkeros/web-destination-api": { "version": "^4" }
           }
         }
       },

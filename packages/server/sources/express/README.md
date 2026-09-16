@@ -10,6 +10,12 @@ Turn-key HTTP event collection server with Express.js. Runs standalone or embeds
 inside an existing Express app, handles JSON POST events, pixel tracking via
 GET, and configurable CORS.
 
+A `text/plain` POST body is parsed as JSON when it is JSON
+(`navigator.sendBeacon` sends JSON as `text/plain`) and otherwise kept as the
+raw string on `ingest.body`, so a `before` transformer can decode it, for
+example batched gtag.js hits with `@walkeros/transformer-ga4`. An
+`application/json` body must parse, or the request is answered with 400.
+
 [Documentation](https://www.walkeros.io/docs/sources/server/express) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-source-express)
 &bull;

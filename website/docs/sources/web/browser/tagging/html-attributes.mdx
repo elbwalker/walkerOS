@@ -4,27 +4,20 @@ sidebar_position: 1
 description: How to tag a page using data-elb HTML attributes
 ---
 
-Tag your web components using `data-elb` attributes to enable structured event
-tracking without custom JavaScript.
+With `data-elb` attributes you can track clicks, views, form submissions, and
+other user behavior straight from your markup, without writing JavaScript.
 
-By adding a few simple attributes to your markup, you can track user behavior
-such as clicks, views, form submissions, and more.
+This works well for component libraries and design systems. Tag a component
+once, and every page that uses it is tracked without extra code or tracking
+configuration.
 
-This technique is especially helpful for **component libraries** and **design
-systems**, where it is important to **scale** event tagging in a maintainable,
-reusable way. You can bake tracking into components once, then use them
-everywhere, without extra code or tracking configuration.
-
-You'll learn how to:
+This page covers how to:
 
 * Define entities, actions, and triggers directly in your HTML
 * Add contextual and global properties
 * Handle dynamic values, arrays, and type casting
 * Link elements across DOM boundaries
 * Structure nested data automatically
-
-If you're looking for a **lightweight, declarative** way to implement analytics
-and event tracking, `data-elb` tagging is your foundation.
 
 ## Concept
 
@@ -36,7 +29,7 @@ Tag a page...
   data-elb="ENTITY"
   data-elb-ENTITY="KEY:VALUE"
   data-elbaction="TRIGGER:ACTION"   <!-- nearest entity only -->
-  data-elbactions="TRIGGER:ACTION"  <!-- all entities -->
+  data-elbactions="TRIGGER:ACTION"  <!-- all entities, click and submit only -->
   data-elbcontext="KEY:VALUE"
   data-elbglobals="KEY:VALUE"
 />
@@ -93,78 +86,84 @@ source: {
 // Details about the origin of the event
 type: 'browser', // Source kind (e.g. browser, dataLayer)
 platform: 'web', // Runtime platform (web or server)
-schema: '4', // walkerOS event schema version
 url: 'https://github.com/elbwalker/walkerOS', // Page URL
-referrer: 'https://www.walkeros.io/' // Referrer URL
+referrer: 'https://www.walkeros.io/', // Referrer URL
+count: 1, // Emission sequence within the run
+trace: '0123456789abcdef0123456789abcdef', // Run-scoped W3C trace_id (32 hex chars)
+release: { web: '3' } // Config release per flow, keyed by flow name
 }
 }`}
   language="javascript"
 />
 
 :::info Updating from v3
-The top-level `group`, `count`, and `version` fields are gone. The `id` is
-now a [W3C Trace Context](https://www.w3.org/TR/trace-context/) `span_id`
-(16 lowercase hex chars). Inside `source`, `type` is now the source kind
+The top-level `group`, `count`, and `version` fields moved into `source`:
+`source.trace` groups all events of a run, `source.count` is the emission
+sequence within the run, and `source.version` is an optional version a source
+can set. `source.release` records the release of each flow. The `id` is now a
+[W3C Trace Context](https://www.w3.org/TR/trace-context/) `span_id` (16
+lowercase hex chars). Inside `source`, `type` is now the source kind
 (`browser`, `dataLayer`, ...), the runtime is captured by the new `platform`
-field, the previous `id` is now `url`, and `previous_id` is now `referrer`.
+field, the v3 `id` is now `url`, and `previous_id` is now `referrer`. See
+the [event model](/docs/getting-started/event-model) for the full structure.
 :::
 
 :::note
 
-You are entirely **free** to define naming conventions.
+You can choose your own naming conventions.
 
 :::
 
 ## Entity and action
 
-You define the entity **scope** by setting the `data-elb` attribute with the
-name of an entity to an element, e.g. `data-elb="promotion"`. The default entity
-is `page` when no `data-elb` is set.
+The `data-elb` attribute sets the entity scope of an element, e.g.
+`data-elb="promotion"`. Without a `data-elb`, the entity is `page`.
 
-An **action** can be added by setting one of the following attributes on the
-**same level** or **child elements** in combination with a **matching trigger**:
+To add an action, set one of the following attributes on the same element or
+on a child element, together with a matching trigger:
 
-* **`data-elbaction`** - applies action to the **nearest entity only**
-* **`data-elbactions`** - applies action to **all entities** in the DOM
-  hierarchy
+* `data-elbaction` applies the action to the nearest entity only.
+* `data-elbactions` applies the action to the nearest entity and every entity
+  above it in the DOM hierarchy. It works for the `click` and `submit` triggers
+  only. For every other trigger, use `data-elbaction`.
 
-Both attributes use the same syntax, e.g., `data-elbaction="visible:view"` or
-`data-elbactions="click:select"` to fire events when triggered.
+Both attributes use the same syntax, e.g. `data-elbaction="visible:view"` or
+`data-elbactions="click:select"`.
 
 :::info Migration Note
 
-The behavior of `data-elbaction` changed in @walkeros to apply to nearest entity
-only. For the previous @elbwalker "all entities" behavior, use
-`data-elbactions`. See the
+In @walkeros, `data-elbaction` applies to the nearest entity only. The
+@elbwalker packages applied it to all entities. To keep that behavior for
+`click` and `submit`, use `data-elbactions`. See the
 [Migration Guide](/docs/guides/migration#data-elbaction-vs-data-elbactions) for
 details.
 
 :::
 
-To define the entities' **properties**, set the **composited attribute**
-`data-elb-ENTITY` with the key and value, e.g.
+To define the entity's properties, set the composite attribute
+`data-elb-ENTITY` with keys and values, e.g.
 `data-elb-promotion="name:tagging is fun;position:overlay"`.
 
 ## Triggers
 
-There is a bunch of pre-built triggers. You don't have to deal with event
-listener or mutation observer initialization.
+The browser source comes with built-in triggers, so you don't set up event
+listeners or mutation observers yourself.
 
-| **Trigger** | **Definition**                                                                       |
-| ----------- | ------------------------------------------------------------------------------------ |
-| load        | after loading a page when DOM is ready                                               |
-| click       | when an element or a child is clicked                                                |
-| impression  | once, after the element has been on screen for one continuous second                 |
-| visible     | like impression, but re-arms and fires again each time the element re-qualifies      |
-| hover       | each time the mouse enters the corresponding element                                 |
-| submit      | on valid form submission                                                             |
-| wait(ms)    | waits ms seconds (15 seconds by default) until triggering                            |
-| pulse(ms)   | recurring trigger every ms seconds (15 seconds by default) if the page is not hidden |
+| **Trigger**   | **Definition**                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| load          | after loading a page when DOM is ready                                                           |
+| click         | when an element or a child is clicked                                                            |
+| impression    | once, after the element has been on screen for one continuous second                             |
+| visible       | like impression, but re-arms and fires again each time the element re-qualifies                  |
+| hover         | each time the mouse enters the corresponding element                                             |
+| submit        | on valid form submission                                                                         |
+| scroll(depth) | once, when `depth` percent of the element (50 by default) is above the bottom of the viewport     |
+| wait(ms)      | once, after `ms` milliseconds (15000 by default)                                                 |
+| pulse(ms)     | every `ms` milliseconds (15000 by default) while the page is not hidden                          |
 
 :::note
 
-Trigger names are predefined and to be selected from the list, while the
-`action` can be an arbitrarily defined name.
+Trigger names come from this list. Action names are up to you.
 
 :::
 
@@ -174,26 +173,25 @@ Trigger names are predefined and to be selected from the list, while the
 been on screen for one continuous second in a foreground tab. "On screen"
 means at least half the element, or half the viewport, whichever is smaller,
 along each axis. A 716px card on a 450px-tall viewport therefore qualifies
-once about 225px of it is showing, rather than the 358px the previous rule
-required: an element bigger than the viewport no longer needs to cover almost
-the entire screen to count. The exact point is sampled rather than measured
-continuously, so it can land within about 1% of the element's height either
-side of that mark. `visible` re-arms only once the element drops back below
-that bar and then requalifies, so it can fire repeatedly as a user scrolls
-past it and back.
+once about 225px of it is showing, so an element taller than the viewport does
+not need to fill the screen to count. The source samples this point instead of
+measuring it continuously, so it can land within about 1% of the element's
+height on either side of that mark. `visible` re-arms only after the element
+drops below that bar and then qualifies again, so it can fire repeatedly as a
+user scrolls past it and back.
 
 :::note
 
 Extremely tall elements, beyond roughly 100x the viewport height, are not
-detected. Such an element never occupies enough of its own area to register,
+detected. Such an element never shows enough of its own area to register,
 however far it is scrolled.
 
 :::
 
 ### Abbreviation
 
-If the trigger and action values are equal, e.g. for click events, you can
-shorten the implementation:
+If the trigger and action names are equal, e.g. for click events, you can
+shorten the attribute:
 
 <CodeSnippet
   code={`<b data-elbaction="click">
@@ -205,31 +203,39 @@ shorten the implementation:
 
 ### Parameters
 
-Some triggers require more information during initialization, while others
-accept optional parameters. The scroll trigger needs to know the percentage a
-user scrolls down, a wait trigger the number of milliseconds until the action
-gets triggered. Use brackets behind the trigger to pass that information.
+The `scroll`, `wait`, and `pulse` triggers accept a parameter in brackets after
+the trigger name. `scroll` takes a percentage from 0 to 100 (default 50) and
+ignores values outside that range. `wait` and `pulse` take a number of
+milliseconds (default 15000).
 
 <CodeSnippet
   code={`<!-- specifying trigger parameters -->
-<p data-elbaction="wait(10):interested"></p>
-<p data-elbaction="pulse(10):interested"></p>`}
+<p data-elbaction="scroll(75):read"></p>
+<p data-elbaction="wait(10000):interested"></p>
+<p data-elbaction="pulse(10000):interested"></p>`}
   language="html"
 />
 
 ### Action filter
 
-At some point, you might want to nest one entity inside another. To prevent an
-action to trigger unwanted entities, you can restrict the action to a specific
-entity by adding the name, e.g. `data-elbaction="load:view(product)` or
-`data-elbactions="load:view(product)"`. If the trigger event gets called, the
-result will only include the property values from the specific entities.
+When one entity is nested inside another, you can restrict an action to a
+specific entity by adding its name in brackets after the action. With
+`data-elbactions`, e.g. `data-elbactions="click:select(product)"`, only
+entities with that name fire the action. With `data-elbaction`, e.g.
+`data-elbaction="load:view(product)"`, the action goes to the nearest entity
+with that name.
 
 <CodeSnippet
   code={`<!-- setting a filter for an entity -->
 <div data-elb="foo">
-  <div data-elb="bar" data-elbaction="load:hello(bar)">
+  <div data-elb="bar" data-elbactions="click:hello(bar)">
     only the bar hello event fires.
+  </div>
+</div>
+
+<div data-elb="foo">
+  <div data-elb="bar" data-elbaction="load:hello(foo)">
+    the foo hello event fires, bar is skipped.
   </div>
 </div>`}
   language="html"
@@ -237,13 +243,13 @@ result will only include the property values from the specific entities.
 
 ### Click trigger
 
-When you click an element, the browser source reads the click in the capture
-phase, so it resolves the `data-elbaction` and the surrounding entity from the
-DOM as it exists at click time, before your app's own click handlers run. If it
-finds a `data-elbaction` with the `click` trigger on the clicked element or any
-of its parents, it fires the action. Often the image or a whole div inside a
-button gets clicked, not the button itself; the parent walk still resolves the
-action and entity for you.
+The browser source reads clicks in the capture phase. It resolves the
+`data-elbaction` and the surrounding entity from the DOM as it exists at click
+time, before your app's own click handlers run. If it finds a `data-elbaction`
+or `data-elbactions` with the `click` trigger on the clicked element or any of
+its parents, it fires the action. Users often click an image or a div inside a
+button rather than the button itself, and the walk up the parents still
+resolves the action and entity.
 
 <CodeSnippet
   code={`<button data-elb="product" data-elbaction="click">
@@ -254,19 +260,19 @@ action and entity for you.
 
 :::info
 
-Reading in the capture phase means `stopPropagation` in your app or a
-third-party widget no longer prevents a tagged click from being captured, and
-the entity is read before a click-driven re-render can unmount it (a common
-cause of events falling back to `page` in single-page apps). To restore the
-previous bubbling behavior, set `capture: false` on the browser source.
+Because clicks are read in the capture phase, `stopPropagation` in your app or
+a third-party widget does not prevent a tagged click from being captured. The
+entity is also read before a click-driven re-render can unmount it, a common
+cause of events falling back to `page` in single-page apps. To read clicks in
+the bubbling phase instead, set `capture: false` on the browser source.
 
 :::
 
 ## Linking elements
 
-Use the `data-elblink` tag to extend the scope of an entity by elements placed
-somewhere else (like modals). Specific IDs connect linked elements. They are
-hierarchically and can either be a parent or a child.
+Use the `data-elblink` attribute to extend the scope of an entity to elements
+placed somewhere else, such as modals. A shared ID connects the linked
+elements, and each element is either the parent or a child.
 
 <CodeSnippet
   code={`<div data-elb="info" data-elblink="details:parent">...</div>
@@ -276,34 +282,41 @@ hierarchically and can either be a parent or a child.
   language="html"
 />
 
-The second element is the parent, triggering the visible action for the
-`info visible` event. There can be multiple children, but there is only one
-parent element per ID.
+The first element is the parent. The second element is its child and carries
+the visible action, which fires the `info visible` event. An ID can have
+multiple children but only one parent element.
 
 :::note
 
 `data-elb`, `data-elbaction`, `data-elbactions`, `data-elbcontext`,
-`data-elbglobals`, and `data-elblink` are reserved attributes, whereas
-`data-elb-*` attributes may be
-arbitrary combinations based on the related entity name. `data-elb_` is a
-reserved path-scoped generic that uses the same value syntax as `data-elb-` but
-only reaches triggers nested below it. Actions and properties can be set
-anywhere inside an elb scope.
+`data-elbglobals`, `data-elbuser`, `data-elblink`, and `data-elbobserve` are
+reserved attributes, whereas `data-elb-*` attributes may be arbitrary
+combinations based on the related entity name. `data-elb_` is a reserved
+path-scoped generic that uses the same value syntax as `data-elb-` but only
+reaches triggers nested below it. Actions and properties can be set anywhere
+inside an elb scope.
 
 :::
 
 :::warning
 
-Spaces in entities, e.g., "shopping cart" or actions, e.g., "add to cart" will
-be replaced by underscores to "shopping\_cart" and "add\_to\_cart".
+An entity name consists of letters, digits, `_`, and `-`. Non-ASCII letters
+are allowed too. A `data-elb` value with any other character, such as
+`shopping cart`, is ignored: the element counts as untagged, and an action
+inside it goes to the next entity above it, or to `page`. Use `shopping_cart`
+instead.
+
+Follow the same rule for action names, e.g. `add_to_cart`. Mapping rules and
+`elb('entity action')` read entity and action from the event name split at the
+first space, so `add to cart` would be matched as `add`.
 
 :::
 
 :::tip
 
-Spaces in property values are no problem, e.g. `"category: 'summer sale'"` works
-fine. But it is better to set them in quotes when doing so or when using
-symbols, especially `:` or `;`
+Spaces in property values work, e.g. `data-elb-product="category:summer sale"`.
+Colons inside a value work too, because only the first colon separates key and
+value. Wrap a value in single quotes when it contains a semicolon.
 
 :::
 
@@ -311,8 +324,8 @@ symbols, especially `:` or `;`
 
 ### Basic attributes
 
-To specify `data`, use the name of the entity. The `data` attributes have to be
-inside of the entity scope or a parent.
+To set `data`, use the name of the entity. The `data` attributes have to be
+inside the entity scope or on a parent.
 
 <CodeSnippet
   code={`<div data-elb-entity="source:parent">
@@ -331,9 +344,9 @@ inside of the entity scope or a parent.
 
 ### Hierarchy
 
-There is a hierarchy for the `data` properties, where the order defines which
-values to use for similar keys. Based on the triggering action element, the
-closest ones or parent values will be preferred over the others.
+When several elements set the same key, the position of the triggering element
+decides which value wins. Values on the element itself or its parents are
+preferred over the others.
 
 <CodeSnippet
   code={`<div id="family" data-elb="e" data-elbaction="click">
@@ -346,7 +359,7 @@ closest ones or parent values will be preferred over the others.
   language="html"
 />
 
-Based on which element gets clicked, the event will contain the following data
+Depending on which element gets clicked, the event contains the following data:
 
 * family: `{ key: 'baz' }`, the last found data-property
 * parent: `{ key: 'foo' }`, a direct data-value
@@ -355,7 +368,7 @@ Based on which element gets clicked, the event will contain the following data
 
 ### Type casting
 
-Property values will be cast to their type, supporting string, number & boolean.
+Property values are cast to their type: string, number, or boolean.
 
 <CodeSnippet
   code={`<div data-elb="types">
@@ -368,31 +381,10 @@ Property values will be cast to their type, supporting string, number & boolean.
 
 ### Multiple attributes
 
-Browsers override duplicate attributes. Hence an element can only have one
-`data-elb`, `data-elb-ENTITY`, and/or `data-elbaction` attribute at a time.
-Nevertheless, it’s possible to define multiple entities, properties, and/or
-actions within one attribute using quotes and semicolons. A semicolon splits
-key-value pairs. Therefore, it’s necessary to escape values that contain a
-semicolon. Quotes are here to meet your needs. To prevent a mistaken
-value-split, use single quotes.
-
-<CodeSnippet
-  code={`<!-- value wrapping with quotes -->
-<p data-elb="foo" data-elb-foo="b:a;r">{ "b": "a", "r": true }</p>
-<p data-elb="foo" data-elb-foo="b:'a;r'">{ "b": "a;r" }</p>`}
-  language="html"
-/>
-
-If a single quote is part of the value, escape it with a backslash:
-
-<CodeSnippet
-  code={`<!-- escaping values with backslash -->
-<p data-elb="foo" data-elb-foo="bar:it\'s escaped">{ "bar": "it's escaped" }</p>`}
-  language="html"
-/>
-
-The semicolon can be used as a separator to list multiple values inside of a
-`data-elb` or `data-elbaction` attribute.
+HTML keeps only one attribute of each name per element, so an element can have
+one `data-elb`, one `data-elb-ENTITY`, and one `data-elbaction` attribute at a
+time. A single `data-elb-ENTITY` attribute can still hold several properties,
+and a single `data-elbaction` several actions, separated by semicolons.
 
 <CodeSnippet
   code={`<!-- using multiple key-value pairs at once -->
@@ -400,21 +392,41 @@ The semicolon can be used as a separator to list multiple values inside of a
   language="html"
 />
 
-### Dynamic field values
-
-You might want to measure dynamic field values, e.g. the quantity of a product
-or the value of the selected element. Use a `#` at the beginning, followed by
-the attribute name to access the value of the element attribute.
+Since a semicolon splits key-value pairs, wrap a value that contains a
+semicolon in single quotes. A key without a value, like `r` in the first line
+below, gets an empty string.
 
 <CodeSnippet
-  code={`<!-- Basic usage: elb-ENTITY="KEY:#VALUE" -->
-<input type="text" value="blue" data-elb-product="color:#value"></input>
+  code={`<!-- value wrapping with quotes -->
+<p data-elb="foo" data-elb-foo="b:a;r">{ "b": "a", "r": "" }</p>
+<p data-elb="foo" data-elb-foo="b:'a;r'">{ "b": "a;r" }</p>`}
+  language="html"
+/>
+
+A single quote cannot be part of a value, and backslash escaping is not
+supported. Double quotes are kept as written, so write the attribute itself in
+single quotes when a value needs them:
+
+<CodeSnippet
+  code={`<p data-elb="foo" data-elb-foo='quote:say "hi"'>{ quote: 'say "hi"' }</p>`}
+  language="html"
+/>
+
+### Dynamic field values
+
+To measure dynamic field values, e.g. the quantity of a product or the value of
+a form field, start the value with `#` followed by a property name of the
+element. The source then reads that property from the element.
+
+<CodeSnippet
+  code={`<!-- Basic usage: data-elb-ENTITY="KEY:#VALUE" -->
+<input type="text" value="blue" data-elb-product="color:#value" />
 <div data-elb-product="name:#innerHTML">Everyday Ruck Snack</div>`}
   language="html"
 />
 
-To capture a selected option from a list, use `elb-ENTITY="KEY:#selected"` to
-get size:20L
+To capture the selected option of a list, use `data-elb-ENTITY="KEY:#selected"`.
+It reads the text of the selected option, here `size:20L`.
 
 <CodeSnippet
   code={`<select data-elb-product="size:#selected">
@@ -426,8 +438,8 @@ get size:20L
 
 ### Arrays
 
-To use array types, add the `[]` suffix to a property's name, such as
-`size[]:m`. It will generate de-duplicated data properties.
+To create an array, add the `[]` suffix to a property's name, such as
+`size[]:m`. Duplicate values are removed.
 
 <CodeSnippet
   code={`<div data-elb="product">
@@ -464,12 +476,6 @@ related entity. Explicitly named properties are preferred over generic ones.
   language="html"
 />
 
-:::note
-
-Explicit properties are preferred over generic ones.
-
-:::
-
 <CodeSnippet
   code={`{
 data: {
@@ -485,13 +491,13 @@ o: 'v' // overridden by explicit
 
 ### Scoped generic properties
 
-The blanket `data-elb-` generic is added to every trigger inside its entity,
+The blanket `data-elb-` generic reaches every trigger inside its entity,
 because the entity collects it through a descendant search. Use `data-elb_`
 (trailing underscore, no dash) when a property should reach only the triggers
 nested below it. It carries the same `key:value` payload as `data-elb-`
-(including `[]` arrays and `#dynamic` values), but it is collected only while
-bubbling up from the triggered element, so sibling triggers outside its branch
-never receive it.
+(including `[]` arrays and `#dynamic` values), but the source collects it only
+while walking up from the triggered element, so sibling triggers outside its
+branch never receive it.
 
 <CodeSnippet
   code={`<div data-elb="product" data-elb-product="name:A">
@@ -504,9 +510,9 @@ never receive it.
   language="html"
 />
 
-Clicking the first button bubbles up through the `data-elb_` element, so it
-receives `size:L` along with the blanket `color:red`. Clicking the second
-button never passes through that element, so it has no `size`.
+Clicking the first button walks up through the `data-elb_` element, so the
+event gets `size:L` along with the blanket `color:red`. The walk from the second
+button never passes that element, so its event has no `size`.
 
 <CodeSnippet
   code={`// first button
@@ -521,11 +527,10 @@ farther up the tree, including an explicit entity property on a higher element.
 
 ## Globals
 
-There might be properties that don't belong to just one event but to **all
-events on a page**. Those properties are called **globals**, and are **read
-from the DOM for every event**. Globals are arbitrary, like the data property.
-What is unique about them is that you can define them anywhere on a page using
-the `data-elbglobals` attribute.
+Globals are properties that apply to all events on a page. The source reads
+them from the DOM for every event. Like data properties, they are arbitrary,
+but you can define them anywhere on a page with the `data-elbglobals`
+attribute.
 
 <CodeSnippet
   code={`<div data-elbglobals="outof:scope"></div>
@@ -534,11 +539,11 @@ the `data-elbglobals` attribute.
   language="html"
 />
 
-This example will lead to the following event:
+This example leads to the following event:
 
 <CodeSnippet
   code={`{
-"event": "entity action",
+"name": "entity action",
 "data": { "foo": "bar" },
 "globals": { "outof": "scope" }
 // other properties omitted
@@ -549,7 +554,7 @@ This example will lead to the following event:
 :::info
 
 Globals are collected fresh from the DOM for every event, so a
-`data-elbglobals` value changed between events is reflected in the next one.
+`data-elbglobals` value changed between events shows up in the next one.
 They are page level: the scan always covers the source's own scope (the whole
 document by default), so `elb('walker init', element)` narrows which elements
 get wired without narrowing the globals those elements report.
@@ -558,12 +563,12 @@ get wired without narrowing the globals those elements report.
 
 ## User
 
-`data-elbuser` sets **user identity** that is applied to the **page view and
-every event after it**. Unlike globals, which are re-read from the DOM for
-every event, the user is collected **once per run**, right before the page
-view, and stored as persistent collector state, the same state the
+`data-elbuser` sets user identity for the page view and every event after it.
+Globals are re-read from the DOM for every event, while the user is collected
+once per run, right before the page view, and stored as persistent collector
+state. That is the same state the
 <Link to="/docs/collector/commands#user">walker user</Link> command writes to.
-Tag any element with the identifiers you have available:
+Tag any element with the identifiers you have:
 
 <CodeSnippet
   code={`<div data-elbuser="id:u123;loggedin:true"></div>`}
@@ -574,33 +579,31 @@ The page view, and every event pushed after it, carries the user:
 
 <CodeSnippet
   code={`{
-"event": "page view",
+"name": "page view",
 "user": { "id": "u123", "loggedin": true }
 // other properties omitted
 }`}
   language="javascript"
 />
 
-Because the user is collected once, right before the page view, only the page
-view and later events carry it. Events that already fired earlier in the run,
-such as `window.elbLayer` pushes replayed before the page view, are not
-retroactively stamped. If multiple elements carry `data-elbuser`, their values
-are merged (last one in the DOM wins per key). An absent `data-elbuser`
-attribute leaves any existing user untouched; it never wipes a user set
-another way, such as by an earlier `walker user` call.
+Events that fired earlier in the run, such as `window.elbLayer` pushes replayed
+before the page view, do not get the user added afterwards. If multiple
+elements carry `data-elbuser`, their values are merged, and the last one in the
+DOM wins per key. Without a `data-elbuser` attribute, the existing user stays
+as it is, including a user set by an earlier `walker user` call.
 
 :::warning
 
-Use fully anonymized & arbitrary IDs by default and check your options with
+Use fully anonymized and arbitrary IDs by default, and check your options for
 persistent user IDs with your data protection officer.
 
 :::
 
 ## Context
 
-Context doesn't work like globals for every event, but is helpful information
-for every framing context an event is embedded in. A context could be a
-position, a test, or specific components for example.
+Context describes the setting an event happens in, such as a position, a test,
+or a specific component. Unlike globals, context only applies to events
+triggered inside the element that sets it.
 
 <CodeSnippet
   code={`<div data-elbcontext="test:engagement" data-elbglobals="plan:paid">
@@ -617,12 +620,13 @@ position, a test, or specific components for example.
   language="html"
 />
 
-The context properties are tuples with the value and an index, starting at the
-closest parent (`[value, index]`). Access them via `event.context.key[0]`.
+Each context property is a tuple of the value and an index, where the closest
+parent has index 0 (`[value, index]`). Access the value via
+`event.context.key[0]`.
 
 <CodeSnippet
   code={`{
-event: "promotion click",
+name: "promotion click",
 data: { title: "click me" },
 globals: { plan: "paid" },
 context: {
@@ -636,19 +640,17 @@ recommendation: ["smart_ai", 0],
 
 :::tip
 
-At elbwalker we often use context for predefined journeys and stages to measure
-events along a specific user journey in structured way.
+Context is useful for predefined journeys and stages, to measure events along a
+specific user journey in a structured way.
 
 :::
 
 ## Nested entities
 
-A `data-elb` entity within another `data-elb` entity is called a **nested
-entity**.
+A `data-elb` entity within another `data-elb` entity is a nested entity.
 
-The walker algorithm runs through nested entities and treats them like regular
-entities by gathering all related information. Nested entities are accessible in
-the nested array of each event. Each element is a regular entity.
+The walker collects nested entities like regular entities, with all their
+related information, and lists them in the `nested` array of each event.
 
 <CodeSnippet
   code={`<div
@@ -664,11 +666,11 @@ the nested array of each event. Each element is a regular entity.
   language="html"
 />
 
-This example will lead to the following event on load:
+This example leads to the following event on load:
 
 <CodeSnippet
   code={`{
-"event": "mother view",
+"name": "mother view",
 "data": { "label": "caring" },
 "nested": [
 { "entity": "son", "data": { "age": 23 } },
@@ -684,18 +686,18 @@ This example will lead to the following event on load:
   language="javascript"
 />
 
-Nested entities that are nested inside another entity will be captured on both
-levels.
+An entity nested inside another nested entity appears on both levels.
 
 :::note
 
-Nested entities are not available for auto-captured page view events.
+Auto-captured page view events have no nested entities.
 
 :::
 
 :::tip
 
-Learn more about the walkerOS event model in our documentation.
+The [event model](/docs/getting-started/event-model) describes the full
+walkerOS event structure.
 
 :::
 
@@ -732,28 +734,27 @@ elb('walker init', root);`}
 />
 
 Its elements then behave like any other tagged markup: `load` triggers fire on
-the scan, and `visible` and `impression` fire on viewport entry. Two triggers
+the scan, and `visible` and `impression` fire on viewport entry. Two things
 still cannot reach inside a closed root:
 
 * **click and submit** resolve through the event's composed path, which stops
   at the host, so an interaction inside a closed root is attributed to the host
-  rather than the inner element.
+  instead of the inner element.
 * **automatic discovery** never reaches a closed root, only the explicit
   `walker init` reference does.
 
 ## Auto-init with data-elbobserve
 
 In a single-page app, tagged content often appears after the initial page scan:
-a route renders a new view, a list loads lazily, a chat streams in messages. The
-normal way to track that content is to call `walker init` on its container after
-each injection. Mark the container with `data-elbobserve` instead, and the
-browser source watches it: any tagged content injected into it is registered for
-tracking automatically, and its triggers are cleaned up when the content is
-removed. You no longer call `walker init` per injection.
+a route renders a new view, a list loads lazily, a chat streams in messages.
+Without further setup you track that content by calling `walker init` on its
+container after each injection. If you mark the container with
+`data-elbobserve`, the browser source watches it instead: tagged content
+injected into it is registered for tracking automatically, and its triggers are
+cleaned up when the content is removed.
 
-Statically present tagged content inside the container is still registered by the
-normal page scan. `data-elbobserve` only changes how **future** injections are
-handled.
+Tagged content already present in the container is registered by the normal
+page scan. `data-elbobserve` only affects content injected later.
 
 <CodeSnippet
   code={`<!-- Mark the container that will receive injected content -->
@@ -777,14 +778,13 @@ container.innerHTML = \`
   language="javascript"
 />
 
-`data-elbobserve` is a presence-only attribute: its presence marks the container
-and it takes no value.
+`data-elbobserve` takes no value. Its presence marks the container.
 
 ### Open shadow roots
 
-A `data-elbobserve` container inside an open shadow root is watched by its own
-observer, so tagged content injected into that shadow root is auto-registered the
-same way. A closed shadow root cannot be discovered, so keep using an explicit
+A `data-elbobserve` container inside an open shadow root gets its own observer,
+so tagged content injected into that shadow root is auto-registered the same
+way. A closed shadow root cannot be discovered, so keep using an explicit
 `walker init` with the root reference for closed roots (see
 [Shadow DOM](#shadow-dom) above).
 
@@ -798,24 +798,15 @@ container, so a tight scope keeps it cheap and avoids re-processing unrelated DO
 
 * **Node recycling and virtualization**: a framework that reuses the *same*
   element instance for new content is skipped, because that element is already
-  registered and this version does not watch attribute changes. A changed action
+  registered and the source does not watch attribute changes. A changed action
   on a recycled node is missed. For virtualized lists that recycle nodes, keep
-  using explicit `walker init`, or ensure the framework creates fresh nodes.
+  using explicit `walker init`, or make the framework create fresh nodes.
 * **Overlapping scopes**: do not place a `walker init <element>` sub-scope
   observe container over the same subtree as a document-scope observe container.
   Injected content stays safe (an already-registered element is not registered
-  twice), but the adds are re-processed redundantly.
+  twice), but both observers process the added nodes.
 * **SVG content**: only HTML elements are auto-registered. An SVG element
   carrying `data-elbaction` inside an observed container is not picked up, the
   same as with the static page scan.
 * **Closed shadow roots**: not reachable by discovery, use explicit
   `walker init` with the root reference.
-
-### Not in this version
-
-These are deferred and may arrive later:
-
-* **Attribute-watching**: reacting to a `data-elbaction` added to an
-  already-present element.
-* **A throttle option** for high-frequency mutations.
-* **A function-callback parameter** on the attribute.

@@ -324,14 +324,14 @@ Options:
   --type <type>     Validation type (default: flow). Also: event, mapping, contract
   --path <path>     Validate entry against package schema (e.g. destinations.snowplow)
   --flow <name>     Flow name for multi-flow configs
-  --strict          Treat warnings as errors
+  --strict          Fail on warnings
   --json            JSON output
 
 Exit codes:
-  0 = Valid
-  1 = Errors found
-  2 = Warnings (with --strict)
-  3 = Input error
+  0 = Valid (with --strict: no warnings either)
+  1 = Errors found (contract violations count as errors under --strict)
+  2 = No errors, warnings found (with --strict only)
+  3 = Validation could not run (invalid JSON on stdin or inline, unknown --type)
 ```
 
 ### Run Command

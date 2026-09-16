@@ -8,6 +8,9 @@ const meta: Meta<typeof Badge> = {
   title: 'Site/Badge',
   component: Badge,
   tags: ['autodocs'],
+  argTypes: {
+    children: { control: 'text' },
+  },
 };
 export default meta;
 
@@ -16,11 +19,5 @@ type Story = StoryObj<typeof Badge>;
 export const Default: Story = {
   args: {
     children: 'New in v4.4',
-  },
-};
-
-export const Event: Story = {
-  args: {
-    children: 'Live workshop · free',
   },
 };
