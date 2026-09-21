@@ -100,12 +100,12 @@ The hash resets each day, limiting cross-day tracking while maintaining session 
 
 ## IP anonymization
 
-To avoid including the raw IP in the hash input, transform it before hashing:
+To avoid including the raw IP in the hash input, transform it before hashing. The `fn` receives `{ event, ingest }` and reads the IP itself; a `fn` next to a `key` never runs:
 
 <CodeSnippet
   code={`settings: {
   fields: [
-    { key: 'ingest.ip', fn: (ip) => ip?.split('.').slice(0, 3).join('.') }, // drops last octet
+    { fn: ({ ingest }) => ingest.ip?.split('.').slice(0, 3).join('.') }, // drops last octet
     'ingest.userAgent',
   ],
   output: 'user.hash',

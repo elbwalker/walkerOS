@@ -66,6 +66,45 @@ describe('byPath', () => {
     expect(modifiedEvent).not.toBe(originalEvent);
   });
 
+  describe('setByPath with undefined removes the key', () => {
+    test('removes an existing key and keeps its siblings', () => {
+      const input = { a: { b: 1, c: 2 } };
+      const result = setByPath(input, 'a.b', undefined);
+
+      expect('b' in result.a).toBe(false);
+      expect(result.a.c).toBe(2);
+      expect(input.a.b).toBe(1);
+    });
+
+    test('creates nothing on a missing path', () => {
+      const result = setByPath<Record<string, unknown>>({}, 'a.b', undefined);
+
+      expect(result).toEqual({});
+      expect('a' in result).toBe(false);
+    });
+
+    test('writes null as a value', () => {
+      expect(setByPath({ a: { b: 1 } }, 'a.b', null).a.b).toBeNull();
+    });
+
+    test('mutable removes in place and returns the same reference', () => {
+      const target = { a: { b: 1 } };
+      const result = setByPath(target, 'a.b', undefined, { mutable: true });
+
+      expect(result).toBe(target);
+      expect('b' in target.a).toBe(false);
+    });
+  });
+
+  test('setByPath mutable writes in place and returns the same reference', () => {
+    const target: Record<string, unknown> = { a: { b: 1 } };
+
+    const result = setByPath(target, 'a.c.d', 'x', { mutable: true });
+
+    expect(result).toBe(target);
+    expect(target).toEqual({ a: { b: 1, c: { d: 'x' } } });
+  });
+
   describe('deleteByPath', () => {
     it('removes a top-level key, returning a new object', () => {
       const input = { a: 1, b: 2 };

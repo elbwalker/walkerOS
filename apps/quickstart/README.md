@@ -14,11 +14,12 @@ documentation. All examples are tested and linted to ensure accuracy.
 
 ```
 src/
-├── collector/           # Event collection examples
-├── web-browser/        # Browser tracking examples
-├── web-destinations/   # Web destination integrations
-├── server-destinations/# Server-side integrations
-└── walkerjs/          # Bundle examples
+├── __tests__/         # One test file per example
+├── batch-all.ts       # Batch every event of a destination
+├── first-event.ts     # First event with a console destination
+├── ga4-ecommerce.ts   # GA4 add_to_cart mapping
+├── mapping-test.ts    # Source and destination mapping
+└── web-basic.ts       # Browser source with API and gtag destinations
 ```
 
 ## Usage
@@ -29,7 +30,9 @@ src/
 npm run test
 ```
 
-### Development Mode
+### Watch Mode
+
+Re-runs the tests on every change:
 
 ```bash
 npm run dev
@@ -49,9 +52,9 @@ npm run lint
 
 ## Writing New Examples
 
-1. Create example in appropriate directory
+1. Add the example as a file in `src/`
 2. Use minimal required configuration
-3. Add corresponding test in `__tests__`
+3. Add corresponding test in `src/__tests__`
 4. Ensure imports are from correct packages
 5. Run test, build, and lint before committing
 
@@ -61,9 +64,11 @@ npm run lint
 // Minimal configuration only
 import { startFlow } from '@walkeros/collector';
 
-const collector = startFlow({
-  // Only required parameters
-});
+export async function setupExample() {
+  const { collector, elb } = await startFlow({
+    // Only required parameters
+  });
 
-export { collector };
+  return { collector, elb };
+}
 ```

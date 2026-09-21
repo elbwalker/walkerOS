@@ -264,3 +264,52 @@ describe('validateEventAgainstContract', () => {
     expect(getValidator(schemaA)).toBe(getValidator(schemaB));
   });
 });
+
+describe('validateEventAgainstContract never throws', () => {
+  const withUndefined: WalkerOS.DeepPartialEvent = {
+    name: 'page view',
+    entity: 'page',
+    action: 'view',
+    data: { path: '/x', referrer: undefined },
+  };
+  const brokenSchema = { $ref: '#/$defs/missing' };
+
+  test('an undefined-valued member is absent, not a failure', () => {
+    const result = validateEventAgainstContract(withUndefined, undefined, {
+      format: true,
+    });
+    expect(result).toEqual({ isValid: true, errors: [] });
+  });
+
+  test('a contract naming the undefined member does not throw', () => {
+    const contract = {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: { referrer: { type: 'string' } },
+        },
+      },
+    };
+    const result = validateEventAgainstContract(withUndefined, undefined, {
+      contracts: [contract],
+    });
+    expect(result.isValid).toBe(true);
+  });
+
+  test('an engine failure becomes one issue plus engineError', () => {
+    const result = validateEventAgainstContract(withUndefined, undefined, {
+      contracts: [brokenSchema],
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.engineError).toContain('Unresolved $ref');
+  });
+
+  test('the other schemas still report when one fails', () => {
+    const result = validateEventAgainstContract(withUndefined, undefined, {
+      contracts: [brokenSchema, { type: 'object', required: ['nope'] }],
+    });
+    expect(result.errors).toHaveLength(2);
+  });
+});

@@ -1,5 +1,5 @@
 import type { Mapping, Transformer } from '@walkeros/core';
-import { getMappingValue, setByPath } from '@walkeros/core';
+import { createMappingRoot, getMappingValue, setByPath } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 import type { FingerprintSettings } from './types';
 
@@ -42,8 +42,7 @@ export const transformerFingerprint: Transformer.Init<
     async push(event, context) {
       const { ingest, collector } = context;
 
-      // Build source object for field resolution
-      const source = { event, ingest };
+      const source = createMappingRoot(ingest, event);
 
       // Resolve each field via mapping (maintains order)
       const values = await Promise.all(

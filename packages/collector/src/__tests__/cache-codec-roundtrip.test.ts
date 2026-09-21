@@ -1,6 +1,6 @@
 import { startFlow } from '..';
 import {
-  buildCacheContext,
+  createMappingRoot,
   checkCache,
   compileCache,
   serializeStoreValue,
@@ -231,7 +231,7 @@ describe('cache envelope round-trip (request-cache callers)', () => {
     const compiled = compileCache({
       rules: [{ key: ['event.name'], ttl: 60 }],
     });
-    const context = buildCacheContext({}, { name: 'page view' });
+    const context = createMappingRoot({}, { name: 'page view' });
 
     // Cold: MISS : store does not yet hold the key.
     const miss = await checkCache(compiled, store, context);

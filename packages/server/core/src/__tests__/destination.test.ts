@@ -460,14 +460,12 @@ describe('Destination', () => {
     expect(mockPush).toHaveBeenCalledWith({
       ...event,
       name: 'new name',
-      data: expect.objectContaining({
-        string: 'bar',
-        number: undefined, // Redacted due to missing consent
-        new: 'value',
-      }),
+      data: expect.objectContaining({ string: 'bar', new: 'value' }),
       nested: [expect.objectContaining({ entity: 'kid' })],
       // timing: 0, // @TODO should be set to default type
     });
+    // Redacted due to missing consent: the field is removed, not left undefined.
+    expect('number' in mockPush.mock.calls[0][0].data).toBe(false);
   });
 
   describe('environment integration', () => {

@@ -3,38 +3,6 @@ import { setByPath } from '@walkeros/core';
 import { validateEventAgainstContract } from './validate';
 import type { ValidateSettings } from './types';
 
-/**
- * Mutating dot-path setter for ingest writes.
- *
- * We can't use @walkeros/core setByPath here: it clones-and-returns (immutable),
- * but ingest is the pipeline's mutable scratch context. We need in-place writes
- * so subsequent transformers and observers in the chain see the values.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function setNestedPath(
-  obj: Record<string, unknown>,
-  path: string,
-  value: unknown,
-): void {
-  const keys = path.split('.');
-  let cur: Record<string, unknown> = obj;
-  for (let i = 0; i < keys.length - 1; i++) {
-    const k = keys[i];
-    const next = cur[k];
-    if (isRecord(next)) {
-      cur = next;
-    } else {
-      const child: Record<string, unknown> = {};
-      cur[k] = child;
-      cur = child;
-    }
-  }
-  cur[keys[keys.length - 1]] = value;
-}
-
 export const transformerValidate: Transformer.Init<
   Transformer.Types<ValidateSettings>
 > = (context) => {
@@ -54,14 +22,20 @@ export const transformerValidate: Transformer.Init<
     async push(event, ctx) {
       const { ingest } = ctx;
 
-      const { isValid, errors } = validateEventAgainstContract(event, ingest, {
-        contracts: settings.contract,
-        format: settings.format,
-      });
+      const { isValid, errors, engineError } = validateEventAgainstContract(
+        event,
+        ingest,
+        { contracts: settings.contract, format: settings.format },
+      );
+      if (engineError)
+        ctx.logger.error('validation engine failed', {
+          event: event.name,
+          error: engineError,
+        });
 
       // Issues go to the INGEST (observer-visible diagnostics), written in
       // place so they survive even when a strict drop stops the chain.
-      if (errorsPath) setNestedPath(ingest, errorsPath, errors);
+      if (errorsPath) setByPath(ingest, errorsPath, errors, { mutable: true });
 
       // Verdict goes to the EVENT (travels to destinations as analytics data).
       // setByPath is immutable, so reassign.

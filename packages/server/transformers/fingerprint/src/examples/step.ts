@@ -79,9 +79,9 @@ export const missingFields: Flow.StepExample = {
 export const ipAnonymization: Flow.StepExample = {
   title: 'IP anonymization',
   description:
-    'Privacy-preserving fingerprint using key+fn pattern: ' +
-    'fn truncates IP to /24 subnet before hashing, so 10.0.42.* users share a hash. ' +
-    'Config: fields: [{ key: "ingest.ip", fn: ip => ip.replace(/\\.\\d+$/, ".0") }, "ingest.userAgent"]',
+    'Privacy-preserving fingerprint: an fn field truncates the IP to its /24 subnet before hashing, ' +
+    'so 10.0.42.* users share a hash. The fn reads the IP itself, since a fn next to a key never runs. ' +
+    'Config: fields: [{ fn: ({ ingest }) => String(ingest.ip || "").replace(/\\.\\d+$/, ".0") }, "ingest.userAgent"]',
   in: {
     name: 'page view',
     data: {

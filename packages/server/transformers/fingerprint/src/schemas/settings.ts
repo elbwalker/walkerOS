@@ -23,7 +23,9 @@ export const SettingsSchema = z
               fn: z
                 .string()
                 .optional()
-                .describe('$code: function for value transformation'),
+                .describe(
+                  '$code: function receiving { event, ingest } that returns the value. Runs only when no key is set.',
+                ),
             })
             .describe('Mapping value config for computed fields'),
         ]),

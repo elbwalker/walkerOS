@@ -15,7 +15,8 @@ export interface FingerprintSettings {
    *
    * Function fields via mapping config:
    * - { fn: () => new Date().getDate() } -> day of month
-   * - { key: 'ingest.ip', fn: anonymizeIP } -> transform value
+   * - { fn: ({ ingest }) => anonymizeIP(ingest.ip) } -> transformed value
+   *   (fn receives { event, ingest }; a fn next to a key never runs)
    */
   fields: Mapping.Value[];
 

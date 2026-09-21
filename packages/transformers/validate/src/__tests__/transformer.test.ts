@@ -183,4 +183,36 @@ describe('transformerValidate', () => {
     expect(result).toMatchObject({ event: { source: { valid: false } } });
     expect(issuesAt(ctx.ingest, 'validation').length).toBeGreaterThan(0);
   });
+
+  describe('engine failure', () => {
+    const settings = { contract: [{ $ref: '#/$defs/missing' }] };
+    const event: WalkerOS.DeepPartialEvent = {
+      name: 'page view',
+      entity: 'page',
+      action: 'view',
+    };
+
+    test('pass forwards the event, records the issue and logs an error', async () => {
+      const instance = await transformerValidate(
+        createInitContext({ settings: { ...settings, mode: 'pass' } }),
+      );
+      const ctx = createPushContext();
+
+      const result = await instance.push(event, ctx);
+
+      expect(result).toMatchObject({ event: { source: { valid: false } } });
+      expect(issuesAt(ctx.ingest, 'validation')).toHaveLength(1);
+      expect(ctx.logger.error).toHaveBeenCalled();
+    });
+
+    test('strict drops the event and keeps the issue', async () => {
+      const instance = await transformerValidate(
+        createInitContext({ settings: { ...settings, mode: 'strict' } }),
+      );
+      const ctx = createPushContext();
+
+      expect(await instance.push(event, ctx)).toBe(false);
+      expect(issuesAt(ctx.ingest, 'validation')).toHaveLength(1);
+    });
+  });
 });

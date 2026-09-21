@@ -20,7 +20,7 @@ import {
   checkCache,
   storeCache,
   applyUpdate,
-  buildCacheContext,
+  createMappingRoot,
   compileState,
   applyState,
 } from '@walkeros/core';
@@ -209,7 +209,7 @@ export async function initSource(
       staticBeforeChain ??
       (before !== undefined
         ? (() => {
-            const ids = getNextSteps(before, buildCacheContext(scope.ingest));
+            const ids = getNextSteps(before, createMappingRoot(scope.ingest));
             if (ids.length === 0) return [];
             const start = ids.length === 1 ? ids[0] : ids;
             return walkChain(
@@ -291,7 +291,7 @@ export async function initSource(
     if (compiledSourceCache) {
       const cacheStore = getCacheStore(compiledSourceCache, collector);
       if (cacheStore) {
-        const cacheContext = buildCacheContext(scope.ingest);
+        const cacheContext = createMappingRoot(scope.ingest);
         const cacheResult = await checkCache(
           compiledSourceCache,
           cacheStore,
@@ -395,7 +395,7 @@ export async function initSource(
       ? { kind: 'single', preChain: staticPreChain }
       : next !== undefined
         ? (() => {
-            const ids = getNextSteps(next, buildCacheContext(scope.ingest));
+            const ids = getNextSteps(next, createMappingRoot(scope.ingest));
             if (ids.length === 0)
               return { kind: 'single', preChain: [] } as Dispatch;
             if (ids.length === 1)
@@ -428,6 +428,7 @@ export async function initSource(
             (id) => getStateStore(id, collector),
             event,
             collector,
+            scope.ingest,
           ),
         ),
       );

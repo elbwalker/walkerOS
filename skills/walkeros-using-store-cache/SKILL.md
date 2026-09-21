@@ -303,22 +303,39 @@ does both directions through the mapping engine.
 ```json
 "transformers": {
   "stashGclid": {
-    "state": { "mode": "set", "store": "sessions", "key": "user.session", "value": "data.gclid" }
+    "state": { "mode": "set", "store": "sessions", "key": "event.user.session", "value": "event.data.gclid" }
   },
   "restoreGclid": {
-    "state": { "mode": "get", "store": "sessions", "key": "user.session", "value": "data.gclid" }
+    "state": { "mode": "get", "store": "sessions", "key": "event.user.session", "value": "event.data.gclid" }
   }
 }
 ```
 
-`key` is always the store side; `value` is always the event side. `mode` sets
-the direction:
+`key` and `value` resolve against `{ event, ingest }`, so every path names its
+side: `event.user.session` reads the event, `ingest.site` reads the pipeline
+context a server source lifted from the request. A path without one of these
+prefixes never resolves: `walkeros validate` rejects it and the runtime warns.
+`key` names the store slot and `mode` sets the direction:
 
-- **`set`** resolves `value` against the event (a path, constant, `fn`, or
-  `map`) and writes that payload to the store under `key`.
-- **`get`** reads `key` from the store and writes the fetched value onto the
-  event at the `value` path. For a `get`, `value` must be a bare string path (or
-  a `ValueConfig` with `key`), not a constant or operator.
+- **`set`** resolves `value` (a path, constant, `fn`, or `map`) and writes that
+  payload to the store under `key`.
+- **`get`** reads `key` from the store and writes the fetched value to the
+  `value` path: `event.x` onto the event, `ingest.x` into the ingest, where
+  later steps and route matchers see it but no destination does. For a `get`,
+  `value` must be a string path (or a `ValueConfig` with `key`), not a constant
+  or operator.
+
+A store keyed by request context, such as a per-site registry, reads the key
+from ingest:
+
+```json
+"registry": {
+  "state": { "mode": "get", "store": "registry", "key": "ingest.site", "value": "ingest.tenant" }
+}
+```
+
+A transformer runs its `get` before its own `next` route, so the route can match
+on `ingest.tenant`. A source picks its route before its state runs.
 
 Omit `store` to use the built-in `__cache` tier; state keys there are prefixed
 with `state:` so they never collide with cache entries. State is **fail-open**:

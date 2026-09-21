@@ -50,7 +50,7 @@ import {
   compileCache,
   checkCache,
   storeCache,
-  buildCacheContext,
+  createMappingRoot,
   validateStepEntry,
   processEventMapping,
   compileState,
@@ -720,13 +720,14 @@ export async function runTransformerChain(
         (id) => getStateStore(id, collector),
         evt,
         collector,
+        ingest,
       );
     };
 
     // Check transformer cache (step-level: skip push, continue chain)
     let cacheMiss: { key: string; ttl: number } | undefined;
     if (compiledTCache && tCacheStore) {
-      const cacheContext = buildCacheContext(ingest, processedEvent);
+      const cacheContext = createMappingRoot(ingest, processedEvent);
       const cacheResult = await checkCache(
         compiledTCache,
         tCacheStore,
@@ -769,7 +770,7 @@ export async function runTransformerChain(
     if (transformerBefore) {
       const beforeIds = getNextSteps(
         transformerBefore,
-        buildCacheContext(ingest, processedEvent),
+        createMappingRoot(ingest, processedEvent),
       );
       if (beforeIds.length === 1) {
         const beforeChainIds = walkChain(
@@ -851,11 +852,13 @@ export async function runTransformerChain(
         (id) => getStateStore(id, collector),
         processedEvent,
         collector,
+        ingest,
       );
     }
 
     // Run the transformer
     const result = await tryCatchAsync(transformerPush, (err) => {
+      collector.status.failed++;
       collector.logger
         .scope(`transformer:${transformer.type || 'unknown'}`)
         .error('Push failed', errorMeta(err));
@@ -912,7 +915,7 @@ export async function runTransformerChain(
             //                    surrounding flatEvents collection.
             const forkIds = getNextSteps(
               forkResult.next,
-              buildCacheContext(forkIngest, forkEvent),
+              createMappingRoot(forkIngest, forkEvent),
             );
             if (forkIds.length === 0) {
               return { event: forkEvent, respond: currentRespond };
@@ -1044,7 +1047,7 @@ export async function runTransformerChain(
         const settledEvent = await applyStateSet(resultEvent || processedEvent);
         const nextIds = getNextSteps(
           next,
-          buildCacheContext(ingest, settledEvent),
+          createMappingRoot(ingest, settledEvent),
         );
         if (nextIds.length === 0) {
           // No route matched → passthrough (continue chain)
@@ -1126,6 +1129,7 @@ export async function runTransformerChain(
         (id) => getStateStore(id, collector),
         processedEvent,
         collector,
+        ingest,
       );
     }
 
@@ -1160,7 +1164,7 @@ export async function runTransformerChain(
     ) {
       const configNextIds = getNextSteps(
         transformer.config.next,
-        buildCacheContext(ingest, processedEvent),
+        createMappingRoot(ingest, processedEvent),
       );
       if (configNextIds.length === 1) {
         const continuationChain = walkChain(

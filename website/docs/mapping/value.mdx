@@ -42,9 +42,17 @@ as `Value = ValueType | Array<ValueType>`, where `ValueType` is either a string
 | [Condition](#condition)         | `{ condition, value }`                    | Gates the value on a predicate. Use for branching logic inside a single rule.                 |
 | [Consent](#consent)             | `{ consent: {…}, value }`                 | Gates the value on consent states. Use to make individual fields privacy-aware.               |
 
-All `ValueConfig` keys can be combined on the same object: `key`, `condition`,
-`consent`, `validate` act as filters; `value`, `fn`, `map`, `loop`, `set`
-produce output.
+A `ValueConfig` uses one producer plus optional filters. `key`, `fn`, `map`,
+`loop` and `set` each produce the value, so set exactly one. If you set several,
+exactly one runs, in this order, and the rest never run: `loop`, `map`, `set`,
+`key`, `fn`. `value` is the fallback when the producer returns nothing,
+including a `loop` over something that is not a list. `condition`, `consent`
+and `validate` filter the result and combine freely.
+
+To read a field and then transform it, use `fn` alone. It receives the whole
+source object, so `fn: (source) => source.user.email.split('@')[1]` does both
+steps in one place. For an event field you can also rewrite it with a `policy`
+entry and read it with `key`. Anything bigger belongs in a transformer.
 
 ## Path
 

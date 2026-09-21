@@ -43,6 +43,6 @@ export const hints: Hint.Hints = {
     ],
   },
   'fields-overview': {
-    text: 'Fields resolve from { event, ingest } via walkerOS mapping. Common patterns: ingest.ip (client IP), ingest.userAgent (browser UA), event.data.* (any event property). For time-based rotation use fn fields: daily rotation with toISOString().slice(0,10), monthly with getDate(). Order matters — same fields in different order produce different hashes. Use { key, fn } objects to transform before hashing (e.g., IP anonymization via the ipAnonymization step example).',
+    text: "Fields resolve from { event, ingest } via walkerOS mapping. Common patterns: ingest.ip (client IP), ingest.userAgent (browser UA), event.data.* (any event property). For time-based rotation use fn fields: daily rotation with toISOString().slice(0,10), monthly with getDate(). Order matters: the same fields in a different order produce a different hash. To transform a value before hashing, use fn alone: it receives { event, ingest } and returns the value, e.g. { fn: ({ ingest }) => String(ingest.ip || '').replace(/\\.\\d+$/, '.0') } hashes the /24 subnet (see the ipAnonymization step example). A fn next to a key never runs.",
   },
 };

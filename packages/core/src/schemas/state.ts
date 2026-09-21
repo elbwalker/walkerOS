@@ -8,14 +8,50 @@ import { ValueSchema } from './mapping';
  *
  * - mode: 'get' | 'set' direction ('delete' is reserved for a later release).
  * - store: optional store id; defaults to the in-memory `__cache` store.
- * - key: Mapping.Value resolving (against the event) to the store key.
- * - value: Mapping.Value. For `set` it resolves to the payload to store; for
- *   `get` its bare-string path (or `.key`) is the event write-target. Optional
+ * - key: Mapping.Value resolving against `{ event, ingest }` to the store key.
+ *   Every path names its side with an `event.` or `ingest.` prefix.
+ * - value: Mapping.Value. For `set` it resolves against `{ event, ingest }` to
+ *   the payload to store; for `get` its string path (or `.key`) is the write
+ *   target, `event.` onto the event or `ingest.` into the ingest. Optional
  *   at the type level (to keep a future `delete` mode non-breaking) but
  *   validation requires it for `get`/`set`, and for `get` it must be a bare
  *   string or a ValueConfig with a `key` (no `value`/`fn`/`map`/`loop`/`set`,
  *   and no `*` wildcard in the path).
  */
+// A read may name a whole root (`event`); a get target must name a path in one.
+const ROOT_PATH = /^(event|ingest)(\..+)?$/;
+const ROOT_TARGET = /^(event|ingest)\..+$/;
+
+/** The paths a Mapping.Value resolves directly: a string, a `.key`, or each entry of a fallback list. */
+function topLevelPaths(value: unknown): string[] {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(topLevelPaths);
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'key' in value &&
+    typeof value.key === 'string'
+  )
+    return [value.key];
+  return [];
+}
+
+function checkRootPaths(
+  value: unknown,
+  field: 'key' | 'value',
+  ctx: z.RefinementCtx,
+  allowed: RegExp,
+): void {
+  for (const path of topLevelPaths(value)) {
+    if (allowed.test(path)) continue;
+    ctx.addIssue({
+      code: 'custom',
+      message: `State paths resolve against { event, ingest }: "${path}" needs an "event." or "ingest." prefix.`,
+      path: [field],
+    });
+  }
+}
+
 export const StateSchema = z
   .object({
     mode: z
@@ -27,12 +63,16 @@ export const StateSchema = z
       .describe(
         'Store id; defaults to the in-memory __cache store when omitted',
       ),
-    key: ValueSchema.describe('Resolves against the event to the store key'),
+    key: ValueSchema.describe(
+      'Resolves against { event, ingest } to the store key. Paths need an event. or ingest. prefix',
+    ),
     value: ValueSchema.optional().describe(
-      'set: resolves to the payload to store. get: its key/bare-string path is the event write-target.',
+      'set: resolves against { event, ingest } to the payload to store. get: its path is the write target, event. onto the event or ingest. into the ingest.',
     ),
   })
   .superRefine((data, ctx) => {
+    checkRootPaths(data.key, 'key', ctx, ROOT_PATH);
+
     if (data.value === undefined) {
       ctx.addIssue({
         code: 'custom',
@@ -41,6 +81,13 @@ export const StateSchema = z
       });
       return;
     }
+
+    checkRootPaths(
+      data.value,
+      'value',
+      ctx,
+      data.mode === 'get' ? ROOT_TARGET : ROOT_PATH,
+    );
 
     if (data.mode === 'get') {
       const value: unknown = data.value;
@@ -91,5 +138,5 @@ export const StateSchema = z
     id: 'StateConfig',
     title: 'State.Config',
     description:
-      'Declarative store operation: stash (set) or fetch (get) a value against a store. key = store side, value = event side, mode = direction.',
+      'Declarative store operation: stash (set) or fetch (get) a value against a store. key names the store slot, value the event or ingest side, mode the direction. Paths resolve against { event, ingest }.',
   });

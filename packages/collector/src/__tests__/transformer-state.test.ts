@@ -2,6 +2,21 @@ import { startFlow } from '..';
 import type { Store, Transformer, WalkerOS } from '@walkeros/core';
 
 /**
+ * A before-chain step that lifts a site id into ingest, as a server source's
+ * `config.ingest` would for a real request.
+ */
+const tagger: Transformer.InitTransformer = {
+  code: async (ctx) => ({
+    type: 'tagger',
+    config: ctx.config,
+    push(event, context) {
+      context.ingest.site = 'acme';
+      return { event };
+    },
+  }),
+};
+
+/**
  * Build a store backed by a Map the test holds a reference to, so writes are
  * directly observable. Registered under a named id and targeted via
  * `state.store`.
@@ -49,7 +64,11 @@ describe('Transformer state integration', () => {
             },
           }),
           // set: store data.token keyed by user.id
-          state: { mode: 'set', key: 'user.id', value: 'data.token' },
+          state: {
+            mode: 'set',
+            key: 'event.user.id',
+            value: 'event.data.token',
+          },
         },
         reader: {
           code: async (ctx): Promise<Transformer.Instance> => ({
@@ -60,7 +79,11 @@ describe('Transformer state integration', () => {
             },
           }),
           // get: fetch the stored token onto data.fetchedToken
-          state: { mode: 'get', key: 'user.id', value: 'data.fetchedToken' },
+          state: {
+            mode: 'get',
+            key: 'event.user.id',
+            value: 'event.data.fetchedToken',
+          },
         },
       },
       destinations: {
@@ -91,10 +114,18 @@ describe('Transformer state integration', () => {
       transformers: {
         stasher: {
           // no code — state-only path step
-          state: { mode: 'set', key: 'user.id', value: 'data.token' },
+          state: {
+            mode: 'set',
+            key: 'event.user.id',
+            value: 'event.data.token',
+          },
         },
         fetcher: {
-          state: { mode: 'get', key: 'user.id', value: 'data.fetched' },
+          state: {
+            mode: 'get',
+            key: 'event.user.id',
+            value: 'event.data.fetched',
+          },
         },
       },
       destinations: {
@@ -135,7 +166,11 @@ describe('Transformer state integration', () => {
             },
           }),
           cache: { rules: [{ key: ['event.name'], ttl: 60 }] },
-          state: { mode: 'set', key: 'user.id', value: 'data.token' },
+          state: {
+            mode: 'set',
+            key: 'event.user.id',
+            value: 'event.data.token',
+          },
         },
       },
       destinations: {
@@ -165,20 +200,28 @@ describe('Transformer state integration', () => {
       transformers: {
         // seed the store first
         seeder: {
-          state: { mode: 'set', key: 'user.id', value: 'data.seed' },
+          state: {
+            mode: 'set',
+            key: 'event.user.id',
+            value: 'event.data.seed',
+          },
         },
         // one step carrying both a get and a set in an array: the get reads
         // the seeded value (runs before mapping), the set writes data.token
         // (runs after mapping)
         both: {
           state: [
-            { mode: 'get', key: 'user.id', value: 'data.echo' },
-            { mode: 'set', key: 'user.id', value: 'data.token' },
+            { mode: 'get', key: 'event.user.id', value: 'event.data.echo' },
+            { mode: 'set', key: 'event.user.id', value: 'event.data.token' },
           ],
         },
         // verify the set landed by reading the key back
         verifier: {
-          state: { mode: 'get', key: 'user.id', value: 'data.verified' },
+          state: {
+            mode: 'get',
+            key: 'event.user.id',
+            value: 'event.data.verified',
+          },
         },
       },
       destinations: {
@@ -232,8 +275,8 @@ describe('Transformer state integration', () => {
           state: {
             mode: 'set',
             store: 'boom',
-            key: 'user.id',
-            value: 'data.token',
+            key: 'event.user.id',
+            value: 'event.data.token',
           },
         },
       },
@@ -276,8 +319,8 @@ describe('Transformer state integration', () => {
           state: {
             mode: 'set',
             store: 'kv',
-            key: 'user.id',
-            value: 'data.token',
+            key: 'event.user.id',
+            value: 'event.data.token',
           },
         },
       },
@@ -313,8 +356,8 @@ describe('Transformer state integration', () => {
           state: {
             mode: 'set',
             store: 'kv',
-            key: 'user.id',
-            value: 'data.token',
+            key: 'event.user.id',
+            value: 'event.data.token',
           },
         },
         sink: {},
@@ -348,8 +391,8 @@ describe('Transformer state integration', () => {
           state: {
             mode: 'set',
             store: 'kv',
-            key: 'user.id',
-            value: 'data.token',
+            key: 'event.user.id',
+            value: 'event.data.token',
           },
         },
         ba: {},
@@ -387,8 +430,8 @@ describe('Transformer state integration', () => {
           state: {
             mode: 'set',
             store: 'kv',
-            key: 'data.fork',
-            value: 'data.token',
+            key: 'event.data.fork',
+            value: 'event.data.token',
           },
         },
       },
@@ -406,5 +449,185 @@ describe('Transformer state integration', () => {
     // both forks wrote, keyed by their own data.fork
     expect(data.get('a')).toBe('F1');
     expect(data.get('b')).toBe('F1');
+  });
+
+  it('keys get and set off an ingest value', async () => {
+    const { code, data } = makeBackedStore();
+    const destinationEvents: WalkerOS.Event[] = [];
+
+    const { elb } = await startFlow({
+      transformers: {
+        tagger,
+        stasher: {
+          state: {
+            mode: 'set',
+            store: 'kv',
+            key: 'ingest.site',
+            value: 'event.data.token',
+          },
+        },
+        fetcher: {
+          state: {
+            mode: 'get',
+            store: 'kv',
+            key: 'ingest.site',
+            value: 'event.data.fetched',
+          },
+        },
+      },
+      stores: { kv: { code } },
+      destinations: {
+        spy: {
+          before: ['tagger', 'stasher', 'fetcher'],
+          code: {
+            type: 'spy',
+            config: {},
+            push: async (event: WalkerOS.Event) => {
+              destinationEvents.push(event);
+            },
+          },
+        },
+      },
+    });
+
+    await elb({ name: 'page view', data: { token: 'I1' } });
+
+    expect(data.get('acme')).toBe('I1');
+    expect(destinationEvents[0].data?.fetched).toBe('I1');
+  });
+
+  it('a get into ingest is visible to a later step', async () => {
+    const { code, data } = makeBackedStore();
+    data.set('acme', { tier: 'enterprise' });
+    let seen: unknown;
+
+    const { elb } = await startFlow({
+      transformers: {
+        tagger,
+        registry: {
+          state: {
+            mode: 'get',
+            store: 'kv',
+            key: 'ingest.site',
+            value: 'ingest.tenant',
+          },
+        },
+        reader: {
+          code: async (ctx): Promise<Transformer.Instance> => ({
+            type: 'reader',
+            config: ctx.config,
+            push(event, context) {
+              seen = context.ingest.tenant;
+              return { event };
+            },
+          }),
+        },
+      },
+      stores: { kv: { code } },
+      destinations: {
+        spy: {
+          before: ['tagger', 'registry', 'reader'],
+          code: { type: 'spy', config: {}, push: async () => {} },
+        },
+      },
+    });
+
+    await elb({ name: 'page view', data: {} });
+
+    expect(seen).toEqual({ tier: 'enterprise' });
+  });
+
+  it('set keys off ingest on each fork of a Result[] array', async () => {
+    const { code, data } = makeBackedStore();
+
+    const { elb } = await startFlow({
+      transformers: {
+        tagger,
+        splitter: {
+          code: async (ctx): Promise<Transformer.Instance> => ({
+            type: 'splitter',
+            config: ctx.config,
+            push: async (event) => [
+              { event: { ...event, data: { ...event.data, fork: 'a' } } },
+              { event: { ...event, data: { ...event.data, fork: 'b' } } },
+            ],
+          }),
+          state: {
+            mode: 'set',
+            store: 'kv',
+            key: 'ingest.site',
+            value: 'event.data.fork',
+          },
+        },
+      },
+      stores: { kv: { code } },
+      destinations: {
+        spy: {
+          before: ['tagger', 'splitter'],
+          code: { type: 'spy', config: {}, push: async () => {} },
+        },
+      },
+    });
+
+    await elb({ name: 'page view', data: {} });
+
+    // both forks share the ingest, so both write under 'acme'
+    expect(['a', 'b']).toContain(data.get('acme'));
+  });
+
+  it("a get into ingest feeds the same step's next route", async () => {
+    const { code, data } = makeBackedStore();
+    data.set('acme', { tier: 'enterprise' });
+    const reached: string[] = [];
+    const mark = (name: string): Transformer.InitTransformer => ({
+      code: async (ctx) => ({
+        type: name,
+        config: ctx.config,
+        push(event) {
+          reached.push(name);
+          return { event };
+        },
+      }),
+    });
+
+    const { elb } = await startFlow({
+      transformers: {
+        tagger: { ...tagger, next: 'registry' },
+        registry: {
+          state: {
+            mode: 'get',
+            store: 'kv',
+            key: 'ingest.site',
+            value: 'ingest.tenant',
+          },
+          next: {
+            one: [
+              {
+                match: {
+                  key: 'ingest.tenant.tier',
+                  operator: 'eq',
+                  value: 'enterprise',
+                },
+                next: 'enterprise',
+              },
+              'shared',
+            ],
+          },
+        },
+        enterprise: mark('enterprise'),
+        shared: mark('shared'),
+      },
+      stores: { kv: { code } },
+      destinations: {
+        spy: {
+          before: 'tagger',
+          code: { type: 'spy', config: {}, push: async () => {} },
+        },
+      },
+    });
+
+    await elb({ name: 'page view', data: {} });
+
+    expect(reached).toEqual(['enterprise']);
   });
 });

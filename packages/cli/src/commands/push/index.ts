@@ -4,7 +4,7 @@ import {
   createIngest,
   getPlatform,
   getNextSteps,
-  buildCacheContext,
+  createMappingRoot,
   stepId,
 } from '@walkeros/core';
 import {
@@ -190,7 +190,7 @@ function resolveBeforeChain(
   if (Array.isArray(before) && before.every(isString)) {
     return before;
   }
-  const ids = getNextSteps(before, buildCacheContext(ingest, event));
+  const ids = getNextSteps(before, createMappingRoot(ingest, event));
   if (ids.length === 0) return [];
   if (ids.length === 1) return walkStaticChain(ids[0], transformers);
   return ids;
