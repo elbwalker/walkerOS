@@ -37,13 +37,16 @@ export interface InsertEntry {
  * deduplicate on the block contents by themselves, but only where the window
  * is on: `non_replicated_deduplication_window` defaults to 0, so a plain
  * MergeTree does nothing unless the table says otherwise. An explicit token
- * carries its own semantics on both MergeTree families.
+ * identifies the block for both MergeTree families, but it prevents duplicates
+ * only where insert deduplication is enabled: by default on a
+ * ReplicatedMergeTree, and on a plain MergeTree only with a positive window.
  *
- * A digest rather than a random uuid, so a redelivery of the same events days
- * later produces the same token and deduplicates too. The ids travel as a JSON
- * array so that no id can imitate the separator between two of them, and the
- * order is part of the digest because the same rows in another order are
- * another block to ClickHouse.
+ * A digest rather than a random uuid, so a redelivery of the same events
+ * produces the same token and deduplicates too, as long as it lands inside the
+ * table's deduplication window, which counts blocks and not time. The ids
+ * travel as a JSON array so that no id can imitate the separator between two
+ * of them, and the order is part of the digest because the same rows in
+ * another order are another block to ClickHouse.
  *
  * Event ids and nothing else. The server deduplicates on this token INSTEAD of
  * the block contents, and skips a repeated block while reporting success, so

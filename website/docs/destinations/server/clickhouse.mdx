@@ -212,8 +212,11 @@ The lines worth explaining:
 - **`non_replicated_deduplication_window = 1000`.** The number of recently
   inserted blocks whose hashes the table keeps, which is what the
   `insert_deduplication_token` is matched against. At 1000 a retry is covered as
-  long as fewer than 1000 further blocks landed in between, which at the
-  recommended batch settings is hours. Raise it if you insert far more often.
+  long as fewer than 1000 further blocks landed in between. At the recommended
+  batch settings one runtime inserts 0.2 to 1 blocks per second, so that is
+  roughly 17 to 83 minutes, and every further runtime writing the same table
+  shortens it in proportion. The destination retries within seconds, so this
+  leaves a wide margin. Raise it if you insert far more often.
 - **`PARTITION BY toYYYYMM(timestamp)`.** A partition key should stay
   low-cardinality, usually under 100 to 1000 distinct values. Monthly
   partitioning keeps a 14 month retention at 14 partitions. Partitioning finer
@@ -475,8 +478,11 @@ retry delay finishes before the collector stops waiting.
 
 At shutdown the collector races each pending batch flush against a 5 second step
 timeout, then closes the destination. A deployment that wants its retries to
-survive shutdown should keep `config.timeout` at 5000 or less, so that the last
-attempt finishes inside that race.
+survive shutdown should keep `config.timeout` clearly below 5000, for example at
+4000, so that the last attempt finishes inside that race with time to spare. At
+exactly 5000 the derived attempts and retry delays use all but a millisecond or
+two of the race, so ordinary timer delay can push the last attempt past it, and
+closing the destination then cuts off the insert still in flight.
 
 ## Next steps
 

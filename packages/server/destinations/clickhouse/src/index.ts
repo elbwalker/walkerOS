@@ -37,8 +37,11 @@ export const destinationClickHouse: Destination = {
     // repeated destroy has to end here rather than in the connection pool.
     settings.client = undefined;
 
-    // The collector flushes every batch before it calls destroy, so there is
-    // nothing left to send: closing the connection pool is the whole job.
+    // The collector flushes every batch before it calls destroy, so normally
+    // there is nothing left to send and closing the connection pool is the
+    // whole job. A flush that outran the collector's shutdown race is the
+    // exception: its insert is still in flight, and closing destroys the
+    // sockets under it.
     await client.close();
 
     logger.debug('ClickHouse client closed');
