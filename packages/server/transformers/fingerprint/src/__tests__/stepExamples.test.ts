@@ -1,4 +1,4 @@
-import type { Mapping, Transformer, WalkerOS } from '@walkeros/core';
+import type { Transformer, WalkerOS } from '@walkeros/core';
 import {
   createIngest,
   createMockContext,
@@ -39,10 +39,7 @@ describe('Step Examples', () => {
 
       const transformer = await transformerFingerprint(
         createInitContext({
-          settings: {
-            fields: ['ingest.ip', 'ingest.userAgent'],
-            length: 16,
-          },
+          settings: { salt: 'test-salt', length: 16 },
         }),
       );
 
@@ -71,14 +68,11 @@ describe('Step Examples', () => {
 
       const transformer = await transformerFingerprint(
         createInitContext({
-          settings: {
-            fields: ['ingest.ip', 'ingest.userAgent'],
-            length: 16,
-          },
+          settings: { salt: 'test-salt', length: 16 },
         }),
       );
 
-      // No ingest fields provided — missing fields resolve to empty strings
+      // No ingest fields provided: each empty input warns once
       const result = await transformer.push(event, createPushContext({}));
 
       expect(result).toBeDefined();
@@ -94,19 +88,8 @@ describe('Step Examples', () => {
       const example = examples.step.ipAnonymization;
       const event = example.in as WalkerOS.DeepPartialEvent;
 
-      // fn receives the full source object { event, ingest }
-      const anonymizeIP: Mapping.Fn = (source) => {
-        const ip = String(getByPath(source, 'ingest.ip') ?? '');
-        return ip.replace(/\.\d+$/, '.0');
-      };
-
       const transformer = await transformerFingerprint(
-        createInitContext({
-          settings: {
-            fields: [{ fn: anonymizeIP }, 'ingest.userAgent'],
-            length: 16,
-          },
-        }),
+        createInitContext({ settings: { salt: 'test-salt', length: 16 } }),
       );
 
       const ua = 'Mozilla/5.0 (compatible; walkerOS/3.0)';

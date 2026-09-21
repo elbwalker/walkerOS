@@ -1,6 +1,6 @@
 ---
 title: Fingerprint
-description: Server-side user identification via deterministic hashing
+description: Cookieless, privacy-friendly visitor identification via salted, rotating hashes
 sidebar_position: 4
 package: '@walkeros/server-transformer-fingerprint'
 ---
@@ -16,7 +16,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
   npm="@walkeros/server-transformer-fingerprint"
 />
 
-Hashes configurable request fields (IP address, user agent, date, etc.) into a deterministic identifier and stores it on the event. No cookies, no PII stored. The same combination of inputs always produces the same hash, enabling server-side session continuity, cookie-free analytics, and cross-domain stitching without client-side IDs.
+Gives each visitor a cookieless identifier without keeping personal data. By default it hashes the anonymized IP (IPv4 /24, IPv6 /48), the user agent reduced to browser, major version and OS, and the site the visitor is on, keyed with a secret salt and rotated daily. The raw IP never reaches the event, the same visitor gets different hashes on different sites and different days, and without the salt the hash cannot be recomputed.
 
 ## Installation
 
@@ -37,11 +37,7 @@ await startFlow({
     fingerprint: {
       code: transformerFingerprint,
       config: {
-        settings: {
-          fields: ['ingest.ip', 'ingest.userAgent'],
-          output: 'user.hash',
-          length: 16,
-        },
+        settings: { salt: process.env.FINGERPRINT_SALT },
       },
     },
   },
@@ -59,11 +55,7 @@ Add to your `flow.json`:
   "fingerprint": {
     "package": "@walkeros/server-transformer-fingerprint",
     "config": {
-      "settings": {
-        "fields": ["ingest.ip", "ingest.userAgent"],
-        "output": "user.hash",
-        "length": 16
-      }
+      "settings": { "salt": "$env.FINGERPRINT_SALT" }
     }
   }
 }`}
@@ -77,53 +69,81 @@ Add to your `flow.json`:
 
 <Configuration type="transformer" data={data} />
 
-Fields are resolved from `{ event, ingest }` using walkerOS mapping. String values use dot notation (`"ingest.ip"`). Function values compute dynamically (`{ fn: () => new Date().getDate() }`).
+## What gets hashed
 
-## Daily rotation
+| Input | Default | Reduced to |
+| --- | --- | --- |
+| `ip` | `ingest.ip` | `203.0.113.0` (IPv4 /24), `2001:db8:abcd::` (IPv6 /48) |
+| `userAgent` | `ingest.userAgent` | `Chrome/124/Windows` |
+| `site` | `event.source.url` | the hostname, e.g. `www.example.com` |
 
-Without rotation, the same IP + user agent always produce the same hash, indefinitely. To limit persistence, add a daily rotation field:
+The source must extract `ip` and `userAgent` into `ingest`:
+
+<CodeSnippet
+  code={`"config": {
+  "ingest": {
+    "map": {
+      "ip": { "key": "ip" },
+      "userAgent": { "key": "headers.user-agent" }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Behind a load balancer, `ip` is the balancer's address; extract the client from `headers.x-forwarded-for` instead. An IPv4 client on a dual-stack server (`::ffff:203.0.113.7`) is treated as its IPv4 address.
+
+Set an input to another [mapping value](/docs/mapping/value) to read it from elsewhere, or to `false` to leave it out. When an input resolves empty, the transformer logs one warning and hashes without it.
+
+## Salt
+
+The salt is the HMAC key. Keep it secret and out of the config file (`$env.FINGERPRINT_SALT`), and give each deployment its own. Without a salt, anyone who knows the inputs can recompute the hash, and an IP hash can be reversed by trying every address. The transformer still runs without one, but logs a warning at startup.
+
+## Rotation
+
+`rotate` sets how long the same visitor keeps the same hash: `daily` (default), `hourly` or `none`. Windows are UTC days or hours, so every instance agrees on them. Rotation limits tracking across windows while keeping sessions together within one.
+
+## Site
+
+The default reads the page URL the walkerOS browser source puts on every event. Events without it, such as decoded GA4 hits or server-side events, need `site` pointed at what the collector knows: a path parameter (`ingest.property`), a header (`ingest.origin`, mapped in the source's `config.ingest`), or a fixed value for a single-site deployment:
 
 <CodeSnippet
   code={`settings: {
-  fields: [
-    'ingest.ip',
-    'ingest.userAgent',
-    { fn: () => new Date().toISOString().slice(0, 10) }, // "2024-01-15"
-  ],
-  output: 'user.hash',
-  length: 16,
+  salt: process.env.FINGERPRINT_SALT,
+  site: { value: 'www.example.com' },
 }`}
   language="typescript"
 />
 
-The hash resets each day, limiting cross-day tracking while maintaining session continuity within a day.
+The site matters when one collector with one salt serves several sites: it keeps one visitor's hashes apart across them.
 
-## IP anonymization
+## Extra fields
 
-To avoid including the raw IP in the hash input, transform it before hashing. The `fn` receives `{ event, ingest }` and reads the IP itself; a `fn` next to a `key` never runs:
+`fields` adds values to the hash as they resolve, from `{ event, ingest }`. To transform a value first, use `fn` alone; it receives `{ event, ingest }` and returns the value (a `fn` next to a `key` never runs):
 
 <CodeSnippet
   code={`settings: {
-  fields: [
-    { fn: ({ ingest }) => ingest.ip?.split('.').slice(0, 3).join('.') }, // drops last octet
-    'ingest.userAgent',
-  ],
-  output: 'user.hash',
+  salt: process.env.FINGERPRINT_SALT,
+  ip: 'ingest.ip',
+  userAgent: 'ingest.userAgent',
+  fields: [{ fn: ({ ingest }) => ingest.region }],
 }`}
   language="typescript"
 />
+
+When `fields` is set, the named inputs are only used if set explicitly, as above. A config with only `fields` hashes exactly those fields, plus the salt and the rotation window.
 
 ## Result
 
-The hash is stored at the configured `output` path on the event:
+The hash is stored at `output` (default `user.hash`), `length` characters long (default: the full 64):
 
 <CodeSnippet
   code={`// Input event (before fingerprint transformer)
 { name: 'page view', entity: 'page', action: 'view', ... }
 
 // Output event (after fingerprint transformer)
-{ name: 'page view', entity: 'page', action: 'view', user: { hash: '158f99cc06e33fd6' }, ... }`}
+{ name: 'page view', entity: 'page', action: 'view', user: { hash: '3f1c9a...' }, ... }`}
   language="typescript"
 />
 
-If any field is missing (e.g., `ingest.ip` is undefined), it is treated as an empty string. The transformer never throws.
+The transformer never throws.

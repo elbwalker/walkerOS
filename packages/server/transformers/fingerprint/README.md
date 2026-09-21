@@ -6,11 +6,9 @@
 
 # @walkeros/server-transformer-fingerprint
 
-Server-side user identification for walkerOS without cookies. Hashes
-configurable request fields into a deterministic identifier and stores it on the
-event. No cookies, no PII stored: the same inputs always produce the same hash,
-which gives session continuity and cross-domain stitching without a client-side
-ID.
+Cookieless, privacy-friendly visitor identification for walkerOS. Hashes the
+anonymized IP, a reduced user agent and the site with a secret salt, rotates
+daily, and stores the hash on the event. No cookies, no raw IP on the event.
 
 [Documentation](https://www.walkeros.io/docs/transformers/fingerprint) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-transformer-fingerprint)
@@ -34,48 +32,20 @@ await startFlow({
     fingerprint: {
       code: transformerFingerprint,
       config: {
-        settings: {
-          fields: ['ingest.ip', 'ingest.userAgent'],
-          output: 'user.hash',
-          length: 16,
-        },
+        settings: { salt: process.env.FINGERPRINT_SALT },
       },
     },
   },
 });
 ```
 
-The event then carries the hash at the configured `output` path:
-
-```json
-{ "name": "page view", "user": { "hash": "158f99cc06e33fd6" } }
-```
-
-Fields resolve from `{ event, ingest }` using walkerOS mapping. Strings use dot
-notation, and function values compute dynamically. A missing field is treated as
-an empty string, and the transformer never throws.
-
-## Daily rotation
-
-Without rotation the same IP and user agent produce the same hash indefinitely.
-Add a date field to reset it each day, which limits cross-day tracking while
-keeping session continuity within a day:
-
-```typescript
-settings: {
-  fields: [
-    'ingest.ip',
-    'ingest.userAgent',
-    { fn: () => new Date().toISOString().slice(0, 10) },
-  ],
-  output: 'user.hash',
-  length: 16,
-}
-```
+The source must extract `ip` and `userAgent` into `ingest` (its
+`config.ingest`). The event then carries the hash at `user.hash`. Without a salt
+the hash can be reversed to the IP, so the transformer logs a warning.
 
 ## Documentation
 
-Full configuration, IP anonymization, and examples live in the docs:
+Full configuration, rotation, site separation, and examples live in the docs:
 **https://www.walkeros.io/docs/transformers/fingerprint**
 
 ## Contribute
