@@ -11,6 +11,7 @@ export const hints: Hint.Hints = {
             sources: {
               express: {
                 package: '@walkeros/server-source-express',
+                next: 'fingerprint',
                 config: {
                   settings: { port: 8080 },
                   ingest: {

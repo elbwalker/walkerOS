@@ -339,7 +339,7 @@ Transformers process events between sources and destinations. They validate, enr
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint",
       "config": {
-        "settings": { "format": true }
+        "settings": { "salt": "$env.FINGERPRINT_SALT" }
       }
     }
   }
