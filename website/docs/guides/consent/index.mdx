@@ -42,8 +42,9 @@ state as it is.
 
 ## Configure consent in a flow
 
-This web flow uses a CMP source to record consent and allows the gtag
-destination to receive events only with marketing consent:
+This web flow uses a CMP source to record consent, allows the gtag
+destination to receive events only with analytics or marketing consent, and
+maps the CMP source's `analytics` group to Google's `analytics_storage`:
 
 <CodeSnippet
   code={`{
@@ -66,9 +67,12 @@ destination to receive events only with marketing consent:
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
-            "consent": { "marketing": true },
-            "require": ["consent"],
+            "consent": { "analytics": true, "marketing": true },
             "settings": {
+              "como": {
+                "marketing": ["ad_storage", "ad_user_data", "ad_personalization"],
+                "analytics": "analytics_storage"
+              },
               "ga4": { "measurementId": "G-XXXXXXXXXX" }
             }
           }
@@ -90,8 +94,9 @@ checks every event against it before the destination sees the event:
   granted.
 - Events without the required consent wait in the destination's queue. Once
   consent is granted, they are delivered in their original order.
-- The collector initializes the destination when the first event passes the
-  check.
+- The collector initializes the destination only after its required consent
+  is granted: at the first event that passes the check or, for a destination
+  with an `on()` handler, at the consent command that grants it.
 - The queue holds up to 1000 events per destination by default. When it is
   full, the oldest events go first. Change the limit with
   `config.queueMax`. See [buffer bounds](/docs/collector#buffer-bounds).
@@ -123,9 +128,13 @@ Use destination gating when events should wait for a decision.
 ### Wait for the CMP with `require`
 
 `"require": ["consent"]` holds a destination back, and holds a source's `on()`
-delivery back, until the collector has a consent state. Any recorded state counts, whether granted or denied, so
-`require` does not check values. Combine it with `config.consent`, which
-decides which events the destination receives. See
+delivery back, until the collector has a consent state. Any recorded state
+counts, whether granted or denied, so `require` does not check values;
+`config.consent` decides which events the destination receives. A destination
+that `require` activates does not receive the consent state that activated it
+in its `on()` handler, only later consent changes. A destination that forwards
+consent to a vendor, such as gtag with Consent Mode, then keeps the vendor's
+denied default, so gate it with `config.consent` alone. See
 [conditional activation](/docs/sources/web/cmps#conditional-activation-with-require)
 for how `require` works.
 
@@ -231,15 +240,25 @@ subscription types.
 ## Google Consent Mode
 
 The [gtag destination](/docs/destinations/web/gtag) supports Google Consent
-Mode v2 through its `como` setting, which is on by default. The destination
-turns consent commands into `gtag('consent', 'update', ...)` calls, and holds
-commands sent before it initializes until initialization. The default mapping
-is:
+Mode v2 through its `como` setting, which is on by default. When the
+destination has a `config.consent` requirement (or `como_advanced` is set), it
+first sets every mapped parameter to `denied` with `gtag('consent', 'default', ...)`
+before loading any tool; otherwise it sends that default right before its first
+update. It turns consent commands into
+`gtag('consent', 'update', ...)` calls, and holds commands sent before it
+initializes until initialization. The default mapping is:
 
 | walkerOS key | Consent Mode parameters                             |
 | ------------ | --------------------------------------------------- |
 | `marketing`  | `ad_storage`, `ad_user_data`, `ad_personalization`  |
 | `functional` | `analytics_storage`                                 |
+
+The CookieFirst and CookiePro sources report measurement consent as
+`analytics` and, by default, map strictly necessary cookies to `functional`,
+which is granted as soon as the CMP reports a choice. With the default
+mapping, `analytics_storage` is then granted even when the user denied
+analytics. With these sources, map `analytics` instead, as in the example
+below.
 
 Pass an object to use your own keys:
 

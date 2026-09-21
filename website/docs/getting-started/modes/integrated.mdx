@@ -46,10 +46,10 @@ That's it. You just sent your first event and saw it in the console.
 
 ## Adding destinations
 
-Install destination packages and add them to your config:
+Install the browser source and the destination packages, then add them to your config:
 
 <CodeSnippet
-  code={`npm install @walkeros/web-destination-api @walkeros/web-destination-gtag`}
+  code={`npm install @walkeros/web-source-browser @walkeros/web-destination-api @walkeros/web-destination-gtag`}
   language="bash"
 />
 
@@ -127,6 +127,8 @@ elb('walker consent', { functional: true, analytics: true });`}
   language="typescript"
 />
 
+Until a destination's required consent is granted, its events wait in an in-memory queue and are delivered once `walker consent` grants it. The queue holds up to 1000 events per destination by default; when it is full, the oldest events are dropped. Change the limit with `config.queueMax` on the destination, see [buffer bounds](/docs/collector#buffer-bounds).
+
 ---
 
 ## Key concepts
@@ -182,6 +184,7 @@ const { elb } = await startFlow<WalkerOS.Elb>({
 import { useEffect, useState } from 'react';
 import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
+import type { WalkerOS } from '@walkeros/core';
 
 export function useWalker() {
   const [elb, setElb] = useState<WalkerOS.Elb | null>(null);

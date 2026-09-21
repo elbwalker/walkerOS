@@ -14,18 +14,22 @@ managed hosting is the optional alternative at the end.
 Bundle your `flow.json` into a standalone artifact:
 
 <CodeSnippet
-  code={`npx walkeros bundle flow.json --output flow.mjs`}
+  code={`npx walkeros bundle flow.json --output dist/`}
   language="bash"
 />
 
+For a server flow this writes `dist/flow.mjs`, `dist/package.json`, and
+`dist/node_modules/`. The step packages load from `node_modules/`, so ship the
+whole directory, not `flow.mjs` alone.
+
 ## Run it yourself
 
-**Docker**, the standard path:
+**Docker**, the standard path. Mount the bundle directory at `/app/flow`, where
+the image expects `flow.mjs`:
 
 <CodeSnippet
   code={`docker run -d -p 8080:8080 \\
-  -v $(pwd)/flow.mjs:/app/flow.mjs \\
-  -e BUNDLE=/app/flow.mjs \\
+  -v $(pwd)/dist:/app/flow:ro \\
   walkeros/flow:latest`}
   language="bash"
 />
@@ -34,9 +38,10 @@ Bundle your `flow.json` into a standalone artifact:
 
 <CodeSnippet code={`npx walkeros run flow.json`} language="bash" />
 
-**Node, from the bundle**:
+**Node, from the bundle**. `flow.mjs` exports a start function and does not run
+on its own with `node`; `walkeros run` starts it:
 
-<CodeSnippet code={`node flow.mjs`} language="bash" />
+<CodeSnippet code={`npx walkeros run dist/flow.mjs`} language="bash" />
 
 Integrated mode needs none of this: the flow deploys with your application and
 needs nothing extra. See [integrated mode](/docs/getting-started/modes/integrated).

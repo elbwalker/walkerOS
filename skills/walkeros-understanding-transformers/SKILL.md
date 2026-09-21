@@ -111,6 +111,10 @@ The `push` function controls event flow:
 | `{ event, next }`    | Redirect chain to a different transformer (fan-out) |
 | `{ event, respond }` | Continue chain with wrapped respond function        |
 
+A `push` that throws also stops the chain and drops the event; the collector
+logs it and counts it in `status.failed`. Catch a library error inside `push`
+when the event should continue.
+
 ```typescript
 push(event, context) {
   if (!event.data?.id) {

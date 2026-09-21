@@ -7,8 +7,8 @@
 # @walkeros/web-source-cmp-usercentrics
 
 Integrates Usercentrics consent management with walkerOS using the official
-Usercentrics events and consent getters, mapping category or service consent
-state to walkerOS consent groups.
+Usercentrics events and consent getters, mapping category consent state to
+walkerOS consent groups.
 
 [Documentation](https://www.walkeros.io/docs/sources/web/cmps/usercentrics)
 &bull;
@@ -66,9 +66,8 @@ implicit first-visit defaults.
 ## Settings
 
 `explicitOnly` (default `true`) is the cross-version gate for "the user has
-actively decided," applied identically for V2 and V3. There is no configurable
-data-layer event setting: the `eventName` setting has been removed, and the
-source listens to the always-emitted official events.
+actively decided," applied identically for V2 and V3. The source listens to the
+official Usercentrics events, so no data-layer event setup is needed.
 
 ## Documentation
 

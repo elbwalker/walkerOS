@@ -21,7 +21,17 @@ describe('Step Examples', () => {
   });
 
   it.each(Object.entries(examples.step))('%s', async (_name, example) => {
-    const mapping = example.mapping as Record<string, unknown> | undefined;
+    // A source step example's `mapping` is the source config fragment the
+    // docs render next to it, so only `mapping.settings` reaches the source.
+    const mapping = example.mapping;
+    const mappingSettings =
+      mapping &&
+      typeof mapping === 'object' &&
+      'settings' in mapping &&
+      mapping.settings &&
+      typeof mapping.settings === 'object'
+        ? mapping.settings
+        : {};
 
     const mockElb = jest.fn(async () => ({
       ok: true,
@@ -42,11 +52,7 @@ describe('Step Examples', () => {
     const source = await sourceCookiePro({
       collector: collectorStub,
       config: {
-        settings: {
-          ...(mapping?.categoryMap
-            ? { categoryMap: mapping.categoryMap as Record<string, string> }
-            : {}),
-        },
+        settings: { ...mappingSettings },
       },
       env: {
         push: mockElb as unknown as Collector.PushFn,
@@ -63,7 +69,7 @@ describe('Step Examples', () => {
     // Adapter setup (listeners + OptanonWrapper + static read) runs in init().
     await source.init?.();
 
-    // Source pushes via detached elb chain — yield for it
+    // Source pushes via detached elb chain; yield for it
     for (let i = 0; i < 10 && mockElb.mock.calls.length === 0; i++) {
       await Promise.resolve();
     }

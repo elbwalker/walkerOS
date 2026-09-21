@@ -161,7 +161,7 @@ The bundle is written to stdout by default. Use `-o` to write to a file (e.g., `
 
 ### Bundle
 
-Build-time configuration lives under `flow.<name>.config.bundle`. The `packages` field specifies npm packages to download and bundle, and `overrides` pins transitive dependency versions (npm `overrides` semantics):
+Build-time configuration lives under `flows.<name>.config.bundle`. The `packages` field specifies npm packages to download and bundle, and `overrides` pins transitive dependency versions (npm `overrides` semantics):
 
 <CodeSnippet
   code={`{
@@ -301,30 +301,26 @@ Destinations receive processed events and send them to analytics tools, database
 - **`consent`** - Required consent states
 - **`policy`** - Processing rules
 
-**Conditional activation:**
+**Consent gating:**
 
-Sources and destinations support `require` to delay initialization until specific collector events fire. Use `require: ["consent"]` to prevent loading until consent is granted:
+Gate a destination on consent with `config.consent`. The destination initializes once the listed consent is granted; until then its events wait in a queue and are delivered after the grant. A denial keeps them waiting:
 
 <CodeSnippet
   code={`{
-  "sources": {
-    "session": {
-      "package": "@walkeros/web-source-session",
-      "config": { "require": ["consent"] }
-    }
-  },
   "destinations": {
     "ga4": {
       "package": "@walkeros/web-destination-gtag",
       "config": {
-        "require": ["consent"],
-        "consent": { "marketing": true }
+        "consent": { "marketing": true },
+        "settings": { "ga4": { "measurementId": "G-DEMO123456" } }
       }
     }
   }
 }`}
   language="json"
 />
+
+`require` is a separate mechanism that waits for collector events, not for granted consent (see [Deferred activation with `require`](#deferred-activation-with-require)).
 
 See [Destinations documentation](/docs/destinations/) for all available options.
 
@@ -348,7 +344,8 @@ Transformers process events between sources and destinations. They validate, enr
 
 **Configuration options:**
 - **`package`** - The npm package (required for package-based steps, optional when using `code:`)
-- **`code`** - Explicit import variable name (optional, auto-resolved)
+- **`import`** - Named export of `package` to use (optional; the package's default export otherwise)
+- **`code`** - Inline code object `{ push, type?, init? }`, used instead of `package` (see [Inline Code](#inline-code-without-packages))
 - **`config`** - Transformer-specific configuration
 - **`env`** - Environment-specific settings
 - **`before`** - Pre-transformer chain (runs before this transformer's push)
@@ -497,7 +494,7 @@ The `next` and `before` fields on sources, transformers, and destinations all ac
 When walking a string chain, three edge cases apply:
 
 1. **String with array `next`**: If `fingerprint.next` is `["a", "b"]`, the walker appends that array and stops. The final chain becomes `["fingerprint", "a", "b"]`.
-2. **Missing target**: If a transformer name in the chain does not exist, that step is skipped and the event proceeds unchanged. If a string chain points to a nonexistent first transformer, the chain is empty and the event goes through without transformation.
+2. **Missing target**: In an array chain, a transformer name that does not exist is skipped (with a warning) and the remaining steps run. A string chain stops walking at the missing name. If a string chain points to a nonexistent first transformer, the chain is empty and the event goes through without transformation.
 3. **Circular reference**: Detected via a visited set and safely broken, with no infinite loop.
 
 #### Pre-collector vs post-collector transformers
@@ -549,7 +546,7 @@ Every chain field (`source.before`, `source.next`, `transformer.before`, `transf
 type Route = string | Route[] | RouteConfig;
 ```
 
-A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, or none of them (pure gate that only filters by `match`). `match` is optional everywhere; omit it to always match.
+A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, or none of them (pure gate that only filters by `match`). `match` is optional on `next`, `one` and `many` entries; omit it to always match. A pure gate requires `match`.
 
 ##### Route operators
 
@@ -608,7 +605,7 @@ Terminal fan-out is the `many` operator. Use it when one inbound event needs to 
   language="json"
 />
 
-Every entry in `many` whose `match` passes runs as its own branch. The main chain stops at the `many` step, so each branch is responsible for its own continuation. If no entry matches, the event is dropped from the pre-collector pipeline.
+Every entry in `many` whose `match` passes runs as its own branch. The main chain stops at the `many` step, so each branch is responsible for its own continuation. If no entry matches, no branch runs and the event goes on to the collector unchanged.
 
 To name and reuse a chain without writing code, declare a **path** transformer: a transformer entry with no `code` / `package`, just `before` / `next` / `cache`. The collector synthesizes a code-less passthrough so the named entry can be referenced from any `Route`:
 
@@ -625,31 +622,27 @@ To name and reuse a chain without writing code, declare a **path** transformer: 
 
 #### Deferred activation with `require`
 
-Sources and destinations support `require` to delay initialization until a specific collector event fires. This is commonly used for consent-gated loading:
+Sources and destinations support `require` to wait until specific collector events have fired:
 
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "analytics": {
-      "package": "@walkeros/web-destination-gtag",
-      "config": {
-        "require": ["consent"]
-      }
-    }
-  }
-}`}
-  language="json"
-/>
+- A **destination** with `require` is not initialized and receives no events until then. Its events are queued and delivered once `require` is met.
+- A **source** with `require` initializes and pushes events right away. `require` only holds back the collector events its `on()` handler receives (such as `consent` or `run`).
 
-The `analytics` destination will not initialize until a `"consent"` event is pushed to the collector. Until then, events are queued. This works identically for sources:
+For the browser source, `require: ["consent"]` holds back the page view and element triggers such as `load`, `impression` or `visible` until the first consent choice, granted or denied. `click` and `submit` triggers are captured from the start.
 
 <CodeSnippet
   code={`{
   "sources": {
-    "session": {
-      "package": "@walkeros/web-source-session",
+    "browser": {
+      "package": "@walkeros/web-source-browser",
+      "config": { "require": ["consent"] }
+    }
+  },
+  "destinations": {
+    "api": {
+      "package": "@walkeros/web-destination-api",
       "config": {
-        "require": ["consent"]
+        "require": ["consent"],
+        "settings": { "url": "https://collect.example.com/events" }
       }
     }
   }
@@ -657,8 +650,10 @@ The `analytics` destination will not initialize until a `"consent"` event is pus
   language="json"
 />
 
-:::tip
-Combine `require` with `consent` on destinations for full consent management: `require` controls when the destination loads, while `consent` controls which events it receives. See the [Destinations](#destinations) section above for a combined example.
+For `require: ["consent"]` the collector needs a consent state: the `collector.consent` default or a `walker consent` command. Any state counts, granted or denied, so with a `consent` default set, `require` is met at startup. `require` does not check consent values; `config.consent` does.
+
+:::warning
+A destination that `require` activates does not receive the consent state that activated it in its `on()` handler, only later consent changes. A destination that forwards consent to a vendor, such as gtag with Consent Mode, then keeps the vendor's denied default. Gate such destinations with `config.consent` alone, as in the [Destinations](#destinations) example. See [Wait for the CMP with `require`](/docs/guides/consent#wait-for-the-cmp-with-require).
 :::
 
 ### Inline Code (without packages)
@@ -738,23 +733,7 @@ See [Collector documentation](/docs/collector/) for complete options.
 
 ### Web-specific options
 
-For browser bundles, you can configure the collector's window variable name via
-`config.settings`:
-
-<CodeSnippet
-  code={`{
-  "config": {
-    "platform": "web",
-    "settings": {
-      "windowCollector": "walkerCollector"
-    }
-  }
-}`}
-  language="json"
-/>
-
-**Properties:**
-- **`windowCollector`** - Global variable name for collector instance (default: `"walkerOS"`)
+Web bundles assign the collector instance to `window.walkerOS`.
 
 The `window.elb` function is owned by the browser source: set `elb` in the
 browser source's `config.settings` to change its global name (default:
@@ -797,7 +776,7 @@ For managing dev/staging/production flows in one file:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-destination-gcp": { "version": "^4", "imports": ["destinationGCP"] }
+            "@walkeros/server-destination-gcp": { "version": "^4", "imports": ["destinationBigQuery"] }
           }
         }
       },
@@ -827,8 +806,8 @@ walkeros bundle config.json --flow development
 # Build production flow
 walkeros bundle config.json --flow production
 
-# Build all flows
-walkeros bundle config.json --all`}
+# Build all flows (one subfolder per flow in dist/)
+walkeros bundle config.json --all -o dist/`}
   language="bash"
 />
 
@@ -882,11 +861,11 @@ Flows in the same file can reference each other's `config` block via `$flow.<nam
   language="json"
 />
 
-Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to `https://collect.example.com` at build time. Validate is lenient (warns on missing values), bundle is strict and fails loudly if the referenced value is empty, so production builds never ship with an unresolved URL.
+Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to `https://collect.example.com` at build time. Validate is lenient: it warns when the referenced value is missing or empty. Bundle fails when the referenced flow or key does not exist, but an empty value (for example `"url": ""`) is bundled as an empty string.
 
 ## Dynamic patterns
 
-Flow configurations support four dynamic patterns for reusable, environment-aware configs:
+Flow configurations support these dynamic patterns for reusable, environment-aware configs (see [Reference syntax](/docs/guides/reference-syntax) for every reference type):
 
 ### `$var.name` - Config Variables
 
@@ -932,9 +911,9 @@ Reference variables defined in `variables` for shared values across your config:
 />
 
 Variables can be defined at three levels (higher specificity wins):
-1. **Source/Destination level** - Highest priority
-2. **Flow (Config) level** - Middle priority
-3. **Setup level** - Lowest priority
+1. **Step level** (`variables` on a source, transformer, destination, or store) - Highest priority
+2. **Flow level** (`flows.<name>.variables`) - Middle priority
+3. **Root level** (top-level `variables`) - Lowest priority
 
 ### `$env.NAME` - Environment Variables
 
@@ -963,7 +942,7 @@ Reference environment variables with optional defaults:
 />
 
 **Syntax:**
-- `$env.GA4_ID` - Required, throws if not set
+- `$env.GA4_ID` - Required. A web flow reads the value at bundle time, and the bundle fails if it is not set. A server flow reads `process.env` when the bundle runs; an unset variable resolves to `undefined`.
 - `$env.GA4_ID:default` - Uses "default" if not set
 
 :::note Why only `$env` supports defaults
@@ -986,8 +965,7 @@ Embed JavaScript code directly in JSON config values:
               "data": {
                 "map": {
                   "item_id": {
-                    "key": "data.id",
-                    "fn": "$code:(value) => value.toUpperCase()"
+                    "fn": "$code:(event) => String(event.data.id).toUpperCase()"
                   }
                 }
               }
@@ -1007,12 +985,14 @@ The `$code:` prefix is stripped during bundling, outputting raw JavaScript:
   code={`// Bundler output
 {
   item_id: {
-    key: "data.id",
-    fn: (value) => value.toUpperCase()
+    fn: (event) => String(event.data.id).toUpperCase()
   }
 }`}
   language="typescript"
 />
+
+A `fn` receives the whole event and returns the value, so it reads the field
+itself. A `fn` next to a `key` never runs: each value has one producer.
 
 **Use cases:**
 - **`fn:` callbacks** - Transform values in mapping
@@ -1022,7 +1002,7 @@ The `$code:` prefix is stripped during bundling, outputting raw JavaScript:
 **Syntax notes:**
 - Multi-line code: Use JSON escapes (`\n`, `\"`)
 - Scope: Same as bundled code (access to imports and variables)
-- Errors: Caught at build time by TypeScript/esbuild
+- Errors: esbuild rejects syntax errors at build time. The code must be plain JavaScript (TypeScript annotations fail the bundle) and is not type-checked.
 
 ## Type hierarchy
 
@@ -1037,7 +1017,7 @@ walkerOS uses a clear type hierarchy:
 │       └── default: Flow                                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ CLI resolves $var, $env, $flow
+                              │ CLI resolves $var, $env, $flow, $contract, $secret
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  Flow (resolved flow)                                           │
@@ -1059,7 +1039,7 @@ walkerOS uses a clear type hierarchy:
 
 - **`Flow.Json`** - Root config file format for CLI
 - **`Flow`** - Single flow configuration (with optional `config`, `sources`, `destinations`, etc.)
-- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`)
+- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`, `observe`)
 - **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
 ## Complete example
@@ -1076,7 +1056,7 @@ Here's a production-ready flow that accepts HTTP events and sends them to BigQue
         "bundle": {
           "packages": {
             "@walkeros/server-source-express": { "version": "^4", "imports": ["sourceExpress"] },
-            "@walkeros/server-destination-gcp": { "version": "^4", "imports": ["destinationGCP"] },
+            "@walkeros/server-destination-gcp": { "version": "^4", "imports": ["destinationBigQuery"] },
             "@walkeros/destination-demo": { "version": "^4", "imports": ["destinationDemo"] }
           }
         }
@@ -1156,7 +1136,7 @@ import { destinationDemo } from '@walkeros/destination-demo';
 const { collector, elb } = await startFlow({
   sources: {
     http: {
-      ...sourceExpress,
+      code: sourceExpress,
       config: {
         settings: { path: '/collect', port: 8080 }
       }
@@ -1164,7 +1144,7 @@ const { collector, elb } = await startFlow({
   },
   destinations: {
     console: {
-      ...destinationDemo,
+      code: destinationDemo,
       config: {
         settings: { name: 'Logger' }
       }

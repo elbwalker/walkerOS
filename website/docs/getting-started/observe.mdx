@@ -10,8 +10,8 @@ You can verify a flow at three levels, each one step closer to production:
 
 1. **Simulate**: run an event through the built flow offline, with
    destinations mocked, see [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
-2. **Preview**: run the flow where your app runs and watch each event in your
-   console, see
+2. **Run locally**: run the flow where your app runs and watch each event in
+   your console, see
    [integrated mode](/docs/getting-started/modes/integrated#see-your-event).
 3. **Observe**: attach a running flow to an Observe session and watch its
    live records arrive in a feed, from any browser or server deployment.
@@ -51,15 +51,15 @@ const { elb } = await startFlow({
 Then open your dev URL with a session credential appended:
 
 <CodeSnippet
-  code={`https://localhost:3000/?elbObserve=obsw_pb_x.ses_9.sec_1`}
+  code={`http://localhost:3000/?elbObserve=obsw_pb_x.ses_9.sec_1`}
   language="text"
 />
 
 On load, the runtime checks that the credential's binding matches the one in
-your config, persists the credential in the browser, removes the parameter
+your config, persists the credential in `localStorage`, removes the parameter
 from the address bar, and starts posting flow records to the observer. Later
-page loads reuse the stored credential, so one activation covers a whole
-browsing session.
+page loads reuse the stored credential, so one activation lasts until the
+Observe session ends.
 
 Without a credential, the same page does zero observation work: nothing is
 parsed, stored, or sent. When the Observe session ends, the observer rejects

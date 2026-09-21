@@ -183,7 +183,7 @@ Extend chains are resolved first, then wildcards expand on the merged result. Sc
 
 ## Wildcard inheritance
 
-Contracts support four wildcard levels in `events` that all merge **additively**:
+Contracts support four wildcard levels in `events`. For entity-action pairs listed under `events`, all matching levels merge **additively**:
 
 | Level | Pattern | Matches |
 |-------|---------|---------|
@@ -207,8 +207,10 @@ For `product add`, levels 1, 3, and 4 all apply and combine:
 //   data.quantity required       (from product -> add)
 ```
 
+Wildcards expand into the entity-action pairs listed under `events`, and only there do all matching levels merge. An event whose pair is not listed gets a single entry instead, the first that exists of: `entity` → `*` (which already carries the `*` → `*` rules), `*` → `action` (without the `*` → `*` rules), `*` → `*`. In the example above, `product view` gets the `product` → `*` rules plus the `*` → `*` rules. List a pair explicitly when several levels must apply to it.
+
 :::warning Contracts vs mapping wildcards
-Contract wildcards use **additive merging**: all matching levels combine.
+Contract wildcards use **additive merging** for pairs listed under `events`: all matching levels combine.
 Mapping wildcards use **fallback matching**: the first match wins.
 
 This difference is intentional. Contracts express cumulative requirements (entity-level rules apply to every action); mappings select a single transformation target.
@@ -224,13 +226,13 @@ When multiple wildcard levels (or `extend` chains) match, the JSON Schemas merge
 | JSON Schema keyword | Merge behavior |
 |---------------------|----------------|
 | `required` | Union (deduplicated) |
-| `properties` | Deep merge |
-| Scalar keywords (`minimum`, `pattern`, ...) | Child overrides parent |
+| `properties` and other object-valued keywords (`items`, `not`, ...) | Deep merge |
+| Scalar and array keywords (`minimum`, `pattern`, `enum`, `oneOf`, ...) | Child overrides parent |
 | Annotations (`description`, `examples`, `title`, `$comment`) | Stripped from resolved event schemas |
 
-Additive deep-merge applies to `properties` (deep-merge) and `required` arrays (union/dedup). Other JSON Schema keywords (`oneOf`, `enum`, `type` arrays, `allOf`) follow child-wins. Use `allOf` composition at the schema level if full JSON Schema composition is needed.
+`required` arrays are united and object values merge key by key. Every other array (`oneOf`, `enum`, `type` arrays, `allOf`) and every scalar is replaced by the child's value. Use `allOf` composition at the schema level if full JSON Schema composition is needed.
 
-Annotations stay on the source contract for tooling (CLI hints, IDE descriptions), but the runtime schema seen by validators is the stripped form.
+Annotations stay on the source contract for tooling (CLI hints, IDE descriptions). Resolved event schemas are stripped; the `schema` block keeps its annotations. Validators ignore annotations either way.
 
 ## `$contract` references
 
@@ -270,7 +272,7 @@ walkeros validate contract.json --type contract
 # Validate inline
 echo '{"default":{"events":{"product":{"add":{"properties":{}}}}}}' | walkeros validate --type contract
 
-# Validate a full flow (covers contract structure + example compliance)
+# Validate a full flow (contract field types, extend references, example compliance)
 walkeros validate flow.json
 ```
 
@@ -282,7 +284,9 @@ The contract validator checks:
 - Entity and action keys are non-empty
 - `schema`, if present, is a valid JSON Schema object
 - Each event entry is a valid JSON Schema object
-- A key outside `extend`, `tagging`, `description`, `events`, `schema` is a warning, not an error
+- A key outside `extend`, `tagging`, `description`, `events`, `schema` is a warning, not an error. Exception: top-level `globals`, `context`, `custom`, `user` and `consent` keys pass without a warning, but no validator reads them. Put these rules under `schema.properties`.
+
+The flat-shape and unknown-key checks run only with `--type contract`. Validating a full flow ignores unknown keys inside a contract entry.
 
 <details>
 <summary>Advanced: shared schema fragments via `variables`</summary>
@@ -311,14 +315,16 @@ Top-level `variables` holds reusable values that any part of the config can pull
 
 Use `variables` when the same JSON Schema fragment shows up in many events. For contract-shaped reuse across flows, prefer `extend`.
 
+`$var` references in a contract resolve at bundle time, so the runtime validate step enforces them. The step-example check in `walkeros validate` reads the contract before `$var` resolution and does not apply rules pulled in with `$var`.
+
 </details>
 
 ## Complete example
 
-A canonical, tested flow with a multi-entry contract lives at
+A complete example flow with a contract (a full-event `schema` plus per-event rules) lives at
 [`packages/cli/examples/flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json).
 
-A shorter end-to-end illustration:
+A shorter illustration, with the validate step running before a destination:
 
 ```json
 {
@@ -377,6 +383,13 @@ A shorter end-to-end illustration:
         "validate": {
           "package": "@walkeros/transformer-validate",
           "config": { "settings": { "contract": ["$contract.web_loggedin"], "mode": "strict" } }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": { "settings": { "ga4": { "measurementId": "G-DEMO123456" } } },
+          "before": "validate"
         }
       }
     }
