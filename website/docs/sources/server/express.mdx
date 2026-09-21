@@ -305,8 +305,7 @@ it from observed traffic:
 
 <CodeSnippet
   code={`"ip": {
-  "key": "headers.x-forwarded-for",
-  "fn": "$code:(v)=>{const a=(v||'').split(',').map(s=>s.trim()).filter(Boolean);return a.length>=2?a[a.length-2]:''}"
+  "fn": "$code:(req)=>{const a=(req.headers['x-forwarded-for']||'').split(',').map(s=>s.trim()).filter(Boolean);return a.length>=2?a[a.length-2]:''}"
 }`}
   language="json"
 />

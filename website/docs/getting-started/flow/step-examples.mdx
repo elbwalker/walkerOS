@@ -141,7 +141,7 @@ Here is a complete flow config with examples on a source, transformer, and desti
           "examples": {
             "cta click": {
               "trigger": { "type": "click", "options": "button" },
-              "in": "<button data-elb=\\"cta\\" data-elb-cta=\\"label:Sign Up\\" data-elbaction=\\"click:click\\">Sign Up</button>",
+              "in": "<button data-elb='cta' data-elb-cta='label:Sign Up' data-elbaction='click:click'>Sign Up</button>",
               "out": [["elb", {
                 "name": "cta click",
                 "entity": "cta",
