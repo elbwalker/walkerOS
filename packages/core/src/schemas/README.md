@@ -315,8 +315,8 @@ namespace.
 
 ## Schema Type Naming
 
-Every exported schema must carry `.meta({ id, title, description })` so the
-generated JSON Schema can link back to the canonical TypeScript name:
+Every schema exported from core must carry `.meta({ id, title, description })`
+so the generated JSON Schema can link back to the canonical TypeScript name:
 
 - **id** - PascalCase, namespace-prefixed to avoid collisions
   (`DestinationConfig`, `CollectorPushContext`, `LoggerConfig`).

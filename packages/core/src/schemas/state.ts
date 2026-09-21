@@ -18,7 +18,8 @@ import { ValueSchema } from './mapping';
  *   string or a ValueConfig with a `key` (no `value`/`fn`/`map`/`loop`/`set`,
  *   and no `*` wildcard in the path).
  */
-// A read may name a whole root (`event`); a get target must name a path in one.
+// A `set` payload may name a whole root (`event`). A key must resolve to a
+// string and a `get` target must be writable, so both name a path in one.
 const ROOT_PATH = /^(event|ingest)(\..+)?$/;
 const ROOT_TARGET = /^(event|ingest)\..+$/;
 
@@ -71,7 +72,7 @@ export const StateSchema = z
     ),
   })
   .superRefine((data, ctx) => {
-    checkRootPaths(data.key, 'key', ctx, ROOT_PATH);
+    checkRootPaths(data.key, 'key', ctx, ROOT_TARGET);
 
     if (data.value === undefined) {
       ctx.addIssue({

@@ -80,7 +80,7 @@ export const ipAnonymization: Flow.StepExample = {
   title: 'IP anonymization',
   description:
     'Privacy-preserving fingerprint: an fn field truncates the IP to its /24 subnet before hashing, ' +
-    'so 10.0.42.* users share a hash. The fn reads the IP itself, since a fn next to a key never runs. ' +
+    'so requests from the same 10.0.42.* subnet with the same user agent share a hash. The fn reads the IP itself, since a fn next to a key never runs. ' +
     'Config: fields: [{ fn: ({ ingest }) => String(ingest.ip || "").replace(/\\.\\d+$/, ".0") }, "ingest.userAgent"]',
   in: {
     name: 'page view',

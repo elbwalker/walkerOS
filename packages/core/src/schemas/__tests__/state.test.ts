@@ -106,6 +106,7 @@ describe('StateSchema', () => {
 
   it.each([
     ['a bare key', { mode: 'set', key: 'user.session', value: 'event.data.x' }],
+    ['a whole-root key', { mode: 'set', key: 'event', value: 'event.data.x' }],
     ['a bare set value', { mode: 'set', key: 'ingest.site', value: 'data.x' }],
     ['a bare get target', { mode: 'get', key: 'ingest.site', value: 'data.x' }],
     [
