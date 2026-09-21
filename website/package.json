@@ -26,6 +26,7 @@
     "@walkeros/server-destination-api": "^4.6.1",
     "@walkeros/server-destination-aws": "^4.6.1",
     "@walkeros/server-destination-bing": "^4.6.1",
+    "@walkeros/server-destination-clickhouse": "^4.6.1",
     "@walkeros/server-destination-criteo": "^4.6.1",
     "@walkeros/server-destination-customerio": "^4.6.1",
     "@walkeros/server-destination-datamanager": "^4.6.1",
