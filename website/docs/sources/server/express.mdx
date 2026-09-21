@@ -299,15 +299,15 @@ it from observed traffic:
 
 <CodeSnippet
   code={`"ip": {
-  "fn": "$code:(req)=>{const a=(req.headers['x-forwarded-for']||'').split(',').map(s=>s.trim()).filter(Boolean);return a.length>=2?a[a.length-2]:''}"
+  "fn": "$code:(req)=>req.headers['x-forwarded-for']?.split(',').at(-2)?.trim()"
 }`}
   language="json"
 />
 
-The example takes the entry one hop in from the right, which is the
-proxy-verified client entry under the contract above. Adjust the offset to your
-own proxy's documented behavior and confirm it with a request from a known
-address before trusting it.
+`.at(-2)` takes the entry one hop in from the right, which is the
+proxy-verified client entry under the contract above; with fewer entries the IP
+stays absent. Adjust the offset to your own proxy's documented behavior and
+confirm it with a request from a known address before trusting it.
 
 ## Advanced mapping
 
