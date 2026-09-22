@@ -9,17 +9,22 @@ const baseConfig = {
   splitting: false,
 };
 
-// Modules
-const buildModules = (customConfig = {}) => {
-  // Auto-inject package version
-  let version = '0.0.0';
+// Package version for the __VERSION__ define
+const getVersion = () => {
   try {
     const packagePath = resolve(process.cwd(), 'package.json');
     const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
-    version = pkg.version || '0.0.0';
+    return pkg.version || '0.0.0';
   } catch (error) {
     console.warn('Could not read package.json for version injection:', error.message);
+    return '0.0.0';
   }
+};
+
+// Modules
+const buildModules = (customConfig = {}) => {
+  // Auto-inject package version
+  const version = getVersion();
 
   return {
     ...baseConfig,
@@ -51,6 +56,11 @@ const buildExamples = (customConfig = {}) => ({
     return { js: format === 'esm' ? '.mjs' : '.js' };
   },
   ...customConfig,
+  // After the spread, so a caller's define merges in and cannot drop __VERSION__
+  define: {
+    __VERSION__: JSON.stringify(getVersion()),
+    ...customConfig.define,
+  },
 });
 
 // Browser

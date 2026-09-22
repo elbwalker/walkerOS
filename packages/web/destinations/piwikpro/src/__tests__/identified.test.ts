@@ -38,9 +38,16 @@ describe('identified', () => {
   test('transition pushes only state changes, per key', () => {
     const queue = {};
 
-    expect(transition(queue, false)).toEqual([['setUserIsAnonymous', true]]);
+    expect(transition(queue, false)).toEqual([
+      ['disableCookies'],
+      ['deleteCookies'],
+      ['setUserIsAnonymous', true],
+    ]);
     expect(transition(queue, false)).toEqual([]);
-    expect(transition(queue, true)).toEqual([['deanonymizeUser']]);
+    expect(transition(queue, true)).toEqual([
+      ['enableCookies'],
+      ['deanonymizeUser'],
+    ]);
     expect(transition(queue, true)).toEqual([]);
     expect(transition({}, true)).toEqual([]);
   });

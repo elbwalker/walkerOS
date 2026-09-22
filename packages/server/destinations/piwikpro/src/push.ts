@@ -1,17 +1,21 @@
 import type { Logger, WalkerOS } from '@walkeros/core';
 import type { Hit, PushBatchFn, PushFn, Settings } from './types';
+import { normalizeUrl } from './config';
 import { buildHits } from './hits';
 import { sendHits } from './send';
 import { logSkip } from './skip';
 
-/** init returns validated settings; anything less means it did not run. */
+/**
+ * init returns validated settings, but config.init: true skips it, so the url
+ * is normalized here as well (idempotent).
+ */
 function getSettings(
   settings: Partial<Settings> | undefined,
   logger: Logger.Instance,
 ): Settings {
   const { url, appId } = settings || {};
   if (!url || !appId) logger.throw('Config settings missing, init() not run');
-  return { ...settings, url, appId };
+  return { ...settings, url: normalizeUrl(url), appId };
 }
 
 function skip(

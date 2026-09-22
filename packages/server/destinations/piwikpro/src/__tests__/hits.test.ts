@@ -84,6 +84,12 @@ describe('buildHits', () => {
   it.each<[string, WalkerOS.Event, Rule | undefined, string]>([
     ['an unmapped event', event('promotion visible'), undefined, 'unmapped'],
     [
+      'an unnamed rule without a goal',
+      event('promotion visible'),
+      { settings: { customDimensions: { '1': 'data.name' } } },
+      'unmapped',
+    ],
+    [
       'a method outside the table',
       event('setUserId'),
       { name: 'setUserId' },
@@ -140,6 +146,23 @@ describe('buildHits', () => {
     expect(goal.get('revenue')).toBe('3');
     expect(goal.has('e_c')).toBe(false);
     expect(goal.get('url')).toBe('https://www.example.com/docs/');
+  });
+
+  it('sends only the goal hit for an unnamed rule with a goal', async () => {
+    const hits = params(
+      await buildHits(
+        {
+          event: event('order complete'),
+          rule: { settings: { goalId: 'g1', goalValue: 'data.total' } },
+        },
+        settings,
+        collector,
+      ),
+    );
+    expect(hits).toHaveLength(1);
+    expect(hits[0].get('idgoal')).toBe('g1');
+    expect(hits[0].get('revenue')).toBe('555');
+    expect(hits[0].has('e_c')).toBe(false);
   });
 
   it('sends only the goal hit for a silent rule', async () => {

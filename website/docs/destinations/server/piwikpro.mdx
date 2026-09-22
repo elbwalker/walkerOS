@@ -1,6 +1,6 @@
 ---
 title: Piwik PRO
-description: "Server-side event delivery to the Piwik PRO Tracking API with the same mapping as the web destination"
+description: "Server-side event delivery to the Piwik PRO Tracking API, reusing web destination mappings that use the portable methods"
 path: /docs/destinations/server/piwikpro
 sidebar_position: 9
 package: '@walkeros/server-destination-piwikpro'
@@ -14,7 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/piwikpro" npm="@walkeros/server-destination-piwikpro" />
 
-Server-side event delivery to the [Piwik PRO](https://piwik.pro/) Tracking API. The destination uses the mapping of the [Piwik PRO web destination](/docs/destinations/web/piwikpro): `rule.name` is a Piwik PRO JavaScript method such as `trackEvent` or `ecommerceOrder`, and `data` resolves to its arguments. A web mapping copied to the server produces the same hits. Each push, or each flushed batch, becomes one bulk request to your account. There is no API token to manage: the destination needs only your account URL and site id.
+Server-side event delivery to the [Piwik PRO](https://piwik.pro/) Tracking API. The destination uses the mapping of the [Piwik PRO web destination](/docs/destinations/web/piwikpro): `rule.name` is a Piwik PRO JavaScript method such as `trackEvent` or `ecommerceOrder`, and `data` resolves to its arguments. A web mapping that uses the 13 [portable methods](#copy-your-web-mapping) produces the same hits on the server. Browser-only commands, such as state setters like `setUserId`, are skipped. Each push, or each flushed batch, becomes one bulk request to your account. There is no API token to manage: the destination needs only your account URL and site id.
 
 <WhereThisFits
   pre={<>Piwik PRO is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -215,6 +215,20 @@ A page view, a custom event with a goal and an ecommerce order:
 
 A rule's `settings.goalId` adds a second hit, `trackGoal`, to the same request. `settings.goalValue` is a mapping value for its revenue, such as `"data.total"`. A page view rule with goal settings still sends its page view. With `silent: true`, the rule sends only the goal hit.
 
+A rule without `name` on an event that is not a page view sends only the goal when it has a `goalId`:
+
+<CodeSnippet
+  code={`"order": {
+  "complete": {
+    "settings": {
+      "goalId": "6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c",
+      "goalValue": "data.total"
+    }
+  }
+}`}
+  language="json"
+/>
+
 When the goal value resolves to something other than a number or a numeric string, the goal hit is invalid and the whole event is skipped. The method hit is not sent either. The same applies to any invalid hit: an event is sent completely or not at all.
 
 ## Custom dimensions
@@ -304,7 +318,7 @@ The page view id links an event to the page view it happened on. By default it i
 
 These events are skipped:
 
-- An event without `rule.name` that is not a page view.
+- An event that is not a page view and whose rule has neither `name` nor `goalId`.
 - An event whose rule names a method outside the table, such as `setUserId`.
 - A `silent` rule without a goal.
 - An invalid event: a missing required argument, no page URL, a value that must be a number but is not (such as `e_v` or `revenue`), or more than 100 products.

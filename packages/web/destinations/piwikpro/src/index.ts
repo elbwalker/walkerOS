@@ -86,27 +86,36 @@ export const destinationPiwikPro: Destination = {
       }
     };
 
+    const mapping: Mapping = rule.settings || {};
+    const { goalId } = mapping;
+
     // An explicit rule name (already applied to event.name) passes through,
-    // so state setters stay usable. Only the implicit case can be unmapped.
-    let method: string;
-    if (rule.name) method = event.name;
-    else if (event.name === 'page view') method = 'trackPageView';
-    else {
+    // so state setters stay usable. The implicit case is a page view, or
+    // with a goal only the goal, else unmapped.
+    const implicitPageView = !rule.name && event.name === 'page view';
+    const method = rule.name
+      ? event.name
+      : implicitPageView
+        ? 'trackPageView'
+        : undefined;
+    if (method === undefined && goalId === undefined) {
       logSkip(
         logger,
         `${id}|${event.name}|unmapped`,
-        `Event "${event.name}" skipped: no rule name and not a page view`,
+        `Event "${event.name}" skipped: no rule name, no goal and not a page view`,
         { event: event.name, reason: 'unmapped' },
       );
       return;
     }
 
-    const mapping: Mapping = rule.settings || {};
-    const { goalId } = mapping;
-    const sendsHit = rule.silent !== true;
-    const portable = isMethodName(method) ? method : undefined;
+    // The method hit, unless silent or goal-only
+    const hitMethod = rule.silent === true ? undefined : method;
+    const portable =
+      hitMethod !== undefined && isMethodName(hitMethod)
+        ? hitMethod
+        : undefined;
 
-    if (!sendsHit && goalId === undefined) {
+    if (hitMethod === undefined && goalId === undefined) {
       logSkip(
         logger,
         `${id}|${event.name}|silent`,
@@ -119,13 +128,14 @@ export const destinationPiwikPro: Destination = {
     // Resolve everything first, so this event's commands are pushed in one
     // synchronous block below and never interleave with another event's.
     const args =
-      !rule.name && rule.data === undefined
-        ? [await getMappingValue(event, 'data.title', { collector })]
-        : toArgs(data);
+      hitMethod === undefined
+        ? []
+        : implicitPageView && rule.data === undefined
+          ? [await getMappingValue(event, 'data.title', { collector })]
+          : toArgs(data);
 
     // Only a portable method hit or the goal carries dimensions.
-    const withAnyDimensions =
-      goalId !== undefined || (sendsHit && portable !== undefined);
+    const withAnyDimensions = goalId !== undefined || portable !== undefined;
     const destinationDimensions = withAnyDimensions
       ? await resolveDimensionMap(settings.customDimensions, event, collector)
       : {};
@@ -144,10 +154,10 @@ export const destinationPiwikPro: Destination = {
       isIdentified(settings.identified, collector, event),
     ).forEach(paq);
 
-    if (sendsHit) {
+    if (hitMethod !== undefined) {
       if (portable === undefined) {
         // Any other command sets state: not a hit, no dimensions.
-        paq([method, ...trimTrailing(args)]);
+        paq([hitMethod, ...trimTrailing(args)]);
       } else if (DIMENSIONS_ARG[portable] === undefined) {
         // No dimensions argument: set the dimensions around the hit.
         const { before, after } = sequence(

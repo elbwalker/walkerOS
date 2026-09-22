@@ -91,3 +91,38 @@ Add to your `flow.json` destinations:
 </Tabs>
 
 <Configuration type="destination" data={data} />
+
+## Unmapped events
+
+An event without `rule.name` that is not a page view and sets no tracking flag
+(`siteSearch`, `contentImpression` or `contentInteraction`) sends only its goal
+when the rule has `settings.goalId`, so a goal-only rule needs no name. Without
+a goal, such an event is skipped: the destination logs a warning once per event
+name, then repeats at debug level.
+
+## Custom dimensions
+
+Custom dimensions are keyed by bare dimension id, like
+`{ "1": "data.category" }`. Each value is a mapping value, resolved for every
+event.
+
+- `settings.customDimensions` applies to every hit.
+- A rule's `settings.customDimensions` applies to that rule's hits and wins
+  per key. A rule dimension that resolves to nothing removes that dimension
+  for the hit, even when the destination sets it.
+
+The dimensions are set with `setCustomDimension` right before the event's
+hits, a goal included. After them, rule-only dimensions are deleted with
+`deleteCustomDimension` and the destination values are set again, so a rule
+value never leaks into later requests such as outlinks or the heart beat. With
+destination dimension `1` set to `globals.pagegroup` and a page view rule
+dimension `2` set to `data.id`, a page view pushes:
+
+<CodeSnippet
+  code={`_paq.push(['setCustomDimension', 1, 'docs']);
+_paq.push(['setCustomDimension', 2, '/docs/']);
+_paq.push(['trackPageView', 'walkerOS documentation']);
+_paq.push(['deleteCustomDimension', 2]);
+_paq.push(['setCustomDimension', 1, 'docs']);`}
+  language="javascript"
+/>

@@ -26,6 +26,14 @@ interface ScriptElement {
 const appId = 'XXX-XXX-XXX-XXX-XXX';
 const url = 'https://your_account_name.piwik.pro/';
 
+// Anonymous runs without tracker cookies; identification turns them back on.
+const toAnonymous = [
+  ['disableCookies'],
+  ['deleteCookies'],
+  ['setUserIsAnonymous', true],
+];
+const toIdentified = [['enableCookies'], ['deanonymizeUser']];
+
 function createEnv(paq?: unknown[]): DestinationPiwikPro.Env {
   return {
     window: paq ? { _paq: paq } : {},
@@ -156,6 +164,46 @@ describe('Destination PiwikPro', () => {
           (log) => log.level === Level.DEBUG && log.message.includes(skipped),
         ),
       ).toHaveLength(1);
+    });
+
+    test('an implicit rule with a goal sends only the goal', async () => {
+      const { elb, paq } = await setup({
+        settings: { linkTracking: true, identified: { marketing: true } },
+        mapping: {
+          order: {
+            complete: {
+              settings: {
+                goalId: 'g1',
+                goalValue: 'data.total',
+                customDimensions: { '1': 'data.id' },
+              },
+            },
+          },
+        },
+      });
+
+      await elb(getEvent('order complete'));
+
+      expect(paq).toEqual([
+        ...toAnonymous,
+        ['trackGoal', 'g1', 555, { dimension1: '0rd3r1d' }],
+        ['enableLinkTracking'],
+      ]);
+    });
+
+    test('an implicit rule without a goal is still unmapped', async () => {
+      const { elb, paq, logs } = await setup({
+        mapping: {
+          order: {
+            complete: { settings: { customDimensions: { '1': 'data.id' } } },
+          },
+        },
+      });
+
+      await elb(getEvent('order complete'));
+
+      expect(paq).toEqual([]);
+      expect(warnings(logs, 'Event "order complete" skipped')).toHaveLength(1);
     });
 
     test('explicit rule name passes through as a state setter', async () => {
@@ -409,7 +457,7 @@ describe('Destination PiwikPro', () => {
       await elb(pageView);
 
       expect(paq).toEqual([
-        ['setUserIsAnonymous', true],
+        ...toAnonymous,
         ['trackPageView', title],
         ['trackPageView', title],
       ]);
@@ -426,10 +474,10 @@ describe('Destination PiwikPro', () => {
       await elb(pageView);
 
       expect(paq).toEqual([
-        ['setUserIsAnonymous', true],
+        ...toAnonymous,
         ['trackPageView', title],
         ['trackPageView', title],
-        ['deanonymizeUser'],
+        ...toIdentified,
         ['trackPageView', title],
       ]);
     });
@@ -447,7 +495,7 @@ describe('Destination PiwikPro', () => {
       await elb(pageView);
 
       expect(paq).toEqual([
-        ['setUserIsAnonymous', true],
+        ...toAnonymous,
         ['setCustomDimensionValue', 1, '/docs/'],
         ['trackPageView', title],
         ['deleteCustomDimension', 1],
@@ -491,7 +539,7 @@ describe('Destination PiwikPro', () => {
     });
 
     test.each<[string, WalkerOS.Consent | undefined, unknown[]]>([
-      ['not granted', undefined, [['setUserIsAnonymous', true]]],
+      ['not granted', undefined, toAnonymous],
       ['granted', { marketing: true }, []],
     ])(
       'resolves a consent-object identified against the collector consent (%s)',

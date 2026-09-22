@@ -132,11 +132,11 @@ destination passes it through as a state command: it gets no custom dimensions
 and does not count as a hit for link tracking. The ecommerce methods take no
 currency argument.
 
-An event without `rule.name` that is not a page view is skipped. The
+An event without `rule.name` that is not a page view is skipped, unless its
+rule has a goal, which then is sent alone (see [goals](#goals)). The
 destination logs a warning once per event name, then repeats at debug level.
-This holds even when the rule has a goal: give the rule a name, and set
-`silent: true` to send only the goal. To keep unmapped events out of the
-destination entirely, ignore everything with a wildcard and map what you need:
+To keep unmapped events out of the destination entirely, ignore everything with
+a wildcard and map what you need:
 
 <CodeSnippet
   code={`"mapping": {
@@ -153,6 +153,21 @@ A rule's `settings.goalId` adds a `trackGoal` call after the method hit.
 `"data.total"`. A page view rule with goal settings still tracks its page
 view. With `silent: true`, the rule sends only the goal, with its dimensions.
 A `silent` rule without a goal sends nothing and logs a skip.
+
+A rule without `name` on an event that is not a page view sends only the goal
+when it has a `goalId`:
+
+<CodeSnippet
+  code={`"order": {
+  "complete": {
+    "settings": {
+      "goalId": "6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c",
+      "goalValue": "data.total"
+    }
+  }
+}`}
+  language="json"
+/>
 
 ## Custom dimensions
 
@@ -187,14 +202,19 @@ The `identified` setting decides whether the tracker identifies the visitor.
 | `identified` | Tracker |
 |---|---|
 | absent or `true` | Identified, the Piwik PRO default. |
-| `false` | Anonymous. The destination pushes `setUserIsAnonymous(true)` at init. |
+| `false` | Anonymous and without tracker cookies from init. |
 | a consent object, like `{ "marketing": true }` | Identified while any listed consent state is granted, anonymous otherwise. |
+
+While anonymous, the tracker runs without cookies. Switching to anonymous
+pushes `disableCookies`, `deleteCookies` and `setUserIsAnonymous(true)`, so a
+returning visitor who revoked consent loses the tracker's existing cookies too.
 
 With a consent object, the destination starts the tracker anonymous at init,
 unless the collector's consent already grants identification. Before each hit
-it matches the tracker to the current consent: `deanonymizeUser` when
-identification becomes granted, which merges the anonymous session into the
-identified visitor, and `setUserIsAnonymous(true)` when it is revoked.
+it matches the tracker to the current consent: `enableCookies` and
+`deanonymizeUser` when identification becomes granted, which turns the cookies
+back on and merges the anonymous session into the identified visitor, and the
+anonymous commands above when it is revoked.
 
 Use `config.consent` for the states that gate tracking at all, and `identified`
 for the states that gate identification:

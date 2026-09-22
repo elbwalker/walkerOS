@@ -17,17 +17,21 @@ export interface BuildInput {
 
 export type BuildResult = { hits: Hit[] } | { skip: string };
 
-/** The method a rule selects; an explicit rule name already renamed the event. */
+/**
+ * The method a rule selects; an explicit rule name already renamed the event.
+ * A rule without a method but with a goalId selects none: only its goal hit is sent.
+ */
 function selectMethod(
   event: WalkerOS.Event,
   rule: Rule | undefined,
-): { method: MethodName } | { skip: string } {
+): { method?: MethodName } | { skip: string } {
   const name = rule?.name
     ? event.name
     : event.name === 'page view'
       ? 'trackPageView'
       : undefined;
-  if (name === undefined) return { skip: 'unmapped' };
+  if (name === undefined)
+    return rule?.settings?.goalId === undefined ? { skip: 'unmapped' } : {};
   if (!isMethodName(name)) return { skip: `unknown method ${name}` };
   return { method: name };
 }
@@ -84,7 +88,6 @@ export async function buildHits(
   if ('skip' in selected) return selected;
   const { method } = selected;
 
-  const args = await methodArgs(input, collector);
   const identified = isIdentified(settings.identified, collector, event);
   const context = await resolveContext({
     settings,
@@ -102,7 +105,8 @@ export async function buildHits(
   };
   const hits: Hit[] = [];
 
-  if (rule?.silent !== true) {
+  if (method !== undefined && rule?.silent !== true) {
+    const args = await methodArgs(input, collector);
     const result = methodParams(method, args);
     if ('invalid' in result) return { skip: result.invalid };
     const index = DIMENSIONS_ARG[method];

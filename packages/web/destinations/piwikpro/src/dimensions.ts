@@ -86,7 +86,11 @@ export function sequence(
   // deleted before the hit.
   const ruleOnly: DimensionValues = {};
   for (const [id, value] of Object.entries(rule)) {
-    if (!(id in destination) && value !== undefined) ruleOnly[id] = undefined;
+    if (
+      !Object.prototype.hasOwnProperty.call(destination, id) &&
+      value !== undefined
+    )
+      ruleOnly[id] = undefined;
   }
 
   return {

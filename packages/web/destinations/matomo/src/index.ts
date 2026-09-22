@@ -1,7 +1,8 @@
-import type { Mapping, Destination } from './types';
-import type { DestinationWeb } from '@walkeros/web-core';
+import type { Mapping, Destination, Env } from './types';
 import { getMappingValue, isArray } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
+import { resolveDimensionMap, sequence } from './dimensions';
+import { logSkip } from './skip';
 
 // Types
 export * as DestinationMatomo from './types';
@@ -12,113 +13,129 @@ export const destinationMatomo: Destination = {
   config: {},
 
   init({ config, env, logger }) {
-    const { window } = getEnv(env);
-    const w = window as Window;
-    const { settings, loadScript } = config;
-    const { siteId, url } = settings || {};
-
-    // Required parameters
-    if (!siteId) logger.throw('Config settings siteId missing');
-    if (!url) logger.throw('Config settings url missing');
+    const { window } = getEnv<Env>(env);
+    const { settings = {}, loadScript } = config;
+    const { siteId, url } = settings;
 
     // Set up the Matomo command queue
-    w._paq = w._paq || [];
-    const paq = w._paq.push.bind(w._paq);
+    window._paq = window._paq || [];
+    const queue = window._paq;
+    const paq = (command: unknown[]) => {
+      queue.push(command);
+    };
 
     if (loadScript) {
+      // Required only to load and address the tracker
+      if (!siteId) return logger.throw('Config settings siteId missing');
+      if (!url) return logger.throw('Config settings url missing');
+
+      const baseUrl = normalizeUrl(url);
+
       // Load the Matomo tracking script
-      addScript(url!, env);
+      addScript(baseUrl, env);
 
       // Configure tracker URL and site ID
-      paq(['setTrackerUrl', url + 'matomo.php']);
+      paq(['setTrackerUrl', baseUrl + 'matomo.php']);
       paq(['setSiteId', siteId]);
     }
 
     // Cookie-free tracking
-    if (settings?.disableCookies) paq(['disableCookies']);
+    if (settings.disableCookies) paq(['disableCookies']);
 
     // Enable link tracking by default
-    if (settings?.enableLinkTracking !== false) paq(['enableLinkTracking']);
+    if (settings.enableLinkTracking !== false) paq(['enableLinkTracking']);
 
     // Heart beat timer for accurate time-on-page
-    if (settings?.enableHeartBeatTimer)
+    if (settings.enableHeartBeatTimer)
       paq(['enableHeartBeatTimer', settings.enableHeartBeatTimer]);
-
-    // Settings-level custom dimensions (visit-scope, set once at init)
-    if (settings?.customDimensions) {
-      for (const [id, value] of Object.entries(settings.customDimensions)) {
-        paq(['setCustomDimension', Number(id), value]);
-      }
-    }
   },
 
-  async push(event, { rule = {}, data, env, collector }) {
-    const { window } = getEnv(env);
-    const w = window as Window;
-    const paq = w._paq!.push.bind(w._paq!);
-    const eventMapping: Mapping = rule.settings || {};
-
-    // Default page view (no mapping settings)
-    if (event.name === 'page view' && !rule.settings) {
-      paq([
-        'trackPageView',
-        await getMappingValue(event, 'data.title', { collector }),
-      ]);
+  async push(event, { config, rule = {}, data, env, collector, logger, id }) {
+    const { window } = getEnv<Env>(env);
+    const queue = window._paq;
+    if (!queue) {
+      logger.warn('Matomo _paq queue missing, init() not run');
       return;
     }
+    const paq = (command: unknown[]) => {
+      queue.push(command);
+    };
 
+    const settings = config.settings || {};
+    const eventMapping: Mapping = rule.settings || {};
+    const { goalId } = eventMapping;
     const parameters = isArray(data) ? data : [data];
 
-    // Site search
+    // A tracking flag picks the method, an explicit rule name (already
+    // applied to event.name) passes through, and a page view defaults to
+    // trackPageView. Anything else sends only its goal, or is unmapped.
+    let command: unknown[] | undefined;
     if (eventMapping.siteSearch) {
-      paq(['trackSiteSearch', ...parameters]);
+      command = ['trackSiteSearch', ...parameters];
+    } else if (eventMapping.contentImpression) {
+      command = ['trackContentImpression', ...parameters];
+    } else if (eventMapping.contentInteraction) {
+      command = ['trackContentInteraction', ...parameters];
+    } else if (rule.name) {
+      command = [event.name, ...parameters];
+    } else if (event.name === 'page view') {
+      // The page title only when the rule maps no data of its own
+      command =
+        rule.data === undefined
+          ? [
+              'trackPageView',
+              await getMappingValue(event, 'data.title', { collector }),
+            ]
+          : ['trackPageView', ...parameters];
+    } else if (goalId === undefined) {
+      logSkip(
+        logger,
+        `${id}|${event.name}|unmapped`,
+        `Event "${event.name}" skipped: no rule name, tracking flag or goal, and not a page view`,
+        { event: event.name, reason: 'unmapped' },
+      );
       return;
     }
 
-    // Content impression
-    if (eventMapping.contentImpression) {
-      paq(['trackContentImpression', ...parameters]);
-      return;
-    }
-
-    // Content interaction
-    if (eventMapping.contentInteraction) {
-      paq(['trackContentInteraction', ...parameters]);
-      return;
-    }
-
-    // Per-event custom dimensions (action-scope)
-    if (eventMapping.customDimensions) {
-      for (const [id, path] of Object.entries(eventMapping.customDimensions)) {
-        const value = await getMappingValue(event, path, { collector });
-        if (value !== undefined) {
-          paq(['setCustomDimension', Number(id), value]);
-        }
-      }
-    }
-
-    // Default: pass through with mapped name and data
-    paq([event.name, ...parameters]);
-
-    // Goal tracking alongside event
-    if (eventMapping.goalId) {
-      const goalValue = eventMapping.goalValue
+    // Resolve everything first, so this event's commands are pushed in one
+    // synchronous block below and never interleave with another event's.
+    const goalValue =
+      goalId !== undefined && eventMapping.goalValue !== undefined
         ? await getMappingValue(event, eventMapping.goalValue, { collector })
         : undefined;
-      paq(['trackGoal', eventMapping.goalId, goalValue]);
-    }
+
+    const { before, after } = sequence(
+      await resolveDimensionMap(settings.customDimensions, event, collector),
+      await resolveDimensionMap(
+        eventMapping.customDimensions,
+        event,
+        collector,
+      ),
+    );
+
+    before.forEach(paq);
+    if (command) paq(command);
+
+    // Goal tracking alongside event
+    if (goalId !== undefined) paq(['trackGoal', goalId, goalValue]);
+
+    after.forEach(paq);
   },
 };
 
-function addScript(url: string, env?: DestinationWeb.Env) {
-  const { document } = getEnv(env);
-  const doc = document as Document;
-  const script = doc.createElement('script');
+/** Base URL with exactly one trailing slash. */
+function normalizeUrl(url: string): string {
+  return `${url.replace(/\/+$/, '')}/`;
+}
+
+function addScript(url: string, env?: Env) {
+  const { document } = getEnv<Env>(env);
+  const script = document.createElement('script');
   script.type = 'text/javascript';
   script.src = url + 'matomo.js';
   script.async = true;
   script.defer = true;
-  doc.head.appendChild(script);
+  document.head.appendChild(script);
 }
 
 export default destinationMatomo;

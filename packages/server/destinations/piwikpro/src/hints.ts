@@ -55,7 +55,7 @@ export const hints: Hint.Hints = {
     text: 'rule.name is a Piwik PRO JavaScript method and data resolves to its positional arguments (use set for several). The server builds hits for 13 methods: trackPageView, trackEvent, trackGoal, trackSiteSearch, trackLink, trackContentImpression, trackContentInteraction, ecommerceProductDetailView, ecommerceAddToCart, ecommerceRemoveFromCart, ecommerceCartUpdate, ecommerceOrder and ping. A web destination mapping copied to the server produces the same hits. State setters such as setUserId are web only; any other method is skipped with a warning.',
   },
   'unmapped-events': {
-    text: 'An event without rule.name is skipped with a warning, except page view, which becomes trackPageView. To keep unmapped events out of the destination entirely, ignore everything with a wildcard and map what you need: { "*": { "*": { "ignore": true } }, "page": { "view": {} } }.',
+    text: 'A page view without rule.name becomes trackPageView. Any other event without rule.name sends only its goal when the rule has settings.goalId, and is otherwise skipped with a warning (once per event name, then at debug level). A named rule with silent: true also sends only its goal. To keep other events out of the destination entirely, ignore everything with a wildcard and map what you need: { "*": { "*": { "ignore": true } }, "page": { "view": {} } }.',
   },
   'visitor-id': {
     text: 'visitorId defaults to event.user.device and is sent as _id. A 16 character hex value passes through, anything else is hashed to 16 hex characters, so walkerOS device ids always hash. For cookieless tracking, run the fingerprint transformer with output user.hash and length 16, and set visitorId: "event.user.hash".',

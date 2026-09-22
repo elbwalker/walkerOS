@@ -2,7 +2,7 @@ import type { Hint } from '@walkeros/core';
 
 export const hints: Hint.Hints = {
   'identified-consent': {
-    text: 'settings.identified controls identified or anonymous tracking. Absent or true: identified, the Piwik PRO default. false: setUserIsAnonymous(true) at init. A consent object like { "marketing": true }: anonymous until that consent is granted, then deanonymizeUser merges the anonymous session into the identified visitor. Keep config.consent for the states that gate tracking at all; do not repeat the identified states there, or events are queued and never reach the destination.',
+    text: 'settings.identified controls identified or anonymous tracking. Absent or true: identified, the Piwik PRO default. false: anonymous from init, without tracker cookies (disableCookies, deleteCookies, setUserIsAnonymous(true)). A consent object like { "marketing": true }: anonymous and cookieless until that consent is granted, then enableCookies and deanonymizeUser merge the anonymous session into the identified visitor. Keep config.consent for the states that gate tracking at all; do not repeat the identified states there, or events are queued and never reach the destination.',
     code: [
       {
         lang: 'json',
@@ -29,7 +29,7 @@ export const hints: Hint.Hints = {
     ],
   },
   'unmapped-events': {
-    text: 'An event without a rule name that is not a page view is skipped with a warning (once per event name, then at debug level), even when its rule has a goal: give the rule a name, and set silent: true to send only the goal. To keep other events out of the destination entirely, ignore everything with a wildcard and keep the page view explicitly.',
+    text: 'An event without a rule name that is not a page view sends only its goal when the rule has settings.goalId, and is otherwise skipped with a warning (once per event name, then at debug level). A named rule with silent: true also sends only its goal. To keep other events out of the destination entirely, ignore everything with a wildcard and keep the page view explicitly.',
     code: [
       {
         lang: 'json',

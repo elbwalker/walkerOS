@@ -8,9 +8,10 @@
 
 Server-side delivery of walkerOS events to the Piwik PRO Tracking API. It uses
 the same mapping format as the Piwik PRO web destination: `rule.name` is a Piwik
-PRO JavaScript method such as `trackEvent` or `ecommerceOrder`, and a web
-mapping copied to the server produces the same hits, sent as one bulk request
-per batch.
+PRO JavaScript method such as `trackEvent` or `ecommerceOrder`. A web mapping
+that uses the 13 portable methods produces the same hits on the server, sent as
+one bulk request per batch. Browser-only commands such as `setUserId` are
+skipped.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/piwikpro)
 &bull;

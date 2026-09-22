@@ -78,6 +78,16 @@ describe('push', () => {
     expect(request).toContain('&rec=1&');
   });
 
+  it('normalizes the url when init is skipped', async () => {
+    await setup({ init: true });
+    await collector.push(event('page view'));
+    expect(sendServer).toHaveBeenCalledWith(
+      ENDPOINT,
+      expect.any(String),
+      expect.any(Object),
+    );
+  });
+
   it('form-encodes a space and an umlaut', async () => {
     await setup();
     await collector.push(
