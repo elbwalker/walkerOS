@@ -21,8 +21,11 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 [Piwik PRO](https://piwik.pro/) is a European, privacy-focused web analytics
 and marketing platform. The destination sends events to Piwik PRO via the
-`_paq` command queue, loading the tracking container script and forwarding
-page views, custom events, and ecommerce calls.
+`_paq` command queue: page views, custom events, goals, site search, links,
+content tracking, ecommerce and custom dimensions. With `loadScript: true` it
+also loads the Piwik PRO JavaScript tracking client from your account. For
+server-side delivery with the same mapping, see the
+[Piwik PRO server destination](/docs/destinations/server/piwikpro).
 
 <WhereThisFits
   pre={<>Piwik PRO is a <strong>web destination</strong> in the walkerOS flow:</>}
@@ -50,6 +53,7 @@ await startFlow({
     piwikpro: {
       code: destinationPiwikPro,
       config: {
+        loadScript: true,
         settings: {
           appId: 'XXX-XXX-XXX-XXX-XXX',
           url: 'https://your_account_name.piwik.pro/',
@@ -71,6 +75,7 @@ Add to your `flow.json` destinations:
   "piwikpro": {
     "package": "@walkeros/web-destination-piwikpro",
     "config": {
+      "loadScript": true,
       "settings": {
         "appId": "XXX-XXX-XXX-XXX-XXX",
         "url": "https://your_account_name.piwik.pro/"
@@ -87,3 +92,147 @@ Add to your `flow.json` destinations:
 </Tabs>
 
 <Configuration type="destination" data={data} />
+
+## Loading the tracker
+
+With `loadScript: true`, the destination loads `ppms.js` from your account URL
+and registers the tracker URL and site id. `url` and `appId` are required only
+then. When the Piwik PRO container already runs on the page, leave
+`loadScript` unset. The destination then only pushes commands to `_paq`.
+
+## Methods
+
+`rule.name` is a Piwik PRO JavaScript method, and `data` resolves to its
+arguments in order. An array built with `set` is spread, any other value is a
+single argument. Trailing undefined arguments are dropped. A `page view` without
+`rule.name` calls `trackPageView`, with `rule.data` as its arguments, or else
+`data.title` as the title.
+
+| Method | Arguments | Custom dimensions |
+|---|---|---|
+| `trackPageView` | `[title]` | Set around the hit |
+| `trackEvent` | `category, action[, name[, value[, dimensions]]]` | Dimensions argument |
+| `trackGoal` | `goalId[, conversionValue[, dimensions]]` | Dimensions argument |
+| `trackSiteSearch` | `keyword[, category[, resultCount[, dimensions]]]` | Dimensions argument |
+| `trackLink` | `linkAddress, linkType[, dimensions]` | Dimensions argument |
+| `trackContentImpression` | `contentName[, contentPiece[, contentTarget]]` | Set around the hit |
+| `trackContentInteraction` | `contentInteraction, contentName[, contentPiece[, contentTarget]]` | Set around the hit |
+| `ecommerceProductDetailView` | `products` | Set around the hit |
+| `ecommerceAddToCart` | `products` | Set around the hit |
+| `ecommerceRemoveFromCart` | `products` | Set around the hit |
+| `ecommerceCartUpdate` | `products, grandTotal` | Set around the hit |
+| `ecommerceOrder` | `products, { orderId, grandTotal, subTotal, tax, shipping, discount }` | Set around the hit |
+| `ping` | none | Set around the hit |
+| Any other `_paq` command by its explicit name, such as `setUserId` | As your mapping passes them | None |
+
+The first 13 are the portable methods: the
+[server destination](/docs/destinations/server/piwikpro) builds the same hits
+from the same mapping. Any other command works only in the browser. The
+destination passes it through as a state command: it gets no custom dimensions
+and does not count as a hit for link tracking. The ecommerce methods take no
+currency argument.
+
+An event without `rule.name` that is not a page view is skipped. The
+destination logs a warning once per event name, then repeats at debug level.
+This holds even when the rule has a goal: give the rule a name, and set
+`silent: true` to send only the goal. To keep unmapped events out of the
+destination entirely, ignore everything with a wildcard and map what you need:
+
+<CodeSnippet
+  code={`"mapping": {
+  "*": { "*": { "ignore": true } },
+  "page": { "view": {} }
+}`}
+  language="json"
+/>
+
+## Goals
+
+A rule's `settings.goalId` adds a `trackGoal` call after the method hit.
+`settings.goalValue` is a mapping value for its conversion value, such as
+`"data.total"`. A page view rule with goal settings still tracks its page
+view. With `silent: true`, the rule sends only the goal, with its dimensions.
+A `silent` rule without a goal sends nothing and logs a skip.
+
+## Custom dimensions
+
+Custom dimensions are keyed by bare dimension id, like `{ "1": "data.size" }`.
+Each value is a mapping value, resolved for every event.
+
+- `settings.customDimensions` applies to every hit.
+- A rule's `settings.customDimensions` applies to that rule's hits and wins per
+  key. A rule dimension that resolves to nothing removes that dimension from
+  the hit, even when the destination sets it.
+- A dimensions object your mapping passes as the method's own argument wins
+  over both settings. Its values are passed unencoded, so percent-encode them
+  yourself. Keys other than `dimension{id}` are dropped.
+
+How the dimensions reach Piwik PRO depends on the method:
+
+- `trackEvent`, `trackGoal`, `trackSiteSearch` and `trackLink` get them as
+  their dimensions argument, `{ "dimension1": "l" }`, with the values from the
+  settings percent-encoded. The goal gets the destination and rule dimensions.
+- Page view, content, ecommerce and `ping` hits have no dimensions argument.
+  Their dimensions are set just before the hit with `setCustomDimensionValue`
+  and restored after it: rule-only dimensions are deleted with
+  `deleteCustomDimension`, and the destination values are set again. A rule
+  value therefore never leaks into the tracker's automatic hits, such as
+  outlinks, while destination values stay set on purpose. This requires the
+  Piwik PRO tracker 15.3 or later.
+
+## Identified and anonymous
+
+The `identified` setting decides whether the tracker identifies the visitor.
+
+| `identified` | Tracker |
+|---|---|
+| absent or `true` | Identified, the Piwik PRO default. |
+| `false` | Anonymous. The destination pushes `setUserIsAnonymous(true)` at init. |
+| a consent object, like `{ "marketing": true }` | Identified while any listed consent state is granted, anonymous otherwise. |
+
+With a consent object, the destination starts the tracker anonymous at init,
+unless the collector's consent already grants identification. Before each hit
+it matches the tracker to the current consent: `deanonymizeUser` when
+identification becomes granted, which merges the anonymous session into the
+identified visitor, and `setUserIsAnonymous(true)` when it is revoked.
+
+Use `config.consent` for the states that gate tracking at all, and `identified`
+for the states that gate identification:
+
+<CodeSnippet
+  code={`"config": {
+  "consent": { "analytics": true },
+  "settings": {
+    "identified": { "marketing": true }
+  }
+}`}
+  language="json"
+/>
+
+:::caution
+Do not repeat the `identified` states in `config.consent`. Events without that
+consent are then queued and never reach the destination, so the tracker never
+sees the anonymous hits.
+:::
+
+## Link tracking
+
+Automatic outlink and download tracking is on by default. The destination
+pushes `enableLinkTracking` once per page, right after the first hit it sends,
+such as a page view, an event or a goal. It never pushes it at init, so a page
+without a hit gets no automatic link tracking. Commands that set state, such as
+`setUserId`, are not hits and do not start it. Set `linkTracking: false` to
+switch it off.
+
+## Several Piwik PRO destinations
+
+The tracker state the destination manages, link tracking and the identified
+state, belongs to the collector. Two Piwik PRO destinations on one page share
+it: link tracking starts once, after the first hit of either destination. Give
+both the same `identified` setting, or each will switch the shared tracker
+back and forth.
+
+## Related
+
+- [Piwik PRO server destination](/docs/destinations/server/piwikpro)
+- [Consent management](/docs/guides/consent)

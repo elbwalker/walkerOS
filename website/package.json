@@ -39,6 +39,7 @@
     "@walkeros/server-destination-mixpanel": "^4.6.1",
     "@walkeros/server-destination-mparticle": "^4.6.1",
     "@walkeros/server-destination-pinterest": "^4.6.1",
+    "@walkeros/server-destination-piwikpro": "^4.6.1",
     "@walkeros/server-destination-posthog": "^4.6.1",
     "@walkeros/server-destination-reddit": "^4.6.1",
     "@walkeros/server-destination-redis": "^4.6.1",

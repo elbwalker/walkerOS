@@ -215,7 +215,7 @@ const { collector } = await startFlow({
         ingest: {
           map: {
             ip: { key: 'ip' },
-            ua: { key: 'headers.user-agent' },
+            userAgent: { key: 'headers.user-agent' },
             origin: { key: 'headers.origin' },
             referer: { key: 'headers.referer' },
           },
@@ -332,7 +332,7 @@ Use walkerOS mapping features for complex extraction:
     // Nested structure
     request: {
       map: {
-        ua: { key: 'headers.user-agent' },
+        userAgent: { key: 'headers.user-agent' },
         origin: { key: 'headers.origin' },
       },
     },

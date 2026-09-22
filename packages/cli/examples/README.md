@@ -354,6 +354,7 @@ Flow configs use the `Flow.Config` format:
 - `@walkeros/server-destination-meta` → `destinationMeta` (Meta CAPI)
 - `@walkeros/server-destination-aws` → `destinationAWS`
 - `@walkeros/server-destination-gcp` → `destinationGCP`
+- `@walkeros/server-destination-piwikpro` → `destinationPiwikPro`
 
 **Universal**:
 
