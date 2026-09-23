@@ -130,7 +130,12 @@ describe('cache envelope round-trip (request-cache callers)', () => {
 
     // Structural round-trip: the decoded event matches the original exactly.
     expect(destinationEvents).toHaveLength(1);
-    expect(destinationEvents[0]).toEqual(enrichedEvent);
+    // The cached event is the same logical event, so it keeps the span id
+    // of the event that entered the chain.
+    expect(destinationEvents[0]).toEqual({
+      ...enrichedEvent,
+      id: expect.stringMatching(/^[0-9a-f]{16}$/),
+    });
     expect(destinationEvents[0].data).toEqual({
       id: '/x',
       count: 3,

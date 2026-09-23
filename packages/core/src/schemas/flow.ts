@@ -18,7 +18,7 @@
  */
 
 import { z, toJsonSchema } from './validation';
-import { RouteSchema, RouteWithoutManySchema } from './matcher';
+import { RouteSchema } from './matcher';
 import { EventCacheSchema, StoreCacheSchema } from './cache';
 import { StateSchema } from './state';
 
@@ -519,11 +519,11 @@ export const DestinationSchema = z
     variables: VariablesSchema.optional().describe(
       'Destination-level variables (highest priority in cascade)',
     ),
-    before: RouteWithoutManySchema.optional().describe(
-      'Post-collector transformer chain. String, string[], or Route[] for conditional routing. `many` is not valid here — use multiple destinations for post-collector fan-out.',
+    before: RouteSchema.optional().describe(
+      'Transformer chain run for this destination only, before it receives the event. String, string[], or a Route for conditional routing.',
     ),
-    next: RouteWithoutManySchema.optional().describe(
-      'Post-push transformer chain. Push response available at context.ingest._response. `many` is not valid here — use multiple destinations for post-collector fan-out.',
+    next: RouteSchema.optional().describe(
+      'Post-push transformer chain. Push response available at context.ingest._response.',
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
@@ -816,7 +816,11 @@ export const FlowSchema = z
         'Store configurations (key-value storage) keyed by unique identifier',
       ),
     collector: z
-      .unknown()
+      .looseObject({
+        next: RouteSchema.optional().describe(
+          'Collector chain: runs once per completed event before the destination fan-out. A stop drops the event for every destination.',
+        ),
+      })
       .meta({
         id: 'FlowCollector',
         title: 'Collector.InitConfig',

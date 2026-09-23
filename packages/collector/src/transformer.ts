@@ -1,52 +1,55 @@
 /**
  * @module transformer
  *
- * Transformer Chain Utilities
- * ==========================
+ * Transformer Chains
+ * ==================
  *
- * This module provides the unified implementation for transformer chains in walkerOS.
- * Chains are used at two points in the data flow:
+ * The one chain runner of walkerOS. Every chain position (`source.before`,
+ * `source.next`, `transformer.before`, `destination.before`,
+ * `destination.next`) and the CLI simulation run through
+ * `runTransformerChain`.
  *
- * 1. Pre-collector chains (source.next):
- *    Source → [Transformer Chain] → Collector
- *    Events are processed before the collector sees them.
+ * A chain starts from a Route (or a continuation of one). The runner loops
+ * `advanceChain` from `@walkeros/core`, which resolves the route hop by hop
+ * with the root the previous step left (`{ ingest, event }`):
  *
- * 2. Post-collector chains (destination.before):
- *    Collector → [Transformer Chain] → Destination
- *    Events are processed before reaching specific destinations.
+ * - `run`: the member runs (cache, `before`, `state`, push); its own `next`
+ *   is inserted right after it, then the explicit array continues.
+ * - `fork` (a `many`, or a transformer returning `Result[]`): each copy
+ *   finishes the whole rest of the path on its own, with its own span id
+ *   (`deriveSpanId`) and a cloned ingest. Copies never merge; every finished
+ *   copy is handed back as its own event.
+ * - `stop`: the running copy ends (`copies: []`, `stopped: true`).
  *
- * Key Functions:
- * - extractTransformerNextMap(): Extracts next links from transformer instances
- * - extractChainProperty(): Unified extraction of chain properties from definitions
- * - walkChain(): Resolves chain IDs from starting point
- * - runTransformerChain(): Executes a chain of transformers on an event
- *
- * Chain Resolution:
- * - String start: Walk transformer.next links until chain ends
- * - Array start: Use array directly (explicit chain, ignores transformer.next)
- *
- * Chain Termination:
- * - Transformer returns false → chain stops, event is dropped
- * - Transformer throws error → chain stops, event is dropped
- * - Transformer returns void → continue with unchanged event
- * - Transformer returns event → continue with modified event
+ * Chain termination per member:
+ * - returns false or throws: the copy is dropped (`droppedBy`)
+ * - returns void: continue with the unchanged event
+ * - returns `{ event }`: continue with the new event
+ * - returns `{ next }`: that route runs right after the member, in place of
+ *   the member's own `next`, then the array continues
  */
 import type {
   Cache,
+  ChainContinuation,
   Collector,
+  RespondFn,
   Transformer,
   WalkerOS,
   Ingest,
 } from '@walkeros/core';
 import {
+  advanceChain,
+  clone,
   createIngest,
+  deriveSpanId,
   emitStep,
   FatalError,
+  isChainContinuation,
   isObject,
+  startChain,
   stepId,
   tryCatchAsync,
   useHooks,
-  getNextSteps,
   compileCache,
   checkCache,
   storeCache,
@@ -59,40 +62,6 @@ import {
 import { buildBaseState, journeyFields } from './observerEmit';
 import { getCacheStore, getStateStore } from './cache';
 import { buildReportError, errorMeta } from './report-error';
-
-/**
- * Extracts transformer next configuration for chain walking.
- * Maps transformer instances to their config.next values.
- *
- * This is the single source of truth for extracting chain links.
- * Used by both source.ts (pre-collector chains) and destination.ts (post-collector chains).
- *
- * @param transformers - Map of transformer instances
- * @returns Map of transformer IDs to their next configuration
- */
-export function extractTransformerNextMap(
-  transformers: Transformer.Transformers,
-): Record<string, { next?: string | string[] }> {
-  const result: Record<string, { next?: string | string[] }> = {};
-  for (const [id, transformer] of Object.entries(transformers)) {
-    const next = transformer.config?.next;
-    // Static shapes are recorded for synchronous chain walking.
-    // Conditional shapes (RouteConfig, mixed arrays) resolve per-event via
-    // getNextSteps at dispatch time; they get an empty entry here so the
-    // chain walker stops at this hop rather than following a stale link.
-    if (typeof next === 'string') {
-      result[id] = { next };
-    } else if (
-      Array.isArray(next) &&
-      next.every((entry) => typeof entry === 'string')
-    ) {
-      result[id] = { next: next as string[] };
-    } else {
-      result[id] = {};
-    }
-  }
-  return result;
-}
 
 /**
  * Extracts chain property from definition and merges into config.
@@ -122,68 +91,6 @@ export function extractChainProperty<
   }
 
   return { config, chainValue: undefined };
-}
-
-/**
- * Walks a transformer chain starting from a given transformer ID.
- * Returns ordered array of transformer IDs in the chain.
- *
- * Used for on-demand chain resolution:
- * - Called from destination.ts with destination.config.before
- * - Called from source.ts with source.config.next
- *
- * @param startId - First transformer in chain, or explicit array of transformer IDs
- * @param transformers - Available transformer configs with optional `next` field
- * @returns Ordered array of transformer IDs to execute
- *
- * @example
- * // Single transformer
- * walkChain('redact', { redact: {} }) // ['redact']
- *
- * @example
- * // Chain via next
- * walkChain('a', { a: { next: 'b' }, b: { next: 'c' }, c: {} }) // ['a', 'b', 'c']
- *
- * @example
- * // Explicit array
- * walkChain(['x', 'y'], {}) // ['x', 'y']
- */
-export function walkChain(
-  startId: string | string[] | undefined,
-  transformers: Record<string, { next?: string | string[] }> = {},
-): string[] {
-  if (!startId) return [];
-
-  // If array provided, use it directly (explicit chain)
-  if (Array.isArray(startId)) {
-    return startId;
-  }
-
-  // Walk the chain via transformer.next links
-  const chain: string[] = [];
-  const visited = new Set<string>();
-  let current: string | undefined = startId;
-
-  while (current && transformers[current]) {
-    if (visited.has(current)) {
-      // Circular reference detected - stop walking
-      break;
-    }
-    visited.add(current);
-    chain.push(current);
-
-    const next: string | string[] | undefined = transformers[current].next;
-
-    // If transformer has array next, append it and stop walking
-    if (Array.isArray(next)) {
-      chain.push(...next);
-      break;
-    }
-
-    current = next;
-  }
-
-  return chain;
 }
 
 /**
@@ -551,90 +458,316 @@ export async function transformerPush(
 }
 
 /**
- * Clone an ingest for an independent branch (e.g. a `many` fan-out branch).
- *
- * Each branch needs its own `_meta.path` so cycle protection and the
- * MAX_PATH_LENGTH safety valve operate per-branch rather than colliding
- * across sibling forks. The top-level object and `_meta` are shallow-copied;
- * `_meta.path` is duplicated so appends in one branch do not leak into others.
- *
- * `branchId` is reserved for future per-branch labelling (Task 4.1) and is
- * not currently written into `_meta`; it is accepted now so callers don't
- * need to change their call sites when error-isolation lands.
+ * Clone an ingest for an independent copy (a fork). The top level and
+ * `_meta` are shallow-copied and `_meta.path` is duplicated, so the path
+ * budget and hop count of one copy never leak into a sibling.
  */
-export function cloneIngest(
-  ingest: Ingest | undefined,
-  branchId: string,
-): Ingest {
-  if (!ingest) return createIngest(branchId);
+export function cloneIngest(ingest: Ingest): Ingest {
   return {
     ...ingest,
     _meta: { ...ingest._meta, path: [...ingest._meta.path] },
   };
 }
 
+/** Safety valve against unbounded path growth, per copy. */
+const MAX_PATH_LENGTH = 256;
+
+/** What every copy of one chain run shares. */
+interface ChainRun {
+  collector: Collector.Instance;
+  transformers: Transformer.Transformers;
+  chainContext?: string;
+}
+
+/** A cache MISS of a member, written once the member settled. */
+interface CacheMiss {
+  key: string;
+  ttl: number;
+}
+
+/** A member about to run, as `advanceChain` handed it out. */
+interface Member {
+  id: string;
+  ancestry: readonly string[];
+  /** The stack after the member; carries its own `next` on top if any. */
+  rest: ChainContinuation;
+  /** Whether `rest` carries the member's own `next` on top. */
+  ownNext: boolean;
+}
+
 /**
- * Runs an event through a chain of transformers.
- *
- * @param collector - The collector instance with transformers
- * @param transformers - Map of transformer instances
- * @param chain - Ordered array of transformer IDs to execute
- * @param event - The event to process
- * @param ingest - Mutable ingest context flowing through the pipeline
- * @returns The processed event or null if chain was stopped
+ * A member that resumes after its `before` chain fanned out: each child
+ * runs the member's own push (no second `before`, path and cache already
+ * accounted for by the parent copy).
  */
-export async function runTransformerChain(
-  collector: Collector.Instance,
-  transformers: Transformer.Transformers,
-  chain: string[],
+interface Resume {
+  member: Member;
+  cacheMiss?: CacheMiss;
+}
+
+/** One independent copy of the event walking the chain. */
+interface Copy {
+  stack: ChainContinuation;
+  event: WalkerOS.DeepPartialEvent;
+  ingest: Ingest;
+  respond: RespondFn | undefined;
+  resume?: Resume;
+}
+
+type MemberOutcome =
+  | { kind: 'halt'; result: Transformer.ChainResult }
+  | { kind: 'fork'; copies: Copy[] }
+  | {
+      kind: 'continue';
+      event: WalkerOS.DeepPartialEvent;
+      respond: RespondFn | undefined;
+      stack: ChainContinuation;
+    };
+
+/** The event's id, or '' when it has none. */
+function idOf(event: WalkerOS.DeepPartialEvent): string {
+  return typeof event.id === 'string' ? event.id : '';
+}
+
+/**
+ * Identity along one copy: an event a member handed on without an id (a
+ * rebuilt event, a mock, a cached value) is still the event the member
+ * received, so it keeps that id. The one identity rule for a single path;
+ * forks derive theirs in `forkOf`.
+ */
+function keepIdentity(
+  received: WalkerOS.DeepPartialEvent,
   event: WalkerOS.DeepPartialEvent,
-  ingest?: Ingest,
-  respond?: import('@walkeros/core').RespondFn,
-  chainContext?: string,
+): WalkerOS.DeepPartialEvent {
+  const id = idOf(received);
+  return id !== '' && idOf(event) === '' ? { ...event, id } : event;
+}
+
+/**
+ * A fork child: a deep copy of the event (siblings run concurrently and
+ * must never share nested objects), with its own cloned ingest. A child
+ * still carrying the parent's id (or no id) gets a span id derived from the
+ * parent id and its position, so forks never collapse on `event.id`; a
+ * child with an id of its own keeps it. The ingest records the parent as
+ * `parentEventId`, which links the fork into the parent's journey.
+ */
+function forkOf(
+  parent: WalkerOS.DeepPartialEvent,
+  child: WalkerOS.DeepPartialEvent,
+  ingest: Ingest,
+  position: number,
+): { event: WalkerOS.DeepPartialEvent; ingest: Ingest } {
+  const forkIngest = cloneIngest(ingest);
+  const event = clone(child);
+  const parentId = idOf(parent);
+  if (parentId === '') return { event, ingest: forkIngest };
+  forkIngest._meta.parentEventId = parentId;
+  const childId = idOf(event);
+  if (childId === '' || childId === parentId)
+    event.id = deriveSpanId(parentId, position);
+  return { event, ingest: forkIngest };
+}
+
+/** A finished result: every copy that continues, with its ingest. */
+function finished(
+  copies: Transformer.ChainCopy[],
+  respond: RespondFn | undefined,
+): Transformer.ChainResult {
+  return { copies, respond };
+}
+
+/** The stack after a member, with a route pushed on its behalf. */
+function withMemberRoute(
+  member: Member,
+  route: Transformer.Route | undefined,
+): ChainContinuation {
+  if (route === undefined) return member.rest;
+  // A route the member returned replaces the member's own `next`.
+  const below = member.ownNext ? member.rest.slice(1) : member.rest;
+  return [{ route, ancestry: member.ancestry }, ...below];
+}
+
+/**
+ * Runs every copy of a fork to its end, each isolated (a throw in one copy
+ * never starves its siblings). Finished copies are handed back one by one;
+ * a copy that was dropped or stopped contributes nothing. A copy started
+ * without `respond` cannot hand a respond back (no respond across `many`).
+ */
+async function runForks(
+  run: ChainRun,
+  copies: Copy[],
+  respond: RespondFn | undefined,
 ): Promise<Transformer.ChainResult> {
-  const MAX_PATH_LENGTH = 256;
+  const results = await Promise.all(
+    copies.map((copy, index) =>
+      tryCatchAsync(runCopy, (err): Transformer.ChainResult => {
+        run.collector.logger
+          .scope('transformer:fork')
+          .error(`fork ${index} failed`, errorMeta(err));
+        return { copies: [] };
+      })(run, copy),
+    ),
+  );
 
-  // Ensure an ingest exists so the per-branch path budget engages
-  // regardless of caller. Production callers (source/push/destination)
-  // always pass one; this guards direct test invocations and any future
-  // entrypoint that omits it. Without an ingest, the safety valve below
-  // can never trip — leaving cyclic `many` graphs unbounded.
-  if (!ingest) {
-    ingest = createIngest(chain[0] ?? 'chain');
+  const survivors: Transformer.ChainCopy[] = [];
+  let lastRespond = respond;
+  let allStopped = results.length > 0;
+  let droppedBy: string | undefined;
+  results.forEach((result, index) => {
+    if (copies[index].respond !== undefined && result.respond)
+      lastRespond = result.respond;
+    if (!result.stopped) allStopped = false;
+    // A dropped or stopped copy (route stop or cache.stop halt) ends here.
+    if (result.stopped || result.copies.length === 0) {
+      if (droppedBy === undefined) droppedBy = result.droppedBy;
+      return;
+    }
+    survivors.push(...result.copies);
+  });
+
+  if (survivors.length === 0) {
+    return {
+      copies: survivors,
+      respond: lastRespond,
+      ...(allStopped ? { stopped: true as const } : {}),
+      ...(droppedBy !== undefined ? { droppedBy } : {}),
+    };
   }
+  return finished(survivors, lastRespond);
+}
 
-  if (chainContext && ingest._meta) {
-    ingest._meta.chainPath = chainContext;
-  }
+/** Walks one copy to its end: loops `advanceChain`, runs each member. */
+async function runCopy(
+  run: ChainRun,
+  copy: Copy,
+): Promise<Transformer.ChainResult> {
+  const { ingest } = copy;
+  let { stack, event, respond } = copy;
+  let resume = copy.resume;
 
-  let processedEvent = event;
-  let currentRespond = respond;
-
-  for (const transformerName of chain) {
-    const transformer = transformers[transformerName];
-    if (!transformer) {
-      collector.logger.warn(`Transformer not found: ${transformerName}`);
-      continue;
+  for (;;) {
+    let member: Member;
+    let resumed: Resume | undefined;
+    if (resume) {
+      member = resume.member;
+      resumed = resume;
+      resume = undefined;
+    } else {
+      const step = advanceChain(
+        stack,
+        createMappingRoot(ingest, event),
+        run.transformers,
+      );
+      if (step.kind === 'done') return finished([{ event, ingest }], respond);
+      if (step.kind === 'stop') {
+        return {
+          copies: [],
+          respond,
+          stopped: true,
+          ...(step.owner !== undefined ? { droppedBy: step.owner } : {}),
+        };
+      }
+      if (step.kind === 'fork') {
+        const parent = event;
+        return runForks(
+          run,
+          step.branches.map((branch, position) => ({
+            stack: branch,
+            ...forkOf(parent, parent, ingest, position),
+            respond: undefined,
+          })),
+          respond,
+        );
+      }
+      const transformer = run.transformers[step.id];
+      member = {
+        id: step.id,
+        ancestry: step.ancestry,
+        rest: step.rest,
+        ownNext: transformer ? transformer.config.next !== undefined : false,
+      };
     }
 
+    const outcome = await runMember(
+      run,
+      member,
+      event,
+      ingest,
+      respond,
+      resumed,
+    );
+    if (outcome.kind === 'halt') return outcome.result;
+    if (outcome.kind === 'fork') return runForks(run, outcome.copies, respond);
+    event = outcome.event;
+    respond = outcome.respond;
+    stack = outcome.stack;
+  }
+}
+
+/**
+ * Runs one member: path accounting, init, mocks, cache, its `before` chain,
+ * `state`, the push, and the result handling. Returns how the copy goes on.
+ */
+async function runMember(
+  run: ChainRun,
+  member: Member,
+  event: WalkerOS.DeepPartialEvent,
+  ingest: Ingest,
+  respond: RespondFn | undefined,
+  resumed: Resume | undefined,
+): Promise<MemberOutcome> {
+  const { collector, transformers, chainContext } = run;
+  const transformerName = member.id;
+  const transformer = transformers[transformerName];
+  let processedEvent = event;
+  let currentRespond = respond;
+  const goOn = (stack: ChainContinuation = member.rest): MemberOutcome => ({
+    kind: 'continue',
+    event: keepIdentity(event, processedEvent),
+    respond: currentRespond,
+    stack,
+  });
+  // A dropped or route-stopped copy hands nothing on (`copies: []`); a
+  // `cache.stop` halt hands its cached copy on, flagged `stopped`, for the
+  // caller to decide.
+  const halt = (result: Transformer.ChainResult): MemberOutcome => ({
+    kind: 'halt',
+    result,
+  });
+
+  if (!transformer) {
+    collector.logger.warn(`Transformer not found: ${transformerName}`);
+    return goOn();
+  }
+
+  // Compile transformer cache once (reused for HIT check and MISS store).
+  // Transformer caches operate on events (step-level HIT/MISS keyed by event
+  // fields), so the rule shape is always EventCacheRule, not StoreCacheRule.
+  const tCacheConfig = transformer.config?.cache as
+    | Cache.Cache<Cache.EventCacheRule>
+    | undefined;
+  const compiledTCache = tCacheConfig ? compileCache(tCacheConfig) : undefined;
+  const tCacheStore = compiledTCache
+    ? getCacheStore(compiledTCache, collector)
+    : undefined;
+
+  let cacheMiss: CacheMiss | undefined = resumed?.cacheMiss;
+
+  if (!resumed) {
     // Safety valve: prevent unbounded path growth
-    if (ingest && ingest._meta && ingest._meta.path.length > MAX_PATH_LENGTH) {
+    if (ingest._meta.path.length > MAX_PATH_LENGTH) {
       collector.logger.error(`Max path length exceeded at ${transformerName}`);
-      return { event: null, respond: currentRespond };
+      return halt({ copies: [], respond: currentRespond });
     }
 
     // Track step in _meta (runtime-managed)
-    if (ingest && ingest._meta) {
-      ingest._meta.hops++;
-      ingest._meta.path.push(transformerName);
-    }
+    ingest._meta.hops++;
+    ingest._meta.path.push(transformerName);
 
     // Initialize transformer if needed. The wrap surfaces a thrown init
     // (misconfiguration, missing env, etc.) with full cause via the scoped
     // logger and counts it on `status.failed`. A non-throw `false` return
-    // from transformerInit itself flows through the same early-return below
-    // (handled by the destination's own log; counter remains untouched on
-    // the deliberate-false path).
+    // from transformerInit itself flows through the same early return below.
     const isInitialized = await tryCatchAsync(
       transformerInit,
       (err: unknown): boolean => {
@@ -650,12 +783,7 @@ export async function runTransformerChain(
       },
     )(collector, transformer, transformerName);
 
-    if (!isInitialized) {
-      // Stop chain on init failure. Thrown cases were already logged with
-      // full cause via the onError above; deliberate-false returns leave
-      // the chain stop signal intact without extra noise.
-      return { event: null, respond: currentRespond };
-    }
+    if (!isInitialized) return halt({ copies: [], respond: currentRespond });
 
     // Path-specific mock check (takes precedence)
     if (
@@ -667,7 +795,7 @@ export async function runTransformerChain(
         .scope(`transformer:${transformer.type || 'unknown'}`)
         .debug('chainMock', { chain: chainContext });
       processedEvent = chainMock as WalkerOS.DeepPartialEvent;
-      continue;
+      return goOn();
     }
 
     // Global mock check
@@ -676,76 +804,33 @@ export async function runTransformerChain(
         .scope(`transformer:${transformer.type || 'unknown'}`)
         .debug('mock');
       processedEvent = transformer.config.mock as WalkerOS.DeepPartialEvent;
-      continue;
+      return goOn();
     }
 
     // Disabled check
-    if (transformer.config?.disabled) {
-      continue;
-    }
-
-    // Compile transformer cache once (reused for HIT check and MISS store).
-    // Transformer caches operate on events (step-level HIT/MISS keyed by event
-    // fields), so the rule shape is always EventCacheRule, not StoreCacheRule.
-    const tCacheConfig = transformer.config?.cache as
-      | Cache.Cache<Cache.EventCacheRule>
-      | undefined;
-    const compiledTCache = tCacheConfig
-      ? compileCache(tCacheConfig)
-      : undefined;
-    const tCacheStore = compiledTCache
-      ? getCacheStore(compiledTCache, collector)
-      : undefined;
-
-    // Compile declarative state entries once. `get` runs before the step's
-    // mapping (so the mapping can read fetched values); `set` runs after the
-    // mapping settles `processedEvent` and before the `next` dispatch.
-    const stateEntries = transformer.config?.state
-      ? compileState(transformer.config.state)
-      : undefined;
-    const stateGet = stateEntries?.filter((entry) => entry.mode === 'get');
-    const stateSet = stateEntries?.filter((entry) => entry.mode === 'set');
-
-    // Apply `state[set]` to a settled event right before it is routed. Called
-    // once per emitted event on every emitting path (straight-through,
-    // runtime `{ next }` single/many, conditional `config.next`, and per fork
-    // of a `Result[]` fan-out). Not called on halted paths (push returned
-    // `false`, a `cache.stop` HIT, a stopped before-chain, init failure).
-    const applyStateSet = async (
-      evt: WalkerOS.DeepPartialEvent,
-    ): Promise<WalkerOS.DeepPartialEvent> => {
-      if (!stateSet || stateSet.length === 0) return evt;
-      return applyState(
-        stateSet,
-        (id) => getStateStore(id, collector),
-        evt,
-        collector,
-        ingest,
-      );
-    };
+    if (transformer.config?.disabled) return goOn();
 
     // Check transformer cache (step-level: skip push, continue chain)
-    let cacheMiss: { key: string; ttl: number } | undefined;
     if (compiledTCache && tCacheStore) {
-      const cacheContext = createMappingRoot(ingest, processedEvent);
       const cacheResult = await checkCache(
         compiledTCache,
         tCacheStore,
-        cacheContext,
+        createMappingRoot(ingest, processedEvent),
       );
 
       if (cacheResult?.status === 'HIT' && cacheResult.value) {
         processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
-        if (compiledTCache.stop)
-          // stop=true → stop chain AND halt pipeline at this position.
-          // Caller branches on `stopped` to skip downstream stages
-          // (collector.push, destinations); see push.ts and source.ts.
-          return {
-            event: processedEvent,
+        // stop=true: stop the chain AND halt the pipeline at this position.
+        // Callers branch on `stopped` to skip downstream stages.
+        if (compiledTCache.stop) {
+          const cached = keepIdentity(event, processedEvent);
+          return halt({
+            copies: [{ event: cached, ingest }],
             respond: currentRespond,
             stopped: true,
-          };
-        continue; // stop=false → next transformer
+          });
+        }
+        return goOn(); // stop=false: next member
       }
 
       if (cacheResult?.status === 'MISS') {
@@ -753,475 +838,211 @@ export async function runTransformerChain(
       }
     }
 
-    // Run transformer.before chain if configured.
-    //
-    // Dispatch uses `getNextSteps`:
-    // - []             → no route matched; skip the before chain (passthrough).
-    // - ['x']          → sequential continuation; walk static .next links from x
-    //                    and run as a single subchain. Preserves cache.stop and
-    //                    null/respond propagation from the nested chain.
-    // - ['a','b',...]  → `many` fan-out. Each branch is an independent
-    //                    terminal subchain with a cloned ingest (per-branch
-    //                    cycle protection). No merge: many is fan-out, not
-    //                    enrichment, so parent processedEvent is unchanged.
-    //                    Per-branch error isolation lands in Task 4.1;
-    //                    respond suppression lands in Task 4.2.
-    const transformerBefore = transformer.config.before;
-    if (transformerBefore) {
-      const beforeIds = getNextSteps(
-        transformerBefore,
-        createMappingRoot(ingest, processedEvent),
-      );
-      if (beforeIds.length === 1) {
-        const beforeChainIds = walkChain(
-          beforeIds[0],
-          extractTransformerNextMap(transformers),
-        );
-        if (beforeChainIds.length > 0) {
-          const beforeResult = await runTransformerChain(
-            collector,
-            transformers,
-            beforeChainIds,
-            processedEvent,
-            ingest,
-            currentRespond,
-            chainContext,
-          );
-          if (beforeResult.event === null)
-            return {
-              event: null,
-              respond: beforeResult.respond ?? currentRespond,
-            }; // Before chain stopped
-          // Propagate pipeline-halt from a nested `cache.stop: true` HIT in
-          // the before chain. The outer caller (push.ts / source.ts) drops
-          // the event before destinations see it.
-          if (beforeResult.stopped) {
-            return {
-              event: Array.isArray(beforeResult.event)
-                ? beforeResult.event[0]
-                : beforeResult.event,
-              respond: beforeResult.respond ?? currentRespond,
-              stopped: true,
-            };
-          }
-          if (beforeResult.respond) currentRespond = beforeResult.respond;
-          // Before chains use first result if fan-out occurred
-          processedEvent = Array.isArray(beforeResult.event)
-            ? beforeResult.event[0]
-            : beforeResult.event;
-        }
-      } else if (beforeIds.length > 1) {
-        // many: independent terminal subchains. Each branch walks to its own
-        // exit with a per-branch ingest clone. Per-branch error isolation
-        // (Task 4.1): wrap each branch dispatch in `tryCatchAsync` so a
-        // throw in one branch (init failure, unforeseen runtime error) does
-        // not reject the surrounding `Promise.all` and starve siblings.
-        // No-respond-across-many: respond ownership cannot be unambiguously
-        // assigned when one inbound request fans out to N terminal flows.
-        // Branch dispatch passes `undefined` instead of `currentRespond`, and
-        // branch results are awaited and discarded — currentRespond is NOT
-        // updated from any branch's wrapped respond.
-        await Promise.all(
-          beforeIds.map((id) =>
-            tryCatchAsync(runTransformerChain, (err) => {
-              collector.logger
-                .scope('transformer:many')
-                .error(`many branch ${id} failed`, errorMeta(err));
-              return { event: null, respond: undefined };
-            })(
-              collector,
-              transformers,
-              walkChain(id, extractTransformerNextMap(transformers)),
-              processedEvent,
-              cloneIngest(ingest, id),
-              undefined,
-              chainContext,
-            ),
-          ),
-        );
-        // No merge: many is fan-out, not enrichment. Parent processedEvent
-        // unchanged.
-      }
-    }
-
-    // state[get]: read from the store and write fetched values onto the event
-    // before the transformer's mapping runs.
-    if (stateGet && stateGet.length > 0) {
-      processedEvent = await applyState(
-        stateGet,
-        (id) => getStateStore(id, collector),
-        processedEvent,
+    // The member's `before` chain (mandatory preparation).
+    if (transformer.config.before !== undefined) {
+      const before = await runTransformerBefore(
         collector,
-        ingest,
-      );
-    }
-
-    // Run the transformer
-    const result = await tryCatchAsync(transformerPush, (err) => {
-      collector.status.failed++;
-      collector.logger
-        .scope(`transformer:${transformer.type || 'unknown'}`)
-        .error('Push failed', errorMeta(err));
-      return false as const; // Stop chain on error
-    })(
-      collector,
-      transformer,
-      transformerName,
-      processedEvent,
-      ingest,
-      currentRespond,
-    );
-
-    // Handle result
-    if (result === false) {
-      // Transformer explicitly stopped the chain (returned false, or threw
-      // and was converted to false by the error handler above).
-      return {
-        event: null,
-        respond: currentRespond,
-        droppedBy: transformerName,
-      };
-    }
-
-    // Handle Result array (fan-out) — MUST be before typeof === 'object'
-    if (Array.isArray(result)) {
-      const remainingChain = chain.slice(chain.indexOf(transformerName) + 1);
-
-      const forkResults = await Promise.all(
-        result.map(async (forkResult) => {
-          const forkEvent = await applyStateSet(
-            forkResult.event || processedEvent,
-          );
-          // Clone ingest per fork to prevent cross-fork contamination
-          const forkIngest = cloneIngest(ingest, 'unknown');
-
-          if (forkResult.next) {
-            // Fork has explicit routing. Dispatch uses `getNextSteps`:
-            // - []             → no route matched; passthrough this fork's
-            //                    event without entering any subchain (fork
-            //                    has explicit routing, so we do NOT fall
-            //                    through to remainingChain).
-            // - ['x']          → walk static .next from x and run that as a
-            //                    single subchain. Preserves the existing
-            //                    "fork has explicit routing terminates the
-            //                    main chain at this branch" semantic — the
-            //                    subchain's ChainResult is this fork's
-            //                    result.
-            // - ['a','b',...]  → `many` fan-out. Each id dispatches as its
-            //                    own terminal subchain with a per-branch
-            //                    cloned ingest. Returns an array of
-            //                    ChainResults; the outer `.flat()` in the
-            //                    aggregation loop folds them into the
-            //                    surrounding flatEvents collection.
-            const forkIds = getNextSteps(
-              forkResult.next,
-              createMappingRoot(forkIngest, forkEvent),
-            );
-            if (forkIds.length === 0) {
-              return { event: forkEvent, respond: currentRespond };
-            }
-            if (forkIds.length === 1) {
-              const branchedChain = walkChain(
-                forkIds[0],
-                extractTransformerNextMap(transformers),
-              );
-              if (branchedChain.length > 0) {
-                return runTransformerChain(
-                  collector,
-                  transformers,
-                  branchedChain,
-                  forkEvent,
-                  forkIngest,
-                  currentRespond,
-                  chainContext,
-                );
-              }
-              return { event: forkEvent, respond: currentRespond };
-            }
-            // Terminal fan-out. Each branch walks to its own exit with a
-            // per-branch ingest clone. Per-branch error isolation
-            // (Task 4.1): wrap each branch dispatch in `tryCatchAsync` so a
-            // throw in one branch does not reject the surrounding
-            // `Promise.all` and starve siblings.
-            // No-respond-across-many: respond ownership cannot be unambiguously
-            // assigned when one inbound request fans out to N terminal flows.
-            // Branches are dispatched with `respond: undefined`, and the
-            // ChainResults returned to the outer aggregation are stripped of
-            // any branch-internal respond so the outer fork's combined result
-            // never propagates a branch's wrapped respond back to the caller.
-            const branchResults = await Promise.all(
-              forkIds.map((id) =>
-                tryCatchAsync(runTransformerChain, (err) => {
-                  collector.logger
-                    .scope('transformer:many')
-                    .error(`many branch ${id} failed`, errorMeta(err));
-                  return { event: null, respond: undefined };
-                })(
-                  collector,
-                  transformers,
-                  walkChain(id, extractTransformerNextMap(transformers)),
-                  forkEvent,
-                  cloneIngest(forkIngest, id),
-                  undefined,
-                  chainContext,
-                ),
-              ),
-            );
-            // Strip per-branch side-channels (respond, stopped) at the many
-            // boundary. The outer aggregation only learns about events from
-            // branch ChainResults; respond and stopped are branch-internal
-            // concerns and must not leak back to the surrounding fork's
-            // combined result.
-            return branchResults.map(
-              (br): Transformer.ChainResult => ({
-                event: br.event,
-                respond: undefined,
-              }),
-            );
-          }
-
-          // Fork continues through remaining chain
-          if (remainingChain.length > 0) {
-            return runTransformerChain(
-              collector,
-              transformers,
-              remainingChain,
-              forkEvent,
-              forkIngest,
-              currentRespond,
-              chainContext,
-            );
-          }
-          return { event: forkEvent, respond: currentRespond };
-        }),
-      );
-
-      // Collect events from ChainResult objects and track last respond
-      let lastForkRespond = currentRespond;
-      const flatEvents: WalkerOS.DeepPartialEvent[] = [];
-      for (const fr of forkResults.flat()) {
-        if (fr === null) continue;
-        if (fr && typeof fr === 'object' && 'event' in fr) {
-          const cr = fr as Transformer.ChainResult;
-          if (cr.respond) lastForkRespond = cr.respond;
-          if (cr.event === null) continue;
-          if (Array.isArray(cr.event)) flatEvents.push(...cr.event);
-          else flatEvents.push(cr.event);
-        } else {
-          flatEvents.push(fr as WalkerOS.DeepPartialEvent);
-        }
-      }
-      if (flatEvents.length === 0)
-        return { event: null, respond: lastForkRespond };
-      if (flatEvents.length === 1)
-        return { event: flatEvents[0], respond: lastForkRespond };
-      return { event: flatEvents, respond: lastForkRespond };
-    }
-
-    if (result && typeof result === 'object') {
-      // Unified TransformerResult handling
-      const { event: resultEvent, respond: resultRespond, next } = result;
-
-      // Update respond if transformer provided a wrapper
-      if (resultRespond) {
-        currentRespond = resultRespond;
-      }
-
-      // Handle chain branching.
-      //
-      // Dispatch uses `getNextSteps`:
-      // - []             → no route matched; passthrough (continue main chain
-      //                    with resultEvent if provided).
-      // - ['x']          → walk static .next from x and run that as a single
-      //                    subchain. The branched subchain's ChainResult
-      //                    becomes this transformer's final result; the main
-      //                    chain terminates here (explicit routing wins).
-      // - ['a','b',...]  → `many` fan-out. Terminal: each branch dispatches
-      //                    as its own subchain with a per-branch ingest
-      //                    clone. Main chain terminates here. Per-branch
-      //                    error isolation arrives in Task 4.1; respond
-      //                    suppression in 4.2.
-      if (next !== undefined) {
-        // Apply `state[set]` to the settled event before this step's `next`
-        // dispatch, once for every branch that emits it.
-        const settledEvent = await applyStateSet(resultEvent || processedEvent);
-        const nextIds = getNextSteps(
-          next,
-          createMappingRoot(ingest, settledEvent),
-        );
-        if (nextIds.length === 0) {
-          // No route matched → passthrough (continue chain)
-          processedEvent = settledEvent;
-          continue;
-        }
-        if (nextIds.length === 1) {
-          const branchedChain = walkChain(
-            nextIds[0],
-            extractTransformerNextMap(transformers),
-          );
-          if (branchedChain.length > 0) {
-            return runTransformerChain(
-              collector,
-              transformers,
-              branchedChain,
-              settledEvent,
-              ingest,
-              currentRespond,
-              chainContext,
-            );
-          }
-          // Branch target not found — drop event (fail-safe).
-          collector.logger.warn(
-            `Branch target not found: ${JSON.stringify(next)}`,
-          );
-          return { event: null, respond: currentRespond };
-        }
-        // many: terminal fan-out. Main chain terminates here. Per-branch
-        // error isolation (Task 4.1): wrap each branch dispatch in
-        // `tryCatchAsync` so a throw in one branch does not reject the
-        // surrounding `Promise.all` and starve siblings.
-        // No-respond-across-many: respond ownership cannot be unambiguously
-        // assigned when one inbound request fans out to N terminal flows.
-        // Branches are dispatched with `respond: undefined`, branch results
-        // are awaited and discarded, and the outer return has
-        // `respond: undefined` so the parent caller (source) sees no
-        // wrapped respond.
-        // No-stopped-across-many (Task 4.2 / regression-guarded by Task 4.3):
-        // branch results — including any `stopped: true` from a nested
-        // `cache.stop` HIT inside one branch — are discarded here. The outer
-        // return omits `stopped`, so a cache.stop HIT in one branch does NOT
-        // halt sibling branches. See the regression test
-        // `transformer.test.ts > many: cache.stop in one branch does not
-        // halt sibling branches`.
-        await Promise.all(
-          nextIds.map((id) =>
-            tryCatchAsync(runTransformerChain, (err) => {
-              collector.logger
-                .scope('transformer:many')
-                .error(`many branch ${id} failed`, errorMeta(err));
-              return { event: null, respond: undefined };
-            })(
-              collector,
-              transformers,
-              walkChain(id, extractTransformerNextMap(transformers)),
-              settledEvent,
-              cloneIngest(ingest, id),
-              undefined,
-              chainContext,
-            ),
-          ),
-        );
-        return { event: null, respond: undefined };
-      }
-
-      // Update event if provided
-      if (resultEvent) {
-        processedEvent = resultEvent;
-      }
-    }
-    // If result is undefined (void), continue with current event unchanged
-
-    // state[set]: write to the store from the settled event, after the
-    // mapping and before the `next` dispatch.
-    if (stateSet && stateSet.length > 0) {
-      processedEvent = await applyState(
-        stateSet,
-        (id) => getStateStore(id, collector),
+        transformers,
+        transformerName,
         processedEvent,
-        collector,
         ingest,
+        currentRespond,
+        chainContext,
       );
-    }
-
-    // Cache MISS: store the processed event after push
-    if (cacheMiss && tCacheStore) {
-      storeCache(tCacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
-    }
-
-    // If transformer didn't return { next } but has a conditional
-    // config.next (one / gate / sequence / many), resolve it per-request
-    // via `getNextSteps`. Static (string / string[]) chains are wired
-    // statically via the next-map and pre-baked into `chain` by the
-    // caller (or by `walkChain` when an explicit chain array is passed);
-    // re-dispatching them here would override an explicit caller chain.
-    //
-    // Dispatch (conditional variants only):
-    // - []             → no match; chain ends here (passthrough).
-    // - ['x']          → continue main chain via static walk from x.
-    // - ['a','b',...]  → `many` fan-out. Terminal: each branch dispatches
-    //                    as its own subchain with a per-branch ingest
-    //                    clone. Main chain terminates here.
-    const configNext = transformer.config.next;
-    const isStaticConfigNext =
-      typeof configNext === 'string' ||
-      (Array.isArray(configNext) &&
-        configNext.every((entry) => typeof entry === 'string'));
-    const isConditionalConfigNext =
-      configNext !== undefined && !isStaticConfigNext;
-    if (
-      (!result || (typeof result === 'object' && !result.next)) &&
-      isConditionalConfigNext
-    ) {
-      const configNextIds = getNextSteps(
-        transformer.config.next,
-        createMappingRoot(ingest, processedEvent),
-      );
-      if (configNextIds.length === 1) {
-        const continuationChain = walkChain(
-          configNextIds[0],
-          extractTransformerNextMap(transformers),
-        );
-        if (continuationChain.length > 0) {
-          return runTransformerChain(
-            collector,
-            transformers,
-            continuationChain,
-            processedEvent,
-            ingest,
-            currentRespond,
-            chainContext,
-          );
-        }
-        // Target not found → chain ends here (passthrough)
-        return { event: processedEvent, respond: currentRespond };
+      const beforeRespond = before.respond ?? currentRespond;
+      // Dropped, stopped, or a nested `cache.stop: true` HIT: the copy halts
+      // with what the before chain handed back.
+      if (before.copies.length === 0 || before.stopped) {
+        return halt({ ...before, respond: beforeRespond });
       }
-      if (configNextIds.length > 1) {
-        // many: terminal fan-out. Main chain terminates here. Per-branch
-        // error isolation (Task 4.1): wrap each branch dispatch in
-        // `tryCatchAsync` so a throw in one branch does not reject the
-        // surrounding `Promise.all` and starve siblings.
-        // No-respond-across-many: respond ownership cannot be unambiguously
-        // assigned when one inbound request fans out to N terminal flows.
-        // Branches are dispatched with `respond: undefined`, branch results
-        // are awaited and discarded, and the outer return has
-        // `respond: undefined` so the parent caller (source) sees no
-        // wrapped respond.
-        await Promise.all(
-          configNextIds.map((id) =>
-            tryCatchAsync(runTransformerChain, (err) => {
-              collector.logger
-                .scope('transformer:many')
-                .error(`many branch ${id} failed`, errorMeta(err));
-              return { event: null, respond: undefined };
-            })(
-              collector,
-              transformers,
-              walkChain(id, extractTransformerNextMap(transformers)),
-              processedEvent,
-              cloneIngest(ingest, id),
-              undefined,
-              chainContext,
-            ),
-          ),
-        );
-        return { event: null, respond: undefined };
+      currentRespond = beforeRespond;
+      const [first] = before.copies;
+      if (before.copies.length > 1 || first.ingest !== ingest) {
+        // The before chain forked: every surviving copy runs this member and
+        // the rest of the path as its own copy, with its own ingest and id
+        // (both set by the fork inside the before chain).
+        const resume: Resume = { member, cacheMiss };
+        return {
+          kind: 'fork',
+          copies: before.copies.map((copy) => ({
+            stack: member.rest,
+            event: copy.event,
+            ingest: copy.ingest,
+            respond: undefined,
+            resume,
+          })),
+        };
       }
-      // configNextIds.length === 0: no match → chain ends here
-      return { event: processedEvent, respond: currentRespond };
+      processedEvent = first.event;
     }
   }
 
-  return { event: processedEvent, respond: currentRespond };
+  // Compile declarative state entries. `get` runs before the push (so the
+  // mapping can read fetched values); `set` runs after the push settled the
+  // event and before the member's route resolves.
+  const stateEntries = transformer.config?.state
+    ? compileState(transformer.config.state)
+    : undefined;
+  const stateGet = stateEntries?.filter((entry) => entry.mode === 'get');
+  const stateSet = stateEntries?.filter((entry) => entry.mode === 'set');
+
+  const applyStateSet = async (
+    evt: WalkerOS.DeepPartialEvent,
+  ): Promise<WalkerOS.DeepPartialEvent> => {
+    if (!stateSet || stateSet.length === 0) return evt;
+    return applyState(
+      stateSet,
+      (id) => getStateStore(id, collector),
+      evt,
+      collector,
+      ingest,
+    );
+  };
+
+  if (stateGet && stateGet.length > 0) {
+    processedEvent = await applyState(
+      stateGet,
+      (id) => getStateStore(id, collector),
+      processedEvent,
+      collector,
+      ingest,
+    );
+  }
+
+  // Run the transformer
+  const result = await tryCatchAsync(transformerPush, (err) => {
+    collector.status.failed++;
+    collector.logger
+      .scope(`transformer:${transformer.type || 'unknown'}`)
+      .error('Push failed', errorMeta(err));
+    return false as const; // Stop chain on error
+  })(
+    collector,
+    transformer,
+    transformerName,
+    processedEvent,
+    ingest,
+    currentRespond,
+  );
+
+  // Returned false, or threw and was converted to false above.
+  if (result === false) {
+    return halt({
+      copies: [],
+      respond: currentRespond,
+      droppedBy: transformerName,
+    });
+  }
+
+  // `Result[]`: every result is a fork that finishes the rest of the path.
+  if (Array.isArray(result) && result.length !== 1) {
+    if (result.length === 0)
+      return halt({ copies: [], respond: currentRespond });
+    const parent = processedEvent;
+    const copies: Copy[] = [];
+    for (let position = 0; position < result.length; position++) {
+      const forkResult = result[position];
+      const settled = await applyStateSet(forkResult.event || parent);
+      copies.push({
+        stack: withMemberRoute(member, forkResult.next),
+        ...forkOf(parent, settled, ingest, position),
+        respond: currentRespond,
+      });
+    }
+    return { kind: 'fork', copies };
+  }
+
+  // One result (a one-element `Result[]` continues in place, like a `many`
+  // with one match).
+  const single = Array.isArray(result) ? result[0] : result;
+  let resultNext: Transformer.Route | undefined;
+  if (single && typeof single === 'object') {
+    if (single.respond) currentRespond = single.respond;
+    if (single.event) processedEvent = single.event;
+    resultNext = single.next;
+  }
+
+  processedEvent = await applyStateSet(processedEvent);
+
+  // Cache MISS: store the processed event after push
+  if (cacheMiss && tCacheStore) {
+    storeCache(tCacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
+  }
+
+  return goOn(withMemberRoute(member, resultNext));
+}
+
+/**
+ * Runs an event through a chain: the one chain runner.
+ *
+ * @param collector - The collector instance with transformers
+ * @param transformers - Map of transformer instances
+ * @param start - The route to run (a chain field such as `source.next`), or
+ *   a continuation of one; `undefined` runs nothing
+ * @param event - The event to process
+ * @param ingest - Mutable ingest context flowing through the pipeline
+ * @param respond - The respond function in scope
+ * @param chainContext - Chain path (e.g. `destination.ga4.before`), recorded
+ *   as `ingest._meta.chainPath` and keying `chainMocks`
+ * @returns Every finished copy with its own ingest (`copies`, empty when
+ *   dropped or stopped) and the respond in scope afterwards
+ */
+export async function runTransformerChain(
+  collector: Collector.Instance,
+  transformers: Transformer.Transformers,
+  start: Transformer.Route | ChainContinuation | undefined,
+  event: WalkerOS.DeepPartialEvent,
+  ingest?: Ingest,
+  respond?: RespondFn,
+  chainContext?: string,
+): Promise<Transformer.ChainResult> {
+  // Ensure an ingest exists so the per-copy path budget engages regardless
+  // of the caller.
+  const chainIngest =
+    ingest ?? createIngest(typeof start === 'string' ? start : 'chain');
+  if (start === undefined)
+    return finished([{ event, ingest: chainIngest }], respond);
+  if (chainContext) chainIngest._meta.chainPath = chainContext;
+
+  return runCopy(
+    { collector, transformers, chainContext },
+    {
+      stack: isChainContinuation(start) ? start : startChain(start),
+      event,
+      ingest: chainIngest,
+      respond,
+    },
+  );
+}
+
+/**
+ * Runs a transformer's `before` chain: the one implementation, used by the
+ * chain runner for every member and by the CLI simulation. A `stop` that
+ * the before route itself resolved is attributed to the transformer.
+ */
+export async function runTransformerBefore(
+  collector: Collector.Instance,
+  transformers: Transformer.Transformers,
+  transformerId: string,
+  event: WalkerOS.DeepPartialEvent,
+  ingest?: Ingest,
+  respond?: RespondFn,
+  chainContext?: string,
+): Promise<Transformer.ChainResult> {
+  const transformer = transformers[transformerId];
+  const before = transformer ? transformer.config.before : undefined;
+  const result = await runTransformerChain(
+    collector,
+    transformers,
+    before,
+    event,
+    ingest,
+    respond,
+    chainContext,
+  );
+  if (result.stopped && result.copies.length === 0 && !result.droppedBy)
+    return { ...result, droppedBy: transformerId };
+  return result;
 }
 
 /**

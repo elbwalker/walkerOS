@@ -51,8 +51,13 @@ The returned instance must implement:
 | `{ event }` | Continue chain with modified event |
 | `void` | Continue chain, event unchanged |
 | `false` | Stop chain, event dropped |
-| `{ event, next }` | Redirect to a different chain (fan-out) |
+| `{ event, next }` | Route this event through `next` instead of the transformer's own `next`, then the chain continues |
 | `{ event, respond }` | Continue chain with wrapped respond function |
+| `Result[]` | Fork: with two or more results, each becomes its own copy of the event with its own `event.id` and finishes the rest of the path on its own |
+
+A `{ next }` in a result uses the same route grammar as the config fields,
+including `one`, `many`, and `stop`. It is resolved against `{ ingest, event }`
+right after this transformer ran.
 
 ## Minimal example
 

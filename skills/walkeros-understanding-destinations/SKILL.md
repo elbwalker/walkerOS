@@ -313,8 +313,9 @@ Use as starting point: `packages/web/destinations/plausible/`
 
 ## Transformer Wiring
 
-Destinations can wire to post-collector transformer chains via the `before`
-property:
+Destinations can wire to their own transformer chain via the `before` property.
+It runs for this destination only, after the collector chain (`collector.next`,
+shared by every destination); a `stop` in it skips only this destination:
 
 ```typescript
 destinations: {

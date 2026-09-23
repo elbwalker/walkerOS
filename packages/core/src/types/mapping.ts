@@ -93,8 +93,10 @@ export interface ValueConfig {
 /**
  * Resolution root for paths that can address both the event and the
  * pipeline ingest: state, cache keys and route matchers. Paths name their
- * side explicitly, `event.data.id` or `ingest.site`. `event` is absent where
- * routing runs before an event exists.
+ * side explicitly, `event.data.id` or `ingest.site`. Every route resolves
+ * with the event its position holds. `event` is absent only for the
+ * request-scoped source cache key (one check per request, before per-event
+ * work) and in static tooling that has no event.
  */
 export type Root = {
   event?: WalkerOS.DeepPartialEvent;

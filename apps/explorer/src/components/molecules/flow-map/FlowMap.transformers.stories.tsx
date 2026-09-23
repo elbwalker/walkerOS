@@ -123,3 +123,56 @@ export const LongPreTransformerChain: Story = {
     },
   },
 };
+
+/**
+ * Collector-level chain (`collector.next`): runs once per event after the
+ * collector, before the destination fan-out, so every destination receives
+ * its output. Drawn inside the dashed collector group.
+ */
+export const CollectorChain: Story = {
+  args: {
+    sources: {
+      web: { label: 'Source', text: 'walker.js' },
+    },
+    collector: { label: 'Collector' },
+    collectorTransformers: {
+      validate: { label: 'Validate', next: 'dedupe' },
+      dedupe: { label: 'Dedupe' },
+    },
+    destinations: {
+      ga4: { label: 'GA4' },
+      meta: { label: 'Meta' },
+    },
+    markers: [
+      { position: 'collector-chain', text: 'collector.next runs once' },
+      { position: 'chain-dedupe-next', text: 'then the fan-out' },
+    ],
+  },
+};
+
+/**
+ * Collector chain plus a per-destination `before` chain: `collector.next`
+ * runs once for all destinations, the `before` chain only for GA4.
+ */
+export const CollectorChainWithDestinationBefore: Story = {
+  args: {
+    sources: {
+      web: { label: 'Source', text: 'walker.js' },
+    },
+    collector: { label: 'Collector' },
+    collectorTransformers: {
+      validate: { label: 'Validate' },
+    },
+    postTransformers: {
+      redactor: { label: 'Redactor' },
+    },
+    destinations: {
+      ga4: { label: 'GA4', before: 'redactor' },
+      bigquery: { label: 'BigQuery' },
+    },
+    markers: [
+      { position: 'chain-validate', text: 'all destinations' },
+      { position: 'post-redactor', text: 'GA4 only' },
+    ],
+  },
+};

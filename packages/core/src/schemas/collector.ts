@@ -8,6 +8,7 @@ import {
 import { ConfigSchema as MappingConfigSchema } from './mapping';
 import { Identifier, Timestamp, Counter } from './primitives';
 import { LoggerConfigSchema } from './logger';
+import { RouteSchema } from './matcher';
 
 /**
  * Collector Schemas
@@ -131,6 +132,9 @@ export const ConfigSchema = z
       .describe(
         'Config release id stamped into event.source.release for this flow.',
       ),
+    next: RouteSchema.optional().describe(
+      'Collector chain: runs once per completed event before the destination fan-out. A stop drops the event for every destination.',
+    ),
   })
   .meta({
     id: 'CollectorConfig',

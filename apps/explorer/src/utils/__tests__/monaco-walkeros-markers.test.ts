@@ -57,16 +57,73 @@ describe('validateWalkerOSReferences', () => {
 
   it('flags unknown inner next in Route[] form', () => {
     const json =
-      '{"before": [{"match": "*", "next": "ghost"}, {"match": "x", "next": "validator"}]}';
+      '{"before": [{"next": "ghost"}, {"match": {"key": "event.name", "operator": "eq", "value": "x"}, "next": "validator"}]}';
     const context = { stepNames: { transformers: ['validator'] } };
     const issues = validateWalkerOSReferences(json, context);
     expect(issues).toHaveLength(1);
     expect(issues[0].message).toContain('ghost');
   });
 
-  it('does not emit chain-ref issues when stepNames is absent from context', () => {
+  it('collects refs inside one and many of collector.next', () => {
+    const json = JSON.stringify({
+      collector: {
+        next: [
+          'validator',
+          {
+            one: [
+              {
+                match: { key: 'event.name', operator: 'eq', value: 'a b' },
+                next: 'ghostOne',
+              },
+              { next: 'router' },
+            ],
+          },
+          { many: [{ next: 'ghostMany' }, { next: ['router', 'ghostSeq'] }] },
+        ],
+      },
+    });
+    const context = { stepNames: { transformers: ['validator', 'router'] } };
+    const messages = validateWalkerOSReferences(json, context).map(
+      (issue) => issue.message,
+    );
+    expect(messages).toHaveLength(3);
+    expect(messages.join('\n')).toContain('"ghostOne" in collector.next');
+    expect(messages.join('\n')).toContain('"ghostMany" in collector.next');
+    expect(messages.join('\n')).toContain('"ghostSeq" in collector.next');
+  });
+
+  it('collects the inner next of a single route config object', () => {
     const json =
-      '{"next": "missing1", "before": [{"match": "*", "next": "missing2"}]}';
+      '{"before": {"match": {"key": "event.name", "operator": "exists", "value": ""}, "next": "ghost"}}';
+    const context = { stepNames: { transformers: ['validator'] } };
+    const issues = validateWalkerOSReferences(json, context);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain('ghost');
+  });
+
+  it('yields no ref and no unknown transformer for a stop entry', () => {
+    const json = JSON.stringify({
+      collector: {
+        next: [
+          {
+            match: { key: 'event.name', operator: 'eq', value: 'x y' },
+            stop: true,
+          },
+          { stop: true },
+        ],
+      },
+      destinations: { ga4: { before: ['ghost', { stop: true }] } },
+    });
+    const context = { stepNames: { transformers: ['validator'] } };
+    const issues = validateWalkerOSReferences(json, context);
+    // The routes are enumerated (the sibling "ghost" is flagged), and the
+    // stop entries contribute no ref.
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain('"ghost" in destinations.ga4.before');
+  });
+
+  it('does not emit chain-ref issues when stepNames is absent from context', () => {
+    const json = '{"next": "missing1", "before": [{"next": "missing2"}]}';
     const issues = validateWalkerOSReferences(json, {});
     expect(issues).toHaveLength(0);
   });

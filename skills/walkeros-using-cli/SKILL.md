@@ -211,9 +211,11 @@ From an AI assistant the equivalent tool is `flow_simulate`. A few specifics:
   walkerOS event `{ name, data }` and `trigger` is optional
   `{ type?, options? }`. There is no `env` field. Destination and transformer
   steps take a plain walkerOS event `{ name, data, consent? }`.
-- **`collector` is the enrichment step.** It takes a post-`next` partial event
-  plus an optional state snapshot `{ consent?, user?, globals?, timing? }`,
-  applies the collector's `createEvent`, and returns the fully enriched event.
+- **`collector` is the enrichment step plus the collector chain.** It takes a
+  post-`next` partial event plus an optional state snapshot
+  `{ consent?, user?, globals?, timing? }`, applies the collector's enrichment,
+  then runs `collector.next`, and returns every event the destinations would
+  receive (none when a `stop` drops it, several when `many` forks it).
 - **`transformer` steps accept an optional `ingest`** (a raw ingest without
   `_meta`). Supply it to test a request decoder standalone, for example a GA4
   decoder reading `ctx.ingest.url`: pass `ingest: { url: "..." }` with the
@@ -310,8 +312,8 @@ Options:
   -e, --event <json|file|url>   Event to process (required)
   --flow <name>                  Flow to use
   -p, --platform <web|server>   Platform override
-  --simulate <step>              Simulate a step (repeatable for destination.*). Format: source.NAME | destination.NAME | transformer.NAME
-  --mock <step=value>            Mock a step with a specific return value (repeatable)
+  --simulate <step>              Simulate a step (repeatable for destination.*). Format: source.NAME | destination.NAME | transformer.NAME | collector.NAME
+  --mock <step=value>            Mock a step with a specific return value (repeatable); chain members via destination.NAME.before.ID or collector.next.ID
   --snapshot <source>            JS file to eval before execution (sets global state)
 ```
 

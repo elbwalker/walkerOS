@@ -1,15 +1,39 @@
 import {
   compileNext,
-  resolveNext,
+  getNextSteps,
   isRouteArray,
   isRouteConfigEntry,
 } from '../route';
+import type { CompiledNext } from '../route';
+import type { Mapping } from '../types';
 import type {
   Route,
   RouteConfig,
   RouteOneConfig,
   RouteManyConfig,
 } from '../types/transformer';
+
+/** Resolves a compiled node to the end with one root (ids, 'stop' or 'fork'). */
+function resolve(
+  compiled: CompiledNext | undefined,
+  partial: Partial<Mapping.Root> = {},
+): string[] | 'stop' | 'fork' {
+  const root: Mapping.Root = { ingest: {}, ...partial };
+  const ids: string[] = [];
+  let steps = getNextSteps(
+    compiled
+      ? { type: 'continuation', segments: [compiled], at: 0 }
+      : undefined,
+    root,
+  );
+  for (;;) {
+    if (steps.stop) return 'stop';
+    if (steps.forks) return 'fork';
+    ids.push(...steps.ids);
+    if (!steps.then) return ids;
+    steps = getNextSteps(steps.then, root);
+  }
+}
 
 describe('compileNext', () => {
   it('returns undefined for undefined input', () => {
@@ -19,13 +43,13 @@ describe('compileNext', () => {
   it('compiles a static string', () => {
     const compiled = compileNext('enricher');
     expect(compiled).toBeDefined();
-    expect(resolveNext(compiled!)).toBe('enricher');
+    expect(resolve(compiled)).toEqual(['enricher']);
   });
 
   it('compiles a static string array', () => {
     const compiled = compileNext(['a', 'b', 'c']);
     expect(compiled).toBeDefined();
-    expect(resolveNext(compiled!)).toEqual(['a', 'b', 'c']);
+    expect(resolve(compiled)).toEqual(['a', 'b', 'c']);
   });
 
   it('compiles routes and resolves first match', () => {
@@ -38,12 +62,12 @@ describe('compileNext', () => {
     ]);
     expect(compiled).toBeDefined();
     expect(compiled!.type).toBe('one');
-    expect(resolveNext(compiled!, { ingest: { path: '/gtag/collect' } })).toBe(
+    expect(resolve(compiled, { ingest: { path: '/gtag/collect' } })).toEqual([
       'gtag-parser',
-    );
-    expect(resolveNext(compiled!, { ingest: { path: '/other' } })).toBe(
+    ]);
+    expect(resolve(compiled, { ingest: { path: '/other' } })).toEqual([
       'default',
-    );
+    ]);
   });
 
   it('returns undefined when no route matches and no wildcard', () => {
@@ -53,9 +77,7 @@ describe('compileNext', () => {
         next: 'writer',
       },
     ]);
-    expect(
-      resolveNext(compiled!, { ingest: { method: 'GET' } }),
-    ).toBeUndefined();
+    expect(resolve(compiled, { ingest: { method: 'GET' } })).toEqual([]);
   });
 
   it('resolves nested routes recursively', () => {
@@ -73,14 +95,14 @@ describe('compileNext', () => {
       { next: 'default' },
     ]);
     expect(
-      resolveNext(compiled!, { ingest: { path: '/api/data', method: 'POST' } }),
-    ).toBe('api-writer');
+      resolve(compiled, { ingest: { path: '/api/data', method: 'POST' } }),
+    ).toEqual(['api-writer']);
     expect(
-      resolveNext(compiled!, { ingest: { path: '/api/data', method: 'GET' } }),
-    ).toBe('api-reader');
-    expect(resolveNext(compiled!, { ingest: { path: '/other' } })).toBe(
+      resolve(compiled, { ingest: { path: '/api/data', method: 'GET' } }),
+    ).toEqual(['api-reader']);
+    expect(resolve(compiled, { ingest: { path: '/other' } })).toEqual([
       'default',
-    );
+    ]);
   });
 
   it('resolves route target to string array (chain)', () => {
@@ -91,7 +113,7 @@ describe('compileNext', () => {
       },
       { next: 'reader' },
     ]);
-    expect(resolveNext(compiled!, { ingest: { method: 'POST' } })).toEqual([
+    expect(resolve(compiled, { ingest: { method: 'POST' } })).toEqual([
       'validator',
       'writer',
     ]);
@@ -111,16 +133,16 @@ describe('compileNext', () => {
       { next: 'default' },
     ]);
     expect(
-      resolveNext(compiled!, { ingest: { path: '/api/data', method: 'POST' } }),
-    ).toBe('api-writer');
+      resolve(compiled, { ingest: { path: '/api/data', method: 'POST' } }),
+    ).toEqual(['api-writer']);
     expect(
-      resolveNext(compiled!, { ingest: { path: '/api/data', method: 'GET' } }),
-    ).toBe('default');
+      resolve(compiled, { ingest: { path: '/api/data', method: 'GET' } }),
+    ).toEqual(['default']);
   });
 
   it('resolves without context (static values pass through)', () => {
     const compiled = compileNext('enricher');
-    expect(resolveNext(compiled!)).toBe('enricher');
+    expect(resolve(compiled)).toEqual(['enricher']);
   });
 
   it('matches against event fields', () => {
@@ -131,9 +153,9 @@ describe('compileNext', () => {
       },
       { next: 'default' },
     ]);
-    expect(resolveNext(compiled!, { event: { name: 'page view' } })).toBe(
+    expect(resolve(compiled, { event: { name: 'page view' } })).toEqual([
       'page-handler',
-    );
+    ]);
   });
 
   it('compiles a RouteConfig with explicit `one`', () => {
@@ -148,13 +170,13 @@ describe('compileNext', () => {
     });
     expect(compiled).toBeDefined();
     expect(compiled!.type).toBe('one');
-    expect(resolveNext(compiled!, { event: { name: 'order complete' } })).toBe(
+    expect(resolve(compiled, { event: { name: 'order complete' } })).toEqual([
       'a',
-    );
-    expect(resolveNext(compiled!, { event: { name: 'page view' } })).toBe('b');
+    ]);
+    expect(resolve(compiled, { event: { name: 'page view' } })).toEqual(['b']);
   });
 
-  it('compiles a RouteConfig with `many` (all-match aggregation)', () => {
+  it('compiles a RouteConfig with `many` (all-match fan-out)', () => {
     const compiled = compileNext({
       many: [
         {
@@ -170,15 +192,34 @@ describe('compileNext', () => {
     });
     expect(compiled).toBeDefined();
     expect(compiled!.type).toBe('many');
-    expect(
-      resolveNext(compiled!, { event: { name: 'order complete' } }),
-    ).toEqual(['audit', 'always']);
-    expect(resolveNext(compiled!, { event: { name: 'page view' } })).toEqual([
+    // Two or more matches fork; a single match continues in place.
+    expect(resolve(compiled, { event: { name: 'order complete' } })).toBe(
+      'fork',
+    );
+    expect(resolve(compiled, { event: { name: 'page view' } })).toEqual([
       'always',
     ]);
-    expect(resolveNext(compiled!, { event: { name: 'never' } })).toEqual([
-      'always',
-      'skipped',
+  });
+
+  it('compiles a stop, gated or not', () => {
+    expect(compileNext({ stop: true })?.type).toBe('stop');
+    const gated = compileNext({
+      match: { key: 'ingest.x', operator: 'eq', value: '1' },
+      stop: true,
+    });
+    expect(gated?.type).toBe('gate');
+    expect(resolve(gated, { ingest: { x: '1' } })).toBe('stop');
+    expect(resolve(gated, { ingest: { x: '2' } })).toEqual([]);
+  });
+
+  it('keeps the source match expression beside the compiled matcher', () => {
+    const match = { key: 'event.name', operator: 'eq' as const, value: 'a' };
+    const gate = compileNext({ match, next: 'x' });
+    expect(gate?.type === 'gate' && gate.source).toBe(match);
+    const one = compileNext({ one: [{ match, next: 'x' }, 'y'] });
+    expect(one?.type === 'one' && one.routes.map((r) => r.source)).toEqual([
+      match,
+      undefined,
     ]);
   });
 
@@ -188,44 +229,41 @@ describe('compileNext', () => {
     });
     expect(compiled).toBeDefined();
     expect(compiled!.type).toBe('gate');
-    // gate fails → resolveNext returns undefined (fall-through)
-    expect(
-      resolveNext(compiled!, { event: { name: 'page view' } }),
-    ).toBeUndefined();
-    // gate passes → resolveNext returns inner next (undefined here since gate has no next)
-    expect(
-      resolveNext(compiled!, { event: { name: 'order complete' } }),
-    ).toBeUndefined();
+    // gate fails: falls through, no ids
+    expect(resolve(compiled, { event: { name: 'page view' } })).toEqual([]);
+    // gate passes: a bare gate selects nothing either
+    expect(resolve(compiled, { event: { name: 'order complete' } })).toEqual(
+      [],
+    );
   });
 
   it('compiles a gate-only RouteConfig with inner next propagation', () => {
     // A gate wraps an outer match around an inner case/next. When match passes,
-    // resolveNext returns the inner next's value; when it fails, returns undefined.
+    // Passing resolves the inner next; failing falls through with no ids.
     const compiled = compileNext({
       match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
       next: 'api-handler',
     });
     expect(compiled).toBeDefined();
     expect(compiled!.type).toBe('gate');
-    expect(resolveNext(compiled!, { ingest: { path: '/api/data' } })).toBe(
+    expect(resolve(compiled, { ingest: { path: '/api/data' } })).toEqual([
       'api-handler',
-    );
-    expect(
-      resolveNext(compiled!, { ingest: { path: '/other' } }),
-    ).toBeUndefined();
+    ]);
+    expect(resolve(compiled, { ingest: { path: '/other' } })).toEqual([]);
   });
 
   // TODO: type-level test via tsd or similar — disjoint union is enforced by RouteConfig's `never` properties
 });
 
 describe('route shape predicates', () => {
-  it('isRouteConfigEntry detects objects with match/next/one/many', () => {
+  it('isRouteConfigEntry detects objects with match/next/one/many/stop', () => {
     expect(
       isRouteConfigEntry({ match: { key: 'a', operator: 'eq', value: 'b' } }),
     ).toBe(true);
     expect(isRouteConfigEntry({ next: 'x' })).toBe(true);
     expect(isRouteConfigEntry({ one: ['a', 'b'] })).toBe(true);
     expect(isRouteConfigEntry({ many: ['a', 'b'] })).toBe(true);
+    expect(isRouteConfigEntry({ stop: true })).toBe(true);
   });
 
   it('isRouteConfigEntry rejects non-route shapes', () => {

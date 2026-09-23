@@ -1,8 +1,9 @@
 // walkerOS/packages/cli/src/commands/validate/validators/flow.ts
 
-import type { Flow, WalkerOS } from '@walkeros/core';
+import type { Flow, Transformer, WalkerOS } from '@walkeros/core';
 import {
   getFlowSettings,
+  getRouteGraph,
   isObject,
   resolveContracts,
   validateStepEntry,
@@ -167,7 +168,27 @@ export function validateFlow(
     details.context = coreResult.context;
   }
 
-  // 10. Deep validation: cross-step example compatibility (typed Flow.Json shape)
+  // 10. CLI-specific: route checks on every chain field, read through
+  //     core's getRouteGraph. Unknown targets are errors; shapes the schema
+  //     accepts but the author probably did not intend are warnings. Runs
+  //     only when there are no schema errors so we operate on shapes core
+  //     has already validated.
+  if (errors.length === 0 && isFlowJson(input)) {
+    const typedFlows: Record<string, Flow> = input.flows;
+    const flowsToLint = options.flow
+      ? options.flow in typedFlows
+        ? [options.flow]
+        : []
+      : Object.keys(typedFlows);
+
+    for (const name of flowsToLint) {
+      const flowSettings = typedFlows[name];
+      if (!flowSettings) continue;
+      lintFlowRoutes(name, flowSettings, errors, warnings);
+    }
+  }
+
+  // 10b. Deep validation: cross-step example compatibility (typed Flow.Json shape)
   if (errors.length === 0 && isFlowJson(input)) {
     const typedFlows: Record<string, Flow> = input.flows;
     const flowNames = Object.keys(typedFlows);
@@ -221,25 +242,6 @@ export function validateFlow(
           }
         }
       }
-    }
-  }
-
-  // 10b. CLI-specific: lint warnings on Route shapes that the schema accepts
-  //      but the author probably didn't intend. Non-blocking — informational.
-  //      Runs only when there are no schema errors so we operate on shapes
-  //      core has already validated.
-  if (errors.length === 0 && isFlowJson(input)) {
-    const typedFlows: Record<string, Flow> = input.flows;
-    const flowsToLint = options.flow
-      ? options.flow in typedFlows
-        ? [options.flow]
-        : []
-      : Object.keys(typedFlows);
-
-    for (const name of flowsToLint) {
-      const flowSettings = typedFlows[name];
-      if (!flowSettings) continue;
-      lintFlowRoutes(name, flowSettings, warnings);
     }
   }
 
@@ -301,87 +303,18 @@ interface StepConnection {
 }
 
 /**
- * Type predicate: narrow a `Route` to its `RouteConfig` variant.
- * `Route` is `string | Route[] | RouteConfig`; eliminating the first two
- * leaves `RouteConfig`. TS will not infer this from inline checks.
+ * Every transformer id a route can reach, read through core's
+ * `getRouteGraph` (the one enumerator over the compiled route form). An
+ * over-approximation by design: static validation has no event, so every
+ * branch counts.
  */
-function isRouteConfig(
-  spec: import('@walkeros/core').Transformer.Route,
-): spec is import('@walkeros/core').Transformer.RouteConfig {
-  return typeof spec === 'object' && spec !== null && !Array.isArray(spec);
-}
-
-/**
- * Type predicate: narrow a `RouteConfig` to its `RouteNextConfig` variant.
- * Property-presence + value-shape check; siblings declare `next?: never`,
- * which TS cannot disambiguate via `in` alone.
- */
-function isRouteNext(
-  spec: import('@walkeros/core').Transformer.RouteConfig,
-): spec is import('@walkeros/core').Transformer.RouteNextConfig {
-  if (!('next' in spec)) return false;
-  const value: unknown = spec.next;
-  return value !== undefined;
-}
-
-/**
- * Type predicate: narrow a `RouteConfig` to its `RouteOneConfig` variant.
- */
-function isRouteOne(
-  spec: import('@walkeros/core').Transformer.RouteConfig,
-): spec is import('@walkeros/core').Transformer.RouteOneConfig {
-  if (!('one' in spec)) return false;
-  const value: unknown = spec.one;
-  return Array.isArray(value);
-}
-
-/**
- * Type predicate: narrow a `RouteConfig` to its `RouteManyConfig` variant.
- */
-function isRouteMany(
-  spec: import('@walkeros/core').Transformer.RouteConfig,
-): spec is import('@walkeros/core').Transformer.RouteManyConfig {
-  if (!('many' in spec)) return false;
-  const value: unknown = spec.many;
-  return Array.isArray(value);
-}
-
-/**
- * Reachability enumeration: returns POSSIBLE downstream targets under
- * "match may pass or fail" semantics. NOT a deterministic path predictor —
- * actual routing requires a real event. Used for static-graph validation
- * (example-compatibility), where over-approximation is correct.
- *
- * Handles all Route shapes:
- * - string transformer ID
- * - string[] sugar for chained .next
- * - RouteConfig with `next` (recursive)
- * - RouteConfig with `one` (first-match dispatch — every branch reachable)
- * - RouteConfig with `many` (all-match fan-out — every branch reachable)
- * - bare gate RouteConfig (no targets)
- * - Route[] of mixed RouteConfig entries
- */
-function flattenRouteTargets(
-  spec: import('@walkeros/core').Transformer.Route | undefined,
-): string[] {
-  if (!spec) return [];
-  if (typeof spec === 'string') return [spec];
-  if (isRouteConfig(spec)) {
-    if (isRouteNext(spec)) return flattenRouteTargets(spec.next);
-    if (isRouteOne(spec)) {
-      return Array.from(new Set(spec.one.flatMap(flattenRouteTargets)));
-    }
-    if (isRouteMany(spec)) {
-      return Array.from(new Set(spec.many.flatMap(flattenRouteTargets)));
-    }
-    return []; // bare gate
+function routeTargets(spec: Transformer.Route | undefined): string[] {
+  if (spec === undefined) return [];
+  const targets = new Set<string>();
+  for (const node of getRouteGraph(spec)) {
+    for (const target of node.targets) targets.add(target);
   }
-  if (spec.length === 0) return [];
-  if (typeof spec[0] === 'string') {
-    return spec.filter((s): s is string => typeof s === 'string');
-  }
-  // Array of RouteConfig (or mixed Route entries)
-  return Array.from(new Set(spec.flatMap(flattenRouteTargets)));
+  return [...targets];
 }
 
 function buildConnectionGraph(config: Flow): StepConnection[] {
@@ -390,7 +323,7 @@ function buildConnectionGraph(config: Flow): StepConnection[] {
   // Source → next transformer
   for (const [name, source] of Object.entries(config.sources || {})) {
     if (!source.next || !source.examples) continue;
-    const nextNames = flattenRouteTargets(source.next);
+    const nextNames = routeTargets(source.next);
     for (const nextName of nextNames) {
       const transformer = config.transformers?.[nextName];
       if (transformer?.examples) {
@@ -409,7 +342,7 @@ function buildConnectionGraph(config: Flow): StepConnection[] {
   // Transformer → next transformer
   for (const [name, transformer] of Object.entries(config.transformers || {})) {
     if (!transformer.next || !transformer.examples) continue;
-    const nextNames = flattenRouteTargets(transformer.next);
+    const nextNames = routeTargets(transformer.next);
     for (const nextName of nextNames) {
       const nextTransformer = config.transformers?.[nextName];
       if (nextTransformer?.examples) {
@@ -432,7 +365,7 @@ function buildConnectionGraph(config: Flow): StepConnection[] {
   // Destination.before → transformer chain → destination
   for (const [name, dest] of Object.entries(config.destinations || {})) {
     if (!dest.before || !dest.examples) continue;
-    const beforeNames = flattenRouteTargets(dest.before);
+    const beforeNames = routeTargets(dest.before);
     for (const beforeName of beforeNames) {
       const transformer = config.transformers?.[beforeName];
       if (transformer?.examples) {
@@ -520,141 +453,169 @@ function isStructurallyCompatible(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Walk every Route spec on a flow's sources/transformers/destinations and
- * emit lint warnings for `many` shapes that are structurally valid but
- * almost certainly unintended:
+ * Checks every chain field of a flow (source `before`/`next`, transformer
+ * `before`/`next`, destination `before`/`next`, `collector.next`):
  *
- * - `many: []` — main chain terminates with no branches.
- * - `many: ["x"]` — single-entry fan-out is just `next: "x"`.
- * - `[..., { many }, trailing]` — mixed-array dead code after `many`.
- *
- * Non-blocking. Warnings only.
+ * - error: a route target that is not a transformer of the flow. At runtime
+ *   an unknown id is skipped with a warning, so a misspelled step (for
+ *   example a redaction branch) would otherwise fail open.
+ * - warning: entries after an unconditional `stop` never run.
+ * - warning: `many: []` selects nothing; `many: ["x"]` is just `next`.
+ * - warning: an array made only of route configs is first-match.
  */
 function lintFlowRoutes(
   flowName: string,
   flow: Flow,
+  errors: ValidationError[],
   warnings: ValidationWarning[],
 ): void {
+  const known = new Set(Object.keys(flow.transformers || {}));
+  const check = (
+    spec: Transformer.Route | undefined,
+    position: string,
+  ): void => {
+    if (spec !== undefined) lintRoute(spec, position, known, errors, warnings);
+  };
+  const at = `flows.${flowName}`;
+
   for (const [name, source] of Object.entries(flow.sources || {})) {
-    lintRoute(source.next, `flows.${flowName}.sources.${name}.next`, warnings);
-    lintRoute(
-      source.before,
-      `flows.${flowName}.sources.${name}.before`,
-      warnings,
-    );
+    check(source.before, `${at}.sources.${name}.before`);
+    check(source.next, `${at}.sources.${name}.next`);
   }
-
   for (const [name, transformer] of Object.entries(flow.transformers || {})) {
-    lintRoute(
-      transformer.next,
-      `flows.${flowName}.transformers.${name}.next`,
-      warnings,
-    );
-    lintRoute(
-      transformer.before,
-      `flows.${flowName}.transformers.${name}.before`,
-      warnings,
-    );
+    check(transformer.before, `${at}.transformers.${name}.before`);
+    check(transformer.next, `${at}.transformers.${name}.next`);
   }
-
+  check(flow.collector?.next, `${at}.collector.next`);
   for (const [name, dest] of Object.entries(flow.destinations || {})) {
-    // `many` is rejected at schema level for destination.before/next, but other
-    // operators are still valid here — keep the walker active for nested gates.
-    lintRoute(
-      dest.before,
-      `flows.${flowName}.destinations.${name}.before`,
-      warnings,
-    );
-    lintRoute(
-      dest.next,
-      `flows.${flowName}.destinations.${name}.next`,
-      warnings,
-    );
+    check(dest.before, `${at}.destinations.${name}.before`);
+    check(dest.next, `${at}.destinations.${name}.next`);
   }
 }
 
+type RoutePath = (string | number)[];
+
+/** The raw value at `path` inside a route (a plain lookup, no grammar). */
+function routeAt(spec: Transformer.Route, path: RoutePath): unknown {
+  let current: unknown = spec;
+  for (const key of path) {
+    if (typeof key === 'number')
+      current = Array.isArray(current) ? current[key] : undefined;
+    else current = isObject(current) ? current[key] : undefined;
+  }
+  return current;
+}
+
 /**
- * Recursive Route walker. Emits warnings for the three `many` lint cases.
- * `position` is a human-readable label of where this Route lives in the flow
- * (e.g. `flows.default.sources.browser.next`) so warnings are actionable.
+ * Lints one route through `getRouteGraph`. Every branch node, and every
+ * enclosing decision it lists in `via`, is looked at once by its path.
  */
 function lintRoute(
-  spec: import('@walkeros/core').Transformer.Route | undefined,
+  spec: Transformer.Route,
   position: string,
+  known: Set<string>,
+  errors: ValidationError[],
   warnings: ValidationWarning[],
 ): void {
-  if (!spec) return;
+  const where = (path: RoutePath) =>
+    path.length > 0 ? `${position}.${path.join('.')}` : position;
+  const reported = new Set<string>();
+  const once = (key: string): boolean => {
+    if (reported.has(key)) return false;
+    reported.add(key);
+    return true;
+  };
 
-  // A bare string is a target ID — nothing to lint.
-  if (typeof spec === 'string') return;
+  for (const node of getRouteGraph(spec)) {
+    for (const target of node.targets) {
+      if (known.has(target) || !once(`unknown:${target}`)) continue;
+      errors.push({
+        path: position,
+        message: `Unknown transformer "${target}" in route at ${position}`,
+        code: 'UNKNOWN_ROUTE_TARGET',
+      });
+    }
 
-  if (Array.isArray(spec)) {
-    // Mixed-array sequence (sugar for chained .next). Check for a `many`
-    // entry in non-final position: anything after `many` is dead code
-    // because the main chain terminates at the fan-out.
-    for (let i = 0; i < spec.length; i++) {
-      const entry = spec[i];
+    // Entries after an unconditional stop never run (a `many` entry's stop
+    // ends only its own copy, so it does not shadow its siblings).
+    const last = node.path[node.path.length - 1];
+    if (node.stop && !node.match && node.kind !== 'many') {
+      const self = routeAt(spec, node.path);
+      const list = routeAt(spec, node.path.slice(0, -1));
       if (
-        i < spec.length - 1 &&
-        typeof entry === 'object' &&
-        entry !== null &&
-        !Array.isArray(entry) &&
-        isRouteMany(entry)
+        isObject(self) &&
+        self.stop === true &&
+        typeof last === 'number' &&
+        Array.isArray(list) &&
+        last < list.length - 1 &&
+        once(`stop:${where(node.path)}`)
       ) {
+        const at = where(node.path);
         warnings.push({
-          path: position,
-          message: `dead code after many at ${position}: main chain terminates at the many operator`,
+          path: at,
+          message: `dead code after stop at ${at}: entries after an unconditional stop never run`,
           suggestion:
-            'Remove entries after the many operator; move them into each many branch if they should still run.',
+            'Remove the entries after the stop, or give the stop a match.',
         });
       }
-      // Recurse into each array entry so we still catch nested issues
-      // (e.g. an inner `one` with a single-entry many branch).
-      lintRoute(entry, `${position}[${i}]`, warnings);
     }
-    return;
-  }
 
-  // RouteConfig — narrow by operator.
-  if (isRouteNext(spec)) {
-    lintRoute(spec.next, `${position}.next`, warnings);
-    return;
-  }
-
-  if (isRouteOne(spec)) {
-    for (let i = 0; i < spec.one.length; i++) {
-      lintRoute(spec.one[i], `${position}.one[${i}]`, warnings);
-    }
-    return;
-  }
-
-  if (isRouteMany(spec)) {
-    if (spec.many.length === 0) {
+    if (
+      node.kind === 'many' &&
+      last === 'many' &&
+      node.targets.length === 0 &&
+      once(`empty:${where(node.path)}`)
+    ) {
+      const at = where(node.path.slice(0, -1));
       warnings.push({
-        path: position,
-        message: `empty many at ${position}: main chain terminates with no branches; use next or remove`,
-        suggestion:
-          'Add one or more branch targets to many, or replace many with next if no fan-out is needed.',
-      });
-    } else if (spec.many.length === 1) {
-      const only = spec.many[0];
-      const hint =
-        typeof only === 'string'
-          ? `use 'next: "${only}"' for clarity`
-          : `use 'next' for clarity`;
-      warnings.push({
-        path: position,
-        message: `single-entry many at ${position}: ${hint}`,
-        suggestion: 'Replace many with next when only one branch exists.',
+        path: at,
+        message: `empty many at ${at}: selects no branch, so it has no effect`,
+        suggestion: 'Add two or more branch targets to many, or remove it.',
       });
     }
-    for (let i = 0; i < spec.many.length; i++) {
-      lintRoute(spec.many[i], `${position}.many[${i}]`, warnings);
-    }
-    return;
-  }
 
-  // Bare gate: nothing else to recurse into.
+    for (const decision of [...(node.via ?? []), node]) {
+      const index = decision.path[decision.path.length - 1];
+      if (typeof index !== 'number') continue;
+      const listPath = decision.path.slice(0, -1);
+      const list = routeAt(spec, listPath);
+      if (!Array.isArray(list)) continue;
+      const at = where(listPath);
+
+      if (
+        decision.kind === 'many' &&
+        list.length === 1 &&
+        once(`single:${at}`)
+      ) {
+        const only = list[0];
+        const hint =
+          typeof only === 'string'
+            ? `use 'next: "${only}"' for clarity`
+            : `use 'next' for clarity`;
+        warnings.push({
+          path: at,
+          message: `single-entry many at ${at}: ${hint}`,
+          suggestion: 'Replace many with next when only one branch exists.',
+        });
+      }
+
+      // A pure route-config array is compiled as an implicit `one`.
+      const explicitOne = listPath[listPath.length - 1] === 'one';
+      if (
+        decision.kind === 'one' &&
+        !explicitOne &&
+        list.length > 1 &&
+        once(`first-match:${at}`)
+      ) {
+        warnings.push({
+          path: at,
+          message: `first-match array at ${at}: an array made only of route configs is an implicit one, the first matching entry wins`,
+          suggestion:
+            'Write { "one": [...] } explicitly, or add the step ids as a sequence to run every entry in order.',
+        });
+      }
+    }
+  }
 }
 
 /**

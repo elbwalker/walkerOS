@@ -1366,6 +1366,66 @@ describe('validateFlowConfig', () => {
         },
         'flows.default.sources.s.next.one.0.match.and.0.key',
       ],
+      [
+        'an entry match around a nested gate',
+        {
+          transformers: {
+            t: {
+              next: {
+                one: [
+                  {
+                    match: { key: 'data.id', operator: 'exists', value: '' },
+                    next: {
+                      match: {
+                        key: 'event.name',
+                        operator: 'exists',
+                        value: '',
+                      },
+                      next: 'a',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        'flows.default.transformers.t.next.one.0.match.key',
+      ],
+      [
+        'a gated stop',
+        {
+          destinations: {
+            d: {
+              package: '@walkeros/x',
+              before: [
+                'a',
+                {
+                  match: { key: 'name', operator: 'eq', value: 'x' },
+                  stop: true,
+                },
+              ],
+            },
+          },
+        },
+        'flows.default.destinations.d.before.1.match.key',
+      ],
+      [
+        'a collector.next match',
+        {
+          collector: {
+            next: {
+              many: [
+                {
+                  match: { key: 'data.id', operator: 'exists', value: '' },
+                  next: 'a',
+                },
+                'b',
+              ],
+            },
+          },
+        },
+        'flows.default.collector.next.many.0.match.key',
+      ],
     ])('flags %s', (_, steps, path) => {
       expect(rootErrorPaths(steps)).toEqual([path]);
     });

@@ -175,7 +175,7 @@ describe('Source Transformer Chains (source.next)', () => {
       expect(destinationEvents[0].name).toBe('page view');
     });
 
-    it('supports array next for explicit chain control', async () => {
+    it('array next is the backbone, member next is inserted after its member', async () => {
       const order: string[] = [];
 
       const { collector } = await startFlow({
@@ -202,7 +202,7 @@ describe('Source Transformer Chains (source.next)', () => {
                 return { event };
               },
             }),
-            next: 'ignored',
+            next: 'inserted',
           },
           b: {
             code: async (context): Promise<Transformer.Instance> => ({
@@ -224,12 +224,12 @@ describe('Source Transformer Chains (source.next)', () => {
               },
             }),
           },
-          ignored: {
+          inserted: {
             code: async (context): Promise<Transformer.Instance> => ({
-              type: 'ignored',
+              type: 'inserted',
               config: context.config,
               push: async (event) => {
-                order.push('ignored');
+                order.push('inserted');
                 return { event };
               },
             }),
@@ -248,8 +248,9 @@ describe('Source Transformer Chains (source.next)', () => {
 
       await collector.sources.testSource.push({ name: 'page view', data: {} });
 
-      expect(order).toEqual(['a', 'b', 'c']);
-      expect(order).not.toContain('ignored');
+      // R7: the explicit array is the backbone and a member's own `next` is
+      // inserted right after it, so `a.next` runs before `b`.
+      expect(order).toEqual(['a', 'inserted', 'b', 'c']);
     });
   });
 

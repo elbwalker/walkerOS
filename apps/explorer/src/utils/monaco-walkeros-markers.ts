@@ -1,4 +1,12 @@
-import { REF_ENV, REF_FLOW, REF_STORE, REF_SECRET } from '@walkeros/core';
+import {
+  REF_ENV,
+  REF_FLOW,
+  REF_STORE,
+  REF_SECRET,
+  getRouteGraph,
+} from '@walkeros/core';
+import type { Transformer } from '@walkeros/core';
+import { schemas } from '@walkeros/core/dev';
 import type { IntelliSenseContext } from '../types/intellisense';
 
 export interface ValidationIssue {
@@ -116,10 +124,32 @@ export function validateWalkerOSReferences(
     }
   }
 
-  // Check next/before cross-references across scalar, array, and Route[] forms
+  // Check next/before cross-references in every Route form
   issues.push(...validateChainRefs(text, context.stepNames?.transformers));
 
   return issues;
+}
+
+/**
+ * A chain field value is only enumerated once it is a valid Route. The
+ * schema is the grammar's single source; an invalid value is reported by the
+ * JSON schema markers, not here.
+ */
+function isRoute(value: unknown): value is Transformer.Route {
+  return schemas.RouteSchema.safeParse(value).success;
+}
+
+/**
+ * Every transformer id a Route can reach, read through core's `getRouteGraph`
+ * (the one enumerator over the compiled route form). Covers `one`, `many`,
+ * gates and sequences; a `stop` entry has no target and yields no ref.
+ */
+function routeRefs(route: Transformer.Route): string[] {
+  const refs = new Set<string>();
+  for (const node of getRouteGraph(route)) {
+    for (const target of node.targets) refs.add(target);
+  }
+  return [...refs];
 }
 
 // TODO: precise source offsets for chain-ref markers (currently path-only).
@@ -138,21 +168,6 @@ function validateChainRefs(
     return issues;
   }
 
-  function collectRefs(value: unknown): string[] {
-    if (typeof value === 'string') return [value];
-    if (Array.isArray(value)) {
-      const out: string[] = [];
-      for (const item of value) {
-        if (typeof item === 'string') out.push(item);
-        else if (item && typeof item === 'object' && 'next' in item) {
-          out.push(...collectRefs((item as { next: unknown }).next));
-        }
-      }
-      return out;
-    }
-    return [];
-  }
-
   function walk(node: unknown, path: (string | number)[]): void {
     if (!node || typeof node !== 'object') return;
     if (Array.isArray(node)) {
@@ -162,10 +177,10 @@ function validateChainRefs(
     for (const [key, value] of Object.entries(node)) {
       const p = [...path, key];
       if (key === 'next' || key === 'before') {
-        // collectRefs handles scalar/array/Route[] uniformly. Do NOT walk
-        // into the value afterwards — a Route[] item's inner `next` would
-        // otherwise be re-detected on the recursive descent.
-        for (const ref of collectRefs(value)) {
+        // The whole Route is enumerated here. Do NOT walk into the value
+        // afterwards: a route entry's inner `next` is part of this Route.
+        if (!isRoute(value)) continue;
+        for (const ref of routeRefs(value)) {
           if (!stepNames.includes(ref)) {
             // v1: path-only diagnostic with index 0,0; offset tracking is a
             // follow-up (see TODO above).

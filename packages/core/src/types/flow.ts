@@ -18,20 +18,24 @@
  * Sources use `before` for consent-exempt pre-source preprocessing
  * (decode, validate, authenticate raw input before the source.next chain).
  *
- * Destinations use `before` to connect to transformers (post-collector chain).
+ * The collector uses `next` for its own chain: it runs once per completed
+ * event, before the destination fan-out, so a `stop` there drops the event
+ * for every destination.
+ *
+ * Destinations use `before` to connect to transformers (per-destination chain).
  * Destinations use `next` for post-push processing.
  *
  * Transformers use `next` to chain to other transformers. The same transformer
  * pool is shared by both pre-collector and post-collector chains.
  *
- * The collector is implicit - it is never referenced directly in connections.
- * It sits between the source chain and the destination chain automatically.
+ * The collector is never referenced as a target in connections. It sits
+ * between the source chain and the destination chains automatically.
  *
- * Circular `next` references are safely handled at runtime by `walkChain()`
- * in the collector module (visited-set detection).
+ * Circular member `next` references are cut at runtime by the chain
+ * runner's cycle guard (`advanceChain`) and bounded by its path cap.
  *
  * ```
- * Source → [before → Preprocessing] → [next → Transformer chain] → Collector → [before → Transformer chain] → Destination → [next → Post-push]
+ * Source → [before → Preprocessing] → [next → Transformer chain] → Collector → [collector.next → Transformer chain] → [before → Transformer chain] → Destination → [next → Post-push]
  * ```
  *
  * @packageDocumentation
@@ -88,9 +92,10 @@ export interface Flow {
   /**
    * Transformer configurations (event transformation).
    *
-   * Pre-collector (source.next) or post-collector (destination.before).
+   * Pre-collector (source.next), collector-level (collector.next, once per
+   * event for every destination) or per destination (destination.before).
    *
-   * Key = unique transformer identifier (referenced by source.next or destination.before)
+   * Key = unique transformer identifier (referenced by any chain field)
    * Value = transformer reference with package and config
    */
   transformers?: Record<string, Flow.Transformer>;
@@ -576,8 +581,9 @@ export namespace Flow {
      * In a pre-collector chain (source.next), terminates at the collector.
      * In a post-collector chain (destination.before), terminates at the destination.
      * If omitted, the chain ends and control passes to the next pipeline stage.
-     * Array values define an explicit chain (no walking). Circular references
-     * are safely detected at runtime by `walkChain()`.
+     * Array values define an explicit chain; a member's own `next` is
+     * inserted right after it. Circular references are cut at runtime by the
+     * chain runner's cycle guard (`advanceChain`).
      */
     next?: Route;
 

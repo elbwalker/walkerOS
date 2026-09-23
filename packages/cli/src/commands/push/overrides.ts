@@ -48,6 +48,8 @@ export interface PushOverrides {
  * - `--simulate destination.NAME` sets simulate: true on NAME
  * - `--simulate source.NAME` marks source for simulation
  * - `--mock destination.NAME=VALUE` sets mock: JSON-parsed VALUE on NAME
+ * - `--mock destination.NAME.before.T=VALUE` mocks transformer T on that chain
+ * - `--mock collector.next.T=VALUE` mocks transformer T in `collector.next`
  * - Any destination NOT targeted by simulate or mock gets disabled: true
  * - Returns empty object if no flags are provided
  *
@@ -129,6 +131,12 @@ export function buildOverrides(
       );
     }
 
+    if (parsed.type === 'collector' && !parsed.chainType) {
+      throw new Error(
+        `Use --mock collector.next.TRANSFORMER=VALUE to mock a step of the collector's chain`,
+      );
+    }
+
     if (parsed.type === 'transformer' && !parsed.chainType) {
       throw new Error(
         `Use --mock destination.NAME.before.${parsed.name}=VALUE for path-specific transformer mocks`,
@@ -144,8 +152,12 @@ export function buildOverrides(
     }
 
     if (parsed.chainType && parsed.transformerId) {
-      // Path-specific mock: destination.ga4.before.redact
-      const chainPath = `destination.${parsed.name}.${parsed.chainType}`;
+      // Path-specific mock: destination.ga4.before.redact, or
+      // collector.next.bot for the collector's own chain.
+      const chainPath =
+        parsed.type === 'collector'
+          ? `collector.${parsed.chainType}`
+          : `destination.${parsed.name}.${parsed.chainType}`;
       if (!overrides.transformerMocks) overrides.transformerMocks = {};
       if (!overrides.transformerMocks[chainPath])
         overrides.transformerMocks[chainPath] = {};
@@ -192,6 +204,7 @@ export interface ParsedStep {
 /**
  * Parse a step string in `source.NAME` or `destination.NAME` format.
  * Also supports 4-part path notation: `destination.NAME.CHAIN.TRANSFORMER`
+ * and the collector's chain: `collector.next.TRANSFORMER`
  * @throws if format is invalid
  */
 export function parseStep(step: string): ParsedStep {
@@ -208,6 +221,21 @@ export function parseStep(step: string): ParsedStep {
         `Invalid step format: "${input}". Missing name after "${p}."`,
     },
   });
+
+  // The collector's own chain: collector.next.bot
+  if (prefix === 'collector' && rest.length > 0) {
+    if (name !== 'next' || rest.length !== 1 || !rest[0]) {
+      throw new Error(
+        `Invalid step format: "${step}". Expected "collector.next.TRANSFORMER"`,
+      );
+    }
+    return {
+      type: prefix,
+      name,
+      chainType: 'next',
+      transformerId: rest[0],
+    };
+  }
 
   // Path-specific: destination.ga4.before.redact
   if (rest.length >= 2) {

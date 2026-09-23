@@ -1,7 +1,9 @@
 import { JsonSchema } from './flow';
 import type { ValidationIssue, ValidationResult } from './validate';
 import type { IntelliSenseContext, PackageInfo } from './intellisense';
-import type { Flow } from '../types';
+import type { Flow, Transformer } from '../types';
+import { getRouteGraph } from '../chain';
+import { RouteSchema } from './matcher';
 import { resolveContracts } from '../contract';
 
 /**
@@ -609,8 +611,8 @@ const STEP_KINDS = ['sources', 'transformers', 'destinations'] as const;
  * Flags paths that can never resolve, by walking each step with the root its
  * values resolve against. Mapping `data` and `policy` resolve against the
  * event, so an `ingest.` path there is a silent miss. Cache keys and route
- * matchers resolve against `{ event, ingest }`, so a path needs one of those
- * prefixes. State paths are checked by StateSchema.
+ * matchers (every chain field, `collector.next` included) resolve against
+ * `{ event, ingest }`, so a path needs one of those prefixes. State paths are checked by StateSchema.
  */
 function checkResolutionRoots(
   text: string,
@@ -659,13 +661,19 @@ function checkResolutionRoots(
       for (const [id, step] of Object.entries(steps)) {
         if (!isObject(step)) continue;
         const at: Path = ['flows', flowName, kind, id];
-        walkRoute(step.before, [...at, 'before'], rootPath);
-        walkRoute(step.next, [...at, 'next'], rootPath);
+        walkRouteMatchers(step.before, [...at, 'before'], rootPath);
+        walkRouteMatchers(step.next, [...at, 'next'], rootPath);
         walkCache(step.cache, [...at, 'cache'], rootPath, updatePath);
         if (kind !== 'transformers' && isObject(step.config))
           walkEventMapping(step.config, [...at, 'config'], eventRoot);
       }
     }
+    if (isObject(flow.collector))
+      walkRouteMatchers(
+        flow.collector.next,
+        ['flows', flowName, 'collector', 'next'],
+        rootPath,
+      );
   }
 }
 
@@ -751,16 +759,28 @@ function walkCache(
   });
 }
 
-function walkRoute(route: unknown, at: Path, check: PathCheck): void {
-  if (Array.isArray(route)) {
-    route.forEach((item, i) => walkRoute(item, [...at, i], check));
-    return;
+function isRoute(value: unknown): value is Transformer.Route {
+  return RouteSchema.safeParse(value).success;
+}
+
+/**
+ * Checks every matcher of a route, read through `getRouteGraph` (the one
+ * enumerator over the compiled route form): each branch's own decision and
+ * the enclosing ones it lists in `via`, each once. A value that is not a
+ * valid route is left to the schema errors.
+ */
+function walkRouteMatchers(route: unknown, at: Path, check: PathCheck): void {
+  if (route === undefined || !isRoute(route)) return;
+  const seen = new Set<string>();
+  for (const node of getRouteGraph(route)) {
+    for (const decision of [...(node.via ?? []), node]) {
+      if (!decision.match) continue;
+      const key = decision.path.join('.');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      walkMatch(decision.match, [...at, ...decision.path, 'match'], check);
+    }
   }
-  if (!isObject(route)) return;
-  walkMatch(route.match, [...at, 'match'], check);
-  walkRoute(route.next, [...at, 'next'], check);
-  walkRoute(route.one, [...at, 'one'], check);
-  walkRoute(route.many, [...at, 'many'], check);
 }
 
 function walkMatch(expr: unknown, at: Path, check: PathCheck): void {

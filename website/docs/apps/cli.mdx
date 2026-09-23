@@ -570,8 +570,8 @@ The event was sent to your real API endpoint!
 | `-e, --event <source>` | **Required.** Event to push (JSON string, file path, or URL) |
 | `-f, --flow <name>` | Flow name (for multi-flow configs) |
 | `-p, --platform <platform>` | Platform override (`web` or `server`) |
-| `--simulate <step>` | Simulate a step (repeatable). Mocks the step's push, captures result. Use `destination.NAME` or `source.NAME`. |
-| `--mock <step=value>` | Mock a step with a specific return value (repeatable). Use `destination.NAME=VALUE`. |
+| `--simulate <step>` | Simulate a step (repeatable). Mocks the step's push, captures result. Use `source.NAME`, `transformer.NAME`, `destination.NAME`, or `collector.NAME` (for example `collector.default`). A transformer runs through its own `before` and `next`; the collector step runs the collector's enrichment and then `collector.next`, so it returns every copy that would reach the destinations (none when a `stop` drops the event). |
+| `--mock <step=value>` | Mock a step with a specific return value (repeatable). Use `destination.NAME=VALUE`, a chain member such as `destination.NAME.before.TRANSFORMER=VALUE`, or a member of the collector chain with `collector.next.TRANSFORMER=VALUE`. |
 | `--snapshot <source>` | JS file to eval before execution. Sets global state (`window.dataLayer`, `process.env`, etc.). |
 | `-o, --output <path>` | Write result to file |
 | `--json` | Output results as JSON |
@@ -914,6 +914,19 @@ Validation Results:
 
 Summary: 0 error(s), 1 warning(s)
 ```
+
+### Route checks
+
+Flow validation reads every chain field (`source.before`, `source.next`, `transformer.before`, `transformer.next`, `collector.next`, `destination.before`, `destination.next`) with the same route grammar the runtime uses:
+
+| Check | Level | Example message |
+|-------|-------|-----------------|
+| A route names a transformer that does not exist | Error `UNKNOWN_ROUTE_TARGET` | `Unknown transformer "x" in route at collector.next` |
+| Entries after an unconditional `stop` in a sequence or `one` | Warning | `dead code after stop at ...: entries after an unconditional stop never run` |
+| An array made only of route configs (an implicit `one`, the first match wins) | Warning | `first-match array at ...` |
+| `many` with no entry, or with a single entry | Warning | `empty many at ...`, `single-entry many at ...` |
+
+At runtime an unknown id is logged and skipped, and the chain continues. A `stop` inside `many` ends only its own copy, so it never makes its siblings dead code. Repeated steps and a transformer's own `next` inside an array are valid and not reported.
 
 ### Options
 

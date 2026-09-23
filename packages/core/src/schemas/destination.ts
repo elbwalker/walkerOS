@@ -8,7 +8,7 @@ import {
   PolicySchema,
 } from './mapping';
 import { Identifier } from './primitives';
-import { RouteWithoutManySchema } from './matcher';
+import { RouteSchema } from './matcher';
 import { EventCacheSchema } from './cache';
 import { StateSchema } from './state';
 import { LoggerConfigSchema } from './logger';
@@ -129,11 +129,11 @@ export const ConfigSchema = z
       .describe(
         'One-time setup options applied during destination registration (boolean enables defaults, object configures specifics)',
       ),
-    before: RouteWithoutManySchema.optional().describe(
-      'Post-collector transformer chain applied before this destination receives the event. `many` is not valid here — use multiple destinations for post-collector fan-out.',
+    before: RouteSchema.optional().describe(
+      'Transformer chain run for this destination only, before it receives the event.',
     ),
-    next: RouteWithoutManySchema.optional().describe(
-      'Post-push transformer chain. Runs after destination push completes; push response is available at ingest._response. `many` is not valid here — use multiple destinations for post-collector fan-out.',
+    next: RouteSchema.optional().describe(
+      'Post-push transformer chain. Runs after destination push completes; push response is available at ingest._response.',
     ),
     cache: EventCacheSchema.optional().describe(
       'Cache configuration for deduplication; skip push on cache HIT',

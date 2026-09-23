@@ -4,83 +4,22 @@ import type {
   Transformer,
   WalkerOS,
 } from '@walkeros/core';
-import { createIngest, createMockLogger, getNextSteps } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
 import {
   destinationInit,
   destinationPush,
   transformerInit,
   transformerPush,
+  runTransformerBefore,
   runTransformerChain,
 } from '@walkeros/collector';
 
 /**
- * Local mirror of the collector's internal chain walker. The collector no
- * longer exports `walkChain` from its public surface (Task 5.1 hard cut), so
- * these fixture tests carry their own minimal walker for resolving before
- * chains to ordered transformer-id arrays.
- */
-function localWalkChain(
-  startId: string | string[] | undefined,
-  transformers: Transformer.Transformers,
-): string[] {
-  if (!startId) return [];
-  if (Array.isArray(startId)) return startId;
-
-  const chain: string[] = [];
-  const visited = new Set<string>();
-  let current: string | undefined = startId;
-
-  while (current && transformers[current]) {
-    if (visited.has(current)) break;
-    visited.add(current);
-    chain.push(current);
-
-    const next: Transformer.Route | undefined =
-      transformers[current].config?.next;
-    if (typeof next === 'string') {
-      current = next;
-      continue;
-    }
-    if (
-      Array.isArray(next) &&
-      next.every((entry) => typeof entry === 'string')
-    ) {
-      for (const id of next) chain.push(id);
-      break;
-    }
-    break;
-  }
-
-  return chain;
-}
-
-/**
- * Resolve a Route to an ordered chain of transformer ids. Uses the public
- * `getNextSteps` to compute entry points, then walks `.next` links.
- */
-function resolveChain(
-  spec: Transformer.Route | undefined,
-  transformers: Transformer.Transformers,
-): string[] {
-  if (spec === undefined) return [];
-  if (typeof spec === 'string') return localWalkChain(spec, transformers);
-  if (Array.isArray(spec) && spec.every((entry) => typeof entry === 'string')) {
-    return localWalkChain(spec, transformers);
-  }
-  const ids = getNextSteps(spec);
-  if (ids.length === 0) return [];
-  if (ids.length === 1) return localWalkChain(ids[0], transformers);
-  return ids;
-}
-
-/**
  * Tests for before-chain execution in transformer simulation.
  *
- * Validates the pattern: resolve before chain (via `resolveChain`) -> run via
- * runTransformerChain -> then call transformerPush on the main transformer.
- *
- * This mirrors the logic in simulateTransformer without requiring
- * a real ESM bundle.
+ * Validates the pattern: run the before chain via the runtime's own
+ * `runTransformerBefore` -> then call transformerPush on the main
+ * transformer. No chain resolution of its own.
  */
 describe('transformer simulation isolation — before chain', () => {
   function createMockCollector(
@@ -155,29 +94,18 @@ describe('transformer simulation isolation — before chain', () => {
       data: { url: '/home' },
     } as WalkerOS.DeepPartialEvent;
 
-    // Step 1: Resolve before chain
-    const before = transformer.config.before;
-    const beforeChainIds = resolveChain(before, transformers);
-    expect(beforeChainIds).toEqual(['enrich']);
-
-    // Step 2: Run before chain
+    // Step 1: Run the before chain the way the runtime does
     let processedEvent: WalkerOS.DeepPartialEvent = inputEvent;
-    const beforeResult = await runTransformerChain(
+    const beforeResult = await runTransformerBefore(
       collector,
       transformers,
-      beforeChainIds,
+      transformerId,
       processedEvent,
       ingest,
-      undefined,
-      `transformer.${transformerId}.before`,
     );
 
-    expect(beforeResult.event).not.toBeNull();
-    processedEvent = (
-      Array.isArray(beforeResult.event)
-        ? beforeResult.event![0]
-        : beforeResult.event
-    ) as WalkerOS.DeepPartialEvent;
+    expect(beforeResult.copies).toHaveLength(1);
+    processedEvent = beforeResult.copies[0].event as WalkerOS.DeepPartialEvent;
 
     // Verify enrichment was applied
     expect(processedEvent.data).toEqual({ url: '/home', enriched: true });
@@ -282,24 +210,17 @@ describe('transformer simulation isolation — before chain', () => {
       data: {},
     } as WalkerOS.DeepPartialEvent;
 
-    // Resolve before chain
-    const before = transformer.config.before;
-    const beforeChainIds = resolveChain(before, transformers);
-    expect(beforeChainIds).toEqual(['gate']);
-
     // Run before chain — gate drops the event
-    const beforeResult = await runTransformerChain(
+    const beforeResult = await runTransformerBefore(
       collector,
       transformers,
-      beforeChainIds,
+      transformerId,
       inputEvent,
       ingest,
-      undefined,
-      `transformer.${transformerId}.before`,
     );
 
     // Chain returned null (event was dropped)
-    expect(beforeResult.event).toBeNull();
+    expect(beforeResult.copies).toEqual([]);
 
     // Main transformer should NOT be called when before chain drops
     expect(mainPush).not.toHaveBeenCalled();
@@ -350,28 +271,18 @@ describe('transformer simulation isolation — before chain', () => {
       data: { total: 100 },
     } as WalkerOS.DeepPartialEvent;
 
-    // Resolve before chain — should follow validate -> enrich via next link
-    const before = transformer.config.before;
-    const beforeChainIds = resolveChain(before, transformers);
-    expect(beforeChainIds).toEqual(['validate', 'enrich']);
-
-    // Run before chain
-    const beforeResult = await runTransformerChain(
+    // Run before chain: validate, then its own next (enrich)
+    const beforeResult = await runTransformerBefore(
       collector,
       transformers,
-      beforeChainIds,
+      transformerId,
       inputEvent,
       ingest,
-      undefined,
-      `transformer.${transformerId}.before`,
     );
 
-    expect(beforeResult.event).not.toBeNull();
-    const processedEvent = (
-      Array.isArray(beforeResult.event)
-        ? beforeResult.event![0]
-        : beforeResult.event
-    ) as WalkerOS.DeepPartialEvent;
+    expect(beforeResult.copies).toHaveLength(1);
+    const processedEvent = beforeResult.copies[0]
+      .event as WalkerOS.DeepPartialEvent;
 
     // Both validate and enrich ran
     expect(processedEvent.data).toEqual({
@@ -525,25 +436,18 @@ describe('destination simulation with before chain', () => {
     const before = destination.config.before;
     let processedEvent: WalkerOS.Event = inputEvent;
     if (before && collector.transformers) {
-      const beforeChainIds = resolveChain(before, collector.transformers);
-      expect(beforeChainIds).toEqual(['enrich']);
-
       const beforeResult = await runTransformerChain(
         collector,
         collector.transformers,
-        beforeChainIds,
+        before,
         processedEvent,
         ingest,
         undefined,
         `destination.${destId}.before`,
       );
 
-      expect(beforeResult.event).not.toBeNull();
-      processedEvent = (
-        Array.isArray(beforeResult.event)
-          ? beforeResult.event![0]
-          : beforeResult.event
-      ) as WalkerOS.Event;
+      expect(beforeResult.copies).toHaveLength(1);
+      processedEvent = beforeResult.copies[0].event as WalkerOS.Event;
     }
 
     // Verify enrichment was applied
@@ -596,15 +500,11 @@ describe('destination simulation with before chain', () => {
       data: { url: '/home' },
     } as unknown as WalkerOS.Event;
 
-    // Resolve and run before chain
-    const before = destination.config.before;
-    const beforeChainIds = resolveChain(before, collector.transformers!);
-    expect(beforeChainIds).toEqual(['gate']);
-
+    // Run the before route
     const beforeResult = await runTransformerChain(
       collector,
       collector.transformers!,
-      beforeChainIds,
+      destination.config.before,
       inputEvent,
       ingest,
       undefined,
@@ -612,7 +512,7 @@ describe('destination simulation with before chain', () => {
     );
 
     // Before chain dropped the event
-    expect(beforeResult.event).toBeNull();
+    expect(beforeResult.copies).toEqual([]);
 
     // destinationPush should NOT be called when before chain drops
     expect(destPushFn).not.toHaveBeenCalled();

@@ -77,7 +77,7 @@ describe('push chain-stop drops', () => {
       event,
     );
 
-    expect(chainResult.event).toBeNull();
+    expect(chainResult.copies).toEqual([]);
     expect(chainResult.droppedBy).toBe('filter');
   });
 });

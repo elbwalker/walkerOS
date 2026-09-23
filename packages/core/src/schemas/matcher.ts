@@ -34,7 +34,8 @@ export const MatchExpressionSchema: z.ZodType = z
   });
 
 // Recursive Route grammar (Flow v4): string | Route[] | RouteConfig.
-// RouteConfig is a disjoint union enforcing exactly one of next/one/many/gate.
+// RouteConfig is a disjoint union enforcing exactly one of
+// next/one/many/stop/gate.
 const RouteNextConfigSchema = z.strictObject({
   match: MatchExpressionSchema.optional(),
   next: z.lazy(() => RouteSchema),
@@ -50,6 +51,11 @@ const RouteManyConfigSchema = z.strictObject({
   many: z.array(z.lazy(() => RouteSchema)),
 });
 
+const RouteStopConfigSchema = z.strictObject({
+  match: MatchExpressionSchema.optional(),
+  stop: z.literal(true),
+});
+
 const RouteGateConfigSchema = z.strictObject({
   match: MatchExpressionSchema,
 });
@@ -58,6 +64,7 @@ const RouteConfigSchema = z.union([
   RouteNextConfigSchema,
   RouteOneConfigSchema,
   RouteManyConfigSchema,
+  RouteStopConfigSchema,
   RouteGateConfigSchema,
 ]);
 
@@ -67,37 +74,5 @@ export const RouteSchema: z.ZodType = z
     id: 'Route',
     title: 'Route',
     description:
-      'Recursive route: string ID, sequence of routes, or a RouteConfig (next/one/many/gate).',
-  });
-
-// Restricted Route grammar for post-collector positions (destination.before).
-// `many` is forbidden at any depth: post-collector fan-out is expressed by
-// configuring multiple destinations, not by branching the chain.
-const RouteNextConfigSchema_NoMany = z.strictObject({
-  match: MatchExpressionSchema.optional(),
-  next: z.lazy(() => RouteWithoutManySchema),
-});
-
-const RouteOneConfigSchema_NoMany = z.strictObject({
-  match: MatchExpressionSchema.optional(),
-  one: z.array(z.lazy(() => RouteWithoutManySchema)),
-});
-
-const RouteConfigSchema_NoMany = z.union([
-  RouteNextConfigSchema_NoMany,
-  RouteOneConfigSchema_NoMany,
-  RouteGateConfigSchema,
-]);
-
-export const RouteWithoutManySchema: z.ZodType = z
-  .union([
-    z.string(),
-    z.array(z.lazy(() => RouteWithoutManySchema)),
-    RouteConfigSchema_NoMany,
-  ])
-  .meta({
-    id: 'RouteWithoutMany',
-    title: 'RouteWithoutMany',
-    description:
-      'Route variant for post-collector positions (destination.before). Excludes the many operator — post-collector fan-out uses the destinations map.',
+      'Recursive route: string ID, sequence of routes, or a RouteConfig (next/one/many/stop/gate). Valid in every chain field.',
   });

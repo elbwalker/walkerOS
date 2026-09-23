@@ -1,4 +1,28 @@
-import { compileNext, resolveNext } from '../route';
+import { compileNext, getNextSteps } from '../route';
+import type { CompiledNext } from '../route';
+import type { Mapping } from '../types';
+
+/** Resolves a compiled node to the end with one root (ids, 'stop' or 'fork'). */
+function resolve(
+  compiled: CompiledNext | undefined,
+  partial: Partial<Mapping.Root> = {},
+): string[] | 'stop' | 'fork' {
+  const root: Mapping.Root = { ingest: {}, ...partial };
+  const ids: string[] = [];
+  let steps = getNextSteps(
+    compiled
+      ? { type: 'continuation', segments: [compiled], at: 0 }
+      : undefined,
+    root,
+  );
+  for (;;) {
+    if (steps.stop) return 'stop';
+    if (steps.forks) return 'fork';
+    ids.push(...steps.ids);
+    if (!steps.then) return ids;
+    steps = getNextSteps(steps.then, root);
+  }
+}
 
 describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
   it('compiles a mixed array to a sequence', () => {
@@ -44,7 +68,7 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
         ],
       },
     ]);
-    const resolved = resolveNext(compiled!, {
+    const resolved = resolve(compiled, {
       event: { name: 'order complete' },
     });
     expect(resolved).toEqual(['a', 'x']);
@@ -66,10 +90,10 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
         ],
       },
     ]);
-    const resolved = resolveNext(compiled!, {
+    const resolved = resolve(compiled, {
       event: { name: 'page view' },
     });
-    // Only "a" survives; inner one has no fallback so segment 2 → undefined
+    // Only "a" survives: the inner one has no fallback and falls through.
     expect(resolved).toEqual(['a']);
   });
 
@@ -89,12 +113,12 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
     ]);
     expect(compiled!.type).toBe('sequence');
 
-    const matched = resolveNext(compiled!, {
+    const matched = resolve(compiled, {
       ingest: { path: '/api/data' },
     });
     expect(matched).toEqual(['dedup', 'validate', 'enrich', 'writer']);
 
-    const fallback = resolveNext(compiled!, {
+    const fallback = resolve(compiled, {
       ingest: { path: '/other' },
     });
     expect(fallback).toEqual(['dedup', 'fallback', 'writer']);
@@ -107,7 +131,7 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
     if (compiled && compiled.type === 'chain') {
       expect(compiled.value).toEqual(['a', 'b']);
     }
-    expect(resolveNext(compiled!)).toEqual(['a', 'b']);
+    expect(resolve(compiled)).toEqual(['a', 'b']);
   });
 
   it('still compiles a pure RouteConfig array as one (unchanged)', () => {
@@ -120,11 +144,11 @@ describe('compileNext — mixed sequence (string + RouteConfig array)', () => {
     ]);
     expect(compiled).toBeDefined();
     expect(compiled!.type).toBe('one');
-    expect(resolveNext(compiled!, { event: { name: 'page view' } })).toBe(
+    expect(resolve(compiled, { event: { name: 'page view' } })).toEqual([
       'page-handler',
-    );
-    expect(resolveNext(compiled!, { event: { name: 'other' } })).toBe(
+    ]);
+    expect(resolve(compiled, { event: { name: 'other' } })).toEqual([
       'default',
-    );
+    ]);
   });
 });

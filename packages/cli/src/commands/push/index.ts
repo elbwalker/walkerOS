@@ -1,16 +1,10 @@
 import path from 'path';
 import fs from 'fs-extra';
-import {
-  createIngest,
-  getPlatform,
-  getNextSteps,
-  createMappingRoot,
-  stepId,
-} from '@walkeros/core';
+import { createIngest, getPlatform, stepId } from '@walkeros/core';
 import {
   enrichEvent,
   transformerInit,
-  transformerPush,
+  runCollectorNext,
   runTransformerChain,
   wrapEnv,
 } from '@walkeros/collector';
@@ -23,6 +17,7 @@ import {
 } from '../../core/index.js';
 
 import type {
+  Collector,
   Flow,
   FlowState,
   Ingest,
@@ -136,64 +131,6 @@ function getDevEnv(devModule: unknown): DevEnv | undefined {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(isString);
-}
-
-/**
- * Walk a transformer chain via static `.next` links starting at `startId`.
- * Mirrors the collector's internal `walkChain` for the case where the
- * simulator already knows the entry-point id and the underlying chain is
- * static. Conditional `.next` shapes terminate the walk at this hop.
- */
-function walkStaticChain(
-  startId: string,
-  transformers: import('@walkeros/core').Transformer.Transformers,
-): string[] {
-  const chain: string[] = [];
-  const visited = new Set<string>();
-  let current: string | undefined = startId;
-
-  while (current && transformers[current]) {
-    if (visited.has(current)) break;
-    visited.add(current);
-    chain.push(current);
-
-    const next: import('@walkeros/core').Transformer.Route | undefined =
-      transformers[current].config?.next;
-    if (typeof next === 'string') {
-      current = next;
-      continue;
-    }
-    if (Array.isArray(next) && next.every(isString)) {
-      chain.push(...next);
-      break;
-    }
-    // Conditional / undefined → terminate walk.
-    break;
-  }
-
-  return chain;
-}
-
-/**
- * Resolve a before chain config to an ordered array of transformer IDs.
- * Uses `getNextSteps` for the entry points and follows static `.next`
- * links via `walkStaticChain`.
- */
-function resolveBeforeChain(
-  before: import('@walkeros/core').Transformer.Route | undefined,
-  transformers: import('@walkeros/core').Transformer.Transformers,
-  ingest?: import('@walkeros/core').Ingest,
-  event?: WalkerOS.DeepPartialEvent,
-): string[] {
-  if (!before) return [];
-  // Explicit string[] chain — use as-is.
-  if (Array.isArray(before) && before.every(isString)) {
-    return before;
-  }
-  const ids = getNextSteps(before, createMappingRoot(ingest, event));
-  if (ids.length === 0) return [];
-  if (ids.length === 1) return walkStaticChain(ids[0], transformers);
-  return ids;
 }
 
 /**
@@ -812,6 +749,31 @@ export async function simulateSource(
   }
 }
 
+/**
+ * Runs a transformer the way the runtime does: through the one chain runner
+ * (`runTransformerChain`), starting at the transformer. Its `before` chain
+ * (via `runTransformerBefore` inside the runner), its push and its route all
+ * run, resolved hop by hop with `{ ingest, event }`. Returns every finished
+ * copy; empty when the event was dropped or stopped.
+ */
+export async function runTransformerSimulation(
+  collector: Collector.Instance,
+  transformerId: string,
+  event: WalkerOS.DeepPartialEvent,
+  ingest: Ingest,
+): Promise<WalkerOS.DeepPartialEvent[]> {
+  const result = await runTransformerChain(
+    collector,
+    collector.transformers,
+    transformerId,
+    event,
+    ingest,
+    undefined,
+    `transformer.${transformerId}`,
+  );
+  return result.copies.map((copy) => copy.event);
+}
+
 export interface SimulateTransformerOptions extends SimulateDataOptions {
   transformerId: string;
   bundlePath?: string;
@@ -833,10 +795,11 @@ export interface SimulateTransformerOptions extends SimulateDataOptions {
  *
  * Takes a DeepPartialEvent, validates it with Zod, loads the flow config,
  * bundles it, starts the flow to get initialized transformers, then runs
- * the event through the target transformer (with optional before chain).
+ * the event from the target transformer on, exactly as the runtime does
+ * (`runTransformerSimulation`).
  *
- * Captured array: first entry = input event, subsequent entries = output event(s).
- * If the transformer drops the event (returns false), output event is null.
+ * Captured array: one entry per finished copy. When the event was dropped
+ * or stopped, a single `null` entry.
  */
 export async function simulateTransformer(
   configOrPath: string | Flow.Json,
@@ -963,67 +926,19 @@ export async function simulateTransformer(
 
         logger.info(`Simulating transformer: ${options.transformerId}`);
 
-        // Run before chain if configured (mandatory preparation)
-        let processedEvent: WalkerOS.DeepPartialEvent = inputEvent;
-        const before = transformer.config.before;
-        if (before && collector.transformers) {
-          const beforeChainIds = resolveBeforeChain(
-            before,
-            collector.transformers,
-            ingest,
-            processedEvent,
-          );
-          if (beforeChainIds.length > 0) {
-            const beforeResult = await runTransformerChain(
-              collector,
-              collector.transformers,
-              beforeChainIds,
-              processedEvent,
-              ingest,
-              undefined,
-              `transformer.${options.transformerId}.before`,
-            );
-            if (beforeResult === null) {
-              captured.push({ event: null, timestamp: Date.now() });
-              await collector.command('shutdown');
-              return buildSimulationResult({
-                step: 'transformer',
-                name: options.transformerId,
-                startTime,
-                captured,
-              });
-            }
-            processedEvent = (
-              Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
-            ) as WalkerOS.DeepPartialEvent;
-          }
-        }
-
-        const pushResult = await transformerPush(
+        // The runtime path: the one chain runner, starting at the
+        // transformer (its before chain, its push, its route).
+        const outputs = await runTransformerSimulation(
           collector,
-          transformer,
           options.transformerId,
-          processedEvent,
+          inputEvent,
           ingest,
         );
-
-        if (pushResult === false) {
+        if (outputs.length === 0) {
           captured.push({ event: null, timestamp: Date.now() });
-        } else if (Array.isArray(pushResult)) {
-          for (const r of pushResult) {
-            captured.push({
-              event: r.event || processedEvent,
-              timestamp: Date.now(),
-            });
-          }
-        } else if (
-          pushResult &&
-          typeof pushResult === 'object' &&
-          pushResult.event
-        ) {
-          captured.push({ event: pushResult.event, timestamp: Date.now() });
-        } else {
-          captured.push({ event: processedEvent, timestamp: Date.now() });
+        }
+        for (const output of outputs) {
+          captured.push({ event: output, timestamp: Date.now() });
         }
 
         await collector.command('shutdown');
@@ -1055,10 +970,30 @@ export async function simulateTransformer(
   }
 }
 
+/**
+ * Runs the collector step the way the runtime does: the runtime's own
+ * enrichment (`enrichEvent`), then the collector's own chain
+ * (`collector.next`) through `runCollectorNext`, the function
+ * `pushToDestinations` calls. Returns every finished copy (one without a
+ * fork, one per surviving fork); empty when the chain dropped the event.
+ */
+export async function runCollectorSimulation(
+  collector: Collector.Instance,
+  event: WalkerOS.DeepPartialEvent,
+): Promise<WalkerOS.Event[]> {
+  const enriched = enrichEvent(collector, event);
+  const result = await runCollectorNext(collector, enriched, {
+    ingest: createIngest('collector'),
+  });
+  return result.copies.map((copy) => copy.event);
+}
+
 export interface SimulateCollectorOptions extends SimulateDataOptions {
   collectorName: string;
   bundlePath?: string;
   flow?: string;
+  /** `collector.next.TRANSFORMER=VALUE` mocks for the collector's chain. */
+  mock?: string[];
   silent?: boolean;
   verbose?: boolean;
   snapshot?: string;
@@ -1071,12 +1006,14 @@ export interface SimulateCollectorOptions extends SimulateDataOptions {
 }
 
 /**
- * Self-contained collector enrichment simulation.
+ * Self-contained collector simulation.
  *
  * Takes a post-next `DeepPartialEvent` and an optional collector-state
- * snapshot, then returns the fully enriched event the runtime produces between
- * the pre-collector `next` chain and the post-collector `before` chain. Reuses
- * the runtime's own enrichment (`enrichEvent`); it does not reimplement it.
+ * snapshot, then returns what the runtime hands to the destination fan-out:
+ * the enriched event after the collector's own chain (`collector.next`), one
+ * entry per finished copy, or a single `null` entry when the chain dropped
+ * the event. Runs `runCollectorSimulation`; it does not reimplement the
+ * enrichment or the chain.
  */
 export async function simulateCollector(
   configOrPath: string | Flow.Json,
@@ -1111,6 +1048,7 @@ export async function simulateCollector(
         config,
         flow: options.flow,
         simulate: ['collector.' + options.collectorName],
+        mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
       }
@@ -1119,6 +1057,7 @@ export async function simulateCollector(
         config,
         flow: options.flow,
         simulate: ['collector.' + options.collectorName],
+        mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
       };
@@ -1156,7 +1095,7 @@ export async function simulateCollector(
         );
         applyOverrides(flowConfig, prepared.overrides);
 
-        // Don't initialize sources or destinations during collector enrichment.
+        // Don't initialize sources or destinations during collector simulation.
         if (flowConfig.sources) flowConfig.sources = {};
         if (flowConfig.destinations) flowConfig.destinations = {};
 
@@ -1179,12 +1118,17 @@ export async function simulateCollector(
             collector.timing = options.state.timing;
         }
 
-        const enriched = enrichEvent(collector, event);
-
+        const outputs = await runCollectorSimulation(collector, event);
         const captured: Array<{
           event: WalkerOS.DeepPartialEvent | null;
           timestamp: number;
-        }> = [{ event: enriched, timestamp: Date.now() }];
+        }> =
+          outputs.length > 0
+            ? outputs.map((output) => ({
+                event: output,
+                timestamp: Date.now(),
+              }))
+            : [{ event: null, timestamp: Date.now() }];
 
         await collector.command('shutdown');
 

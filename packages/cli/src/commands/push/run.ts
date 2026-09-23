@@ -121,6 +121,7 @@ export async function runPushCommand(
             {
               collectorName: plan.ids[0],
               flow: options.flow,
+              mock: options.mock,
               silent: options.silent,
               verbose: options.verbose,
               snapshot: options.snapshot,
