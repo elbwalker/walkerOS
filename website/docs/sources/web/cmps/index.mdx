@@ -1,5 +1,5 @@
 ---
-title: Consent management
+title: CMP sources
 description: Automate consent handling with walkerOS CMP source packages
 ---
 
@@ -41,37 +41,28 @@ events:
     "consent": {
       "package": "@walkeros/web-source-cmp-cookiefirst"
     },
-    "session": {
-      "package": "@walkeros/web-source-session",
-      "config": { "require": ["consent"] }
-    },
     "dataLayer": {
-      "package": "@walkeros/web-source-dataLayer",
+      "package": "@walkeros/web-source-datalayer",
       "config": { "require": ["consent"] }
-    }
-  },
-  "destinations": {
-    "ga4": {
-      "package": "@walkeros/web-destination-gtag",
-      "config": {
-        "require": ["consent"],
-        "consent": { "marketing": true }
-      }
     }
   }
 }`}
   language="json"
 />
 
-In this example the CMP source initializes immediately and fires
-`elb('walker consent', state)` once the user makes a choice. That `consent`
-event unblocks the session source, the dataLayer source, and the GA4
-destination, all at once.
+In this example the CMP source initializes immediately and calls
+`elb('walker consent', state)` once a consent state is known. Until then, the
+dataLayer source holds back its `run` delivery, so the dataLayer entries that
+existed before its `init()` ran are replayed only after a consent state is
+recorded. `require` does not stop a source from capturing: entries pushed to
+the dataLayer after its `init()` ran enter the flow at once. To drop a source's
+events without consent, set the source's `config.consent` (see the
+[consent guide](/docs/guides/consent#gate-a-source-with-consent)).
 
 ### How `require` works
 
 1. Sources are registered immediately and their `Instance.init()` runs eagerly
-   after registration. `require` does not block init — it gates `on()`
+   after registration. `require` does not block init; it gates `on()`
    delivery. Lifecycle events targeted at a source with unmet `require` are
    buffered in `Instance.queueOn`.
 2. Destinations with `require` are held as **pending** during initialization
@@ -84,21 +75,22 @@ destination, all at once.
    after all sources have registered.
 4. Sources whose `require` just emptied have their queued lifecycle events
    replayed via `source.on(type, data)`. Destinations whose `require` just
-   emptied are registered and become eligible to initialize/send; any previously
-   queued events are preserved and delivered once the collector is allowed to
-   push, so no data is lost.
+   emptied are registered and receive the current run's events from the
+   collector's replay buffer (bounded by the collector's `queueMax`), unless
+   they set `queue: false`. They do not receive the `on()` calls broadcast
+   while they were pending, including the consent state that activated them.
 
 ### Key points
 
-- **CMP sources must not have `require`**: they need to fire consent
-  immediately, so the collector should be able to call `on('consent', …)` on
-  them right away
+- **CMP sources need no `require`**: a CMP source reads and reports consent in
+  `init()`, which `require` does not delay, and it has no `on()` to hold back
 - **Accepted values**: any collector event type, such as `"consent"`, `"session"`,
   `"user"`, `"run"`, `"config"`, `"globals"`, etc.
 - **AND logic**: `require: ["consent", "session"]` waits for **both** events
-- **Cascading**: a CMP source fires `consent` → session source's require
-  clears, its queued `on('consent', …)` replays, it fires `session` → a
-  dataLayer source waiting for `["session"]` clears next
+- **Chained activation**: a source still runs `init()` while it waits on
+  `require`, so a command it sends can satisfy another step's `require`. The
+  session source without `settings.consent`, for example, records `session`
+  when the collector runs, which activates a step waiting for `["session"]`
 
 ## How CMP sources work
 
@@ -107,14 +99,20 @@ destination, all at once.
 3. Mapping CMP categories to walkerOS consent groups via `categoryMap`
 4. Calling `elb('walker consent', state)` with the mapped state
 
-CMP and session sources perform their initial consent read during `init()`, not
-in the source factory. The factory stays side-effect free; the consent emit
-happens once the collector runs the source's `init()`. Combined with the
-current-state `require` matching above, this means a `require:["consent"]` step
-activates reliably regardless of which source provided the consent or when.
+CMP sources perform their initial consent read during `init()`, not in the
+source factory. The factory stays side-effect free; the consent emit happens
+once the collector runs the source's `init()`. Combined with the current-state
+`require` matching above, a `require: ["consent"]` step activates whichever
+source recorded the consent, and whenever it did.
 
-All CMP sources support `explicitOnly` (default: `true`) to filter out
-implicit/default consent and only process active user choices.
+When several CMP categories map to the same walkerOS group, the CookieFirst
+and CookiePro sources grant the group if any of them is granted, and the
+Usercentrics source grants it only if all of them are.
+
+The CookiePro and Usercentrics sources support `explicitOnly` (default:
+`true`) to skip implicit or default consent and report only active user
+choices. The CookieFirst source reports nothing while `CookieFirst.consent` is
+`null`, whatever `explicitOnly` says.
 
 For more details on how consent works in walkerOS, see the
 [consent management guide](/docs/guides/consent).

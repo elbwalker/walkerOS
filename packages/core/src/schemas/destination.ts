@@ -110,7 +110,9 @@ export const ConfigSchema = z
     ),
     queue: z
       .boolean()
-      .describe('Whether to queue events when consent is not granted')
+      .describe(
+        'Whether a destination added later receives events pushed earlier in the current run (default true). Consent-denied events are queued regardless.',
+      )
       .optional(),
     require: z
       .array(z.string())

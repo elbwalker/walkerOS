@@ -7,7 +7,7 @@ sidebar_position: 1
 # Quickstart
 
 Get started with walkerOS in minutes. These examples provide working code that
-you can copy, paste, and run immediately. All examples are maintained in our
+you can copy, paste, and run. The step 2 example is maintained in our
 [quickstart app](https://github.com/elbwalker/walkerOS/tree/main/apps/quickstart)
 and tested with every release.
 
@@ -19,7 +19,7 @@ This quickstart uses [integrated mode](/docs/getting-started/modes/integrated): 
 
 ## 1. Install packages
 
-Install the collector package from npm:
+Install the collector and the browser source from npm:
 
 <CodeSnippet
   code={`npm install @walkeros/collector @walkeros/web-source-browser`}
@@ -57,20 +57,24 @@ await elb('page view', { title: 'Home' });
 Install destination packages and add them to your setup:
 
 <CodeSnippet
+  code={`npm install @walkeros/web-destination-gtag @walkeros/web-destination-api`}
+  language="bash"
+/>
+
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-export async function initializeWalker(): Promise<void> {
-  const { collector, elb } = await startFlow({
+export async function initializeWalker() {
+  const { collector } = await startFlow({
     sources: {
       browser: {
         code: sourceBrowser,
         config: {
           settings: {
             pageview: true,
-            session: true,
             elb: 'elb',
           },
         },
@@ -106,18 +110,30 @@ export async function initializeWalker(): Promise<void> {
 
 ## 4. Add consent management
 
-Add consent requirements to your destinations:
+Add consent requirements to your destinations. This replaces `initializeWalker`
+from step 3 and keeps its imports. Until a destination's required consent is
+granted, its events wait in the destination's queue and are sent once the
+consent arrives. The consent handlers wait for the flow to start, so your banner
+can call them at any time, also right after `initializeWalker()` to restore a
+stored choice.
 
 <CodeSnippet
-  code={`export async function initializeWalker(): Promise<void> {
-  const { collector, elb } = await startFlow({
+  code={`let walkerReady;
+
+// Starts the flow once, later calls return the same promise
+export function initializeWalker() {
+  walkerReady ??= startWalker();
+  return walkerReady;
+}
+
+async function startWalker() {
+  const { collector } = await startFlow({
     sources: {
       browser: {
         code: sourceBrowser,
         config: {
           settings: {
             pageview: true,
-            session: true,
             elb: 'elb',
           },
         },
@@ -153,24 +169,25 @@ Add consent requirements to your destinations:
   });
 
   window.walker = collector;
+}
 
-  // Set consent when user accepts/denies
-  // This would typically come from your consent banner
-  function handleConsentAccept() {
-    elb('walker consent', {
-      functional: true,
-      analytics: true,
-      marketing: true,
-    });
-  }
+// Call these from your consent banner when the user accepts or denies
+export async function handleConsentAccept() {
+  await initializeWalker();
+  window.elb('walker consent', {
+    functional: true,
+    analytics: true,
+    marketing: true,
+  });
+}
 
-  function handleConsentDeny() {
-    elb('walker consent', {
-      functional: true,
-      analytics: false,
-      marketing: false,
-    });
-  }
+export async function handleConsentDeny() {
+  await initializeWalker();
+  window.elb('walker consent', {
+    functional: true,
+    analytics: false,
+    marketing: false,
+  });
 }`}
   language="javascript"
 />
@@ -185,7 +202,7 @@ You should see:
 
 <CodeSnippet code={`Event: page view`} language="bash" />
 
-That is the whole loop: an event pushed with `elb` reaching a destination. The browser setups in steps 3 and 4 verify the same way in your browser console once your app runs. To test flows offline with the CLI instead, see [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
+That is the whole loop: an event pushed with `elb` reaching a destination. The browser setups in steps 3 and 4 have no console destination: once your app runs, check the requests to your API and to GA4 in your browser's network tab. To test flows offline with the CLI instead, see [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
 
 ## Next steps
 

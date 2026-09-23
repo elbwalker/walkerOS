@@ -30,27 +30,11 @@ import type { Mapping } from '@walkeros/core';
  */
 
 /**
- * Consent rule. Maps `gtag('consent', 'update'|'default', { ... })` into
- * a walker consent command. The same shape covers both `update` and
- * `default` because the payload fields are identical.
+ * Consent rule. Renames `gtag('consent', 'update'|'default', { ... })`
+ * pushes to `walker consent`; the consent fields stay in `data`.
  */
 export const consent: Mapping.Rule = {
   name: 'walker consent',
-  settings: {
-    command: {
-      map: {
-        functional: { value: true },
-        analytics: {
-          key: 'analytics_storage',
-          fn: (value: unknown) => value === 'granted',
-        },
-        marketing: {
-          key: 'ad_storage',
-          fn: (value: unknown) => value === 'granted',
-        },
-      },
-    },
-  },
 };
 
 /**

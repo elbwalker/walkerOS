@@ -371,6 +371,8 @@
     "MappingLoop": {
       "title": "Mapping.Loop",
       "description": "Loop tuple [source, transform] for iterating and transforming arrays.",
+      "minItems": 2,
+      "maxItems": 2,
       "type": "array",
       "items": [
         {

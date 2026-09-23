@@ -50,7 +50,7 @@ To read from or write to a store from a step without wiring `$store` and writing
 
 ## Wiring stores to components
 
-Components reference stores via `$store.storeId` in their `env` configuration. The collector resolves this at startup and passes the live store instance to the component. In bundled mode, references to undefined stores are caught at build time.
+Components reference stores in their `env` configuration. In a bundled `flow.json`, write `$store.storeId`; the CLI resolves it, and references to undefined stores are caught at build time. In integrated mode, put the same store definition object in `stores` and in `env`; the collector replaces it with the initialized store instance at startup (matched by object identity, so a copy does not work).
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -60,26 +60,26 @@ Components reference stores via `$store.storeId` in their `env` configuration. T
 import { storeS3Init } from '@walkeros/server-store-s3';
 import { transformerFile } from '@walkeros/server-transformer-file';
 
-await startFlow({
-  stores: {
-    assets: {
-      code: storeS3Init,
-      config: {
-        file: true,
-        settings: {
-          bucket: 'my-assets',
-          endpoint: 'https://s3.eu-west-1.amazonaws.com',
-          accessKeyId: process.env.S3_ACCESS_KEY,
-          secretAccessKey: process.env.S3_SECRET_KEY,
-        },
-      },
+const assets = {
+  code: storeS3Init,
+  config: {
+    file: true,
+    settings: {
+      bucket: 'my-assets',
+      endpoint: 'https://s3.eu-west-1.amazonaws.com',
+      accessKeyId: process.env.S3_ACCESS_KEY,
+      secretAccessKey: process.env.S3_SECRET_KEY,
     },
   },
+};
+
+await startFlow({
+  stores: { assets },
   transformers: {
     file: {
       code: transformerFile,
       config: { settings: { prefix: '/static' } },
-      env: { store: '$store.assets' }, // wired to the assets store
+      env: { store: assets }, // same object as stores.assets
     },
   },
 });`}

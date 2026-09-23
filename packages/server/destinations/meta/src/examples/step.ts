@@ -1,11 +1,11 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
 
 /**
  * Meta Conversions API step examples.
  *
  * At push time, the destination calls `env.sendServer(url, body, options)`
- * where `url` is `${settings.url}${settings.pixelId}/events`, `body` is the
+ * where `url` is `${settings.url}/${settings.pixelId}/events`, `body` is the
  * JSON-stringified `{ data: [serverEvent] }` payload, and `options` carries the
  * access token in an `Authorization: Bearer` header (never in the URL).
  *
@@ -13,9 +13,12 @@ import { getEvent, isObject } from '@walkeros/core';
  * so each `out` tuple is `['sendServer', url, body, options]` with `body` as
  * the already-stringified JSON payload (mirroring the actual call signature).
  *
- * The test fixture pins `accessToken = 's3cr3t'` and `pixelId = 'p1x3l1d'`,
+ * Functions in mappings are published as source code, so they must not use
+ * imported helpers.
+ *
+ * The test fixture pins `accessToken = 's3cr3t'` and `pixelId = '1234567890'`,
  * so every endpoint resolves to:
- *   https://graph.facebook.com/v22.0/p1x3l1d/events
+ *   https://graph.facebook.com/v22.0/1234567890/events
  * with header `Authorization: Bearer s3cr3t`.
  *
  * Body fields are emitted in the order the destination constructs them
@@ -28,7 +31,7 @@ import { getEvent, isObject } from '@walkeros/core';
  *   6. user_data (hashed per Meta's PII requirements)
  *   7. event_source_url (appended after hash when action_source === 'website')
  */
-const ENDPOINT = 'https://graph.facebook.com/v22.0/p1x3l1d/events';
+const ENDPOINT = 'https://graph.facebook.com/v22.0/1234567890/events';
 
 const OPTIONS = { headers: { Authorization: 'Bearer s3cr3t' } };
 
@@ -38,7 +41,7 @@ export const purchase: Flow.StepExample = {
     'A completed order is sent to the Meta Conversions API as a Purchase event with value, currency, and contents.',
   in: getEvent('order complete', {
     id: 'c1d2e3f4a5b60001',
-    timestamp: 1700000900,
+    timestamp: 1700000900000,
     data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
     nested: [
       { entity: 'product', data: { id: 'SKU-A1', price: 129.99, quantity: 2 } },
@@ -62,7 +65,10 @@ export const purchase: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 id: 'data.id',
                 item_price: 'data.price',
@@ -89,7 +95,7 @@ export const purchase: Flow.StepExample = {
           {
             event_name: 'Purchase',
             event_id: 'c1d2e3f4a5b60001',
-            event_time: 1700001,
+            event_time: 1700000900,
             action_source: 'website',
             order_id: 'ORD-300',
             currency: 'EUR',
@@ -112,7 +118,7 @@ export const lead: Flow.StepExample = {
     'A form submission is forwarded to Meta CAPI as a custom event with the event source URL.',
   in: getEvent('form submit', {
     id: 'c1d2e3f4a5b60002',
-    timestamp: 1700000901,
+    timestamp: 1700000901000,
     data: { type: 'newsletter' },
     user: { email: 'user@example.com' },
     source: {
@@ -131,7 +137,7 @@ export const lead: Flow.StepExample = {
           {
             event_name: 'form submit',
             event_id: 'c1d2e3f4a5b60002',
-            event_time: 1700001,
+            event_time: 1700000901,
             action_source: 'website',
             user_data: {},
             event_source_url: 'https://example.com',
@@ -149,7 +155,7 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
     'A purchase is sent to Meta CAPI with an external_id and a formatted fbc click id for ads attribution.',
   in: getEvent('order complete', {
     id: 'c1d2e3f4a5b60003',
-    timestamp: 1700000902,
+    timestamp: 1700000902000,
     data: { id: 'ORD-700', total: 89.99, currency: 'USD' },
     user: { id: 'cust-42' },
     context: { fbclid: ['abc123xyz', 0] },
@@ -169,7 +175,7 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
         user_data: {
           map: {
             external_id: 'user.id',
-            fbclid: 'context.fbclid',
+            fbclid: 'context.fbclid.0',
           },
         },
       },
@@ -184,7 +190,7 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
           {
             event_name: 'Purchase',
             event_id: 'c1d2e3f4a5b60003',
-            event_time: 1700001,
+            event_time: 1700000902,
             action_source: 'website',
             currency: 'USD',
             value: 89.99,
@@ -193,9 +199,8 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
               // sha256('cust-42')
               external_id:
                 '8a3c5a67cad508582b5edf6b8352cea3ffbad7f44812c1a736b4444c0f5746aa',
-              // formatClickId(['abc123xyz', 0], event.timestamp) - array joins
-              // to 'abc123xyz,0' when coerced to string inside the template.
-              fbc: 'fb.1.1700000902.abc123xyz,0',
+              // fb.subdomainIndex.creationTime.fbclid, creationTime in milliseconds
+              fbc: 'fb.1.1700000902000.abc123xyz',
             },
             event_source_url: 'https://shop.example.com',
           },

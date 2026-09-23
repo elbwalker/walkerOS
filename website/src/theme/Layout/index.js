@@ -6,7 +6,7 @@ export default function LayoutWrapper(props) {
   return (
     <>
       <DataCollection />
-      <span {...tagger.globals('pagegroup', 'content')}>
+      <span {...tagger().globals('pagegroup', 'content').get()}>
         <Layout {...props} />
       </span>
     </>

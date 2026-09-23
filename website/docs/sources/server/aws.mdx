@@ -43,7 +43,7 @@ let handler: any;
 async function init() {
   if (handler) return handler;
 
-  const { sources } = await startFlow({
+  const { collector } = await startFlow({
     sources: {
       lambda: {
         code: sourceLambda,
@@ -57,7 +57,7 @@ async function init() {
     },
   });
 
-  handler = sources.lambda.push;
+  handler = collector.sources.lambda.push;
   return handler;
 }
 
@@ -141,7 +141,7 @@ source passes the whole scope through and no field is extracted.
 envelopes are normalized away, so one mapping serves both.
 
 <CodeSnippet
-  code={`const { sources } = await startFlow({
+  code={`const { collector } = await startFlow({
   sources: {
     lambda: {
       code: sourceLambda,

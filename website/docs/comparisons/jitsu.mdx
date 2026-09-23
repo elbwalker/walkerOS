@@ -5,8 +5,8 @@ description: Compare walkerOS and Jitsu to understand which solution fits your n
 ---
 
 [Jitsu](https://jitsu.com/) is an open-source data collection platform founded in
-2020 (Y Combinator S20), positioning itself as a Segment alternative. It focuses
-on streaming event data to data warehouses. Here's how it compares to walkerOS.
+2020 (Y Combinator S20) that positions itself as a Segment alternative. It
+focuses on streaming event data to data warehouses.
 
 ## Quick comparison
 
@@ -14,7 +14,7 @@ on streaming event data to data warehouses. Here's how it compares to walkerOS.
 | -------------------- | -------------------------------- | --------------------------------- |
 | Open-source          | Yes (MIT)                        | Yes (MIT)                         |
 | Company location     | USA                              | Germany                     |
-| Data hosting         | Self-host anywhere, US-hosting for Cloud version                         | Self-host anywhere |
+| Data hosting         | Self-host anywhere, US-hosting for Cloud version                         | Self-host anywhere, EU-hosting for the hosted app |
 | Pricing              | Free up to 200k events, then start at $99 per month for 2M events (Cloud) | Free, self-hosted (Paid support available) |
 | Consent handling     | Config option (privacy mode)     | First-class (consent in events)   |
 | Event model          | Schema-less, freeform naming     | Structured entity-action          |
@@ -31,7 +31,7 @@ on streaming event data to data warehouses. Here's how it compares to walkerOS.
 
 ### Choose walkerOS if
 
-- You need consent state in every event (GDPR-native, not just compliant)
+- You need consent state in every event, built into the event model for GDPR
 - You're routing to ad platforms (Meta, Google) and need match quality
 - You're a European company needing pure EU data hosting
 - You want structured event naming (entity-action prevents chaos at scale)
@@ -41,77 +41,78 @@ on streaming event data to data warehouses. Here's how it compares to walkerOS.
 
 ### Consent handling
 
-**Jitsu:** Offers a "privacy mode" that can be enabled via configuration. When
-active, it uses fingerprints instead of cookies and truncates IP addresses.
-However, consent is a configuration setting, not a property of the event itself.
-The consent state does not travel with events to destinations.
+**Jitsu:** A "privacy mode" can be enabled in the configuration. When it is
+active, Jitsu uses fingerprints instead of cookies and truncates IP addresses.
+Consent is a configuration setting, though, and the consent state does not
+travel with events to destinations.
 
-**walkerOS:** Consent is a first-class citizen. Every event carries its consent
-state, so destinations always know what permissions were granted. This matters
-for GDPR accountability: you can prove exactly what consent existed when each
-event was collected.
+**walkerOS:** Every event carries its consent state, so destinations always know
+what permissions were granted. For GDPR accountability, this means you can prove
+what consent existed when each event was collected.
 
 ### Data residency
 
-**Jitsu:** US-based company with US-only infrastructure. According to their
-privacy policy, data is "stored and processed on servers in the United States"
-with no EU hosting option. For EU companies, this creates potential Schrems II
-compliance concerns when collecting personal data (IP addresses, user IDs,
-behavioral data).
+**Jitsu:** A US-based company. Jitsu's data processing agreement states that
+Jitsu Cloud's primary processing takes place in the United States; for EU data
+residency you self-host. For EU companies collecting personal data (IP
+addresses, user IDs, behavioral data) in Jitsu Cloud, this can raise Schrems II
+compliance concerns.
 
-**walkerOS:** German company. The open-source software can be self-hosted on
-pure EU infrastructure, eliminating transatlantic data transfer concerns
-entirely. A commercial product is in development.
+**walkerOS:** A German company. The open-source software can be self-hosted on
+pure EU infrastructure, which removes transatlantic data transfer concerns
+entirely. The hosted walkerOS app ([app.walkeros.io](https://app.walkeros.io))
+also runs on EU infrastructure.
 
 ### Event model
 
-**Jitsu:** Schema-less by design. Accepts any JSON, auto-creates warehouse
-columns, and uses freeform event naming (like Segment's "Product Viewed"). This
-is flexible but can lead to inconsistent naming across teams and messy warehouse
-schemas over time.
+**Jitsu:** Schema-less by design. It accepts any JSON, auto-creates warehouse
+columns, and uses freeform event naming (like Segment's "Product Viewed"). That
+is flexible, but over time it can lead to inconsistent naming across teams and
+messy warehouse schemas.
 
-**walkerOS:** Uses structured entity-action naming (`product view`, `order complete`).
-This convention enforces consistency: you always know what entity was involved
-and what action occurred. Optional contracts can validate events at collection
-time, catching issues before they reach your warehouse.
+**walkerOS:** Uses structured entity-action naming (`product view`, `order complete`),
+so you always know which entity was involved and what action occurred. Optional
+contracts can validate events at collection time and catch issues before they
+reach your warehouse.
 
 ### Destination focus
 
 **Jitsu:** Built primarily for streaming to data warehouses (BigQuery, Snowflake,
-Redshift, ClickHouse, PostgreSQL). The warehouse is the core destination.
+Redshift, ClickHouse, PostgreSQL), with the warehouse as the core destination.
 
-**walkerOS:** Destination-agnostic with strong support for ad platforms. Send
-events to warehouses AND to Meta/Google with high match quality for conversion
-optimization. This matters if you need both analytics and marketing use cases
-from the same event stream.
+**walkerOS:** Destination-agnostic, with strong support for ad platforms. You can
+send events to warehouses and to Meta/Google with high match quality for
+conversion optimization, which matters when analytics and marketing need the
+same event stream.
 
 ### Tagging approach
 
-**Jitsu:** JavaScript SDK similar to Google Analytics. Add a tracking script,
-then call tracking functions in your code. Quick to start, but tracking code
-lives separate from your components.
+**Jitsu:** A JavaScript SDK similar to Google Analytics. You add a tracking
+script and call tracking functions in your code. It is quick to start, but the
+tracking code lives apart from your components.
 
 **walkerOS:** HTML attribute-based tagging with first-class React/Next.js support.
-Add `data-elb` attributes to components. Events are captured automatically based
-on user interactions. Tracking lives with your components, not in a separate
-tracking layer.
+You add `data-elb` attributes to components, and events are captured
+automatically from user interactions. The tracking lives with your components
+instead of in a separate tracking layer.
 
 ### Cost
 
 **Jitsu:** Free cloud tier up to 200k events/month with included ClickHouse.
 Business plans start at $99/month for 2M events. Self-hosted is free (MIT).
 
-**walkerOS:** The open-source software is free with no event limits. Currently
-self-hosted only - you pay for your own infrastructure. Optional paid services
-include implementation support and SLAs.
+**walkerOS:** The open-source software is free with no event limits, and when
+you self-host you pay for your own infrastructure. The hosted app adds managed
+deploys and live observability. Optional paid services include implementation
+support and SLAs.
 
 ## The trade-off
 
-Jitsu optimizes for **speed of setup**: add a script tag, start collecting,
-auto-infer schemas, stream to warehouse.
+Jitsu optimizes for speed of setup: you add a script tag, start collecting, and
+let it infer schemas and stream to the warehouse.
 
-walkerOS optimizes for **quality of data over time**: structured events,
-consent-native, ad platform routing, EU-hosted.
+walkerOS optimizes for data quality over time, with structured events, consent in
+every event, ad platform routing, and EU hosting.
 
 If you need to collect data fast and your destination is a warehouse, Jitsu's
 simplicity is compelling. If you need consent in every event, route to ad
@@ -119,12 +120,15 @@ platforms, or require EU data residency, walkerOS is the better fit.
 
 ## Can they work together?
 
-Yes! You can use walkerOS for event collection and send data to Jitsu as a
-destination. This gives you walkerOS's composable tagging, consent handling,
-and structured events on the frontend, with Jitsu's warehouse streaming on
-the backend.
+Yes. You can use walkerOS for event collection and forward the events to Jitsu.
+walkerOS has no dedicated Jitsu destination: point the
+[API destination](/docs/destinations/api/server) at Jitsu's HTTP ingest endpoint
+and shape the request body with mapping, or, for a Segment-compatible endpoint,
+set `host` on the [Segment destination](/docs/destinations/server/segment).
+walkerOS then handles composable tagging, consent, and structured
+events on the frontend, and Jitsu streams to the warehouse on the backend.
 
 ## Getting started
 
-Ready to try walkerOS? Check out the [quickstart guide](/docs/) to set up
-component-level tagging with consent-native event collection.
+The [quickstart guide](/docs/) shows how to set up component-level tagging with
+consent in every event.

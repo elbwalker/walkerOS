@@ -18,8 +18,8 @@ source's `before` chain, reads the raw HTTP request via `ctx.ingest`, and
 returns one walkerOS event per GA4 event in the hit (one hit can carry many
 events).
 
-Boundaries: server-side decoding via `source-express`, GA4 v2 only, `G-` tids
-only by default. Per-field patching via `extend`/`remove` is supported.
+Boundaries: server-side decoding in front of a server source, GA4 v2 only, `G-`
+tids only by default. Per-field patching via `extend`/`remove` is supported.
 
 ## When to use this skill
 
@@ -32,6 +32,27 @@ only by default. Per-field patching via `extend`/`remove` is supported.
 
 ## Quickstart wiring
 
+**Pick the source by runtime before copying the example below.** gtag.js can
+send several events in one POST body (one per line, as `text/plain`), so the
+source must keep a non-JSON body as `ingest.body`. These server sources do:
+
+- `@walkeros/server-source-express` (shown below), the source `walkeros run` and
+  the `walkeros/flow` image serve. A `text/plain` body that is valid JSON is
+  parsed; any other `text/plain` body reaches the decoder as the raw string.
+- `@walkeros/server-source-fetch`: a `(Request) => Response` handler with no
+  `port`, for a runtime that calls it (Cloudflare Workers, Deno, Bun, Node.js
+  18+ with a fetch adapter), e.g.
+  `export default { fetch: collector.sources.http.push }`. `walkeros run` and
+  the `walkeros/flow` image cannot serve it (they only mount a source's Node
+  `httpHandler`).
+- `sourceCloudFunction` from `@walkeros/server-source-gcp` on Google Cloud
+  Functions.
+- `sourceLambda` from `@walkeros/server-source-aws` on AWS Lambda. It answers a
+  POST without a body with 400, so body-less single-event hits are lost there.
+
+The other sources take the same `ingest` and `before` config as the express
+example. The fetch source also takes `paths`; none of them takes `port`.
+
 ```json
 {
   "version": 4,
@@ -42,6 +63,10 @@ only by default. Per-field patching via `extend`/`remove` is supported.
         "http": {
           "package": "@walkeros/server-source-express",
           "config": {
+            "settings": {
+              "port": 8080,
+              "paths": ["/g/collect"]
+            },
             "ingest": {
               "map": {
                 "url": { "key": "url" },
@@ -67,6 +92,25 @@ only by default. Per-field patching via `extend`/`remove` is supported.
 
 **Wiring rules:**
 
+- The express source listens on `/collect` by default and matches paths exactly.
+  gtag.js sends to `/g/collect`, so set `settings.paths` to `["/g/collect"]` (or
+  the full path, if the collector URL carries a path prefix). Without it every
+  GA4 hit gets a 404.
+- On the website, point gtag at the collector origin:
+  `gtag('config', 'G-XXXXXXXXXX', { server_container_url: 'https://collect.example.com' })`.
+  gtag.js appends `/g/collect`. With the walkerOS gtag destination, set
+  `settings.ga4.server_container_url` (or `settings.ga4.transport_url`). Hits
+  then go to the collector instead of Google. The `/g/collect` suffix, the
+  body-less single-event POST, and one-line-per-event batches are gtag.js
+  behaviour, not a walkerOS contract: confirm them in the browser Network tab.
+- `before: "ga4"` runs every request on the source through the decoder, and a
+  request without GA4 parameters is dropped. If the source also receives
+  walkerOS events (for example on `/collect`), gate the chain:
+  `"before": { "match": { "key": "ingest.path", "operator": "eq", "value": "/g/collect" }, "next": "ga4" }`.
+- Batched hits (several events in one POST body, one per line) reach the decoder
+  through `server-source-express` as the raw `text/plain` string, alongside GET
+  and body-less POST hits. A body sent as `application/json` must be valid JSON,
+  or express answers 400 before the decoder runs.
 - `transformer-ga4` belongs in `source.before`, not `destination.before`.
   Decoding is a pre-collector concern: GA4 hits are not yet walkerOS events.
 - The source must populate `ctx.ingest.url` (required, string) and
@@ -74,16 +118,13 @@ only by default. Per-field patching via `extend`/`remove` is supported.
   not decode. The express, fetch, GCP and AWS server sources keep a non-JSON
   `text/plain` body (gtag's batched POST) as the raw string in `ingest.body`;
   only a body that parses as JSON arrives parsed.
-- One HTTP request can fan out to N walkerOS events. This requires the collector
-  fan-out fix (shipped in this release).
+- One HTTP request can fan out to N walkerOS events.
 
-**Common mistake:** `config.ingest` must be the `map` operator with direct `req`
-field paths (no `req.` prefix), e.g. `{ "map": { "url": { "key": "url" } } }`.
-The bare `{ "url": "req.url" }` form is silently inert: without a `map` operator
-the source passes the whole `req` through `getMappingValue`, and a real Express
-`req` (which carries functions and circular references) fails the property
-check, so `ctx.ingest` stays empty, the decoder reads no `url`, and the
-`/g/collect` `before` match never fires.
+**Common mistake:** `config.ingest` must be the `map` operator with direct field
+paths on the request scope (no `req.` prefix), e.g.
+`{ "map": { "url": { "key": "url" } } }`. The bare `{ "url": "req.url" }` form
+is silently inert: without a `map` operator no field is extracted, so
+`ctx.ingest` stays empty, the decoder reads no `url`, and the hit is dropped.
 
 This wiring contract (before-chain placement plus the `config.ingest` keys the
 source must populate) is also surfaced as a package hint, so `package_get` on
@@ -191,6 +232,17 @@ init):
 }
 ```
 
+### Change the batch cap
+
+`settings.maxEvents` (default `100`) caps the events decoded from one request. A
+POST body with more non-empty lines is dropped whole, before decoding:
+
+```json
+"settings": {
+  "maxEvents": 250
+}
+```
+
 ### Custom destination after decode
 
 The transformer returns walkerOS events with `entity action` names. Anything
@@ -200,11 +252,12 @@ needed:
 ```json
 "destinations": {
   "bq": {
-    "package": "@walkeros/server-destination-bigquery",
+    "package": "@walkeros/server-destination-gcp",
+    "import": "destinationBigQuery",
     "config": {
       "settings": {
-        "project": "my-eu-project",
-        "dataset": "events",
+        "projectId": "my-eu-project",
+        "datasetId": "events",
         "location": "EU"
       }
     }
@@ -232,17 +285,23 @@ the `params` namespace.
 
 ### No events arriving
 
-1. Check that `source.config.ingest` is the `map` operator and populates `url`
+1. A 404 on `/g/collect` means the source does not listen there. Set
+   `settings.paths` to include `/g/collect` (the express and fetch sources
+   default to `/collect`).
+2. Check that `source.config.ingest` is the `map` operator and populates `url`
    (required, string) and `body` (optional, string), e.g.
    `{ "map": { "url": { "key": "url" }, "body": { "key": "body" } } }`. A bare
-   `{ "url": "req.url" }` object is silently inert: the source passes the whole
-   `req` through, the real Express `req` fails the property check, and
-   `ctx.ingest` is left empty.
-2. Confirm `before: "ga4"` is set on the source, not on a destination.
-3. Check the `tidPattern`: by default `^G-` blocks `AW-` / `DC-` traffic
+   `{ "url": "req.url" }` object is silently inert and `ctx.ingest` is left
+   empty.
+3. Confirm `before: "ga4"` is set on the source, not on a destination.
+4. Check the `tidPattern`: by default `^G-` blocks `AW-` / `DC-` traffic
    silently.
-4. Confirm the request really is Measurement Protocol v2. v1 hits will not
+5. Confirm the request really is Measurement Protocol v2. v1 hits will not
    decode.
+6. A POST body with more non-empty lines than `settings.maxEvents` (default
+   `100`) is dropped whole. The client still gets a success response; the only
+   trace is a `warn` log line with the line count and the cap. Raise the cap if
+   your own server-to-server batches are larger.
 
 ### Wrong field in the output event
 
@@ -252,11 +311,14 @@ the `params` namespace.
 3. If you used a full-replace rule (no `extend`), your `data.map` is the entire
    rule. Use `extend` to inherit the defaults and add only the fields you need.
 
-### Batched POST drops events after the first
+### Batched POST hits return 400
 
-This was a pre-`0.1.0` bug in `@walkeros/collector`. The fix preserves fan-out
-in `source.before` chains. Confirm both packages are on the same release wave
-(transformer-ga4 `0.1.0` + collector minor bump).
+`@walkeros/server-source-express` only rejects a POST body that is sent as
+`application/json` and does not parse. gtag.js sends `text/plain`, which express
+keeps as the raw string. If a proxy in front of the collector rewrites the
+content type to `application/json`, restore `text/plain`. Earlier express
+releases parsed `text/plain` bodies as JSON too and answered these hits with
+400; upgrade the source.
 
 ### `gcs` consent not applied
 
@@ -274,6 +336,9 @@ Override the consent path manually if you need richer mapping.
   raw on the express source. Express source releases before the text body fix
   rejected them with 400 before the decoder ran; if batched hits answer 400,
   upgrade `@walkeros/server-source-express`.
+- **At most `maxEvents` events per request.** Default `100`; a larger batch is
+  dropped whole before decoding, because each event becomes its own push and a
+  source's batch limit does not cover a raw text body.
 - **Server-side only.** Web ingest via interception sources is not supported.
 
 ## Related Skills

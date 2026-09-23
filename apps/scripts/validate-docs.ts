@@ -155,13 +155,22 @@ function extractCodeRegions(content: string): string {
   // <CodeSnippet ... code={`...`} ... /> — capture the template-literal body.
   const snippetRe = /code=\{`([\s\S]*?)`\}/g;
   let m: RegExpExecArray | null;
-  while ((m = snippetRe.exec(content)) !== null) regions.push(m[1]);
+  while ((m = snippetRe.exec(content)) !== null)
+    regions.push(cookTemplateLiteral(m[1]));
 
   // ``` fenced code blocks (```lang ... ```).
   const fenceRe = /```[^\n]*\n([\s\S]*?)```/g;
   while ((m = fenceRe.exec(content)) !== null) regions.push(m[1]);
 
   return regions.join('\n');
+}
+
+// A `code={`...`}` body is a JS template literal, so the page renders it with
+// its escapes applied: `\\` shows as `\`, `\`` as a backtick, `\$` as `$`.
+// Check what the reader sees, not the source escapes, or an escaped quote in a
+// JSON snippet reads as a broken string.
+function cookTemplateLiteral(raw: string): string {
+  return raw.replace(/\\([\\`$])/g, '$1');
 }
 
 // Per-block variant of extractCodeRegions. Where extractCodeRegions joins every
@@ -181,7 +190,7 @@ export function extractCodeBlocks(content: string): CodeBlock[] {
     let m: RegExpExecArray | null;
     while ((m = re.exec(content)) !== null) {
       blocks.push({
-        code: m[1],
+        code: re === snippetRe ? cookTemplateLiteral(m[1]) : m[1],
         line: content.slice(0, m.index).split('\n').length,
       });
     }

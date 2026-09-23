@@ -446,7 +446,7 @@ Default: validates input as Flow.Json (schema, references, cross-step examples).
 | `--type <type>` | Validation type (default: `flow`). See types below.                  |
 | `--path <path>` | Validate entry against package schema (e.g. `destinations.snowplow`) |
 | `--flow <name>` | Flow name for multi-flow configs                                     |
-| `--strict`      | Treat warnings as errors                                             |
+| `--strict`      | Fail on warnings (contract violations exit 1, other warnings exit 2) |
 | `--json`        | JSON output                                                          |
 | `-v, --verbose` | Verbose output                                                       |
 | `-s, --silent`  | Suppress output                                                      |
@@ -460,7 +460,10 @@ Default: validates input as Flow.Json (schema, references, cross-step examples).
 | `mapping`        | Mapping      | Pattern format, rule structure          |
 | `contract`       | Contract     | Named entries, extend, sections         |
 
-Use `--path` for entry validation against package schemas:
+Flow validation does not check that a `package` exists or that its
+`config.settings` match the package schema. Use `--path` for one entry; it
+fetches the published schema from the CDN (network required), always for the
+`latest` version (version pins are ignored), and reads only the first flow:
 
 ```bash
 walkeros validate flow.json --path destinations.snowplow
@@ -469,12 +472,12 @@ walkeros validate flow.json --path sources.browser
 
 ### Exit codes
 
-| Code | Meaning                            |
-| ---- | ---------------------------------- |
-| 0    | Valid                              |
-| 1    | Errors found                       |
-| 2    | Warnings found (with --strict)     |
-| 3    | Input error (file not found, etc.) |
+| Code | Meaning                                                               |
+| ---- | --------------------------------------------------------------------- |
+| 0    | Valid (with `--strict`: no warnings either)                           |
+| 1    | Errors found, including contract violations under `--strict`          |
+| 2    | No errors, but warnings found (with `--strict` only)                  |
+| 3    | Validation could not run (missing file, invalid JSON, unknown --type) |
 
 ### Examples
 

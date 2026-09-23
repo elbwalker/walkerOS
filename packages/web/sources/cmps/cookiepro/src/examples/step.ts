@@ -3,7 +3,7 @@ import type { Flow } from '@walkeros/core';
 export const fullConsent: Flow.StepExample = {
   title: 'Full consent',
   description:
-    'A CookiePro OptanonConsent cookie listing all groups is translated into a walker consent command with all true.',
+    'An OptanonActiveGroups string listing all groups is translated into a walker consent command with all groups true.',
   trigger: { type: 'consent' },
   in: ',C0001,C0002,C0003,C0004,C0005,',
   out: [
@@ -43,7 +43,7 @@ export const categoryMapOverride: Flow.StepExample = {
   description: 'Custom categoryMap remaps C0002 from analytics to statistics',
   trigger: { type: 'consent' },
   in: ',C0001,C0002,',
-  mapping: { categoryMap: { C0002: 'statistics' } },
+  mapping: { settings: { categoryMap: { C0002: 'statistics' } } },
   out: [
     [
       'elb',

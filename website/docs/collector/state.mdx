@@ -54,7 +54,7 @@ An `ingest.` write is shared by every event in the scope and lands in place. Whe
 
 ## The default store
 
-When `store` is omitted, state uses the same built-in in-memory store as [cache](./cache.mdx) (`__cache`). This store is an entry-capped LRU with a TTL sweep, so entries are **evictable**: treat the default store as best-effort, not durable. For persistence across restarts or instances, point `store` at a configured backing (Redis, S3, filesystem).
+When `store` is omitted, state uses the same built-in in-memory store as [cache](./cache.mdx) (`__cache`). This store is an entry-capped LRU with a TTL sweep, so entries are **evictable**: treat the default store as best-effort, not durable. For persistence across restarts or instances, point `store` at a configured backing (filesystem, S3, GCS).
 
 State keys on the default store are prefixed with `state:` so they cannot collide with cache entries that share the same store. Explicitly named stores use the key as-is.
 

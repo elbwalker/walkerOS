@@ -8,7 +8,7 @@ import {
   readStdin,
   writeResult,
 } from '../../core/index.js';
-import { loadJsonFromSource } from '../../config/index.js';
+import { loadJsonConfig } from '../../config/index.js';
 import {
   validateContract,
   validateEvent,
@@ -33,13 +33,12 @@ export async function validate(
   input: unknown,
   options: { flow?: string; path?: string; strict?: boolean } = {},
 ): Promise<ValidateResult> {
-  // Resolve string inputs (file paths, URLs, JSON strings) to parsed objects
+  // Resolve string inputs (file paths, URLs, JSON strings) to parsed objects.
+  // A path that cannot be read or parsed is an input error, never a document.
   let resolved = input;
   if (typeof input === 'string') {
-    resolved = await loadJsonFromSource(input, {
-      name: type,
-      required: true,
-    });
+    if (input.trim() === '') throw new Error(`${type} is required`);
+    resolved = await loadJsonConfig(input);
   }
 
   // Path-based entry validation takes priority

@@ -29,33 +29,24 @@ The key file will be baked into your Docker image. Keep the image in a **private
 
 ## 2. Bundle the Flow
 
-Install the CLI and bundle the flow:
+Install the CLI and bundle the flow into `dist/`:
 
 ```bash
 npm install -g @walkeros/cli
 
-# Set your environment variables
-export GCP_PROJECT_ID="your-project-id"
-export BQ_DATASET="walkerOS"
-export BQ_TABLE="events"
-export BQ_LOCATION="EU"
-
-# Use the container path - variables are substituted at bundle time
-export SA_KEY_PATH="/app/sa-bigquery.json"
-
 # Bundle the flow
-walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json
+walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json -o dist/
 ```
 
-This creates `dist/bundle.mjs` with the credentials path baked in.
+This creates `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The flow reads `GCP_PROJECT_ID` (required), `BQ_DATASET`, `BQ_TABLE`, and `BQ_LOCATION` (optional, defaults `walkerOS`, `events`, `EU`) from the environment when the container starts, so nothing is baked in at bundle time.
 
 :::tip[Quick Local Test]
-Test your flow before building Docker using `push --simulate` with a local credentials path:
+Test your flow before building Docker using `push --simulate`. The BigQuery call is mocked, so no credentials are needed:
 
 ```bash
-export SA_KEY_PATH="./sa-bigquery.json"
+export GCP_PROJECT_ID="your-project-id"
 walkeros push https://www.walkeros.io/flows/gcp-bigquery.json \
-  -e '{"name": "test", "data": {}}' --simulate destination.bigquery
+  -e '{"name": "page view", "data": {}}' --simulate destination.bigquery
 ```
 :::
 
@@ -66,14 +57,15 @@ Create a `Dockerfile`:
 ```dockerfile
 FROM walkeros/flow:latest
 
-# Copy pre-built flow bundle
-COPY dist/bundle.mjs /app/flow/bundle.mjs
+# Copy the pre-built flow bundle (flow.mjs, package.json, node_modules/)
+COPY dist/ /app/flow/
 
 # Copy service account credentials
 COPY sa-bigquery.json /app/sa-bigquery.json
 
 # Configure runtime
-ENV FLOW=/app/flow/bundle.mjs
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/sa-bigquery.json
+ENV GCP_PROJECT_ID=your-project-id
 
 EXPOSE 8080
 ```
@@ -270,4 +262,4 @@ To remove all created resources:
 - Delete the Bunny Magic Container app from the dashboard
 - Delete the GHCR image from your GitHub packages
 - [Clean up BigQuery resources](/docs/destinations/server/gcp#cleanup)
-- Delete local files (`dist/bundle.mjs`, `sa-bigquery.json`, `Dockerfile`)
+- Delete local files (`dist/`, `sa-bigquery.json`, `Dockerfile`)

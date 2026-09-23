@@ -6,14 +6,14 @@ sidebar_position: 1
 
 # Step examples
 
-Add `examples` to any step in your flow config to document what it expects and produces:
+Add `examples` to any step in your flow config to document what it expects and produces. On a GA4 destination (`@walkeros/web-destination-gtag` with measurement ID `G-DEMO123456`):
 
 ```json
 "examples": {
   "purchase": {
     "in": { "name": "order complete", "data": { "id": "ORD-123", "total": 149.97 } },
     "mapping": { "name": "purchase", "data": { "map": { "transaction_id": "data.id", "value": "data.total" } } },
-    "out": ["event", "purchase", { "transaction_id": "ORD-123", "value": 149.97 }]
+    "out": [["gtag", "event", "purchase", { "transaction_id": "ORD-123", "value": 149.97, "send_to": "G-DEMO123456" }]]
   }
 }
 ```
@@ -27,7 +27,7 @@ Every source, transformer, and destination in a walkerOS flow is a **step**. Eac
 They serve multiple purposes simultaneously:
 
 - **Documentation**: developers see real data shapes, not just type signatures
-- **Testing**: CI runs examples as regression tests via `walkeros push --simulate`
+- **Testing**: your tests use examples as fixtures, and `walkeros validate` checks that connected steps have compatible examples
 - **Simulation**: debug your pipeline before deployment
 - **LLM context**: AI tools use examples to suggest correct mappings
 
@@ -43,7 +43,7 @@ Each example has a human-readable name and two fields:
         "name": "page view",
         "data": { "title": "Home", "path": "/" }
       },
-      "out": ["event", "page_view", { "page_title": "Home" }]
+      "out": [["gtag", "event", "page_view", { "send_to": "G-DEMO123456" }]]
     },
     "purchase": {
       "in": {
@@ -60,11 +60,12 @@ Each example has a human-readable name and two fields:
           }
         }
       },
-      "out": ["event", "purchase", {
+      "out": [["gtag", "event", "purchase", {
         "transaction_id": "ORD-123",
         "value": 149.97,
-        "currency": "EUR"
-      }]
+        "currency": "EUR",
+        "send_to": "G-DEMO123456"
+      }]]
     }
   }
 }`}
@@ -75,9 +76,12 @@ Each example has a human-readable name and two fields:
 |-------|------|-------------|
 | `in` | any | The data the step receives |
 | `mapping` | object | The mapping rule applied to this event (destinations only) |
-| `out` | any | The data the step produces |
-| `out: false` | `false` | The step rejects or filters this event |
+| `out` | array | The effects the step produces, in order. Each entry is a tuple `[callable, ...args]`: a vendor call such as `["gtag", ...]` for a destination, `["elb", event]` for a source, `["return", value]` for a transformer. `[]` means no observable effect |
+| `out: [["return", false]]` | array | The transformer rejects or filters this event |
+| `trigger` | object | Sources only: how the example fires (`type`, such as `click` or `POST`, and `options`) |
 | `command` | string | Route `in` through a walker command instead of pushing it as an event (`config`, `consent`, `user`, `run`) |
+| `title`, `description` | string | Labels shown in docs and MCP output |
+| `public` | boolean | `false` hides a test-only example from docs and default MCP output (default `true`) |
 
 For destinations, the optional `mapping` field captures the mapping rule that transforms the walkerOS event into the vendor-specific output. This ties the example to a specific mapping configuration, so tests and simulations can register it dynamically as `{ [entity]: { [action]: example.mapping } }`.
 
@@ -89,14 +93,17 @@ Some destinations need to react to walker commands (consent updates, user identi
   code={`{
   "command": "consent",
   "in": { "marketing": true, "functional": true },
-  "out": ["consent", "update", { "ad_storage": "granted", "analytics_storage": "granted" }]
+  "out": [
+    ["gtag", "consent", "default", { "ad_storage": "denied", "ad_user_data": "denied", "ad_personalization": "denied", "analytics_storage": "denied" }],
+    ["gtag", "consent", "update", { "ad_storage": "granted", "ad_user_data": "granted", "ad_personalization": "granted", "analytics_storage": "granted" }]
+  ]
 }`}
   language="json"
 />
 
-Supported commands: \`config\`, \`consent\`, \`user\`, \`run\`. When `command` is set, `mapping` is ignored, because commands don't flow through event mapping. See the [walkeros-using-step-examples skill](https://github.com/elbwalker/walkerOS/blob/main/skills/walkeros-using-step-examples/SKILL.md#command-step-example) for the full test-runner pattern.
+Supported commands: `config`, `consent`, `user`, `run`. When `command` is set, `mapping` is ignored, because commands don't flow through event mapping. See the [walkeros-using-step-examples skill](https://github.com/elbwalker/walkerOS/blob/main/skills/walkeros-using-step-examples/SKILL.md#command-step-example) for the full test-runner pattern.
 
-You can add as many named examples as you need. Each name becomes addressable from the CLI with `--example`.
+You can add as many named examples as you need. Tests refer to each example by its name, and the MCP `flow_examples` tool lists them by name for each step.
 
 ## Three type zones
 
@@ -113,10 +120,10 @@ A walkerOS flow has three distinct type zones. The shape of `in` and `out` depen
 ```
 
 - **Source `in`**: raw HTTP request body, DOM event, dataLayer push (package-specific)
-- **Source `out` through destination `in`**: `walkerOS.Event` (known structure, varying properties)
-- **Destination `out`**: `gtag()` args, `fbq()` args, HTTP POST body (vendor-specific)
-
-Transformers that filter events use `out: false` to indicate rejection.
+- **Source `out`**: the `elb` call that pushes the `walkerOS.Event`, as `[["elb", event]]`
+- **Transformer `in` and destination `in`**: `walkerOS.Event` (known structure, varying properties)
+- **Transformer `out`**: `[["return", { "event": event }]]`, or `[["return", false]]` when the transformer drops the event
+- **Destination `out`**: the vendor calls, such as `gtag()` or `fbq()` arguments or an HTTP request (vendor-specific)
 
 ## Adding examples to a flow
 
@@ -127,29 +134,43 @@ Here is a complete flow config with examples on a source, transformer, and desti
   "version": 4,
   "flows": {
     "default": {
-      "config": { "platform": "server" },
+      "config": { "platform": "web" },
       "sources": {
-        "http": {
-          "package": "@walkeros/server-source-express",
-          "config": { "settings": { "port": 8080 } },
+        "browser": {
+          "package": "@walkeros/web-source-browser",
           "examples": {
-            "page view": {
-              "in": {
-                "method": "POST",
-                "body": { "name": "page view", "data": { "title": "Home" } }
-              },
-              "out": { "name": "page view", "data": { "title": "Home" } }
+            "cta click": {
+              "trigger": { "type": "click", "options": "button" },
+              "in": "<button data-elb='cta' data-elb-cta='label:Sign Up' data-elbaction='click:click'>Sign Up</button>",
+              "out": [["elb", {
+                "name": "cta click",
+                "entity": "cta",
+                "action": "click",
+                "data": { "label": "Sign Up" },
+                "context": {},
+                "globals": {},
+                "nested": [],
+                "source": { "type": "browser", "platform": "web", "url": "https://example.com/", "referrer": "" },
+                "trigger": "click"
+              }]]
             }
           }
         }
       },
       "transformers": {
-        "fingerprint": {
-          "package": "@walkeros/server-transformer-fingerprint",
+        "validate": {
+          "package": "@walkeros/transformer-validate",
+          "config": {
+            "settings": { "contract": [{ "type": "object", "properties": { "data": { "required": ["title"] } } }] }
+          },
           "examples": {
-            "enriched event": {
-              "in": { "name": "page view", "data": { "title": "Home" } },
-              "out": { "name": "page view", "data": { "title": "Home" } }
+            "page view": {
+              "in": { "name": "page view", "entity": "page", "action": "view", "data": { "title": "Home" } },
+              "out": [["return", { "event": {
+                "name": "page view", "entity": "page", "action": "view",
+                "data": { "title": "Home" },
+                "source": { "valid": true }
+              } }]]
             }
           }
         }
@@ -158,7 +179,7 @@ Here is a complete flow config with examples on a source, transformer, and desti
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
-            "settings": { "measurementId": "G-DEMO123456" }
+            "settings": { "ga4": { "measurementId": "G-DEMO123456" } }
           },
           "examples": {
             "page view": {
@@ -167,12 +188,11 @@ Here is a complete flow config with examples on a source, transformer, and desti
                 "name": "page_view",
                 "data": { "map": { "page_title": "data.title" } }
               },
-              "out": ["event", "page_view", { "page_title": "Home" }]
+              "out": [["gtag", "event", "page_view", { "page_title": "Home", "send_to": "G-DEMO123456" }]]
             }
           }
         }
-      },
-      "collector": {}
+      }
     }
   }
 }`}
@@ -183,41 +203,34 @@ Examples are stripped by the bundler at build time. They never appear in your pr
 
 ## Using examples with the CLI
 
-### Simulate a single example
+### Simulate a step with an example's input
 
-Run a named example through the pipeline:
+Push an event through one step with its external calls mocked. `--event` takes the input itself, so pass an example's `in` value:
 
 <CodeSnippet
-  code={`# Run the "page view" example from the ga4 destination
+  code={`# Push the "page view" example's in value through the ga4 destination
 walkeros push flow.json --simulate destination.ga4 --event '{"name":"page view","data":{"title":"Home"}}'`}
   language="bash"
 />
 
-The CLI feeds `in` to the step, runs it through the pipeline, and compares the actual output against `out`. Mismatches are reported as errors.
+The CLI does not read `examples` here and does not compare anything against `out`. It reports whether the push succeeded and how long it took, and exits with code 1 only when the push fails with an error. A mapping that produces the wrong output still exits 0. To assert on `out`, run the examples in your own tests (see [Using examples in tests](#using-examples-in-tests)).
 
 ### Validate examples
 
-Check that examples match expected shapes without running the full pipeline:
+`walkeros validate` checks examples statically. It does not run any step:
 
 <CodeSnippet
   code={`walkeros validate flow.json`}
   language="bash"
 />
 
-### Cross-step validation
+For steps connected through `next` (source to transformer, transformer to transformer) or a destination's `before` chain, it checks that at least one `out` of the upstream step is structurally compatible with an `in` of the downstream step. Both values must have the same type. Two objects are compatible when they share at least half of the keys of the object with fewer keys; any two arrays are compatible regardless of their content. This is a shape check, not an equality check. It compares the raw values, so an `out` in the effect-tuple format (an array) never matches an event `in` (an object): two connected steps that both declare examples in these formats fail with `No compatible out/in pair found between connected steps`.
 
-Cross-step example validation is included automatically when validating a flow. It verifies that connected steps (source → transformer → destination) have structurally compatible `out`/`in` pairs:
-
-<CodeSnippet
-  code={`walkeros validate flow.json`}
-  language="bash"
-/>
-
-Cross-step validation checks that:
-- Source `out` types match transformer `in` types
-- Transformer `out` types match destination `in` types
-- Steps without examples produce warnings
-- Contract compliance when contracts are defined
+- No compatible pair is an error.
+- A connection is only checked when both steps declare `examples`. If either step has no `examples` key, nothing is checked and no warning is produced.
+- When both steps declare `examples` but one side has no usable value, the connection produces a warning. An upstream `out` counts when it is a non-empty array, string, or object; empty values such as `out: []` are skipped. A downstream `in` counts unless its example sets `command`.
+- Steps without `next` or `before` are not checked.
+- When the config defines a `contract`, each destination and transformer example `in` that carries `entity` and `action` is validated against every named contract in the file (all must pass). Violations are warnings, or errors with `--strict`.
 
 ## Using examples in tests
 
@@ -225,18 +238,27 @@ Extract examples from your flow config and use them as test fixtures:
 
 <CodeSnippet
   code={`import { readFileSync } from 'fs';
-import { push } from '@walkeros/web-destination-gtag';
+import { startFlow } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const flow = JSON.parse(readFileSync('flow.json', 'utf-8'));
-const ga4Examples = flow.flows.default.destinations.ga4.examples;
+const ga4 = flow.flows.default.destinations.ga4;
 
-const cases = Object.entries(ga4Examples).map(
-  ([name, ex]) => [name, ex.in, ex.out]
-);
+it.each(Object.entries(ga4.examples))('ga4 destination: %s', async (name, example) => {
+  // Record every gtag() call instead of loading the real gtag.js
+  const calls: unknown[][] = [];
+  const env = { window: { dataLayer: [], gtag: (...args: unknown[]) => calls.push(['gtag', ...args]) } };
+  const [entity, action] = example.in.name.split(' ');
 
-it.each(cases)('ga4 destination: %s', (name, input, expected) => {
-  const result = push(input);
-  expect(result).toEqual(expected);
+  const { elb } = await startFlow();
+  await elb('walker destination', {
+    code: { ...destinationGtag, env },
+    config: { ...ga4.config, mapping: { [entity]: { [action]: example.mapping } } },
+  });
+  await elb(example.in);
+
+  // calls[0] is the gtag('config', ...) call the destination makes on init
+  expect(calls.slice(1)).toEqual(example.out);
 });`}
   language="typescript"
 />
@@ -252,9 +274,9 @@ Examples exist at two levels:
 | **Package** | `walkerOS.json` in the npm package (via `dev.ts`) | Generic examples showing what the package handles |
 | **Flow** | Inline on step references in `flow.json` | Specific examples for your actual data and mappings |
 
-**Package examples** are generic and ship with the npm package. They show the package's capabilities with sample data. The CLI and MCP tools discover them from CDN.
+**Package examples** are generic and ship with the npm package. They show the package's capabilities with sample data. The MCP tools `package_get` and `flow_examples` read them from the package's `walkerOS.json` on the CDN.
 
-**Flow examples** are specific to your setup. They use your real event names, your actual data properties, and your configured mappings. They override or complement package examples.
+**Flow examples** are specific to your setup. They use your real event names, your actual data properties, and your configured mappings. In the MCP `flow_examples` tool, a step's flow examples take precedence over its package's examples; a step without flow examples falls back to the package's examples.
 
 <details>
 <summary>How packages ship examples</summary>

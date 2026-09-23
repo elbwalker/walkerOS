@@ -538,7 +538,7 @@ function leanFrame(overrides: Partial<FrameLeanWire> = {}): FrameLeanWire {
 }
 
 function fullFrame(overrides: Partial<FrameWire> = {}): FrameWire {
-  return { ...leanFrame(), marks: { entities: [] }, ...overrides };
+  return { ...leanFrame(), marks: { tags: [] }, ...overrides };
 }
 
 async function hubHintKeysFor(

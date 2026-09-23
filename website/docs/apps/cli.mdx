@@ -136,7 +136,7 @@ The collector is added automatically. To pin a specific version (recommended for
 
 <CodeSnippet
   code={`"packages": {
-  "@walkeros/collector": { "version": "1.0.0" },
+  "@walkeros/collector": { "version": "4.6.1" },
   "@walkeros/web-source-browser": {},
   "@walkeros/destination-demo": {}
 }`}
@@ -272,8 +272,8 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -343,8 +343,8 @@ Create `server-collect.json`:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -493,13 +493,13 @@ Create `api-flow.json` with a destination that makes real HTTP calls:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/web-destination-api": {}
+            "@walkeros/server-destination-api": { "version": "^4" }
           }
         }
       },
       "destinations": {
         "api": {
-          "package": "@walkeros/web-destination-api",
+          "package": "@walkeros/server-destination-api",
           "config": {
             "settings": {
               "url": "https://your-endpoint.com/events",
@@ -848,11 +848,11 @@ The `--type` option accepts four validation types. Default is `flow`:
 | Type | What it validates |
 |------|-------------------|
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
-| `flow` (default) | Flow.Json config: schema, references, packages, and cross-step example compatibility |
+| `flow` (default) | Flow.Json config: schema, references, unpinned package versions, and cross-step example compatibility |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
 | `contract` | Contract structure: named entries with optional `extend`, `tagging`, `description`, `events`, and `schema` fields |
 
-Use `--path` for entry validation against package schemas (e.g., `--path destinations.snowplow`).
+Flow validation does not check that a referenced `package` exists or that its `config.settings` match the package's settings schema. Use `--path` for that on one entry (e.g., `--path destinations.snowplow`): it fetches the package's published schema from the CDN, so it needs network access. It always fetches the `latest` version (version pins are ignored) and reads only the first flow in the file.
 
 ### Step-by-step guide
 
@@ -928,7 +928,7 @@ Summary: 0 error(s), 1 warning(s)
 | `--path <path>` | Validate a specific entry against its package schema (e.g., `destinations.snowplow`) |
 | `-f, --flow <name>` | Flow name to validate (for multi-flow configs) |
 | `-o, --output <path>` | Write result to file |
-| `--strict` | Treat warnings as errors (exit code 2) |
+| `--strict` | Fail on warnings. Contract violations in examples become errors (exit code 1); any remaining warning exits with code 2 |
 | `--json` | Output results as JSON |
 | `-v, --verbose` | Show detailed validation information |
 | `-s, --silent` | Suppress banner output |
@@ -937,10 +937,10 @@ Summary: 0 error(s), 1 warning(s)
 
 | Code | Meaning |
 |------|---------|
-| 0 | Valid (no errors) |
-| 1 | Validation errors found |
-| 2 | Warnings found (with `--strict`) |
-| 3 | Input error (file not found, invalid JSON, etc.) |
+| 0 | Valid: no errors, and with `--strict` no warnings either |
+| 1 | Validation errors found, including contract violations under `--strict` |
+| 2 | No errors, but warnings found (with `--strict` only) |
+| 3 | Validation could not run (for example a file path that does not exist, a file or inline input that is not valid JSON, invalid JSON on stdin, or an unknown `--type`) |
 
 ### CI/CD integration
 
@@ -1717,8 +1717,8 @@ Create `collect.json`:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -1911,8 +1911,8 @@ Create `server-collect.json`:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -1952,8 +1952,8 @@ Create `web-track.json`:
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/web-source-browser": {},
-            "@walkeros/web-destination-api": {}
+            "@walkeros/web-source-browser": { "version": "^4" },
+            "@walkeros/web-destination-api": { "version": "^4" }
           }
         }
       },

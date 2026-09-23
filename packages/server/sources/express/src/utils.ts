@@ -46,6 +46,11 @@ export function setCorsHeaders(
 }
 
 /**
+ * Maximum POST body size, shared by every route body parser.
+ */
+export const BODY_LIMIT = '1mb';
+
+/**
  * 1x1 transparent GIF for pixel tracking
  * Base64-encoded GIF (43 bytes)
  */

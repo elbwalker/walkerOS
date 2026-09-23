@@ -7,7 +7,7 @@ sidebar_position: 3
 
 # Bundled mode
 
-In Bundled mode, you configure walkerOS with JSON files and build standalone bundles using the CLI. The output is a separate file that can be deployed independently of your application.
+In Bundled mode, you configure walkerOS with JSON files and build standalone bundles using the CLI. The output is a separate artifact (one script for web, a directory for server) that can be deployed independently of your application.
 
 ## Quickstart
 
@@ -37,8 +37,8 @@ Create `flow.json`:
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/web-source-browser": {}
+            "@walkeros/collector": { "version": "^4" },
+            "@walkeros/web-source-browser": { "version": "^4" }
           }
         }
       },
@@ -47,8 +47,7 @@ Create `flow.json`:
           "package": "@walkeros/web-source-browser",
           "config": {
             "settings": {
-              "pageview": true,
-              "session": true
+              "pageview": true
             }
           }
         }
@@ -72,9 +71,9 @@ Create `flow.json`:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/collector": { "version": "^4" },
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -111,9 +110,9 @@ Create `flow.json`:
   language="bash"
 />
 
-This writes the bundle to stdout. Use `-o` to write to a file:
+This writes the bundle to stdout. Use `-o` to write to disk:
 - **Web**: `-o ./dist/walker.js` (IIFE format, loadable via script tag)
-- **Server**: `-o ./dist/bundle.mjs` (ESM format, runnable with Node.js)
+- **Server**: `-o ./dist/` (writes `dist/flow.mjs` in ESM format plus `dist/package.json` and `dist/node_modules/`; ship the whole directory)
 
 ### 4. Deploy
 
@@ -129,17 +128,19 @@ Add to your HTML:
   </TabItem>
   <TabItem value="server" label="Server">
 
-Run directly:
+Run the bundle (`flow.mjs` exports a start function, so plain `node` does not start it):
 
 ```bash
-node ./dist/bundle.mjs
+walkeros run ./dist/flow.mjs
 ```
 
-Or with Docker:
+Or skip the build step; `run` bundles the config on start:
 
 ```bash
 walkeros run flow.json
 ```
+
+For containers, see [Docker deployment](#docker-deployment) below.
 
   </TabItem>
 </Tabs>
@@ -159,10 +160,10 @@ Add destinations to your `flow.json`:
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/web-source-browser": {},
-            "@walkeros/web-destination-api": {},
-            "@walkeros/web-destination-gtag": {}
+            "@walkeros/collector": { "version": "^4" },
+            "@walkeros/web-source-browser": { "version": "^4" },
+            "@walkeros/web-destination-api": { "version": "^4" },
+            "@walkeros/web-destination-gtag": { "version": "^4" }
           }
         }
       },
@@ -195,7 +196,7 @@ Add destinations to your `flow.json`:
   language="json"
 />
 
-Rebuild: `walkeros bundle flow.json`
+Rebuild: `walkeros bundle flow.json -o ./dist/walker.js`
 
 ---
 
@@ -230,6 +231,8 @@ Set consent at runtime:
 elb('walker consent', { functional: true, analytics: true });
 ```
 
+Until a destination's required consent is granted, its events wait in an in-memory queue and are delivered once `walker consent` grants it. The queue holds up to 1000 events per destination by default; when it is full, the oldest events are dropped. Change the limit with `config.queueMax` on the destination, see [buffer bounds](/docs/collector#buffer-bounds).
+
 ---
 
 ## Key concepts
@@ -261,8 +264,10 @@ Use variables for environment-specific values:
   },
   "flows": {
     "default": {
+      "config": { "platform": "web" },
       "destinations": {
         "ga4": {
+          "package": "@walkeros/web-destination-gtag",
           "config": {
             "settings": { "ga4": { "measurementId": "$var.GA_ID" } }
           }
@@ -274,7 +279,7 @@ Use variables for environment-specific values:
   language="json"
 />
 
-Environment variables (`$env.NAME:default`) are resolved at build time. Config variables (`$var.name`) reference values from the `variables` section.
+Environment variables (`$env.NAME:default`) are resolved at build time for web bundles, which bake the value into `walker.js`. Server bundles read them from the environment at runtime and fall back to the default. Config variables (`$var.name`) reference values from the `variables` section.
 
 ### Multiple flows
 
@@ -310,7 +315,7 @@ Build specific flow: `walkeros bundle flow.json --flow production`
 | Command | Purpose |
 |---------|---------|
 | `walkeros bundle` | Build production bundle |
-| `walkeros push --simulate` | Test with mocked events |
+| `walkeros push --simulate` | Test with mocked destinations |
 | `walkeros push` | Test with real API calls |
 | `walkeros run` | Start HTTP collection server |
 
@@ -323,13 +328,12 @@ See [CLI documentation](/docs/apps/cli) for full details.
 For production server deployments:
 
 <CodeSnippet
-  code={`# Build the bundle
-walkeros bundle flow.json
+  code={`# Build the bundle directory
+walkeros bundle flow.json -o ./dist/
 
-# Run with Docker
+# Run with Docker (the image expects flow.mjs in /app/flow)
 docker run -d -p 8080:8080 \\
-  -v $(pwd)/dist/bundle.mjs:/app/flow.mjs \\
-  -e BUNDLE=/app/flow.mjs \\
+  -v $(pwd)/dist:/app/flow:ro \\
   walkeros/flow:latest`}
   language="bash"
 />
@@ -396,7 +400,7 @@ the flow's `config` and rebuild once:
   language="json"
 />
 
-Rebuild: `walkeros bundle flow.json`
+Rebuild: `walkeros bundle flow.json -o ./dist/walker.js`
 
 Both values are public and safe to commit; set both, a partial pair warns at
 build time and wires nothing. The bundle never contains a credential: the

@@ -195,7 +195,7 @@ push.
 | Status | Meaning |
 |--------|---------|
 | 200 | Accepted (respond-first mode: accepted for processing, not proof of delivery) or, in synchronous mode, processed |
-| 400 | Rejected client input: unparseable `application/json` body (body echoes the parser message) or, on synchronous POST, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
+| 400 | Rejected client input: an unparseable `application/json` body (body echoes the parser message) or, on synchronous POST, an event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
 | 404 | Path not configured in `paths` |
 | 405 | Method not allowed on the path |
 | 413 | Body exceeds the 1mb limit |

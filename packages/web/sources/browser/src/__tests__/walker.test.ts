@@ -541,6 +541,130 @@ describe('Walker', () => {
   });
 });
 
+describe('Invalid attribute values', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  function tag(
+    attributes: Record<string, string>,
+    parent: Element = document.body,
+  ): HTMLElement {
+    const el = document.createElement('div');
+    Object.entries(attributes).forEach(([k, v]) => el.setAttribute(k, v));
+    parent.appendChild(el);
+    return el;
+  }
+
+  const invalidNames = [
+    'shopping cart',
+    'foo;bar',
+    "foo'bar",
+    'foo"bar',
+    'foo[bar]',
+    'foo,bar',
+  ];
+
+  test.each(invalidNames)(
+    'entity %p is skipped like a missing entity',
+    (name) => {
+      const el = tag({ 'data-elb': name, 'data-elbaction': 'click' });
+
+      expect(getEvents(el, Triggers.Click)).toMatchObject([
+        { entity: 'page', action: 'click' },
+      ]);
+    },
+  );
+
+  test.each(invalidNames)(
+    'entity %p does not affect a valid parent entity',
+    (name) => {
+      const cart = tag({
+        id: 'cart',
+        'data-elb': 'cart',
+        'data-elb-cart': 'id:1',
+        'data-elbaction': 'click',
+      });
+      tag({ 'data-elb': name }, cart);
+      tag({ 'data-elb': 'item', 'data-elb-item': 'sku:a' }, cart);
+
+      const events = getEvents(cart, Triggers.Click);
+      expect(events).toMatchObject([
+        {
+          entity: 'cart',
+          action: 'click',
+          data: { id: 1 },
+          nested: [{ entity: 'item', data: { sku: 'a' } }],
+        },
+      ]);
+      expect(events[0].nested).toHaveLength(1);
+    },
+  );
+
+  test.each(invalidNames)(
+    'entity %p does not affect a valid nested trigger',
+    (name) => {
+      const outer = tag({ 'data-elb': name });
+      const item = tag(
+        {
+          'data-elb': 'item',
+          'data-elb-item': 'sku:a',
+          'data-elbactions': 'click',
+        },
+        outer,
+      );
+
+      expect(getEvents(item, Triggers.Click)).toMatchObject([
+        { entity: 'item', action: 'click', data: { sku: 'a' } },
+      ]);
+    },
+  );
+
+  test.each(['product_item', 'Product-2', 'größe'])(
+    'entity %p stays valid',
+    (name) => {
+      const el = tag({
+        'data-elb': name,
+        [`data-elb-${name}`]: 'k:v',
+        'data-elbaction': 'click',
+      });
+
+      expect(getEvents(el, Triggers.Click)).toMatchObject([
+        { entity: name, action: 'click', data: { k: 'v' } },
+      ]);
+    },
+  );
+
+  test('getAllEvents collects valid events next to an invalid entity', () => {
+    tag({ 'data-elb': 'shopping cart', 'data-elbaction': 'load' });
+    tag({ 'data-elb': 'cart', 'data-elbaction': 'load' });
+
+    expect(getAllEvents(document.body)).toMatchObject([
+      { entity: 'page', action: 'load' },
+      { entity: 'cart', action: 'load' },
+    ]);
+  });
+
+  test('link ids with CSS-special characters still link parent and child', () => {
+    const parent = tag({ 'data-elb': 'l', 'data-elbaction': 'click' });
+    tag({ 'data-elblink': 'a"b]:parent' }, parent);
+    const child = tag({
+      'data-elb': 'c',
+      'data-elb-c': 'k:v',
+      'data-elblink': 'a"b]:child',
+      'data-elbactions': 'click',
+    });
+
+    expect(getEvents(parent, Triggers.Click)).toMatchObject([
+      { entity: 'l', nested: [{ entity: 'c', data: { k: 'v' } }] },
+    ]);
+    expect(getEvents(child, Triggers.Click)).toMatchObject([
+      { entity: 'c' },
+      { entity: 'l' },
+    ]);
+  });
+});
+
 describe('getUser', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
