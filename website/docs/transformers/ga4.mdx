@@ -117,7 +117,7 @@ The transformer expects the source to populate `ctx.ingest` with these keys:
 
 `config.ingest` must use the `map` operator with **direct `req` field paths** (no `req.` prefix), as shown above. A bare object like `{ "url": "req.url" }` is silently inert: without an operator the source returns `req` itself, `ctx.ingest` stays empty, and raw GA4 params reach the collector as a nameless event.
 
-If `url` is missing or not a string the transformer drops the event silently. If `body` is JSON-parsed by the source before reaching the transformer, pass the original raw string through or skip the transformer.
+If `url` is missing or not a string the transformer drops the event silently. The express source keeps a non-JSON `text/plain` body (gtag's batched POST) as the raw string, so batched hits decode with the wiring above. If a custom source JSON-parses the body before it reaches the transformer, pass the original raw string through or skip the transformer.
 
 <Configuration type="transformer" data={data} />
 

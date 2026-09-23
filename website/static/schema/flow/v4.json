@@ -151,6 +151,35 @@
       "title": "Flow.Bundle",
       "description": "Bundle configuration (packages + overrides + traceInclude)."
     },
+    "FlowObserve": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "description": "Managed-telemetry verbosity. 'off' disables telemetry entirely, 'standard' emits structural records, 'trace' emits full payloads.",
+          "type": "string",
+          "enum": ["off", "standard", "trace"]
+        },
+        "sample": {
+          "description": "Deterministic sample fraction in [0, 1]. Defaults to 1.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "url": {
+          "description": "Observer base URL for the web connect form. Public, safe to commit. Paired with binding.",
+          "type": "string",
+          "minLength": 1
+        },
+        "binding": {
+          "description": "Public project binding a web observe credential must match. Paired with url; public, safe to commit.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "title": "Flow.Observe",
+      "description": "Observability configuration: public web connect pair (url + binding) and managed-telemetry knobs (level + sample)."
+    },
     "FlowConfig": {
       "type": "object",
       "properties": {
@@ -179,12 +208,20 @@
               "$ref": "#/definitions/FlowBundle"
             }
           ]
+        },
+        "observe": {
+          "description": "Observability configuration: public web connect pair, managed-telemetry level and sample.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FlowObserve"
+            }
+          ]
         }
       },
       "required": ["platform"],
       "additionalProperties": false,
       "title": "Flow.Config",
-      "description": "Per-flow configuration block: platform identity, optional public URL, settings, bundle."
+      "description": "Per-flow configuration block: platform identity, optional public URL, settings, bundle, observe."
     },
     "FlowCode": {
       "type": "object",
@@ -225,11 +262,213 @@
               "additionalProperties": {}
             }
           ]
+        },
+        "state": {
+          "description": "Declarative store get/set, run before the collector receives the event. Takes precedence over a step-level state.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StateConfig"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/StateConfig"
+              }
+            }
+          ]
         }
       },
       "additionalProperties": {},
       "title": "Source.Config",
       "description": "Source-specific configuration object (Source.Config)."
+    },
+    "StateConfig": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["get", "set"],
+          "description": "Direction: 'get' reads from the store, 'set' writes to it"
+        },
+        "store": {
+          "description": "Store id; defaults to the in-memory __cache store when omitted",
+          "type": "string"
+        },
+        "key": {
+          "description": "Resolves against { event, ingest } to the store key. Paths need an event. or ingest. prefix",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema0"
+            }
+          ],
+          "$ref": "#/definitions/MappingValue"
+        },
+        "value": {
+          "description": "set: resolves against { event, ingest } to the payload to store. get: its path is the write target, event. onto the event or ingest. into the ingest.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/MappingValue"
+            }
+          ]
+        }
+      },
+      "required": ["mode", "key"],
+      "additionalProperties": false,
+      "title": "State.Config",
+      "description": "Declarative store operation: stash (set) or fetch (get) a value against a store. key names the store slot, value the event or ingest side, mode the direction. Paths resolve against { event, ingest }."
+    },
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "string",
+          "description": "String value or property path (e.g., \"data.id\")"
+        },
+        {
+          "type": "number",
+          "description": "Numeric value"
+        },
+        {
+          "type": "boolean",
+          "description": "Boolean value"
+        },
+        {
+          "description": "Value transformation configuration with multiple strategies",
+          "allOf": [
+            {
+              "$ref": "#/definitions/MappingValueConfig"
+            }
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MappingValue"
+          },
+          "description": "Array of values"
+        }
+      ]
+    },
+    "MappingMap": {
+      "title": "Mapping.Map",
+      "description": "Map: object mapping keys to transformation values.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/MappingValue"
+      }
+    },
+    "MappingValue": {
+      "title": "Mapping.Value",
+      "description": "Polymorphic transform primitive used in every mapping field. A string path, constant, operator object (map/loop/set/condition/consent), or array of values.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema0"
+        }
+      ]
+    },
+    "MappingLoop": {
+      "title": "Mapping.Loop",
+      "description": "Loop tuple [source, transform] for iterating and transforming arrays.",
+      "type": "array",
+      "items": [
+        {
+          "$ref": "#/definitions/MappingValue"
+        },
+        {
+          "$ref": "#/definitions/MappingValue"
+        }
+      ]
+    },
+    "MappingSet": {
+      "title": "Mapping.Set",
+      "description": "Set: array of values for selection or combination.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/MappingValue"
+      }
+    },
+    "WalkerOSConsent": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "title": "WalkerOS.Consent",
+      "description": "Consent state mapping. Keys are consent groups (e.g. marketing, functional), values are booleans for granted/denied."
+    },
+    "MappingValueConfig": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "Property path to extract from event (e.g., \"data.id\", \"user.email\")",
+          "type": "string"
+        },
+        "value": {
+          "description": "Static primitive value",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "fn": {
+          "description": "Custom transformation function as string (serialized)",
+          "type": "string"
+        },
+        "map": {
+          "description": "Object mapping: transform event data to structured output",
+          "allOf": [
+            {
+              "$ref": "#/definitions/MappingMap"
+            }
+          ]
+        },
+        "loop": {
+          "description": "Loop transformation: [source, transform] for array processing",
+          "allOf": [
+            {
+              "$ref": "#/definitions/MappingLoop"
+            }
+          ]
+        },
+        "set": {
+          "description": "Set of values: combine or select from multiple values",
+          "allOf": [
+            {
+              "$ref": "#/definitions/MappingSet"
+            }
+          ]
+        },
+        "consent": {
+          "description": "Required consent states to include this value",
+          "allOf": [
+            {
+              "$ref": "#/definitions/WalkerOSConsent"
+            }
+          ]
+        },
+        "condition": {
+          "description": "Condition function as string: return true to include value",
+          "type": "string"
+        },
+        "validate": {
+          "description": "Validation function as string: return true if value is valid",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "title": "Mapping.ValueConfig",
+      "description": "Object-form value transformation with map/loop/set/condition/consent etc."
     },
     "FlowSourceEnv": {
       "title": "Source.BaseEnv",
@@ -558,180 +797,6 @@
       "title": "EventCache.Rule",
       "description": "Single event-cache rule: when it applies (match), what event fields it keys off, TTL, and optional response mutations on hit."
     },
-    "MappingValue": {
-      "title": "Mapping.Value",
-      "description": "Polymorphic transform primitive used in every mapping field. A string path, constant, operator object (map/loop/set/condition/consent), or array of values.",
-      "anyOf": [
-        {
-          "type": "string",
-          "description": "String value or property path (e.g., \"data.id\")"
-        },
-        {
-          "type": "number",
-          "description": "Numeric value"
-        },
-        {
-          "type": "boolean",
-          "description": "Boolean value"
-        },
-        {
-          "description": "Value transformation configuration with multiple strategies",
-          "allOf": [
-            {
-              "$ref": "#/definitions/MappingValueConfig"
-            }
-          ]
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/MappingValue"
-          },
-          "description": "Array of values"
-        }
-      ]
-    },
-    "MappingMap": {
-      "title": "Mapping.Map",
-      "description": "Map: object mapping keys to transformation values.",
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "$ref": "#/definitions/MappingValue"
-      }
-    },
-    "MappingLoop": {
-      "title": "Mapping.Loop",
-      "description": "Loop tuple [source, transform] for iterating and transforming arrays.",
-      "type": "array",
-      "items": [
-        {
-          "$ref": "#/definitions/MappingValue"
-        },
-        {
-          "$ref": "#/definitions/MappingValue"
-        }
-      ]
-    },
-    "MappingSet": {
-      "title": "Mapping.Set",
-      "description": "Set: array of values for selection or combination.",
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/MappingValue"
-      }
-    },
-    "WalkerOSConsent": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "type": "boolean"
-      },
-      "title": "WalkerOS.Consent",
-      "description": "Consent state mapping. Keys are consent groups (e.g. marketing, functional), values are booleans for granted/denied."
-    },
-    "MappingValueConfig": {
-      "type": "object",
-      "properties": {
-        "key": {
-          "description": "Property path to extract from event (e.g., \"data.id\", \"user.email\")",
-          "type": "string"
-        },
-        "value": {
-          "description": "Static primitive value",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "boolean"
-            }
-          ]
-        },
-        "fn": {
-          "description": "Custom transformation function as string (serialized)",
-          "type": "string"
-        },
-        "map": {
-          "description": "Object mapping: transform event data to structured output",
-          "allOf": [
-            {
-              "$ref": "#/definitions/MappingMap"
-            }
-          ]
-        },
-        "loop": {
-          "description": "Loop transformation: [source, transform] for array processing",
-          "allOf": [
-            {
-              "$ref": "#/definitions/MappingLoop"
-            }
-          ]
-        },
-        "set": {
-          "description": "Set of values: combine or select from multiple values",
-          "allOf": [
-            {
-              "$ref": "#/definitions/MappingSet"
-            }
-          ]
-        },
-        "consent": {
-          "description": "Required consent states to include this value",
-          "allOf": [
-            {
-              "$ref": "#/definitions/WalkerOSConsent"
-            }
-          ]
-        },
-        "condition": {
-          "description": "Condition function as string: return true to include value",
-          "type": "string"
-        },
-        "validate": {
-          "description": "Validation function as string: return true if value is valid",
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "title": "Mapping.ValueConfig",
-      "description": "Object-form value transformation with map/loop/set/condition/consent etc."
-    },
-    "Validate": {
-      "type": "object",
-      "properties": {
-        "format": {
-          "description": "Validate event structure against the standard event format",
-          "type": "boolean"
-        },
-        "events": {
-          "description": "Per entity-action JSON Schemas to validate matching events against",
-          "allOf": [
-            {
-              "$ref": "#/definitions/ValidateEvents"
-            }
-          ]
-        },
-        "schema": {
-          "description": "A single JSON Schema applied to every event this step handles",
-          "allOf": [
-            {
-              "$ref": "#/definitions/JsonSchema"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false,
-      "title": "Validate",
-      "description": "Step-level validation: { format?, events?, schema? }"
-    },
     "FlowSource": {
       "type": "object",
       "properties": {
@@ -813,10 +878,17 @@
             }
           ]
         },
-        "validate": {
-          "allOf": [
+        "state": {
+          "description": "Declarative store get/set for this source. Paths resolve against { event, ingest }.",
+          "anyOf": [
             {
-              "$ref": "#/definitions/Validate"
+              "$ref": "#/definitions/StateConfig"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/StateConfig"
+              }
             }
           ]
         }
@@ -1007,10 +1079,17 @@
             }
           ]
         },
-        "validate": {
-          "allOf": [
+        "state": {
+          "description": "Declarative store get/set for this destination. Paths resolve against { event, ingest }.",
+          "anyOf": [
             {
-              "$ref": "#/definitions/Validate"
+              "$ref": "#/definitions/StateConfig"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/StateConfig"
+              }
             }
           ]
         }
@@ -1104,12 +1183,22 @@
             }
           ]
         },
-        "validate": {
-          "allOf": [
+        "state": {
+          "description": "Declarative store get/set for this transformer. Paths resolve against { event, ingest }.",
+          "anyOf": [
             {
-              "$ref": "#/definitions/Validate"
+              "$ref": "#/definitions/StateConfig"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/StateConfig"
+              }
             }
           ]
+        },
+        "mapping": {
+          "description": "Event mapping for a code-free transformer. The collector applies it to the event; a rule with ignore: true drops it."
         }
       },
       "additionalProperties": false,
@@ -1359,10 +1448,17 @@
                   }
                 ]
               },
-              "validate": {
-                "allOf": [
+              "state": {
+                "description": "Declarative store get/set for this source. Paths resolve against { event, ingest }.",
+                "anyOf": [
                   {
-                    "$ref": "#/definitions/Validate"
+                    "$ref": "#/definitions/StateConfig"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/StateConfig"
+                    }
                   }
                 ]
               }
@@ -1460,10 +1556,17 @@
                   }
                 ]
               },
-              "validate": {
-                "allOf": [
+              "state": {
+                "description": "Declarative store get/set for this destination. Paths resolve against { event, ingest }.",
+                "anyOf": [
                   {
-                    "$ref": "#/definitions/Validate"
+                    "$ref": "#/definitions/StateConfig"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/StateConfig"
+                    }
                   }
                 ]
               }
@@ -1561,12 +1664,22 @@
                   }
                 ]
               },
-              "validate": {
-                "allOf": [
+              "state": {
+                "description": "Declarative store get/set for this transformer. Paths resolve against { event, ingest }.",
+                "anyOf": [
                   {
-                    "$ref": "#/definitions/Validate"
+                    "$ref": "#/definitions/StateConfig"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/StateConfig"
+                    }
                   }
                 ]
+              },
+              "mapping": {
+                "description": "Event mapping for a code-free transformer. The collector applies it to the event; a rule with ignore: true drops it."
               }
             },
             "additionalProperties": false,

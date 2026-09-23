@@ -11,12 +11,17 @@ import type { Flow } from '@walkeros/core';
  *   - Mapped events (fan-out):   `out: [['return', e1], ['return', e2], ...]`
  *   - Dropped (ignore / no en):  `out: [['return', false]]`
  *
- * Examples set `_p` (becomes `event.id`) and `sid` (becomes `event.timestamp`
- * in ms via `sid * 1000`) so the assertions are deterministic. The synthetic
- * walkerOS event shape mirrors what `mapHitToEvents` produces in `map.ts`:
+ * Examples set `_p` (page load id), `_s` (hit sequence) and `sid` (becomes
+ * `event.timestamp` in ms via `sid * 1000`) so the assertions are
+ * deterministic. The synthetic walkerOS event shape mirrors what
+ * `mapHitToEvents` produces in `map.ts`:
+ *   - `id` derived from `tid`, `cid`, `_p`, `_s` and the event's position in
+ *     the hit: 16 lowercase hex chars, unique per event, identical when the
+ *     same hit is delivered twice (see `id.ts`)
  *   - `entity` + `action` derived from rule.name's first/rest words
  *   - `user.{id,device,session}` from `uid/cid/sid`
- *   - `source: { type: 'ga4', platform? }` from `p`
+ *   - `source: { type: 'ga4', platform?, pageLoadId, hitSequence }` from
+ *     `p`, `_p` and `_s`
  *   - `consent` from `gcs` (`G100` → all false, `G111` → all true)
  *   - `timing` from event `_et` (defaults to 0 if absent)
  *   - `trigger: 'ga4'` (hard-coded in v1)
@@ -27,15 +32,19 @@ import type { Flow } from '@walkeros/core';
 
 const SID = '1700000000'; // → timestamp 1700000000000
 
-function ga4Event(overrides: Record<string, unknown>): Record<string, unknown> {
+function ga4Event(
+  hitSequence: string,
+  id: string,
+  overrides: Record<string, unknown>,
+): Record<string, unknown> {
   return {
-    id: 'p1',
+    id,
     timestamp: 1700000000000,
     timing: 0,
     trigger: 'ga4',
     user: { device: 'cid-1', session: SID },
     globals: {},
-    source: { type: 'ga4' },
+    source: { type: 'ga4', pageLoadId: 'p1', hitSequence },
     consent: {},
     ...overrides,
   };
@@ -50,7 +59,7 @@ export const pageView: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=1&cid=cid-1&sid=' +
       SID +
       '&en=page_view' +
       '&dl=https%3A%2F%2Fshop.example.com%2Fproducts%2Fsku-123' +
@@ -60,7 +69,7 @@ export const pageView: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('1', 'e696fb64aa2977fd', {
         name: 'page view',
         entity: 'page',
         action: 'view',
@@ -81,7 +90,7 @@ export const purchase: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=2&cid=cid-1&sid=' +
       SID +
       '&en=purchase' +
       '&ep.transaction_id=T-9001' +
@@ -94,7 +103,7 @@ export const purchase: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('2', '502e44f9d66b4f50', {
         name: 'order complete',
         entity: 'order',
         action: 'complete',
@@ -118,14 +127,14 @@ export const viewItem: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=3&cid=cid-1&sid=' +
       SID +
       '&en=view_item&ep.currency=EUR&epn.value=129.99',
   },
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('3', '32d273af6128083f', {
         name: 'product view',
         entity: 'product',
         action: 'view',
@@ -142,14 +151,14 @@ export const addToCart: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=4&cid=cid-1&sid=' +
       SID +
       '&en=add_to_cart&ep.currency=EUR&epn.value=129.99',
   },
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('4', 'a6836917c43be032', {
         name: 'product add',
         entity: 'product',
         action: 'add',
@@ -166,7 +175,7 @@ export const beginCheckout: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=5&cid=cid-1&sid=' +
       SID +
       '&en=begin_checkout' +
       '&ep.currency=EUR&epn.value=149.97&ep.coupon=WELCOME10',
@@ -174,7 +183,7 @@ export const beginCheckout: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('5', 'e9a2d80f15837449', {
         name: 'order start',
         entity: 'order',
         action: 'start',
@@ -195,14 +204,14 @@ export const scroll: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=6&cid=cid-1&sid=' +
       SID +
       '&en=scroll&epn.percent_scrolled=90',
   },
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('6', '68d641a4df21861c', {
         name: 'page scroll',
         entity: 'page',
         action: 'scroll',
@@ -219,14 +228,14 @@ export const search: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=7&cid=cid-1&sid=' +
       SID +
       '&en=search&ep.search_term=trail%20runner',
   },
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('7', 'f7293057f63a752b', {
         name: 'search submit',
         entity: 'search',
         action: 'submit',
@@ -243,14 +252,14 @@ export const login: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=8&cid=cid-1&sid=' +
       SID +
       '&en=login&ep.method=google',
   },
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('8', '073e353121b1d68e', {
         name: 'session login',
         entity: 'session',
         action: 'login',
@@ -267,14 +276,14 @@ export const customEvent: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=9&cid=cid-1&sid=' +
       SID +
       '&en=newsletter_subscribe&ep.source=footer',
   },
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('9', '09f644269b418d05', {
         name: 'ga4 track',
         entity: 'ga4',
         action: 'track',
@@ -291,7 +300,7 @@ export const consentDenied: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=10&cid=cid-1&sid=' +
       SID +
       '&gcs=G100' +
       '&en=page_view&dl=https%3A%2F%2Fx&dt=X',
@@ -299,7 +308,7 @@ export const consentDenied: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('10', '8edc3aea57048d5d', {
         name: 'page view',
         entity: 'page',
         action: 'view',
@@ -317,7 +326,7 @@ export const userEngagementIgnored: Flow.StepExample = {
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=11&cid=cid-1&sid=' +
       SID +
       '&en=user_engagement&_et=1500',
   },
@@ -327,11 +336,11 @@ export const userEngagementIgnored: Flow.StepExample = {
 export const batchPost: Flow.StepExample = {
   title: 'Batched POST (fan-out)',
   description:
-    'A single POST request carrying two newline-separated events fans out into two walkerOS events.',
+    'A single POST request carrying two newline-separated events fans out into two walkerOS events, each with its own id.',
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
-      '?v=2&tid=G-EXAMPLE&_p=p1&cid=cid-1&sid=' +
+      '?v=2&tid=G-EXAMPLE&_p=p1&_s=12&cid=cid-1&sid=' +
       SID,
     body: [
       'en=add_to_cart&ep.currency=EUR&epn.value=19.99',
@@ -341,7 +350,7 @@ export const batchPost: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event({
+      ga4Event('12', '8ab72f078097141f', {
         name: 'product add',
         entity: 'product',
         action: 'add',
@@ -350,7 +359,7 @@ export const batchPost: Flow.StepExample = {
     ],
     [
       'return',
-      ga4Event({
+      ga4Event('12', '8aba3307809950c2', {
         name: 'product add',
         entity: 'product',
         action: 'add',

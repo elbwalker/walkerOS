@@ -130,7 +130,6 @@ describe('express input hygiene', () => {
   it.each([
     ['test_data', 'application/json', 400],
     ['(wget --no-check http://x', 'application/json', 400],
-    ['not json either', 'text/plain', 400],
     ['{"a":1}', 'application/json; charset=klingon', 415],
   ])(
     'rejects %p (%s) with %i and a JSON body',

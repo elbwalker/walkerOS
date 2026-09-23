@@ -450,6 +450,12 @@ export const TransformerSchema = z
       .describe(
         'Declarative store get/set for this transformer. Paths resolve against { event, ingest }.',
       ),
+    mapping: z
+      .unknown()
+      .optional()
+      .describe(
+        'Event mapping for a code-free transformer. The collector applies it to the event; a rule with ignore: true drops it.',
+      ),
   })
   .meta({
     id: 'FlowTransformer',

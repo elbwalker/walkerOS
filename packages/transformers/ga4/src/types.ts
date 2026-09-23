@@ -1,5 +1,19 @@
 import type { Mapping, WalkerOS } from '@walkeros/core';
 
+declare module '@walkeros/core' {
+  interface SourceMap {
+    ga4: {
+      type: 'ga4';
+      /** GA4 `p` param, when sent. */
+      platform?: string;
+      /** Raw GA4 page load id (`_p`), shared by every hit of one page load. */
+      pageLoadId?: string;
+      /** Raw GA4 hit sequence counter (`_s`) within the page load. */
+      hitSequence?: string;
+    };
+  }
+}
+
 /** Raw input to the decoder. Origin-agnostic (express, lambda, pubsub, etc). */
 export interface GA4Request {
   /** Full request URL including query string. */

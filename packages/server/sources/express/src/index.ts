@@ -58,7 +58,7 @@ const settleAfterAck = (
 };
 
 /**
- * Client-caused body failure raised by the route-scoped JSON parser:
+ * Client-caused body failure raised by a route-scoped body parser:
  * unparseable JSON, oversized payload, unsupported charset or encoding,
  * an aborted request, or a content-length mismatch. Identified by the
  * error type marker the parser attaches, so unrelated middleware errors
@@ -149,14 +149,21 @@ export const sourceExpress = async (
   // probing the endpoint pick an exploit.
   app.disable('x-powered-by');
 
-  // Body parsing per configured POST route: JSON content-type plus text/plain
-  // so navigator.sendBeacon payloads (which the browser forces to
-  // text/plain;charset=UTF-8) are also parsed as JSON. 1mb default limit.
-  // Route-scoped so unmatched paths (scanner noise) fall through to the
-  // default 404 without ever touching the parser.
+  // Body parsing per configured POST route, 1mb limit each. A body declared
+  // as application/json must be JSON: a malformed one is rejected with 400.
+  // A text/plain body is read as text and resolved once in buildScope: JSON
+  // (navigator.sendBeacon forces text/plain;charset=UTF-8 on JSON payloads)
+  // becomes the parsed value, anything else (e.g. a GA4 gtag batch of
+  // URL-encoded hit lines) stays the raw string for a source.before decoder
+  // reading ingest.body. Route-scoped so unmatched paths (scanner noise) fall
+  // through to the default 404 without ever touching a parser.
   const jsonParser = expressLib.json({
     limit: '1mb',
-    type: ['application/json', 'text/plain'],
+    type: 'application/json',
+  });
+  const textParser = expressLib.text({
+    limit: '1mb',
+    type: 'text/plain',
   });
 
   // Content-Type on some responses is flow-controlled (a cache or asset step
@@ -176,7 +183,8 @@ export const sourceExpress = async (
 
   /**
    * Request handler - transforms HTTP requests into walker events
-   * Supports POST (JSON body), GET (query params), and OPTIONS (CORS preflight)
+   * Supports POST (JSON or text body), GET (query params), and OPTIONS (CORS
+   * preflight)
    *
    * Each inbound request gets its own `withScope` invocation. The per-scope
    * env carries this request's `ingest` and `respond` end to end, so
@@ -363,7 +371,9 @@ export const sourceExpress = async (
   );
 
   for (const route of resolvedPaths) {
-    if (route.methods.includes('POST')) app.post(route.path, jsonParser, push);
+    if (route.methods.includes('POST')) {
+      app.post(route.path, jsonParser, textParser, push);
+    }
     if (route.methods.includes('GET')) app.get(route.path, push);
     app.options(route.path, push); // Always register OPTIONS for CORS
   }
