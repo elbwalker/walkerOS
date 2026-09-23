@@ -68,7 +68,7 @@ in a session share the same key.
     "sessionLookup": {
       "code": {
         "type": "session-lookup",
-        "push": "$code:async (event, context) => { if (!event.user.session) return; const session = await context.env.store.get(event.user.session); if (session) return { event: { ...event, data: { ...event.data, session } } }; }"
+        "push": "$code:async (event, context) => { if (!event.user?.session) return; const session = await context.env.store.get(event.user.session); if (session) return { event: { ...event, data: { ...event.data, session } } }; }"
       },
       "env": { "store": "$store.sessions" }
     }
@@ -162,7 +162,7 @@ built-in memory tier: the Sheets store cannot hold cache entries.
     "crmLookup": {
       "code": {
         "type": "crm-lookup",
-        "push": "$code:async (event, context) => { if (!event.user.id) return; const crm = await context.env.store.get(event.user.id); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
+        "push": "$code:async (event, context) => { if (!event.user?.id) return; const crm = await context.env.store.get(event.user.id); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
       },
       "env": { "store": "$store.crm" }
     }
@@ -179,8 +179,9 @@ Lookup chain on `crm.get(K)`:
    on the unwind: `crm` writes to `files`, which writes GCS and then memory.
 
 TTL ordering: shortest at the top (the `files` memory tier, 300s), longest at
-the cold end (the `crm` entries in GCS, 86400s). The bound on staleness is the
-longest TTL in the chain.
+the cold end (the `crm` entries in GCS, 86400s). A hit in a lower tier restarts
+the TTL of every tier above it, so the bound on staleness is the sum of the TTLs
+along the chain (86400s + 300s here), not the longest one.
 
 **Async-safe by design.** Whether your cache store's `get` is synchronous (the
 built-in `__cache`, an in-memory store) or asynchronous

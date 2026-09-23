@@ -16,6 +16,25 @@ describe('ga4 SettingsSchema', () => {
     expect(SettingsSchema.safeParse({}).success).toBe(true);
   });
 
+  it('rejects a mapping rule that is not a valid rule', () => {
+    // A string "false" would otherwise pass and, read by truthiness at
+    // runtime, drop every page_view.
+    expect(
+      SettingsSchema.safeParse({ mapping: { page_view: { ignore: 'false' } } })
+        .success,
+    ).toBe(false);
+  });
+
+  it('accepts a patching rule with extend and remove', () => {
+    expect(
+      SettingsSchema.safeParse({
+        mapping: {
+          page_view: { extend: { name: 'page open' }, remove: ['data.x'] },
+        },
+      }).success,
+    ).toBe(true);
+  });
+
   it.each([0, 1.5])('rejects maxEvents %s', (maxEvents) => {
     expect(SettingsSchema.safeParse({ maxEvents }).success).toBe(false);
   });
