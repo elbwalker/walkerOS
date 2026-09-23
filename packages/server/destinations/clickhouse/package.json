@@ -1,0 +1,73 @@
+{
+  "name": "@walkeros/server-destination-clickhouse",
+  "description": "ClickHouse server destination for walkerOS (bulk JSONEachRow inserts, bounded retry, insert deduplication)",
+  "version": "4.6.1",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    },
+    "./walkerOS.json": "./dist/walkerOS.json",
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "import": "./dist/examples/index.mjs",
+      "require": "./dist/examples/index.js"
+    }
+  },
+  "files": [
+    "dist/**",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
+    "test": "jest",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@clickhouse/client": "1.23.1",
+    "@walkeros/core": "4.6.1",
+    "@walkeros/server-core": "4.6.1"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/server/destinations/clickhouse"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "walkerOS": {
+    "type": "destination",
+    "platform": [
+      "server"
+    ],
+    "docs": "https://www.walkeros.io/docs/destinations/server/clickhouse"
+  },
+  "keywords": [
+    "walkerOS",
+    "walkerOS-destination",
+    "destination",
+    "server",
+    "clickhouse",
+    "warehouse",
+    "analytics"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}
