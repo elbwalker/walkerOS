@@ -10,41 +10,45 @@ declare global {
   }
 }
 
+/** Bare dimension id (like "1") to a Mapping Value resolved per event. */
+export type CustomDimensions = Record<string, WalkerOSMapping.Value>;
+
 export interface Settings {
-  /** Matomo Site ID (required). */
-  siteId: string;
-  /** Base URL of Matomo instance, e.g. https://analytics.example.com/ (required). */
-  url: string;
+  /** Matomo Site ID; required when `loadScript` is true. */
+  siteId?: string;
+  /** Base URL of the Matomo instance, like https://analytics.example.com/; required when `loadScript` is true. */
+  url?: string;
   /** Disable all tracking cookies for cookie-free analytics. */
   disableCookies?: boolean;
   /** Enable automatic outlink and download tracking. Default: true. */
   enableLinkTracking?: boolean;
   /** Enable heart beat timer with interval in seconds for accurate time-on-page. */
   enableHeartBeatTimer?: number;
-  /** Custom dimensions applied to all events. Keys are dimension IDs, values are property paths. */
-  customDimensions?: Record<string, string>;
+  /** Custom dimensions applied to every hit, keyed by bare dimension id. */
+  customDimensions?: CustomDimensions;
 }
 
 export type InitSettings = Partial<Settings>;
 
 export interface Mapping {
-  /** Goal ID to track a conversion alongside this event. */
-  goalId?: string;
-  /** Property path for goal revenue value (e.g. data.revenue). */
-  goalValue?: string;
+  /** Matomo goal ID, a positive integer like 1; adds a trackGoal conversion. */
+  goalId?: string | number;
+  /** Goal revenue, resolved from the event (like "data.revenue"). */
+  goalValue?: WalkerOSMapping.Value;
   /** Track as internal site search via trackSiteSearch. */
   siteSearch?: boolean;
   /** Track as content impression via trackContentImpression. */
   contentImpression?: boolean;
   /** Track as content interaction via trackContentInteraction. */
   contentInteraction?: boolean;
-  /** Per-event custom dimensions. Keys are dimension IDs, values are property paths. */
-  customDimensions?: Record<string, string>;
+  /** Custom dimensions for this rule; win per key over the destination ones. */
+  customDimensions?: CustomDimensions;
 }
 
 export interface Env extends DestinationWeb.Env {
   window: {
-    _paq: Array<unknown>;
+    // Optional: the queue may be absent until `init` installs it.
+    _paq?: Array<unknown>;
     location?: { href?: string };
   };
   document: {

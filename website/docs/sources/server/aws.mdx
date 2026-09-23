@@ -150,7 +150,7 @@ envelopes are normalized away, so one mapping serves both.
         ingest: {
           map: {
             ip: { key: 'ip' },
-            ua: { key: 'headers.user-agent' },
+            userAgent: { key: 'headers.user-agent' },
             path: { key: 'path' },
           },
         },

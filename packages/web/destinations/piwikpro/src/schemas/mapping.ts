@@ -1,11 +1,17 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
+import { CustomDimensionsSchema } from './settings';
 
 export const MappingSchema = z.object({
-  goalId: z.string().describe('ID to count the event as a goal (like 1)'),
-  goalValue: z
-    .string()
-    .describe('Property to be used as the goal value (like data.value)')
+  goalId: z
+    .union([z.string(), z.number()])
+    .describe(
+      'Piwik PRO goal id (UUID or legacy integer). Adds a second hit, trackGoal.',
+    )
     .optional(),
+  goalValue: schemas.ValueSchema.describe(
+    'Goal revenue, resolved from the event (like "data.total"), passed as the trackGoal conversion value',
+  ).optional(),
+  customDimensions: CustomDimensionsSchema.describe(
+    'Custom dimensions for this rule, keyed by bare dimension id (like { "1": "data.size" }). Wins per key over the destination customDimensions.',
+  ).optional(),
 });
-
-export type Mapping = z.infer<typeof MappingSchema>;
