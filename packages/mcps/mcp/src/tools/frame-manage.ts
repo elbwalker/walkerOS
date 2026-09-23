@@ -57,7 +57,7 @@ export const FRAME_MANAGE_DESCRIPTION =
   'A frame name is documentation; the marks inside it carry the meaning. A frame that extends another stores only what it adds, so its tags may carry only the fields they change. ' +
   'Marks are { tags, note }: tags is one flat list of tags, each with an id, a kind such as entity, property or action, a name, and a parentId naming the tag it sits under; note is the frame’s own description and thread. ' +
   'Use hub_manage action "knowledge" with a frameId or markId to read what people wrote on a frame. ' +
-  'A markId is a tag id: a tag’s id, parentId and threadRef come back literal when they have the shape the app mints, so they can be passed straight back; every other string value in the marks is wrapped as data, and object keys come back as they are.';
+  'A markId is a tag id: a tag’s id, parentId and threadRef come back literal when they have the shape the app mints, so they can be passed straight back; every other string value in the marks is wrapped as data, and so is an object key that is not a plain identifier.';
 
 /**
  * Exported so the declarative registry holds the same object rather than a
@@ -205,7 +205,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * lookup and never leaks an instruction.
  *
  * A key this file does not name, at any level, is walked as text. Object keys
- * themselves are carried as they are.
+ * are client-written too, so a key keeps its spelling only when it is a plain
+ * identifier (see {@link markKey}); any other key is wrapped like a value.
  */
 
 /**
@@ -260,6 +261,29 @@ const NOTE_ADDRESSES: ReadonlyMap<string, (value: string) => boolean> = new Map(
   [['threadRef', isThreadId]],
 );
 
+/** A key the app writes: a JavaScript-style identifier, dashes allowed for
+ *  attribute names, bounded in length. Such a key cannot close the envelope or
+ *  carry a sentence, so it stays readable. */
+const MARK_KEY_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$-]{0,63}$/;
+
+/** A marks key as it is handed back: literal when it has the shape of a key the
+ *  app writes, wrapped as data otherwise. */
+const markKey = (key: string): string =>
+  MARK_KEY_PATTERN.test(key) ? key : wrapUserData(key);
+
+/** Text below the addresses: every string wrapped, every key through
+ *  {@link markKey}. */
+function walkText(value: unknown): unknown {
+  if (typeof value === 'string') return wrapUserData(value);
+  if (Array.isArray(value)) return value.map(walkText);
+  if (!isRecord(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    out[markKey(key)] = walkText(child);
+  }
+  return out;
+}
+
 /** Walks a marks document applying the rule above. */
 function walkMarks(marks: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -269,7 +293,7 @@ function walkMarks(marks: Record<string, unknown>): Record<string, unknown> {
     } else if (key === 'note') {
       out[key] = walkAddressed(value, NOTE_ADDRESSES);
     } else {
-      out[key] = redactNestedStrings(value);
+      out[markKey(key)] = walkText(value);
     }
   }
   return out;
@@ -286,14 +310,14 @@ function walkAddressed(
   value: unknown,
   addresses: ReadonlyMap<string, (value: string) => boolean>,
 ): unknown {
-  if (!isRecord(value)) return redactNestedStrings(value);
+  if (!isRecord(value)) return walkText(value);
   const out: Record<string, unknown> = {};
   for (const [key, field] of Object.entries(value)) {
     const isAddress = addresses.get(key);
-    out[key] =
+    out[markKey(key)] =
       isAddress !== undefined && typeof field === 'string' && isAddress(field)
         ? field
-        : redactNestedStrings(field);
+        : walkText(field);
   }
   return out;
 }

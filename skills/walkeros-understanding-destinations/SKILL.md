@@ -115,9 +115,9 @@ evictions) and `?.dlq` (DLQ evictions). Build the key with `stepId()` from
 `@walkeros/core`. Point-in-time sizes stay on
 `collector.status.destinations[id].queuePushSize` / `dlqSize`.
 
-Nothing drains either buffer back into the pipeline. An event that reaches the
-DLQ is gone once it is evicted, which is what makes the delivery rules below
-worth getting right.
+`queuePush` drains back into the destination once consent allows delivery. The
+DLQ is never replayed: an event that reaches it is gone once it is evicted,
+which is what makes the delivery rules below worth getting right.
 
 ## Delivery timeout
 

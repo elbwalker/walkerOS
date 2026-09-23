@@ -331,7 +331,7 @@ Exit codes:
   0 = Valid (with --strict: no warnings either)
   1 = Errors found (contract violations count as errors under --strict)
   2 = No errors, warnings found (with --strict only)
-  3 = Validation could not run (invalid JSON on stdin or inline, unknown --type)
+  3 = Validation could not run (missing file, invalid JSON, unknown --type)
 ```
 
 ### Run Command
