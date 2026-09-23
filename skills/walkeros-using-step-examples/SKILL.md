@@ -15,7 +15,8 @@ destinations) that define the expected input/output behavior of each step in a
 flow. They serve as:
 
 - **Test fixtures** for automated `it.each` testing
-- **Simulation data** for `walkeros push --simulate`
+- **Simulation input** for `walkeros push --simulate` (pass an example's `in` as
+  `--event`; the CLI does not compare the result against `out`)
 - **MCP context** for AI-assisted development
 - **Documentation** showing real-world usage
 
@@ -342,13 +343,19 @@ Destination and transformer examples don't use `trigger`.
 
 ## Simulating with Step Examples
 
-Use the `--step` flag to target a specific step, then provide the event as
-`SourceInput` (`{ content, trigger? }`):
+Use `--simulate <kind>.<name>` to target a specific step, then provide the input
+with `--event`. For a source step, that is `SourceInput`
+(`{ content, trigger? }`):
 
 ```bash
 # Simulate a source step with trigger metadata
 walkeros push flow.json --simulate source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
 ```
+
+The CLI does not read `examples` and does not compare the result against `out`.
+It prints `success` and the duration, and exits 1 only when the push fails with
+an error; a mapping that produces the wrong output still exits 0. Assert on
+`out` in your own tests (see Testing with Examples below).
 
 The MCP `flow_examples` tool returns `trigger` metadata alongside `in`/`out`,
 and `mapping` for destination examples, giving full visibility into how input
@@ -356,18 +363,31 @@ events are transformed to vendor-specific output.
 
 ## Validating Examples
 
-Cross-step example validation is included automatically when validating a flow:
+Cross-step example validation is included automatically when validating a flow.
+It does not run any step:
 
 ```bash
 # Validate flow config including step example compatibility
 walkeros validate flow.json
 ```
 
-Flow validation checks that:
+For steps connected through `next` or a destination's `before` chain, flow
+validation checks that:
 
-- Source `out` types match transformer `in` types
-- Transformer `out` types match destination `in` types
-- Connected steps have compatible examples
+- At least one upstream `out` is structurally compatible with a downstream `in`:
+  same type; two objects share at least half of the keys of the object with
+  fewer keys; any two arrays are compatible regardless of content. No compatible
+  pair is an error. This is a shape check, not an equality check.
+- A connection is only checked when both steps declare `examples`; a step
+  without an `examples` key produces no warning.
+- When both steps declare `examples` but one side has no usable value, the
+  connection produces a warning. An upstream `out` counts when it is a non-empty
+  array, string, or object (such as a walkerOS event); `out: false` and empty
+  values are skipped. A downstream `in` counts unless its example sets
+  `command`.
+- With a `contract`, destination and transformer example `in` values that carry
+  `entity` and `action` are validated against it (warnings, errors with
+  `--strict`).
 
 ## Testing with Examples
 

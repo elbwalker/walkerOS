@@ -151,7 +151,7 @@ export interface Config<T extends TypesGeneric = Types> {
   mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping<T>>>;
   /** Pre-processing rules applied to all events before mapping; modifies events in-place. */
   policy?: Policy;
-  /** Whether to queue events when consent is not granted; defaults to true. */
+  /** Whether a destination added after events were pushed receives the current run's earlier events (from `collector.queue`); defaults to true. Consent-denied events are queued regardless. */
   queue?: boolean;
   /** Defer destination initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];

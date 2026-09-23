@@ -19,20 +19,24 @@ export function parseQuery(url: string): Record<string, string> {
   return out;
 }
 
-export function parseBody(body: string): Record<string, string>[] {
+/** Non-empty, trimmed lines of a POST body: one GA4 event per line. */
+export function splitBodyLines(body: string): string[] {
   if (!body) return [];
   return body
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const out: Record<string, string> = {};
-      const usp = new URLSearchParams(line);
-      usp.forEach((v, k) => {
-        out[k] = v;
-      });
-      return out;
+    .filter((line) => line.length > 0);
+}
+
+export function parseBody(body: string): Record<string, string>[] {
+  return splitBodyLines(body).map((line) => {
+    const out: Record<string, string> = {};
+    const usp = new URLSearchParams(line);
+    usp.forEach((v, k) => {
+      out[k] = v;
     });
+    return out;
+  });
 }
 
 // Two separate dispatch maps keyed by 2-char prefix.

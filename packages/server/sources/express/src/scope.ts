@@ -5,11 +5,10 @@ import type { Request } from 'express';
 /**
  * Builds the normalized scope from an Express request.
  *
- * An application/json body arrives already parsed. A text/plain body arrives
- * as a string and is resolved here, once, at the boundary: JSON (a
- * `navigator.sendBeacon` payload) becomes the parsed value, anything else
- * stays the raw string, so `ingest.body` and the event the pipeline receives
- * never disagree and a `source.before` decoder can read raw input.
+ * The route parsers leave an application/json body parsed and a text/plain
+ * body as a string. The string is resolved here, once: JSON when it parses
+ * (sendBeacon payloads), otherwise kept raw for a `source.before` chain to
+ * decode, as on the other server sources.
  *
  * @param req The Express request.
  * @returns The normalized scope.

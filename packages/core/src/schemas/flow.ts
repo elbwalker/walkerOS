@@ -127,7 +127,7 @@ export const BundleSchema = z
  * {
  *   "code": {
  *     "type": "enricher",
- *     "push": "$code:(event) => ({ ...event, data: { ...event.data, enriched: true } })"
+ *     "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, enriched: true } } })"
  *   }
  * }
  * ```

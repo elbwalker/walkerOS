@@ -138,6 +138,11 @@ export interface GA4Settings {
    * String at config time, compiled to RegExp once at init.
    */
   tidPattern?: string;
+  /**
+   * Maximum number of events (POST body lines) decoded from one request.
+   * A request above the cap is dropped whole. Default `100`.
+   */
+  maxEvents?: number;
 }
 
 /** Per-event mapping rule keyed by GA4 event name. */

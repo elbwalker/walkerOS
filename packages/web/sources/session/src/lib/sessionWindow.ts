@@ -33,11 +33,11 @@ export function sessionWindow(
   // Entry type
   if (!isStart) {
     // Only focus on linked or direct navigation types
-    // and ignore reloads and all others
-    const [perf] = win.performance.getEntriesByType(
-      'navigation',
-    ) as PerformanceNavigationTiming[];
-    if (perf.type !== 'navigate') return known;
+    // and ignore reloads and all others.
+    // Navigation Timing is not available in every browser or embedded
+    // webview, so a missing entry counts as "not a plain navigation".
+    const [entry] = win.performance?.getEntriesByType?.('navigation') ?? [];
+    if (!entry || !('type' in entry) || entry.type !== 'navigate') return known;
   }
 
   const url = new URL(config.url || win.location.href);

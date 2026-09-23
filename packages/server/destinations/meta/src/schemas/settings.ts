@@ -1,4 +1,5 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
+import { userDataKeys } from '../userData';
 import { ActionSourceSchema } from './primitives';
 
 export const SettingsSchema = z.object({
@@ -20,7 +21,7 @@ export const SettingsSchema = z.object({
   doNotHash: z
     .array(z.string())
     .describe(
-      "Array of user_data fields that should not be hashed (like ['client_ip_address', 'client_user_agent'])",
+      "user_data keys to send without normalizing and hashing, for values that are already hashed. Only em, ph, fn, ln, db, ge, ct, st, zp, country and external_id are hashed (like ['external_id'])",
     )
     .optional(),
   test_event_code: z
@@ -33,13 +34,13 @@ export const SettingsSchema = z.object({
     .string()
     .url()
     .describe(
-      'Custom URL for Meta Conversions API endpoint (like https://graph.facebook.com/v17.0)',
+      'Custom URL for Meta Conversions API endpoint (like https://graph.facebook.com/v22.0)',
     )
     .optional(),
   user_data: z
-    .record(z.string(), z.string())
+    .partialRecord(z.enum(userDataKeys), schemas.MappingSchemas.ValueSchema)
     .describe(
-      "Mapping configuration for user data fields (like { email: 'user.email', phone: 'user.phone' })",
+      "Mapping of Meta customer information parameters to event values, applied to every event. Keys must be Meta's short names such as em and ph (like { em: 'user.email', ph: 'user.phone' })",
     )
     .optional(),
 });

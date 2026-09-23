@@ -14,7 +14,7 @@ import {
 } from '@walkeros/core';
 import type { Elb, Logger, Source } from '@walkeros/core';
 import type { ExpressSource, Types, EventRequest } from './types';
-import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
+import { BODY_LIMIT, setCorsHeaders, TRANSPARENT_GIF } from './utils';
 import { buildScope } from './scope';
 import { resolveRespondFirst } from './respond-mode';
 
@@ -58,13 +58,13 @@ const settleAfterAck = (
 };
 
 /**
- * Client-caused body failure raised by a route-scoped body parser:
- * unparseable JSON, oversized payload, unsupported charset or encoding,
- * an aborted request, or a content-length mismatch. Identified by the
- * error type marker the parser attaches, so unrelated middleware errors
- * that happen to carry a 4xx status are never treated as body rejections.
- * Carries the HTTP status to answer with and, for parse failures, the raw
- * body for debug diagnostics.
+ * Client-caused body failure raised by the route-scoped body parsers:
+ * an unparseable application/json body, oversized payload, unsupported
+ * charset or encoding, an aborted request, or a content-length mismatch.
+ * Identified by the error type marker the parser attaches, so unrelated
+ * middleware errors that happen to carry a 4xx status are never treated as
+ * body rejections. Carries the HTTP status to answer with and, for parse
+ * failures, the raw body for debug diagnostics.
  */
 interface RequestBodyError extends Error {
   status: number;
@@ -149,20 +149,19 @@ export const sourceExpress = async (
   // probing the endpoint pick an exploit.
   app.disable('x-powered-by');
 
-  // Body parsing per configured POST route, 1mb limit each. A body declared
-  // as application/json must be JSON: a malformed one is rejected with 400.
-  // A text/plain body is read as text and resolved once in buildScope: JSON
-  // (navigator.sendBeacon forces text/plain;charset=UTF-8 on JSON payloads)
-  // becomes the parsed value, anything else (e.g. a GA4 gtag batch of
-  // URL-encoded hit lines) stays the raw string for a source.before decoder
-  // reading ingest.body. Route-scoped so unmatched paths (scanner noise) fall
-  // through to the default 404 without ever touching a parser.
+  // Body parsing per configured POST route. application/json must parse, or
+  // the request is rejected. text/plain is read as a string and resolved in
+  // buildScope: JSON when it parses (navigator.sendBeacon forces
+  // text/plain;charset=UTF-8 on JSON payloads), raw input otherwise, so a
+  // source.before chain can decode it (e.g. batched gtag.js hits).
+  // Route-scoped so unmatched paths (scanner noise) fall through to the
+  // default 404 without ever touching a parser.
   const jsonParser = expressLib.json({
-    limit: '1mb',
+    limit: BODY_LIMIT,
     type: 'application/json',
   });
   const textParser = expressLib.text({
-    limit: '1mb',
+    limit: BODY_LIMIT,
     type: 'text/plain',
   });
 
@@ -371,9 +370,8 @@ export const sourceExpress = async (
   );
 
   for (const route of resolvedPaths) {
-    if (route.methods.includes('POST')) {
+    if (route.methods.includes('POST'))
       app.post(route.path, jsonParser, textParser, push);
-    }
     if (route.methods.includes('GET')) app.get(route.path, push);
     app.options(route.path, push); // Always register OPTIONS for CORS
   }

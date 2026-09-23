@@ -1,5 +1,5 @@
 import type { Ingest, Transformer } from '@walkeros/core';
-import { parseRequest } from './parse';
+import { parseRequest, splitBodyLines } from './parse';
 import { mapHitToEvents } from './map';
 import { defaultMapping } from './defaults';
 import { mergeGa4Mapping } from './merge';
@@ -33,6 +33,7 @@ export const transformerGa4: Transformer.Init<
   const { config } = context;
   const settings = config.settings ?? {};
   const tidPattern = new RegExp(settings.tidPattern ?? '^G-');
+  const maxEvents = settings.maxEvents ?? 100;
   const mapping = mergeGa4Mapping(defaultMapping, settings.mapping ?? {});
 
   return {
@@ -45,6 +46,18 @@ export const transformerGa4: Transformer.Init<
       if (!raw) {
         logger.debug('transformer-ga4: no request in ingest; skipping');
         return false;
+      }
+
+      // Bound the fan-out before decoding: every event becomes a concurrent
+      // push, and the source's batch cap does not apply to a raw text body.
+      if (raw.body) {
+        const lineCount = splitBodyLines(raw.body).length;
+        if (lineCount > maxEvents) {
+          logger.warn(
+            `transformer-ga4: ${lineCount} events exceed maxEvents ${maxEvents}; request dropped`,
+          );
+          return false;
+        }
       }
 
       try {
