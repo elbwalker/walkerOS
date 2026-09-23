@@ -149,7 +149,7 @@ Extract request metadata and forward it through the pipeline.
         ingest: {
           map: {
             ip: { key: 'ip' },
-            ua: { key: 'headers.user-agent' },
+            userAgent: { key: 'headers.user-agent' },
             origin: { key: 'headers.origin' },
           },
         },

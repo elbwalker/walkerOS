@@ -71,6 +71,8 @@ The transformer reads the `{ ingest, event }` context and validates the canonica
 
 The verdict and the error list are written to two different places. The boolean verdict goes onto the **event** (`output.isValid`, default `source.valid`) as analytics-grade data that travels with the event. The issue list goes onto the **ingest** (`output.errors`, default `validation`) as observer-visible diagnostics, never event data, so it survives even a strict-mode drop. Set either path to an empty string to skip that write.
 
+The transformer never throws. A schema the engine cannot compile or apply (for example an unresolvable `$ref`) is reported as an issue with `level: "error"`, so `pass` still forwards the event and `strict` drops it like an invalid one. A field whose value is `undefined` counts as absent, as in JSON.
+
 <Configuration type="transformer" data={data} />
 
 ## Reference a contract
@@ -122,6 +124,7 @@ There is no separate `ignore` or `filter` setting. To drop unwanted events (for 
 
 - The error list may contain an extra parent entry pointing at a `properties` wrapper per failure, a quirk of the underlying JSON Schema engine. The `isValid` verdict is unaffected: it is `false` exactly when there is at least one failure.
 - Issues are emitted at `level: "error"`; there is no warn level.
+- `flow_simulate` does not run a source's `policy` and `next` chain, so a green simulation does not prove a validate step placed there.
 
 ## Next steps
 

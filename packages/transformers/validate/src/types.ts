@@ -59,4 +59,6 @@ export interface ValidationIssue {
 export interface ValidateResult {
   isValid: boolean;
   errors: ValidationIssue[];
+  /** Set when the engine could not compile or apply a schema. */
+  engineError?: string;
 }

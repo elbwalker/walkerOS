@@ -1,8 +1,23 @@
 import { startFlow } from '..';
 import { Source } from '@walkeros/core';
-import type { Collector, Elb, WalkerOS } from '@walkeros/core';
+import type { Collector, Elb, Transformer, WalkerOS } from '@walkeros/core';
 
 type TestSourceTypes = Source.Types<unknown, unknown, Source.Push>;
+
+/**
+ * A before-chain step that lifts a site id into ingest, as a server source's
+ * `config.ingest` would for a real request.
+ */
+const tagger: Transformer.InitTransformer = {
+  code: async (ctx) => ({
+    type: 'tagger',
+    config: ctx.config,
+    push(event, context) {
+      context.ingest.site = 'acme';
+      return { event };
+    },
+  }),
+};
 
 /**
  * Integration tests for the declarative `state` block on source steps.
@@ -24,7 +39,11 @@ describe('Source state integration', () => {
           }),
           // stash data.token under user.id
           config: {
-            state: { mode: 'set', key: 'user.id', value: 'data.token' },
+            state: {
+              mode: 'set',
+              key: 'event.user.id',
+              value: 'event.data.token',
+            },
           },
         },
         reader: {
@@ -36,7 +55,11 @@ describe('Source state integration', () => {
           }),
           // get the stored token onto data.fetched before the collector sees it
           config: {
-            state: { mode: 'get', key: 'user.id', value: 'data.fetched' },
+            state: {
+              mode: 'get',
+              key: 'event.user.id',
+              value: 'event.data.fetched',
+            },
           },
         },
       },
@@ -94,8 +117,12 @@ describe('Source state integration', () => {
           // would enrich data.fetched if state ran; with a terminus it must not
           config: {
             state: [
-              { mode: 'set', key: 'user.id', value: 'data.token' },
-              { mode: 'get', key: 'user.id', value: 'data.fetched' },
+              { mode: 'set', key: 'event.user.id', value: 'event.data.token' },
+              {
+                mode: 'get',
+                key: 'event.user.id',
+                value: 'event.data.fetched',
+              },
             ],
           },
         },
@@ -128,8 +155,8 @@ describe('Source state integration', () => {
           }),
           config: {
             state: [
-              { mode: 'set', key: 'user.id', value: 'data.token' },
-              { mode: 'get', key: 'user.id', value: 'data.echo' },
+              { mode: 'set', key: 'event.user.id', value: 'event.data.token' },
+              { mode: 'get', key: 'event.user.id', value: 'event.data.echo' },
             ],
           },
         },
@@ -156,5 +183,48 @@ describe('Source state integration', () => {
     expect(destinationEvents).toHaveLength(1);
     // set ran (stashed TOK2), then get read it back onto data.echo
     expect(destinationEvents[0].data?.echo).toBe('TOK2');
+  });
+
+  it('keys state off an ingest value lifted by the before chain', async () => {
+    const destinationEvents: WalkerOS.Event[] = [];
+
+    const { collector } = await startFlow({
+      sources: {
+        s1: {
+          primary: true,
+          before: 'tagger',
+          code: async (context): Promise<Source.Instance<TestSourceTypes>> => ({
+            type: 's1',
+            config: context.config as Source.Config<TestSourceTypes>,
+            push: context.env.push,
+          }),
+          config: {
+            state: [
+              { mode: 'set', key: 'ingest.site', value: 'event.data.token' },
+              { mode: 'get', key: 'ingest.site', value: 'event.data.echo' },
+            ],
+          },
+        },
+      },
+      transformers: { tagger },
+      destinations: {
+        spy: {
+          code: {
+            type: 'spy',
+            config: {},
+            push: async (event: WalkerOS.Event) => {
+              destinationEvents.push(event);
+            },
+          },
+        },
+      },
+    });
+
+    await collector.sources.s1.push({
+      name: 'page view',
+      data: { token: 'TOK4' },
+    });
+
+    expect(destinationEvents[0].data?.echo).toBe('TOK4');
   });
 });

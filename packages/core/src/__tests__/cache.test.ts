@@ -3,8 +3,9 @@ import {
   checkCache,
   storeCache,
   applyUpdate,
-  buildCacheContext,
+  createMappingRoot,
 } from '../cache';
+import { getNextSteps } from '../route';
 import { serializeStoreValue, deserializeStoreValue } from '../store/codec';
 import {
   createMockCollector,
@@ -373,34 +374,37 @@ describe('applyUpdate', () => {
   });
 });
 
-describe('buildCacheContext', () => {
-  it('wraps ingest into context object', () => {
-    const ctx = buildCacheContext({ method: 'GET', path: '/api' });
-    expect(ctx).toEqual({ ingest: { method: 'GET', path: '/api' } });
+describe('createMappingRoot', () => {
+  it('wraps ingest into a root', () => {
+    const root = createMappingRoot({ method: 'GET', path: '/api' });
+    expect(root).toEqual({ ingest: { method: 'GET', path: '/api' } });
   });
 
   it('wraps ingest and event', () => {
-    const ctx = buildCacheContext({ method: 'GET' }, { name: 'page view' });
-    expect(ctx).toEqual({
+    const root = createMappingRoot({ method: 'GET' }, { name: 'page view' });
+    expect(root).toEqual({
       ingest: { method: 'GET' },
       event: { name: 'page view' },
     });
   });
 
-  it('defaults ingest to empty object when undefined', () => {
-    const ctx = buildCacheContext(undefined);
-    expect(ctx).toEqual({ ingest: {} });
+  it('defaults ingest to an empty object', () => {
+    expect(createMappingRoot()).toEqual({ ingest: {} });
   });
 
-  it('defaults ingest to empty object when null', () => {
-    const ctx = buildCacheContext(null);
-    expect(ctx).toEqual({ ingest: {} });
+  it('omits the event key before an event exists', () => {
+    const root = createMappingRoot({ path: '/' });
+    expect('event' in root).toBe(false);
   });
 
-  it('omits event key when event is undefined', () => {
-    const ctx = buildCacheContext({ path: '/' });
-    expect(ctx).toEqual({ ingest: { path: '/' } });
-    expect('event' in ctx).toBe(false);
+  it('routes on ingest before an event exists', () => {
+    const route = {
+      match: { key: 'ingest.method', operator: 'eq' as const, value: 'GET' },
+      next: 'reader',
+    };
+    expect(getNextSteps(route, createMappingRoot({ method: 'GET' }))).toEqual([
+      'reader',
+    ]);
   });
 });
 

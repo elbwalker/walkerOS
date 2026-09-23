@@ -1,13 +1,27 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
+
+const { ValueSchema } = schemas;
+
+export const CustomDimensionsSchema = z.record(
+  z.string().regex(/^\d+$/, 'Dimension keys are bare numeric ids like "1"'),
+  ValueSchema,
+);
 
 export const SettingsSchema = z.object({
-  siteId: z.string().min(1).describe('Matomo Site ID (like 1, 2, etc.)'),
+  siteId: z
+    .string()
+    .min(1)
+    .describe(
+      'Matomo Site ID (like 1, 2, etc.). Required when loadScript is true',
+    )
+    .optional(),
   url: z
     .string()
     .url()
     .describe(
-      'Base URL of your Matomo instance (like https://analytics.example.com/ or https://yourname.matomo.cloud/)',
-    ),
+      'Base URL of your Matomo instance, normalized to one trailing slash (like https://analytics.example.com/ or https://yourname.matomo.cloud/). Required when loadScript is true',
+    )
+    .optional(),
   disableCookies: z
     .boolean()
     .default(false)
@@ -24,12 +38,9 @@ export const SettingsSchema = z.object({
     .describe(
       'Enable heart beat timer with interval in seconds for accurate time-on-page',
     ),
-  customDimensions: z
-    .record(z.string(), z.string())
-    .optional()
-    .describe(
-      'Custom dimension ID to property path mapping applied to all events (like { "1": "data.userType" })',
-    ),
+  customDimensions: CustomDimensionsSchema.describe(
+    'Custom dimensions applied to every hit, keyed by bare dimension id (like { "1": "data.userType" }). Each value is resolved per event. Rule-level customDimensions win per key.',
+  ).optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

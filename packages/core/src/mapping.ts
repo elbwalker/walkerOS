@@ -186,21 +186,8 @@ async function processMappingValue(
 
       let mappingValue: unknown = isDefined(staticValue) ? staticValue : value;
 
-      if (fn) {
-        mappingValue = await tryCatchAsync(fn, (err: unknown): undefined => {
-          if (err instanceof FatalError) throw err;
-          cbContext.logger.error('mapping fn failed', {
-            event: cbContext.event,
-            error: err,
-          });
-          return undefined; // No transform on error.
-        })(value, cbContext);
-      }
-
-      if (key) {
-        mappingValue = getByPath(value, key, staticValue);
-      }
-
+      // One producer per value, in this order; the rest never run. A producer
+      // that yields nothing leaves the result to the `value` fallback.
       if (loop) {
         const [scope, itemMapping] = loop;
         const data =
@@ -208,13 +195,15 @@ async function processMappingValue(
             ? [value]
             : await getMappingValue(value, scope, cbContext);
 
-        if (isArray(data)) {
-          mappingValue = (
-            await Promise.all(
-              data.map((item) => getMappingValue(item, itemMapping, cbContext)),
-            )
-          ).filter(isDefined);
-        }
+        mappingValue = isArray(data)
+          ? (
+              await Promise.all(
+                data.map((item) =>
+                  getMappingValue(item, itemMapping, cbContext),
+                ),
+              )
+            ).filter(isDefined)
+          : undefined;
       } else if (map) {
         mappingValue = await Object.entries(map).reduce(
           async (mappedObjPromise, [mapKey, mapValue]) => {
@@ -229,6 +218,17 @@ async function processMappingValue(
         mappingValue = await Promise.all(
           set.map((item) => processMappingValue(value, item, cbContext)),
         );
+      } else if (key) {
+        mappingValue = getByPath(value, key, staticValue);
+      } else if (fn) {
+        mappingValue = await tryCatchAsync(fn, (err: unknown): undefined => {
+          if (err instanceof FatalError) throw err;
+          cbContext.logger.error('mapping fn failed', {
+            event: cbContext.event,
+            error: err,
+          });
+          return undefined; // No transform on error.
+        })(value, cbContext);
       }
 
       if (

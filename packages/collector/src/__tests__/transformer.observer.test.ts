@@ -72,6 +72,36 @@ describe('transformer.push self-emission', () => {
     expect(err?.error?.message).toContain('transformer kaboom');
   });
 
+  test('counts a transformer throw and still drops the event', async () => {
+    const sinkPush = jest.fn(async () => undefined);
+    const { collector, elb } = await startFlow({
+      run: true,
+      transformers: {
+        bomb: {
+          code: async (context) => ({
+            type: 'bomb',
+            config: context.config,
+            push: async () => {
+              throw new Error('transformer kaboom');
+            },
+          }),
+        },
+      },
+      destinations: {
+        sink: {
+          code: { type: 'sink', config: {}, push: sinkPush },
+          before: 'bomb',
+        },
+      },
+    });
+    const failedBefore = collector.status.failed;
+
+    await elb({ name: 'page view', data: {} });
+
+    expect(sinkPush).not.toHaveBeenCalled();
+    expect(collector.status.failed - failedBefore).toBe(1);
+  });
+
   test('trace observer keeps inEvent/outEvent on the transformer frames', async () => {
     const states: FlowState[] = [];
     let seenEvent: WalkerOS.DeepPartialEvent | undefined;

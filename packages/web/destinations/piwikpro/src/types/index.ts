@@ -1,6 +1,7 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  WalkerOS,
 } from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
 
@@ -10,17 +11,31 @@ declare global {
   }
 }
 
+/** Bare dimension id (like "1") to a Mapping Value resolved per event. */
+export type CustomDimensions = Record<string, WalkerOSMapping.Value>;
+
 export interface Settings {
-  appId: string;
+  /** Piwik PRO site id; required when `loadScript` is true. */
+  appId?: string;
+  /** Automatic outlink and download tracking after the first hit. Default: true */
   linkTracking?: boolean;
-  url: string;
+  /** Piwik PRO account URL; required when `loadScript` is true. */
+  url?: string;
+  /** Custom dimensions applied to every hit, keyed by bare dimension id. */
+  customDimensions?: CustomDimensions;
+  /** Identified (default) or anonymous tracking; a consent object identifies when granted. */
+  identified?: boolean | WalkerOS.Consent;
 }
 
 export type InitSettings = Partial<Settings>;
 
 export interface Mapping {
-  goalId?: string;
-  goalValue?: string;
+  /** Piwik PRO goal id (UUID or legacy integer); adds a trackGoal hit. */
+  goalId?: string | number;
+  /** Goal revenue, resolved from the event (like "data.total"). */
+  goalValue?: WalkerOSMapping.Value;
+  /** Custom dimensions for this rule; win per key over the destination ones. */
+  customDimensions?: CustomDimensions;
 }
 
 export interface Env extends DestinationWeb.Env {
@@ -48,7 +63,3 @@ export type Config = DestinationWeb.Config<Types>;
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;
-
-export interface Dimensions {
-  [i: number]: string;
-}

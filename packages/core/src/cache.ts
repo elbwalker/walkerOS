@@ -1,5 +1,5 @@
 import type { Cache, EventCacheRule } from './types/cache';
-import type { Collector, Mapping, Store } from './types';
+import type { Collector, Mapping, Store, WalkerOS } from './types';
 import type { StoreValue } from './types/store';
 import type { CompiledMatcher } from './types/matcher';
 import { compileMatcher } from './matcher';
@@ -30,20 +30,15 @@ export interface CacheResult {
 }
 
 /**
- * Builds a structured context object for cache and routing operations.
- * Normalizes ingest (defaulting to {}) and optionally includes event.
+ * Builds the `{ event, ingest }` resolution root. Ingest defaults to `{}`.
+ * `event` is omitted when undefined, because `before` chains route on ingest
+ * before an event exists.
  */
-export function buildCacheContext(
-  ingest?: unknown,
-  event?: unknown,
-): Record<string, unknown> {
-  const ctx: Record<string, unknown> = {
-    ingest: (ingest ?? {}) as Record<string, unknown>,
-  };
-  if (event !== undefined) {
-    ctx.event = event as Record<string, unknown>;
-  }
-  return ctx;
+export function createMappingRoot(
+  ingest: Record<string, unknown> = {},
+  event?: WalkerOS.DeepPartialEvent,
+): Mapping.Root {
+  return event === undefined ? { ingest } : { ingest, event };
 }
 
 export function compileCache(cache: Cache<EventCacheRule>): CompiledCache {

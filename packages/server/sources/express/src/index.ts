@@ -182,7 +182,8 @@ export const sourceExpress = async (
 
   /**
    * Request handler - transforms HTTP requests into walker events
-   * Supports POST (JSON body), GET (query params), and OPTIONS (CORS preflight)
+   * Supports POST (JSON or text body), GET (query params), and OPTIONS (CORS
+   * preflight)
    *
    * Each inbound request gets its own `withScope` invocation. The per-scope
    * env carries this request's `ingest` and `respond` end to end, so

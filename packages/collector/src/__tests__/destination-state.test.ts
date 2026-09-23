@@ -1,5 +1,20 @@
 import { startFlow } from '..';
-import type { Destination, Store, WalkerOS } from '@walkeros/core';
+import type { Destination, Store, Transformer, WalkerOS } from '@walkeros/core';
+
+/**
+ * A before-chain step that lifts a site id into ingest, as a server source's
+ * `config.ingest` would for a real request.
+ */
+const tagger: Transformer.InitTransformer = {
+  code: async (ctx) => ({
+    type: 'tagger',
+    config: ctx.config,
+    push(event, context) {
+      context.ingest.site = 'acme';
+      return { event };
+    },
+  }),
+};
 
 /**
  * Build a store backed by a Map the test holds a reference to, so writes are
@@ -47,7 +62,11 @@ describe('Destination state integration', () => {
               pushedA.push(event);
             },
           },
-          state: { mode: 'set', key: 'user.id', value: 'data.token' },
+          state: {
+            mode: 'set',
+            key: 'event.user.id',
+            value: 'event.data.token',
+          },
         },
         // reads the store before its own push: enrich data.fetched
         reader: {
@@ -58,7 +77,11 @@ describe('Destination state integration', () => {
               pushedB.push(event);
             },
           },
-          state: { mode: 'get', key: 'user.id', value: 'data.fetched' },
+          state: {
+            mode: 'get',
+            key: 'event.user.id',
+            value: 'event.data.fetched',
+          },
         },
       },
     });
@@ -83,7 +106,11 @@ describe('Destination state integration', () => {
             config: {},
             push: async () => undefined,
           },
-          state: { mode: 'set', key: 'user.id', value: 'data.token' },
+          state: {
+            mode: 'set',
+            key: 'event.user.id',
+            value: 'event.data.token',
+          },
         },
         verifier: {
           code: {
@@ -93,7 +120,11 @@ describe('Destination state integration', () => {
               pushed.push(event);
             },
           },
-          state: { mode: 'get', key: 'user.id', value: 'data.verified' },
+          state: {
+            mode: 'get',
+            key: 'event.user.id',
+            value: 'event.data.verified',
+          },
         },
       },
     });
@@ -120,7 +151,11 @@ describe('Destination state integration', () => {
               pushed.push(event);
             },
           },
-          state: { mode: 'get', key: 'user.id', value: 'data.fetched' },
+          state: {
+            mode: 'get',
+            key: 'event.user.id',
+            value: 'event.data.fetched',
+          },
         },
       },
     });
@@ -144,8 +179,8 @@ describe('Destination state integration', () => {
         state: {
           mode: 'set',
           store: 'kv',
-          key: 'user.id',
-          value: 'data.token',
+          key: 'event.user.id',
+          value: 'event.data.token',
         },
       },
     };
@@ -176,8 +211,8 @@ describe('Destination state integration', () => {
           state: {
             mode: 'set',
             store: 'kv',
-            key: 'user.id',
-            value: 'data.token',
+            key: 'event.user.id',
+            value: 'event.data.token',
           },
         },
       },
@@ -186,5 +221,47 @@ describe('Destination state integration', () => {
     await elb({ name: 'page view', user: { id: 'b2' }, data: { token: 'B2' } });
 
     expect(data.get('b2')).toBe('B2');
+  });
+
+  it('keys get and set off an ingest value', async () => {
+    const { code, data } = makeBackedStore();
+    data.set('acme', 'registry-row');
+    const pushed: WalkerOS.Event[] = [];
+
+    const { elb } = await startFlow({
+      transformers: { tagger },
+      stores: { kv: { code } },
+      destinations: {
+        warehouse: {
+          before: 'tagger',
+          code: {
+            type: 'warehouse',
+            config: {},
+            push: async (event: WalkerOS.Event) => {
+              pushed.push(event);
+            },
+          },
+          state: [
+            {
+              mode: 'get',
+              store: 'kv',
+              key: 'ingest.site',
+              value: 'event.data.tenant',
+            },
+            {
+              mode: 'set',
+              store: 'kv',
+              key: 'ingest.site',
+              value: 'event.data.token',
+            },
+          ],
+        },
+      },
+    });
+
+    await elb({ name: 'page view', data: { token: 'D9' } });
+
+    expect(pushed[0].data?.tenant).toBe('registry-row');
+    expect(data.get('acme')).toBe('D9');
   });
 });

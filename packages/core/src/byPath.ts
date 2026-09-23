@@ -54,21 +54,34 @@ export function getByPath(
  * @param obj - The object to set the value in.
  * @param key - The dot-notation string.
  * @param value - The value to set.
- * @returns A new object with the updated value.
+ * @param options.mutable - Write into `obj` in place instead of a clone. For
+ *   shared mutable context such as ingest, where later steps must see the
+ *   write. Returns `obj` itself.
+ * @returns A new object with the updated value, or `obj` when mutable.
+ *
+ * Setting `undefined` removes the key instead, and creates nothing on a
+ * missing path. An own key holding `undefined` is a state walkerOS never
+ * produces, because JSON and JSON Schema treat it as absent.
  */
-export function setByPath<T = unknown>(obj: T, key: string, value: unknown): T {
+export function setByPath<T = unknown>(
+  obj: T,
+  key: string,
+  value: unknown,
+  options?: { mutable?: boolean },
+): T {
   if (!isObject(obj)) return obj;
 
-  const clonedObj = clone(obj);
+  const target = options?.mutable ? obj : clone(obj);
   const keys = key.split('.');
-  let current: WalkerOS.AnyObject = clonedObj;
+  let current: WalkerOS.AnyObject = target;
 
   for (let i = 0; i < keys.length; i++) {
     const k = keys[i] as keyof typeof current;
 
     // Set the value if it's the last key
     if (i === keys.length - 1) {
-      current[k] = value;
+      if (value === undefined) delete current[k];
+      else current[k] = value;
     } else {
       // Traverse to the next level
       if (
@@ -76,6 +89,8 @@ export function setByPath<T = unknown>(obj: T, key: string, value: unknown): T {
         typeof current[k] !== 'object' ||
         current[k] === null
       ) {
+        // Nothing to remove below a missing level, so create nothing.
+        if (value === undefined) return target as T;
         current[k] = {};
       }
 
@@ -84,7 +99,7 @@ export function setByPath<T = unknown>(obj: T, key: string, value: unknown): T {
     }
   }
 
-  return clonedObj as T;
+  return target as T;
 }
 
 /**

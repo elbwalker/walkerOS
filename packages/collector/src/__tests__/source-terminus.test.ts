@@ -32,7 +32,9 @@ describe('InitSource.terminus', () => {
           terminus,
           next: 'tap',
           config: {
-            state: [{ mode: 'set', key: 'user.id', value: 'data.token' }],
+            state: [
+              { mode: 'set', key: 'event.user.id', value: 'event.data.token' },
+            ],
           },
         },
       },

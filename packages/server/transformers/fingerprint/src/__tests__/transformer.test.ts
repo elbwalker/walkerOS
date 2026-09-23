@@ -128,24 +128,24 @@ describe('Transformer Fingerprint', () => {
       expect(getByPath(result, 'event.user.hash')).toBeDefined();
     });
 
-    it('should support key + fn transformation', async () => {
-      const anonymizeIP = (ip: unknown) => String(ip).replace(/\.\d+$/, '.0');
+    it('hashes the /24 subnet when an fn anonymizes the IP', async () => {
+      const anonymizeIP = (source: unknown) =>
+        String(getByPath(source, 'ingest.ip') ?? '').replace(/\.\d+$/, '.0');
 
-      const initContext = createInitContext({
-        settings: {
-          fields: [{ key: 'ingest.ip', fn: anonymizeIP }],
-          length: 16,
-        },
-      });
+      const transformer = await transformerFingerprint(
+        createInitContext({
+          settings: { fields: [{ fn: anonymizeIP }], length: 16 },
+        }),
+      );
+      const hashFor = async (ip: string) =>
+        getByPath(
+          await transformer.push(baseEvent, createPushContext({ ip })),
+          'event.user.hash',
+        );
 
-      const transformer = await transformerFingerprint(initContext);
-
-      const pushContext = createPushContext({ ip: '192.168.1.100' });
-
-      const result = await transformer.push(baseEvent, pushContext);
-
-      expect(result).toBeDefined();
-      expect(getByPath(result, 'event.user.hash')).toBeDefined();
+      const hash = await hashFor('192.168.1.100');
+      expect(hash).toBe(await hashFor('192.168.1.7'));
+      expect(hash).not.toBe(await hashFor('192.168.2.100'));
     });
   });
 

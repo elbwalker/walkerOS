@@ -1,5 +1,5 @@
 import type { Mapping, Transformer } from '@walkeros/core';
-import { getMappingValue, setByPath } from '@walkeros/core';
+import { createMappingRoot, getMappingValue, setByPath } from '@walkeros/core';
 import { isBotContext, type BotContext } from './detect/context';
 import { computeScore, type SignalName, type Signals } from './detect/score';
 import type { BotInput, BotOutput, BotSettings } from './types';
@@ -33,29 +33,6 @@ const DEFAULT_OUTPUT: Required<BotOutput> = {
   botReasons: 'ingest.bot.reasons',
 };
 
-/**
- * Mutating dot-path setter for ingest writes.
- *
- * We can't use @walkeros/core setByPath here: it clones-and-returns (immutable),
- * but ingest is the pipeline's mutable scratch context. We need in-place writes
- * so subsequent transformers in the chain see the values.
- */
-function setNestedPath(
-  obj: Record<string, unknown>,
-  path: string,
-  value: unknown,
-): void {
-  const keys = path.split('.');
-  let cur: Record<string, unknown> = obj;
-  for (let i = 0; i < keys.length - 1; i++) {
-    const k = keys[i];
-    const next = cur[k];
-    if (typeof next !== 'object' || next === null) cur[k] = {};
-    cur = cur[k] as Record<string, unknown>;
-  }
-  cur[keys[keys.length - 1]] = value;
-}
-
 export const transformerBot: Transformer.Init<
   Transformer.Types<BotSettings>
 > = (context) => {
@@ -82,7 +59,7 @@ export const transformerBot: Transformer.Init<
 
     async push(event, ctx) {
       const { ingest, collector } = ctx;
-      const source = { event, ingest };
+      const source = createMappingRoot(ingest, event);
 
       const resolve = async (
         value: Mapping.Value,
@@ -142,7 +119,8 @@ export const transformerBot: Transformer.Init<
         if (path.startsWith('ingest.')) {
           const subPath = path.slice('ingest.'.length);
           if (!subPath) return;
-          setNestedPath(ingest, subPath, value);
+          // In place: ingest is shared, so later steps must see the write.
+          setByPath(ingest, subPath, value, { mutable: true });
         } else {
           nextEvent = setByPath(nextEvent, path, value);
         }

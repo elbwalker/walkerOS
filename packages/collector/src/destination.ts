@@ -10,7 +10,7 @@ import type {
 } from '@walkeros/core';
 import {
   assign,
-  buildCacheContext,
+  createMappingRoot,
   clone,
   compileCache,
   checkCache,
@@ -198,7 +198,7 @@ function resolveDestinationChain(
     return walkChain(before, transformerNextMap);
   }
   // Conditional shape — resolve per-event, walk single-id result.
-  const ids = getNextSteps(before, buildCacheContext(ingest));
+  const ids = getNextSteps(before, createMappingRoot(ingest));
   if (ids.length === 0) return [];
   if (ids.length === 1) return walkChain(ids[0], transformerNextMap);
   // Multiple ids from a conditional shape: treat as explicit chain.
@@ -645,7 +645,7 @@ export async function pushToDestinations(
           let cacheMiss: { key: string; ttl: number } | undefined;
           let cacheValue: unknown;
           if (compiledDCache?.stop && dCacheStore) {
-            const cacheContext = buildCacheContext(destIngest, event);
+            const cacheContext = createMappingRoot(destIngest, event);
             const cacheResult = await checkCache(
               compiledDCache,
               dCacheStore,
@@ -712,9 +712,9 @@ export async function pushToDestinations(
 
             // Step-level cache check: after before chain, skip only push on HIT
             if (compiledDCache && !compiledDCache.stop && dCacheStore) {
-              const cacheContext = buildCacheContext(
+              const cacheContext = createMappingRoot(
                 destIngest,
-                processedEvent,
+                processedEvent ?? undefined,
               );
               const cacheResult = await checkCache(
                 compiledDCache,
@@ -737,6 +737,7 @@ export async function pushToDestinations(
                 (storeId) => getStateStore(storeId, collector),
                 processedEvent,
                 collector,
+                destIngest,
               );
             }
 
@@ -834,6 +835,7 @@ export async function pushToDestinations(
                 (storeId) => getStateStore(storeId, collector),
                 processedEvent,
                 collector,
+                destIngest,
               );
             }
 

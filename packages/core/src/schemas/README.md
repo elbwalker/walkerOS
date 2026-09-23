@@ -44,7 +44,7 @@ types/                          schemas/
 ├── destination.ts     ━━━━━━→  ├── destination.ts
 ├── collector.ts       ━━━━━━→  ├── collector.ts
 ├── source.ts          ━━━━━━→  ├── source.ts
-├── storage.ts + handler.ts ━→  ├── utilities.ts
+├── storage.ts         ━━━━━━→  ├── utilities.ts
 └── ...                         └── schema-builder.ts (utility)
 ```
 
@@ -170,19 +170,20 @@ Utility type schemas:
 
 #### [`schema-builder.ts`](./schema-builder.ts)
 
-**Existing utility** - Kept unchanged
-
-DRY utility for destinations to create JSON Schemas **without Zod dependency**.
-
-Allows destination packages to define schemas without adding Zod to their
-dependencies.
+Builds plain JSON Schema objects without Zod.
 
 ## Usage
 
 ### Runtime Validation
 
+Schemas are exported from `@walkeros/core/dev` under `schemas`, both directly
+(common ones such as `EventSchema`) and as namespaces (`DestinationSchemas`,
+`MappingSchemas`, ...).
+
 ```typescript
-import { EventSchema, ConfigSchema } from '@walkeros/core';
+import { schemas } from '@walkeros/core/dev';
+
+const { EventSchema, DestinationSchemas } = schemas;
 
 // Validate event data
 const result = EventSchema.safeParse(userInput);
@@ -194,13 +195,15 @@ if (result.success) {
 }
 
 // Validate destination config
-const configResult = ConfigSchema.safeParse(destConfig);
+const configResult = DestinationSchemas.ConfigSchema.safeParse(destConfig);
 ```
 
 ### JSON Schema Generation
 
 ```typescript
-import { eventJsonSchema, valueConfigJsonSchema } from '@walkeros/core';
+import { schemas } from '@walkeros/core/dev';
+
+const { eventJsonSchema, valueConfigJsonSchema } = schemas;
 
 // Use in RJSF forms
 <Form schema={eventJsonSchema} />
@@ -216,11 +219,10 @@ server.tool({
 ### Type Inference
 
 ```typescript
-import { z } from 'zod';
-import { EventSchema } from '@walkeros/core';
+import { schemas, z } from '@walkeros/core/dev';
 
 // Infer TypeScript type from schema
-type Event = z.infer<typeof EventSchema>;
+type Event = z.infer<typeof schemas.EventSchema>;
 ```
 
 ## Naming Convention
@@ -268,22 +270,22 @@ export const sourceTypeJsonSchema = toJsonSchema(SourceTypeSchema, ...);
 Recursive schemas use `z.lazy()` to handle circular dependencies:
 
 ```typescript
-export const PropertySchema: z.ZodType<any> = z.lazy(() =>
+export const PropertySchema: z.ZodTypeAny = z.lazy(() =>
   z.union([PropertyTypeSchema, z.array(PropertyTypeSchema)]),
 );
 ```
 
-**Note**: Use `z.ZodType<any>` to avoid complex type inference issues while
-maintaining runtime validation.
+**Note**: The `z.ZodTypeAny` annotation avoids complex recursive type inference
+while keeping runtime validation.
 
 ### Function Fields
 
-Functions cannot be serialized, so we use `z.any()`:
+Functions cannot be serialized, so we use `z.unknown()`:
 
 ```typescript
 export const InstanceSchema = z.object({
-  push: z.any().describe('Push function'),
-  init: z.any().optional().describe('Init function'),
+  push: z.unknown().describe('Push function for single events'),
+  init: z.unknown().optional().describe('Initialization function'),
   // ...
 });
 ```
@@ -295,27 +297,26 @@ This allows the schema to validate structure while accepting any function.
 The mapping system distinguishes Loop from Set using JSON Schema properties:
 
 ```typescript
-// Loop: z.tuple() generates minItems = 2, maxItems = 2
-const LoopSchema = z.tuple([ValueSchema, ValueSchema]);
+// Loop: a tuple whose meta sets minItems = 2, maxItems = 2
+const LoopSchema = z
+  .lazy(() => z.tuple([ValueSchema, ValueSchema]))
+  .meta({ id: 'MappingLoop', title: 'Mapping.Loop', minItems: 2, maxItems: 2 });
 
 // Set: z.array() has no minItems/maxItems
-const SetSchema = z.array(ValueSchema);
+const SetSchema = z.lazy(() => z.array(ValueSchema));
 ```
 
-Explorer type detector reads these properties to determine the type.
-
-## Migration Notes
+## Mapping Value Schemas
 
 All mapping value schemas (`ValueSchema`, `ValueConfigSchema`, `LoopSchema`,
 `SetSchema`, `MapSchema`) live in `mapping.ts`. Import them from
-`@walkeros/core` (re-exported at the package root) or directly from
-`@walkeros/core/schemas/mapping`. The previous `value-config.ts` file has been
-removed.
+`@walkeros/core/dev`: `schemas.ValueSchema` or the `schemas.MappingSchemas`
+namespace.
 
-### Schema type naming
+## Schema Type Naming
 
-Every exported schema must carry `.meta({ id, title, description })` so the
-generated JSON Schema can link back to the canonical TypeScript name:
+Every schema exported from core must carry `.meta({ id, title, description })`
+so the generated JSON Schema can link back to the canonical TypeScript name:
 
 - **id** - PascalCase, namespace-prefixed to avoid collisions
   (`DestinationConfig`, `CollectorPushContext`, `LoggerConfig`).
@@ -362,13 +363,35 @@ Test schemas by:
 4. **Type alignment** - Verify schema matches TypeScript type
 5. **JSON Schema generation** - Ensure JSON Schema is valid
 
-## Schema Builder (Destinations)
+## Package Schemas (Destinations, Sources, Transformers)
 
-For destination-specific schemas (Settings, Mapping), use the **schema builder**
-to avoid adding Zod as a dependency:
+Packages define their settings and mapping schemas with Zod in `src/schemas/`,
+importing `z` from `@walkeros/core/dev`, so they need no direct Zod dependency.
+`zodToSchema` converts them to the JSON Schemas the package exports:
 
 ```typescript
-import { createObjectSchema } from '@walkeros/core/schemas';
+// src/schemas/settings.ts
+import { z } from '@walkeros/core/dev';
+
+export const SettingsSchema = z.object({
+  pixelId: z.string().describe('Your Meta Pixel ID (like 1234567890)'),
+});
+
+// src/schemas/index.ts
+import { zodToSchema } from '@walkeros/core/dev';
+import { SettingsSchema } from './settings';
+
+export const settings = zodToSchema(SettingsSchema);
+```
+
+## Schema Builder
+
+To build a plain JSON Schema without Zod, use the **schema builder**:
+
+```typescript
+import { schemas } from '@walkeros/core/dev';
+
+const { createObjectSchema } = schemas;
 
 export const settingsSchema = createObjectSchema(
   {
@@ -385,19 +408,18 @@ export const settingsSchema = createObjectSchema(
 
 **Benefits**:
 
-- No Zod dependency in destination packages
+- No Zod needed
 - Simple, declarative API
 - Type-safe with TypeScript
 - Significantly less code than hand-written JSON Schema
 
-See existing README content below for schema builder documentation.
+See the Schema Builder API below.
 
 ---
 
 ## Resources
 
 - [Zod Documentation](https://zod.dev)
-- [zod-to-json-schema](https://github.com/StefanTerdell/zod-to-json-schema)
 - [JSON Schema Specification](https://json-schema.org/)
 - [RJSF (React JSON Schema Form)](https://rjsf-team.github.io/react-jsonschema-form/)
 - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
@@ -498,8 +520,8 @@ const eventTypeSchema = createEnumSchema(
 
 Creates a tuple schema (Loop pattern).
 
-**Important**: This generates `{ type: 'array', minItems: 2, maxItems: 2 }`,
-which Explorer's type detector recognizes as a "loop" pattern.
+**Important**: This generates `{ type: 'array', minItems: 2, maxItems: 2 }`, the
+same length constraint the Loop mapping schema carries.
 
 ```typescript
 const loopSchema = createTupleSchema(
@@ -509,42 +531,11 @@ const loopSchema = createTupleSchema(
 );
 ```
 
-## Usage in Destinations
-
-### Step 1: Define Schema
-
-```typescript
-// packages/web/destinations/meta/src/schema.ts
-import { createObjectSchema } from '@walkeros/core/schemas';
-
-export const settingsSchema = createObjectSchema(
-  {
-    pixelId: {
-      type: 'string',
-      required: true,
-      pattern: '^[0-9]+$',
-      description: 'Your Meta Pixel ID',
-    },
-  },
-  'Meta Pixel Settings',
-);
-```
-
-### Step 2: Export from Destination
-
-```typescript
-// packages/web/destinations/meta/src/index.ts
-export { destinationMeta } from './destination';
-export { settingsSchema, mappingSchema } from './schema';
-```
-
-**NO Zod dependency needed in destination!** ✅
-
 ## Best Practices
 
 ### ✅ DO
 
-- Use schema builder for destination schemas
+- Define package schemas with `z` from `@walkeros/core/dev`
 - Use Zod schemas (walkeros.ts, mapping.ts, etc.) for core types
 - Keep schema definitions close to types
 - Add descriptions for user guidance
@@ -553,7 +544,8 @@ export { settingsSchema, mappingSchema } from './schema';
 
 ### ❌ DON'T
 
-- Install Zod in destination packages (not needed!)
-- Hand-write JSON Schema (use builder instead)
+- Add Zod as a direct dependency of a destination, source, or transformer
+  package (import `z` from `@walkeros/core/dev`)
+- Hand-write JSON Schema (use `zodToSchema` or the schema builder instead)
 - Duplicate schema logic (DRY!)
 - Skip descriptions (help users understand)

@@ -3,7 +3,8 @@ import type { Flow } from '@walkeros/core';
 export const serverFingerprint: Flow.StepExample = {
   title: 'Server fingerprint',
   description:
-    'Standard server fingerprint using ingest.ip and ingest.userAgent. Requires source config.ingest.',
+    'Default server fingerprint: the anonymized ingest.ip, the reduced ingest.userAgent and the site, keyed with settings.salt and rotated daily. ' +
+    'Config: { salt: "$env.FINGERPRINT_SALT", length: 16 }. Requires source config.ingest. The hash depends on the salt and the day.',
   in: {
     name: 'page view',
     data: {
@@ -45,7 +46,7 @@ export const serverFingerprint: Flow.StepExample = {
 export const missingFields: Flow.StepExample = {
   public: false,
   description:
-    'Graceful handling when ingest is missing - fields resolve to empty strings, hash is still generated.',
+    'Graceful handling when ingest is missing: each empty input logs one warning, and the hash is still generated.',
   in: {
     name: 'session start',
     data: { id: 's3ss10n' },
@@ -79,9 +80,8 @@ export const missingFields: Flow.StepExample = {
 export const ipAnonymization: Flow.StepExample = {
   title: 'IP anonymization',
   description:
-    'Privacy-preserving fingerprint using key+fn pattern: ' +
-    'fn truncates IP to /24 subnet before hashing, so 10.0.42.* users share a hash. ' +
-    'Config: fields: [{ key: "ingest.ip", fn: ip => ip.replace(/\\.\\d+$/, ".0") }, "ingest.userAgent"]',
+    'The ip input anonymizes the IP before hashing (IPv4 /24, IPv6 /48), so visitors from the same 10.0.42.* subnet ' +
+    'with the same browser, major version and OS share a hash within a day. No custom fn needed. Config: { salt: "$env.FINGERPRINT_SALT", length: 16 }',
   in: {
     name: 'page view',
     data: {

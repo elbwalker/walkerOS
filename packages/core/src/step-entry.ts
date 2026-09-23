@@ -16,7 +16,139 @@ import type { Flow } from './types/flow';
  * - INVALID_CODE_SHAPE   `code` is present but is neither an object nor a string
  */
 
-export const STEP_OPERATIVE_FIELDS: Record<Flow.StepKind, readonly string[]> = {
+/**
+ * The Flow step interface for each step kind.
+ */
+interface StepByKind {
+  Source: Flow.Source;
+  Transformer: Flow.Transformer;
+  Destination: Flow.Destination;
+  Store: Flow.Store;
+}
+
+/** A declared field name of the Flow step interface for `K`. */
+export type StepField<K extends Flow.StepKind> = keyof StepByKind[K] & string;
+
+/**
+ * Lifecycle role of a declared step field.
+ *
+ * - `reference`: selects the implementation (`code`, `package`, `import`).
+ *   The bundler turns it into the emitted `code` value; it is never emitted
+ *   as-is.
+ * - `resolve`: consumed by flow resolution (the variable cascade). Kept on the
+ *   resolved flow, never emitted into a bundle.
+ * - `docs`: consumed by validate/simulate/test tooling. Stripped at flow
+ *   resolution, never emitted.
+ * - `runtime`: must reach the collector unchanged, on every emission path
+ *   (package step, inline code step, code-free path step).
+ */
+export type StepFieldRole = 'reference' | 'resolve' | 'docs' | 'runtime';
+
+/**
+ * Single source of truth for what happens to each declared step field between
+ * the flow file and the running collector. Flow resolution (`getFlowSettings`)
+ * and the CLI bundler both derive their field handling from this table instead
+ * of hand-written field lists.
+ *
+ * Each entry is typed as a complete map over the Flow step interface, so adding
+ * a field to `Flow.Source` / `Flow.Transformer` / `Flow.Destination` /
+ * `Flow.Store` is a compile error here until the field is classified.
+ */
+export const STEP_FIELD_ROLES: {
+  readonly [K in Flow.StepKind]: Readonly<Record<StepField<K>, StepFieldRole>>;
+} = {
+  Source: {
+    package: 'reference',
+    code: 'reference',
+    import: 'reference',
+    config: 'runtime',
+    env: 'runtime',
+    primary: 'runtime',
+    before: 'runtime',
+    next: 'runtime',
+    cache: 'runtime',
+    state: 'runtime',
+    variables: 'resolve',
+    examples: 'docs',
+  },
+  Transformer: {
+    package: 'reference',
+    code: 'reference',
+    import: 'reference',
+    config: 'runtime',
+    env: 'runtime',
+    before: 'runtime',
+    next: 'runtime',
+    cache: 'runtime',
+    state: 'runtime',
+    mapping: 'runtime',
+    variables: 'resolve',
+    examples: 'docs',
+  },
+  Destination: {
+    package: 'reference',
+    code: 'reference',
+    import: 'reference',
+    config: 'runtime',
+    env: 'runtime',
+    before: 'runtime',
+    next: 'runtime',
+    cache: 'runtime',
+    state: 'runtime',
+    variables: 'resolve',
+    examples: 'docs',
+  },
+  Store: {
+    package: 'reference',
+    code: 'reference',
+    import: 'reference',
+    config: 'runtime',
+    env: 'runtime',
+    cache: 'runtime',
+    variables: 'resolve',
+    examples: 'docs',
+  },
+};
+
+/**
+ * Role of `field` on a step of `kind`, or `undefined` when the field is not a
+ * declared Flow step field.
+ */
+export function getStepFieldRole(
+  kind: Flow.StepKind,
+  field: string,
+): StepFieldRole | undefined {
+  const roles: Readonly<Record<string, StepFieldRole>> = STEP_FIELD_ROLES[kind];
+  return Object.prototype.hasOwnProperty.call(roles, field)
+    ? roles[field]
+    : undefined;
+}
+
+/**
+ * The runtime fields of a step entry: every declared field classified as
+ * `runtime` whose value is set. This is what the bundler must emit for the
+ * step, whatever its emission path.
+ */
+export function getStepRuntimeProps(
+  step: object,
+  kind: Flow.StepKind,
+): Record<string, unknown> {
+  const props: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(step)) {
+    if (value === undefined || value === null) continue;
+    if (getStepFieldRole(kind, key) === 'runtime') props[key] = value;
+  }
+  return props;
+}
+
+/**
+ * Fields whose presence makes an entry operative (a real step rather than an
+ * empty no-op). Each is a declared Flow step field; see `STEP_FIELD_ROLES` for
+ * its lifecycle.
+ */
+export const STEP_OPERATIVE_FIELDS: {
+  readonly [K in Flow.StepKind]: readonly StepField<K>[];
+} = {
   Source: ['code', 'package', 'import', 'before', 'next', 'cache', 'state'],
   Transformer: [
     'code',
@@ -38,26 +170,20 @@ export const STEP_OPERATIVE_FIELDS: Record<Flow.StepKind, readonly string[]> = {
     'state',
   ],
   Store: ['code', 'package', 'import', 'cache'],
-} as const;
+};
 
-const COMMON_NON_OPERATIVE = [
-  'config',
-  'env',
-  'variables',
-  'examples',
+/**
+ * Keys accepted on a step entry that are not declared Flow step fields. They
+ * are runtime registration keys (`Collector` init shapes) that
+ * `validateStepEntry` also checks; flow resolution does not carry them.
+ */
+const RUNTIME_ENTRY_EXTRA = [
   'disabled',
   'id',
   'logger',
   'mock',
   'chainMocks',
 ] as const;
-
-const KIND_EXTRA: Record<Flow.StepKind, readonly string[]> = {
-  Source: ['primary'],
-  Transformer: [],
-  Destination: [],
-  Store: [],
-};
 
 const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
@@ -78,9 +204,8 @@ export interface StepEntryValidation {
 
 function allowedKeys(kind: Flow.StepKind): Set<string> {
   return new Set<string>([
-    ...STEP_OPERATIVE_FIELDS[kind],
-    ...COMMON_NON_OPERATIVE,
-    ...KIND_EXTRA[kind],
+    ...Object.keys(STEP_FIELD_ROLES[kind]),
+    ...RUNTIME_ENTRY_EXTRA,
   ]);
 }
 
@@ -181,11 +306,9 @@ export function isPathStepEntry(
   ) {
     return false;
   }
-  return (
-    entry.before !== undefined ||
-    entry.next !== undefined ||
-    entry.cache !== undefined ||
-    entry.state !== undefined ||
-    entry.mapping !== undefined
+  return STEP_OPERATIVE_FIELDS.Transformer.some(
+    (field) =>
+      getStepFieldRole('Transformer', field) !== 'reference' &&
+      entry[field] !== undefined,
   );
 }

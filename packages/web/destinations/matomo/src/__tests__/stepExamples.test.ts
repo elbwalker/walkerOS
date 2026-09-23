@@ -1,35 +1,47 @@
-import type {
-  Destination,
-  WalkerOS,
-  Mapping as WalkerOSMapping,
-} from '@walkeros/core';
+import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, createLogger, isObject } from '@walkeros/core';
+import type { Config, Rule } from '../types';
 import { examples } from '../dev';
+import destinationMatomo from '..';
 
 type CallRecord = [string, ...unknown[]];
 
-const initConfig = examples.step.init.in as Destination.Config;
-const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
+/**
+ * `StepExample.in` and `.mapping` are typed `unknown`. Narrow them with type
+ * predicates instead of `as` assertions.
+ */
+function isEvent(value: unknown): value is WalkerOS.Event {
+  return (
+    isObject(value) &&
+    typeof value.name === 'string' &&
+    typeof value.entity === 'string' &&
+    typeof value.action === 'string'
+  );
+}
 
-const noopLogger = {
-  log: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  throw: (msg: string) => {
-    throw new Error(msg);
-  },
-} as unknown as Destination.Context['logger'];
+function isConfig(value: unknown): value is Config {
+  return isObject(value);
+}
+
+function isRule(value: unknown): value is Rule {
+  return isObject(value);
+}
+
+const initExample = examples.step.init;
+const initConfig: Config = isConfig(initExample.in) ? initExample.in : {};
+const initOut: CallRecord[] = [...(initExample.out ?? [])].map((effect) => [
+  ...effect,
+]);
 
 function makeMockPaq(): {
-  mockPaq: Array<unknown> & { push: jest.Mock };
+  mockPaq: unknown[];
   calls: CallRecord[];
 } {
   const calls: CallRecord[] = [];
-  const mockPaq = [] as unknown as Array<unknown> & { push: jest.Mock };
+  const mockPaq: unknown[] = [];
   mockPaq.push = jest.fn((...args: unknown[]) => {
-    calls.push(['_paq.push', args[0]]);
+    for (const arg of args) calls.push(['_paq.push', arg]);
     return calls.length;
   });
   return { mockPaq, calls };
@@ -41,47 +53,53 @@ describe('matomo web destination -- step examples', () => {
   );
 
   it('init', async () => {
+    const { init } = destinationMatomo;
+    if (!init) throw new Error('init missing');
+
     const { mockPaq, calls } = makeMockPaq();
     const env = clone(examples.env.push);
     env.window._paq = mockPaq;
+    const { collector } = await startFlow();
 
-    const dest = jest.requireActual('../').default;
-
-    await dest.init({
+    await init({
       id: 'matomo',
       config: initConfig,
       env,
-      logger: noopLogger,
-      collector: {} as Destination.Context['collector'],
+      logger: createLogger(),
+      collector,
     });
 
     expect(calls).toEqual(initOut);
   });
 
-  it.each(stepEntries)('%s', async (_name, example) => {
-    const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-    const event = example.in as WalkerOS.Event;
+  it.each(stepEntries)('%s', async (name, example) => {
+    if (!isEvent(example.in))
+      throw new Error(`step example "${name}" has no event input`);
+    const event = example.in;
+
+    const rule = isRule(example.mapping) ? example.mapping : undefined;
+    const mapping: Config['mapping'] = rule
+      ? { [event.entity]: { [event.action]: rule } }
+      : undefined;
 
     const { mockPaq, calls } = makeMockPaq();
     const env = clone(examples.env.push);
     env.window._paq = mockPaq;
 
-    const dest = jest.requireActual('../').default;
     const { elb } = await startFlow();
-
-    const mappingConfig = mapping
-      ? { [event.entity]: { [event.action]: mapping } }
-      : undefined;
-
     await elb('walker destination', {
-      code: { ...dest, env },
-      config: { ...initConfig, mapping: mappingConfig },
+      code: { ...destinationMatomo, env },
+      config: {
+        ...initConfig,
+        settings: { ...initConfig.settings, ...example.settings },
+        mapping,
+      },
     });
 
     await elb(event);
 
-    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+    // Slice off the init calls, which run on the first event
     const actual = calls.slice(initOut.length);
-    expect(actual).toEqual(expected);
+    expect(actual).toEqual([...(example.out ?? [])]);
   });
 });

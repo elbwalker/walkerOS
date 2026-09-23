@@ -15,7 +15,11 @@ describe('InitSourceSchema', () => {
   it('accepts a top-level state (single)', () => {
     const result = InitSourceSchema.safeParse({
       code,
-      state: { mode: 'get', key: 'user.session', value: 'data.gclid' },
+      state: {
+        mode: 'get',
+        key: 'event.user.session',
+        value: 'event.data.gclid',
+      },
     });
     expect(result.success).toBe(true);
   });
@@ -24,8 +28,8 @@ describe('InitSourceSchema', () => {
     const result = InitSourceSchema.safeParse({
       code,
       state: [
-        { mode: 'get', key: 'user.session', value: 'data.gclid' },
-        { mode: 'set', key: 'user.session', value: 'data.gclid' },
+        { mode: 'get', key: 'event.user.session', value: 'event.data.gclid' },
+        { mode: 'set', key: 'event.user.session', value: 'event.data.gclid' },
       ],
     });
     expect(result.success).toBe(true);
@@ -34,7 +38,11 @@ describe('InitSourceSchema', () => {
   it('rejects an invalid top-level state', () => {
     const result = InitSourceSchema.safeParse({
       code,
-      state: { mode: 'delete', key: 'user.session', value: 'data.gclid' },
+      state: {
+        mode: 'delete',
+        key: 'event.user.session',
+        value: 'event.data.gclid',
+      },
     });
     expect(result.success).toBe(false);
   });

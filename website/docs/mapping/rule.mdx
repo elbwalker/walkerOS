@@ -75,6 +75,9 @@ Once a rule matches, the collector runs `policy` (event-level), resolves `data`,
 checks `consent` and `condition`, then hands the result to the destination's
 `push` (or buffers it when `batch` is set).
 
+A `policy` entry that resolves to nothing removes the field. That is how a
+consent-gated entry redacts a value when consent is denied.
+
 ### Batch scheduling
 
 `batch` accepts a number (debounce `wait` window in ms, legacy form) or an

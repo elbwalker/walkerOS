@@ -1,4 +1,5 @@
 import { mapHitToEvents } from '../map';
+import { parseRequest } from '../parse';
 import { defaultMapping } from '../defaults';
 import type { GA4Hit, GA4Mapping } from '../types';
 
@@ -104,37 +105,6 @@ describe('mapHitToEvents — hit-level merge', () => {
     };
     const out = mapHitToEvents(hit, defaultMapping);
     expect(out[0].consent).toEqual({ analytics: true, marketing: true });
-  });
-
-  it('populates id from hit._p when present', () => {
-    const hit: GA4Hit = {
-      hit: { tid: 'G-X', _p: '9876543210', dl: 'https://x' },
-      events: [
-        {
-          en: 'page_view',
-          params: { ep: {}, epn: {}, up: {}, upn: {} },
-          items: [],
-        },
-      ],
-    };
-    const out = mapHitToEvents(hit, defaultMapping);
-    expect(out[0].id).toBe('9876543210');
-  });
-
-  it('generates a non-empty id when hit._p is missing', () => {
-    const hit: GA4Hit = {
-      hit: { tid: 'G-X', dl: 'https://x' },
-      events: [
-        {
-          en: 'page_view',
-          params: { ep: {}, epn: {}, up: {}, upn: {} },
-          items: [],
-        },
-      ],
-    };
-    const out = mapHitToEvents(hit, defaultMapping);
-    expect(typeof out[0].id).toBe('string');
-    expect((out[0].id ?? '').length).toBeGreaterThan(0);
   });
 
   it('populates timestamp from hit.sid (epoch seconds → ms) and timing from event._et', () => {
@@ -1130,6 +1100,78 @@ describe('mapHitToEvents — * fallback', () => {
       entity: 'ga4',
       action: 'track',
       data: { event_name: 'custom_something' },
+    });
+  });
+});
+
+describe('mapHitToEvents - event id', () => {
+  const COLLECT = 'https://region1.google-analytics.com/g/collect';
+  const SPAN_ID = /^[0-9a-f]{16}$/;
+
+  function decode(url: string, body?: string) {
+    return mapHitToEvents(parseRequest({ url, body }), defaultMapping);
+  }
+
+  const pageHit = (s: string, tid = 'G-ABC') =>
+    `${COLLECT}?v=2&tid=${tid}&_p=1718112345&cid=111.222&sid=1700000000&_s=${s}`;
+
+  it('derives a span-shaped id (16 lowercase hex chars)', () => {
+    const [event] = decode(`${pageHit('1')}&en=page_view&dl=https%3A%2F%2Fx`);
+    expect(event.id).toMatch(SPAN_ID);
+  });
+
+  it('gives two events in one batched hit distinct ids', () => {
+    const out = decode(
+      pageHit('3'),
+      'en=add_to_cart&epn.value=1\nen=add_to_cart&epn.value=2',
+    );
+    expect(out).toHaveLength(2);
+    expect(out[0].id).not.toBe(out[1].id);
+  });
+
+  it('yields the same ids when the same hit is decoded twice', () => {
+    const body = 'en=add_to_cart&epn.value=1\nen=begin_checkout&epn.value=2';
+    const first = decode(pageHit('3'), body).map((e) => e.id);
+    const second = decode(pageHit('3'), body).map((e) => e.id);
+    expect(second).toEqual(first);
+  });
+
+  it('gives two hits on one page with different _s distinct ids', () => {
+    const [a] = decode(`${pageHit('1')}&en=page_view&dl=https%3A%2F%2Fx`);
+    const [b] = decode(`${pageHit('2')}&en=scroll&epn.percent_scrolled=90`);
+    expect(a.id).not.toBe(b.id);
+  });
+
+  it('gives the same page and sequence on two properties distinct ids', () => {
+    const [a] = decode(`${pageHit('1', 'G-ONE')}&en=page_view`);
+    const [b] = decode(`${pageHit('1', 'G-TWO')}&en=page_view`);
+    expect(a.id).not.toBe(b.id);
+  });
+
+  it.each([
+    ['_p', `${COLLECT}?v=2&tid=G-ABC&cid=111.222&_s=1&en=page_view`],
+    ['_s', `${COLLECT}?v=2&tid=G-ABC&cid=111.222&_p=1718112345&en=page_view`],
+  ])('falls back to a random span id when %s is missing', (_key, url) => {
+    const [a] = decode(url);
+    const [b] = decode(url);
+    expect(a.id).toMatch(SPAN_ID);
+    expect(b.id).toMatch(SPAN_ID);
+    expect(a.id).not.toBe(b.id);
+  });
+});
+
+describe('mapHitToEvents - source', () => {
+  it('marks the GA4 decoder and keeps the raw page load id and hit sequence', () => {
+    const out = mapHitToEvents(
+      parseRequest({
+        url: 'https://region1.google-analytics.com/g/collect?v=2&tid=G-ABC&_p=1718112345&_s=4&en=page_view',
+      }),
+      defaultMapping,
+    );
+    expect(out[0].source).toEqual({
+      type: 'ga4',
+      pageLoadId: '1718112345',
+      hitSequence: '4',
     });
   });
 });

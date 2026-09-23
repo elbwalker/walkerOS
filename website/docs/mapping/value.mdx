@@ -45,9 +45,10 @@ as `Value = ValueType | Array<ValueType>`, where `ValueType` is either a string
 
 A `ValueConfig` uses one producer plus optional filters. `key`, `fn`, `map`,
 `loop` and `set` each produce the value, so set exactly one. If you set several,
-only one result is used: `loop`, `map` or `set` win over `key`, and `key` wins
-over `fn`. `value` is the fallback when the producer returns nothing.
-`condition`, `consent` and `validate` filter the result and combine freely.
+exactly one runs, in this order, and the rest never run: `loop`, `map`, `set`,
+`key`, `fn`. `value` is the fallback when the producer returns nothing,
+including a `loop` over something that is not a list. `condition`, `consent`
+and `validate` filter the result and combine freely.
 
 To read a field and then transform it, use `fn` alone. It receives the whole
 source object, so `fn: (source) => source.user.email.split('@')[1]` does both

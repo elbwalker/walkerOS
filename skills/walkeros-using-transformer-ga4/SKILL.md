@@ -114,8 +114,10 @@ example. The fetch source also takes `paths`; none of them takes `port`.
 - `transformer-ga4` belongs in `source.before`, not `destination.before`.
   Decoding is a pre-collector concern: GA4 hits are not yet walkerOS events.
 - The source must populate `ctx.ingest.url` (required, string) and
-  `ctx.ingest.body` (optional, string). Raw text body only — pre-parsed JSON
-  will not decode.
+  `ctx.ingest.body` (optional, string). Raw text body only: pre-parsed JSON will
+  not decode. The express, fetch, GCP and AWS server sources keep a non-JSON
+  `text/plain` body (gtag's batched POST) as the raw string in `ingest.body`;
+  only a body that parses as JSON arrives parsed.
 - One HTTP request can fan out to N walkerOS events.
 
 **Common mistake:** `config.ingest` must be the `map` operator with direct field
@@ -329,7 +331,11 @@ Override the consent path manually if you need richer mapping.
 - **GA4 v2 only.** v1 Measurement Protocol is out of scope.
 - **`G-` tids only by default.** Override `tidPattern` for Ads/DC.
 - **Basic `gcs` only.** No `gcd`, no functional/preferences flags.
-- **Raw text body required.** Pre-parsed JSON bodies will not decode.
+- **Raw text body required.** Pre-parsed JSON bodies will not decode. Batched
+  gtag POSTs (`text/plain`, one URL-encoded hit per line) reach `ingest.body`
+  raw on the express source. Express source releases before the text body fix
+  rejected them with 400 before the decoder ran; if batched hits answer 400,
+  upgrade `@walkeros/server-source-express`.
 - **At most `maxEvents` events per request.** Default `100`; a larger batch is
   dropped whole before decoding, because each event becomes its own push and a
   source's batch limit does not cover a raw text body.

@@ -124,7 +124,7 @@ Extract request metadata and forward it through the pipeline.
         settings: { cors: true },
         ingest: {
           map: {
-            ua: { key: 'headers.user-agent' },
+            userAgent: { key: 'headers.user-agent' },
             origin: { key: 'headers.origin' },
             path: { key: 'path' },
           },

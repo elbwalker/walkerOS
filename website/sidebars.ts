@@ -324,9 +324,20 @@ const sidebars: SidebarsConfig = {
                   className: 'sidebar-badge-web',
                 },
                 {
-                  type: 'doc',
-                  id: 'destinations/web/piwikpro',
-                  className: 'sidebar-badge-web',
+                  type: 'category',
+                  label: 'Piwik PRO',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/piwikpro',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/piwikpro',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
                 },
                 {
                   type: 'doc',
@@ -512,6 +523,11 @@ const sidebars: SidebarsConfig = {
                 {
                   type: 'doc',
                   id: 'destinations/server/sns',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/clickhouse',
                   className: 'sidebar-badge-server',
                 },
                 {

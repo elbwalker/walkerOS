@@ -136,11 +136,22 @@ Server sources require platform-specific handlers. For containerized deployments
 | GET | `/collect` | Pixel tracking (returns 1x1 GIF) |
 | OPTIONS | `/collect` | CORS preflight |
 
-POST bodies are read by content type. An `application/json` body must parse, or
-the request is answered with 400. A `text/plain` body is parsed as JSON when it
-is JSON (`navigator.sendBeacon` sends JSON as `text/plain`) and otherwise kept as
-the raw string on `ingest.body`, so a `before` transformer can decode it, for
-example batched gtag.js hits with the [GA4 transformer](/docs/transformers/ga4).
+### POST bodies
+
+| Content-Type | Handling |
+|---|---|
+| `application/json` | Parsed as JSON. Malformed JSON is rejected with 400 before the pipeline runs. |
+| `text/plain` | Read as text, then parsed as JSON when it is JSON (a `navigator.sendBeacon` payload, which browsers always send as `text/plain;charset=UTF-8`). Any other text, such as a GA4 gtag batch of newline-separated hit lines, stays the raw string. |
+| anything else | Not read: `body` is `undefined`. |
+
+Both parsers apply the 1mb limit. A raw text body reaches `ingest.body` as the
+string and yields one empty event, so a `source.before` decoder such as
+[transformer-ga4](/docs/transformers/ga4) can turn it into events. Without a
+decoder that empty event is rejected as invalid input by the collector: 400 on
+synchronous POST, counted as `rejected` after the ack in respond-first mode. It
+never reaches a destination. This follows the shared
+[request scope](/docs/sources/scope) contract, so fetch, GCP and AWS sources
+behave the same way.
 
 :::tip Health checks
 Health check endpoints (`/health` and `/ready`) are provided by the [runner](/docs/apps/runner), not by individual sources. This means health checks work regardless of which source type you use.
@@ -221,7 +232,7 @@ const { collector } = await startFlow({
         ingest: {
           map: {
             ip: { key: 'ip' },
-            ua: { key: 'headers.user-agent' },
+            userAgent: { key: 'headers.user-agent' },
             origin: { key: 'headers.origin' },
             referer: { key: 'headers.referer' },
           },
@@ -243,7 +254,7 @@ const { collector } = await startFlow({
 | `path` | Pathname, no query string |
 | `query.*` | Query parameter, repeated keys joined with `,` |
 | `url` | Absolute request URL, or `''` when there is no `host` header |
-| `body` | Parsed request body, or the raw string for a `text/plain` body that is not JSON |
+| `body` | Parsed JSON body, the raw string for non-JSON `text/plain`, or `undefined` |
 | `raw` | The Express `Request` itself |
 
 These are the shared [request scope](/docs/sources/scope) fields. `protocol` and
@@ -337,7 +348,7 @@ Use walkerOS mapping features for complex extraction:
     // Nested structure
     request: {
       map: {
-        ua: { key: 'headers.user-agent' },
+        userAgent: { key: 'headers.user-agent' },
         origin: { key: 'headers.origin' },
       },
     },

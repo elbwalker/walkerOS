@@ -1,6 +1,6 @@
 import type { Flow, Ingest, ValidateEvents, WalkerOS } from '@walkeros/core';
 import * as cfworker from '@cfworker/json-schema';
-import type { ContractSource, ValidationIssue } from './types';
+import type { ContractSource, ValidateResult, ValidationIssue } from './types';
 import { eventFormatSchema } from './event-format.schema';
 
 /**
@@ -80,22 +80,58 @@ function collectSchemas(
 }
 
 /**
+ * JSON Schema validates JSON, and an `undefined` member is not JSON: the
+ * engine throws on it. Drop own keys holding `undefined` and turn `undefined`
+ * array items into `null`, as JSON serialisation does, so positions stay.
+ * Returns the input itself when nothing changed.
+ */
+function toJsonInstance(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    let changed = false;
+    const next = value.map((item) => {
+      const json = item === undefined ? null : toJsonInstance(item);
+      if (json !== item) changed = true;
+      return json;
+    });
+    return changed ? next : value;
+  }
+  if (typeof value !== 'object' || value === null) return value;
+  let changed = false;
+  const next: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (item === undefined) {
+      changed = true;
+      continue;
+    }
+    const json = toJsonInstance(item);
+    if (json !== item) changed = true;
+    next[key] = json;
+  }
+  return changed ? next : value;
+}
+
+/**
  * The validation verdict authority. Runs the event through every applicable
  * JSON Schema (AND semantics) and aggregates all @cfworker errors.
  *
  * No matching constraint (empty schema set) means no opinion: isValid is true.
+ * Never throws: a schema the engine cannot compile or apply becomes an issue,
+ * and its message is also returned as `engineError`.
  */
 export function validateEventAgainstContract(
   event: WalkerOS.DeepPartialEvent,
   _ingest: Ingest | undefined,
   opts: { contracts?: ContractSource[]; format?: boolean },
-): { isValid: boolean; errors: ValidationIssue[] } {
+): ValidateResult {
   const schemas = collectSchemas(event, opts);
+  const instance = toJsonInstance(event);
 
   const errors: ValidationIssue[] = [];
-  for (const schema of schemas) {
-    const result = getValidator(schema).validate(event);
-    if (!result.valid) {
+  let engineError: string | undefined;
+  schemas.forEach((schema, index) => {
+    try {
+      const result = getValidator(schema).validate(instance);
+      if (result.valid) return;
       for (const unit of result.errors) {
         errors.push({
           path: unit.instanceLocation,
@@ -103,8 +139,18 @@ export function validateEventAgainstContract(
           level: 'error',
         });
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      engineError ??= message;
+      errors.push({
+        path: `schema[${index}]`,
+        message: `Validation engine failed: ${message}`,
+        level: 'error',
+      });
     }
-  }
+  });
 
-  return { isValid: errors.length === 0, errors };
+  return engineError === undefined
+    ? { isValid: errors.length === 0, errors }
+    : { isValid: false, errors, engineError };
 }

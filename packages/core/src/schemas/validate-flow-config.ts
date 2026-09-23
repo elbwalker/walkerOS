@@ -68,6 +68,7 @@ export function validateFlowConfig(
 
   // Structural checks over the parsed object (store file/cache contract).
   checkStoreContract(json, parsed, warnings);
+  checkResolutionRoots(json, parsed, errors);
 
   return {
     valid: errors.length === 0,
@@ -592,6 +593,183 @@ function findPathPosition(
   }
 
   return { line: 1, column: 1 };
+}
+
+// --- Resolution roots ---
+
+type Path = (string | number)[];
+type PathCheck = (value: string, path: Path) => void;
+
+// A path names a whole root (`event`) or a path within one (`event.name`).
+const ROOT_PREFIX = /^(event|ingest)(\..+)?$/;
+const CACHE_UPDATE_PREFIX = /^(event|ingest|cache)(\..+)?$/;
+const STEP_KINDS = ['sources', 'transformers', 'destinations'] as const;
+
+/**
+ * Flags paths that can never resolve, by walking each step with the root its
+ * values resolve against. Mapping `data` and `policy` resolve against the
+ * event, so an `ingest.` path there is a silent miss. Cache keys and route
+ * matchers resolve against `{ event, ingest }`, so a path needs one of those
+ * prefixes. State paths are checked by StateSchema.
+ */
+function checkResolutionRoots(
+  text: string,
+  parsed: unknown,
+  errors: ValidationIssue[],
+): void {
+  if (!isObject(parsed) || !isObject(parsed.flows)) return;
+
+  const report = (value: string, path: Path, message: string) => {
+    errors.push({
+      message,
+      severity: 'error',
+      path: path.join('.'),
+      ...positionForKey(text, value),
+    });
+  };
+  const eventRoot: PathCheck = (value, path) => {
+    if (value.startsWith('ingest.'))
+      report(
+        value,
+        path,
+        `Mapping values resolve against the event, so "${value}" never resolves here. Copy it onto the event in an earlier step, then map the event path.`,
+      );
+  };
+  const prefixed =
+    (allowed: RegExp, prefixes: string): PathCheck =>
+    (value, path) => {
+      if (!allowed.test(value))
+        report(
+          value,
+          path,
+          `Cache keys and route matchers resolve against { event, ingest }: "${value}" needs an ${prefixes} prefix.`,
+        );
+    };
+  const rootPath = prefixed(ROOT_PREFIX, '"event." or "ingest."');
+  const updatePath = prefixed(
+    CACHE_UPDATE_PREFIX,
+    '"event.", "ingest." or "cache."',
+  );
+
+  for (const [flowName, flow] of Object.entries(parsed.flows)) {
+    if (!isObject(flow)) continue;
+    for (const kind of STEP_KINDS) {
+      const steps = flow[kind];
+      if (!isObject(steps)) continue;
+      for (const [id, step] of Object.entries(steps)) {
+        if (!isObject(step)) continue;
+        const at: Path = ['flows', flowName, kind, id];
+        walkRoute(step.before, [...at, 'before'], rootPath);
+        walkRoute(step.next, [...at, 'next'], rootPath);
+        walkCache(step.cache, [...at, 'cache'], rootPath, updatePath);
+        if (kind !== 'transformers' && isObject(step.config))
+          walkEventMapping(step.config, [...at, 'config'], eventRoot);
+      }
+    }
+  }
+}
+
+/**
+ * Walks a Mapping.Value the way the engine resolves it: a string or `key` is
+ * a path on the current root, `map` values and `set` items share that root,
+ * and a `loop` resolves its scope here but its item mapping against each
+ * item, so the item mapping is skipped. `$` references are still unresolved
+ * at this point and skipped too.
+ */
+function walkValue(value: unknown, path: Path, check: PathCheck): void {
+  if (typeof value === 'string') {
+    if (!value.startsWith('$')) check(value, path);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, i) => walkValue(item, [...path, i], check));
+    return;
+  }
+  if (!isObject(value)) return;
+  if (typeof value.key === 'string')
+    walkValue(value.key, [...path, 'key'], check);
+  if (isObject(value.map))
+    for (const [key, item] of Object.entries(value.map))
+      walkValue(item, [...path, 'map', key], check);
+  if (Array.isArray(value.set))
+    value.set.forEach((item, i) => walkValue(item, [...path, 'set', i], check));
+  if (Array.isArray(value.loop) && value.loop[0] !== 'this')
+    walkValue(value.loop[0], [...path, 'loop', 0], check);
+}
+
+function walkPolicy(policy: unknown, path: Path, check: PathCheck): void {
+  if (!isObject(policy)) return;
+  for (const [key, value] of Object.entries(policy))
+    walkValue(value, [...path, key], check);
+}
+
+function walkEventMapping(
+  config: Record<string, unknown>,
+  at: Path,
+  check: PathCheck,
+): void {
+  walkValue(config.data, [...at, 'data'], check);
+  walkPolicy(config.policy, [...at, 'policy'], check);
+  if (!isObject(config.mapping)) return;
+  for (const [entity, actions] of Object.entries(config.mapping)) {
+    if (!isObject(actions)) continue;
+    for (const [action, rules] of Object.entries(actions)) {
+      const base: Path = [...at, 'mapping', entity, action];
+      const list = Array.isArray(rules) ? rules : [rules];
+      list.forEach((rule, i) => {
+        if (!isObject(rule)) return;
+        const rulePath = Array.isArray(rules) ? [...base, i] : base;
+        walkValue(rule.data, [...rulePath, 'data'], check);
+        walkPolicy(rule.policy, [...rulePath, 'policy'], check);
+        if (!isObject(rule.extend)) return;
+        walkValue(rule.extend.data, [...rulePath, 'extend', 'data'], check);
+        walkPolicy(
+          rule.extend.policy,
+          [...rulePath, 'extend', 'policy'],
+          check,
+        );
+      });
+    }
+  }
+}
+
+function walkCache(
+  cache: unknown,
+  at: Path,
+  check: PathCheck,
+  updateCheck: PathCheck,
+): void {
+  if (!isObject(cache) || !Array.isArray(cache.rules)) return;
+  cache.rules.forEach((rule, i) => {
+    if (!isObject(rule)) return;
+    const rulePath: Path = [...at, 'rules', i];
+    walkValue(rule.key, [...rulePath, 'key'], check);
+    walkMatch(rule.match, [...rulePath, 'match'], check);
+    if (isObject(rule.update))
+      for (const [key, value] of Object.entries(rule.update))
+        walkValue(value, [...rulePath, 'update', key], updateCheck);
+  });
+}
+
+function walkRoute(route: unknown, at: Path, check: PathCheck): void {
+  if (Array.isArray(route)) {
+    route.forEach((item, i) => walkRoute(item, [...at, i], check));
+    return;
+  }
+  if (!isObject(route)) return;
+  walkMatch(route.match, [...at, 'match'], check);
+  walkRoute(route.next, [...at, 'next'], check);
+  walkRoute(route.one, [...at, 'one'], check);
+  walkRoute(route.many, [...at, 'many'], check);
+}
+
+function walkMatch(expr: unknown, at: Path, check: PathCheck): void {
+  if (!isObject(expr)) return;
+  if (Array.isArray(expr.and))
+    expr.and.forEach((item, i) => walkMatch(item, [...at, 'and', i], check));
+  if (Array.isArray(expr.or))
+    expr.or.forEach((item, i) => walkMatch(item, [...at, 'or', i], check));
+  if (typeof expr.key === 'string') walkValue(expr.key, [...at, 'key'], check);
 }
 
 // --- Helpers ---
