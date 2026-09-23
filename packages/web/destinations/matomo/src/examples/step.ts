@@ -85,7 +85,7 @@ export const customEvent: StepExample = {
   mapping: {
     name: 'trackEvent',
     settings: {
-      goalId: 'goal_1',
+      goalId: '1',
     },
     data: {
       set: ['data.name', 'data.position'],
@@ -93,7 +93,7 @@ export const customEvent: StepExample = {
   },
   out: [
     ['_paq.push', ['trackEvent', 'Setting up tracking easily', 'hero']],
-    ['_paq.push', ['trackGoal', 'goal_1', undefined]],
+    ['_paq.push', ['trackGoal', '1', undefined]],
   ],
 };
 

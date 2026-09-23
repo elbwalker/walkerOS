@@ -66,6 +66,16 @@ export const destinationMatomo: Destination = {
     const { goalId } = eventMapping;
     const parameters = isArray(data) ? data : [data];
 
+    // Matomo drops a conversion whose goal id is not a positive integer
+    const goal = isGoalId(goalId) ? goalId : undefined;
+    if (goalId !== undefined && goal === undefined)
+      logSkip(
+        logger,
+        `${id}|${event.name}|invalid goalId`,
+        `Goal of event "${event.name}" skipped: goalId ${JSON.stringify(goalId)} is not a positive integer`,
+        { event: event.name, reason: 'invalid goalId' },
+      );
+
     // A tracking flag picks the method, an explicit rule name (already
     // applied to event.name) passes through, and a page view defaults to
     // trackPageView. Anything else sends only its goal, or is unmapped.
@@ -87,7 +97,7 @@ export const destinationMatomo: Destination = {
               await getMappingValue(event, 'data.title', { collector }),
             ]
           : ['trackPageView', ...parameters];
-    } else if (goalId === undefined) {
+    } else if (goal === undefined) {
       logSkip(
         logger,
         `${id}|${event.name}|unmapped`,
@@ -100,7 +110,7 @@ export const destinationMatomo: Destination = {
     // Resolve everything first, so this event's commands are pushed in one
     // synchronous block below and never interleave with another event's.
     const goalValue =
-      goalId !== undefined && eventMapping.goalValue !== undefined
+      goal !== undefined && eventMapping.goalValue !== undefined
         ? await getMappingValue(event, eventMapping.goalValue, { collector })
         : undefined;
 
@@ -117,11 +127,20 @@ export const destinationMatomo: Destination = {
     if (command) paq(command);
 
     // Goal tracking alongside event
-    if (goalId !== undefined) paq(['trackGoal', goalId, goalValue]);
+    if (goal !== undefined) paq(['trackGoal', goal, goalValue]);
 
     after.forEach(paq);
   },
 };
+
+// A Matomo goal id, the same rule as the mapping schema.
+const GOAL_ID = /^[1-9]\d*$/;
+
+/** A positive integer, as a number or a decimal string. */
+function isGoalId(value: unknown): value is string | number {
+  if (typeof value === 'number') return Number.isInteger(value) && value > 0;
+  return typeof value === 'string' && GOAL_ID.test(value);
+}
 
 /** Base URL with exactly one trailing slash. */
 function normalizeUrl(url: string): string {

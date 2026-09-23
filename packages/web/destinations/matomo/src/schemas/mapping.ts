@@ -3,9 +3,14 @@ import { CustomDimensionsSchema } from './settings';
 
 export const MappingSchema = z.object({
   goalId: z
-    .string()
+    .union([
+      z.string().regex(/^[1-9]\d*$/, 'Goal IDs are positive integers like "1"'),
+      z.number().int().positive(),
+    ])
     .optional()
-    .describe('Goal ID to track a conversion alongside this event (like 1)'),
+    .describe(
+      'Matomo goal ID, a positive integer like 1. Adds a trackGoal conversion alongside this event',
+    ),
   goalValue: schemas.ValueSchema.describe(
     'Goal revenue, resolved from the event (like "data.revenue"), passed as the trackGoal revenue',
   ).optional(),

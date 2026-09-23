@@ -197,14 +197,48 @@ describe('Destination Matomo', () => {
       expect(warnings(logs, 'skipped')).toEqual([]);
     });
 
-    test('an empty goalId still counts as a goal', async () => {
+    test.each([1, '1'])('goalId %j sends the goal', async (goalId) => {
       const { elb, paq } = await setup({
-        mapping: { product: { add: { settings: { goalId: '' } } } },
+        mapping: { product: { add: { settings: { goalId } } } },
       });
 
       await elb(getEvent('product add'));
 
-      expect(paq).toEqual([['trackGoal', '', undefined]]);
+      expect(paq).toEqual([['trackGoal', goalId, undefined]]);
+    });
+
+    test('an invalid goalId sends the main hit, no goal and warns once', async () => {
+      const { elb, paq, logs } = await setup({
+        mapping: {
+          promotion: {
+            visible: {
+              name: 'trackEvent',
+              data: { set: [{ value: 'promotion' }, { value: 'visible' }] },
+              settings: { goalId: 'goal_1' },
+            },
+          },
+        },
+      });
+
+      await elb(getEvent('promotion visible'));
+      await elb(getEvent('promotion visible'));
+
+      expect(paq).toEqual([
+        ['trackEvent', 'promotion', 'visible'],
+        ['trackEvent', 'promotion', 'visible'],
+      ]);
+      expect(warnings(logs, 'goalId')).toHaveLength(1);
+    });
+
+    test('an implicit rule with only an invalid goal is skipped as unmapped', async () => {
+      const { elb, paq, logs } = await setup({
+        mapping: { product: { add: { settings: { goalId: 'goal_1' } } } },
+      });
+
+      await elb(getEvent('product add'));
+
+      expect(paq).toEqual([]);
+      expect(warnings(logs, 'Event "product add" skipped')).toHaveLength(1);
     });
 
     test('explicit rule name passes through', async () => {
@@ -475,6 +509,18 @@ describe('Destination Matomo', () => {
           customDimensions: { '2': { map: { size: 'data.size' } } },
         }).success,
       ).toBe(true);
+    });
+
+    test.each<[unknown, boolean]>([
+      ['', false],
+      ['goal_1', false],
+      ['01', false],
+      [0, false],
+      [1.5, false],
+      ['1', true],
+      [1, true],
+    ])('goalId %j is valid: %s', (goalId, valid) => {
+      expect(MappingSchema.safeParse({ goalId }).success).toBe(valid);
     });
 
     test('custom dimension keys are bare numeric ids', () => {

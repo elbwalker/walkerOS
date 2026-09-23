@@ -31,8 +31,8 @@ export interface Settings {
 export type InitSettings = Partial<Settings>;
 
 export interface Mapping {
-  /** Goal ID to track a conversion alongside this event. */
-  goalId?: string;
+  /** Matomo goal ID, a positive integer like 1; adds a trackGoal conversion. */
+  goalId?: string | number;
   /** Goal revenue, resolved from the event (like "data.revenue"). */
   goalValue?: WalkerOSMapping.Value;
   /** Track as internal site search via trackSiteSearch. */
