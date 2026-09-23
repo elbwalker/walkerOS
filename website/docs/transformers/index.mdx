@@ -50,7 +50,7 @@ for the full vocabulary.
 |-------------|-----|--------|--------------|
 | **<Link to="/docs/transformers/bot">Bot detection</Link>** | - | Yes | Annotates events with a bot score, a client category, and stable reason codes. Never drops events. |
 | **<Link to="/docs/transformers/file">File</Link>** | - | Yes | Serves a static file from a store backend by request path and stops the chain. |
-| **<Link to="/docs/transformers/fingerprint">Fingerprint</Link>** | - | Yes | Hashes configurable request fields into a deterministic identifier, without cookies. |
+| **<Link to="/docs/transformers/fingerprint">Fingerprint</Link>** | - | Yes | Cookieless visitor hash from the anonymized IP, reduced user agent and site, salted and rotating daily. |
 | **<Link to="/docs/transformers/ga4">GA4</Link>** | - | Yes | Decodes Google Analytics 4 Measurement Protocol v2 hits into walkerOS events. |
 | **<Link to="/docs/transformers/validate">Validate</Link>** | Yes | Yes | Checks events against JSON Schema contracts and records a verdict. |
 

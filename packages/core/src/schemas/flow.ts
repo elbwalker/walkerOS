@@ -20,6 +20,7 @@
 import { z, toJsonSchema } from './validation';
 import { RouteSchema, RouteWithoutManySchema } from './matcher';
 import { EventCacheSchema, StoreCacheSchema } from './cache';
+import { StateSchema } from './state';
 
 // ========================================
 // Shared Type Schemas
@@ -321,6 +322,12 @@ export const SourceSchema = z
           .describe(
             'One-time setup options applied during source registration (boolean enables defaults, object configures specifics)',
           ),
+        state: z
+          .union([StateSchema, z.array(StateSchema)])
+          .optional()
+          .describe(
+            'Declarative store get/set, run before the collector receives the event. Takes precedence over a step-level state.',
+          ),
       })
       .meta({
         id: 'FlowSourceConfig',
@@ -360,6 +367,12 @@ export const SourceSchema = z
     cache: EventCacheSchema.optional().describe(
       'Cache configuration for this source (match → key → ttl rules)',
     ),
+    state: z
+      .union([StateSchema, z.array(StateSchema)])
+      .optional()
+      .describe(
+        'Declarative store get/set for this source. Paths resolve against { event, ingest }.',
+      ),
   })
   // Reject unknown keys so runtime-only fields (e.g. `terminus`) and typos
   // fail validation loudly instead of being silently stripped.
@@ -431,6 +444,18 @@ export const TransformerSchema = z
     cache: EventCacheSchema.optional().describe(
       'Cache configuration for this transformer (match → key → ttl rules)',
     ),
+    state: z
+      .union([StateSchema, z.array(StateSchema)])
+      .optional()
+      .describe(
+        'Declarative store get/set for this transformer. Paths resolve against { event, ingest }.',
+      ),
+    mapping: z
+      .unknown()
+      .optional()
+      .describe(
+        'Event mapping for a code-free transformer. The collector applies it to the event; a rule with ignore: true drops it.',
+      ),
   })
   .meta({
     id: 'FlowTransformer',
@@ -506,6 +531,12 @@ export const DestinationSchema = z
     cache: EventCacheSchema.optional().describe(
       'Cache configuration for this destination (match → key → ttl rules)',
     ),
+    state: z
+      .union([StateSchema, z.array(StateSchema)])
+      .optional()
+      .describe(
+        'Declarative store get/set for this destination. Paths resolve against { event, ingest }.',
+      ),
   })
   .meta({
     id: 'FlowDestination',

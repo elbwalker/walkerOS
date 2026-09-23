@@ -17,6 +17,7 @@ import {
   REF_VAR_INLINE,
 } from './references';
 import { throwError } from './throwError';
+import { getStepFieldRole } from './step-entry';
 
 /**
  * Merge variables with cascade priority.
@@ -535,6 +536,40 @@ export function getFlowSettings(
   }
 }
 
+/**
+ * Resolve one (already cloned) step entry in place: `$var`/`$env`/`$flow`/
+ * `$contract` patterns in `config` and `env` are resolved, `docs` fields and
+ * undeclared keys are removed, and every other declared field is kept as-is.
+ */
+function resolveStepEntry(
+  step: Flow.Step,
+  kind: Flow.StepKind,
+  variables: Flow.Variables,
+  options: ResolveOptions | undefined,
+  resolvedContracts: Record<string, Flow.ContractRule> | undefined,
+  resolveFlow: FlowConfigResolver,
+): void {
+  step.config = resolvePatterns(
+    step.config,
+    variables,
+    options,
+    resolvedContracts,
+    resolveFlow,
+  );
+  step.env = resolvePatterns(
+    step.env,
+    variables,
+    options,
+    resolvedContracts,
+    resolveFlow,
+  );
+  for (const key of Object.keys(step)) {
+    const role = getStepFieldRole(kind, key);
+    if (role === undefined || role === 'docs')
+      Reflect.deleteProperty(step, key);
+  }
+}
+
 function resolveFlowSettings(
   config: Flow.Json,
   settings: Flow,
@@ -573,160 +608,27 @@ function resolveFlowSettings(
     );
   }
 
-  // Process sources with variable cascade
-  if (result.sources) {
-    for (const [name, source] of Object.entries(result.sources)) {
-      const vars = mergeVariables(
-        config.variables,
-        settings.variables,
-        source.variables,
-      );
-
-      const processedConfig = resolvePatterns(
-        source.config,
-        vars,
+  // Resolve every step with the variable cascade. Which fields survive
+  // resolution is decided by STEP_FIELD_ROLES, never by a hand-written list.
+  const resolveSteps = (
+    steps: Record<string, Flow.Step> | undefined,
+    kind: Flow.StepKind,
+  ): void => {
+    for (const step of Object.values(steps ?? {})) {
+      resolveStepEntry(
+        step,
+        kind,
+        mergeVariables(config.variables, settings.variables, step.variables),
         options,
         resolvedContracts,
         resolveFlow,
       );
-
-      const processedEnv = resolvePatterns(
-        source.env,
-        vars,
-        options,
-        resolvedContracts,
-        resolveFlow,
-      );
-
-      result.sources[name] = {
-        package: source.package,
-        import: source.import,
-        config: processedConfig,
-        env: processedEnv,
-        primary: source.primary,
-        variables: source.variables,
-        before: source.before,
-        next: source.next,
-        cache: source.cache,
-        code: source.code,
-      } as Flow.Source;
     }
-  }
-
-  // Process destinations with variable cascade
-  if (result.destinations) {
-    for (const [name, dest] of Object.entries(result.destinations)) {
-      const vars = mergeVariables(
-        config.variables,
-        settings.variables,
-        dest.variables,
-      );
-
-      const processedConfig = resolvePatterns(
-        dest.config,
-        vars,
-        options,
-        resolvedContracts,
-        resolveFlow,
-      );
-
-      const processedEnv = resolvePatterns(
-        dest.env,
-        vars,
-        options,
-        resolvedContracts,
-        resolveFlow,
-      );
-
-      result.destinations[name] = {
-        package: dest.package,
-        import: dest.import,
-        config: processedConfig,
-        env: processedEnv,
-        variables: dest.variables,
-        before: dest.before,
-        next: dest.next,
-        cache: dest.cache,
-        code: dest.code,
-      } as Flow.Destination;
-    }
-  }
-
-  // Process stores with variable cascade
-  if (result.stores) {
-    for (const [name, store] of Object.entries(result.stores)) {
-      const vars = mergeVariables(
-        config.variables,
-        settings.variables,
-        store.variables,
-      );
-
-      const processedConfig = resolvePatterns(
-        store.config,
-        vars,
-        options,
-        resolvedContracts,
-        resolveFlow,
-      );
-
-      const processedEnv = resolvePatterns(
-        store.env,
-        vars,
-        options,
-        resolvedContracts,
-        resolveFlow,
-      );
-
-      result.stores[name] = {
-        package: store.package,
-        import: store.import,
-        config: processedConfig,
-        env: processedEnv,
-        cache: store.cache,
-        variables: store.variables,
-        code: store.code,
-      } as Flow.Store;
-    }
-  }
-
-  // Process transformers with variable cascade
-  if (result.transformers) {
-    for (const [name, transformer] of Object.entries(result.transformers)) {
-      const vars = mergeVariables(
-        config.variables,
-        settings.variables,
-        transformer.variables,
-      );
-
-      const processedConfig = resolvePatterns(
-        transformer.config,
-        vars,
-        options,
-        resolvedContracts,
-        resolveFlow,
-      );
-
-      const processedEnv = resolvePatterns(
-        transformer.env,
-        vars,
-        options,
-        resolvedContracts,
-        resolveFlow,
-      );
-
-      result.transformers[name] = {
-        package: transformer.package,
-        import: transformer.import,
-        config: processedConfig,
-        env: processedEnv,
-        variables: transformer.variables,
-        before: transformer.before,
-        next: transformer.next,
-        cache: transformer.cache,
-        code: transformer.code,
-      } as Flow.Transformer;
-    }
-  }
+  };
+  resolveSteps(result.sources, 'Source');
+  resolveSteps(result.destinations, 'Destination');
+  resolveSteps(result.stores, 'Store');
+  resolveSteps(result.transformers, 'Transformer');
 
   // Process collector config
   if (result.collector) {

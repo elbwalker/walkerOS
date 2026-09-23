@@ -7,7 +7,9 @@
 # @walkeros/server-source-express
 
 Turn-key HTTP event collection server with Express.js. Runs standalone or embeds
-inside an existing Express app, handles JSON POST events, pixel tracking via
+inside an existing Express app, handles JSON POST events (including
+`navigator.sendBeacon` payloads sent as `text/plain`), raw `text/plain` bodies
+for request decoders such as `@walkeros/transformer-ga4`, pixel tracking via
 GET, and configurable CORS.
 
 [Documentation](https://www.walkeros.io/docs/sources/server/express) &bull;

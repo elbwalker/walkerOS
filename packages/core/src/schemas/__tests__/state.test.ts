@@ -9,8 +9,8 @@ describe('StateSchema', () => {
       StateSchema.safeParse({
         mode: 'get',
         store: 'sessions',
-        key: 'user.session',
-        value: 'data.gclid',
+        key: 'event.user.session',
+        value: 'event.data.gclid',
       }).success,
     ).toBe(true);
   });
@@ -19,8 +19,8 @@ describe('StateSchema', () => {
     expect(
       StateSchema.safeParse({
         mode: 'set',
-        key: 'user.session',
-        value: 'data.gclid',
+        key: 'event.user.session',
+        value: 'event.data.gclid',
       }).success,
     ).toBe(true);
   });
@@ -29,8 +29,8 @@ describe('StateSchema', () => {
     expect(
       StateSchema.safeParse({
         mode: 'get',
-        key: 'user.session',
-        value: { key: 'data.gclid' },
+        key: 'event.user.session',
+        value: { key: 'event.data.gclid' },
       }).success,
     ).toBe(true);
   });
@@ -39,21 +39,21 @@ describe('StateSchema', () => {
     expect(
       StateSchema.safeParse({
         mode: 'delete',
-        key: 'user.session',
-        value: 'data.gclid',
+        key: 'event.user.session',
+        value: 'event.data.gclid',
       }).success,
     ).toBe(false);
   });
 
   it('rejects a get with no value', () => {
     expect(
-      StateSchema.safeParse({ mode: 'get', key: 'user.session' }).success,
+      StateSchema.safeParse({ mode: 'get', key: 'event.user.session' }).success,
     ).toBe(false);
   });
 
   it('rejects a set with no value', () => {
     expect(
-      StateSchema.safeParse({ mode: 'set', key: 'user.session' }).success,
+      StateSchema.safeParse({ mode: 'set', key: 'event.user.session' }).success,
     ).toBe(false);
   });
 
@@ -61,7 +61,7 @@ describe('StateSchema', () => {
     expect(
       StateSchema.safeParse({
         mode: 'get',
-        key: 'user.session',
+        key: 'event.user.session',
         value: { value: 'static' },
       }).success,
     ).toBe(false);
@@ -71,8 +71,8 @@ describe('StateSchema', () => {
     expect(
       StateSchema.safeParse({
         mode: 'get',
-        key: 'user.session',
-        value: { key: 'data.x', fn: '$code: (e) => e' },
+        key: 'event.user.session',
+        value: { key: 'event.data.x', fn: '$code: (e) => e' },
       }).success,
     ).toBe(false);
   });
@@ -81,15 +81,15 @@ describe('StateSchema', () => {
     expect(
       StateSchema.safeParse({
         mode: 'get',
-        key: 'user.session',
-        value: { key: 'data.x', value: 'static' },
+        key: 'event.user.session',
+        value: { key: 'event.data.x', value: 'static' },
       }).success,
     ).toBe(false);
     expect(
       StateSchema.safeParse({
         mode: 'get',
-        key: 'user.session',
-        value: { key: 'data.x', map: { a: 'b' } },
+        key: 'event.user.session',
+        value: { key: 'event.data.x', map: { a: 'b' } },
       }).success,
     ).toBe(false);
   });
@@ -98,22 +98,68 @@ describe('StateSchema', () => {
     expect(
       StateSchema.safeParse({
         mode: 'get',
-        key: 'user.session',
-        value: 'data.*',
+        key: 'event.user.session',
+        value: 'event.data.*',
       }).success,
     ).toBe(false);
+  });
+
+  it.each([
+    ['a bare key', { mode: 'set', key: 'user.session', value: 'event.data.x' }],
+    ['a whole-root key', { mode: 'set', key: 'event', value: 'event.data.x' }],
+    ['a bare set value', { mode: 'set', key: 'ingest.site', value: 'data.x' }],
+    ['a bare get target', { mode: 'get', key: 'ingest.site', value: 'data.x' }],
+    [
+      'a bare path in a key fallback list',
+      { mode: 'set', key: ['ingest.site', 'user.id'], value: 'event.data.x' },
+    ],
+    [
+      'a prefix with no path',
+      { mode: 'set', key: 'ingest.', value: 'event.data.x' },
+    ],
+  ])('rejects %s', (_, state) => {
+    const result = StateSchema.safeParse(state);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].message).toContain(
+      'needs an "event." or "ingest." prefix',
+    );
+  });
+
+  it.each([
+    [
+      'a whole-root set value',
+      { mode: 'set', key: 'ingest.site', value: 'event' },
+    ],
+    [
+      'ingest on both sides',
+      { mode: 'get', key: 'ingest.site', value: 'ingest.tenant' },
+    ],
+    [
+      'a set value from fn',
+      { mode: 'set', key: 'ingest.site', value: { fn: '$code:() => 1' } },
+    ],
+    [
+      'a set value constant',
+      { mode: 'set', key: 'ingest.site', value: { value: 'x' } },
+    ],
+  ])('accepts %s', (_, state) => {
+    expect(StateSchema.safeParse(state).success).toBe(true);
   });
 });
 
 describe('state appears on the three step configs', () => {
   const single = {
     mode: 'get' as const,
-    key: 'user.session',
-    value: 'data.gclid',
+    key: 'event.user.session',
+    value: 'event.data.gclid',
   };
   const arr = [
     single,
-    { mode: 'set' as const, key: 'user.session', value: 'data.gclid' },
+    {
+      mode: 'set' as const,
+      key: 'event.user.session',
+      value: 'event.data.gclid',
+    },
   ];
 
   it('SourceConfig accepts state (single and array)', () => {

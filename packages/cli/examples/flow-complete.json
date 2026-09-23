@@ -376,8 +376,7 @@
                     "map": {
                       "transaction_id": "data.id",
                       "value": {
-                        "key": "data.total",
-                        "fn": "$code:(v) => Math.round(v * 100)"
+                        "fn": "$code:(event) => Math.round(event.data.total * 100)"
                       },
                       "currency": {
                         "key": "data.currency",
@@ -624,8 +623,7 @@
                     "language": { "key": "headers.accept-language" },
                     "referer": { "key": "headers.referer" },
                     "anonymizedIp": {
-                      "key": "ip",
-                      "fn": "$code:(ip) => ip ? ip.replace(/\\.\\d+$/, '.0') : ''"
+                      "fn": "$code:(req) => req.ip ? req.ip.replace(/\\.\\d+$/, '.0') : ''"
                     }
                   }
                 }

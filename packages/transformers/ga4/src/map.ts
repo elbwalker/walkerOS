@@ -1,5 +1,5 @@
 import type { Mapping, WalkerOS } from '@walkeros/core';
-import { getByPath, getId, deleteByPath, isObject } from '@walkeros/core';
+import { getByPath, deleteByPath, isObject } from '@walkeros/core';
 import type {
   GA4Event,
   GA4Hit,
@@ -8,6 +8,7 @@ import type {
   GA4Mapping,
 } from './types';
 import { parseConsent } from './parse';
+import { getEventId } from './id';
 
 /**
  * Lookup root for mapping path resolution. Mapping rules reference keys via
@@ -39,16 +40,17 @@ export function mapHitToEvents(
   mapping: GA4Mapping,
 ): WalkerOS.DeepPartialEvent[] {
   const out: WalkerOS.DeepPartialEvent[] = [];
-  for (const event of hit.events) {
-    const mapped = mapOneEvent(hit.hit, event, mapping);
+  hit.events.forEach((event, index) => {
+    const mapped = mapOneEvent(hit.hit, event, index, mapping);
     if (mapped) out.push(mapped);
-  }
+  });
   return out;
 }
 
 function mapOneEvent(
   hitParams: GA4HitParams,
   event: GA4Event,
+  index: number,
   mapping: GA4Mapping,
 ): WalkerOS.DeepPartialEvent | null {
   const ruleEntry = mapping[event.en] ?? mapping['*'];
@@ -96,16 +98,20 @@ function mapOneEvent(
     ...(hitParams.ul !== undefined ? { language: hitParams.ul } : {}),
     ...(hitParams.sr !== undefined ? { screen: hitParams.sr } : {}),
   };
+  // source.type marks the GA4 decoder; the raw page load id (_p) and hit
+  // sequence (_s) stay available for analysts next to the derived event id.
   evaluated.source = {
     type: 'ga4',
     ...(hitParams.p !== undefined ? { platform: hitParams.p } : {}),
+    ...(hitParams._p !== undefined ? { pageLoadId: hitParams._p } : {}),
+    ...(hitParams._s !== undefined ? { hitSequence: hitParams._s } : {}),
   };
 
-  // Consent from gcs string, id from hit._p (fallback to generated string),
+  // Consent from gcs string, id derived from the hit (see getEventId),
   // timestamp from sid (epoch seconds → ms; falls back to wall-clock now),
   // timing from event._et (ms; 0 if absent), trigger hard-coded to "ga4" for v1.
   evaluated.consent = parseConsent(hitParams);
-  evaluated.id = hitParams._p ?? getId();
+  evaluated.id = getEventId(hitParams, index);
   const sidNum = hitParams.sid ? Number(hitParams.sid) : NaN;
   evaluated.timestamp =
     !Number.isNaN(sidNum) && sidNum > 0 ? sidNum * 1000 : Date.now();

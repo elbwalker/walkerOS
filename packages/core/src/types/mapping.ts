@@ -90,6 +90,17 @@ export interface ValueConfig {
   value?: WalkerOS.PropertyType;
 }
 
+/**
+ * Resolution root for paths that can address both the event and the
+ * pipeline ingest: state, cache keys and route matchers. Paths name their
+ * side explicitly, `event.data.id` or `ingest.site`. `event` is absent where
+ * routing runs before an event exists.
+ */
+export type Root = {
+  event?: WalkerOS.DeepPartialEvent;
+  ingest: Record<string, unknown>;
+};
+
 // Per-event callback context. Distinct from Context.Base (lifecycle-time) because mappings have no config/env of their own.
 export interface Context {
   event: WalkerOS.DeepPartialEvent;

@@ -1,37 +1,95 @@
 import type { Mapping, Transformer } from '@walkeros/core';
-import { getMappingValue, setByPath } from '@walkeros/core';
+import {
+  anonymizeIP,
+  createMappingRoot,
+  getBrowser,
+  getBrowserVersion,
+  getMappingValue,
+  getOS,
+  setByPath,
+} from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 import type { FingerprintSettings } from './types';
 
+type InputName = 'ip' | 'userAgent' | 'site';
+
+interface Input {
+  name: InputName;
+  value: Mapping.Value;
+}
+
+const inputNames: InputName[] = ['ip', 'userAgent', 'site'];
+
+const defaultInputs: Record<InputName, Mapping.Value> = {
+  ip: 'ingest.ip',
+  userAgent: 'ingest.userAgent',
+  site: 'event.source.url',
+};
+
+// Each named input is reduced before hashing, so the hash never carries
+// more than the reduced value.
+const reduceInput: Record<InputName, (value: string) => string> = {
+  ip: anonymizeIP,
+  userAgent: (ua) =>
+    [getBrowser(ua), getBrowserVersion(ua), getOS(ua)]
+      .map((part) => part ?? '')
+      .join('/'),
+  site: toHostname,
+};
+
+function toHostname(value: string): string {
+  try {
+    return new URL(value).hostname || value;
+  } catch {
+    return value; // Not a URL, e.g. a site id
+  }
+}
+
+function rotationWindow(rotate: FingerprintSettings['rotate']): string {
+  if (rotate === 'none') return '';
+  const now = new Date().toISOString();
+  return rotate === 'hourly' ? now.slice(0, 13) : now.slice(0, 10);
+}
+
 /**
- * Fingerprint transformer - hash configurable fields for session continuity.
+ * Fingerprint transformer - a cookieless, privacy-friendly visitor hash.
  *
- * Resolves fields from { event, ingest } source object using getMappingValue,
- * concatenates values in order, hashes with SHA-256, and stores at output path.
+ * Hashes the rotation window, the named inputs (anonymized IP, reduced user
+ * agent, site) and any extra fields with an HMAC keyed by the salt, and
+ * stores the result at the output path.
  *
  * @example
  * transformerFingerprint({
  *   config: {
- *     settings: {
- *       fields: [
- *         'ingest.ip',
- *         'ingest.userAgent',
- *         { fn: () => new Date().getDate() },
- *       ],
- *       output: 'user.hash',
- *       length: 16,
- *     },
+ *     settings: { salt: '$env.FINGERPRINT_SALT' },
  *   },
  * })
  */
 export const transformerFingerprint: Transformer.Init<
   Transformer.Types<FingerprintSettings>
 > = (context) => {
-  const { config } = context;
+  const { config, logger } = context;
   const settings: Partial<FingerprintSettings> = config.settings ?? {};
   const fields: Mapping.Value[] = settings.fields || [];
   const output: string = settings.output || 'user.hash';
   const length: number | undefined = settings.length;
+  const salt: string | undefined = settings.salt || undefined;
+  const rotate = settings.rotate ?? 'daily';
+
+  // Named inputs default on only without fields, so a fields config keeps its input set
+  const inputs: Input[] = [];
+  for (const name of inputNames) {
+    const value =
+      settings[name] ?? (settings.fields ? false : defaultInputs[name]);
+    if (value !== false) inputs.push({ name, value });
+  }
+
+  if (!salt)
+    logger.warn(
+      'Fingerprint has no salt: the hash can be reversed to the IP by brute force. Set settings.salt, e.g. "$env.FINGERPRINT_SALT".',
+    );
+
+  const warnedEmpty = new Set<InputName>();
 
   return {
     type: 'fingerprint',
@@ -42,23 +100,40 @@ export const transformerFingerprint: Transformer.Init<
     async push(event, context) {
       const { ingest, collector } = context;
 
-      // Build source object for field resolution
-      const source = { event, ingest };
+      const source = createMappingRoot(ingest, event);
+      const resolve = async (value: Mapping.Value) =>
+        String((await getMappingValue(source, value, { collector })) ?? '');
 
-      // Resolve each field via mapping (maintains order)
-      const values = await Promise.all(
-        fields.map((field: Mapping.Value) =>
-          getMappingValue(source, field, { collector }),
-        ),
+      const inputValues = await Promise.all(
+        inputs.map(async ({ name, value }) => {
+          const resolved = await resolve(value);
+          const reduced = resolved ? reduceInput[name](resolved) : '';
+
+          if (!reduced && !warnedEmpty.has(name)) {
+            warnedEmpty.add(name);
+            logger.warn(
+              `Fingerprint input "${name}" resolved empty, so hashes are less distinct. Check the source's config.ingest or set settings.${name}.`,
+            );
+          }
+
+          return reduced;
+        }),
       );
 
-      // Safe string concatenation: '' prefix + String() cast for each value
-      // '' prefix ensures we always have a string even if fields is empty
-      // String(v ?? '') handles undefined/null gracefully
-      const input = '' + values.map((v: unknown) => String(v ?? '')).join('');
+      const fieldValues = await Promise.all(fields.map(resolve));
 
-      // Hash and store at output path
-      const hash = await getHashServer(input, length);
+      // A separator keeps 'ab' + 'c' and 'a' + 'bc' apart
+      const input = [
+        rotationWindow(rotate),
+        ...inputValues,
+        ...fieldValues,
+      ].join('\u001f');
+
+      const hash = await getHashServer(
+        input,
+        length,
+        salt ? { key: salt } : {},
+      );
       return { event: setByPath(event, output, hash) };
     },
   };

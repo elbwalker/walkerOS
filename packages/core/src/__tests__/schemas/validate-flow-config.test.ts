@@ -1290,4 +1290,173 @@ describe('validateFlowConfig', () => {
       ).toHaveLength(0);
     });
   });
+  describe('resolution roots', () => {
+    function flowWith(steps: Record<string, unknown>): string {
+      return JSON.stringify(
+        {
+          version: 4,
+          flows: { default: { config: { platform: 'server' }, ...steps } },
+        },
+        null,
+        2,
+      );
+    }
+
+    function destination(config: Record<string, unknown>) {
+      return { destinations: { d: { package: '@walkeros/x', config } } };
+    }
+
+    function rootErrorPaths(steps: Record<string, unknown>): string[] {
+      return validateFlowConfig(flowWith(steps))
+        .errors.filter((e) => /resolve/.test(e.message))
+        .map((e) => e.path ?? '');
+    }
+
+    it.each([
+      [
+        'ingest in destination data',
+        destination({ data: { map: { site: 'ingest.site' } } }),
+        'flows.default.destinations.d.config.data.map.site',
+      ],
+      [
+        'ingest in a loop scope',
+        destination({
+          data: { loop: ['ingest.items', { map: { id: 'id' } }] },
+        }),
+        'flows.default.destinations.d.config.data.loop.0',
+      ],
+      [
+        'ingest in a policy',
+        destination({ policy: { 'data.site': 'ingest.site' } }),
+        'flows.default.destinations.d.config.policy.data.site',
+      ],
+      [
+        'ingest in a mapping rule',
+        destination({ mapping: { page: { view: { data: 'ingest.site' } } } }),
+        'flows.default.destinations.d.config.mapping.page.view.data',
+      ],
+      [
+        'a bare cache key',
+        {
+          transformers: {
+            t: { cache: { rules: [{ key: ['data.id'], ttl: 60 }] } },
+          },
+        },
+        'flows.default.transformers.t.cache.rules.0.key.0',
+      ],
+      [
+        'a bare route match',
+        {
+          sources: {
+            s: {
+              package: '@walkeros/x',
+              next: {
+                one: [
+                  {
+                    match: {
+                      and: [{ key: 'data.id', operator: 'exists', value: '' }],
+                    },
+                    next: 'a',
+                  },
+                  'b',
+                ],
+              },
+            },
+          },
+        },
+        'flows.default.sources.s.next.one.0.match.and.0.key',
+      ],
+    ])('flags %s', (_, steps, path) => {
+      expect(rootErrorPaths(steps)).toEqual([path]);
+    });
+
+    it.each([
+      [
+        'ingest inside a loop body, which resolves against each item',
+        destination({
+          data: { loop: ['nested', { map: { v: 'ingest.x' } }] },
+        }),
+      ],
+      [
+        'a nested loop inside a map',
+        destination({
+          data: {
+            map: {
+              items: {
+                loop: ['nested', { loop: ['this', { key: 'ingest.x' }] }],
+              },
+            },
+          },
+        }),
+      ],
+      [
+        'bare event paths in destination data',
+        destination({ data: { map: { v: 'data.total' } } }),
+      ],
+      [
+        'a reference string',
+        destination({ data: { map: { v: '$var.currency' } } }),
+      ],
+      [
+        'a whole-root route match',
+        {
+          destinations: {
+            d: {
+              package: '@walkeros/x',
+              before: {
+                match: { key: 'event', operator: 'exists', value: '' },
+                next: 't',
+              },
+            },
+          },
+        },
+      ],
+      [
+        'event.name in a cache key',
+        {
+          transformers: {
+            t: { cache: { rules: [{ key: ['event.name'], ttl: 60 }] } },
+          },
+        },
+      ],
+      [
+        'cache.status in a cache update',
+        {
+          sources: {
+            s: {
+              package: '@walkeros/x',
+              cache: {
+                rules: [
+                  {
+                    key: ['ingest.path'],
+                    ttl: 60,
+                    update: { 'headers.X-Cache': { key: 'cache.status' } },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    ])('does not flag %s', (_, steps) => {
+      expect(rootErrorPaths(steps)).toEqual([]);
+    });
+
+    it('flags a bare state key through the schema', () => {
+      const result = validateFlowConfig(
+        flowWith({
+          transformers: {
+            t: {
+              state: { mode: 'get', key: 'user.id', value: 'event.data.x' },
+            },
+          },
+        }),
+      );
+      expect(
+        result.errors.some((e) =>
+          e.message.includes('needs an "event." or "ingest." prefix'),
+        ),
+      ).toBe(true);
+    });
+  });
 });

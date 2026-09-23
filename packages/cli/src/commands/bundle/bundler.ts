@@ -3,9 +3,10 @@ import esbuild from 'esbuild';
 import { builtinModules } from 'module';
 import path from 'path';
 import fs from 'fs-extra';
-import type { Flow, ObserveWeb, PreviewKey, Transformer } from '@walkeros/core';
+import type { Flow, ObserveWeb, PreviewKey } from '@walkeros/core';
 import {
   packageNameToVariable,
+  getStepRuntimeProps,
   ENV_MARKER_PREFIX,
   SECRET_MARKER_PREFIX,
   isPathStepEntry,
@@ -69,54 +70,46 @@ function hasCodeReference(code: unknown): boolean {
 }
 
 /**
- * Generates inline code for any component type (source, destination, transformer).
- * Handles $code: prefix for push/init functions.
+ * Generates inline code for any component type (source, destination,
+ * transformer, store). Handles $code: prefix for push/init functions.
  *
  * @param inline - InlineCode object with push, optional init, optional type
- * @param config - Component configuration
- * @param env - Optional environment configuration
- * @param chains - Optional chain values: `before` (post-collector for destinations,
- *   pre-push for transformers, pre-source for sources) and `next`
- *   (pre-collector for sources/transformers, post-push for destinations).
+ * @param runtimeProps - The step's runtime fields (`getStepRuntimeProps`),
+ *   emitted beside the code. `config` and `env` default to `{}`.
  * @param isDestination - Whether this is a destination (uses different code structure)
  */
 function generateInlineCode(
   inline: Flow.Code,
-  config: object,
-  env?: object,
-  chains?: { before?: Transformer.Route; next?: Transformer.Route },
+  runtimeProps: Record<string, unknown>,
   isDestination?: boolean,
 ): string {
   const pushFn = inline.push.replace('$code:', '');
   const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
   const typeLine = inline.type ? `type: '${inline.type}',` : '';
 
-  const chainLines: string[] = [];
-  if (chains?.before !== undefined) {
-    chainLines.push(`before: ${JSON.stringify(chains.before)}`);
-  }
-  if (chains?.next !== undefined) {
-    chainLines.push(`next: ${JSON.stringify(chains.next)}`);
-  }
-  const chainBlock = chainLines.length
-    ? `,\n      ${chainLines.join(',\n      ')}`
-    : '';
+  const props: Record<string, unknown> = {
+    config: {},
+    env: {},
+    ...runtimeProps,
+  };
+  const propLines = Object.entries(props)
+    .map(([key, value]) => `${key}: ${processConfigValue(value)}`)
+    .join(',\n      ');
 
   // Destinations have a different structure - code is the instance directly
   if (isDestination) {
     return `{
       code: {
         ${typeLine}
-        config: ${processConfigValue(config || {})},
+        config: ${processConfigValue(props.config)},
         ${initFn ? `init: ${initFn},` : ''}
         push: ${pushFn}
       },
-      config: ${processConfigValue(config || {})},
-      env: ${processConfigValue(env || {})}${chainBlock}
+      ${propLines}
     }`;
   }
 
-  // Sources and transformers use factory pattern
+  // Sources, transformers and stores use factory pattern
   return `{
       code: async (context) => ({
         ${typeLine}
@@ -124,8 +117,7 @@ function generateInlineCode(
         ${initFn ? `init: ${initFn},` : ''}
         push: ${pushFn}
       }),
-      config: ${processConfigValue(config || {})},
-      env: ${processConfigValue(env || {})}${chainBlock}
+      ${propLines}
     }`;
 }
 import type { BuildOptions } from '../../types/bundle.js';
@@ -1481,34 +1473,21 @@ export function buildSplitConfigObject(
     return packageNameToVariable(step.package!);
   }
 
-  // Helper to build step properties (excluding 'code', 'package', and 'import')
-  function getStepProps(step: FlowStep): Record<string, unknown> {
-    const props: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(step)) {
-      if (key === 'code' || key === 'package' || key === 'import') continue;
-      if (value !== undefined && value !== null) {
-        props[key] = value;
-      }
-    }
-    return props;
-  }
-
-  // Helper to build a split step entry for the code skeleton
+  // Helper to build a split step entry for the code skeleton. `codeVar` is
+  // undefined for a code-free path step: the runtime synthesizes its push.
   function buildSplitStepEntry(
     section: string,
     stepId: string,
-    step: FlowStep,
+    codeVar: string | undefined,
+    runtimeProps: Record<string, unknown>,
   ): string {
-    const codeVar = resolveCodeVar(step);
-    const stepProps = getStepProps(step);
-    const { codeProps, dataProps } = classifyStepProperties(stepProps);
+    const { codeProps, dataProps } = classifyStepProperties(runtimeProps);
 
     const codeEntries: string[] = [];
-    codeEntries.push(`code: ${codeVar}`);
+    if (codeVar !== undefined) codeEntries.push(`code: ${codeVar}`);
 
     // Code-layer props (serialized with processConfigValue)
     for (const [key, value] of Object.entries(codeProps)) {
-      if (key === 'code') continue; // already handled above
       codeEntries.push(`${key}: ${processConfigValue(value)}`);
     }
 
@@ -1526,6 +1505,25 @@ export function buildSplitConfigObject(
     return `    ${stepId}: {\n      ${codeEntries.join(',\n      ')}\n    }`;
   }
 
+  // Single emission path for every step kind. Which fields reach the runtime
+  // is decided by STEP_FIELD_ROLES in @walkeros/core (getStepRuntimeProps),
+  // never by a hand-written field list here.
+  function buildStepEntry(
+    kind: Flow.StepKind,
+    section: string,
+    stepId: string,
+    step: FlowStep,
+  ): string {
+    const runtimeProps = getStepRuntimeProps(step, kind);
+    if (isInlineCode(step.code)) {
+      return `    ${stepId}: ${generateInlineCode(step.code, runtimeProps, kind === 'Destination')}`;
+    }
+    const codeVar = isPathStepEntry({ ...step }, kind)
+      ? undefined
+      : resolveCodeVar(step);
+    return buildSplitStepEntry(section, stepId, codeVar, runtimeProps);
+  }
+
   // Validate references
   Object.entries(sources).forEach(([name, source]) => {
     validateReference('Source', name, source);
@@ -1540,24 +1538,16 @@ export function buildSplitConfigObject(
   // Build sources
   const sourcesEntries = Object.entries(sources)
     .filter(([, source]) => source.package || hasCodeReference(source.code))
-    .map(([key, source]) => {
-      if (isInlineCode(source.code)) {
-        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, { next: source.next })}`;
-      }
-      return buildSplitStepEntry('sources', key, source);
-    });
+    .map(([key, source]) => buildStepEntry('Source', 'sources', key, source));
 
   // Build destinations
   const destinationsEntries = Object.entries(destinations)
     .filter(([, dest]) => dest.package || hasCodeReference(dest.code))
-    .map(([key, dest]) => {
-      if (isInlineCode(dest.code)) {
-        return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, { before: dest.before, next: dest.next }, true)}`;
-      }
-      return buildSplitStepEntry('destinations', key, dest);
-    });
+    .map(([key, dest]) =>
+      buildStepEntry('Destination', 'destinations', key, dest),
+    );
 
-  // Build transformers
+  // Build transformers (including code-free path steps)
   const transformersEntries = Object.entries(transformers)
     .filter(
       ([, transformer]) =>
@@ -1565,32 +1555,9 @@ export function buildSplitConfigObject(
         hasCodeReference(transformer.code) ||
         isPathStepEntry({ ...transformer }, 'Transformer'),
     )
-    .map(([key, transformer]) => {
-      if (isInlineCode(transformer.code)) {
-        return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, { before: transformer.before, next: transformer.next })}`;
-      }
-      if (isPathStepEntry({ ...transformer }, 'Transformer')) {
-        // Path: code-less passthrough. Emit only wiring fields; the runtime
-        // synthesizes the push function.
-        const chainLines: string[] = [];
-        if (transformer.before !== undefined) {
-          chainLines.push(`before: ${JSON.stringify(transformer.before)}`);
-        }
-        if (transformer.next !== undefined) {
-          chainLines.push(`next: ${JSON.stringify(transformer.next)}`);
-        }
-        if (transformer.cache !== undefined) {
-          chainLines.push(`cache: ${JSON.stringify(transformer.cache)}`);
-        }
-        if (transformer.config !== undefined) {
-          chainLines.push(
-            `config: ${processConfigValue(transformer.config as object)}`,
-          );
-        }
-        return `    ${key}: {\n      ${chainLines.join(',\n      ')}\n    }`;
-      }
-      return buildSplitStepEntry('transformers', key, transformer);
-    });
+    .map(([key, transformer]) =>
+      buildStepEntry('Transformer', 'transformers', key, transformer),
+    );
 
   // Build stores
   Object.entries(stores).forEach(([name, store]) => {
@@ -1601,34 +1568,7 @@ export function buildSplitConfigObject(
 
   const storesEntries = Object.entries(stores)
     .filter(([, store]) => store.package || hasCodeReference(store.code))
-    .map(([key, store]) => {
-      if (isInlineCode(store.code)) {
-        return `    ${key}: ${generateInlineCode(store.code, (store.config as object) || {}, store.env as object)}`;
-      }
-
-      const codeVar = resolveCodeVar(store);
-      const storeProps = getStepProps(store);
-      const { codeProps, dataProps } = classifyStepProperties(storeProps);
-
-      const codeEntries: string[] = [];
-      codeEntries.push(`code: ${codeVar}`);
-
-      for (const [propKey, value] of Object.entries(codeProps)) {
-        if (propKey === 'code') continue;
-        codeEntries.push(`${propKey}: ${processConfigValue(value)}`);
-      }
-
-      for (const propKey of Object.keys(dataProps)) {
-        codeEntries.push(`${propKey}: __data.stores.${key}.${propKey}`);
-      }
-
-      if (Object.keys(dataProps).length > 0) {
-        if (!dataPayloadObj['stores']) dataPayloadObj['stores'] = {};
-        dataPayloadObj['stores'][key] = dataProps;
-      }
-
-      return `    ${key}: {\n      ${codeEntries.join(',\n      ')}\n    }`;
-    });
+    .map(([key, store]) => buildStepEntry('Store', 'stores', key, store));
 
   // Build stores declaration
   const storesDeclaration =

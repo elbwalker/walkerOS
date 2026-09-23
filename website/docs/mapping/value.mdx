@@ -24,7 +24,8 @@ export const logValue = async (input, config, log) => {
 `data`, every entry under `map`, entries in `set[]`, keys under `policy`, and
 anywhere a destination rule field accepts `any`. It is polymorphic: a value can
 be a simple string path, an object with one of several transforming keys, or an
-array of those. The shape is defined in
+array of those, which is a fallback chain: the first entry that resolves wins.
+The shape is defined in
 [`packages/core/src/types/mapping.ts`](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/types/mapping.ts)
 as `Value = ValueType | Array<ValueType>`, where `ValueType` is either a string
 (path) or a `ValueConfig` object.
@@ -37,14 +38,22 @@ as `Value = ValueType | Array<ValueType>`, where `ValueType` is either a string
 | [Constant](#constant)           | `{ value }`                               | Emits a fixed value. Use when the destination needs a literal like a currency, ID, or label.  |
 | [Map](#map)                     | `{ map: { key: Value, … } }`              | Builds an object from multiple paths. Use when the destination expects a structured payload.  |
 | [Loop](#loop)                   | `{ loop: [source, Value] }`               | Iterates an array source and transforms each item. Use for nested product, cart, or item lists. |
-| [Set](#set)                     | `{ set: [Value, Value, …] }`              | Picks the first defined value from a list. Use as a fallback chain like email then user_id.   |
+| [Set](#set)                     | `{ set: [Value, Value, …] }`              | Builds an array from several values, in order. Use when the destination expects a list.       |
 | [Fn](#fn)                       | `{ fn: (value, context) => … }`          | Runs a custom function on the event. Use only when no declarative form fits.                  |
 | [Condition](#condition)         | `{ condition, value }`                    | Gates the value on a predicate. Use for branching logic inside a single rule.                 |
 | [Consent](#consent)             | `{ consent: {…}, value }`                 | Gates the value on consent states. Use to make individual fields privacy-aware.               |
 
-All `ValueConfig` keys can be combined on the same object: `key`, `condition`,
-`consent`, `validate` act as filters; `value`, `fn`, `map`, `loop`, `set`
-produce output.
+A `ValueConfig` uses one producer plus optional filters. `key`, `fn`, `map`,
+`loop` and `set` each produce the value, so set exactly one. If you set several,
+exactly one runs, in this order, and the rest never run: `loop`, `map`, `set`,
+`key`, `fn`. `value` is the fallback when the producer returns nothing,
+including a `loop` over something that is not a list. `condition`, `consent`
+and `validate` filter the result and combine freely.
+
+To read a field and then transform it, use `fn` alone. It receives the whole
+source object, so `fn: (source) => source.user.email.split('@')[1]` does both
+steps in one place. For an event field you can also rewrite it with a `policy`
+entry and read it with `key`. Anything bigger belongs in a transformer.
 
 ## Path
 
@@ -161,12 +170,15 @@ transforms each item.
 
 ## Set
 
-Try each value in order and return the first defined result. Useful as a
-fallback chain.
+Resolve every value and return them as an array, in order. A value that
+resolves to nothing keeps its position as an empty entry.
 
 ```typescript
-{ set: ['data.email', 'user.email', { value: 'anonymous' }] }
+{ set: ['data.id', 'data.name'] } // ['P1', 'Shirt']
 ```
+
+For a fallback chain, where the first value that resolves wins, use a plain
+array instead: `['data.email', 'user.email', { value: 'anonymous' }]`.
 
 ## Fn
 

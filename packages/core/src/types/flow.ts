@@ -40,6 +40,8 @@
 import type { Collector } from '.';
 import type { Cache, EventCacheRule, StoreCacheRule } from './cache';
 import type { Route } from './transformer';
+import type { State } from './state';
+import type { Config as MappingConfig } from './mapping';
 import type { ValidateEvents, JsonSchema } from './validate';
 
 /**
@@ -432,6 +434,9 @@ export namespace Flow {
     /** Cache configuration for this source. */
     cache?: Cache<EventCacheRule>;
 
+    /** Declarative store get/set. Paths resolve against `{ event, ingest }`. */
+    state?: State | State[];
+
     /**
      * Source-level variables (highest priority in cascade).
      * Overrides flow and root variables.
@@ -507,6 +512,9 @@ export namespace Flow {
     /** Cache configuration for this destination. */
     cache?: Cache<EventCacheRule>;
 
+    /** Declarative store get/set. Paths resolve against `{ event, ingest }`. */
+    state?: State | State[];
+
     /** Destination-level variables (highest priority in cascade). */
     variables?: Variables;
 
@@ -575,6 +583,15 @@ export namespace Flow {
 
     /** Cache configuration for this transformer. */
     cache?: Cache<EventCacheRule>;
+
+    /** Declarative store get/set. Paths resolve against `{ event, ingest }`. */
+    state?: State | State[];
+
+    /**
+     * Event mapping for a code-free transformer. The collector synthesizes a
+     * push that applies it to the event (a rule with `ignore: true` drops it).
+     */
+    mapping?: MappingConfig;
 
     /** Transformer-level variables (highest priority in cascade). */
     variables?: Variables;

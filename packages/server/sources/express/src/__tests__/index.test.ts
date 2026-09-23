@@ -209,13 +209,18 @@ describe('sourceExpress', () => {
       expect(mockExpress).toHaveBeenCalled();
       expect(mockExpress.json).toHaveBeenCalledWith({
         limit: '1mb',
-        type: ['application/json', 'text/plain'],
+        type: 'application/json',
       });
-      // The JSON parser is mounted per POST route, so unmatched paths never
-      // reach it.
+      expect(mockExpress.text).toHaveBeenCalledWith({
+        limit: '1mb',
+        type: 'text/plain',
+      });
+      // The body parsers are mounted per POST route, so unmatched paths never
+      // reach them.
       expect(mockApp.post).toHaveBeenCalledWith(
         '/collect',
         mockJsonMiddleware,
+        mockTextMiddleware,
         expect.any(Function),
       );
 

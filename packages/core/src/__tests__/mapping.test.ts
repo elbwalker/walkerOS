@@ -667,6 +667,83 @@ describe('getMappingValue', () => {
   });
 });
 
+describe('one producer per value', () => {
+  const source = { data: { path: '/toezicht', list: [{ id: 1 }, { id: 2 }] } };
+  const collector = createMockCollector();
+  const resolve = (mapping: Mapping.Value) =>
+    getMappingValue(source, mapping, { collector });
+
+  const winners: Array<[string, Mapping.Value, unknown]> = [
+    [
+      'map beats key',
+      { key: 'data.path', map: { fromMap: 'data.path' } },
+      { fromMap: '/toezicht' },
+    ],
+    ['set beats key', { key: 'data.path', set: ['data.path'] }, ['/toezicht']],
+    ['key beats fn', { key: 'data.path', fn: () => 'FN_WON' }, '/toezicht'],
+    [
+      'map beats fn',
+      { fn: () => 'FN_WON', map: { fromMap: 'data.path' } },
+      { fromMap: '/toezicht' },
+    ],
+    ['key alone', { key: 'data.path' }, '/toezicht'],
+    ['fn alone', { fn: () => 'FN_WON' }, 'FN_WON'],
+    [
+      'value is the fallback',
+      { key: 'data.nope', value: 'FALLBACK' },
+      'FALLBACK',
+    ],
+    [
+      'loop beats key and loops the source scope',
+      { key: 'data.list', loop: ['data.list', { key: 'id' }] },
+      [1, 2],
+    ],
+  ];
+  test.each(winners)('%s', async (_, mapping, expected) => {
+    expect(await resolve(mapping)).toEqual(expected);
+  });
+
+  test('a fn next to a key never runs', async () => {
+    const fn = jest.fn(() => 'FN_WON');
+    await resolve({ key: 'data.path', fn });
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  test('fn alone receives the root', async () => {
+    const fn = jest.fn(() => 'x');
+    await resolve({ fn });
+    expect(fn).toHaveBeenCalledWith(source, expect.anything());
+  });
+
+  test('condition sees the root and validate sees the produced value', async () => {
+    const condition = jest.fn(() => true);
+    const validate = jest.fn(() => true);
+    await resolve({ key: 'data.path', condition, validate });
+    expect(condition).toHaveBeenCalledWith(source, expect.anything());
+    expect(validate).toHaveBeenCalledWith('/toezicht', expect.anything());
+  });
+
+  const nonList: Array<[string, Mapping.Value, unknown]> = [
+    ['loop alone', { loop: ['data.path', { key: 'x' }] }, undefined],
+    [
+      'key with loop',
+      { key: 'data.path', loop: ['data.path', { key: 'x' }] },
+      undefined,
+    ],
+    [
+      'loop with a value fallback',
+      { loop: ['data.path', { key: 'x' }], value: 'FB' },
+      'FB',
+    ],
+  ];
+  test.each(nonList)(
+    'a loop over a non-list yields the fallback: %s',
+    async (_, mapping, expected) => {
+      expect(await resolve(mapping)).toEqual(expected);
+    },
+  );
+});
+
 describe('processEventMapping', () => {
   const { processEventMapping } = require('..');
 
@@ -885,6 +962,28 @@ describe('processEventMapping', () => {
 
     // Event should be ignored
     expect(result.ignore).toBe(true);
+  });
+
+  test('a policy rule resolving to nothing leaves no own key', async () => {
+    const event = { name: 'page view', data: { title: 'Home' } };
+    const config = { policy: { 'data.referrer': { key: 'data.referrer' } } };
+
+    const result = await processEventMapping(event, config, mockCollector);
+
+    expect('referrer' in result.event.data).toBe(false);
+  });
+
+  test('a denied consent-gated policy rule removes the existing value', async () => {
+    const event = { name: 'page view', user: { email: 'a@example.com' } };
+    const config = {
+      policy: {
+        'user.email': { key: 'user.email', consent: { marketing: true } },
+      },
+    };
+
+    const result = await processEventMapping(event, config, mockCollector);
+
+    expect('email' in result.event.user).toBe(false);
   });
 
   test('policy with no mapping rules', async () => {

@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Fingerprint to BigQuery
 
-This server flow turns raw request signals into a privacy-friendly identifier before events reach BigQuery. The Express source extracts the client IP and user agent, the fingerprint transformer hashes them into `user.hash`, and the GCP destination writes the events to a table. The ingest keys (`ip`, `userAgent`) must match the fingerprint `fields` (`ingest.ip`, `ingest.userAgent`) exactly, or the hash is computed over empty strings.
+This server flow turns raw request signals into a privacy-friendly identifier before events reach BigQuery. The Express source extracts the client IP and user agent, the fingerprint transformer hashes them into `user.hash`, and the GCP destination writes the events to a table. The ingest keys must be `ip` and `userAgent`, the fingerprint's default inputs (`ingest.ip`, `ingest.userAgent`); the transformer anonymizes the IP, reduces the user agent and keys the hash with a secret salt.
 
 <CodeSnippet
   code={`{
@@ -42,11 +42,7 @@ This server flow turns raw request signals into a privacy-friendly identifier be
         "fingerprint": {
           "package": "@walkeros/server-transformer-fingerprint",
           "config": {
-            "settings": {
-              "fields": ["ingest.ip", "ingest.userAgent"],
-              "output": "user.hash",
-              "length": 16
-            }
+            "settings": { "salt": "$env.FINGERPRINT_SALT", "length": 16 }
           }
         }
       },
@@ -72,10 +68,10 @@ This server flow turns raw request signals into a privacy-friendly identifier be
 
 ## Run it
 
-Save the config as `flow.json` and push an event through the built flow with the destination mocked. Nothing is written to BigQuery:
+Save the config as `flow.json` and push an event through the built flow with the destination mocked. The salt comes from the environment. Nothing is written to BigQuery:
 
 <CodeSnippet
-  code={`npx walkeros push flow.json -e '{"name":"page view"}' --simulate destination.bigquery`}
+  code={`FINGERPRINT_SALT=change-me npx walkeros push flow.json -e '{"name":"page view"}' --simulate destination.bigquery`}
   language="bash"
 />
 
@@ -102,9 +98,9 @@ In production every event lands as one row in your table, using the standard wal
   language="bash"
 />
 
-Add a daily rotation field to the fingerprint `fields` (see the transformer page) so the hash resets each day instead of persisting indefinitely.
+The hash rotates daily by default, so a visitor is not tracked across days. Use a long random salt per deployment in production.
 
 ## Next steps
 
-- [**Fingerprint transformer**](/docs/transformers/fingerprint): Rotation, IP anonymization, and hash fields
+- [**Fingerprint transformer**](/docs/transformers/fingerprint): Salt, rotation, site separation, and extra fields
 - [**GCP destination**](/docs/destinations/server/gcp): BigQuery table setup and mapping
