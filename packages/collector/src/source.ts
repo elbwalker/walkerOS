@@ -4,6 +4,7 @@ import type {
   Elb,
   Ingest,
   Source,
+  Transformer,
   WalkerOS,
 } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
@@ -15,7 +16,6 @@ import {
   parseTraceparent,
   isScope,
   tryCatchAsync,
-  getNextSteps,
   compileCache,
   checkCache,
   storeCache,
@@ -24,34 +24,12 @@ import {
   compileState,
   applyState,
 } from '@walkeros/core';
-import {
-  walkChain,
-  extractTransformerNextMap,
-  runTransformerChain,
-  cloneIngest,
-} from './transformer';
+import { runTransformerChain } from './transformer';
 import { buildReportError, errorMeta } from './report-error';
 import { isStateDelivery, shouldDeliver, setMark } from './on';
 import { reconcilePending } from './pending';
-
-/**
- * A Route is "static" when it's a transformer-ID string or an array of
- * transformer-ID strings. Static routes can be resolved once at init and
- * walked synchronously; conditional shapes (RouteConfig, mixed arrays)
- * depend on per-event context and resolve via getNextSteps at dispatch.
- */
-function isStaticRoute(
-  route: import('@walkeros/core').Transformer.Route | undefined,
-): route is string | string[] {
-  if (typeof route === 'string') return true;
-  if (
-    Array.isArray(route) &&
-    route.every((entry) => typeof entry === 'string')
-  ) {
-    return true;
-  }
-  return false;
-}
+import { createPushResult } from './destination';
+import { emitCollectorDrop } from './observerEmit';
 import { getCacheStore, getStateStore } from './cache';
 
 /**
@@ -153,18 +131,6 @@ export async function initSource(
       })
     : undefined;
 
-  // Resolve transformer chain for this source.
-  // Static (string / string[]) chains pre-walk at init (optimization).
-  // Conditional shapes (case / gate) require per-request context — see wrappedPush.
-  const staticPreChain = isStaticRoute(next)
-    ? walkChain(next, extractTransformerNextMap(collector.transformers))
-    : undefined;
-
-  // Resolve before chain for this source (consent-exempt, pre-source preprocessing).
-  const staticBeforeChain = isStaticRoute(before)
-    ? walkChain(before, extractTransformerNextMap(collector.transformers))
-    : undefined;
-
   // The pipeline's end. `terminus` replaces the collector entirely; see the
   // field's doc on Source.InitSource for the full (total) semantics.
   const terminalPush: Collector.PushFn = terminus ?? collector.push;
@@ -202,47 +168,39 @@ export async function initSource(
         ? rawEvent
         : { ...rawEvent, id: getSpanId() };
 
-    // Resolve before chain (static or conditional).
-    // Single-id results walk static `.next` links; multi-id results are
-    // explicit chains (fan-out from `many` is handled by the engine).
-    const beforeChain =
-      staticBeforeChain ??
-      (before !== undefined
-        ? (() => {
-            const ids = getNextSteps(before, createMappingRoot(scope.ingest));
-            if (ids.length === 0) return [];
-            const start = ids.length === 1 ? ids[0] : ids;
-            return walkChain(
-              start,
-              extractTransformerNextMap(collector.transformers),
-            );
-          })()
-        : []);
-
     // The before chain may fan out (return an array of events). The cache
     // check and destination push must run once per event so fan-out is
     // preserved end-to-end. Cache logic is request-scoped (keyed by the
     // scope's ingest), so it lives outside the loop. The actual pipeline
     // (preChain + collector.push) runs inside the loop, once per event.
-    let events: WalkerOS.DeepPartialEvent[] = [identified];
+    let copies: Transformer.ChainCopy[] = [
+      { event: identified, ingest: scope.ingest },
+    ];
 
-    // Run source.before chain (consent-exempt, pre-source preprocessing)
-    if (
-      beforeChain.length > 0 &&
-      collector.transformers &&
-      Object.keys(collector.transformers).length > 0
-    ) {
+    // Run source.before chain (consent-exempt, pre-source preprocessing).
+    // The route resolves hop by hop with `{ ingest, event }`, the event being
+    // the source's raw output with its span id already minted.
+    if (before !== undefined) {
+      const chainPath = `source.${sourceId}.before`;
       const beforeResult = await runTransformerChain(
         collector,
-        collector.transformers,
-        beforeChain,
+        collector.transformers || {},
+        before,
         identified,
         scope.ingest,
         scope.respond,
-        `source.${sourceId}.before`,
+        chainPath,
       );
-      if (beforeResult.event === null) {
-        return { ok: true } as Elb.PushResult;
+      if (beforeResult.copies.length === 0) {
+        // Dropped or stopped: the event never reaches the collector.
+        emitCollectorDrop(
+          collector,
+          identified,
+          scope.ingest,
+          beforeResult.droppedBy,
+          chainPath,
+        );
+        return createPushResult({ ok: true, dropped: true });
       }
       // Pipeline-halt signal from a `cache.stop: true` HIT inside the
       // source.before chain. Do NOT invoke collector.push — drop the event
@@ -253,38 +211,9 @@ export async function initSource(
       }
       if (beforeResult.respond) scope.respond = beforeResult.respond;
 
-      // The id the before chain ran under, and therefore the id its records
-      // carry. A fork that spreads its input copies this id onto every child;
-      // a rebuilt single result drops it. Both are corrected here. The
-      // invariant this establishes is narrow and deliberate: no child keeps
-      // the CHAIN INPUT's id. It is NOT "no two children share an id".
-      // Children spreading an id a transformer assigned mid-chain still
-      // collapse, because that id was chosen rather than inherited and is
-      // indistinguishable from a legitimate one here.
-      const chainEventId =
-        typeof identified.id === 'string' ? identified.id : '';
-
-      if (Array.isArray(beforeResult.event)) {
-        // A child that inherited the chain input's id is a distinct event and
-        // gets its own span. A child carrying an id the transformer chose
-        // keeps it; one with no id is minted downstream by `createEvent`.
-        events = beforeResult.event.map((child) =>
-          chainEventId !== '' && child.id === chainEventId
-            ? { ...child, id: getSpanId() }
-            : child,
-        );
-      } else {
-        // One result is the same logical event the chain received, so it keeps
-        // that id even when the transformer rebuilt the event from scratch.
-        // Without this the before-chain records and everything downstream of
-        // them land in two different journeys.
-        const single = beforeResult.event;
-        events =
-          chainEventId !== '' &&
-          !(typeof single.id === 'string' && single.id !== '')
-            ? [{ ...single, id: chainEventId }]
-            : [single];
-      }
+      // Every finished copy goes on with its own ingest and the id the
+      // runner gave it (a single copy keeps the source-minted id).
+      copies = beforeResult.copies;
     }
 
     // Source cache check (full=true by default for sources)
@@ -372,111 +301,36 @@ export async function initSource(
       }
     }
 
-    // Resolve chain: static (pre-computed) or conditional (per-event).
-    // Three dispatch shapes from `getNextSteps`:
-    // - []          → no route matched; passthrough to collector with no
-    //                 pre-chain.
-    // - ['x']       → walk static `.next` links from x and run as a single
-    //                 sequential subchain inside `collector.push`.
-    // - ['a','b',…] → `many` fan-out. Each id is an INDEPENDENT terminal
-    //                 subchain dispatched via its own `collector.push` call
-    //                 with a per-branch cloned ingest and `respond` cleared
-    //                 (no-respond-across-many doctrine). Error isolation
-    //                 per branch via tryCatchAsync.
-    //
-    // Note: a plain `next: ['a','b','c']` is `isStaticRoute` → pre-walked
-    // by `staticPreChain` as the legacy explicit sequential chain. Only
-    // `{ many: [...] }` reaches the multi-id branch here.
-    type Dispatch =
-      | { kind: 'single'; preChain: string[] }
-      | { kind: 'many'; branches: string[][] };
-
-    const dispatch: Dispatch = staticPreChain
-      ? { kind: 'single', preChain: staticPreChain }
-      : next !== undefined
-        ? (() => {
-            const ids = getNextSteps(next, createMappingRoot(scope.ingest));
-            if (ids.length === 0)
-              return { kind: 'single', preChain: [] } as Dispatch;
-            if (ids.length === 1)
-              return {
-                kind: 'single',
-                preChain: walkChain(
-                  ids[0],
-                  extractTransformerNextMap(collector.transformers),
-                ),
-              } as Dispatch;
-            return {
-              kind: 'many',
-              branches: ids.map((id) =>
-                walkChain(
-                  id,
-                  extractTransformerNextMap(collector.transformers),
-                ),
-              ),
-            } as Dispatch;
-          })()
-        : ({ kind: 'single', preChain: [] } as Dispatch);
-
     // Apply declarative state per event before handing off to the collector.
     // Entries run sequentially in array order at this single pipeline point.
     if (stateEntries && stateEntries.length > 0) {
-      events = await Promise.all(
-        events.map((event) =>
-          applyState(
+      copies = await Promise.all(
+        copies.map(async (copy) => ({
+          event: await applyState(
             stateEntries,
             (id) => getStateStore(id, collector),
-            event,
+            copy.event,
             collector,
-            scope.ingest,
+            copy.ingest,
           ),
-        ),
+          ingest: copy.ingest,
+        })),
       );
     }
 
-    // Push each event independently through the post-before pipeline.
-    // For non-fan-out (single event) this is a one-iteration loop and
-    // behaves exactly like the previous implementation.
+    // Push each event independently through the post-before pipeline. The
+    // source's `next` route travels as the pre-collector chain and resolves
+    // per event, after the source's state, inside `collector.push`.
     let pushResult: Elb.PushResult = { ok: true } as Elb.PushResult;
-    for (const event of events) {
-      if (dispatch.kind === 'many') {
-        // `many` fan-out: each branch is an independent terminal flow.
-        // Per-branch ingest clone, no respond propagation, error isolation
-        // via tryCatchAsync. Branch results are awaited and discarded;
-        // scope.respond is NOT updated from any branch.
-        await Promise.all(
-          dispatch.branches.map((branchChain, idx) =>
-            tryCatchAsync(
-              async () =>
-                terminalPush(event, {
-                  ...options,
-                  id: sourceId,
-                  ingest: cloneIngest(scope.ingest, `${sourceId}.${idx}`),
-                  respond: undefined,
-                  mapping: config,
-                  preChain: branchChain,
-                }),
-              (err) => {
-                collector.logger
-                  .scope('source:many')
-                  .error(`many branch ${idx} failed`, errorMeta(err));
-                return { ok: true } as Elb.PushResult;
-              },
-            )(),
-          ),
-        );
-        // `many` is fan-out, not enrichment — surface a generic OK.
-        pushResult = { ok: true } as Elb.PushResult;
-      } else {
-        pushResult = await terminalPush(event, {
-          ...options,
-          id: sourceId,
-          ingest: scope.ingest,
-          respond: scope.respond,
-          mapping: config,
-          preChain: dispatch.preChain,
-        });
-      }
+    for (const copy of copies) {
+      pushResult = await terminalPush(copy.event, {
+        ...options,
+        id: sourceId,
+        ingest: copy.ingest,
+        respond: scope.respond,
+        mapping: config,
+        preChain: next,
+      });
     }
 
     // Wait for any deferred MISS update work to land on the source's

@@ -146,6 +146,11 @@ Two flags control destination behaviour and they are not interchangeable:
 
 If both are set on the same rule, `ignore` wins.
 
+`ignore` suppresses one destination. To drop an event before any destination
+sees it, use a route `stop` in `collector.next`; to drop it for one destination
+by condition, use a `stop` in that destination's `before`. See
+[Dropping an event with `stop`](/docs/getting-started/flow#dropping-an-event-with-stop).
+
 <LiveCode
   language="typescript"
   labelInput="Configuration"

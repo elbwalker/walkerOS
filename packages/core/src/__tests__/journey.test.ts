@@ -1704,3 +1704,29 @@ describe('assembleJourneys - release provenance', () => {
     expect(journeys[0].hops[0].release).toBeUndefined();
   });
 });
+
+describe('assembleJourneys: collector drop', () => {
+  test('a dropped event settles the collector.push hop as skip / dropped', () => {
+    const records = [
+      rec({ stepId: 'collector.push', phase: 'in', elapsedMs: 0 }),
+      rec({
+        stepId: 'collector.push',
+        phase: 'skip',
+        skipReason: 'dropped',
+        meta: { by: 'route', at: 'source.web.next' },
+        elapsedMs: 2,
+      }),
+      rec({ stepId: 'collector.push', phase: 'out', elapsedMs: 3 }),
+    ];
+
+    const [journey] = assembleJourneys(records, SETTLED).journeys;
+    const hops = journey.hops.filter((h) => h.stepId === 'collector.push');
+
+    // One hop: the wrap's out does not overwrite the skip as terminal phase.
+    expect(hops).toHaveLength(1);
+    expect(hops[0].terminalPhase).toBe('skip');
+    expect(hops[0].status).toBe('skipped');
+    expect(hops[0].skipReason).toBe('dropped');
+    expect(hops[0].meta).toEqual({ by: 'route', at: 'source.web.next' });
+  });
+});

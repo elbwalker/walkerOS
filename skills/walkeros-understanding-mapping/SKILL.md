@@ -155,7 +155,7 @@ but should not create a separate `track("user login")` event in Amplitude.
 interface ValueConfig {
   key?: string; // Extract from path
   value?: Primitive; // Static fallback value
-  fn?: Function; // Custom transformation
+  fn?: Function; // Compute the value from the source
   map?: Record; // Object transformation
   loop?: [path, config]; // Array transformation
   set?: Value[]; // Create array from values
@@ -164,6 +164,12 @@ interface ValueConfig {
   validate?: Function; // Value validation
 }
 ```
+
+Exactly one producer runs per value, in this order: `loop`, `map`, `set`, `key`,
+`fn`. The rest never run, so a `fn` next to a `key` is ignored. `value` is the
+fallback when the producer yields nothing, including a `loop` over something
+that is not a list. To transform a field, use `fn` alone (it receives the
+source), or rewrite it with `policy` and read it with `key`.
 
 ---
 
@@ -312,6 +318,9 @@ mapping: {
 ```
 
 ### Policy with Consent
+
+A policy entry that resolves to nothing removes the field, so a denied consent
+gate redacts it:
 
 ```json
 {

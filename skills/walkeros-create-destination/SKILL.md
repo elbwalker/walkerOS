@@ -265,7 +265,7 @@ export const purchase: Flow.StepExample = {
 export const pageView: Flow.StepExample = {
   in: getEvent('page view', { timestamp: 1700000102 }),
   mapping: undefined,
-  out: ['event', 'page_view', { send_to: 'G-XXXXXX-1' }],
+  out: ['event', 'page_view', { send_to: 'G-XXXXXXXXXX' }],
 };
 
 // For destinations that handle consent updates, use the command field

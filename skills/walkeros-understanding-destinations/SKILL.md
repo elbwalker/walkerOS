@@ -115,6 +115,30 @@ evictions) and `?.dlq` (DLQ evictions). Build the key with `stepId()` from
 `@walkeros/core`. Point-in-time sizes stay on
 `collector.status.destinations[id].queuePushSize` / `dlqSize`.
 
+`queuePush` drains back into the destination once consent allows delivery. The
+DLQ is never replayed: an event that reaches it is gone once it is evicted,
+which is what makes the delivery rules below worth getting right.
+
+## Delivery timeout
+
+`config.timeout` bounds one delivery. A `push` or `pushBatch` that has not
+settled within it is abandoned, its events are routed to the DLQ and `failed` is
+incremented. The default is 10000 ms, applied whenever `timeout` is `0` or
+unset, so one slow destination never wedges the collector push.
+
+**A destination's own client timeout has to fit inside it, retry delays
+included.** Many SDK defaults are longer (30 s in several HTTP clients), and a
+longer one produces the worst outcome available: the collector stops waiting at
+10 s, dead-letters the batch and counts it lost, then the request lands anyway a
+few seconds later. Those events are both counted lost and actually written.
+Derive the client's per-attempt timeout from `config.timeout` minus what the
+retry delays can take, split across the attempts, so the last attempt finishes
+before the race does.
+
+The same bound applies at shutdown, where the collector races each pending batch
+flush against a fixed 5000 ms step timeout before destroying the destination. A
+destination whose retries need longer than that loses them on shutdown.
+
 ## Batch scheduling
 
 Set `config.batch` on a destination (with `pushBatch` implemented) to batch
@@ -161,13 +185,28 @@ compatibility.
 - **Resolves a `BatchOutcome`** - partial failure.
   `{ failed: [{ index, error? }] }` names the entries that did not make it, by
   index into `batch.entries`. Only those are DLQ'd; the rest count as delivered.
-  Use this whenever the vendor reports per-row results (BigQuery's `rowErrors`
-  is the reference case), so a later DLQ retry does not rewrite rows that
-  already landed.
+  Use this when the vendor reports per-row results (BigQuery's `rowErrors` is
+  the reference case), so a later DLQ retry does not rewrite rows that already
+  landed.
 
-Per-item retry is the destination SDK's responsibility (BigQuery, Kafka, HubSpot
-each have their own backoff semantics). Counters (`count`, `out`) are bumped
-only after a successful flush.
+**A `BatchOutcome` is for sinks that report per row, and for nothing else.** A
+sink that succeeds or fails as a whole (one SQL `INSERT`, one file write, one
+publish) must never report an all-failed outcome in place of throwing. Only a
+throw records a transport failure on the breaker, and only a flush with at least
+one delivered entry records a success, so an outcome where nothing succeeded
+records neither: a total outage passes the breaker unseen and it never opens.
+For a whole-batch sink there are two answers and no third one, resolve `void` or
+throw.
+
+Retry belongs to the destination, everything around it to the collector.
+Batching, the delivery timeout, the DLQ and the breaker are the collector's, and
+per-item retry is the destination SDK's responsibility (BigQuery, Kafka, HubSpot
+each have their own backoff semantics). A destination that adds a retry of its
+own therefore owns two obligations: keeping the attempts and their delays inside
+`config.timeout`, and making a repeat safe, through an idempotency key or a
+deduplication token computed once and reused across attempts. Without the
+second, a retry of a delivery the vendor had already accepted duplicates data.
+Counters (`count`, `out`) are bumped only after a successful flush.
 
 Operators also see `status.destinations[id].inFlightBatch`: the number of events
 buffered but not yet delivered.
@@ -274,8 +313,9 @@ Use as starting point: `packages/web/destinations/plausible/`
 
 ## Transformer Wiring
 
-Destinations can wire to post-collector transformer chains via the `before`
-property:
+Destinations can wire to their own transformer chain via the `before` property.
+It runs for this destination only, after the collector chain (`collector.next`,
+shared by every destination); a `stop` in it skips only this destination:
 
 ```typescript
 destinations: {

@@ -1,8 +1,9 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
-import type { Config, Destination, Rules, Settings } from '../types';
+import type { Config, Destination, Rule, Rules, Settings } from '../types';
 import {
   clone,
   getEvent,
+  getMappingValue,
   createMockContext,
   createMockLogger,
 } from '@walkeros/core';
@@ -128,6 +129,91 @@ describe('Server Destination Meta', () => {
     expect(url).not.toContain('access_token');
     expect(url).not.toContain(accessToken);
     expect(options.headers.Authorization).toBe(`Bearer ${accessToken}`);
+  });
+
+  test.each([
+    ['https://graph.facebook.com/v22.0', 'without a trailing slash'],
+    ['https://graph.facebook.com/v22.0/', 'with a trailing slash'],
+  ])('endpoint from url %s (%s)', async (url) => {
+    const config: Config = {
+      settings: { accessToken, pixelId: '1234567890', url },
+    };
+
+    await destination.push(
+      getEvent(),
+      createMockContext({ config, env: testEnv, id: 'test-meta' }),
+    );
+
+    expect(mockSendServer.mock.calls[0][0]).toBe(
+      'https://graph.facebook.com/v22.0/1234567890/events',
+    );
+  });
+
+  test('drops unknown user_data keys with a warning that omits values', async () => {
+    const logger = createMockLogger();
+    const event = getEvent('entity action', {
+      user: { id: 'us3r', email: 'private@example.com' },
+    });
+    const config: Config = {
+      settings: { accessToken, pixelId, user_data: { em: 'user.email' } },
+    };
+    const { collector } = await startFlow();
+    const rule: Rule = {
+      data: {
+        map: {
+          user_data: {
+            map: { email: 'user.email', fbclid: { value: 'abc' } },
+          },
+        },
+      },
+    };
+
+    await destination.push(
+      event,
+      createMockContext({
+        config,
+        rule,
+        collector,
+        data: await getMappingValue(event, rule.data, { collector }),
+        env: testEnv,
+        id: 'test-meta',
+        logger,
+      }),
+    );
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('dropped'),
+      {
+        keys: ['email'],
+      },
+    );
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain(
+      'private@example.com',
+    );
+
+    const body = mockSendServer.mock.calls[0][1];
+    const { user_data } = JSON.parse(body).data[0];
+    expect(Object.keys(user_data).sort()).toEqual(['em', 'fbc']);
+    expect(body).not.toContain('private@example.com');
+  });
+
+  test('does not warn for known user_data keys', async () => {
+    const logger = createMockLogger();
+    const config: Config = {
+      settings: {
+        accessToken,
+        pixelId,
+        user_data: { em: 'user.email', fbclid: { value: 'abc' } },
+      },
+    };
+
+    await destination.push(
+      getEvent(),
+      createMockContext({ config, env: testEnv, id: 'test-meta', logger }),
+    );
+
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   test('environment customization', async () => {

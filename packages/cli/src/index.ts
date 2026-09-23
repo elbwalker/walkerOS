@@ -249,8 +249,6 @@ export type { SSEEvent, SSEParseResult } from './core/sse.js';
 // === Utilities ===
 // Export utilities for programmatic usage
 export { loadConfig, loadJsonConfig } from './config/utils.js';
-export { findExample } from './commands/simulate/example-loader.js';
-export { compareOutput } from './commands/simulate/compare.js';
 
 // === Telemetry ===
 export * as telemetry from './telemetry/index.js';
@@ -265,7 +263,6 @@ export type {
   MinifyOptions,
 } from './types/bundle.js';
 export type { BundleStats } from './commands/bundle/bundler.js';
-export type { ExampleLookupResult } from './commands/simulate/example-loader.js';
 export type { PushResult } from './commands/push/types.js';
 export type { PrepareInput, PreparedFlow } from './commands/push/prepare.js';
 export type {

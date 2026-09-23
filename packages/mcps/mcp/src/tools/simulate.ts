@@ -67,7 +67,8 @@ const inputSchema = {
   step: z
     .string()
     .describe(
-      'Required. Target step as "type.name" — e.g. "source.demo", "destination.gtag", "transformer.router".',
+      'Required. Target step as "type.name", e.g. "source.demo", "collector.default", "destination.gtag", "transformer.router". ' +
+        'A collector step runs enrichment and then collector.next, returning every event the destinations would receive (none after a stop).',
     ),
   verbose: z
     .boolean()

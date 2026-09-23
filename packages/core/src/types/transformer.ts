@@ -8,20 +8,29 @@ import type { MatchExpression } from './matcher';
 /**
  * Unified route grammar for Flow v4. A `Route` is one of:
  * - a transformer ID string (`"redact"`)
- * - a sequence of routes (`["a", "b", "c"]` — sugar for chained `.next`)
- * - a `RouteConfig` — a gated / dispatching node.
+ * - a sequence of routes (`["a", "b", "c"]`, run in order)
+ * - a `RouteConfig`: a gated / dispatching node.
  *
- * `RouteConfig` is a disjoint union — set exactly one of `next`, `one`,
- * `many`, or neither (pure gate). The disjointness is enforced by `never`
- * sibling properties at the type level and `z.strictObject` at the schema
- * level.
+ * Exception: an array made only of route configs (no id, no nested array)
+ * is an implicit `one`, first match wins (`[gateA, gateB]` runs at most one
+ * of them). Write `{ one: [...] }` to say so, or add an id to make it a
+ * sequence (`["x", gateA, gateB]` evaluates both gates in order).
+ *
+ * `RouteConfig` is a disjoint union: set exactly one of `next`, `one`,
+ * `many`, `stop`, or none of them (pure gate). The disjointness is enforced
+ * by `never` sibling properties at the type level and `z.strictObject` at the
+ * schema level.
  *
  * Operators:
  * - `next`: single continuation.
  * - `one`: first-match dispatch (walk entries, first whose match passes wins).
- * - `many`: all-match terminal fan-out (every matching entry spawns an
- *   independent flow; main chain terminates here). Restricted to
- *   pre-collector positions (source.next, transformer.next, transformer.before).
+ * - `many`: all-match fan-out. Every matching entry is its own copy of the
+ *   event that finishes the rest of the path on its own. Valid in every chain
+ *   field.
+ * - `stop`: ends the running copy of the event (optionally gated by `match`).
+ *
+ * Sequences resolve lazily: a conditional segment is evaluated only when its
+ * position is reached, so it sees what earlier steps wrote.
  */
 export type Route = string | Route[] | RouteConfig;
 
@@ -29,6 +38,7 @@ export type RouteConfig =
   | RouteNextConfig
   | RouteOneConfig
   | RouteManyConfig
+  | RouteStopConfig
   | RouteGateConfig;
 
 export interface RouteNextConfig {
@@ -36,6 +46,7 @@ export interface RouteNextConfig {
   next: Route;
   one?: never;
   many?: never;
+  stop?: never;
 }
 
 export interface RouteOneConfig {
@@ -43,6 +54,7 @@ export interface RouteOneConfig {
   one: Route[];
   next?: never;
   many?: never;
+  stop?: never;
 }
 
 export interface RouteManyConfig {
@@ -50,6 +62,19 @@ export interface RouteManyConfig {
   many: Route[];
   next?: never;
   one?: never;
+  stop?: never;
+}
+
+/**
+ * Ends the running copy of the event. Without `match` the stop is
+ * unconditional; with `match` a failing match falls through like a gate.
+ */
+export interface RouteStopConfig {
+  match?: MatchExpression;
+  stop: true;
+  next?: never;
+  one?: never;
+  many?: never;
 }
 
 export interface RouteGateConfig {
@@ -57,6 +82,7 @@ export interface RouteGateConfig {
   next?: never;
   one?: never;
   many?: never;
+  stop?: never;
 }
 
 /**
@@ -168,20 +194,36 @@ export interface Result<E = WalkerOS.DeepPartialEvent> {
 }
 
 /**
+ * One finished copy of a chain run: its event and its own ingest. `E`
+ * narrows the event where the copy is known complete (a full event after
+ * `collector.next`).
+ */
+export interface ChainCopy<E = WalkerOS.DeepPartialEvent> {
+  event: E;
+  ingest: Ingest;
+}
+
+/**
  * Result of running a transformer chain.
- * Returns the processed event (singular, fan-out array, or null if dropped)
- * alongside the potentially wrapped respond function.
  *
- * `stopped` signals pipeline-halt — when set, the caller MUST NOT propagate
- * the event further downstream (no destinations, no subsequent chains).
- * Used by `cache.stop: true` on pre-collector transformers so the documented
- * "downstream transformers and destinations are skipped" semantic holds.
+ * `copies` is the one carrier of the outcome: every finished copy that
+ * continues downstream (one without a fork, one per surviving fork), each
+ * with the ingest it finished with. The next position goes on with each
+ * pair.
+ *
+ * - dropped (a transformer returned `false` or threw): `copies` empty,
+ *   `droppedBy` names the transformer.
+ * - route `stop`: `copies` empty, `stopped: true`; `droppedBy` names the
+ *   transformer whose route stopped it, absent for the start route.
+ * - `cache.stop: true` HIT: `copies` holds the cached copy, `stopped: true`.
+ *   The caller MUST NOT propagate it further downstream than its position
+ *   allows (pipeline halt).
  */
 export interface ChainResult {
-  event: WalkerOS.DeepPartialEvent | WalkerOS.DeepPartialEvent[] | null;
+  copies: ChainCopy[];
   respond?: import('../respond').RespondFn;
   stopped?: true;
-  /** Transformer that stopped the chain (returned false or threw). */
+  /** Transformer that dropped or stopped the chain. */
   droppedBy?: string;
 }
 

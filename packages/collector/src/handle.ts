@@ -75,8 +75,11 @@ export async function commonHandleCommand(
     switch (action) {
       case Const.Commands.Config:
         if (isObject(data)) {
+          // `merge: false`: a config array (the `next` route) is replaced,
+          // never unioned with the previous one.
           assign(collector.config, data as Partial<Collector.Config>, {
             shallow: false,
+            merge: false,
           });
           onData = data;
           shouldNotify = true;
@@ -239,7 +242,18 @@ export function prepareEvent(
 }
 
 /**
- * Creates a full event from a partial event.
+ * Collector state an event is floored with: its globals under the event's
+ * own, its user and consent when the event has none.
+ */
+interface EventFloors {
+  globals: WalkerOS.Properties;
+  user: WalkerOS.User;
+  consent: WalkerOS.Consent;
+}
+
+/**
+ * Creates a full event from a partial event, floored with the collector's
+ * current state (globals, user, consent).
  *
  * @param collector The walkerOS collector instance.
  * @param partialEvent The partial event to transform.
@@ -249,6 +263,38 @@ export function createEvent(
   collector: Collector.Instance,
   partialEvent: WalkerOS.PartialEvent,
   ingest?: Ingest,
+): WalkerOS.Event {
+  return buildEvent(collector, partialEvent, ingest, {
+    globals: collector.globals,
+    user: collector.user,
+    consent: collector.consent,
+  });
+}
+
+/**
+ * Completes an event that was already created and then edited by a chain
+ * (`collector.next`): fills only the fields that are missing, never floors
+ * globals, user or consent again, so a step that removed one keeps it
+ * removed.
+ */
+export function completeEvent(
+  collector: Collector.Instance,
+  event: WalkerOS.DeepPartialEvent,
+  ingest?: Ingest,
+): WalkerOS.Event {
+  return buildEvent(collector, prepareEvent(collector, event), ingest, {
+    globals: {},
+    user: {},
+    consent: {},
+  });
+}
+
+/** Shape completion shared by `createEvent` and `completeEvent`. */
+function buildEvent(
+  collector: Collector.Instance,
+  partialEvent: WalkerOS.PartialEvent,
+  ingest: Ingest | undefined,
+  floors: EventFloors,
 ): WalkerOS.Event {
   // The name arrives from client-controlled input, so its declared type is a
   // claim rather than a guarantee. A wrong-typed value must be rejected here:
@@ -274,9 +320,9 @@ export function createEvent(
     context = {},
     globals = {},
     custom = {},
-    user = collector.user,
+    user = floors.user,
     nested = [],
-    consent = collector.consent,
+    consent = floors.consent,
     // A supplied id is preserved: sources and the push wrap mint the span
     // early so pre-enrichment records can carry it.
     id = getSpanId(),
@@ -314,8 +360,8 @@ export function createEvent(
   };
 
   // The collector's globals (config statics plus `walker globals`) are the
-  // floor for every event; values the event carries win per key.
-  const mergedGlobals = assign(collector.globals, globals);
+  // floor for every created event; values the event carries win per key.
+  const mergedGlobals = assign(floors.globals, globals);
 
   return {
     name,

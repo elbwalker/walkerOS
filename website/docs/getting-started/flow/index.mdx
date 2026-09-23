@@ -378,7 +378,7 @@ Link transformers together using `next`:
 
 **Explicit chain control with arrays:**
 
-For explicit control over the transformer chain order, use an array instead of a string. This bypasses the automatic chain resolution:
+For explicit control over the order, use an array instead of a string. The array is the backbone of the chain: its entries run in order, and a member's own `next` runs right after that member before the array continues:
 
 <CodeSnippet
   code={`{
@@ -399,14 +399,15 @@ For explicit control over the transformer chain order, use an array instead of a
 
 | Syntax | Behavior |
 |--------|----------|
-| `"next": "fingerprint"` | Walks chain via each transformer's `next` property |
-| `"next": ["fingerprint", "enrich"]` | Uses exact order specified, ignores transformer `next` properties |
+| `"next": "fingerprint"` | Runs `fingerprint`, then follows each transformer's own `next` |
+| `"next": ["fingerprint", "enrich"]` | Runs the array in order; a member's own `next` is inserted right after that member |
 
-**Connecting to sources and destinations:**
+**Connecting to sources, the collector, and destinations:**
 
 - **Source preprocessing**: Use `before` on a source for consent-exempt preprocessing (runs before the source's push)
-- **Pre-collector chain**: Use `next` on a source to route events through transformers before the collector
-- **Post-collector chain**: Use `before` on a destination to route events through transformers after the collector
+- **Source chain**: Use `next` on a source to route its events through transformers before the collector
+- **Collector chain**: Use `next` on the collector to run one chain for every event, after the collector completed it and before the destination fan-out
+- **Destination chain**: Use `before` on a destination to run transformers for that destination only
 - **Post-push chain**: Use `next` on a destination to process events after the destination push completes
 
 <CodeSnippet
@@ -435,7 +436,7 @@ For explicit control over the transformer chain order, use an array instead of a
   language="json"
 />
 
-All chain fields (`before` and `next`) accept arrays for explicit chain control (see "Explicit chain control with arrays" above).
+All chain fields (`before` and `next`, including `collector.next`) accept the same route grammar: a transformer id, an array, or a route config (see [Conditional routing](#conditional-routing) below).
 
 See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
 
@@ -446,12 +447,13 @@ Sources, transformers, collectors, and destinations connect in specific ways. Th
 | From | To | Field | Notes |
 |------|----|-------|-------|
 | Source | Transformer | `before` on source | Consent-exempt preprocessing |
-| Source | Transformer | `next` on source | Pre-collector chain |
+| Source | Transformer | `next` on source | Source chain, runs before the collector |
 | Source | Collector | omit `next` | Default: events go straight to collector |
 | Transformer | Transformer | `before` on transformer | Pre-transform enrichment |
 | Transformer | Transformer | `next` on transformer | Chain continues to next transformer |
-| Collector | Transformer | `before` on destination | Post-collector chain |
-| Collector | Destination | omit `before` | Default: events go straight to destination |
+| Collector | Transformer | `next` on collector | Collector chain, runs once per event before the destination fan-out |
+| Collector | Transformer | `before` on destination | Destination chain, runs for that destination only |
+| Collector | Destination | omit `collector.next` and `before` | Default: events go straight to every destination |
 | Destination | Transformer | `next` on destination | Post-push processing |
 
 **Connections that are not allowed:**
@@ -461,28 +463,34 @@ Sources, transformers, collectors, and destinations connect in specific ways. Th
 
 #### Chain resolution
 
-The `next` and `before` fields on sources, transformers, and destinations all accept either a string or an array. The resolution behavior differs:
+Every chain field (`source.before`, `source.next`, `transformer.before`, `transformer.next`, `collector.next`, `destination.before`, `destination.next`) accepts the same value and resolves it the same way:
 
 | Value | Behavior |
 |-------|----------|
-| `"fingerprint"` (string) | Walks `transformer.next` links until the chain ends |
-| `["fingerprint", "enrich"]` (array) | Uses the array as-is, ignoring each transformer's `next` property |
+| `"fingerprint"` (string) | Runs `fingerprint`, then its own `next`, and so on until a step has no `next` |
+| `["fingerprint", "enrich"]` (array) | Runs the array in order. A member's own `next` is inserted right after that member, then the array continues |
 
-When walking a string chain, three edge cases apply:
+For example, `["bot", "validate", "session"]` where `bot` has `"next": "flag"` runs `bot`, `flag`, `validate`, `session`. Insertion is recursive: if `flag` has a `next` of its own, it runs right after `flag`. A string is the one-member case of the same rule.
 
-1. **String with array `next`**: If `fingerprint.next` is `["a", "b"]`, the walker appends that array and stops. The final chain becomes `["fingerprint", "a", "b"]`.
-2. **Missing target**: If a transformer name in the chain does not exist, that step is skipped and the event proceeds unchanged. If a string chain points to a nonexistent first transformer, the chain is empty and the event goes through without transformation.
-3. **Circular reference**: Detected via a visited set and safely broken, with no infinite loop.
+The rules that apply everywhere:
 
-#### Pre-collector vs post-collector transformers
+1. **Resolved per hop**: each route is evaluated when the event reaches it, never ahead of time. Its `match` reads `{ ingest, event }` as the previous step left them, so a route can decide on a value an earlier step loaded, for example a `state` get that writes `ingest.tier`. A conditional `next` on a transformer sees what that transformer did.
+2. **Repeated steps run as written**: a step listed twice runs twice.
+3. **Cycles**: a transformer's own `next` that leads back to a step already on that insertion path is skipped. Each copy of an event is also limited to 256 steps.
+4. **Unknown ids**: an id that names no transformer is logged as a warning and skipped, and the chain continues. `walkeros validate` reports it as an `UNKNOWN_ROUTE_TARGET` error.
+5. **Forks and stops**: `many` splits the event into independent copies and `stop` ends one copy, see [Route operators](#route-operators) and [Dropping an event with `stop`](#dropping-an-event-with-stop).
+
+#### Where transformers run
 
 All transformers live in a single `transformers` pool. Their position in the pipeline depends on which field references them:
 
 ```
-[Source.before] → Source ──[next]──→ Pre-transformers ──→ Collector ──→ Post-transformers ──[before]──→ Destination ──[next]──→ Post-push
+[Source.before] → Source ──[next]──→ Source chain ──→ Collector ──[next]──→ Collector chain ──→ fan-out ──[before]──→ Destination chain ──→ Destination ──[next]──→ Post-push
 ```
 
-The same transformer can appear in both a pre-collector and a post-collector chain. For example, you might use `fingerprint` in a source's `next` chain and again in a destination's `before` chain. Each invocation runs independently.
+The same transformer can appear in several chains. For example, you might use `fingerprint` in a source's `next` chain and again in a destination's `before` chain. Each invocation runs independently.
+
+Use `collector.next` for work every destination needs, and `destination.before` for work only one destination needs. The collector chain runs once per event, after the collector completed it (globals, user, consent, ids) and before the event is handed to the destinations.
 
 <CodeSnippet
   code={`{
@@ -496,39 +504,53 @@ The same transformer can appear in both a pre-collector and a post-collector cha
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint"
     },
+    "validate": {
+      "package": "@walkeros/transformer-validate"
+    },
     "enrich": {
       "package": "@walkeros/transformer-enricher"
     }
+  },
+  "collector": {
+    "next": "validate"
   },
   "destinations": {
     "analytics": {
       "package": "@walkeros/server-destination-gcp",
       "before": "enrich"
+    },
+    "archive": {
+      "package": "@walkeros/server-destination-gcp"
     }
   }
 }`}
   language="json"
 />
 
-In this config, `fingerprint` runs before the collector (pre-chain) and `enrich` runs after the collector but before the `analytics` destination (post-chain).
+In this config, `fingerprint` runs before the collector (source chain), `validate` runs once per event for both destinations (collector chain), and `enrich` runs only before the `analytics` destination (destination chain).
 
 #### Conditional routing
 
-Every chain field (`source.before`, `source.next`, `transformer.before`, `transformer.next`, `destination.before`, `destination.next`) accepts a `Route`. `Route` is recursive:
+Every chain field (`source.before`, `source.next`, `transformer.before`, `transformer.next`, `collector.next`, `destination.before`, `destination.next`) accepts a `Route`. `Route` is recursive:
 
 ```typescript
 type Route = string | Route[] | RouteConfig;
 ```
 
-A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, or none of them (pure gate that only filters by `match`). `match` is optional everywhere; omit it to always match.
+A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, `stop`, or none of them (pure gate that only filters by `match`). `match` is optional everywhere; omit it to always match.
+
+At every position, `match` reads the same root: `{ ingest, event }`. Use `ingest.*` for request context and `event.*` for the event as it is at that point (at `source.before`, the source's raw output). Each route is evaluated only when the event reaches it.
 
 ##### Route operators
 
 A `RouteConfig` is a disjoint union. Pick the operator that matches the routing shape you need:
 
 - `next`: single continuation. Optionally gated by `match`.
-- `one`: first-match dispatch. Walk entries in order; the first whose `match` passes wins, and the main chain continues with that entry's `Route`.
-- `many`: all-match terminal fan-out. Every matching entry spawns an independent flow that runs to its own exit. The main chain terminates at the `many` step. Restricted to pre-collector positions (`source.next`, `transformer.next`, `transformer.before`). Post-collector fan-out uses the destinations map.
+- `one`: first-match dispatch. Walk entries in order; the first whose `match` passes wins, and the chain continues with that entry's `Route`.
+- `many`: all-match fan-out, allowed in every chain field. Every matching entry becomes its own copy of the event, and each copy finishes the rest of the path on its own: the rest of the array, every enclosing chain, and the positions after it (collector, destinations). Copies are never merged. If only one entry matches, the event continues without a copy.
+- `stop`: `{ "stop": true }` ends the running copy of the event. With `match`, it ends the copy only when the match passes; otherwise the chain continues.
+
+An array made only of route configs, with no transformer id in it, is an implicit `one`: the first matching entry wins. Write `{ "one": [...] }` to make that explicit, or add a transformer id to make it a sequence.
 
 First-match dispatch is the `one` operator:
 
@@ -552,9 +574,9 @@ First-match dispatch is the `one` operator:
   language="json"
 />
 
-`one` entries are evaluated in order and the first matching `Route` wins. The trailing entry omits `match`, so it always matches and acts as the default branch. If no entry matches, the event passes through unchanged to the collector.
+`one` entries are evaluated in order and the first matching `Route` wins. The trailing entry omits `match`, so it always matches and acts as the default branch. If no entry matches, the route selects nothing and the event continues unchanged, here to the collector.
 
-Terminal fan-out is the `many` operator. Use it when one inbound event needs to feed several independent processing branches (for example, splitting a webhook payload into per-vendor enrichment paths before the collector):
+Fan-out is the `many` operator. Use it when one inbound event needs to feed several independent branches, for example a parser plus an audit log:
 
 <CodeSnippet
   code={`{
@@ -567,10 +589,7 @@ Terminal fan-out is the `many` operator. Use it when one inbound event needs to 
             "match": { "key": "ingest.path", "operator": "prefix", "value": "/purchase" },
             "next": "purchase_parser"
           },
-          {
-            "match": { "key": "ingest.path", "operator": "prefix", "value": "/signup" },
-            "next": "signup_parser"
-          }
+          { "next": "audit_log" }
         ]
       }
     }
@@ -579,7 +598,60 @@ Terminal fan-out is the `many` operator. Use it when one inbound event needs to 
   language="json"
 />
 
-Every entry in `many` whose `match` passes runs as its own branch. The main chain stops at the `many` step, so each branch is responsible for its own continuation. If no entry matches, the event is dropped from the pre-collector pipeline.
+A request to `/purchase` matches both entries, so it becomes two copies: one runs `purchase_parser`, the other `audit_log`, and each then continues to the collector and the destinations on its own. Any other request matches only `audit_log` and continues without a copy. If no entry matches, the event continues unchanged.
+
+Each copy gets its own `event.id`, derived from the original id and the branch position, so deduplication on `event.id` (and vendor deduplication such as Meta's `event_id`) keeps every copy. The copies share the same `trace`. A transformer that returns an array of results forks the same way.
+
+`many` works in every chain field and at any depth. Inside an array, each copy finishes the rest of the array:
+
+```json
+"next": ["decode", { "many": ["enrich_a", "enrich_b"] }, "session"]
+```
+
+This runs `decode`, then two copies: `enrich_a` then `session`, and `enrich_b` then `session`.
+
+#### Dropping an event with `stop`
+
+A `stop` entry ends the running copy of the event. Combine it with `match` to drop only some events; without `match` it always stops. A `stop` that does not match falls through and the chain continues. In a `many`, a `stop` ends only its own copy; the other copies continue.
+
+What a stop means depends on the position it is resolved in:
+
+| Position | A resolved `stop` means |
+|----------|-------------------------|
+| `source.before`, `source.next` | The event never reaches the collector. The push result is `{ ok: true, dropped: true }` |
+| `transformer.before`, `transformer.next`, a transformer result `{ next }` | The running copy ends; the position that started the chain applies its own meaning |
+| `collector.next` | No destination receives the event |
+| `destination.before` | This destination skips the event; other destinations are unaffected |
+| `destination.next` | The post-push chain ends; delivery already happened |
+
+`collector.next` runs before the destination fan-out, so a `stop` there drops the event for **all** destinations. To drop an event for one destination only, put the `stop` in that destination's `before`.
+
+Drop product impressions everywhere:
+
+```json
+"collector": {
+  "next": [
+    { "match": { "key": "event.name", "operator": "eq", "value": "product impression" }, "stop": true },
+    "session"
+  ]
+}
+```
+
+Drop product impressions for one vendor only:
+
+```json
+"destinations": {
+  "meta": {
+    "package": "@walkeros/web-destination-meta",
+    "before": [
+      { "match": { "key": "event.name", "operator": "eq", "value": "product impression" }, "stop": true },
+      "redact"
+    ]
+  }
+}
+```
+
+A dropped event is recorded as a `skip` with reason `dropped` in the flow's observability data. `walkeros validate` warns about entries placed after an unconditional `stop`, because they can never run.
 
 To name and reuse a chain without writing code, declare a **path** transformer: a transformer entry with no `code` / `package`, just `before` / `next` / `cache`. The collector synthesizes a code-less passthrough so the named entry can be referenced from any `Route`:
 
@@ -694,7 +766,8 @@ The collector processes events from sources and routes them to destinations:
     },
     "consent": {
       "functional": true
-    }
+    },
+    "next": ["bot", "session"]
   }
 }`}
   language="json"
@@ -704,6 +777,7 @@ The collector processes events from sources and routes them to destinations:
 - **`run`** - Whether to start the collector automatically (default: `true`)
 - **`globals`** - Properties added to every event
 - **`consent`** - Default consent state
+- **`next`** - Collector chain: a `Route` that runs once per event, after the collector completed it and before the destination fan-out. Every destination receives what it produces; a `stop` here reaches no destination, and each `many` copy is delivered to the destinations on its own. Per-destination work stays on `destination.before`
 
 See [Collector documentation](/docs/collector/) for complete options.
 
@@ -1004,7 +1078,7 @@ walkerOS uses a clear type hierarchy:
 │  ├── transformers: { ... }                                      │
 │  ├── destinations: { ... }                                      │
 │  ├── stores: { ... }                                            │
-│  └── collector: { ... }                                         │
+│  └── collector: { next?, globals?, ... }                        │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               │ CLI bundles and transforms

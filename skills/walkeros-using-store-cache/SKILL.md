@@ -17,7 +17,7 @@ populate every tier on the unwind. Writes go to the backing first, then to the
 cache best-effort.
 
 The wrapping is transparent: a transformer wired to `$store.crm` does not know
-whether reads hit a memory cache, a Redis tier, or the underlying API.
+whether reads hit a memory cache, a GCS tier, or the underlying Sheets API.
 
 **Core principle:** the cache is advisory. Backing is the source of truth.
 Failed cache operations degrade performance, never correctness.
@@ -40,7 +40,7 @@ serve bytes with `file: true` and no cache, or cache a structured store with no
 - A store has rate limits or slow HTTP round-trips (Sheets, custom API, S3
   metadata)
 - You need to deduplicate concurrent reads on a cold key (thundering herd)
-- You want to compose multi-tier caches (memory → Redis → API)
+- You want to compose multi-tier caches (memory → GCS → Sheets)
 - You're migrating off `@walkeros/store-memory` (removed in favor of the
   built-in tier)
 
@@ -65,13 +65,20 @@ in a session share the same key.
     }
   },
   "transformers": {
-    "enrich": {
-      "package": "@walkeros/transformer-enrich",
+    "sessionLookup": {
+      "code": {
+        "type": "session-lookup",
+        "push": "$code:async (event, context) => { if (!event.user?.session) return; const session = await context.env.store.get(event.user.session); if (session) return { event: { ...event, data: { ...event.data, session } } }; }"
+      },
       "env": { "store": "$store.sessions" }
     }
   }
 }
 ```
+
+walkerOS ships no generic lookup transformer, so the consumer here is an inline
+`code` transformer. Any transformer or destination that reads its `env.store`
+works the same way.
 
 The first lookup hits Sheets and populates the built-in in-memory tier with a
 300-second TTL. The next 300 seconds of identical reads hit memory and skip the
@@ -81,16 +88,18 @@ Without the cache: 60 events in 60 seconds = 60 Sheets reads = quota tripped (60
 req/min limit) in one minute. With the cache: 60 events in 60 seconds = 1 Sheets
 read.
 
-## Recipe: memoize a slow API store
+## Recipe: memoize an object storage store
 
-Same shape, longer TTL because the API is the cold backing:
+Same shape, longer TTL because every read is a network round-trip to the bucket:
 
 ```json
 {
   "stores": {
     "users": {
-      "package": "@walkeros/server-store-api",
-      "config": { "settings": { "endpoint": "$env.USER_API_URL" } },
+      "package": "@walkeros/server-store-gcs",
+      "config": {
+        "settings": { "bucket": "my-user-records", "prefix": "users/" }
+      },
       "cache": { "rules": [{ "ttl": 3600 }] }
     }
   }
@@ -122,51 +131,61 @@ wins. The match context is `{ key, value? }`, not event data:
 
 A rule without `match` always matches. Place it last as a fallback.
 
-## Recipe: multi-tier composition (memory → Redis → API)
+## Recipe: multi-tier composition (memory → GCS → Sheets)
 
-When the working set exceeds the memory tier's capacity, add a Redis layer
-between memory and the cold backing. The consumer still wires to `$store.api`;
-the tiers resolve automatically.
+When the working set exceeds the memory tier's capacity, or cached values should
+survive restarts and be shared across instances, add an object storage layer
+between memory and the cold backing. The consumer still wires to `$store.crm`;
+the tiers resolve automatically. The cache tier must be fs, S3, GCS, or the
+built-in memory tier: the Sheets store cannot hold cache entries.
 
 ```json
 {
   "stores": {
-    "redis": {
-      "package": "@walkeros/server-store-redis",
-      "config": { "settings": { "url": "$env.REDIS_URL" } },
+    "files": {
+      "package": "@walkeros/server-store-gcs",
+      "config": {
+        "settings": { "bucket": "my-cache-bucket", "prefix": "cache/" }
+      },
       "cache": { "rules": [{ "ttl": 300 }] }
     },
-    "api": {
-      "package": "@walkeros/server-store-api",
-      "config": { "settings": { "endpoint": "$env.API_URL" } },
+    "crm": {
+      "package": "@walkeros/server-store-sheets",
+      "config": { "settings": { "id": "1AbC...", "sheet": "Customers" } },
       "cache": {
-        "store": "redis",
+        "store": "files",
         "rules": [{ "ttl": 86400 }]
       }
     }
   },
   "transformers": {
-    "enrich": {
-      "env": { "store": "$store.api" }
+    "crmLookup": {
+      "code": {
+        "type": "crm-lookup",
+        "push": "$code:async (event, context) => { if (!event.user?.id) return; const crm = await context.env.store.get(event.user.id); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
+      },
+      "env": { "store": "$store.crm" }
     }
   }
 }
 ```
 
-Lookup chain on `api.get(K)`:
+Lookup chain on `crm.get(K)`:
 
-1. `api`'s tier (Redis) — HIT, return.
-2. On Redis MISS, the Redis wrapper checks its own tier (memory `__cache`). If
-   memory HIT, return up and Redis populates.
-3. On all MISS, call the underlying API. Each traversed tier populates on the
-   unwind.
+1. `crm`'s tier is the `files` store. The `files` wrapper checks its own tier
+   (memory `__cache`) first, then GCS. HIT, return. A GCS HIT also populates
+   memory.
+2. On all MISS, call the underlying Sheets store. Each traversed tier populates
+   on the unwind: `crm` writes to `files`, which writes GCS and then memory.
 
-TTL ordering: shortest at the top (memory 300s), longest at the cold end (API
-86400s). The bound on staleness is the longest TTL in the chain.
+TTL ordering: shortest at the top (the `files` memory tier, 300s), longest at
+the cold end (the `crm` entries in GCS, 86400s). A hit in a lower tier restarts
+the TTL of every tier above it, so the bound on staleness is the sum of the TTLs
+along the chain (86400s + 300s here), not the longest one.
 
 **Async-safe by design.** Whether your cache store's `get` is synchronous (the
 built-in `__cache`, an in-memory store) or asynchronous
-(`@walkeros/server-store-fs`, Redis, the cache wrapper itself), the collector
+(`@walkeros/server-store-fs`, S3, GCS, the cache wrapper itself), the collector
 reads through with an `await` internally. You can mix sync and async stores
 freely in a multi-tier chain without any extra configuration — the same HIT/MISS
 semantics apply.

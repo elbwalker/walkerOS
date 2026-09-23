@@ -125,6 +125,51 @@ describe('transformerGa4', () => {
     });
   });
 
+  describe('maxEvents cap', () => {
+    const url = 'https://x/g/collect?v=2&tid=G-X';
+    const lines = (n: number) =>
+      Array.from({ length: n }, (_, i) => `en=page_view&dt=P${i}`).join('\n');
+
+    it.each([
+      ['under', 2, 3, 2],
+      ['at', 3, 3, 3],
+      ['default at', 100, undefined, 100],
+    ])(
+      'decodes a batch %s the cap',
+      async (_label, count, maxEvents, expected) => {
+        const ctx = makeContext({
+          settings: maxEvents === undefined ? undefined : { maxEvents },
+          url,
+          body: lines(count),
+        });
+        const result = await (await transformerGa4(ctx)).push(emptyEvent, ctx);
+        expect(result).toHaveLength(expected);
+      },
+    );
+
+    it.each([
+      ['over', 4, 3],
+      ['default over', 101, undefined],
+    ])(
+      'rejects the whole request when a batch is %s the cap',
+      async (_label, count, maxEvents) => {
+        const logger = createMockLogger();
+        const ctx = makeContext({
+          settings: maxEvents === undefined ? undefined : { maxEvents },
+          logger,
+          url,
+          body: lines(count),
+        });
+        const result = await (await transformerGa4(ctx)).push(emptyEvent, ctx);
+        expect(result).toBe(false);
+        expect(logger.warn).toHaveBeenCalledTimes(1);
+        expect(String(logger.warn.mock.calls[0][0])).toContain(
+          `${count} events exceed maxEvents ${maxEvents ?? 100}`,
+        );
+      },
+    );
+  });
+
   describe('Task 24 — User-override merge + ignore semantics', () => {
     it('user mapping replaces individual default keys while keeping others', async () => {
       const ctx = makeContext({

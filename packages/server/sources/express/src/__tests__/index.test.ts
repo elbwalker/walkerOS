@@ -1,4 +1,5 @@
 import { sourceExpress } from '../index';
+import { BODY_LIMIT } from '../utils';
 import type { EventRequest, Types } from '../types';
 import type { Ingest, WalkerOS, Source, Collector } from '@walkeros/core';
 import { createIngest, createMockLogger } from '@walkeros/core';
@@ -208,11 +209,11 @@ describe('sourceExpress', () => {
       // Verify env.express was used to create app and middleware
       expect(mockExpress).toHaveBeenCalled();
       expect(mockExpress.json).toHaveBeenCalledWith({
-        limit: '1mb',
+        limit: BODY_LIMIT,
         type: 'application/json',
       });
       expect(mockExpress.text).toHaveBeenCalledWith({
-        limit: '1mb',
+        limit: BODY_LIMIT,
         type: 'text/plain',
       });
       // The body parsers are mounted per POST route, so unmatched paths never
@@ -280,7 +281,7 @@ describe('sourceExpress', () => {
       expect(mockPush).toHaveBeenCalledWith({});
     });
 
-    it('should push empty object for POST with invalid body type', async () => {
+    it('pushes an empty event for a non-JSON string body', async () => {
       const source = await sourceExpress(
         createSourceContext(
           {},
@@ -366,47 +367,6 @@ describe('sourceExpress', () => {
     });
 
     describe('raw body support', () => {
-      it('parses JSON from text/plain POST (sendBeacon) via middleware', async () => {
-        // Integration test: exercises the actual express middleware chain by
-        // hitting a live server. Verifies the bug fix where navigator.sendBeacon
-        // forces Content-Type to text/plain even with JSON payloads.
-        const source = await sourceExpress(
-          createSourceContext(
-            { settings: { port: 0, paths: ['/collect'] } },
-            {
-              push: mockPush as never,
-              command: mockCommand as never,
-              elb: jest.fn() as never,
-              logger: createMockLogger(),
-            },
-          ),
-        );
-
-        try {
-          const address = source.server?.address();
-          if (!address || typeof address === 'string') {
-            throw new Error('Server did not bind');
-          }
-          const event = { name: 'page view', data: { title: 'beacon' } };
-
-          const response = await fetch(
-            `http://127.0.0.1:${address.port}/collect`,
-            {
-              method: 'POST',
-              headers: { 'content-type': 'text/plain' },
-              body: JSON.stringify(event),
-            },
-          );
-
-          expect(response.status).toBe(200);
-          expect(mockPush).toHaveBeenCalledWith(event);
-        } finally {
-          await new Promise<void>((resolve) => {
-            source.server?.close(() => resolve());
-          });
-        }
-      });
-
       it('should push empty event for undefined POST body', async () => {
         const source = await sourceExpress(
           createSourceContext(

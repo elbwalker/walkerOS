@@ -1,5 +1,6 @@
 import { startFlow } from '..';
 import type { Elb, Source, Transformer, WalkerOS } from '@walkeros/core';
+import { createIngest } from '@walkeros/core';
 
 describe('Destination Transformer Chains (destination.before)', () => {
   describe('chain execution', () => {
@@ -268,41 +269,30 @@ describe('Destination Transformer Chains (destination.before)', () => {
   });
 
   describe('conditional Route[] before', () => {
-    it('should resolve conditional before routes based on event entity', async () => {
-      const order: string[] = [];
+    function enricher(
+      id: string,
+      order: string[],
+    ): Transformer.InitTransformer {
+      return {
+        code: async (ctx): Promise<Transformer.Instance> => ({
+          type: id,
+          config: ctx.config,
+          push(event) {
+            order.push(id);
+            return {
+              event: { ...event, data: { ...event.data, enriched: id } },
+            };
+          },
+        }),
+      };
+    }
 
-      const { elb } = await startFlow({
+    async function setup(order: string[]) {
+      return startFlow({
         transformers: {
-          'product-enricher': {
-            code: async (ctx): Promise<Transformer.Instance> => ({
-              type: 'product-enricher',
-              config: ctx.config,
-              push(event) {
-                order.push('product-enricher');
-                return {
-                  event: {
-                    ...event,
-                    data: { ...event.data, enriched: 'product' },
-                  },
-                };
-              },
-            }),
-          },
-          'default-enricher': {
-            code: async (ctx): Promise<Transformer.Instance> => ({
-              type: 'default-enricher',
-              config: ctx.config,
-              push(event) {
-                order.push('default-enricher');
-                return {
-                  event: {
-                    ...event,
-                    data: { ...event.data, enriched: 'default' },
-                  },
-                };
-              },
-            }),
-          },
+          product: enricher('product', order),
+          flagged: enricher('flagged', order),
+          fallback: enricher('fallback', order),
         },
         destinations: {
           spy: {
@@ -317,28 +307,50 @@ describe('Destination Transformer Chains (destination.before)', () => {
               one: [
                 {
                   match: {
-                    key: 'ingest.entity',
+                    key: 'event.entity',
                     operator: 'eq',
                     value: 'product',
                   },
-                  next: 'product-enricher',
+                  next: 'product',
                 },
-                { next: 'default-enricher' },
+                {
+                  match: { key: 'ingest.flag', operator: 'eq', value: 'on' },
+                  next: 'flagged',
+                },
+                { next: 'fallback' },
               ],
             },
           },
         },
       });
+    }
 
-      // The post-collector chain receives ingest from the source push.
-      // Without a custom source, ingest is undefined, so we test with
-      // a route that matches based on entity (from the event itself).
-      // Note: destination.before routing uses meta.ingest, not event fields.
-      // With undefined ingest, all field matches fail except wildcards.
+    it('routes destination.before on event fields, per event', async () => {
+      const order: string[] = [];
+      const { elb } = await setup(order);
+
+      // The route resolves with `{ ingest, event }`, the event included.
       await elb({ name: 'product view', data: {} });
-      // With undefined ingest, entity key won't match → falls through to wildcard
-      expect(order).toContain('default-enricher');
-      expect(order).toContain('dest:default');
+      await elb({ name: 'page view', data: {} });
+
+      expect(order).toEqual([
+        'product',
+        'dest:product',
+        'fallback',
+        'dest:fallback',
+      ]);
+    });
+
+    it('routes destination.before on ingest fields', async () => {
+      const order: string[] = [];
+      const { collector } = await setup(order);
+
+      await collector.push(
+        { name: 'page view', data: {} },
+        { ingest: { ...createIngest('src'), flag: 'on' } },
+      );
+
+      expect(order).toEqual(['flagged', 'dest:flagged']);
     });
   });
 

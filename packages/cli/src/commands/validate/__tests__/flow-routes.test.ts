@@ -1,10 +1,10 @@
 /**
  * Tests for the flow validator: route flattening and empty-transformer rule.
  *
- * Indirectly exercises the private `flattenRouteTargets` helper inside
+ * Indirectly exercises the private `routeTargets` helper inside
  * `validators/flow.ts` by inspecting `details.connectionsChecked`, which counts
  * connections enumerated by the static graph builder. The graph builder calls
- * `flattenRouteTargets` to resolve each step's `next`/`before` route spec into
+ * `routeTargets` (core `getRouteGraph`) to resolve each step's `next`/`before` route spec into
  * concrete downstream target IDs and only records a connection when both
  * endpoints expose `examples`.
  *
@@ -15,7 +15,29 @@
 
 import { validateFlow } from '../validators/flow.js';
 
-describe('validateFlow — route flattening (flattenRouteTargets)', () => {
+/**
+ * Raw flow JSON (as `validate` receives it) whose one source routes `next`,
+ * with the named transformers.
+ */
+function sourceNext(next: unknown, transformerIds: string[]) {
+  const transformers: Record<string, { package: string }> = {};
+  for (const id of transformerIds)
+    transformers[id] = { package: '@walkeros/transformer-enricher' };
+  return {
+    version: 4,
+    flows: {
+      default: {
+        config: { platform: 'web' as const },
+        sources: {
+          browser: { package: '@walkeros/web-source-browser', next },
+        },
+        transformers,
+      },
+    },
+  };
+}
+
+describe('validateFlow: route targets (getRouteGraph)', () => {
   it('flattens a one route to all downstream targets', () => {
     // Source.next is a `one` (first-match dispatch) route fanning out to two
     // transformers, each with examples. The graph builder should enumerate
@@ -349,45 +371,20 @@ describe('validateFlow — many operator lint warnings', () => {
     ).toHaveLength(0);
   });
 
-  it('warns on main-chain steps after many (dead code)', () => {
-    // `many` terminates the main chain. Anything sequenced after it is dead
-    // code and never runs.
-    const flow = {
-      version: 4,
-      flows: {
-        default: {
-          config: { platform: 'web' as const },
-          sources: {
-            browser: {
-              package: '@walkeros/web-source-browser',
-              next: [{ many: ['toEnricher', 'toRedactor'] }, 'toTrailing'],
-            },
-          },
-          transformers: {
-            toEnricher: {
-              package: '@walkeros/transformer-enricher',
-            },
-            toRedactor: {
-              package: '@walkeros/transformer-redactor',
-            },
-            toTrailing: {
-              package: '@walkeros/transformer-enricher',
-            },
-          },
-        },
-      },
-    };
-
-    const result = validateFlow(flow);
-
-    expect(
-      result.warnings.some((w) =>
-        /dead code|unreachable|after.*many/i.test(w.message),
+  it('does not warn on steps after many: each fork runs the rest', () => {
+    // Each `many` fork is an independent copy that finishes the rest of the
+    // path, so a step sequenced after `many` runs once per fork.
+    const result = validateFlow(
+      sourceNext(
+        [{ many: ['toEnricher', 'toRedactor'] }, 'toTrailing'],
+        ['toEnricher', 'toRedactor', 'toTrailing'],
       ),
-    ).toBe(true);
-    expect(
-      result.errors.filter((e) => e.code === 'SCHEMA_VALIDATION'),
-    ).toHaveLength(0);
+    );
+
+    expect(result.errors).toEqual([]);
+    expect(result.warnings.filter((w) => /dead code/i.test(w.message))).toEqual(
+      [],
+    );
   });
 
   it('does not warn on well-formed many', () => {
@@ -421,6 +418,164 @@ describe('validateFlow — many operator lint warnings', () => {
 
     const manyWarnings = result.warnings.filter((w) => /many/i.test(w.message));
     expect(manyWarnings).toEqual([]);
+  });
+});
+
+describe('validateFlow: route targets and stop', () => {
+  it.each([
+    ['source.next', 'toRedact'],
+    [
+      'a one entry',
+      {
+        one: [
+          {
+            match: { key: 'event.name', operator: 'eq', value: 'x' },
+            next: 'toRedact',
+          },
+          'toEnricher',
+        ],
+      },
+    ],
+    ['a many entry', { many: ['toEnricher', 'toRedact'] }],
+  ])('reports an unknown target in %s as an error', (_, next) => {
+    const result = validateFlow(sourceNext(next, ['toEnricher']));
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: 'UNKNOWN_ROUTE_TARGET',
+        path: 'flows.default.sources.browser.next',
+        message: expect.stringContaining('"toRedact"'),
+      }),
+    ]);
+  });
+
+  it('reports an unknown target in collector.next', () => {
+    const flow = sourceNext('toEnricher', ['toEnricher']);
+    const result = validateFlow({
+      ...flow,
+      flows: {
+        default: {
+          ...flow.flows.default,
+          collector: { next: ['toEnricher', 'toMissing'] },
+        },
+      },
+    });
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: 'UNKNOWN_ROUTE_TARGET',
+        path: 'flows.default.collector.next',
+      }),
+    ]);
+  });
+
+  it('accepts collector.next with known targets and a stop', () => {
+    const flow = sourceNext('toEnricher', ['toEnricher']);
+    const result = validateFlow({
+      ...flow,
+      flows: {
+        default: {
+          ...flow.flows.default,
+          collector: {
+            next: [
+              {
+                match: { key: 'event.name', operator: 'eq', value: 'x' },
+                stop: true,
+              },
+              'toEnricher',
+            ],
+          },
+        },
+      },
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it.each([
+    [
+      'a sequence',
+      ['toEnricher', { stop: true }, 'toRedactor'],
+      'flows.default.sources.browser.next.1',
+    ],
+    [
+      'a one',
+      { one: [{ stop: true }, 'toRedactor'] },
+      'flows.default.sources.browser.next.one.0',
+    ],
+  ])('warns on entries after an unconditional stop in %s', (_, next, path) => {
+    const result = validateFlow(sourceNext(next, ['toEnricher', 'toRedactor']));
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        path,
+        message: expect.stringMatching(/dead code after stop/),
+      }),
+    ]);
+  });
+
+  it.each([
+    [
+      'a gated stop',
+      [
+        'toEnricher',
+        {
+          match: { key: 'event.name', operator: 'eq', value: 'x' },
+          stop: true,
+        },
+        'toRedactor',
+      ],
+    ],
+    ['a stop in last position', ['toEnricher', { stop: true }]],
+    ['a stop in a many entry', { many: [{ stop: true }, 'toRedactor'] }],
+  ])('does not warn on %s', (_, next) => {
+    const result = validateFlow(sourceNext(next, ['toEnricher', 'toRedactor']));
+    expect(result.warnings.filter((w) => /dead code/.test(w.message))).toEqual(
+      [],
+    );
+  });
+
+  it('hints that an array of route configs is first-match', () => {
+    const gate = (value: string, next: string) => ({
+      match: { key: 'event.name', operator: 'eq', value },
+      next,
+    });
+    const result = validateFlow(
+      sourceNext(
+        [gate('a', 'toEnricher'), gate('b', 'toRedactor')],
+        ['toEnricher', 'toRedactor'],
+      ),
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        path: 'flows.default.sources.browser.next',
+        message: expect.stringMatching(/first-match array/),
+      }),
+    ]);
+  });
+
+  it('does not warn on repeated steps or member next insertion', () => {
+    const flow = sourceNext(
+      ['toEnricher', 'toRedactor', 'toEnricher'],
+      ['toEnricher', 'toRedactor'],
+    );
+    const result = validateFlow({
+      ...flow,
+      flows: {
+        default: {
+          ...flow.flows.default,
+          transformers: {
+            toEnricher: {
+              package: '@walkeros/transformer-enricher',
+              next: 'toRedactor',
+            },
+            toRedactor: { package: '@walkeros/transformer-redactor' },
+          },
+        },
+      },
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([]);
   });
 });
 

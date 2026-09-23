@@ -14,6 +14,7 @@ export * from './deepMerge';
 export * from './eventGenerator';
 export * from './getId';
 export * from './getSpanId';
+export { deriveSpanId } from './deriveSpanId';
 export * from './getTraceId';
 export { parseTraceparent } from './parseTraceparent';
 export type { ParsedTraceparent } from './parseTraceparent';
@@ -54,11 +55,36 @@ export * from './respond';
 export * from './scope';
 export * from './envelope';
 export * from './matcher';
-// Route helpers. `getNextSteps` is the runtime resolver. `isRouteArray` and
+// Route helpers. `getNextSteps` is the one route resolver, `getRouteGraph`
+// the enumeration over the same compiled form, `advanceChain` the pure
+// continuation stack every chain runner loops. `isRouteArray` and
 // `isRouteConfigEntry` are the canonical shape probes for `Transformer.Route`.
-// `compileNext`, `resolveNext`, `CompiledNext`, and `CompiledRoute` remain
-// package-internal.
-export { getNextSteps, isRouteArray, isRouteConfigEntry } from './route';
+// `compileNext`, `walkRoute`, `enumerateRoute` and the compiled node types
+// remain package-internal.
+export {
+  getNextSteps,
+  isRouteArray,
+  isRouteConfigEntry,
+  isRouteContinuation,
+} from './route';
+export type {
+  NextSteps,
+  RouteContinuation,
+  RouteDecision,
+  RouteLabel,
+} from './route';
+export {
+  advanceChain,
+  getRouteGraph,
+  isChainContinuation,
+  startChain,
+} from './chain';
+export type {
+  ChainContinuation,
+  ChainFrame,
+  ChainStep,
+  RouteGraphNode,
+} from './chain';
 export * from './cache';
 export * from './cache-envelope';
 export {

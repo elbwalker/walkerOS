@@ -19,14 +19,18 @@ Components are composable and replaceable.
 ## The Flow Pattern
 
 ```
-[Source.before] → Sources → [Source.next] → Collector → [Dest.before] → Destinations → [Dest.next]
-(Preprocessing)  (Capture)  (Pre-chain)   (Processing) (Post-chain)   (Delivery)     (Post-push)
+[Source.before] → Sources → [Source.next] → Collector → [Collector.next] → [Dest.before] → Destinations → [Dest.next]
+(Preprocessing)   (Capture)  (Source chain)  (Processing) (Collector chain) (Dest. chain)   (Delivery)     (Post-push)
 
-Consent-exempt:                                                                        Post-consent:
-- Decode                    - Validation   - Event creation - Validation   - Push       - Audit logging
-- Validate format           - Enrichment   - Enrichment    - Enrichment   - Send       - Response parsing
-- Authenticate              - Redaction    - Consent check - Routing      - Store      - Webhooks
+Consent-exempt:                                                                                   Post-consent:
+- Decode           - Validation     - Event creation  - Validation     - Redaction      - Push     - Audit logging
+- Validate format  - Enrichment     - Enrichment      - Bot scoring    - Per-vendor     - Send     - Response parsing
+- Authenticate     - Redaction      - Consent check   - Drop for all   - Drop for one   - Store    - Webhooks
 ```
+
+`collector.next` runs once per event before the destination fan-out, so its work
+(and a `stop`) applies to every destination. `destination.before` runs per
+destination.
 
 ## Key Concepts
 
@@ -126,8 +130,8 @@ Three pipeline components (Source / Transformer / Destination) plus Stores as
 key-value storage that other components consume via `env`. They have no `push`,
 no `next`, no `before`; they sit alongside the pipeline rather than inside it.
 
-- Referenced via `$store.storeId` in `env` values (bundled mode) or passed
-  directly as store instances (integrated mode)
+- Referenced via `$store.storeId` in `env` values (bundled mode) or by passing
+  the same store definition object used in `stores` (integrated mode)
 - **Init first, destroy last** - stores are available before any source,
   transformer, or destination starts, and outlive them on shutdown
 - **No chains** - stores don't participate in the event pipeline. Components
@@ -197,10 +201,11 @@ mapping-only transformer).
 
 ## Transformer Chains
 
-Transformers run at two points in the pipeline, configured via `next` and
-`before`:
+Transformers run at three points around the collector, configured via
+`source.next`, `collector.next`, and `destination.before` (plus `source.before`,
+`transformer.before`, and `destination.next`):
 
-### Pre-Collector Chain
+### Source Chain (`source.next`)
 
 Runs after source captures event, before collector processing:
 
@@ -269,9 +274,37 @@ function:
 }
 ```
 
-### Post-Collector Chain
+### Collector Chain (`collector.next`)
 
-Runs after collector enrichment, before destination receives event:
+Runs once per event after the collector completed it, before the destination
+fan-out. Every destination receives its output; a `stop` here reaches no
+destination:
+
+```json
+{
+  "collector": {
+    "next": [
+      {
+        "match": {
+          "key": "event.name",
+          "operator": "eq",
+          "value": "product impression"
+        },
+        "stop": true
+      },
+      "bot",
+      "validate"
+    ]
+  }
+}
+```
+
+In TypeScript it is the top-level `next` of `startFlow({ next, ... })`.
+
+### Destination Chain (`destination.before`)
+
+Runs per destination, after the collector chain, before that destination
+receives the event. A `stop` here skips only this destination:
 
 **Bundled mode (flow.json):**
 
@@ -349,11 +382,12 @@ transformers: {
 ### Chain Resolution
 
 - `source.before` → consent-exempt preprocessing chain
-- `source.next` → starts pre-collector chain
+- `source.next` → source chain, before the collector
 - `transformer.before` → pre-transform enrichment chain
 - `transformer.next` (flow.json) or `transformer.config.next` (runtime) → links
   transformers
-- `destination.before` → starts post-collector chain per destination
+- `collector.next` → collector chain, once per event, for all destinations
+- `destination.before` → destination chain, for that destination only
 - `destination.next` → post-push processing chain
 
 ## Cross-Flow References (`$flow`)
@@ -435,8 +469,8 @@ ASCII diagram and detailed explanation.
 }
 ```
 
-Step examples enable `it.each` testing, CLI simulation with `--example`, and
-deep validation with `--deep`. See
+Step examples enable `it.each` testing and cross-step checks in
+`walkeros validate`. See
 [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the complete
 lifecycle.
 
@@ -448,65 +482,92 @@ validating configurations, and rendering UI visualizations.
 
 ### Valid connection matrix
 
-| From        | To          | Via Field                   | Valid?                |
-| ----------- | ----------- | --------------------------- | --------------------- |
-| Source      | Transformer | `source.before`             | Yes (consent-exempt)  |
-| Source      | Transformer | `source.next`               | Yes (pre-collector)   |
-| Source      | Collector   | (implicit, no next)         | Yes                   |
-| Source      | Source      | -                           | No                    |
-| Source      | Destination | -                           | No                    |
-| Transformer | Transformer | `transformer.before`        | Yes (pre-transform)   |
-| Transformer | Transformer | `transformer.next`          | Yes (chain continues) |
-| Transformer | Collector   | (implicit, pre-chain ends)  | Yes                   |
-| Transformer | Destination | (implicit, post-chain ends) | Yes                   |
-| Collector   | Destination | (implicit, no before)       | Yes                   |
-| Collector   | Transformer | `destination.before`        | Yes (post-chain)      |
-| Destination | Transformer | `destination.next`          | Yes (post-push)       |
-| Collector   | Source      | -                           | No                    |
+| From        | To          | Via Field                     | Valid?                 |
+| ----------- | ----------- | ----------------------------- | ---------------------- |
+| Source      | Transformer | `source.before`               | Yes (consent-exempt)   |
+| Source      | Transformer | `source.next`                 | Yes (source chain)     |
+| Source      | Collector   | (implicit, no next)           | Yes                    |
+| Source      | Source      | -                             | No                     |
+| Source      | Destination | -                             | No                     |
+| Transformer | Transformer | `transformer.before`          | Yes (pre-transform)    |
+| Transformer | Transformer | `transformer.next`            | Yes (chain continues)  |
+| Transformer | Collector   | (implicit, source chain ends) | Yes                    |
+| Transformer | Destination | (implicit, chain ends)        | Yes                    |
+| Collector   | Destination | (implicit, no next/before)    | Yes                    |
+| Collector   | Transformer | `collector.next`              | Yes (all destinations) |
+| Collector   | Transformer | `destination.before`          | Yes (one destination)  |
+| Destination | Transformer | `destination.next`            | Yes (post-push)        |
+| Collector   | Source      | -                             | No                     |
 
-### Pre-transformer chains (`source.next`)
+### Source chains (`source.next`)
 
 - Entry: `source.next: "transformerId"` or `source.next: ["t1", "t2"]`
-- Chaining: `transformer.next: "nextId"` walks forward; array stops walking
 - Exit: chain ends, event reaches collector
 - Multiple sources can reference the same transformer (fan-in)
 - No `next` = source connects directly to collector
+- Resolved per event after the source's `state`, so it can route on a loaded
+  value
 
-### Post-transformer chains (`destination.before`)
+### Collector chain (`collector.next`)
+
+- Entry: `collector.next` (flow.json) or top-level `next` in `startFlow`
+- Runs once per completed event, before the destination fan-out
+- Exit: every finished copy is delivered to the destinations; a `stop` or a
+  transformer returning `false` drops the event for all destinations
+- Consent replay, late destinations, and pre-run replay receive its output; it
+  never runs twice for one event
+- No `next` = collector connects directly to the destinations
+
+### Destination chains (`destination.before`)
 
 - Entry: `destination.before: "transformerId"` or
   `destination.before: ["t1", "t2"]`
-- Same `transformer.next` chain-walking logic as pre-chains
-- Exit: chain ends, event reaches destination
+- Exit: chain ends, event reaches destination; a `stop` skips only this
+  destination
 - Multiple destinations can share the same transformer
-- No `before` = collector connects directly to destination
+- No `before` = the collector (or its chain) connects directly to destination
+- Per-destination filtering belongs here, not in `collector.next`
 
-### Chain resolution algorithm (`getNextSteps`)
+### Chain resolution (one model for every chain field)
 
-See
-[packages/collector/src/transformer.ts](../../packages/collector/src/transformer.ts)
-for the implementation. `getNextSteps` is the public dispatch helper that
-replaces the previous `walkChain` entry point.
+One runner executes every position (`runTransformerChain` in
+[packages/collector/src/transformer.ts](../../packages/collector/src/transformer.ts)),
+on top of the pure continuation stack `startChain` / `advanceChain` in
+[packages/core/src/chain.ts](../../packages/core/src/chain.ts). Routes are
+resolved per hop by `getNextSteps(spec, root)` in
+[packages/core/src/route.ts](../../packages/core/src/route.ts), which returns
+`NextSteps` (ids plus an optional continuation, a stop, or forks) and needs the
+root `{ ingest, event }`.
 
-- **String start:** walks `transformer.next` links until chain ends
-- **Array start:** uses array as-is (explicit chain, no walking)
-- **Array `next` inside chain:** appends array elements and stops walking
-- **Circular references:** detected via visited set, silently breaks loop
-- **Non-existent transformer ID:** chain ends (no error, event proceeds without
-  transformation)
+- **String start:** runs the transformer, then its own `next`, recursively
+- **Array start:** the array is the backbone. A member's own `next` (static or
+  conditional) is inserted right after that member, then the array continues.
+  `["bot", "validate", "session"]` with `bot.next = "foo"` runs bot, foo,
+  validate, session. Insertion is depth-first.
+- **Lazy per hop:** a route is evaluated only when the event reaches it, against
+  `{ ingest, event }` as the previous step left them. A sequence
+  `["a", { "match": ..., "stop": true }, "b"]` evaluates the stop after `a` ran.
+- **Repeated steps:** a step listed twice runs twice (no dedup, no warning)
+- **Cycles:** a member `next` that leads back to a step already on its insertion
+  path is skipped; each copy is capped at 256 steps
+- **Unknown transformer id:** logged as a warning and skipped, the chain
+  continues; `walkeros validate` reports `UNKNOWN_ROUTE_TARGET` as an error
+- **Result `{ next }`:** replaces the member's own `next` for that event, then
+  the array continues
 
-Note: `getNextSteps` is deterministic for the supplied event context. Static
-analyzers without a real event can only enumerate reachability under "match may
-pass or fail" speculation.
+For tooling without an event, `getRouteGraph(spec, transformers?)` enumerates
+every branch of the same compiled form (both sides of each gate, every `one` and
+`many` entry, stops marked), so canvases and validators draw exactly what can
+run.
 
 ### Conditional routing (`one` operator)
 
 The `next` and `before` properties accept a `Route`
 (`string | Route[] | RouteConfig`). A `RouteConfig` is a **disjoint union**:
 each config sets at most one of `next` (gated link), `one` (first-match
-dispatch), or `many` (all-match dispatch), never more than one. The `one`
-operator enables conditional routing evaluated against ingest data and picks the
-first entry whose `match` succeeds:
+dispatch), `many` (all-match fan-out), or `stop` (drop), never more than one.
+Every `match` reads `{ ingest, event }`. The `one` operator picks the first
+entry whose `match` succeeds:
 
 ```json
 "next": {
@@ -521,18 +582,23 @@ first entry whose `match` succeeds:
 - An entry without `match` always matches, use it as the fallback
 - No matching entry means the event passes through unchanged
 - Works on all chain positions: `source.before`, `source.next`,
-  `transformer.before`, `transformer.next`, `destination.before`, and
-  `destination.next`
-- Routes are compiled to closures at init time for fast per-event evaluation
-- See [packages/core/src/route.ts](../../packages/core/src/route.ts) for
-  `compileNext()` and `resolveNext()`
+  `transformer.before`, `transformer.next`, `collector.next`,
+  `destination.before`, and `destination.next`
+- An array made only of route configs (no id) is an implicit `one`: first match
+  wins. `walkeros validate` hints at it; write `{ "one": [...] }` explicitly
+- Routes are compiled once (cached) and resolved per event by `getNextSteps` in
+  [packages/core/src/route.ts](../../packages/core/src/route.ts)
 
 ### All-match dispatch (`many` operator)
 
-Use `many` when every matching entry should produce an independent parallel flow
-(audit-while-process, multi-decoder fan-out). `many` terminates the main chain,
-each branch runs to its own exit. Available only pre-collector. Post-collector
-fan-out uses the destinations map.
+Use `many` when every matching entry should produce an independent copy of the
+event (audit-while-process, multi-decoder fan-out). Allowed in every chain
+field, at any depth. Each copy finishes the ENTIRE rest of the path on its own
+(rest of the array, every enclosing chain, collector, destinations); copies are
+never merged. Each copy gets its own `event.id`, derived deterministically from
+the parent id and branch position (`deriveSpanId`); `trace` stays shared. One
+matching entry continues in place without a copy. A transformer returning
+`Result[]` forks the same way.
 
 ```jsonc
 "next": {
@@ -542,6 +608,25 @@ fan-out uses the destinations map.
   ]
 }
 ```
+
+### Dropping an event (`stop`)
+
+`{ "stop": true }` ends the running copy (optionally gated by `match`; a failing
+match falls through). In a `many`, a stop ends only its own copy. Meaning per
+position:
+
+| Position                                                    | A resolved `stop` means                                                |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `source.before`, `source.next`                              | never reaches the collector; push result `{ ok: true, dropped: true }` |
+| `transformer.before`, `transformer.next`, result `{ next }` | the copy ends; the enclosing position applies its meaning              |
+| `collector.next`                                            | no destination receives the event (runs before the fan-out)            |
+| `destination.before`                                        | this destination skips it; others unaffected                           |
+| `destination.next`                                          | post-push chain ends; delivery already happened                        |
+
+"Drop impressions everywhere" is a stop in `collector.next`; "drop impressions
+for vendor destinations only" is a stop in those destinations' `before`. A drop
+is observable as a `skip` with `skipReason: 'dropped'`. `walkeros validate`
+warns about entries after an unconditional stop (dead code).
 
 ### Paths and pass-through steps (code-less transformer entries)
 
@@ -555,7 +640,8 @@ Pass-through steps come in three variants:
 - **Chain-only:** only `before` and/or `next` set. A named hop that shares a
   chain across multiple call sites (avoids duplicating arrays).
 - **Cache-only:** only `cache` set. A dedup or short-circuit step.
-  `cache.stop: true` at a pre-collector position halts the pipeline.
+  `cache.stop: true` in a source chain or `collector.next` halts the event for
+  all destinations.
 - **Mapping-only:** only `mapping: Mapping.Config` set. A declarative
   event-to-event transform that mutates the event in-flight.
 
@@ -591,9 +677,11 @@ position.
 
 ### Transformer sharing
 
-A single transformer can appear in both pre-chains (`source.next`) and
-post-chains (`destination.before`). The same transformer pool is shared; role
-depends on which chain references it.
+A single transformer can appear in source chains (`source.next`), the collector
+chain (`collector.next`), and destination chains (`destination.before`). The
+same transformer pool is shared; role depends on which chain references it. Work
+every destination needs belongs in `collector.next`, not repeated in each
+`destination.before`.
 
 ### Deferred activation (`require`)
 
@@ -606,10 +694,11 @@ depends on which chain references it.
 ### Mapping and consent gating
 
 - **Source-level:** `source.config.mapping` and `source.config.consent` -
-  applied before pre-chain; blocks event entirely
+  applied before the source chain; blocks event entirely
 - **Destination-level:** `destination.config.mapping` and
-  `destination.config.consent` - applied after post-chain; skips only that
-  destination, queues denied events
+  `destination.config.consent` - applied after the destination chain; skips only
+  that destination, queues denied events (after `collector.next`, so a replay
+  never re-runs it)
 
 ### Canvas rendering rules (for UI graph visualization)
 
@@ -621,6 +710,9 @@ depends on which chain references it.
 - **Diamond patterns (fan-in + fan-out):** expected and valid
 - **Overlapping `destination.before` chains:** intentional (e.g., shared
   validator for monitoring)
+- **Collector chain:** draw `collector.next` between the collector and the
+  destination fan-out, distinct from per-destination `before` chains; draw a
+  `stop` as an end of its branch
 
 ## Related Skills
 

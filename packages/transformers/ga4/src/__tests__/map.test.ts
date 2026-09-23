@@ -1,3 +1,4 @@
+import { deriveSpanId } from '@walkeros/core';
 import { mapHitToEvents } from '../map';
 import { parseRequest } from '../parse';
 import { defaultMapping } from '../defaults';
@@ -1118,6 +1119,18 @@ describe('mapHitToEvents - event id', () => {
   it('derives a span-shaped id (16 lowercase hex chars)', () => {
     const [event] = decode(`${pageHit('1')}&en=page_view&dl=https%3A%2F%2Fx`);
     expect(event.id).toMatch(SPAN_ID);
+  });
+
+  it('derives the id with the shared deriveSpanId (hit key, position)', () => {
+    const out = decode(
+      pageHit('3'),
+      'en=add_to_cart&epn.value=1\nen=add_to_cart&epn.value=2',
+    );
+    const key = JSON.stringify(['ga4', 'G-ABC', '111.222', '1718112345', '3']);
+    expect(out.map((event) => event.id)).toEqual([
+      deriveSpanId(key, 0),
+      deriveSpanId(key, 1),
+    ]);
   });
 
   it('gives two events in one batched hit distinct ids', () => {

@@ -3,6 +3,8 @@ export * from './types';
 export * from './constants';
 
 export * from './consent';
+export { runCollectorNext } from './collector-next';
+export type { CollectorNextResult } from './collector-next';
 export * from './flow';
 export * from './push';
 export * from './report-error';
@@ -19,10 +21,9 @@ export * from './on';
 export * from './source';
 export {
   runTransformerChain,
+  runTransformerBefore,
   transformerPush,
   transformerInit,
-  walkChain,
-  extractTransformerNextMap,
 } from './transformer';
 export { wrapEnv } from './wrapEnv';
 export { getCacheStore } from './cache';

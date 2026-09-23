@@ -371,6 +371,8 @@
     "MappingLoop": {
       "title": "Mapping.Loop",
       "description": "Loop tuple [source, transform] for iterating and transforming arrays.",
+      "minItems": 2,
+      "maxItems": 2,
       "type": "array",
       "items": [
         {
@@ -564,6 +566,24 @@
               "type": "object",
               "properties": {
                 "match": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/MatcherExpression"
+                    }
+                  ]
+                },
+                "stop": {
+                  "type": "boolean",
+                  "const": true
+                }
+              },
+              "required": ["stop"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "match": {
                   "$ref": "#/definitions/MatcherExpression"
                 }
               },
@@ -574,7 +594,7 @@
         }
       ],
       "title": "Route",
-      "description": "Recursive route: string ID, sequence of routes, or a RouteConfig (next/one/many/gate)."
+      "description": "Recursive route: string ID, sequence of routes, or a RouteConfig (next/one/many/stop/gate). Valid in every chain field."
     },
     "MatcherExpression": {
       "anyOf": [
@@ -847,7 +867,7 @@
           ]
         },
         "next": {
-          "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.",
+          "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing on ingest and event data.",
           "allOf": [
             {
               "$ref": "#/definitions/Route"
@@ -924,84 +944,6 @@
       "title": "Destination.Env",
       "description": "Destination environment configuration."
     },
-    "RouteWithoutMany": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "allOf": [
-              {
-                "$ref": "#/definitions/RouteWithoutMany"
-              }
-            ]
-          }
-        },
-        {
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "match": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/MatcherExpression"
-                    }
-                  ]
-                },
-                "next": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/RouteWithoutMany"
-                    }
-                  ]
-                }
-              },
-              "required": ["next"],
-              "additionalProperties": false
-            },
-            {
-              "type": "object",
-              "properties": {
-                "match": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/MatcherExpression"
-                    }
-                  ]
-                },
-                "one": {
-                  "type": "array",
-                  "items": {
-                    "allOf": [
-                      {
-                        "$ref": "#/definitions/RouteWithoutMany"
-                      }
-                    ]
-                  }
-                }
-              },
-              "required": ["one"],
-              "additionalProperties": false
-            },
-            {
-              "type": "object",
-              "properties": {
-                "match": {
-                  "$ref": "#/definitions/MatcherExpression"
-                }
-              },
-              "required": ["match"],
-              "additionalProperties": false
-            }
-          ]
-        }
-      ],
-      "title": "RouteWithoutMany",
-      "description": "Route variant for post-collector positions (destination.before). Excludes the many operator — post-collector fan-out uses the destinations map."
-    },
     "FlowDestination": {
       "type": "object",
       "properties": {
@@ -1048,18 +990,18 @@
           ]
         },
         "before": {
-          "description": "Post-collector transformer chain. String, string[], or Route[] for conditional routing. `many` is not valid here — use multiple destinations for post-collector fan-out.",
+          "description": "Transformer chain run for this destination only, before it receives the event. String, string[], or a Route for conditional routing.",
           "allOf": [
             {
-              "$ref": "#/definitions/RouteWithoutMany"
+              "$ref": "#/definitions/Route"
             }
           ]
         },
         "next": {
-          "description": "Post-push transformer chain. Push response available at context.ingest._response. `many` is not valid here — use multiple destinations for post-collector fan-out.",
+          "description": "Post-push transformer chain. Push response available at context.ingest._response.",
           "allOf": [
             {
-              "$ref": "#/definitions/RouteWithoutMany"
+              "$ref": "#/definitions/Route"
             }
           ]
         },
@@ -1347,6 +1289,18 @@
       "description": "Store package reference with configuration, env, cache, and examples."
     },
     "FlowCollector": {
+      "type": "object",
+      "properties": {
+        "next": {
+          "description": "Collector chain: runs once per completed event before the destination fan-out. A stop drops the event for every destination.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Route"
+            }
+          ]
+        }
+      },
+      "additionalProperties": {},
       "title": "Collector.InitConfig",
       "description": "Collector configuration for event processing (Collector.InitConfig)."
     },
@@ -1417,7 +1371,7 @@
                 ]
               },
               "next": {
-                "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.",
+                "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing on ingest and event data.",
                 "allOf": [
                   {
                     "$ref": "#/definitions/Route"
@@ -1525,18 +1479,18 @@
                 ]
               },
               "before": {
-                "description": "Post-collector transformer chain. String, string[], or Route[] for conditional routing. `many` is not valid here — use multiple destinations for post-collector fan-out.",
+                "description": "Transformer chain run for this destination only, before it receives the event. String, string[], or a Route for conditional routing.",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/RouteWithoutMany"
+                    "$ref": "#/definitions/Route"
                   }
                 ]
               },
               "next": {
-                "description": "Post-push transformer chain. Push response available at context.ingest._response. `many` is not valid here — use multiple destinations for post-collector fan-out.",
+                "description": "Post-push transformer chain. Push response available at context.ingest._response.",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/RouteWithoutMany"
+                    "$ref": "#/definitions/Route"
                   }
                 ]
               },

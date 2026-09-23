@@ -1,5 +1,5 @@
 import type { WalkerOS, Source, Elb } from '@walkeros/core';
-import type { SettingsSchema, Mapping } from '../schemas';
+import type { SettingsSchema } from '../schemas';
 import type { z } from '@walkeros/core/dev';
 
 declare module '@walkeros/core' {
@@ -30,13 +30,13 @@ export interface Settings extends Omit<BaseSettings, 'filter'> {
 // InitSettings: user input (all optional)
 export type InitSettings = Partial<Settings>;
 
-export type { Mapping };
-
 export type Push = Elb.Fn;
 
 export interface Env extends Source.BaseEnv {
   window?: Window & typeof globalThis;
 }
+
+export interface Mapping {}
 
 export type Types = Source.Types<Settings, Mapping, Push, Env, InitSettings>;
 
@@ -45,12 +45,4 @@ export type Config = Source.Config<Types>;
 export type DataLayerEvent = {
   event: string;
   [key: string]: unknown;
-};
-
-export type MappedEvent = {
-  event?: WalkerOS.DeepPartialEvent & { id: string };
-  command?: {
-    name: string;
-    data: unknown;
-  };
 };

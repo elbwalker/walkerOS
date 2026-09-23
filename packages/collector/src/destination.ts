@@ -6,6 +6,7 @@ import type {
   Destination,
   Transformer,
   Ingest,
+  RespondFn,
   Simulation,
 } from '@walkeros/core';
 import {
@@ -20,7 +21,6 @@ import {
   emitStep,
   getId,
   getGrantedConsent,
-  getNextSteps,
   isDefined,
   isFunction,
   isObject,
@@ -36,12 +36,7 @@ import { buildBaseState, journeyFields } from './observerEmit';
 import { wrapEnv } from './wrapEnv';
 import { sanitizeCalls } from './sanitizeArgs';
 import { callDestinationOn } from './on';
-import {
-  runTransformerChain,
-  walkChain,
-  extractTransformerNextMap,
-  extractChainProperty,
-} from './transformer';
+import { runTransformerChain, extractChainProperty } from './transformer';
 import { getCacheStore, getStateStore } from './cache';
 import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
 import {
@@ -52,6 +47,7 @@ import {
   errorMeta,
 } from './report-error';
 import { reconcilePending } from './pending';
+import { runCollectorNext } from './collector-next';
 import {
   isBreakerOpen,
   recordStepOutcome,
@@ -164,51 +160,6 @@ function normalizeBatchOptions(
 }
 
 /**
- * Resolves transformer chain for a destination.
- *
- * `getNextSteps` returns the immediate next-step ids for the given Route in
- * the supplied context. `walkChain` then follows static `.next` links from
- * each entry to produce the full ordered chain. The WeakMap inside
- * `getNextSteps` caches the compiled form, so we don't re-compile per event.
- *
- * post-collector destination.before disallows `many` (enforced at the schema
- * layer via `RouteWithoutManySchema`), so we never see more than one id here
- * unless a user passes an explicit string[] chain — in which case we want to
- * treat it as the explicit chain (no further walking).
- *
- * `transformerNextMap` is computed once per `pushToDestinations` call (it depends
- * only on `collector.transformers`) and passed in to avoid rebuilding it for
- * every destination's before and next chain resolution.
- */
-function resolveDestinationChain(
-  before: Transformer.Route | undefined,
-  transformerNextMap: ReturnType<typeof extractTransformerNextMap>,
-  ingest?: Ingest,
-): string[] {
-  if (!before) return [];
-  // Static string[] chains pass through unchanged — they are explicit and
-  // suppress `.next` walking. Static single-string starts are walked.
-  if (
-    Array.isArray(before) &&
-    before.every((entry) => typeof entry === 'string')
-  ) {
-    return walkChain(before, transformerNextMap);
-  }
-  if (typeof before === 'string') {
-    return walkChain(before, transformerNextMap);
-  }
-  // Conditional shape — resolve per-event, walk single-id result.
-  const ids = getNextSteps(before, createMappingRoot(ingest));
-  if (ids.length === 0) return [];
-  if (ids.length === 1) return walkChain(ids[0], transformerNextMap);
-  // Multiple ids from a conditional shape: treat as explicit chain.
-  // (destination.before disallows `many`; this path is reached only if a
-  // RouteConfig.next resolves to a string[], which is then the user's
-  // declared chain.)
-  return walkChain(ids, transformerNextMap);
-}
-
-/**
  * Adds a new destination to the collector.
  *
  * @param collector - The walkerOS collector instance.
@@ -296,6 +247,11 @@ export async function addDestination(
 /**
  * Pushes an event to all or a subset of destinations.
  *
+ * A completed event first runs the collector's own chain
+ * (`collector.config.next`), once, and every copy it hands back is delivered.
+ * A flush call (no event) delivers what the destinations have queued and
+ * never runs the chain: queued events are already post-chain.
+ *
  * @param collector - The walkerOS collector instance.
  * @param event - The event to push.
  * @param meta - Optional metadata with id and ingest.
@@ -308,14 +264,55 @@ export async function pushToDestinations(
   meta: {
     id?: string;
     ingest?: Ingest;
-    respond?: import('@walkeros/core').RespondFn;
+    respond?: RespondFn;
   } = {},
   destinations?: Collector.Destinations,
 ): Promise<Elb.PushResult> {
-  const { allowed, consent, user } = collector;
-
   // Check if collector is allowed to push
-  if (!allowed) return createPushResult({ ok: false });
+  if (!collector.allowed) return createPushResult({ ok: false });
+
+  if (!event)
+    return deliverToDestinations(collector, undefined, meta, destinations);
+
+  const next = await runCollectorNext(collector, event, meta);
+  if (next.copies.length === 0)
+    return createPushResult({
+      ok: true,
+      ...(next.dropped ? { dropped: true } : {}),
+    });
+
+  // Each copy is delivered in order, as its own event with its own ingest.
+  // The first delivery's result is reported, as for a source-level fan-out.
+  const results: Elb.PushResult[] = [];
+  for (const copy of next.copies) {
+    results.push(
+      await deliverToDestinations(
+        collector,
+        copy.event,
+        { id: meta.id, ingest: copy.ingest, respond: next.respond },
+        destinations,
+      ),
+    );
+  }
+  return results[0];
+}
+
+/**
+ * Delivers one event (or, without one, the queued events only) to all or a
+ * subset of destinations. Module-private: every caller goes through
+ * `pushToDestinations`, so `collector.next` runs exactly once per event.
+ */
+async function deliverToDestinations(
+  collector: Collector.Instance,
+  event: WalkerOS.Event | undefined,
+  meta: {
+    id?: string;
+    ingest?: Ingest;
+    respond?: RespondFn;
+  },
+  destinations?: Collector.Destinations,
+): Promise<Elb.PushResult> {
+  const { consent, user } = collector;
 
   // Add event to the collector queue (bounded; FIFO drop-oldest on overflow)
   if (event) {
@@ -352,13 +349,9 @@ export async function pushToDestinations(
   // Use given destinations or use internal destinations
   if (!destinations) destinations = collector.destinations;
 
-  // Precompute the transformer next map once per push (shared across all
-  // destinations in this batch, used for both before and next chain resolution).
-  // Guarded because tests and partially-initialized collectors may pass
-  // `transformers` as undefined.
-  const transformerNextMap = collector.transformers
-    ? extractTransformerNextMap(collector.transformers)
-    : {};
+  // Tests and partially initialized collectors may leave `transformers`
+  // unset; routes then resolve against an empty set.
+  const transformers: Transformer.Transformers = collector.transformers || {};
 
   const results = await Promise.all(
     // Process all destinations in parallel
@@ -593,16 +586,9 @@ export async function pushToDestinations(
       let response: unknown;
       if (!destination.dlq) destination.dlq = [];
 
-      // Resolve the before chain once per destination batch (the per-event
-      // resolution inside getNextSteps is WeakMap-cached, so this is cheap).
+      // The before and next routes; each resolves per event, hop by hop,
+      // with `{ ingest, event }` (the runner resolves nothing ahead).
       const before = destination.config.before;
-      const postChain = resolveDestinationChain(
-        before,
-        transformerNextMap,
-        destIngest,
-      );
-
-      // Capture the next chain config; resolution happens per-event below.
       const nextConfig = destination.config.next;
 
       // Compile destination cache once per batch (not per-event).
@@ -660,25 +646,39 @@ export async function pushToDestinations(
           }
 
           // Run post-collector transformer chain if configured for this destination
-          let children: WalkerOS.Event[] = [event];
+          let children: Array<{ event: WalkerOS.Event; ingest: Ingest }> = [
+            { event, ingest: destIngest },
+          ];
           let destRespond = meta.respond;
-          if (
-            postChain.length > 0 &&
-            collector.transformers &&
-            Object.keys(collector.transformers).length > 0
-          ) {
+          if (before !== undefined) {
+            const chainPath = `destination.${id}.before`;
             const chainResult = await runTransformerChain(
               collector,
-              collector.transformers,
-              postChain,
+              transformers,
+              before,
               event,
               destIngest,
               meta.respond,
-              `destination.${id}.before`,
+              chainPath,
             );
 
-            if (chainResult.event === null) {
-              // Chain stopped - skip this event for this destination
+            if (chainResult.copies.length === 0) {
+              // Dropped or stopped: THIS destination skips the event; other
+              // destinations are unaffected.
+              const skipState = buildBaseState(collector, {
+                stepId: stepId('destination', id),
+                stepType: 'destination',
+                phase: 'skip',
+                eventId: typeof event.id === 'string' ? event.id : '',
+                now: Date.now(),
+                ...journeyFields(event, destIngest, collector),
+              });
+              skipState.skipReason = 'dropped';
+              skipState.meta = {
+                by: chainResult.droppedBy ?? 'route',
+                at: chainPath,
+              };
+              emitStep(collector, skipState);
               return event;
             }
 
@@ -686,13 +686,11 @@ export async function pushToDestinations(
             if (chainResult.respond) destRespond = chainResult.respond;
 
             // A before chain may fan one event into several. Every child is
-            // delivered: the chain's return type promises an array may come
-            // back, and the source-position chain honors that too.
-            children = (
-              Array.isArray(chainResult.event)
-                ? chainResult.event
-                : [chainResult.event]
-            ) as WalkerOS.Event[];
+            // delivered, each with the ingest it finished with.
+            children = chainResult.copies.map((copy) => ({
+              event: copy.event as WalkerOS.Event,
+              ingest: copy.ingest,
+            }));
           }
 
           // Delivers one child of the before chain, from the step-level cache
@@ -701,6 +699,7 @@ export async function pushToDestinations(
           // child was actually delivered.
           const deliverOne = async (
             processedEvent: WalkerOS.Event | null,
+            childIngest: Ingest,
             sharedMiss: { key: string; ttl: number } | undefined,
           ): Promise<boolean> => {
             // The pre-chain key is derived from the one event that entered, so
@@ -713,7 +712,7 @@ export async function pushToDestinations(
             // Step-level cache check: after before chain, skip only push on HIT
             if (compiledDCache && !compiledDCache.stop && dCacheStore) {
               const cacheContext = createMappingRoot(
-                destIngest,
+                childIngest,
                 processedEvent ?? undefined,
               );
               const cacheResult = await checkCache(
@@ -737,7 +736,7 @@ export async function pushToDestinations(
                 (storeId) => getStateStore(storeId, collector),
                 processedEvent,
                 collector,
-                destIngest,
+                childIngest,
               );
             }
 
@@ -793,7 +792,7 @@ export async function pushToDestinations(
               destination,
               id,
               processedEvent!,
-              destIngest,
+              childIngest,
               destRespond,
             );
             totalDuration += Date.now() - pushStart;
@@ -835,7 +834,7 @@ export async function pushToDestinations(
                 (storeId) => getStateStore(storeId, collector),
                 processedEvent,
                 collector,
-                destIngest,
+                childIngest,
               );
             }
 
@@ -850,31 +849,20 @@ export async function pushToDestinations(
             if (!pushFailed && nextConfig) {
               // Write push response to ingest for destination.next transformers
               if (result !== undefined) {
-                destIngest._response = result;
+                childIngest._response = result;
               }
 
-              const nextChain = resolveDestinationChain(
+              // Delivery already happened: a stop only ends this chain.
+              const nextResult = await runTransformerChain(
+                collector,
+                transformers,
                 nextConfig,
-                transformerNextMap,
-                destIngest,
+                processedEvent!,
+                childIngest,
+                destRespond,
+                `destination.${id}.next`,
               );
-
-              if (
-                nextChain.length > 0 &&
-                collector.transformers &&
-                Object.keys(collector.transformers).length > 0
-              ) {
-                const nextResult = await runTransformerChain(
-                  collector,
-                  collector.transformers,
-                  nextChain,
-                  processedEvent!,
-                  destIngest,
-                  destRespond,
-                  `destination.${id}.next`,
-                );
-                if (nextResult.respond) destRespond = nextResult.respond;
-              }
+              if (nextResult.respond) destRespond = nextResult.respond;
             }
 
             return true;
@@ -885,7 +873,8 @@ export async function pushToDestinations(
             // miss recorded before the chain is shared, since it was computed
             // from the one event that entered. Only a child that actually
             // reached the destination counts as delivered.
-            if (await deliverOne(child, cacheMiss)) pushedCount++;
+            if (await deliverOne(child.event, child.ingest, cacheMiss))
+              pushedCount++;
           }
 
           // One write per request, after every child settled.

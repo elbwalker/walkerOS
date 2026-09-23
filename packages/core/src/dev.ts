@@ -4,4 +4,5 @@ export { ClickIdEntrySchema } from './schemas';
 export { mergeConfigSchema, resolveBaseSchema } from './merge-config-schema';
 
 export { formatOut } from './examples/formatOut';
+export * as routeCases from './examples/route-cases';
 export type { Flow } from './types/flow';

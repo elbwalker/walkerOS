@@ -174,6 +174,57 @@ For example, transforming a `product add` event into GA4's `add_to_cart`:
 
 [**Learn more about mapping →**](/docs/mapping)
 
+## Collector chain (`next`)
+
+The collector's `next` is a transformer chain that runs once per event, after
+the collector completed the event and before it hands the event to the
+destinations. Every destination receives what the chain produces, so it is the
+place for work all destinations share, such as validation or bot scoring.
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  collectorTransformers={{ collect: { label: 'Transformer(s)', highlight: true } }}
+  destinations={{ ga4: { label: 'GA4', highlight: false }, meta: { label: 'Meta', highlight: false } }}
+  markers={[
+    { position: 'chain-collect', id: '1', text: 'Runs once per event, before the fan-out' },
+  ]}
+/>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { transformerBot } from '@walkeros/server-transformer-bot';
+import { transformerValidate } from '@walkeros/transformer-validate';
+
+await startFlow({
+  transformers: {
+    bot: { code: transformerBot },
+    validate: { code: transformerValidate },
+  },
+  next: [
+    { match: { key: 'event.name', operator: 'eq', value: 'product impression' }, stop: true },
+    'bot',
+    'validate',
+  ],
+  destinations: { /* ... */ },
+});`}
+  language="typescript"
+/>
+
+`next` accepts the same `Route` as every other chain field (see
+[Chain resolution](/docs/getting-started/flow#chain-resolution)); in a flow
+file it is `collector.next`. Its routes read `{ ingest, event }` with the
+completed event. What the chain does reaches every destination:
+
+- A `stop` (or a transformer returning `false`) drops the event for **all**
+  destinations. To drop an event for one destination only, put the `stop` in
+  that destination's `before`.
+- A `many` fork delivers each copy to the destinations on its own, each with
+  its own `event.id`.
+- Consent-queued events, late destinations, and replayed pre-run events receive
+  the chain's output; the chain never runs twice for one event.
+- `walker config` can replace `next` for later events.
+
 ## Status
 
 The collector tracks delivery metrics on `collector.status`, giving you real-time

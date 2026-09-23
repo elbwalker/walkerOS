@@ -131,6 +131,7 @@ describe('express input hygiene', () => {
     ['test_data', 'application/json', 400],
     ['(wget --no-check http://x', 'application/json', 400],
     ['{"a":1}', 'application/json; charset=klingon', 415],
+    ['{"a":1}', 'text/plain; charset=klingon', 415],
   ])(
     'rejects %p (%s) with %i and a JSON body',
     async (payload, contentType, status) => {

@@ -101,6 +101,14 @@ export interface Config {
   name?: string;
   /** Config release id stamped into event.source.release for this flow. */
   release?: string;
+  /**
+   * The collector's own transformer chain. Runs once per completed event,
+   * after enrichment and before the destination fan-out, with the full route
+   * grammar. A `stop` (or a transformer returning `false`) drops the event for
+   * every destination; per-destination filtering belongs on
+   * `destination.before`. Swappable at runtime via `walker config`.
+   */
+  next?: Transformer.Route;
 }
 
 /**
@@ -279,7 +287,11 @@ export interface PushOptions {
   ingest?: Ingest;
   respond?: import('../respond').RespondFn;
   mapping?: Mapping.Config;
-  preChain?: string[];
+  /**
+   * Pre-collector chain (the source's `next` route, or a continuation of
+   * it). Resolved hop by hop by the chain runner with `{ ingest, event }`.
+   */
+  preChain?: Transformer.Route;
   include?: string[];
   exclude?: string[];
 }

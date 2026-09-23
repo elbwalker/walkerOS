@@ -150,7 +150,9 @@ export async function validateEntry(
   const config = entry.config as Record<string, unknown> | undefined;
   const settings = config?.settings;
 
-  const ajv = new Ajv({ allErrors: true });
+  // Formats such as `uri` and `email` are not bundled with Ajv; ignore them
+  // instead of failing to compile. Every structural keyword is still checked.
+  const ajv = new Ajv({ allErrors: true, validateFormats: false });
   const validate = ajv.compile(settingsSchema as object);
   const isValid = validate(settings || {});
 

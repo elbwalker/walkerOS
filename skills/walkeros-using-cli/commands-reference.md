@@ -64,16 +64,16 @@ walkeros push <config|bundle> [options]
 
 ### Options
 
-| Option                  | Description                                                                                                                            |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `-e, --event <source>`  | Event (required) - JSON string, file, or URL                                                                                           |
-| `--flow <name>`         | Flow to use                                                                                                                            |
-| `-p, --platform <type>` | Platform override                                                                                                                      |
-| `--simulate <step>`     | Simulate a step (repeatable for `destination.*`). Format: `source.NAME` \| `destination.NAME` \| `transformer.NAME`. Bare names error. |
-| `--mock <step=value>`   | Mock a step with a specific return value (repeatable)                                                                                  |
-| `--snapshot <source>`   | JS file to eval before execution (sets global state)                                                                                   |
-| `--json`                | JSON output                                                                                                                            |
-| `-v, --verbose`         | Verbose logging                                                                                                                        |
+| Option                  | Description                                                                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-e, --event <source>`  | Event (required) - JSON string, file, or URL                                                                                                               |
+| `--flow <name>`         | Flow to use                                                                                                                                                |
+| `-p, --platform <type>` | Platform override                                                                                                                                          |
+| `--simulate <step>`     | Simulate a step (repeatable for `destination.*`). Format: `source.NAME` \| `destination.NAME` \| `transformer.NAME` \| `collector.NAME`. Bare names error. |
+| `--mock <step=value>`   | Mock a step with a specific return value (repeatable). Also `destination.NAME.before.ID=VALUE` and `collector.next.ID=VALUE` for chain members             |
+| `--snapshot <source>`   | JS file to eval before execution (sets global state)                                                                                                       |
+| `--json`                | JSON output                                                                                                                                                |
+| `-v, --verbose`         | Verbose logging                                                                                                                                            |
 
 **Without `--simulate`:** Makes real API calls. Test with `--simulate` first.
 
@@ -100,6 +100,12 @@ walkeros push flow.json -e event.json --simulate destination.ga4 --mock destinat
 
 # Multi-target destination simulate (one flag per destination)
 walkeros push flow.json -e event.json --simulate destination.ga4 --simulate destination.meta
+
+# Simulate the collector step: enrichment, then collector.next
+walkeros push flow.json -e event.json --simulate collector.default
+
+# Mock one member of the collector chain
+walkeros push flow.json -e event.json --simulate collector.default --mock collector.next.bot='{"name":"page view"}'
 ```
 
 ### `--simulate` rules
@@ -111,7 +117,14 @@ walkeros push flow.json -e event.json --simulate destination.ga4 --simulate dest
 - `--simulate source.*` and `--simulate transformer.*` are single-target.
   Multiple flags of those types error.
 - All flags in one invocation must target the same type (no mixing
-  destination/source/transformer).
+  destination/source/transformer/collector).
+- `--simulate transformer.NAME` runs the transformer through its own `before`,
+  its push, and its `next` route (and what follows), exactly as at runtime; the
+  output is every finished copy.
+- `--simulate collector.NAME` (any name, e.g. `collector.default`) runs the
+  collector's enrichment, then `collector.next`. The output is every copy the
+  destinations would receive: none when a `stop` drops the event, several when a
+  `many` forks it.
 
 ---
 
@@ -446,7 +459,7 @@ Default: validates input as Flow.Json (schema, references, cross-step examples).
 | `--type <type>` | Validation type (default: `flow`). See types below.                  |
 | `--path <path>` | Validate entry against package schema (e.g. `destinations.snowplow`) |
 | `--flow <name>` | Flow name for multi-flow configs                                     |
-| `--strict`      | Treat warnings as errors                                             |
+| `--strict`      | Fail on warnings (contract violations exit 1, other warnings exit 2) |
 | `--json`        | JSON output                                                          |
 | `-v, --verbose` | Verbose output                                                       |
 | `-s, --silent`  | Suppress output                                                      |
@@ -460,21 +473,41 @@ Default: validates input as Flow.Json (schema, references, cross-step examples).
 | `mapping`        | Mapping      | Pattern format, rule structure          |
 | `contract`       | Contract     | Named entries, extend, sections         |
 
-Use `--path` for entry validation against package schemas:
+Flow validation does not check that a `package` exists or that its
+`config.settings` match the package schema. Use `--path` for one entry; it
+fetches the published schema from the CDN (network required), always for the
+`latest` version (version pins are ignored), and reads only the first flow:
 
 ```bash
 walkeros validate flow.json --path destinations.snowplow
 walkeros validate flow.json --path sources.browser
 ```
 
+### Route checks
+
+Every chain field (`source.before`, `source.next`, `transformer.before`,
+`transformer.next`, `collector.next`, `destination.before`, `destination.next`)
+is read with the runtime's route grammar:
+
+| Check                                                     | Level                          |
+| --------------------------------------------------------- | ------------------------------ |
+| Route names a transformer that does not exist             | Error `UNKNOWN_ROUTE_TARGET`   |
+| Entries after an unconditional `stop` (sequence or `one`) | Warning `dead code after stop` |
+| Array made only of route configs (implicit `one`)         | Warning `first-match array`    |
+| `many` with no entry or a single entry                    | Warning                        |
+
+A `stop` inside `many` ends only its own copy, so its siblings are not dead
+code. Repeated steps and member `next`s inside arrays are valid and not
+reported.
+
 ### Exit codes
 
-| Code | Meaning                            |
-| ---- | ---------------------------------- |
-| 0    | Valid                              |
-| 1    | Errors found                       |
-| 2    | Warnings found (with --strict)     |
-| 3    | Input error (file not found, etc.) |
+| Code | Meaning                                                               |
+| ---- | --------------------------------------------------------------------- |
+| 0    | Valid (with `--strict`: no warnings either)                           |
+| 1    | Errors found, including contract violations under `--strict`          |
+| 2    | No errors, but warnings found (with `--strict` only)                  |
+| 3    | Validation could not run (missing file, invalid JSON, unknown --type) |
 
 ### Examples
 

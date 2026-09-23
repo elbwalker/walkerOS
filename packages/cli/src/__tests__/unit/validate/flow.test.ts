@@ -446,6 +446,89 @@ describe('validateFlow', () => {
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
       expect(result.details.connectionsChecked).toBe(1);
+      expect(result.warnings).not.toContainEqual(
+        expect.objectContaining({
+          message: 'Cannot check compatibility: missing out or in examples',
+        }),
+      );
+    });
+
+    it('warns instead of erroring when the next step has only command examples', () => {
+      const result = validateFlow(
+        baseSetup({
+          sources: {
+            browser: {
+              package: '@walkeros/web-source-browser',
+              next: 'enrich',
+              examples: {
+                pageview: {
+                  in: { url: 'https://example.com' },
+                  out: { name: 'page view', data: { title: 'Home' } },
+                },
+              },
+            },
+          },
+          transformers: {
+            enrich: {
+              package: '@walkeros/transformer-enricher',
+              examples: {
+                grant: {
+                  command: 'consent',
+                  in: { marketing: true },
+                },
+              },
+            },
+          },
+        }),
+      );
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toContainEqual(
+        expect.objectContaining({
+          message: 'Cannot check compatibility: missing out or in examples',
+        }),
+      );
+    });
+
+    it('fails when an object out is incompatible with the next in', () => {
+      const result = validateFlow(
+        baseSetup({
+          sources: {
+            browser: {
+              package: '@walkeros/web-source-browser',
+              next: 'enrich',
+              examples: {
+                pageview: {
+                  in: { url: 'https://example.com' },
+                  out: { url: 'https://example.com', referrer: '' },
+                },
+              },
+            },
+          },
+          transformers: {
+            enrich: {
+              package: '@walkeros/transformer-enricher',
+              examples: {
+                pageview: {
+                  in: {
+                    name: 'page view',
+                    data: { title: 'Home' },
+                    entity: 'page',
+                    action: 'view',
+                  },
+                },
+              },
+            },
+          },
+        }),
+      );
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          code: 'INCOMPATIBLE_EXAMPLES',
+        }),
+      );
     });
 
     it('fails when connected steps have incompatible examples', () => {

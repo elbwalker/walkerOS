@@ -255,7 +255,7 @@ export const HUB_MANAGE_INPUT_SCHEMA = {
     .max(MAX_MARK_ID_LENGTH)
     .optional()
     .describe(
-      'One mark within "frameId". Action "knowledge" only, and refused without frameId, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies.',
+      'One tag within "frameId", by its tag id (the id of an entry in frame_manage marks.tags). Action "knowledge" only, and refused without frameId, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies.',
     ),
 };
 

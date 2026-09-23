@@ -128,7 +128,13 @@ export interface JourneyBranch {
   /** Wall-clock duration of the branch, when measured. */
   durationMs?: number;
   /** Skip discriminator when the branch was skipped. */
-  skipReason?: 'consent' | 'cache_hit' | 'sampled_out' | 'disabled' | 'unknown';
+  skipReason?:
+    | 'consent'
+    | 'cache_hit'
+    | 'sampled_out'
+    | 'disabled'
+    | 'dropped'
+    | 'unknown';
   /** Error info when the branch failed. */
   error?: { name?: string; message: string };
   /** Outbound payload of the branch, when captured. */
@@ -170,7 +176,13 @@ export interface JourneyHop {
   /** Error info when the hop's terminal phase is error. */
   error?: { name?: string; message: string };
   /** Skip discriminator when the hop's terminal phase is skip. */
-  skipReason?: 'consent' | 'cache_hit' | 'sampled_out' | 'disabled' | 'unknown';
+  skipReason?:
+    | 'consent'
+    | 'cache_hit'
+    | 'sampled_out'
+    | 'disabled'
+    | 'dropped'
+    | 'unknown';
   /** Matched mapping rule, when one matched. */
   mappingKey?: string;
   /** Matched contract rule, when one matched. */

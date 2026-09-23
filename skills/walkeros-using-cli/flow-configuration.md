@@ -192,21 +192,22 @@ globs both work, resolved against the install root (where pacote put files):
 
 ### Destination Properties
 
-| Property  | Type                               | Description                                                       |
-| --------- | ---------------------------------- | ----------------------------------------------------------------- |
-| `package` | `string`                           | NPM package or local package name                                 |
-| `config`  | `object`                           | Destination-specific configuration                                |
-| `mapping` | `object`                           | Event transformation rules                                        |
-| `consent` | `object`                           | Required consent levels                                           |
-| `before`  | `string \| Route[] \| RouteConfig` | First transformer in post-collector chain (conditional via `one`) |
+| Property  | Type                               | Description                                                                |
+| --------- | ---------------------------------- | -------------------------------------------------------------------------- |
+| `package` | `string`                           | NPM package or local package name                                          |
+| `config`  | `object`                           | Destination-specific configuration                                         |
+| `mapping` | `object`                           | Event transformation rules                                                 |
+| `consent` | `object`                           | Required consent levels                                                    |
+| `before`  | `string \| Route[] \| RouteConfig` | Destination chain: runs for this destination only (a `stop` skips only it) |
 
-**Route shape** (used wherever the type column shows `Route[]` or
-`RouteConfig`). A `RouteConfig` is a **disjoint union**: set at most one of
-`next` (gated link), `one` (first-match dispatch), or `many` (all-match
-dispatch), never more than one:
+**Route shape** (used wherever the type column shows `Route[]` or `RouteConfig`,
+and by `collector.next`). A `RouteConfig` is a **disjoint union**: set at most
+one of `next` (gated link), `one` (first-match dispatch), `many` (all-match
+fan-out), or `stop` (drop), never more than one:
 
 ```json
-// Sequence form (chained, no dispatch):
+// Sequence form (chained, no dispatch). A member's own `next` runs right
+// after that member, then the array continues:
 "before": ["validate", "enrich"]
 
 // Gated link:
@@ -223,21 +224,31 @@ dispatch), never more than one:
   ]
 }
 
-// All-match dispatch (many, pre-collector only):
+// All-match fan-out (many, allowed in every chain field):
 "next": {
   "many": [
     { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "granted" }, "next": "ga4-pipeline" },
     { "next": "audit-log" }
   ]
 }
+
+// Drop (stop), here for one destination only:
+"before": [
+  { "match": { "key": "event.name", "operator": "eq", "value": "product impression" }, "stop": true },
+  "redact"
+]
 ```
 
 `one` entries evaluate in order, first match wins. An entry with no `match`
-always matches (use it as a fallback). The match object reads from ingest
-metadata (e.g. `ingest.path`, `ingest.method`). No matching entry means the
-event passes through unchanged. `many` runs every matching branch in parallel
-and terminates the main chain, useful for audit-while-process patterns
-pre-collector.
+always matches (use it as a fallback). The match object reads the root
+`{ ingest, event }` at every position (e.g. `ingest.path`, `event.name`), and
+each route is evaluated only when the event reaches it. No matching entry means
+the event passes through unchanged. An array made only of route configs is an
+implicit `one` (first match wins). `many` turns every matching entry into its
+own copy of the event with a derived `event.id`; each copy finishes the rest of
+the path (collector and destinations included) on its own, and copies are never
+merged. `stop` ends the running copy: in `collector.next` no destination gets
+the event, in `destination.before` only that destination skips it.
 
 For mapping syntax, see
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
@@ -262,11 +273,11 @@ For mapping syntax, see
 
 ### Source Properties
 
-| Property  | Type                               | Description                                                      |
-| --------- | ---------------------------------- | ---------------------------------------------------------------- |
-| `package` | `string`                           | Source package name                                              |
-| `config`  | `object`                           | Source-specific configuration                                    |
-| `next`    | `string \| Route[] \| RouteConfig` | First transformer in pre-collector chain (conditional via `one`) |
+| Property  | Type                               | Description                                                        |
+| --------- | ---------------------------------- | ------------------------------------------------------------------ |
+| `package` | `string`                           | Source package name                                                |
+| `config`  | `object`                           | Source-specific configuration                                      |
+| `next`    | `string \| Route[] \| RouteConfig` | Source chain: runs before the collector (a `stop` drops the event) |
 
 `Route` shape: see [Destination Properties](#destination-properties) above.
 
@@ -292,15 +303,15 @@ For mapping syntax, see
 
 ### Transformer Properties
 
-| Property  | Type                               | Description                                                                                   |
-| --------- | ---------------------------------- | --------------------------------------------------------------------------------------------- |
-| `package` | `string`                           | Transformer package name                                                                      |
-| `config`  | `object`                           | Transformer-specific configuration                                                            |
-| `code`    | `object`                           | Inline code (`push`, `init`) with `$code:`                                                    |
-| `before`  | `string \| Route[] \| RouteConfig` | First transformer to run before this step's push (conditional via `one`)                      |
-| `next`    | `string \| Route[] \| RouteConfig` | Next transformer in the chain (conditional via `one`)                                         |
-| `cache`   | `object`                           | Cache config (dedup, halt). `cache.stop: true` halts the pipeline at pre-collector positions. |
-| `mapping` | `Mapping.Config`                   | Event-to-event mapping (same shape as `Destination.mapping`, different position semantic)     |
+| Property  | Type                               | Description                                                                                                                |
+| --------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `package` | `string`                           | Transformer package name                                                                                                   |
+| `config`  | `object`                           | Transformer-specific configuration                                                                                         |
+| `code`    | `object`                           | Inline code (`push`, `init`) with `$code:`                                                                                 |
+| `before`  | `string \| Route[] \| RouteConfig` | First transformer to run before this step's push (conditional via `one`)                                                   |
+| `next`    | `string \| Route[] \| RouteConfig` | Next transformer in the chain (conditional via `one`)                                                                      |
+| `cache`   | `object`                           | Cache config (dedup, halt). `cache.stop: true` in a source chain or `collector.next` halts the event for all destinations. |
+| `mapping` | `Mapping.Config`                   | Event-to-event mapping (same shape as `Destination.mapping`, different position semantic)                                  |
 
 `Route` shape: see [Destination Properties](#destination-properties) above.
 
@@ -343,10 +354,16 @@ validate → enrich → [destinations]
 {
   "collector": {
     "consent": { "functional": true },
-    "globals": { "version": "1.0" }
+    "globals": { "version": "1.0" },
+    "next": ["bot", "validate"]
   }
 }
 ```
+
+`collector.next` is the collector chain: a `Route` that runs once per event,
+after the collector completed it and before the destination fan-out. Every
+destination receives its output, and a `stop` there reaches no destination. Keep
+per-destination filtering on `destination.before`.
 
 ---
 

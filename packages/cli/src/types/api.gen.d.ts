@@ -4093,15 +4093,15 @@ export interface paths {
     put?: never;
     /**
      * Bundle flow
-     * @description Bundle a flow using CLI. Returns bundleId (content-hash). Use ?output=download to redirect to presigned S3 URL.
+     * @description Bundle a flow for deploy or download. Requires ?output=download: bearer callers get a 302 to a presigned S3 URL, session callers get the bundle bytes streamed. A POST without output=download returns 400.
      */
     post: {
       parameters: {
-        query?: {
+        query: {
           /** @description Named flow to bundle (required for multi-settings flows) */
           flow?: string;
-          /** @description Set to "download" to redirect to the bundle file */
-          output?: 'download';
+          /** @description Required. Must be "download" */
+          output: 'download';
         };
         header?: never;
         path: {
@@ -4112,84 +4112,27 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Bundle result */
+        /** @description Bundle file streamed (session callers) */
         200: {
           headers: {
             [name: string]: unknown;
           };
-          content: {
-            'application/json': components['schemas']['BundleResponse'];
-          };
+          content?: never;
         };
-        /** @description Redirect to presigned bundle URL (when output=download) */
+        /** @description Redirect to presigned bundle URL (bearer callers) */
         302: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
         };
-        /** @description Unauthorized */
-        401: {
+        /** @description Validation error */
+        400: {
           headers: {
             [name: string]: unknown;
           };
           content: {
             'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/simulate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Simulate a flow step
-     * @description Execute a simulation against a pre-built bundle. Requires bundleId from the bundle endpoint.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['SimulateRequest'];
-        };
-      };
-      responses: {
-        /** @description Simulation result */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['SimulateResponse'];
           };
         };
         /** @description Unauthorized */
@@ -4210,7 +4153,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Simulation container error */
+        /** @description Bundle upstream unavailable */
         502: {
           headers: {
             [name: string]: unknown;
@@ -13356,37 +13299,6 @@ export interface components {
       scope: 'read' | 'read write';
       /** @example 90 */
       expiresInDays: 30 | 90 | 180 | 365;
-    };
-    BundleResponse: {
-      bundleId: string;
-      cached: boolean;
-    };
-    SimulateResponse: {
-      success: boolean;
-      result?: {
-        /** @enum {string} */
-        step: 'source' | 'transformer' | 'destination';
-        name: string;
-        events: {
-          [key: string]: unknown;
-        }[];
-        calls: {
-          fn: string;
-          args: unknown[];
-          ts: number;
-        }[];
-        duration: number;
-      };
-    };
-    SimulateRequest: {
-      bundleId: string;
-      config: {
-        [key: string]: unknown;
-      };
-      event: {
-        [key: string]: unknown;
-      };
-      step: string;
     };
     RegisterRuntimeRequest: {
       flowId: string;

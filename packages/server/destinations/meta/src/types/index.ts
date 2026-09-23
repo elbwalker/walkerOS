@@ -3,6 +3,7 @@ import type {
   Destination as CoreDestination,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { userDataKeys } from '../userData';
 
 export interface Settings {
   accessToken: string;
@@ -11,8 +12,13 @@ export interface Settings {
   doNotHash?: string[];
   test_event_code?: string;
   url?: string;
-  user_data?: WalkerOSMapping.Map;
+  user_data?: UserDataMap;
 }
+
+export type UserDataKey = (typeof userDataKeys)[number];
+
+/** Mapping of Meta customer information parameters to event values */
+export type UserDataMap = Partial<Record<UserDataKey, WalkerOSMapping.Value>>;
 
 export type InitSettings = Partial<Settings>;
 

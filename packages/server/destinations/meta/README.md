@@ -30,7 +30,15 @@ npm install @walkeros/server-destination-meta
     "default": {
       "config": { "platform": "server" },
       "destinations": {
-        "meta": { "package": "@walkeros/server-destination-meta", "config": {} }
+        "meta": {
+          "package": "@walkeros/server-destination-meta",
+          "config": {
+            "settings": {
+              "accessToken": "YOUR_ACCESS_TOKEN",
+              "pixelId": "1234567890"
+            }
+          }
+        }
       }
     }
   }

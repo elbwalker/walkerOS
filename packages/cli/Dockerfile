@@ -3,10 +3,10 @@
 # Self-bundling runner: fetches config, bundles locally, runs the flow.
 # Same image for all modes: local (A), registered (B), remote (C), managed (D).
 
-FROM node:22.23.0-alpine@sha256:ab07539e0988b63558ff621f5fbe1077054c39d9809112974fb79993949d41cd
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
 
 # Install tini for proper signal handling
-RUN apk add --no-cache tini
+RUN apk upgrade --no-cache && apk add --no-cache tini
 
 ARG CLI_VERSION=latest
 

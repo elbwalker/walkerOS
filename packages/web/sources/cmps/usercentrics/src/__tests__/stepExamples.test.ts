@@ -1,4 +1,4 @@
-import type { Collector, Elb } from '@walkeros/core';
+import type { Collector, Elb, Trigger } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { sourceUsercentrics } from '../index';
 import { examples } from '../dev';
@@ -83,7 +83,7 @@ describe('Step Examples', () => {
       );
     }
 
-    // Source pushes via detached elb chain — yield for it.
+    // Source pushes via detached elb chain; yield for it.
     for (let i = 0; i < 10 && mockElb.mock.calls.length === 0; i++) {
       await Promise.resolve();
     }
@@ -92,5 +92,56 @@ describe('Step Examples', () => {
       (args) => ['elb', ...args] as unknown[],
     );
     expect(captured).toEqual(example.out);
+  });
+});
+
+describe('createTrigger', () => {
+  let instance: Trigger.Instance<UsercentricsV2Service[], void> | undefined;
+
+  beforeEach(() => {
+    // startFlow runs the real collector; the shared setup fakes timers.
+    jest.useRealTimers();
+    ucWindow().UC_UI = undefined;
+  });
+
+  afterEach(async () => {
+    if (instance?.flow) await instance.flow.collector.command('shutdown');
+    instance = undefined;
+    ucWindow().UC_UI = undefined;
+  });
+
+  // `walkeros push --simulate` drives a source through its createTrigger, so
+  // every step example must produce its documented consent through it.
+  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
+    const services: UsercentricsV2Service[] = Array.isArray(example.in)
+      ? example.in
+      : [];
+    const mapping = example.mapping;
+    const mappingSettings =
+      mapping &&
+      typeof mapping === 'object' &&
+      'settings' in mapping &&
+      mapping.settings &&
+      typeof mapping.settings === 'object'
+        ? mapping.settings
+        : {};
+
+    instance = await examples.createTrigger({
+      sources: {
+        consent: {
+          code: sourceUsercentrics,
+          config: { settings: { ...mappingSettings } },
+        },
+      },
+    });
+    await instance.trigger(
+      example.trigger?.type,
+      example.trigger?.options,
+    )(services);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(instance.flow?.collector.consent).toEqual(
+      example.out?.[0]?.[2] ?? {},
+    );
   });
 });

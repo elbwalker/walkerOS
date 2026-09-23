@@ -402,9 +402,9 @@ describe('createMappingRoot', () => {
       match: { key: 'ingest.method', operator: 'eq' as const, value: 'GET' },
       next: 'reader',
     };
-    expect(getNextSteps(route, createMappingRoot({ method: 'GET' }))).toEqual([
-      'reader',
-    ]);
+    expect(getNextSteps(route, createMappingRoot({ method: 'GET' }))).toEqual({
+      ids: ['reader'],
+    });
   });
 });
 

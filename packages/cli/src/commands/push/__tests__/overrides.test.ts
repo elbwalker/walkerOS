@@ -307,6 +307,27 @@ describe('buildOverrides', () => {
       ).toThrow('Specify a transformer');
     });
 
+    it('parses --mock collector.next.bot=value for the collector chain', () => {
+      const result = buildOverrides(
+        { mock: ['collector.next.bot={"name":"mocked"}'] },
+        threeDestFlow,
+      );
+      expect(result.transformerMocks).toEqual({
+        'collector.next': { bot: { name: 'mocked' } },
+      });
+      expect(result.destinations).toBeUndefined();
+    });
+
+    it.each([
+      ['collector.next={}', 'collector.next.TRANSFORMER'],
+      ['collector.default.bot={}', 'collector.next.TRANSFORMER'],
+      ['collector.next.bot.extra={}', 'collector.next.TRANSFORMER'],
+    ])('rejects --mock %s', (flag, message) => {
+      expect(() => buildOverrides({ mock: [flag] }, threeDestFlow)).toThrow(
+        message,
+      );
+    });
+
     it('path-specific mock does not disable other destinations', () => {
       const result = buildOverrides(
         { mock: ['destination.ga4.before.redact={}'] },
