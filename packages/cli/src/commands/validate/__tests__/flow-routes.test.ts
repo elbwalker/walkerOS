@@ -37,7 +37,7 @@ function sourceNext(next: unknown, transformerIds: string[]) {
   };
 }
 
-describe('validateFlow — route targets (getRouteGraph)', () => {
+describe('validateFlow: route targets (getRouteGraph)', () => {
   it('flattens a one route to all downstream targets', () => {
     // Source.next is a `one` (first-match dispatch) route fanning out to two
     // transformers, each with examples. The graph builder should enumerate

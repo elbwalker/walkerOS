@@ -867,7 +867,7 @@
           ]
         },
         "next": {
-          "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.",
+          "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing on ingest and event data.",
           "allOf": [
             {
               "$ref": "#/definitions/Route"
@@ -1371,7 +1371,7 @@
                 ]
               },
               "next": {
-                "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.",
+                "description": "Pre-collector transformer chain. String, string[], or Route[] for conditional routing on ingest and event data.",
                 "allOf": [
                   {
                     "$ref": "#/definitions/Route"

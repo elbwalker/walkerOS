@@ -497,7 +497,7 @@ export namespace Flow {
     env?: unknown;
 
     /**
-     * First transformer in post-collector chain.
+     * First transformer in this destination's chain.
      *
      * Name of the transformer to execute before sending events to this destination.
      * If omitted, events are sent directly from the collector.
@@ -579,7 +579,8 @@ export namespace Flow {
      *
      * Name of the next transformer to execute after this one.
      * In a pre-collector chain (source.next), terminates at the collector.
-     * In a post-collector chain (destination.before), terminates at the destination.
+     * In collector.next, terminates at the destination fan-out.
+     * In a destination chain (destination.before), terminates at the destination.
      * If omitted, the chain ends and control passes to the next pipeline stage.
      * Array values define an explicit chain; a member's own `next` is
      * inserted right after it. Circular references are cut at runtime by the

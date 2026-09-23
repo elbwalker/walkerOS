@@ -356,7 +356,7 @@ export const SourceSchema = z
       'Source-level variables (highest priority in cascade)',
     ),
     next: RouteSchema.optional().describe(
-      'Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.',
+      'Pre-collector transformer chain. String, string[], or Route[] for conditional routing on ingest and event data.',
     ),
     before: RouteSchema.optional().describe(
       'Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.',
