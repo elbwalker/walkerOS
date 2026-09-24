@@ -16,7 +16,113 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # One-step release: dispatch right after a push, no need to wait for CI.
+  # "Build and test" (test.yml) proves the code, the release job's smoke
+  # proves the bumped build. The gate decides whether this run must prove the
+  # code itself: if a standalone "Build and test" run for the exact SHA passed
+  # (or is running and then passes), reuse it; otherwise the ci job runs
+  # test.yml here. The gate holds no publish rights.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      need_ci: ${{ steps.lookup.outputs.need_ci }}
+    steps:
+      # Matching on the workflow file, then on name, path and head_sha, keeps
+      # any other workflow from satisfying the gate. Runs of test.yml called
+      # from a Release run are part of that Release run and are not listed.
+      - name: Look up "Build and test" for this commit
+        id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          runs() {
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/test.yml/runs?head_sha=${SHA}&per_page=100" \
+              --jq '[.workflow_runs[]
+                     | select(.head_sha == "'"$SHA"'"
+                              and .name == "Build and test"
+                              and .path == ".github/workflows/test.yml")]'
+          }
+
+          RUNS="$(runs)"
+          # A push run can take a few seconds to register after the push.
+          if [ "$(jq length <<<"$RUNS")" = "0" ]; then
+            sleep 20
+            RUNS="$(runs)"
+          fi
+
+          SUCCESS="$(jq -r '[.[] | select(.conclusion == "success")][0].html_url // empty' <<<"$RUNS")"
+          if [ -n "$SUCCESS" ]; then
+            echo "OK: \"Build and test\" passed on $SHA: $SUCCESS"
+            echo "need_ci=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ACTIVE="$(jq -r '[.[] | select(.status != "completed")] | sort_by(.created_at) | last | .id // empty' <<<"$RUNS")"
+          if [ -n "$ACTIVE" ]; then
+            URL="$(jq -r --arg id "$ACTIVE" '.[] | select((.id | tostring) == $id) | .html_url' <<<"$RUNS")"
+            echo "Waiting for \"Build and test\" in progress on $SHA: $URL"
+            # test.yml's timeout is 15 minutes; allow queueing on top of that.
+            DEADLINE=$(( $(date +%s) + 20 * 60 ))
+            while :; do
+              RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ACTIVE}")"
+              if [ "$(jq -r .status <<<"$RUN")" = "completed" ]; then break; fi
+              if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+                echo "::error::\"Build and test\" on $SHA did not finish within 20 minutes: $URL"
+                exit 1
+              fi
+              sleep 30
+            done
+            CONCLUSION="$(jq -r .conclusion <<<"$RUN")"
+            case "$CONCLUSION" in
+              success)
+                echo "OK: \"Build and test\" passed on $SHA: $URL"
+                echo "need_ci=false" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+              cancelled|skipped)
+                echo "\"Build and test\" was $CONCLUSION; this release runs it itself."
+                echo "need_ci=true" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+              *)
+                echo "::error::Refusing to release: \"Build and test\" concluded '$CONCLUSION' on $SHA: $URL"
+                echo "Fix the commit, or re-run the failed run if it was a flake, then dispatch the release again."
+                exit 1
+                ;;
+            esac
+          fi
+
+          FAILED="$(jq -r '[.[] | select(.conclusion != "cancelled" and .conclusion != "skipped")] | sort_by(.created_at) | last | .html_url // empty' <<<"$RUNS")"
+          if [ -n "$FAILED" ]; then
+            echo "::error::Refusing to release: \"Build and test\" failed on $SHA: $FAILED"
+            echo "Fix the commit, or re-run the failed run if it was a flake, then dispatch the release again."
+            exit 1
+          fi
+
+          echo "No usable \"Build and test\" run on $SHA (none, or only cancelled/skipped); this release runs it itself."
+          echo "need_ci=true" >> "$GITHUB_OUTPUT"
+
+  # Full "Build and test" (typecheck, lint, test, integration, e2e) on this
+  # SHA. It runs on its own runner with read-only permissions and no secrets;
+  # its node_modules and turbo caches never reach the publishing job, which
+  # installs cold on a fresh runner.
+  ci:
+    needs: gate
+    if: needs.gate.outputs.need_ci == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/test.yml
+
   release:
+    needs: [gate, ci]
+    # ci is skipped when the gate found a green run; that counts as proven.
+    if: ${{ !cancelled() && needs.gate.result == 'success' && (needs.ci.result == 'success' || needs.ci.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: npm-publish
@@ -25,8 +131,6 @@ jobs:
       pull-requests: write
       id-token: write
     env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
       # The tag that follows the newest release of this kind.
       MOVING_TAG: ${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
     steps:
@@ -71,6 +175,7 @@ jobs:
           # holds npm publish rights, so restoring a dependency cache that a
           # lower-privileged workflow can write is a supply-chain path into the
           # release. Install cold instead; correctness beats the cache here.
+          # The same holds for node_modules and turbo caches: none are restored.
           package-manager-cache: false
 
       - name: Install dependencies
@@ -156,11 +261,60 @@ jobs:
       - name: Build
         # Bump runs first so this single build embeds the bumped __VERSION__
         # (see walkerOS/packages/config/tsup/index.mjs). The dist produced here
-        # is exactly what the gate below tests and what publish ships.
+        # is exactly what the smoke below checks and what publish ships.
         run: npx turbo run build --filter='!@walkeros/website'
 
-      - name: Test, typecheck, lint, integration, e2e
-        run: npx turbo run test typecheck lint test:integration test:e2e
+      # The gate above proved the code on this commit; this proves the bumped
+      # build. cli e2e spawns the built binary, then both binaries must report
+      # the bumped version and every public package's entry points must exist.
+      - name: Smoke-test the bumped build
+        run: |
+          npx turbo run test:e2e --filter=@walkeros/cli
+
+          check_version() {
+            local label="$1" bin="$2" manifest="$3"
+            local want got
+            want="$(node -p "require('./$manifest').version")"
+            got="$(node "$bin" --version)"
+            if [ "$got" != "$want" ]; then
+              echo "::error::$label --version reports '$got', expected bumped '$want'."
+              exit 1
+            fi
+            echo "OK: $label $got"
+          }
+          check_version cli packages/cli/dist/cli.js packages/cli/package.json
+          check_version runner packages/runner/dist/bin.js packages/runner/package.json
+
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          const { execSync } = require('child_process');
+          const workspaces = JSON.parse(execSync('npm query .workspace', { encoding: 'utf8' }));
+          const targets = (value, out) => {
+            if (typeof value === 'string') out.push(value);
+            else if (Array.isArray(value)) value.forEach((v) => targets(v, out));
+            else if (value && typeof value === 'object')
+              Object.values(value).forEach((v) => targets(v, out));
+            return out;
+          };
+          const missing = [];
+          let checked = 0;
+          for (const ws of workspaces) {
+            if (ws.private) continue;
+            const pkg = JSON.parse(fs.readFileSync(path.join(ws.path, 'package.json'), 'utf8'));
+            for (const file of targets([pkg.main, pkg.module, pkg.types, pkg.exports], [])) {
+              if (file.includes('*')) continue;
+              checked++;
+              if (!fs.existsSync(path.join(ws.path, file))) missing.push(`${pkg.name}: ${file}`);
+            }
+          }
+          if (missing.length) {
+            console.log(`::error::${missing.length} published entry point(s) missing from the build:`);
+            missing.forEach((m) => console.log(`  ${m}`));
+            process.exit(1);
+          }
+          console.log(`OK: ${checked} entry points present across public packages.`);
+          EOF
 
       # Trusted Publishing: npm exchanges the GitHub OIDC token at publish time.
       # No NPM_TOKEN. Provenance attestations are generated automatically.
