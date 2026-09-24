@@ -35,6 +35,29 @@ function mergeVariables(
   return result;
 }
 
+/**
+ * A `$env` or `$secret` reference that cannot resolve for a build. Carries a
+ * code and the referenced NAME (never a value), so build tooling can report
+ * the failure structurally instead of matching message text.
+ * - `MISSING_ENV`: `$env.NAME` with no value in the build env and no default.
+ * - `WEB_SECRET_REF`: `$secret.NAME` in a web (non-deferred) flow.
+ */
+export class FlowReferenceError extends Error {
+  readonly code: 'MISSING_ENV' | 'WEB_SECRET_REF';
+  readonly reference: string;
+
+  constructor(
+    code: 'MISSING_ENV' | 'WEB_SECRET_REF',
+    reference: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'FlowReferenceError';
+    this.code = code;
+    this.reference = reference;
+  }
+}
+
 /** Sentinel prefix for deferred $env resolution. Shared with CLI bundler. */
 export const ENV_MARKER_PREFIX = '__WALKEROS_ENV:';
 
@@ -43,6 +66,14 @@ export const SECRET_MARKER_PREFIX = '__WALKEROS_SECRET:';
 
 export interface ResolveOptions {
   deferred?: boolean;
+  /**
+   * The only source for non-deferred `$env` references. When set, `$env.NAME`
+   * reads this map (then the inline `:default`) and never `process.env`.
+   * Build tooling passes it so a web bundle cannot pick up whatever happens
+   * to be in the building process's environment. When omitted, `process.env`
+   * is used.
+   */
+  env?: Readonly<Record<string, string | undefined>>;
   /**
    * When false, unresolved `$flow.X.Y` refs (unknown flow, missing key,
    * empty value) trigger {@link onWarning} and the original `$flow…` string
@@ -128,7 +159,8 @@ export type FlowConfigResolver = (flowName: string) => unknown;
  *   (object, array, number, boolean, string). Inline interpolation requires a
  *   scalar (string/number/boolean) and throws on objects/arrays. Resolution is
  *   recursive (variables may reference other variables) with cycle detection.
- * - $env.NAME or $env.NAME:default → Look up process.env[NAME] (non-secret config)
+ * - $env.NAME or $env.NAME:default → Look up `options.env` (or process.env when
+ *   no env map is given) for non-secret config
  * - $secret.NAME → Managed secret. In deferred (server) mode emits a marker the
  *   bundler turns into a runtime process.env read; the deploy pipeline injects
  *   the secret value. Throws in non-deferred (web) mode. Use for credentials.
@@ -287,8 +319,10 @@ function resolvePatterns(
       if (options?.deferred) {
         return `${SECRET_MARKER_PREFIX}${name}`;
       }
-      throwError(
-        `Secret "$secret.${name}" cannot be used in a web flow — secrets are never sent to the browser. Use a server flow.`,
+      throw new FlowReferenceError(
+        'WEB_SECRET_REF',
+        name,
+        `Secret "$secret.${name}" cannot be used in a web flow: secrets are never sent to the browser. Use a server flow.`,
       );
     }
 
@@ -349,13 +383,17 @@ function resolvePatterns(
           ? `${ENV_MARKER_PREFIX}${name}:${defaultValue}`
           : `${ENV_MARKER_PREFIX}${name}`;
       }
-      if (typeof process !== 'undefined' && process.env?.[name] !== undefined) {
-        return process.env[name]!;
-      }
+      const source =
+        options?.env ??
+        (typeof process !== 'undefined' ? process.env : undefined);
+      const found = source?.[name];
+      if (found !== undefined) return found;
       if (defaultValue !== undefined) {
         return defaultValue;
       }
-      throwError(
+      throw new FlowReferenceError(
+        'MISSING_ENV',
+        name,
         `Environment variable "${name}" not found and no default provided`,
       );
     });

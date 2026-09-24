@@ -323,6 +323,24 @@ export namespace Flow {
      * Server flows only.
      */
     traceInclude?: string[];
+
+    /**
+     * Declared build-time values for web `$env` references.
+     *
+     * Web flows resolve `$env.NAME` when the bundle is built and inline the
+     * value. This map is the declared set the build resolves against, so the
+     * same config bundles identically wherever it is built. A local CLI build
+     * layers it over the shell environment; a hosted build uses it alone.
+     * Server flows ignore it: their `$env` references are read at runtime.
+     *
+     * Values are inlined into public web bundles. Never put secrets here.
+     *
+     * @example
+     * ```json
+     * { "GA4_MEASUREMENT_ID": "G-XXXXXXX" }
+     * ```
+     */
+    env?: Record<string, string>;
   }
 
   /**

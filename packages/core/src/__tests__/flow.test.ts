@@ -1494,6 +1494,54 @@ describe('Pattern Resolution', () => {
         value: 'from-env',
       });
     });
+
+    test('an explicit env map is the only source, never process.env', () => {
+      process.env.AMBIENT_SECRET = 'leaked';
+      const setup: Flow.Json = {
+        version: 4,
+        flows: {
+          default: {
+            config: { platform: 'web' },
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  id: '$env.GA4_ID',
+                  fallback: '$env.AMBIENT_SECRET:none',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup, undefined, {
+        env: { GA4_ID: 'G-DECLARED' },
+      });
+      expect(config.destinations?.test.config).toEqual({
+        id: 'G-DECLARED',
+        fallback: 'none',
+      });
+      expect(() =>
+        getFlowSettings(
+          {
+            version: 4,
+            flows: {
+              default: {
+                config: { platform: 'web' },
+                destinations: {
+                  test: {
+                    package: '@walkeros/test',
+                    config: { value: '$env.AMBIENT_SECRET' },
+                  },
+                },
+              },
+            },
+          },
+          undefined,
+          { env: {} },
+        ),
+      ).toThrow('Environment variable "AMBIENT_SECRET" not found');
+    });
   });
 
   describe('Combined Patterns', () => {
