@@ -488,7 +488,9 @@
                     },
                     "source": {
                       "type": "dataLayer",
-                      "platform": "web"
+                      "platform": "web",
+                      "url": "http://localhost/",
+                      "referrer": ""
                     }
                   }
                 ]

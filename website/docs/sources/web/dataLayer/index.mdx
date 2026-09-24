@@ -103,6 +103,14 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
   language="javascript"
 />
 
+Every event carries the page context in `source`, like browser source events:
+`{ type: 'dataLayer', platform: 'web', url, referrer }`, with `url` from
+`window.location.href` and `referrer` from `document.referrer`. Both are read
+when the event is emitted, so a push after an SPA navigation carries the new
+URL, and entries queued before the source started get the URL at replay time.
+Destinations that read `source.url` (such as Meta or Piwik PRO) use it for
+dataLayer events without extra config.
+
 ## Custom filtering
 
 Filter which dataLayer events get processed:
