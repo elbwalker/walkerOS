@@ -36,7 +36,8 @@ import {
   type HeartbeatHandle,
 } from './heartbeat.js';
 import { createTracePoller, type TracePollerHandle } from './trace-poller.js';
-import { fetchSecrets, SecretsHttpError } from './secrets-fetcher.js';
+import { fetchSecrets } from './secrets-fetcher.js';
+import { RunnerAuthError } from './runner-auth-error.js';
 import type { ErrorRing, LogRing } from './log-ring.js';
 import { VERSION } from './version.js';
 
@@ -761,12 +762,10 @@ async function injectSecrets(
       logger.info(`Injected ${count} secret(s) into environment`);
     }
   } catch (error) {
-    if (
-      error instanceof SecretsHttpError &&
-      (error.status === 401 || error.status === 403)
-    ) {
-      throw error; // Fatal: token is invalid
-    }
+    // Fatal: a 401/403 means the token is missing, revoked or not bound to
+    // this flow. fetchSecrets classifies it as RunnerAuthError before any
+    // generic status check, so this is the branch a revoked token reaches.
+    if (error instanceof RunnerAuthError) throw error;
     logger.warn(
       `Could not fetch secrets: ${error instanceof Error ? error.message : error}`,
     );

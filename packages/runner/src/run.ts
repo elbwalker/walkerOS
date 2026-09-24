@@ -11,9 +11,11 @@ import { homedir } from 'os';
 import path from 'path';
 import chalk from 'chalk';
 import { Level, createTimer, getErrorMessage } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
 import {
   createCLILogger,
   createCLILoggerConfig,
+  scrubSecrets,
   type CLILoggerColors,
 } from '@walkeros/core/node';
 import {
@@ -30,13 +32,40 @@ import {
 } from './resolve-bundle.js';
 import { validatePort } from './validators.js';
 import { runPipeline, type PipelineOptions } from './pipeline.js';
-import type { RunCommandOptions, RunOptions, RunResult } from './types.js';
+import type { RunCommandOptions } from './types.js';
 
 /** The runtime's terminal colours, injected into the shared logger factory. */
 const RUNTIME_COLORS: CLILoggerColors = { error: chalk.red };
 
 /** Artifact looked up in the working directory when none is given. */
 const DEFAULT_ARTIFACT = 'flow.mjs';
+
+/** Heartbeat cadence when none is configured, in seconds. */
+const DEFAULT_HEARTBEAT_INTERVAL_S = 60;
+/** Floor for the heartbeat cadence, in seconds: protects the app API from a tight loop. */
+export const MIN_HEARTBEAT_INTERVAL_S = 10;
+
+/**
+ * Resolve `WALKEROS_HEARTBEAT_INTERVAL` (seconds) to milliseconds. Unset uses
+ * the 60 s default. A value that is not a number, or is below 10 s (0 and
+ * negatives included), is clamped to the 10 s minimum with a warning, so a
+ * typo can never turn the heartbeat into a millisecond loop against the app.
+ */
+export function resolveHeartbeatIntervalMs(
+  raw: string | undefined,
+  logger: Pick<Logger.Instance, 'warn'>,
+): number {
+  if (raw === undefined || raw.trim() === '')
+    return DEFAULT_HEARTBEAT_INTERVAL_S * 1000;
+  const seconds = Number(raw);
+  if (!Number.isFinite(seconds) || seconds < MIN_HEARTBEAT_INTERVAL_S) {
+    logger.warn(
+      `Invalid heartbeat interval "${raw}"; using the ${MIN_HEARTBEAT_INTERVAL_S}s minimum`,
+    );
+    return MIN_HEARTBEAT_INTERVAL_S * 1000;
+  }
+  return seconds * 1000;
+}
 
 /** Default cache dir following XDG conventions */
 function defaultCacheDir(): string {
@@ -104,15 +133,6 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   );
 
   try {
-    // Opt-in dotenv: load BEFORE bundle resolution so $env/$secret runtime
-    // reads see the values. No auto-discovery; only when --env-file is passed.
-    // Existing process.env keys are never overridden.
-    if (options.envFile) {
-      const { loadEnvFile } = await import('./env-file.js');
-      loadEnvFile(options.envFile);
-      logger.debug(`Loaded env file: ${options.envFile}`);
-    }
-
     // Resolve port
     const port = options.port ?? 8080;
     if (options.port !== undefined) {
@@ -152,13 +172,11 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
         projectId,
         flowId,
         deploymentId: options.deploymentId,
-        heartbeatIntervalMs:
-          parseInt(
-            process.env.WALKEROS_HEARTBEAT_INTERVAL ??
-              process.env.HEARTBEAT_INTERVAL ??
-              '60',
-            10,
-          ) * 1000,
+        heartbeatIntervalMs: resolveHeartbeatIntervalMs(
+          process.env.WALKEROS_HEARTBEAT_INTERVAL ??
+            process.env.HEARTBEAT_INTERVAL,
+          logger,
+        ),
         cacheDir:
           process.env.WALKEROS_CACHE_DIR ??
           process.env.CACHE_DIR ??
@@ -196,9 +214,12 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {
+      // The text path scrubs inside the logger handler; the shared jsonHandler
+      // prints data verbatim (the CLI's machine output relies on that), so
+      // scrub here. A failed fetch message can carry a presigned URL.
       logger.json({
         success: false,
-        error: errorMessage,
+        error: scrubSecrets(errorMessage),
         duration,
       });
     } else {
@@ -236,35 +257,4 @@ async function resolveBundlePath(
   return path.resolve(resolved.path);
 }
 
-/**
- * Programmatic start function
- */
-export async function run(options: RunOptions): Promise<RunResult> {
-  const startTime = Date.now();
-
-  try {
-    await runCommand({
-      config: options.config,
-      port: options.port,
-      flowId: options.flowId,
-      project: options.project,
-      verbose: options.verbose,
-      silent: options.silent ?? true,
-    });
-
-    return {
-      success: true,
-      exitCode: 0,
-      duration: Date.now() - startTime,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      exitCode: 1,
-      duration: Date.now() - startTime,
-      error: getErrorMessage(error),
-    };
-  }
-}
-
-export type { RunCommandOptions, RunOptions, RunResult };
+export type { RunCommandOptions };

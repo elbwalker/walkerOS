@@ -249,6 +249,8 @@ export async function createDeployCommand(
 
   try {
     let type: 'web' | 'server';
+    // Known only for a remote flow; feeds the runneros hint below.
+    let remoteProjectId: string | undefined;
 
     if (!config) {
       log.error(
@@ -263,6 +265,7 @@ export async function createDeployCommand(
     if (isRemoteFlow) {
       // Fetch flow from API to determine type
       const id = options.project ?? requireProjectId();
+      remoteProjectId = id;
       const resp = await apiFetch(`/api/projects/${id}/flows/${config}`);
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}));
@@ -313,17 +316,29 @@ export async function createDeployCommand(
     log.info(`  Slug:  ${result.slug}`);
     log.info(`  Type:  ${result.type}`);
     log.info('');
-    log.info('Run locally:');
-    log.info(
-      `  walkeros run ${isRemoteFlow ? 'flow.json' : config} --deploy ${result.id}`,
-    );
-    log.info('');
     log.info('Create a deploy token for this flow in the app');
     log.info('(Settings, Self-hosted deploy token) and set it as');
     log.info('WALKEROS_DEPLOY_TOKEN, then run with Docker:');
     log.info('  docker run -e WALKEROS_DEPLOY_TOKEN \\');
     log.info('             -e WALKEROS_APP_URL=https://app.walkeros.io \\');
     log.info('             walkeros/flow:latest');
+
+    if (type === 'server') {
+      // runneros (from @walkeros/runner) reads its token from the environment
+      // only; --flow-id and --project enable the heartbeat and secrets.
+      log.info('');
+      log.info('Or build and start it locally with the same exported token:');
+      log.info(`  walkeros bundle ${isRemoteFlow ? 'flow.json' : config}`);
+      log.info(
+        isRemoteFlow && remoteProjectId
+          ? `  WALKEROS_DEPLOYMENT_ID=${result.id} runneros start dist/flow.mjs --flow-id ${config} --project ${remoteProjectId}`
+          : `  WALKEROS_DEPLOYMENT_ID=${result.id} runneros start dist/flow.mjs`,
+      );
+      if (!isRemoteFlow)
+        log.info(
+          '  (add --flow-id and --project for the heartbeat and secrets)',
+        );
+    }
   } catch (err) {
     handleCliError(err);
   }

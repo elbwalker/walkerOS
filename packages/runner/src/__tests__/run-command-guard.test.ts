@@ -26,13 +26,15 @@ jest.mock('../stdin.js', () => ({
 }));
 
 const errorLog = jest.fn();
+const jsonLog = jest.fn();
 jest.mock('@walkeros/core/node', () => ({
+  ...jest.requireActual('@walkeros/core/node'),
   createCLILogger: () => ({
     info: jest.fn(),
     warn: jest.fn(),
     debug: jest.fn(),
     error: errorLog,
-    json: jest.fn(),
+    json: jsonLog,
     scope: jest.fn().mockReturnValue({ info: jest.fn() }),
   }),
   createCLILoggerConfig: () => ({ level: Level.DEBUG, handler: jest.fn() }),
@@ -124,5 +126,26 @@ describe('runCommand refuses anything but a prebuilt artifact', () => {
     expect(runPipeline).toHaveBeenCalledWith(
       expect.objectContaining({ bundlePath: artifact }),
     );
+  });
+
+  it('scrubs a presigned URL signature from --json error output', async () => {
+    const signature =
+      'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90';
+    const url =
+      'https://bucket.s3.eu-central-1.amazonaws.com/flow.mjs' +
+      `?X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20260924&X-Amz-Signature=${signature}`;
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('denied', { status: 403 }));
+
+    await expect(runCommand({ config: url, json: true })).rejects.toThrow(
+      /__exit__/,
+    );
+
+    expect(jsonLog).toHaveBeenCalledTimes(1);
+    const printed = JSON.stringify(jsonLog.mock.calls[0][0]);
+    expect(printed).toContain('Failed to fetch bundle');
+    expect(printed).not.toContain(signature);
+    expect(printed).not.toContain('AKIAIOSFODNN7EXAMPLE');
   });
 });

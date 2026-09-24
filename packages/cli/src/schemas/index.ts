@@ -7,8 +7,6 @@
 
 export { PortSchema, FilePathSchema } from './primitives';
 
-export { RunOptionsSchema, type RunOptions } from './run';
-
 export {
   ValidationTypeSchema,
   ValidateOptionsSchema,

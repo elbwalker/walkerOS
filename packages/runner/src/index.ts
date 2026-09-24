@@ -5,8 +5,8 @@
  * `@walkeros/cli`), then start the artifact with `runneros start`.
  */
 
-export { runCommand, run, assertPrebuiltArtifact } from './run.js';
-export type { RunCommandOptions, RunOptions, RunResult } from './types.js';
+export { runCommand, assertPrebuiltArtifact } from './run.js';
+export type { RunCommandOptions } from './types.js';
 export {
   runPipeline,
   runShutdown,

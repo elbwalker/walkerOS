@@ -48,6 +48,7 @@ import { loadFlow } from '../runner.js';
 import { createHeartbeat } from '../heartbeat.js';
 import { fetchSecrets } from '../secrets-fetcher.js';
 import { createMockLogger } from './helpers/mock-logger.js';
+import { RunnerAuthError } from '../runner-auth-error.js';
 
 const mockLogger = createMockLogger();
 
@@ -232,5 +233,29 @@ describe('runPipeline', () => {
     expect(mockSetFailed).toHaveBeenCalledWith('bad bundle');
     expect(mockSetReady).not.toHaveBeenCalledWith(true);
     expect(mockClose).toHaveBeenCalled();
+  });
+
+  it('stops startup when the secrets fetch reports a revoked token', async () => {
+    jest
+      .mocked(fetchSecrets)
+      .mockRejectedValueOnce(
+        new RunnerAuthError(401, 'unauthorised', null, 'token revoked'),
+      );
+
+    await expect(
+      runPipeline({
+        ...baseOptions,
+        api: {
+          appUrl: 'https://app.walkeros.io',
+          token: 'revoked-token',
+          projectId: 'proj_123',
+          flowId: 'flow_456',
+          heartbeatIntervalMs: 60000,
+          cacheDir: '/tmp/cache',
+        },
+      }),
+    ).rejects.toBeInstanceOf(RunnerAuthError);
+    expect(loadFlow).not.toHaveBeenCalled();
+    expect(createHeartbeat).not.toHaveBeenCalled();
   });
 });

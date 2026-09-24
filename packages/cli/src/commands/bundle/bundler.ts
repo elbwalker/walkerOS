@@ -20,16 +20,12 @@ import {
   validateComponentNames,
   validateReference,
   validateStoreReferences,
-} from './structural-validators.js';
+} from '@walkeros/core/dev';
 
-// Re-export the structural validators so existing import sites (and the public
-// package entry) keep resolving them from `./bundler`. The implementations live
-// in `./structural-validators` so they can run without loading esbuild.
-export {
-  validateComponentNames,
-  validateReference,
-  validateStoreReferences,
-} from './structural-validators.js';
+// Re-export the structural validators so existing import sites keep resolving
+// them from `./bundler`. The implementations live in `@walkeros/core/dev` so
+// they can run without loading esbuild.
+export { validateComponentNames, validateReference, validateStoreReferences };
 
 import {
   parsePackageSpec,

@@ -1,6 +1,8 @@
 # Dev-only: builds the flow runtime image from local npm pack tarballs.
-# Usage:
+# Usage (build first: neither package builds on pack, and an unbuilt tarball
+# has no dist/):
 #   cd walkerOS/packages/runner
+#   (cd ../core && npm run build) && npm run build
 #   npm pack && npm pack ../core
 #   docker build -f Dockerfile.dev -t rg.fr-par.scw.cloud/NAMESPACE/flow:dev .
 # Same final stage as Dockerfile; only the package source differs.

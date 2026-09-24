@@ -46,7 +46,9 @@ describe('loadFlow forwards collector logger config to the bundle', () => {
     const file = path.join(dir, 'bundle.mjs');
     // Mirror generateServerEntry: only adopt context.logger when truthy, then
     // simulate a collector that builds its own logger from config.logger and a
-    // failing destination push that logs a scoped error.
+    // destination that fails during construction, logging a scoped error from
+    // inside the factory. The error reaches the ring ONLY if loadFlow forwarded
+    // the logger config as `context.logger`.
     fs.writeFileSync(
       file,
       `import { createLogger } from '@walkeros/core';
@@ -57,13 +59,10 @@ export default async function(context = {}) {
     level: config.logger?.level,
     handler: config.logger?.handler,
   });
+  logger.scope('bq').error('Push failed', { event: 'order complete' });
   return {
     collector: {
-      push: async () => {
-        // Simulate a failing destination push.
-        logger.scope('bq').error('Push failed', { event: 'order complete' });
-        return {};
-      },
+      push: async () => ({}),
       command: async () => {},
     },
   };
@@ -97,16 +96,6 @@ export default async function(context = {}) {
       runnerLogger,
       collectorLoggerConfig,
     );
-
-    // loadFlow only exposes command/status on the handle; drive the push via
-    // a fresh load to reach the collector. Re-load and call push directly.
-    const { loadBundle } = await import('../load-bundle.js');
-    const loaded = await loadBundle(
-      bundle,
-      { logger: collectorLoggerConfig },
-      runnerLogger,
-    );
-    await loaded.collector.push();
 
     const snapshot = errorRing.snapshot();
     expect(snapshot).toHaveLength(1);

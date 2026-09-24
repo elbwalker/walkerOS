@@ -389,6 +389,7 @@ export async function bundleCommand(
  * @param options.stats - Collect and return bundle statistics (default: false)
  * @param options.cache - Enable package caching (default: true)
  * @param options.flowName - Flow to use (required for multi-flow configs)
+ * @param options.buildEnv - Base env for web `$env` (default `process.env`)
  * @returns Bundle statistics if stats option is true, otherwise void
  *
  * @example
@@ -430,6 +431,13 @@ export async function bundle(
      */
     target?: BundleTarget;
     buildOverrides?: Partial<BuildOptions>;
+    /**
+     * Base environment web `$env` references resolve against, beneath the
+     * flow's declared `config.bundle.env`. Omitted, it is `process.env` (a
+     * local build). Pass `{}` for a hosted build, which then resolves against
+     * the declared values alone and never the building process's own env.
+     */
+    buildEnv?: Record<string, string | undefined>;
   } = {},
 ): Promise<import('./bundler').BundleStats | void> {
   // Resolve effective target: explicit target > legacy skipWrapper mapping > default 'cdn'.
@@ -484,6 +492,7 @@ export async function bundle(
     configPath,
     flowName: options.flowName,
     buildOverrides: mergedOverrides,
+    buildEnv: options.buildEnv,
   });
 
   // Bake flow name + release into the collector so the deployed flow stamps

@@ -6,3 +6,12 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "ci"
+  - package-ecosystem: "docker"
+    directories:
+      - "/packages/cli"
+      - "/packages/runner"
+      - "/apps/demos/flows"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"

@@ -5,8 +5,11 @@ import { handleCliError } from './core/api-error.js';
 import { printBanner } from './core/banner.js';
 import { createEmitter } from './telemetry/index.js';
 import { bundleCommand } from './commands/bundle/index.js';
+import {
+  bundleManifestCommand,
+  manifestFlagConflicts,
+} from './commands/bundle/manifest.js';
 import { pushCommand } from './commands/push/index.js';
-import { runCommand } from './commands/run/index.js';
 import { setupCommand } from './commands/setup/index.js';
 import { validateCommand } from './commands/validate/index.js';
 import { registerCacheCommand } from './commands/cache.js';
@@ -104,9 +107,28 @@ program
     '--release <id>',
     'config release id baked into config.collector.release (stamped on event.source.release)',
   )
+  .option(
+    '--manifest [source]',
+    'build from a manifest (URL or path; bare flag reads BUILD_MANIFEST_URL), PUT outputs and a result',
+  )
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
+    if (options.manifest !== undefined) {
+      const conflicts = manifestFlagConflicts(file, options);
+      if (conflicts.length > 0) {
+        throw new Error(
+          `--manifest cannot be combined with ${conflicts.join(', ')}; only --json, --verbose and --silent apply`,
+        );
+      }
+      await bundleManifestCommand({
+        manifest: options.manifest,
+        json: options.json,
+        verbose: options.verbose,
+        silent: options.silent,
+      });
+      return;
+    }
     await bundleCommand({
       config: file,
       output: options.output,
@@ -650,38 +672,6 @@ observeCmd
       wait: options.wait,
       timeout: options.timeout,
       json: options.json,
-    });
-  });
-
-// Run command
-program
-  .command('run [file]')
-  .description('Run a walkerOS flow')
-  .option('-f, --flow <name>', 'flow name for multi-flow configs')
-  .option('--flow-id <id>', 'API flow ID (enables heartbeat, polling, secrets)')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
-  .option(
-    '--env-file <path>',
-    'load environment variables from a dotenv file (opt-in; existing env wins; refuses group/other-readable files)',
-  )
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (file, options) => {
-    await runCommand({
-      config: file || process.env.BUNDLE,
-      port:
-        options.port ??
-        (process.env.PORT ? parseInt(process.env.PORT, 10) : undefined),
-      flow: options.flow ?? process.env.WALKEROS_FLOW_NAME,
-      flowId: options.flowId ?? process.env.WALKEROS_FLOW_ID,
-      deploymentId: process.env.WALKEROS_DEPLOYMENT_ID,
-      project: options.project ?? process.env.WALKEROS_PROJECT_ID,
-      envFile: options.envFile,
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
     });
   });
 

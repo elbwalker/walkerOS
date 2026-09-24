@@ -8,7 +8,6 @@ declare module '@walkeros/core' {
 // Export CLI command handlers
 export { bundleCommand } from './commands/bundle/index.js';
 export { pushCommand } from './commands/push/index.js';
-export { runCommand } from './commands/run/index.js';
 export { validateCommand } from './commands/validate/index.js';
 export {
   loginCommand,
@@ -64,8 +63,31 @@ export {
   classifyStepProperties,
   containsCodeMarkers,
 } from './commands/bundle/config-classifier.js';
-export { validateFlowStructure } from './commands/bundle/validate-structure.js';
+export { validateFlowStructure } from '@walkeros/core/dev';
 export { wrapSkeleton } from './commands/bundle/wrap.js';
+export {
+  runBuildManifest,
+  resolveManifestSource,
+  BUILD_MANIFEST_ENV,
+} from './commands/bundle/manifest.js';
+export type { RunBuildManifestResult } from './commands/bundle/manifest.js';
+export {
+  BUILD_MANIFEST_VERSION,
+  BUILD_ERROR_CODES,
+  BuildManifestSchema,
+  BuildArtifactSchema,
+  BuildBundleArtifactSchema,
+  BuildWrapArtifactSchema,
+  BuildWrapOptionsSchema,
+  BuildResultSchema,
+} from './schemas/build-manifest.js';
+export type {
+  BuildManifest,
+  BuildArtifact,
+  BuildWrapOptions,
+  BuildResult,
+  BuildErrorCode,
+} from './schemas/build-manifest.js';
 export type { WrapSkeletonOptions } from './commands/bundle/wrap.js';
 export {
   push,
@@ -81,7 +103,6 @@ export type {
   SimulateDestinationOptions,
   SimulateCollectorOptions,
 } from './commands/push/index.js';
-export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
 export {
   resolveAccessToken,
@@ -265,11 +286,6 @@ export type {
 export type { BundleStats } from './commands/bundle/bundler.js';
 export type { PushResult } from './commands/push/types.js';
 export type { PrepareInput, PreparedFlow } from './commands/push/prepare.js';
-export type {
-  RunCommandOptions,
-  RunOptions,
-  RunResult,
-} from './commands/run/index.js';
 export type { GlobalOptions } from './types/global.js';
 export type {
   ValidateResult,

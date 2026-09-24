@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { VERSION } from './version.js';
 import { runCommand } from './run.js';
+import { resolveStartOptions, type StartFlags } from './start-options.js';
 
 const program = new Command();
 
@@ -14,7 +15,7 @@ program
 program
   .command('start [artifact]')
   .description(
-    'Start a prebuilt flow artifact (.mjs, .js, .cjs, .tar.gz, an http(s) URL, or stdin)',
+    'Start a prebuilt flow artifact (.mjs, .js, .cjs, .tar.gz, .tgz, or an http(s) URL to one)',
   )
   .option('--flow-id <id>', 'API flow ID (enables heartbeat and secrets)')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
@@ -26,20 +27,8 @@ program
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
-  .action(async (artifact, options) => {
-    await runCommand({
-      config: artifact || process.env.BUNDLE,
-      port:
-        options.port ??
-        (process.env.PORT ? parseInt(process.env.PORT, 10) : undefined),
-      flowId: options.flowId ?? process.env.WALKEROS_FLOW_ID,
-      deploymentId: process.env.WALKEROS_DEPLOYMENT_ID,
-      project: options.project ?? process.env.WALKEROS_PROJECT_ID,
-      envFile: options.envFile,
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
-    });
+  .action(async (artifact: string | undefined, flags: StartFlags) => {
+    await runCommand(resolveStartOptions(artifact, flags));
   });
 
 await program.parseAsync();

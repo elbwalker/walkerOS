@@ -8,16 +8,35 @@ import { resolveLocalPackage, copyLocalPackage } from './local-packages.js';
 import type { Logger } from '@walkeros/core';
 import { getPackageCacheKey } from './cache-utils.js';
 import { getTmpPath } from './tmp.js';
+import {
+  assertRegistrySpecs,
+  assertTransitiveRegistrySpec,
+  isRegistrySpec,
+} from './package-spec.js';
 
 export interface NpmConfig {
   registry: string;
   [key: string]: unknown;
 }
 
+/**
+ * `ignoreScripts` is NOT the fix for install-time code execution, and must
+ * not be read as one. pacote honours it in exactly one place, the directory
+ * fetcher's `prepare` gate (`lib/dir.js`), so it closes `file:` and directory
+ * specs only. The git fetcher's `#prepareDir` (`lib/git.js`) spawns a full
+ * `npm install --force` whose default CLI config carries no
+ * `--ignore-scripts` and passes `--include=dev --include=peer
+ * --include=optional`, so it does NOT close `git:`. What closes `git:` is the
+ * spec-type gate in `./package-spec.ts`, which refuses every non-registry
+ * spec before pacote sees it. This flag is defence in depth behind that gate.
+ */
+const IGNORE_SCRIPTS = { ignoreScripts: true } as const;
+
 export const PACOTE_OPTS: NpmConfig = {
   registry: 'https://registry.npmjs.org/',
   preferOnline: true,
   where: undefined,
+  ...IGNORE_SCRIPTS,
 };
 
 /**
@@ -70,7 +89,9 @@ export async function loadNpmConfigForPacote(
       if (!v.endsWith('/')) merged[key] = `${v}/`;
     }
   }
-  return { ...merged, registry, preferOnline: true };
+  // IGNORE_SCRIPTS goes last so an .npmrc cannot switch it off. See its
+  // comment: it closes `file:` and directories, not `git:`.
+  return { ...merged, registry, preferOnline: true, ...IGNORE_SCRIPTS };
 }
 
 // ============================================================
@@ -378,6 +399,20 @@ export async function collectAllSpecs(
     return { name: depName, spec: depSpec, source, from, optional };
   };
 
+  // Every spec that can reach pacote must be a registry fetch. Direct pins
+  // and override values are checked up front, all at once, before any
+  // network call; transitive specs are checked as they are dequeued.
+  assertRegistrySpecs([
+    ...packages
+      .filter((pkg) => !pkg.path)
+      .map((pkg) => ({ name: pkg.name, spec: pkg.version, from: 'flow.json' })),
+    ...Object.entries(overrides).map(([name, spec]) => ({
+      name,
+      spec,
+      from: 'config.bundle.overrides',
+    })),
+  ]);
+
   const queue: QueueItem[] = packages.map((pkg) => ({
     name: pkg.name,
     spec: pkg.version,
@@ -389,6 +424,25 @@ export async function collectAllSpecs(
 
   while (queue.length > 0) {
     const item = queue.shift()!;
+
+    // A transitive spec for a name the flow supplies from disk is never
+    // fetched: the local copy wins resolution. An OPTIONAL dependency with a
+    // non-registry spec is skipped (never recorded, never fetched), as npm
+    // would skip an optional dependency it cannot install; every other
+    // non-registry transitive spec fails closed.
+    if (
+      !item.localPath &&
+      item.source !== 'direct' &&
+      !directLocalNames.has(item.name)
+    ) {
+      if (item.optional && !isRegistrySpec(item.name, item.spec, true)) {
+        logger.warn(
+          `Skipping optional dependency ${item.name}@${item.spec} (from ${item.from}): only npm registry specs are installed`,
+        );
+        continue;
+      }
+      assertTransitiveRegistrySpec(item);
+    }
 
     // Record this spec for EVERY queue item — the same name@spec can arrive
     // from multiple consumers (e.g., common AND pubsub both declare arrify@^2.0.0),

@@ -1,0 +1,328 @@
+name: Images
+
+# Builds and publishes the Docker Hub images walkeros/flow (the runtime,
+# @walkeros/runner inside) and walkeros/cli (the builder, @walkeros/cli inside).
+# A separate dispatch from release.yml, which publishes npm only.
+#
+# Image tags match the npm version inside: walkeros/flow:<v> holds
+# @walkeros/runner@<v>, walkeros/cli:<v> holds @walkeros/cli@<v>. That tag is
+# immutable: an existing one is an error, never rebuilt in place. So a
+# base-image-only fix (a new OpenSSL, say) needs an npm patch release to get a
+# new tag. latest, <M.m> and <M> are moving tags, flipped only after the scan,
+# smoke and parity gates pass.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Image to publish'
+        required: true
+        type: choice
+        options: [flow, cli, both]
+      version:
+        description: 'npm version to package (default: the latest published)'
+        required: false
+        type: string
+      reason:
+        description: 'Why (shown in the run summary)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: images
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Preflight - main only
+        run: |
+          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+            echo "::error::Images publish from main only (got ${GITHUB_REF_NAME})."
+            exit 1
+          fi
+
+      - name: Plan images
+        id: plan
+        env:
+          IMAGE: ${{ inputs.image }}
+        run: |
+          set -euo pipefail
+          case "$IMAGE" in both) IMAGES="flow cli" ;; *) IMAGES="$IMAGE" ;; esac
+          ENTRIES=""
+          for img in $IMAGES; do
+            case "$img" in
+              flow) PKG="@walkeros/runner"; CONTEXT="packages/runner"; FILE="packages/runner/Dockerfile"; ARG="RUNNER_VERSION" ;;
+              cli) PKG="@walkeros/cli"; CONTEXT="packages/cli"; FILE="packages/cli/Dockerfile.cli"; ARG="CLI_VERSION" ;;
+            esac
+            ENTRIES="${ENTRIES}${ENTRIES:+,}{\"image\":\"${img}\",\"package\":\"${PKG}\",\"context\":\"${CONTEXT}\",\"file\":\"${FILE}\",\"arg\":\"${ARG}\"}"
+          done
+          echo "matrix={\"include\":[${ENTRIES}]}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    runs-on: ubuntu-latest
+    # DOCKERHUB_* are read under the same environment release.yml used.
+    environment: npm-publish
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    env:
+      REPO: walkeros/${{ matrix.image }}
+      PKG: ${{ matrix.package }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Log in before the existence probe: anonymous `docker manifest inspect`
+      # is rate limited, and a 429 is indistinguishable from "missing".
+      - name: Login to Docker Hub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Resolve package version
+        env:
+          # Dispatch text stays in env, never spliced into the script body.
+          REQUESTED: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          VERSION="${REQUESTED:-$(npm view "${PKG}" version)}"
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::'${VERSION}' is not an exact npm version"
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Resolved ${PKG}@${VERSION}"
+
+      - name: Refuse an existing immutable tag
+        run: |
+          if docker manifest inspect "${REPO}:${VERSION}" >/dev/null 2>&1; then
+            echo "::error::${REPO}:${VERSION} already exists. Image tags are immutable; publish a new npm version instead."
+            exit 1
+          fi
+          echo "OK: ${REPO}:${VERSION} is free."
+
+      - name: Wait for the package and its walkerOS dependencies on npm
+        env:
+          PKG_VERSION: ${{ env.VERSION }}
+        run: |
+          set -euo pipefail
+          # The build runs `npm install ${PKG}@${PKG_VERSION}` in a fresh
+          # container, which resolves the whole dependency closure, and
+          # `changeset publish` lands packages on the registry out of order.
+          #
+          # Wait for the tarball, not just the metadata. The packument lists a
+          # version minutes before its tarball is fetchable, and the tarball is
+          # what `npm install` downloads. Probe both, uncached, from this runner:
+          # buildkit shares its network, so a 200 here predicts a 200 there.
+          # node -e bodies are JavaScript; their $ and backticks are not shell.
+          # shellcheck disable=SC2016
+          WAIT="${PKG}@${PKG_VERSION} $(npm view "${PKG}@${PKG_VERSION}" dependencies --json \
+            | node -e '
+              const deps = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}");
+              process.stdout.write(
+                Object.entries(deps)
+                  .filter(([n, v]) => n.startsWith("@walkeros/") && /^\d+\.\d+\.\d+(-[\w.]+)?$/.test(v))
+                  .map(([n, v]) => `${n}@${v}`)
+                  .join(" "),
+              );
+            ')"
+          echo "Waiting for: $WAIT"
+
+          for SPEC in $WAIT; do
+            NAME="${SPEC%@*}"
+            VER="${SPEC##*@}"
+            URL="https://registry.npmjs.org/${NAME/\//%2F}"
+            OK=0
+            CODE=000
+            TCODE=-
+            for i in $(seq 1 30); do
+              CODE="$(curl -sS -o /tmp/npm-probe.json -w '%{http_code}' \
+                -H 'Accept: application/vnd.npm.install-v1+json' "$URL" \
+                || echo 000)"
+              TARBALL=""
+              if [ "$CODE" = "200" ]; then
+                TARBALL="$(node -e '
+                  const doc = JSON.parse(require("fs").readFileSync("/tmp/npm-probe.json", "utf8"));
+                  process.stdout.write(doc.versions?.[process.argv[1]]?.dist?.tarball ?? "");
+                ' "$VER")"
+              fi
+              TCODE="-"
+              if [ -n "$TARBALL" ]; then
+                TCODE="$(curl -sS -o /dev/null -w '%{http_code}' -L "$TARBALL" || echo 000)"
+                if [ "$TCODE" = "200" ]; then
+                  echo "Verified: ${SPEC} (metadata + tarball)"
+                  OK=1
+                  break
+                fi
+              fi
+              echo "  ${SPEC} attempt $i/30 (meta $CODE, tarball $TCODE): waiting..."
+              sleep 15
+            done
+            if [ "$OK" != "1" ]; then
+              echo "::error::${SPEC} not installable after ~7min (meta $CODE, tarball $TCODE)"
+              exit 1
+            fi
+          done
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      # Single-arch (amd64). Loaded, not pushed: scan, SBOM and smoke run on
+      # the local image so a failing build never burns an immutable tag.
+      - name: Build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          load: true
+          push: false
+          build-args: |
+            ${{ matrix.arg }}=${{ env.VERSION }}
+          tags: ${{ env.REPO }}:${{ env.VERSION }}
+
+      # The lockfile describes the intended tree and stays out of the runtime
+      # image; it is kept here, beside the SBOM, which describes the actual one.
+      - name: Export lockfile
+        if: matrix.image == 'flow'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          target: lockfile
+          build-args: |
+            ${{ matrix.arg }}=${{ env.VERSION }}
+          outputs: type=local,dest=lockfile
+
+      - name: Upload lockfile
+        if: matrix.image == 'flow'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lockfile-${{ matrix.image }}-${{ env.VERSION }}
+          path: lockfile/package-lock.json
+
+      - name: SBOM
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: ${{ env.REPO }}:${{ env.VERSION }}
+          format: spdx-json
+          artifact-name: sbom-${{ matrix.image }}-${{ env.VERSION }}.spdx.json
+          dependency-snapshot: false
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+        with:
+          version: v0.70.0
+          cache: true
+
+      # One scan, fixable CRITICAL/HIGH of every package type, reused by the
+      # report uploads and the gate below.
+      - name: Scan
+        run: |
+          set -euo pipefail
+          trivy image --quiet --severity CRITICAL,HIGH --ignore-unfixed \
+            --format json --output trivy.json "${REPO}:${VERSION}"
+          trivy convert --format sarif --output trivy.sarif trivy.json
+          trivy convert --format table trivy.json
+
+      - name: Upload scan report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trivy-${{ matrix.image }}-${{ env.VERSION }}
+          path: trivy.sarif
+
+      - name: Upload SARIF
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-image-${{ matrix.image }}
+
+      # Block on fixable OS CRITICAL+HIGH and library CRITICAL. Library HIGHs
+      # stay reported above and never block.
+      - name: Scan gate
+        run: |
+          set -euo pipefail
+          BLOCKING=$(jq '[.Results[]? | select(.Class == "os-pkgs" or .Class == "lang-pkgs") | .Class as $c | .Vulnerabilities[]? | select($c == "os-pkgs" or .Severity == "CRITICAL")] | length' trivy.json)
+          echo "Blocking findings: $BLOCKING"
+          [ "$BLOCKING" = "0" ]
+
+      - name: Smoke
+        run: images/smoke.sh "${{ matrix.image }}" "${REPO}:${VERSION}" "${{ env.VERSION }}"
+
+      - name: Push
+        run: docker push "${REPO}:${VERSION}"
+
+      # The parity gate: pull the pushed tag back from the registry, boot it,
+      # and assert it reports the package version this build resolved.
+      - name: Parity gate
+        run: |
+          set -euo pipefail
+          docker image rm "${REPO}:${VERSION}"
+          docker pull "${REPO}:${VERSION}"
+          images/smoke.sh "${{ matrix.image }}" "${REPO}:${VERSION}" "${{ env.VERSION }}"
+
+      # Each moving tag follows the newest stable version of its line, so a
+      # backfill of an older version (or a prerelease) leaves it alone.
+      - name: Move tags
+        run: |
+          set -euo pipefail
+          # node -e bodies are JavaScript; their $ and backticks are not shell.
+          # shellcheck disable=SC2016
+          TAGS="$(npm view "${PKG}" versions --json | node -e '
+            const v = process.argv[1];
+            const all = [].concat(JSON.parse(require("fs").readFileSync(0, "utf8")));
+            const stable = all.filter((x) => /^\d+\.\d+\.\d+$/.test(x));
+            if (!stable.includes(v)) process.exit(0);
+            const key = (x) => x.split(".").map(Number);
+            const newest = (xs) => xs.sort((a, b) => {
+              const [p, q] = [key(a), key(b)];
+              return q[0] - p[0] || q[1] - p[1] || q[2] - p[2];
+            })[0];
+            const [ma, mi] = key(v);
+            const tags = [];
+            if (newest(stable) === v) tags.push("latest");
+            if (newest(stable.filter((x) => key(x)[0] === ma)) === v) tags.push(`${ma}`);
+            if (newest(stable.filter((x) => key(x)[0] === ma && key(x)[1] === mi)) === v) tags.push(`${ma}.${mi}`);
+            process.stdout.write(tags.join(" "));
+          ' "$VERSION")"
+          if [ -z "$TAGS" ]; then
+            echo "No moving tag follows ${VERSION}."
+            exit 0
+          fi
+          ARGS=""
+          for t in $TAGS; do ARGS="$ARGS --tag ${REPO}:${t}"; done
+          # shellcheck disable=SC2086
+          docker buildx imagetools create $ARGS "${REPO}:${VERSION}"
+          echo "MOVED=${TAGS}" >> "$GITHUB_ENV"
+
+      - name: Summary
+        env:
+          REASON: ${{ inputs.reason }}
+        run: |
+          {
+            echo "### ${REPO}:${VERSION}"
+            echo ""
+            echo "- package: ${PKG}@${{ env.VERSION }}"
+            echo "- digest: $(docker buildx imagetools inspect "${REPO}:${VERSION}" --format '{{json .Manifest.Digest}}')"
+            echo "- moving tags: ${MOVED:-none}"
+            echo "- reason: ${REASON}"
+          } >> "$GITHUB_STEP_SUMMARY"
