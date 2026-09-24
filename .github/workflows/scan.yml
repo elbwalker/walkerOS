@@ -6,9 +6,9 @@ name: Scan
 # opens on OS CRITICAL+HIGH and library CRITICAL only (node's bundled npm
 # carries library HIGHs we cannot fix).
 #
-# Images are versioned apart from npm (images.yml), so they can lag it. The
-# staleness check opens an issue when the newest published package has no
-# image yet.
+# Images are published by release.yml after npm, so they can lag it (a failed
+# image step, say). The staleness check opens an issue when the newest
+# published package has no image yet.
 
 on:
   schedule:
@@ -31,7 +31,7 @@ jobs:
       issues: write
       security-events: write
     env:
-      # The moving tags images.yml publishes to Docker Hub.
+      # The moving tags release.yml publishes to Docker Hub.
       IMAGES: walkeros/flow:latest walkeros/cli:latest
     steps:
       - name: Checkout
@@ -197,7 +197,7 @@ jobs:
             }
 
             const body = [
-              'A published package has no image yet. Dispatch images.yml to publish it.',
+              'A published package has no image yet. Dispatch release.yml with images_only set to that version to publish it.',
               stale,
               `Run: ${runUrl}`,
             ].join('\n\n');

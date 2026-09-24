@@ -20,18 +20,10 @@ on:
       - '.github/workflows/website.yml'
 
   workflow_dispatch:
-  # Called by release.yml when the released SHA has no green run. The github
-  # context is the caller's there: event_name is workflow_dispatch, so the
-  # full (non-PR) verify and e2e steps run.
-  workflow_call:
 
-# Under workflow_call, github.workflow is the caller's name ("Release"), so
-# the group becomes "Release-<ref>": distinct from standalone runs and from
-# release.yml's own "release" group, so neither can cancel the other. Never
-# cancel in progress there, or a release would lose its own CI.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.workflow == 'Build and test' }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

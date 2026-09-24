@@ -14,7 +14,7 @@ RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund \
     @walkeros/runner@${RUNNER_VERSION}
 
 # The lockfile describes the intended tree, so it stays out of the runtime
-# image; images.yml exports it from this stage as a build artifact beside the SBOM.
+# image; release.yml exports it from this stage as a build artifact beside the SBOM.
 FROM scratch AS lockfile
 COPY --from=pkg /app/package-lock.json /package-lock.json
 
