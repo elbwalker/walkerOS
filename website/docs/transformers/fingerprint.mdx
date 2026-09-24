@@ -105,7 +105,7 @@ The salt is the HMAC key. Keep it secret and out of the config file (`$env.FINGE
 
 ## Site
 
-The default reads the page URL the walkerOS browser source puts on every event. Events without it, such as decoded GA4 hits or server-side events, need `site` pointed at what the collector knows: a path parameter (`ingest.property`), a header (`ingest.origin`, mapped in the source's `config.ingest`), or a fixed value for a single-site deployment:
+The default reads the page URL the walkerOS browser source puts on every event; `@walkeros/transformer-ga4` sets it from the hit's page URL (`dl`), so upgrading to a version that does changes the hash of GA4-decoded events once. Events without it, such as server-side events, need `site` pointed at what the collector knows: a path parameter (`ingest.property`), a header (`ingest.origin`, mapped in the source's `config.ingest`), or a fixed value for a single-site deployment:
 
 <CodeSnippet
   code={`settings: {

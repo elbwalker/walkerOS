@@ -49,4 +49,10 @@ export const push: Env = {
   logger: noopLogger,
 };
 
-export const simulation = ['PubSub'];
+/**
+ * No recorded calls. `PubSub` is not part of this mock env (tests substitute
+ * the SDK module-wide), so the path never resolved here. Recording pull and
+ * ack calls needs a `PubSub` mock in `push`, which would bypass those module
+ * mocks.
+ */
+export const simulation: string[] = [];

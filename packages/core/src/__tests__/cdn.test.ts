@@ -272,6 +272,30 @@ describe('fetchPackage', () => {
     expect(result.exampleSummaries).toEqual([]);
   });
 
+  it('carries exportExamples from walkerOS.json when present', async () => {
+    const exportExamples = {
+      destinationBigQuery: { env: { push: {} } },
+      destinationPubSub: { env: { push: {} } },
+    };
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockPkgJson),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ $meta: {}, schemas: {}, exportExamples }),
+      });
+    const result = await fetchPackage('@walkeros/server-destination-gcp');
+    expect(result.exportExamples).toEqual(exportExamples);
+  });
+
+  it('omits exportExamples for a single-export package', async () => {
+    setupMocks();
+    const result = await fetchPackage('@walkeros/web-destination-gtag');
+    expect(result.exportExamples).toBeUndefined();
+  });
+
   it('attaches X-Walkeros-Client header when client option is set (jsdelivr branch)', async () => {
     setupMocks();
     await fetchPackage('@walkeros/web-destination-gtag', {
@@ -428,6 +452,15 @@ describe('fetchPackage — baseUrl branch (single round-trip)', () => {
     expect(result.hintKeys).toEqual([]);
     expect(result.examples).toEqual({});
     expect(result.exampleSummaries).toEqual([]);
+  });
+
+  it('carries exportExamples from the unified response when present', async () => {
+    const exportExamples = { sourceLambda: {}, sourceSqs: {} };
+    setupDetailMock({ ...mockDetailResponse, exportExamples });
+    const result = await fetchPackage('@walkeros/server-source-aws', {
+      baseUrl: 'http://app.test',
+    });
+    expect(result.exportExamples).toEqual(exportExamples);
   });
 
   it('attaches X-Walkeros-Client header on baseUrl branch', async () => {

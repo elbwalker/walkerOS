@@ -7,6 +7,7 @@ import {
   clone,
   createMockContext,
   createMockLogger,
+  isObject,
 } from '@walkeros/core';
 import { examples } from './dev';
 
@@ -382,10 +383,64 @@ describe('Destination API', () => {
       const [, calledData] = mockSendWeb.mock.calls[0];
       const parsed = JSON.parse(calledData);
       expect(parsed).toHaveLength(2);
-      expect(JSON.parse(parsed[0])).toEqual({
+      expect(parsed[0]).toEqual({
         transformed: true,
         original: events[0],
       });
     });
+
+    test('sends a JSON array of the transformed bodies, not of strings', () => {
+      const events = [getEvent('product view'), getEvent('product click')];
+      const batch = {
+        key: 'product view',
+        events,
+        data: [],
+        entries: events.map((event) => ({ event })),
+      };
+      const transform: DestinationAPI.Transform = (data) =>
+        JSON.stringify({ name: isObject(data) ? data.name : undefined });
+
+      destination.pushBatch!(
+        batch,
+        createMockContext({
+          config: { settings: { url, transform } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
+
+      expect(mockSendWeb.mock.calls[0][1]).toBe(
+        '[{"name":"product view"},{"name":"product click"}]',
+      );
+    });
+
+    test.each([
+      ['plain text', '["plain text"]'],
+      ['42', '["42"]'],
+    ])(
+      'keeps a transformed body %s that is no JSON object as a string item',
+      (text, expected) => {
+        const events = [getEvent('product view')];
+        const batch = {
+          key: 'product view',
+          events,
+          data: [],
+          entries: events.map((event) => ({ event })),
+        };
+
+        destination.pushBatch!(
+          batch,
+          createMockContext({
+            config: { settings: { url, transform: () => text } },
+            env: testEnv,
+            logger: mockLogger,
+            id: 'test-api',
+          }),
+        );
+
+        expect(mockSendWeb.mock.calls[0][1]).toBe(expected);
+      },
+    );
   });
 });

@@ -6,8 +6,17 @@ import {
 } from '../../tools/examples.js';
 import { ExamplesListOutputShape } from '../../schemas/output.js';
 
+// The real resolver and selector come from their cli source modules: the
+// cli index would pull the whole cli into this mock, and the tool must use
+// the same selection rule simulate uses.
 jest.mock('@walkeros/cli', () => ({
   loadJsonConfig: jest.fn(),
+  resolveExportName: jest.requireActual(
+    '../../../../../cli/src/core/resolve-export-name',
+  ).resolveExportName,
+  selectDevExamples: jest.requireActual(
+    '../../../../../cli/src/commands/push/dev-examples',
+  ).selectDevExamples,
 }));
 
 jest.mock('@walkeros/core', () => ({
@@ -434,6 +443,86 @@ describe('flow_examples tool', () => {
       '@walkeros/transformer-ga4',
       expect.any(Object),
     );
+  });
+
+  describe('multi-export packages', () => {
+    const bigqueryExamples = {
+      step: { row: { in: { name: 'page view' }, out: [] } },
+    };
+    const pubsubExamples = {
+      step: { publish: { in: { name: 'page view' }, out: [] } },
+    };
+
+    function configWith(
+      destination: Record<string, unknown>,
+      bundle?: Record<string, unknown>,
+    ) {
+      return {
+        version: 4,
+        flows: {
+          default: {
+            config: { platform: 'server', ...(bundle ? { bundle } : {}) },
+            destinations: { out: destination },
+          },
+        },
+      };
+    }
+
+    beforeEach(() => {
+      mockFetchPackage.mockResolvedValue({
+        packageName: '@walkeros/server-destination-gcp',
+        version: '1.0.0',
+        type: 'destination',
+        schemas: {},
+        examples: bigqueryExamples,
+        exportExamples: {
+          destinationBigQuery: bigqueryExamples,
+          destinationPubSub: pubsubExamples,
+        },
+        hintKeys: [],
+        exampleSummaries: [],
+      });
+    });
+
+    it.each([
+      ['the step import', { import: 'destinationPubSub' }, ['publish']],
+      ['the default export', {}, ['row']],
+      ['an export missing from the map', { import: 'destinationTypo' }, []],
+    ])('lists the examples of %s', async (_label, stepFields, expected) => {
+      mockLoadJsonConfig.mockResolvedValue(
+        configWith({
+          package: '@walkeros/server-destination-gcp',
+          ...stepFields,
+        }),
+      );
+      const tool = server.getTool('flow_examples');
+      const result = await tool.handler({ configPath: './flow.json' });
+      const names = result.structuredContent.examples.map(
+        (e: { exampleName: string }) => e.exampleName,
+      );
+      expect(names).toEqual(expected);
+    });
+
+    it('follows bundle.packages imports when the step has no import', async () => {
+      const config = configWith(
+        { package: '@walkeros/server-destination-gcp' },
+        {
+          packages: {
+            '@walkeros/server-destination-gcp': {
+              imports: ['destinationPubSub'],
+            },
+          },
+        },
+      );
+      mockLoadJsonConfig.mockResolvedValue(config);
+      const tool = server.getTool('flow_examples');
+      const result = await tool.handler({ configPath: './flow.json' });
+      expect(
+        result.structuredContent.examples.map(
+          (e: { exampleName: string }) => e.exampleName,
+        ),
+      ).toEqual(['publish']);
+    });
   });
 
   it('prefers inline examples over package examples (no fallback, no duplicates)', async () => {

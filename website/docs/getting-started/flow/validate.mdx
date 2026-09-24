@@ -81,24 +81,26 @@ Filtering is the same mechanism, not a separate setting. Author an inline schema
 
 ## Design-time checks
 
-The CLI flow validator checks step examples (`destination.in`, `transformer.in`) against the resolved contract and reports violations before you deploy, so a sample event that breaks the contract is caught at authoring time.
+`walkeros validate` checks contracts the way the runtime applies them. A contract binds only where a `@walkeros/transformer-validate` step links it, so the validator runs each validate step's own examples through that step's resolved `contract`, with that step's `mode`, `format` and `output` settings, and checks that each example's `out` agrees with the verdict: a valid event goes on, an invalid one is dropped in `strict` mode or goes on with its `isValid` flag set to `false` in `pass` mode.
 
 <CodeSnippet code={`walkeros validate flow.json`} language="bash" />
 
+The top-level `contract` block is the reference for setting up mappings, `$contract` references and editor IntelliSense, but it binds nothing by itself. Examples of other steps are never checked against it, and a flow without a validate step gets no contract checks.
+
 ## Break it on purpose
 
-Contracts are easiest to trust after watching one fail. Take the contract above (it requires `total` and `currency` on `order complete` data) and give a step example an event that misses `currency`. The validator names the exact path and problem:
+Contracts are easiest to trust after watching one fail. Take the contract above (it requires `total` and `currency` on `order complete` data), run the validate step with `mode: "strict"`, and give it an example whose `in` misses `currency` while its `out` still passes the event on. The validator names the exact path and what the step really does:
 
 <CodeSnippet
   code={`Validation Results:
-  ⚠ destination.ga4.examples.purchase.in: Example violates contract: #/data: Instance does not have required property "currency".
-    → Fix the example data to satisfy the contract schema.
+  ⚠ transformer.validate.examples.missingCurrency.out: Example out disagrees with the validate step: the event breaks the contract (#: Property "data" does not match schema.; #/data: Instance does not have required property "currency".), so with mode "strict" the step drops it (["return", false]).
+    → Make the example out show what the validate step does with its settings.
 
 Summary: 0 error(s), 1 warning(s)`}
   language="bash"
 />
 
-Contract violations are warnings by default; add `--strict` to turn them into errors (exit code 1) and fail CI before a broken event shape ships. A tag manager drops the same broken field silently, in production.
+A disagreement is a warning by default; add `--strict` to turn it into an error (exit code 1) and fail CI before a broken example ships. Fix it by making the example `out` show the drop (`[["return", false]]`), or by completing the `in` event.
 
 ## Next steps
 

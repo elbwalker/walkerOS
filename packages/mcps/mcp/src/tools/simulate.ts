@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { mcpResult, mcpError } from '@walkeros/core';
+import { isObject, mcpResult, mcpError } from '@walkeros/core';
+import { scrubSecrets, toPrintable } from '@walkeros/core/node';
 import type { Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
 
@@ -30,6 +31,46 @@ const STEP_TYPES: readonly SimulateStepType[] = [
 
 function isStepType(value: string): value is SimulateStepType {
   return STEP_TYPES.some((t) => t === value);
+}
+
+/**
+ * Simulate results carry recorded vendor calls and events whose values can
+ * hold credentials. They egress like a log line: serialize, scrub, then parse
+ * back into the structured result.
+ */
+function scrubbed(result: Record<string, unknown>): Record<string, unknown> {
+  const text = scrubSecrets(JSON.stringify(toPrintable(result)));
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    parsed = undefined;
+  }
+  if (!isObject(parsed))
+    throw new Error('Simulation result could not be redacted as JSON.');
+  return parsed;
+}
+
+/** The error response egresses the same way: its text and structured copy. */
+function scrubbedError(
+  response: ReturnType<typeof mcpError>,
+): ReturnType<typeof mcpError> {
+  let structuredContent: Record<string, unknown>;
+  try {
+    structuredContent = scrubbed(response.structuredContent);
+  } catch {
+    structuredContent = {
+      error: 'Simulation failed; the error could not be redacted.',
+    };
+  }
+  return {
+    ...response,
+    content: response.content.map((part) => ({
+      ...part,
+      text: scrubSecrets(part.text),
+    })),
+    structuredContent,
+  };
 }
 
 const TITLE = 'Simulate Flow';
@@ -78,8 +119,10 @@ const inputSchema = {
     .record(z.string(), z.unknown())
     .optional()
     .describe(
-      'Pipeline context a transformer reads via ctx.ingest, e.g. { url } for a ' +
-        'request decoder. Only used for transformer steps.',
+      'Pipeline context a step reads via ctx.ingest, e.g. { url } for a ' +
+        'request decoder or { ip, userAgent } for a conversion API. Used for ' +
+        'transformer, collector and destination steps (their before chains ' +
+        'included); _meta is always set by the runtime.',
     ),
   state: z
     .object({
@@ -206,13 +249,13 @@ async function flowSimulateHandlerBody(
       const summary = `Source captured ${eventCount} event${eventCount !== 1 ? 's' : ''}`;
 
       return mcpResult(
-        {
+        scrubbed({
           success,
           error: errorMessage,
           summary,
           capturedEvents: result.events,
           duration: result.duration,
-        },
+        }),
         {
           next:
             eventCount > 0
@@ -229,13 +272,13 @@ async function flowSimulateHandlerBody(
     // Transformer simulation: surface the transformed events
     if (result.step === 'transformer') {
       return mcpResult(
-        {
+        scrubbed({
           success,
           error: errorMessage,
           summary: `Transformer processed event`,
           capturedEvents: result.events,
           duration: result.duration,
-        },
+        }),
         {
           next: ['Use flow_bundle to build for production'],
         },
@@ -245,13 +288,13 @@ async function flowSimulateHandlerBody(
     // Collector simulation: surface the enriched event
     if (result.step === 'collector') {
       return mcpResult(
-        {
+        scrubbed({
           success,
           error: errorMessage,
           summary: `Collector enriched event`,
           capturedEvents: result.events,
           duration: result.duration,
-        },
+        }),
         {
           next: ['Use flow_simulate with a destination step to test delivery'],
         },
@@ -294,7 +337,7 @@ async function flowSimulateHandlerBody(
       duration: result.duration,
     };
 
-    return mcpResult(resultObj, {
+    return mcpResult(scrubbed(resultObj), {
       next: ['Use flow_bundle to build for production'],
       ...(warnings.length > 0 ? { warnings } : {}),
     });
@@ -307,7 +350,7 @@ async function flowSimulateHandlerBody(
         'pending until that event fires. For simulation, either remove require from ' +
         'the config or simulate with a flow that omits require on the target destination.';
     }
-    return mcpError(error, refusalHint(error, hint));
+    return scrubbedError(mcpError(error, refusalHint(error, hint)));
   }
 }
 

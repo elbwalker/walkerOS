@@ -72,6 +72,7 @@ export const destinationBigQuery: Destination = {
           bigquery: settings.bigquery,
           timeout,
           onConnectionError,
+          env,
         },
         logger,
       );
@@ -89,6 +90,7 @@ export const destinationBigQuery: Destination = {
             bigquery: settings.bigquery,
             timeout,
             onConnectionError,
+            env,
           },
           logger,
         );

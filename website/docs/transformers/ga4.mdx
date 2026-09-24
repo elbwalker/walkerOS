@@ -119,6 +119,22 @@ The transformer expects the source to populate `ctx.ingest` with these keys:
 
 If `url` is missing or not a string the transformer drops the event silently. The express source keeps a non-JSON `text/plain` body (gtag's batched POST) as the raw string, so batched hits decode with the wiring above. If a custom source JSON-parses the body before it reaches the transformer, pass the original raw string through or skip the transformer.
 
+### Hit-level fields
+
+Every decoded event carries the hit's page and visitor context, each field only when the hit sends it, value as sent:
+
+| Hit param | Event field | Notes |
+| --------- | ----------- | ----- |
+| `dl` | `source.url` | Page URL. Server destinations that send a page URL (Meta, Snapchat, Pinterest, Bing, TikTok, Criteo, Piwik PRO) read it. |
+| `dr` | `source.referrer` | Page referrer. |
+| `uid`, `cid`, `sid` | `user.id`, `user.device`, `user.session` | |
+| `ul` | `user.language` | Browser language, a visitor fact. `globals` stays free for site-level facts. |
+| `sr` | `user.screenSize` | Screen resolution. |
+
+`timestamp` is the time the hit was received (GA4 `sid` is the session start, not the event time). Consent comes from `gcs`, the event `id` is derived from the hit, and `source.type` is `ga4`.
+
+Because decoded events now carry `source.url`, the [fingerprint transformer](/docs/transformers/fingerprint)'s default `site` component resolves for them, so fingerprint hashes of GA4-decoded events differ from those computed before `source.url` was set.
+
 <Configuration type="transformer" data={data} />
 
 ## Default mappings

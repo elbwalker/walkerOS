@@ -250,6 +250,23 @@ is compiled as-is.
 Resolution runs at `getFlowSettings()` in `@walkeros/core`, the runtime
 replaces every reference before the bundler or collector sees the config.
 
+## Whole-value and inline references
+
+`$flow.`, `$store.`, `$secret.` and `$contract.` resolve only when the reference
+is the entire string value. `$var.` and `$env.` also resolve inside a longer
+string. `walkeros validate` warns about a whole-value reference that would not
+resolve:
+
+- **Malformed:** `"$flow.server.url/collect"` or `"$secret.api_key"` does not
+  match the reference grammar (`$secret.` names are uppercase letters, digits
+  and `_`), so it would not resolve.
+- **Inline:** `"https://x/$store.cache"` uses `$store.` mid-string, so it would
+  ship as literal text. Use the reference as the entire value, or compose the
+  string with `$var` or `$env`.
+
+`$code:` values and values under `title`, `description` and `$comment` are not
+checked.
+
 ## What else to read
 
 - [`@walkeros/core` reference exports](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/references.ts):

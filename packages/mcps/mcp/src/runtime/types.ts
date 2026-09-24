@@ -54,7 +54,10 @@ export interface SimulateOptions {
   stepId: string;
   event: unknown;
   flow?: string;
-  /** Transformer steps only: pipeline context the step reads via `ctx.ingest`. */
+  /**
+   * Transformer, collector and destination steps: pipeline context the step
+   * reads via `ctx.ingest`. Source steps ignore it.
+   */
   ingest?: Omit<Ingest, '_meta'>;
   /** Collector steps only: state snapshot seeded before enrichment runs. */
   state?: {

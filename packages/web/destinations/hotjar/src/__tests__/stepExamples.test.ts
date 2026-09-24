@@ -9,6 +9,7 @@ import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 import type { Env, Settings } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 
@@ -82,3 +83,6 @@ describe('hotjar destination -- step examples', () => {
     expect(actual).toEqual(expected);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

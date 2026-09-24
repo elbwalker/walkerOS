@@ -23,7 +23,7 @@ export const push: Env = {
 };
 
 export const simulation = [
-  'call:events.send.basicApi.send',
-  'call:events.send.batchApi.send',
-  'call:crm.contacts.basicApi.update',
+  'call:client.events.send.basicApi.send',
+  'call:client.events.send.batchApi.send',
+  'call:client.crm.contacts.basicApi.update',
 ];

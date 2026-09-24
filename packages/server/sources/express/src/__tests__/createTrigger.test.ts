@@ -111,9 +111,35 @@ describe('Express createTrigger', () => {
     const result = await instance.trigger()({
       method: 'POST',
       path: '/collect',
-      body: 'not-an-object' as unknown,
+      body: 'not-an-object',
     });
 
     expect(result.status).toBe(400);
   });
+
+  it.each([
+    ['the triggered source id', { sourceId: 'express' }],
+    ['a single source', undefined],
+  ])(
+    'listens on a free port when settings.port is not set (%s)',
+    async (_label, options) => {
+      instance = await examples.createTrigger(
+        {
+          consent: { functional: true },
+          sources: {
+            express: { code: sourceExpress, config: { settings: {} } },
+          },
+        },
+        options,
+      );
+
+      const result = await instance.trigger()({
+        method: 'POST',
+        path: '/collect',
+        body: { name: 'page view' },
+      });
+
+      expect(result.status).toBe(200);
+    },
+  );
 });

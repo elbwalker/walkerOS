@@ -190,14 +190,53 @@ walkeros push flow.json --simulate source.browser --event '{"content":"<html>...
 walkeros push flow.json --simulate destination.gtag -e '{"entity":"order","action":"complete","data":{"total":149.97}}'
 ```
 
-Example output:
+Example output (a destination step prints its matched mapping key and every
+recorded vendor call, arguments as compact JSON cut at 300 chars):
 
 ```
-Step: destinations.gtag
-  in:  { name: "order complete", data: { id: "ORD-123", total: 149.97 } }
-  out: ["event", "purchase", { transaction_id: "ORD-123", value: 149.97 }]
-  Status: PASS
+success: true
+  destination.pubsub
+    mapping: none
+    call PubSub.topic.publishMessage({"data":"{\"name\":\"order complete\",...}"})
+  Duration: 44779ms
 ```
+
+- `mapping: <key>` when a rule matched, `mapping: none` when the destination
+  pushed without a rule, `mapping: none (skipped before mapping)` plus
+  `no calls` when nothing was sent. Transformer and collector steps print
+  `event <json>` or `no events`; a failed step prints `error: <message>`.
+- `--json` puts the same data under `simulations` (one
+  `{ step, name, events, calls: [{ fn, args, ts }], mappingKey?, error? }` per
+  simulated step, in order; a multi-destination simulate stops at the first
+  failure). stdout is pure JSON, logs go to stderr, so `| jq` works without
+  `--silent`. Values pass through `toPrintable` (`@walkeros/core/node`): `Error`
+  to `{ name, message }`, `Buffer` to UTF-8, `bigint` to string, `Map`/`Set` to
+  arrays, cycles to `"[Circular]"`.
+- Text and JSON output (and MCP `flow_simulate`) are scrubbed with
+  `scrubSecrets`, the same redactor the loggers use: service accounts, PEM keys,
+  `Authorization`, `access_token`, credential-named fields and high-entropy runs
+  show as `***`. The step still receives the real values.
+- **No real vendor calls.** A package destination whose export has no mock env
+  (`examples.env.push`) is refused before the flow starts (an inline `code` step
+  has no package and runs as given):
+  `No mock env for <package> export <exportName>: simulate would call the real vendor. Add examples.env.push to the package's dev examples.`
+  A named export of a package version without `exportExamples` is refused with
+  `...: this package version predates export-keyed examples; use a version with exportExamples or a local path.`
+  Every flow store's mock env is injected too, so a Sheets/GCS/S3 store needs no
+  credentials in simulate.
+- **`--ingest <json|file|url>`** supplies the request context (a JSON object,
+  e.g. `{"ip":"203.0.113.7","userAgent":"Mozilla/5.0"}`) for `transformer.*`,
+  `collector.*` and `destination.*` simulation. It reaches the destination
+  `before` chain and `context.ingest` (or `collector.next`); the CLI always sets
+  `_meta`. Rejected for `source.*` and a real push:
+  `--ingest applies to transformer, collector and destination simulation only`.
+  A programmatic `pushCommand({ ingest })` on a real push or source simulate
+  errors the same way; `simulateTransformer`, `simulateCollector` and
+  `simulateDestination` take `ingest` directly.
+- **Trace-mode limit.** Simulate injects the mock env before `init`, so clients
+  built in `init` (BigQuery writer, Pub/Sub client) are recorded. Runtime trace
+  mode (an Observe session at trace level) wraps the env per push only, so calls
+  through a client built in `init` are not recorded there.
 
 ### Same flow via MCP (`flow_simulate`)
 
@@ -216,10 +255,12 @@ From an AI assistant the equivalent tool is `flow_simulate`. A few specifics:
   `{ consent?, user?, globals?, timing? }`, applies the collector's enrichment,
   then runs `collector.next`, and returns every event the destinations would
   receive (none when a `stop` drops it, several when `many` forks it).
-- **`transformer` steps accept an optional `ingest`** (a raw ingest without
-  `_meta`). Supply it to test a request decoder standalone, for example a GA4
-  decoder reading `ctx.ingest.url`: pass `ingest: { url: "..." }` with the
-  event.
+- **`transformer`, `collector` and `destination` steps accept an optional
+  `ingest`** (a raw ingest without `_meta`). Supply it to test a request decoder
+  standalone (a GA4 decoder reading `ctx.ingest.url`: pass
+  `ingest: { url: "..." }`), or to see the client IP and user agent a
+  conversion-API destination sends (`ingest: { ip, userAgent }`). The result is
+  scrubbed of credentials like the CLI output.
 - **Sources are simulatable as a step**, including the `@walkeros/source-demo`
   demo source.
 - **`configPath` accepts a cloud flow id** (`flow_...` / `cfg_...`), resolved
@@ -247,8 +288,13 @@ Validate schema, references, and cross-step example compatibility:
 walkeros validate flow.json
 ```
 
-All checks run automatically — schema validation, reference checking, and
-cross-step example compatibility. No flags needed for full validation.
+All checks run automatically: schema validation, reference checking (a malformed
+or inline `$flow.`/`$store.`/`$secret.`/`$contract.` value is a warning),
+cross-step example compatibility (a StepOut `out` contributes the events its
+`elb` and `return` effects pass on), and the examples of
+`@walkeros/transformer-validate` steps against their own linked contract and
+settings. No other example is checked against a contract. No flags needed for
+full validation; `--strict` turns warnings into errors.
 
 For full details on writing and testing with step examples, see
 [using-step-examples](../walkeros-using-step-examples/SKILL.md).
@@ -314,7 +360,9 @@ Options:
   -p, --platform <web|server>   Platform override
   --simulate <step>              Simulate a step (repeatable for destination.*). Format: source.NAME | destination.NAME | transformer.NAME | collector.NAME
   --mock <step=value>            Mock a step with a specific return value (repeatable); chain members via destination.NAME.before.ID or collector.next.ID
+  --ingest <json|file|url>       Request context for transformer/collector/destination simulate
   --snapshot <source>            JS file to eval before execution (sets global state)
+  --json                         Pure JSON on stdout (incl. simulations); logs to stderr
 ```
 
 ### Validate Command

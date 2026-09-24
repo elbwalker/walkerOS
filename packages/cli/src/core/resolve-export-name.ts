@@ -20,7 +20,7 @@
 
 import type { Flow } from '@walkeros/core';
 
-export type ComponentKind = 'source' | 'destination' | 'store';
+export type ComponentKind = 'source' | 'transformer' | 'destination' | 'store';
 
 export type ResolveSource = 'import' | 'imports' | 'default';
 
@@ -47,6 +47,8 @@ function getStep(
   switch (kind) {
     case 'source':
       return flow.sources?.[id];
+    case 'transformer':
+      return flow.transformers?.[id];
     case 'destination':
       return flow.destinations?.[id];
     case 'store':

@@ -23,6 +23,7 @@ import type {
   ProducerRecord,
   Settings,
 } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 type ExpectedOut = CallRecord | CallRecord[];
@@ -178,3 +179,6 @@ describe('kafka server destination -- step examples', () => {
     );
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

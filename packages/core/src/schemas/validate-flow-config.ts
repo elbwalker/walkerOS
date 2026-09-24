@@ -5,6 +5,13 @@ import type { Flow, Transformer } from '../types';
 import { getRouteGraph } from '../chain';
 import { RouteSchema } from './matcher';
 import { resolveContracts } from '../contract';
+import {
+  REF_CODE_PREFIX,
+  REF_CONTRACT,
+  REF_FLOW,
+  REF_SECRET,
+  REF_STORE,
+} from '../references';
 
 /**
  * Validate a Flow.Config JSON string.
@@ -206,8 +213,10 @@ const FLOW_INLINE_REGEX =
 const COLON_TYPO_REGEX = /\$(var|store|flow|secret):([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
 // Inline variant of REF_SECRET for scanning anywhere in JSON text.
-// Source-of-truth REF_SECRET in references.ts is anchored (^...$).
-const SECRET_INLINE_REGEX = /\$secret\.([A-Z0-9_]+)/g;
+// Source-of-truth REF_SECRET in references.ts is anchored (^...$) and
+// uppercase only; the scan also finds lowercase names so a secret that would
+// never resolve is still reported (a web flow must not carry it either way).
+const SECRET_INLINE_REGEX = /\$secret\.([A-Za-z0-9_]+)/g;
 
 function checkReferences(
   text: string,
@@ -225,6 +234,99 @@ function checkReferences(
   checkEnvReferences(text, context, warnings);
   checkFlowReferences(text, context, warnings);
   checkSecretReferences(text, parsed, context, errors, warnings);
+  checkWholeValueReferences(text, parsed, warnings);
+}
+
+// References that resolve only when they are the entire string value.
+// `$var.` and `$env.` resolve inline and are not listed here.
+const WHOLE_VALUE_REFERENCES: ReadonlyArray<{
+  prefix: string;
+  regex: RegExp;
+  grammar: string;
+}> = [
+  {
+    prefix: '$flow.',
+    regex: REF_FLOW,
+    grammar: 'a flow name, then an optional dot path of letters, digits and _',
+  },
+  {
+    prefix: '$store.',
+    regex: REF_STORE,
+    grammar: 'one store id of letters, digits and _, no path',
+  },
+  {
+    prefix: '$secret.',
+    regex: REF_SECRET,
+    grammar: 'uppercase letters, digits and _',
+  },
+  {
+    prefix: '$contract.',
+    regex: REF_CONTRACT,
+    grammar: 'a contract name, then an optional dot path',
+  },
+];
+
+const PROSE_KEYS = ['title', 'description', '$comment'];
+
+/**
+ * Warn on whole-value references that would not resolve: used inside a
+ * larger string (they ship as literal text) or malformed (the value starts
+ * with the prefix but fails the anchored grammar). Walks parsed string
+ * values; `$code:` payloads are code, not references, and are skipped.
+ */
+function checkWholeValueReferences(
+  text: string,
+  parsed: unknown,
+  warnings: ValidationIssue[],
+): void {
+  walkStringValues(parsed, [], (value, path) => {
+    if (value.startsWith(REF_CODE_PREFIX)) return;
+    // Prose fields describe references, they never resolve them.
+    if (PROSE_KEYS.includes(path[path.length - 1])) return;
+    for (const { prefix, regex, grammar } of WHOLE_VALUE_REFERENCES) {
+      if (!value.includes(prefix)) continue;
+      const name = prefix.slice(0, -1);
+      let message: string;
+      if (value.startsWith(prefix)) {
+        if (regex.test(value)) continue;
+        message = `"${value}" does not match the ${name}.NAME grammar (${grammar}); it would not resolve. To build a longer string, compose with $var or $env.`;
+      } else {
+        message = `"${value}" uses ${prefix} inline. ${prefix} references resolve only as the whole value; it would ship as literal text. Use the reference as the entire value, or compose strings with $var or $env.`;
+      }
+      const encoded = JSON.stringify(value);
+      const idx = text.indexOf(encoded);
+      warnings.push({
+        message,
+        severity: 'warning',
+        path: path.join('.'),
+        ...(idx === -1
+          ? { line: 1, column: 1 }
+          : offsetToPosition(text, idx, encoded.length)),
+      });
+    }
+  });
+}
+
+function walkStringValues(
+  value: unknown,
+  path: string[],
+  visit: (value: string, path: string[]) => void,
+): void {
+  if (typeof value === 'string') {
+    visit(value, path);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) =>
+      walkStringValues(item, [...path, String(index)], visit),
+    );
+    return;
+  }
+  if (isObject(value)) {
+    for (const [key, child] of Object.entries(value)) {
+      walkStringValues(child, [...path, key], visit);
+    }
+  }
 }
 
 // Packages that persist raw bytes (byte-native), the only stores where
@@ -363,40 +465,44 @@ function checkSecretReferences(
         ? cfg.platform
         : undefined;
 
-    const flowText = JSON.stringify(flow);
-    SECRET_INLINE_REGEX.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = SECRET_INLINE_REGEX.exec(flowText)) !== null) {
-      const full = match[0];
-      const name = match[1];
-      // Best-effort position against the original text (first occurrence of the
-      // ref), mirroring positionForKey's indexOf approach; flowText offsets do
-      // not map to the original document.
-      const idx = text.indexOf(full);
-      const pos =
-        idx === -1
-          ? { line: 1, column: 1 }
-          : offsetToPosition(text, idx, full.length);
+    // Scan string values; prose fields describe references, they never
+    // resolve them (same skip as checkWholeValueReferences).
+    walkStringValues(flow, [], (value, path) => {
+      if (PROSE_KEYS.includes(path[path.length - 1])) return;
+      SECRET_INLINE_REGEX.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = SECRET_INLINE_REGEX.exec(value)) !== null) {
+        const full = match[0];
+        const name = match[1];
+        // Best-effort position against the original text (first occurrence of
+        // the ref), mirroring positionForKey's indexOf approach; value offsets
+        // do not map to the original document.
+        const idx = text.indexOf(full);
+        const pos =
+          idx === -1
+            ? { line: 1, column: 1 }
+            : offsetToPosition(text, idx, full.length);
 
-      if (platform === 'web') {
-        errors.push({
-          message: `Secret "$secret.${name}" cannot be used in a web flow — secrets are never sent to the browser; use a server flow.`,
-          severity: 'error',
-          path: full,
-          ...pos,
-        });
-        continue;
-      }
+        if (platform === 'web') {
+          errors.push({
+            message: `Secret "$secret.${name}" cannot be used in a web flow: secrets are never sent to the browser; use a server flow.`,
+            severity: 'error',
+            path: full,
+            ...pos,
+          });
+          continue;
+        }
 
-      if (known && !known.includes(name)) {
-        warnings.push({
-          message: `Unknown secret "$secret.${name}"; not in the project's registered secrets.`,
-          severity: 'warning',
-          path: full,
-          ...pos,
-        });
+        if (known && !known.includes(name)) {
+          warnings.push({
+            message: `Unknown secret "$secret.${name}"; not in the project's registered secrets.`,
+            severity: 'warning',
+            path: full,
+            ...pos,
+          });
+        }
       }
-    }
+    });
   }
 }
 

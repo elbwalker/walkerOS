@@ -41,4 +41,4 @@ export const push: Env = {
   },
 };
 
-export const simulation = ['call:client.xadd'];
+export const simulation = ['call:Redis.Client.xadd'];

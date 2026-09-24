@@ -3,7 +3,8 @@
  *
  * Helpers shared by `@walkeros/cli` and `@walkeros/runner` that do not belong
  * in the browser `.` entry: the temp-path helpers import node builtins, the
- * terminal logger config writes to the console, and the secret redactor has
+ * terminal logger config writes to the console, and the secret redactor and
+ * the simulate output formatter (`toPrintable`, it reads `Buffer`) have
  * no browser consumer (in `.` it was not tree-shaken out of walker.js). Core gains no dependency
  * for them: the colouriser is injected by the caller, so chalk stays in the
  * packages that already depend on it.
@@ -16,6 +17,7 @@ import { createLogger } from './logger';
 import { scrubSecrets } from './redactLine';
 
 export { scrubSecrets, redactLine } from './redactLine';
+export { toPrintable } from './toPrintable';
 import type { Config, Instance } from './types/logger';
 import { Level } from './types/logger';
 

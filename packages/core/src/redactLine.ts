@@ -40,7 +40,10 @@ const FORCE_MASK_PREFIXES = [
 // ── Regex constants (all linear, no nested quantifiers) ─────────────────────
 
 // URL credentials: scheme://user:password@host, keep user, mask password.
-const RE_URL_CREDS = /(:\/\/[^/:@\s]+:)[^@\s]+(@)/g;
+// The user may be empty (`redis://:pw@host`). Neither part crosses a quote,
+// backslash or `/`, so a URL in serialized JSON never reaches an `@` further
+// along the line (an email in another field).
+const RE_URL_CREDS = /(:\/\/[^/:@\s"\\]*:)[^@\s/"\\]+(@)/g;
 
 // JSON service-account field values, catches service-account blobs.
 // `private_key` holds the PEM body; `client_email`, `private_key_id`,
@@ -50,9 +53,47 @@ const RE_URL_CREDS = /(:\/\/[^/:@\s]+:)[^@\s]+(@)/g;
 // heuristics, which can miss an email or a URL. The value may contain escaped
 // newlines (\n as literal backslash-n) which do not split the line. [^"] is
 // safe: these values contain no embedded quotes. One alternation over the field
-// names keeps the scan single-pass and linear.
+// names keeps the scan single-pass and linear. The escaped `\"private_key\"`
+// form (a service account inside a serialized JSON string) matches too; its
+// optional backslash is captured and repeated around the mask.
 const RE_JSON_SA_FIELD =
-  /("(?:private_key|client_email|private_key_id|client_id|client_x509_cert_url)"\s*:\s*)"[^"]*"/g;
+  /(\\?"(?:private_key|client_email|private_key_id|client_id|client_x509_cert_url)\\?"\s*:\s*)(\\?)"[^"]*"/g;
+
+// Credential fields by name: the value is a secret whatever its shape (a
+// plain-word password or a `Basic`/`Bearer` header slips past the token
+// heuristics). Word parts may be joined by `-`, `_` or nothing (`api_key`,
+// `apiKey`, `API-Key`), and a header name may carry an `x-` prefix
+// (`X-API-Key`).
+const SECRET_FIELD_NAMES =
+  '(?:x-)?(?:password|passwd|secret|client[-_]?secret|secret[-_]?access[-_]?key|api[-_]?key|api[-_]?secret|access[-_]?token|refresh[-_]?token|auth[-_]?token|id[-_]?token|session[-_]?token|private[-_]?key|token|authorization)';
+
+// Plain `"key": value`: a string value runs to its closing quote (an escaped
+// char is consumed as a pair; the alternatives start on different chars, so
+// the scan is linear), a numeric value to its last digit. The mask is a
+// string, so the JSON stays valid.
+const RE_JSON_SECRET_FIELD = new RegExp(
+  `("(?:${SECRET_FIELD_NAMES})"\\s*:\\s*)(?:"(?:[^"\\\\]|\\\\.)*"|-?\\d[\\d.eE+-]*)`,
+  'gi',
+);
+
+// Escaped `\"key\":\"value\"`, the form a serialized request body carries
+// inside a JSON string. The value ends at the escaped closing quote.
+const RE_JSON_SECRET_FIELD_ESCAPED = new RegExp(
+  `(\\\\"(?:${SECRET_FIELD_NAMES})\\\\"\\s*:\\s*\\\\")(?:[^"\\\\]|\\\\[^"])*`,
+  'gi',
+);
+
+// A credential-named URL query parameter (`?api_secret=...`,
+// `&access_token=...`): the value runs to the next `&`, `#`, quote, backslash
+// or whitespace.
+const RE_QUERY_SECRET = new RegExp(
+  `([?&]${SECRET_FIELD_NAMES}=)[^&#\\s"\\\\]+`,
+  'gi',
+);
+
+// A PEM private key inline in one line (a JSON string with escaped newlines),
+// under any field name: marker and body up to the END marker's dashes.
+const RE_PEM_INLINE = /-----BEGIN [A-Z ]*PRIVATE KEY-----[^-]*/gi;
 
 // PEM block boundaries (structural removal, not regex masking).
 // Case-insensitive, tolerate leading whitespace so a lowercase or indented
@@ -95,6 +136,10 @@ const RE_PREFIXED_TOKEN = new RegExp(
   'g',
 );
 
+// A run right after a backslash starts with that escape's letters (`\n`, `\t`,
+// `\u00e9` in serialized JSON). Masking keeps them so the text stays valid JSON.
+const RE_ESCAPE_HEAD = /^(?:u[0-9a-fA-F]{4}|[bfnrt])/;
+
 // ── Entropy ──────────────────────────────────────────────────────────────────
 
 /** Shannon entropy in bits per character. Linear in input length. */
@@ -122,6 +167,10 @@ const RE_ALL_DIGIT = /^[0-9]+$/;
 const RE_BASE64_SPECIAL = /[+=]/;
 const RE_HAS_DIGIT = /[0-9]/;
 const RE_HAS_LETTER = /[A-Za-z]/;
+// A dotted run is judged per segment; segments shorter than this (`oauth2`,
+// `com`) are never judged, longer ones only mask when secret-shaped (name
+// parts like `JSONWriter` or `googleapis` are not).
+const MIN_DOT_SEGMENT_LEN = 8;
 
 /**
  * Decide whether a candidate run (a single token, no `/`) is a secret to mask.
@@ -155,6 +204,13 @@ function isSecretSegment(run: string): boolean {
  * secrets remain masked while FQNs, gs:// paths, request paths, and googleapis
  * URLs survive.
  *
+ * A `.` splits a run (or a path segment) too, with a shorter bar: host names
+ * (`oauth2.googleapis.com`) and dotted call paths (`JSONWriter.appendRows`)
+ * stay legible, while a dotted run with any secret-shaped segment of 8+
+ * chars (each part of a JWT, `abc123def456gh.ghi789...`) is masked. A
+ * KEY=value value without `/` (`keyedValue`) is judged whole, dots included:
+ * `DB_PASSWORD=Sup3rS3cret.Pass2024` masks although both parts are short.
+ *
  * ACCEPTED best-effort limitation: a bare all-letters run with no digit, no
  * special char, no known prefix, and entropy < 4.0 (e.g. `supercalifragilistic`
  * or a long camelCase identifier like `getUserAccountSettings`) may pass through
@@ -162,16 +218,25 @@ function isSecretSegment(run: string): boolean {
  * ordinary identifiers and words, which defeats the purpose of legible
  * diagnostics. This is a deliberate trade-off, not an oversight.
  */
-function shouldMaskToken(run: string): boolean {
+function shouldMaskToken(run: string, keyedValue = false): boolean {
   if (run.includes('/')) {
     // Per-segment: only mask if a long segment is itself secret-shaped. Short
     // path segments (the bulk of any URL) never qualify, keeping URLs legible.
     return run
       .split('/')
       .filter((segment) => segment.length >= MIN_TOKEN_LEN)
-      .some(isSecretSegment);
+      .some(isSecretDottedRun);
   }
-  return isSecretSegment(run);
+  return keyedValue ? isSecretSegment(run) : isSecretDottedRun(run);
+}
+
+/** A run without `/`: secret when any 8+ char dot segment is secret-shaped. */
+function isSecretDottedRun(run: string): boolean {
+  if (!run.includes('.')) return isSecretSegment(run);
+  return run
+    .split('.')
+    .filter((segment) => segment.length >= MIN_DOT_SEGMENT_LEN)
+    .some(isSecretSegment);
 }
 
 // ── PEM block removal ────────────────────────────────────────────────────────
@@ -215,6 +280,12 @@ function maskLine(line: string): string {
   // 1. URL credentials: ://user:secret@host → ://user:***@host
   s = s.replace(RE_URL_CREDS, '$1***$2');
 
+  // 1a. Credential-named query parameters, whatever the value's shape.
+  s = s.replace(RE_QUERY_SECRET, '$1***');
+
+  // 1b. A PEM private key inline (a JSON string), whatever its field name.
+  s = s.replace(RE_PEM_INLINE, '***');
+
   // 2. KEY=secret / KEY: secret (anchored, bounded key, ReDoS-safe).
   // Mask the value only when it is secret-shaped. This stops `scheme://host/...`
   // (matched as `gs:` / `https:` key + `//...` value) from masking legitimate
@@ -223,15 +294,23 @@ function maskLine(line: string): string {
   s = s.replace(
     RE_KV_SECRET,
     (match: string, boundary: string, keyPart: string, value: string) =>
-      shouldMaskToken(value) ? `${boundary}${keyPart}***` : match,
+      shouldMaskToken(value, true) ? `${boundary}${keyPart}***` : match,
   );
 
   // 3. Known-prefix tokens (force-mask regardless of length/entropy)
   s = s.replace(RE_PREFIXED_TOKEN, '***');
 
   // 4. Standalone candidate runs ≥ 20 chars, mask by shape/entropy
-  s = s.replace(RE_TOKEN_RUN, (match) =>
-    shouldMaskToken(match) ? '***' : match,
+  s = s.replace(
+    RE_TOKEN_RUN,
+    (match: string, offset: number, input: string) => {
+      if (!shouldMaskToken(match)) return match;
+      const head =
+        offset > 0 && input[offset - 1] === '\\'
+          ? RE_ESCAPE_HEAD.exec(match)?.[0]
+          : undefined;
+      return head ? `${head}***` : '***';
+    },
   );
 
   return s;
@@ -246,20 +325,25 @@ function maskLine(line: string): string {
  *
  * Algorithm:
  * 1. Mask JSON service-account fields (private_key, client_email,
- *    private_key_id, client_id, client_x509_cert_url) BEFORE splitting
+ *    private_key_id, client_id, client_x509_cert_url) and credential-named
+ *    JSON fields (password, token, authorization, ...) BEFORE splitting
  *    (service-account blobs embed PEM blocks as \\n-encoded strings; masking
  *    first prevents the BEGIN marker from appearing on its own line and dropping
  *    surrounding fields).
  * 2. Split on \\n.
  * 3. Remove PEM private-key blocks structurally (BEGIN…END inclusive,
  *    case-insensitive; a no-END block drops to end of entry).
- * 4. For each surviving line: mask URL creds, KEY=secret, prefixed tokens,
+ * 4. For each surviving line: mask URL creds, inline PEM keys, KEY=secret,
+ *    prefixed tokens,
  *    high-entropy/shape-based token runs.
  * 5. Rejoin with \\n.
  */
 export function scrubSecrets(line: string): string {
   // Step 1: JSON service-account field masking before any line splitting
-  const withoutJsonKey = line.replace(RE_JSON_SA_FIELD, '$1"***"');
+  const withoutJsonKey = line
+    .replace(RE_JSON_SA_FIELD, '$1$2"***$2"')
+    .replace(RE_JSON_SECRET_FIELD_ESCAPED, '$1***')
+    .replace(RE_JSON_SECRET_FIELD, '$1"***"');
 
   // Step 2: split
   const rawLines = withoutJsonKey.split('\n');

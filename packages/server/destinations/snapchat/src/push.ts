@@ -7,13 +7,14 @@ import type {
   SnapchatEvent,
   UserData,
 } from './types';
-import { getMappingValue, isObject } from '@walkeros/core';
+import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
+import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashUserData } from './hash';
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, env, logger },
+  { config, rule, data, ingest, collector, env, logger },
 ) {
   const {
     accessToken,
@@ -23,6 +24,8 @@ export const push: PushFn = async function (
     url = 'https://tr.snapchat.com/v3/',
     user_data,
     testMode,
+    ip,
+    userAgent,
   } = config.settings as Settings;
 
   const eventData = isObject(data) ? data : {};
@@ -38,7 +41,21 @@ export const push: PushFn = async function (
     ? (eventData.user_data as UserData)
     : {};
 
+  // Client IP and user agent auto-fill, overridden by any mapped value
+  const root = createMappingRoot(ingest, event);
+  const clientIp = await resolveClient(ip, DEFAULT_IP, root, collector);
+  const clientUserAgent = await resolveClient(
+    userAgent,
+    DEFAULT_USER_AGENT,
+    root,
+    collector,
+  );
+
   const userData: UserData = {
+    ...(clientIp !== undefined ? { client_ip_address: clientIp } : {}),
+    ...(clientUserAgent !== undefined
+      ? { client_user_agent: clientUserAgent }
+      : {}),
     // Destination config data
     ...(isObject(configData) && isObject(configData.user_data)
       ? (configData.user_data as UserData)
@@ -100,3 +117,21 @@ export const push: PushFn = async function (
     logger.throw(`Snapchat API error: ${JSON.stringify(result)}`);
   }
 };
+
+const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
+const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [
+  'ingest.userAgent',
+  'event.user.userAgent',
+];
+
+/** A client IP or user agent setting resolved to a non-empty string. */
+async function resolveClient(
+  setting: WalkerOSMapping.Value | false | undefined,
+  fallback: WalkerOSMapping.Value,
+  root: WalkerOSMapping.Root,
+  collector: Collector.Instance,
+): Promise<string | undefined> {
+  if (setting === false) return undefined;
+  const value = await getMappingValue(root, setting ?? fallback, { collector });
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}

@@ -14,17 +14,14 @@ export const destinationDataManager: DestinationInterface = {
     // getConfig validates required fields and returns ValidatedConfig
     const config = getConfig(partialConfig, logger);
 
+    // Keep an injected client (tests, simulate); create one only when none is given.
+    if (env?.authClient) return { ...config, env };
+
     try {
       const authClient = await createAuthClient(config, logger);
       logger.debug('Auth client created');
 
-      return {
-        ...config,
-        env: {
-          ...env,
-          authClient,
-        },
-      };
+      return { ...config, env: { ...env, authClient } };
     } catch (error) {
       logger.throw(
         `Data Manager authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,

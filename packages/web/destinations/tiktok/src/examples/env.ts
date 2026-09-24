@@ -66,10 +66,10 @@ export const push: Env = makeEnv();
 
 /** Simulation tracking paths for CLI --simulate. */
 export const simulation = [
-  'call:ttq.load',
-  'call:ttq.track',
-  'call:ttq.identify',
-  'call:ttq.page',
-  'call:ttq.enableCookie',
-  'call:ttq.disableCookie',
+  'call:window.ttq.load',
+  'call:window.ttq.track',
+  'call:window.ttq.identify',
+  'call:window.ttq.page',
+  'call:window.ttq.enableCookie',
+  'call:window.ttq.disableCookie',
 ];

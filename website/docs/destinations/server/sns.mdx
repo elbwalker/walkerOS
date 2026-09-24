@@ -18,7 +18,7 @@ export const data = {
     mapping: awsData.schemas?.snsMapping,
     setup: awsData.schemas?.snsSetup,
   },
-  examples: {},
+  examples: awsData.exportExamples?.destinationSNS ?? {},
 };
 
 # AWS SNS
@@ -233,6 +233,10 @@ Runtime push role:
 
 Recommended: separate roles for setup and runtime. Setup runs from a
 provisioner identity; runtime push uses a least-privileged role.
+
+## Simulate
+
+`walkeros push --simulate destination.sns` runs offline with the package's mock SNS client and prints each `AWS.SNSClient.send` call with its command input; nothing reaches AWS. The step's `import` (`destinationSNS`) selects the SNS examples and mock, not Firehose's.
 
 ## Troubleshooting
 

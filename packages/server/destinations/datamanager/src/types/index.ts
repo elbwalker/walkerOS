@@ -5,7 +5,6 @@ import type {
   ServiceAccount,
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
-import type { OAuth2Client } from 'google-auth-library';
 
 export interface Settings {
   /**
@@ -76,6 +75,20 @@ export interface Settings {
 
   /** Consent mapping: Map consent field to adPersonalization (string = field name, boolean = static value) */
   consentAdPersonalization?: string | boolean;
+
+  /**
+   * Client IP, sent as eventDeviceInfo.ipAddress. Resolves against
+   * { ingest, event }. `false` switches it off. A mapped `ipAddress` wins.
+   * @default ['ingest.ip', 'event.user.ip']
+   */
+  ip?: WalkerOSMapping.Value | false;
+
+  /**
+   * Client user agent, sent as eventDeviceInfo.userAgent. Resolves against
+   * { ingest, event }. `false` switches it off. A mapped `userAgent` wins.
+   * @default ['ingest.userAgent', 'event.user.userAgent']
+   */
+  userAgent?: WalkerOSMapping.Value | false;
 }
 
 export interface Mapping {
@@ -86,9 +99,18 @@ export interface Mapping {
   sessionAttributes?: WalkerOSMapping.Value;
 }
 
+/**
+ * The part of a Google auth client this destination calls. Structural so an
+ * injected client (tests, simulate) needs no cast; `OAuth2Client` and the
+ * client `GoogleAuth.getClient()` returns both satisfy it.
+ */
+export interface AuthClient {
+  getAccessToken(): Promise<{ token?: string | null }>;
+}
+
 export interface Env extends DestinationServer.Env {
   fetch?: typeof fetch;
-  authClient?: OAuth2Client | null;
+  authClient?: AuthClient | null;
 }
 
 export type InitSettings = Partial<Settings>;
@@ -305,6 +327,9 @@ export interface EventLocation {
 export interface DeviceInfo {
   /** User agent string */
   userAgent?: string;
+
+  /** IP address of the device */
+  ipAddress?: string;
 }
 
 /**

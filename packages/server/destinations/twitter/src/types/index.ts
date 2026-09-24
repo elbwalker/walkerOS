@@ -15,6 +15,18 @@ export interface Settings {
   doNotHash?: string[];
   url?: string;
   user_data?: WalkerOSMapping.Map;
+  /**
+   * Client IP, sent as the ip_address identifier. Resolves against { ingest, event }.
+   * `false` switches it off.
+   * @default ['ingest.ip', 'event.user.ip']
+   */
+  ip?: WalkerOSMapping.Value | false;
+  /**
+   * Client user agent, sent as the user_agent identifier. Resolves against
+   * { ingest, event }. `false` switches it off.
+   * @default ['ingest.userAgent', 'event.user.userAgent']
+   */
+  userAgent?: WalkerOSMapping.Value | false;
 }
 
 export type InitSettings = Partial<Settings>;

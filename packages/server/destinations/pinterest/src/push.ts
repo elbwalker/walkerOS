@@ -1,11 +1,12 @@
 import type { ConversionEvent, PushFn, RequestBody, UserData } from './types';
-import { getMappingValue, isObject } from '@walkeros/core';
+import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
+import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashEvent } from './hash';
 
 export const push: PushFn = async function (
   event,
-  { config, data, env, logger, collector },
+  { config, data, ingest, env, logger, collector },
 ) {
   const {
     accessToken,
@@ -16,6 +17,8 @@ export const push: PushFn = async function (
     url = 'https://api.pinterest.com/v5/',
     user_data,
     partner_name,
+    ip,
+    userAgent,
   } = config.settings!;
 
   const eventData = isObject(data) ? data : {};
@@ -27,7 +30,21 @@ export const push: PushFn = async function (
     : {};
 
   // Merge user_data from config.data, settings.user_data, and event mapping
+  // Client IP and user agent auto-fill, overridden by any mapped value
+  const root = createMappingRoot(ingest, event);
+  const clientIp = await resolveClient(ip, DEFAULT_IP, root, collector);
+  const clientUserAgent = await resolveClient(
+    userAgent,
+    DEFAULT_USER_AGENT,
+    root,
+    collector,
+  );
+
   const userData: UserData = {
+    ...(clientIp !== undefined ? { client_ip_address: clientIp } : {}),
+    ...(clientUserAgent !== undefined
+      ? { client_user_agent: clientUserAgent }
+      : {}),
     // Destination config
     ...(isObject(configData) && isObject(configData.user_data)
       ? configData.user_data
@@ -97,3 +114,21 @@ export const push: PushFn = async function (
     logger.throw(`Pinterest API error: ${JSON.stringify(result)}`);
   }
 };
+
+const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
+const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [
+  'ingest.userAgent',
+  'event.user.userAgent',
+];
+
+/** A client IP or user agent setting resolved to a non-empty string. */
+async function resolveClient(
+  setting: WalkerOSMapping.Value | false | undefined,
+  fallback: WalkerOSMapping.Value,
+  root: WalkerOSMapping.Root,
+  collector: Collector.Instance,
+): Promise<string | undefined> {
+  if (setting === false) return undefined;
+  const value = await getMappingValue(root, setting ?? fallback, { collector });
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}

@@ -48,6 +48,11 @@ export interface FlowModule {
    * bytes. Read sites must call and await the thunk, then narrow the result.
    */
   __devExports?: Record<string, () => Promise<unknown>>;
+  /**
+   * Export names each package declares in `walkerOS.exports`, read at build
+   * time from the copy that was bundled. Absent in bundles built before it.
+   */
+  __packageExports?: Record<string, string[]>;
 }
 
 /**
@@ -183,6 +188,7 @@ export async function withFlowContext<T>(
       startFlow,
       __configData: module.__configData,
       __devExports: module.__devExports,
+      __packageExports: module.__packageExports,
     };
 
     // Execute step-specific logic

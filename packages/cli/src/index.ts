@@ -95,6 +95,7 @@ export {
   simulateTransformer,
   simulateDestination,
   simulateCollector,
+  formatPushResult,
 } from './commands/push/index.js';
 export type {
   SimulateDataOptions,
@@ -270,6 +271,8 @@ export type { SSEEvent, SSEParseResult } from './core/sse.js';
 // === Utilities ===
 // Export utilities for programmatic usage
 export { loadConfig, loadJsonConfig } from './config/utils.js';
+export { resolveExportName } from './core/resolve-export-name.js';
+export { selectDevExamples } from './commands/push/dev-examples.js';
 
 // === Telemetry ===
 export * as telemetry from './telemetry/index.js';

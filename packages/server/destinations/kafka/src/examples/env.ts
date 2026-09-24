@@ -79,4 +79,4 @@ export const push: Env = {
   },
 };
 
-export const simulation = ['call:producer.send'];
+export const simulation = ['call:Kafka.Kafka.producer.send'];

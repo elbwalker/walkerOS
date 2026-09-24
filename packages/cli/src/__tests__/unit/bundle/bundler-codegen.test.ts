@@ -1548,3 +1548,80 @@ describe('applyCollectorProvenance', () => {
     });
   });
 });
+
+describe('declared package exports', () => {
+  // The real gcp destination declares two exports in `walkerOS.exports`;
+  // the demo destination declares none.
+  const gcpPath = path.resolve(
+    __dirname,
+    '../../../../../server/destinations/gcp',
+  );
+  const demoPath = path.resolve(__dirname, '../../../../../destinations/demo');
+
+  const flowSettings: Flow = {
+    config: { platform: 'server' },
+    sources: {},
+    destinations: {
+      pubsub: {
+        package: '@walkeros/server-destination-gcp',
+        import: 'destinationPubSub',
+      },
+      demo: { package: '@walkeros/destination-demo' },
+    },
+  };
+
+  function options(skipWrapper: boolean): BuildOptions {
+    return {
+      platform: 'node',
+      format: 'esm',
+      skipWrapper,
+      packages: {
+        '@walkeros/server-destination-gcp': {},
+        '@walkeros/destination-demo': {},
+      },
+      output: './dist/bundle.mjs',
+      code: '',
+    };
+  }
+
+  const packagePaths = new Map([
+    ['@walkeros/server-destination-gcp', gcpPath],
+    ['@walkeros/destination-demo', demoPath],
+  ]);
+
+  it('emits __packageExports from the bundled package.json beside __devExports', async () => {
+    const { codeEntry } = await createEntryPoint(
+      flowSettings,
+      options(true),
+      packagePaths,
+    );
+
+    expect(codeEntry).toContain(
+      `export const __packageExports = {\n  '@walkeros/server-destination-gcp': ["destinationBigQuery","destinationPubSub"],\n};`,
+    );
+  });
+
+  it('emits an empty __packageExports when no package declares exports', async () => {
+    const { codeEntry } = await createEntryPoint(
+      {
+        config: { platform: 'server' },
+        sources: {},
+        destinations: { demo: { package: '@walkeros/destination-demo' } },
+      },
+      options(true),
+      packagePaths,
+    );
+
+    expect(codeEntry).toContain('export const __packageExports = {};');
+  });
+
+  it('emits no __packageExports without the dev surface', async () => {
+    const { codeEntry } = await createEntryPoint(
+      flowSettings,
+      options(false),
+      packagePaths,
+    );
+
+    expect(codeEntry).not.toContain('__packageExports');
+  });
+});

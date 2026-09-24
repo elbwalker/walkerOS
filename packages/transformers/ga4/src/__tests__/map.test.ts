@@ -60,7 +60,7 @@ describe('mapHitToEvents — hit-level merge', () => {
     });
   });
 
-  it('populates globals from hit-level ul, sr', () => {
+  it('puts the visitor facts ul and sr on user, not globals', () => {
     const hit: GA4Hit = {
       hit: { tid: 'G-X', ul: 'de-de', sr: '1920x1080', dl: 'https://x' },
       events: [
@@ -72,10 +72,11 @@ describe('mapHitToEvents — hit-level merge', () => {
       ],
     };
     const out = mapHitToEvents(hit, defaultMapping);
-    expect(out[0].globals).toMatchObject({
+    expect(out[0].user).toMatchObject({
       language: 'de-de',
-      screen: '1920x1080',
+      screenSize: '1920x1080',
     });
+    expect(out[0]).not.toHaveProperty('globals');
   });
 
   it('populates source from hit-level p (platform) and adds type:ga4', () => {
@@ -108,7 +109,7 @@ describe('mapHitToEvents — hit-level merge', () => {
     expect(out[0].consent).toEqual({ analytics: true, marketing: true });
   });
 
-  it('populates timestamp from hit.sid (epoch seconds → ms) and timing from event._et', () => {
+  it('sets timestamp to the receive time (not the session start) and timing from event._et', () => {
     const hit: GA4Hit = {
       hit: { tid: 'G-X', sid: '1700000000', dl: 'https://x' },
       events: [
@@ -119,8 +120,11 @@ describe('mapHitToEvents — hit-level merge', () => {
         },
       ],
     };
+    const before = Date.now();
     const out = mapHitToEvents(hit, defaultMapping);
-    expect(out[0].timestamp).toBe(1700000000 * 1000);
+    const after = Date.now();
+    expect(out[0].timestamp).toBeGreaterThanOrEqual(before);
+    expect(out[0].timestamp).toBeLessThanOrEqual(after);
     expect(out[0].timing).toBe(1234);
   });
 
@@ -385,9 +389,11 @@ describe('mapHitToEvents — purchase (canary)', () => {
         },
       ],
       timing: 1234,
-      user: { device: '111.222', session: '1700000000' },
-      globals: { language: 'de-de' },
-      source: { type: 'ga4' },
+      user: { device: '111.222', session: '1700000000', language: 'de-de' },
+      source: {
+        type: 'ga4',
+        url: 'https://shop/success',
+      },
     });
   });
 });
@@ -1186,5 +1192,51 @@ describe('mapHitToEvents - source', () => {
       pageLoadId: '1718112345',
       hitSequence: '4',
     });
+  });
+});
+
+describe('mapHitToEvents - page context', () => {
+  const baseHit: GA4Hit = {
+    hit: { v: '2', tid: 'G-XXX', cid: '111.222', sid: '1700000000' },
+    events: [
+      {
+        en: 'page_view',
+        params: { ep: {}, epn: {}, up: {}, upn: {} },
+        items: [],
+      },
+    ],
+  };
+
+  it('sets source.url and source.referrer from dl and dr', () => {
+    const [event] = mapHitToEvents(
+      {
+        ...baseHit,
+        hit: {
+          ...baseHit.hit,
+          dl: 'https://shop.example/p/1',
+          dr: 'https://google.com/',
+        },
+      },
+      defaultMapping,
+    );
+    expect(event.source).toMatchObject({
+      type: 'ga4',
+      url: 'https://shop.example/p/1',
+      referrer: 'https://google.com/',
+    });
+  });
+
+  it('omits url and referrer when the hit has none', () => {
+    const [event] = mapHitToEvents(baseHit, defaultMapping);
+    expect(event.source).not.toHaveProperty('url');
+    expect(event.source).not.toHaveProperty('referrer');
+  });
+
+  it('keeps a relative dl as-is', () => {
+    const [event] = mapHitToEvents(
+      { ...baseHit, hit: { ...baseHit.hit, dl: '/p/1?x' } },
+      defaultMapping,
+    );
+    expect(event.source?.url).toBe('/p/1?x');
   });
 });

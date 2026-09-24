@@ -179,6 +179,10 @@ program
     '--snapshot <source>',
     'JS file to eval before bundle execution (file path, URL, or inline code)',
   )
+  .option(
+    '--ingest <source>',
+    'pipeline context for a simulated transformer, collector or destination (JSON object, file path, or URL)',
+  )
   .action(async (file, options) => {
     await pushCommand({
       config: file,
@@ -192,6 +196,7 @@ program
       simulate: options.simulate,
       mock: options.mock,
       snapshot: options.snapshot,
+      ingestSource: options.ingest,
     });
   });
 

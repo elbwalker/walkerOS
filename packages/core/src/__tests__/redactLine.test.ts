@@ -1,3 +1,4 @@
+import { generateKeyPairSync, sign } from 'crypto';
 import { scrubSecrets, redactLine } from '../redactLine';
 
 describe('scrubSecrets', () => {
@@ -76,6 +77,9 @@ describe('scrubSecrets', () => {
       'gs://my-bucket/path/to/object.json',
       'GET /api/users/12345/settings 200',
       'https://bigquery.googleapis.com/v2/projects/p/datasets/d',
+      'https://oauth2.googleapis.com/token',
+      'call JSONWriter.appendRows',
+      'PubSub.topic.publishMessage',
     ])('leaves %s unmasked', (line) => {
       const result = scrubSecrets(line);
       expect(result).toBe(line);
@@ -99,6 +103,16 @@ describe('scrubSecrets', () => {
       const result = scrubSecrets(`token ${token} ok`);
       expect(result).not.toContain('kJ8sL2mNqRtVxYzAbCdEfGhIjKlMnOp');
       expect(result).toContain('***');
+    });
+
+    it('masks a dotted token whose segments are secret-shaped', () => {
+      const token =
+        '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';
+      const result = scrubSecrets(`key ${token} ok`);
+      expect(result).not.toContain('aB3dE5fG7hJ9kL1mN3pQ5r');
+      expect(result).not.toContain(
+        'sT7uV9wX1yZ3aB5cD7eF9gH1jK3lM5nP7qR9sT1uV3w',
+      );
     });
 
     it('masks an all-hex digest', () => {
@@ -161,6 +175,206 @@ describe('scrubSecrets', () => {
       expect(result).not.toContain(secret);
       expect(result).toContain('***');
     });
+  });
+});
+
+// Recorded simulate calls egress through scrubSecrets as serialized JSON, the
+// same way a logger context does, so these are the shapes vendor calls carry.
+describe('scrubSecrets on serialized vendor calls', () => {
+  const metaToken =
+    'EAABsbCS1iHgBAKZCZBqwZDZDq7xQ9kLmN3pRsT5vWyZ1aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789';
+
+  it('masks an access_token query parameter and keeps the URL host and path', () => {
+    const url = `https://graph.facebook.com/v19.0/1/events?access_token=${metaToken}`;
+    const result = scrubSecrets(JSON.stringify([url]));
+    expect(result).not.toContain(metaToken);
+    expect(result).toContain('https://graph.facebook.com/v19.0/1/events');
+  });
+
+  it('masks a JWT assertion signed with a private key', () => {
+    const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const part = (value: object) =>
+      Buffer.from(JSON.stringify(value)).toString('base64url');
+    const header = part({ alg: 'RS256', typ: 'JWT' });
+    const claims = part({
+      iss: 'svc@my-proj.iam.gserviceaccount.com',
+      aud: 'https://oauth2.googleapis.com/token',
+      exp: 1790000000,
+    });
+    const signature = sign(
+      'RSA-SHA256',
+      Buffer.from(`${header}.${claims}`),
+      privateKey,
+    ).toString('base64url');
+    const body = `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${header}.${claims}.${signature}`;
+    const result = scrubSecrets(JSON.stringify([{ method: 'POST', body }]));
+    expect(result).not.toContain(signature.slice(0, 20));
+    expect(result).not.toContain(claims.slice(0, 20));
+    expect(result).toContain('grant_type');
+  });
+
+  it.each([
+    ['password', 'correcthorsebatterystaple'],
+    ['client_secret', 'plainwordsecretvalue'],
+    ['apiKey', 'lowercaseletterskey'],
+    ['Authorization', 'Basic dXNlcjpwYXNzMTIzNA=='],
+    ['authorization', 'Bearer abcdefghijklmnopqrstu'],
+  ])('masks the value of a JSON %s field', (key, value) => {
+    const json = JSON.stringify({ user: 'admin', [key]: value });
+    const result = scrubSecrets(json);
+    expect(result).not.toContain(value);
+    expect(JSON.parse(result)).toEqual({ user: 'admin', [key]: '***' });
+  });
+
+  it('masks a secret field inside a JSON string body', () => {
+    const body = JSON.stringify({ password: 'correcthorsebatterystaple' });
+    const result = scrubSecrets(JSON.stringify([body]));
+    expect(result).not.toContain('correcthorsebatterystaple');
+    expect(JSON.parse(result)).toEqual(['{"password":"***"}']);
+  });
+
+  it.each([
+    [
+      'a dotted KEY=value secret',
+      'DB_PASSWORD=Sup3rS3cret.Pass2024',
+      'Sup3rS3cret',
+    ],
+    [
+      'a dotted key: value secret',
+      'api_key: abc123def456.ghi789jk',
+      'abc123def456',
+    ],
+    [
+      'a dotted run of secret-shaped segments',
+      'token AbC123dEf456gh.GhI789jKl012mn.MnO345pQr678st end',
+      'AbC123dEf456gh',
+    ],
+    [
+      'a KEY=value path with a short-part dotted segment',
+      'DB_PASSWORD=abc/Sup3rS3cret.Pass2024',
+      'Sup3rS3cret',
+    ],
+    [
+      'a short key with the same path',
+      'pw=abc/Sup3rS3cret.Pass2024',
+      'Sup3rS3cret',
+    ],
+    [
+      'the same path as a bare run',
+      'x abc/Sup3rS3cret.Pass2024 y',
+      'Sup3rS3cret',
+    ],
+  ])('masks %s', (_label, line, secret) => {
+    expect(scrubSecrets(line)).not.toContain(secret);
+  });
+
+  it('keeps a URL legible when an email follows in the same JSON line', () => {
+    const json = JSON.stringify({
+      url: 'http://localhost:8080/collect',
+      email: 'jane@example.com',
+    });
+    expect(scrubSecrets(json)).toBe(json);
+  });
+
+  it('masks URL credentials inside JSON', () => {
+    const json = JSON.stringify({ dsn: 'postgres://app:S3cretPass@db.io/x' });
+    const result = scrubSecrets(json);
+    expect(result).not.toContain('S3cretPass');
+    expect(JSON.parse(result)).toEqual({ dsn: 'postgres://app:***@db.io/x' });
+  });
+
+  it.each([
+    ['a value with an escaped quote', { password: 'ab"cd efgh ijkl' }, 'efgh'],
+    ['a value with a backslash', { password: 'ab\\cd efgh ijkl' }, 'efgh'],
+    ['a numeric value', { password: 12345678 }, '12345678'],
+    [
+      'an AWS secret access key',
+      { secret_access_key: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' },
+      'bPxRfiCYEXAMPLEKEY',
+    ],
+    ['a session token', { sessionToken: 'plainwordsession' }, 'plainword'],
+  ])('masks a JSON credential field with %s', (_label, value, secret) => {
+    const result = scrubSecrets(JSON.stringify(value));
+    expect(result).not.toContain(secret);
+    expect(() => JSON.parse(result)).not.toThrow();
+  });
+
+  it.each([
+    ['an X-API-Key header', { 'X-API-Key': 'myKey-2024-prod' }, 'myKey'],
+    ['an api_secret field', { api_secret: 'plainwordsecret' }, 'plainword'],
+    ['an apiSecret field', { apiSecret: 'plainwordsecret' }, 'plainword'],
+    ['an API-Key field', { 'API-Key': 'plainwordkey' }, 'plainword'],
+  ])('masks %s', (_label, value, secret) => {
+    const result = scrubSecrets(JSON.stringify(value));
+    expect(result).not.toContain(secret);
+    expect(() => JSON.parse(result)).not.toThrow();
+  });
+
+  it.each([
+    [
+      'an api_secret query parameter',
+      'https://www.google-analytics.com/mp/collect?measurement_id=G-ABC&api_secret=plainwordsecret',
+      'https://www.google-analytics.com/mp/collect?measurement_id=G-ABC&api_secret=***',
+    ],
+    [
+      'an access_token query parameter',
+      'GET /events?access_token=shortword&x=1',
+      'GET /events?access_token=***&x=1',
+    ],
+    [
+      'URL credentials with an empty user',
+      'redis://:pw@cache:6379',
+      'redis://:***@cache:6379',
+    ],
+  ])('masks %s', (_label, line, expected) => {
+    expect(scrubSecrets(line)).toBe(expected);
+  });
+
+  it.each([
+    'GET /search?tokenize=true&keyword=shoes',
+    '{"monkey":"banana","tokenType":"Bearer"}',
+    'http://localhost:8080/collect',
+  ])('leaves %s legible', (line) => {
+    expect(scrubSecrets(line)).toBe(line);
+  });
+
+  describe('private keys under any field', () => {
+    const pem = [
+      '-----BEGIN PRIVATE KEY-----',
+      'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7',
+      'abcdefghijklmnopqrstuvwxyzabcdefghij',
+      '-----END PRIVATE KEY-----',
+      '',
+    ].join('\n');
+
+    it.each([
+      ['privateKey', { privateKey: pem }],
+      ['key', { key: pem }],
+      ['a serialized service account', [JSON.stringify({ private_key: pem })]],
+      [
+        'a serialized client email',
+        [
+          JSON.stringify({
+            client_email: 'svc@my-proj.iam.gserviceaccount.com',
+          }),
+        ],
+      ],
+    ])('masks %s', (_label, value) => {
+      const result = scrubSecrets(JSON.stringify(value));
+      expect(result).not.toContain('MIIEvQIBADANBg');
+      expect(result).not.toContain('abcdefghijklmnopqrstuvwxyz');
+      expect(result).not.toContain('svc@my-proj');
+      expect(() => JSON.parse(result)).not.toThrow();
+    });
+  });
+
+  it('keeps JSON escapes intact when masking the run after them', () => {
+    const pemBody =
+      'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7kJ8sL2mNqRtVxYz';
+    const json = JSON.stringify([`line one\n${pemBody}`, `x\n${pemBody}`]);
+    const result = scrubSecrets(json);
+    expect(result).not.toContain(pemBody);
+    expect(() => JSON.parse(result)).not.toThrow();
   });
 });
 

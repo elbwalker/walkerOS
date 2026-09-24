@@ -244,6 +244,13 @@ const { collector } = await startFlow({
   language="typescript"
 />
 
+Ingest is opt-in: without `config.ingest` the source forwards no request
+metadata, so no client IP leaves your server by accident. The keys `ip` and
+`userAgent` are the ones server destinations read by default (Meta, TikTok, Snapchat, Pinterest, Bing, Reddit, Criteo and X (Twitter) conversion APIs, Google Data Manager and Piwik PRO), so this
+map is all they need to send the client IP and user agent. Each of those
+destinations can turn either off with `ip: false` or `userAgent: false` in its
+settings.
+
 ## Available ingest paths
 
 | Path | Description |

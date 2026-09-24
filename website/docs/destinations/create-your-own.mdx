@@ -475,6 +475,8 @@ describe('My Destination', () => {
 * **Type Safety**: 3rd generic parameter gives full autocomplete
 * **Fallback**: `getEnv(env)` automatically uses real APIs if env not provided
 * **Reusable**: Store mock environments in `examples/env.ts` for consistency
+* **Simulate**: `walkeros push --simulate` runs the destination with `examples.env.push` and refuses a destination that has none, so it never calls the real vendor. Next to it, export `simulation`, the call paths that carry the vendor request (for example `['sendServer']` or `['call:PubSub.topic.publishMessage']`), which simulate records and prints
+* **Keep injected clients**: when `init` builds an SDK client, reach it through `env` and create one only when none is injected, so the mock env reaches the request call
 * **Context helper**: Use `createPushContext()` to standardize test context with `id` and `rule`
 
 ## Package convention

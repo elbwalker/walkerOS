@@ -2,6 +2,7 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Rules, Settings } from '../types';
 import {
   clone,
+  createIngest,
   getEvent,
   createMockContext,
   createMockLogger,
@@ -441,5 +442,77 @@ describe('Server Destination Reddit', () => {
       { id: 'ers', name: 'Everyday Ruck Snack', category: 'uncategorized' },
       { id: 'cc', name: 'Cool Cap', category: 'uncategorized' },
     ]);
+  });
+
+  describe('client IP and user agent auto-fill', () => {
+    const ingest = {
+      ...createIngest('test'),
+      ip: '203.0.113.7',
+      userAgent: 'Mozilla/5.0 test',
+    };
+    const sent = () => JSON.parse(mockSendServer.mock.calls[0][1]);
+    const expected = async (value: string) =>
+      (await hashEvent({ user: { ip_address: value } })).user.ip_address;
+
+    test('fills client IP and user agent from ingest by default', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: { settings: { accessToken, pixelId } },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sent().data.events[0].user.ip_address).toBe(
+        await expected('203.0.113.7'),
+      );
+      expect(sent().data.events[0].user.user_agent).toBeDefined();
+    });
+
+    test('falls back to event.user.ip and userAgent', async () => {
+      await destination.push(
+        getEvent('entity action', {
+          user: { id: 'us3r', ip: '198.51.100.2', userAgent: 'UA2' },
+        }),
+        createMockContext({
+          config: { settings: { accessToken, pixelId } },
+          env: testEnv,
+        }),
+      );
+      expect(sent().data.events[0].user.ip_address).toBe(
+        await expected('198.51.100.2'),
+      );
+      expect(sent().data.events[0].user.user_agent).toBeDefined();
+    });
+
+    test('sends neither when disabled with false', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: {
+            settings: { accessToken, pixelId, ip: false, userAgent: false },
+          },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sent().data.events[0].user.ip_address).toBeUndefined();
+      expect(sent().data.events[0].user.user_agent).toBeUndefined();
+    });
+
+    test('lets an explicitly mapped value win', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: { settings: { accessToken, pixelId } },
+          data: { user: { ip_address: '10.0.0.1' } },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sent().data.events[0].user.ip_address).toBe(
+        await expected('10.0.0.1'),
+      );
+    });
   });
 });

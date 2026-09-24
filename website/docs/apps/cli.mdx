@@ -571,10 +571,11 @@ The event was sent to your real API endpoint!
 | `-f, --flow <name>` | Flow name (for multi-flow configs) |
 | `-p, --platform <platform>` | Platform override (`web` or `server`) |
 | `--simulate <step>` | Simulate a step (repeatable). Mocks the step's push, captures result. Use `source.NAME`, `transformer.NAME`, `destination.NAME`, or `collector.NAME` (for example `collector.default`). A transformer runs through its own `before` and `next`; the collector step runs the collector's enrichment and then `collector.next`, so it returns every copy that would reach the destinations (none when a `stop` drops the event). |
+| `--ingest <source>` | Request context for the simulated step (JSON string, file path, or URL; must be a JSON object), for example `{"ip":"203.0.113.7","userAgent":"Mozilla/5.0"}`. Applies to `transformer.*`, `collector.*` and `destination.*` simulation only. |
 | `--mock <step=value>` | Mock a step with a specific return value (repeatable). Use `destination.NAME=VALUE`, a chain member such as `destination.NAME.before.TRANSFORMER=VALUE`, or a member of the collector chain with `collector.next.TRANSFORMER=VALUE`. |
 | `--snapshot <source>` | JS file to eval before execution. Sets global state (`window.dataLayer`, `process.env`, etc.). |
 | `-o, --output <path>` | Write result to file |
-| `--json` | Output results as JSON |
+| `--json` | Output results as JSON. For a real and a simulated push alike, stdout carries only the JSON document; logs go to stderr |
 | `-v, --verbose` | Verbose output with debug information |
 | `-s, --silent` | Suppress output (for CI/CD) |
 
@@ -624,12 +625,85 @@ The `--event` parameter accepts three formats:
 - Use `push --simulate` first to validate configuration without side effects
 - Use `push` (without flags) to verify real integrations work before deployment
 
+### Simulation output
+
+A simulated destination runs with the mock env its package ships (`examples.env.push`), so the vendor SDK or HTTP call is recorded instead of sent. The output lists, per simulated step, the mapping rule that matched and every recorded vendor call:
+
+<CodeSnippet
+  code={`walkeros push flow.json -e '{"name":"order complete","data":{"id":"ORD-1","total":42}}' \\
+  --simulate destination.pubsub`}
+  language="bash"
+/>
+
+```
+success: true
+  destination.pubsub
+    mapping: none
+    call PubSub.topic.publishMessage({"data":"{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-1\",\"total\":42},...)
+  Duration: 44779ms
+```
+
+Each destination step prints `mapping: <entity action key>` when a rule matched, `mapping: none` when it pushed the event without a matching rule, or `mapping: none (skipped before mapping)` when nothing was sent, then one `call <fn>(<args>)` line per recorded call (arguments as compact JSON, cut at 300 characters) or `no calls`. Transformer and collector steps print the events they pass on (`event <json>` or `no events`).
+
+With `--json`, the same results arrive under `simulations`, one entry per simulated step, with the full call arguments:
+
+```json
+{
+  "success": true,
+  "duration": 43222,
+  "simulations": [
+    {
+      "step": "destination",
+      "name": "pubsub",
+      "events": [],
+      "calls": [
+        {
+          "fn": "PubSub.topic.publishMessage",
+          "args": [{ "data": "{\"name\":\"order complete\",...}" }],
+          "ts": 1790265170276
+        }
+      ],
+      "duration": 42841
+    }
+  ]
+}
+```
+
+Arguments are made printable (an `Error` becomes `{ name, message }`, a `Buffer` its UTF-8 text, `bigint` a string, `Map` and `Set` arrays, cycles `"[Circular]"`). Both text and JSON output pass through the same secret scrubbing the CLI logs use, so service account keys, private keys, `Authorization` headers, `access_token` parameters and credential fields show as `***`. The destination itself still receives the real values.
+
+**No real vendor calls.** When a package step's export has no mock env, simulate stops before the flow starts (a step with inline `code` has no package and runs as given):
+
+```
+No mock env for @my/destination export default: simulate would call the real vendor. Add examples.env.push to the package's dev examples.
+```
+
+A multi-export package (for example `@walkeros/server-destination-gcp` with `destinationBigQuery` and `destinationPubSub`) keys its dev examples by export name, and simulate picks the entry for the step's `import`. A package version published before that convention is refused for a named export with `...: this package version predates export-keyed examples; use a version with exportExamples or a local path.`
+
+**Request context with `--ingest`.** Destinations that read the request (client IP, user agent) get it from the ingest context, which an HTTP source fills in a running flow. Pass it with `--ingest` to see what those destinations send:
+
+<CodeSnippet
+  code={`walkeros push flow.json -e event.json --simulate destination.meta \\
+  --ingest '{"ip":"203.0.113.7","userAgent":"Mozilla/5.0"}'`}
+  language="bash"
+/>
+
+The ingest reaches the destination's `before` chain and its push context (for a collector step, `collector.next`). Runtime metadata (`_meta`) is always set by the CLI. `--ingest` is rejected for `source.*` simulation and for a real push.
+
+**Simulate versus trace mode.** Simulate injects the mock env before the destination's `init`, so clients built in `init` (the BigQuery writer, the Pub/Sub client) are recorded. A running flow observed at trace level records calls per push only, so calls through a client built in `init` do not appear there.
+
+**Secrets in simulate.** A `$secret.NAME` reference is read from the environment variable `NAME`, also in simulate. For a Sheets or GCS store the value must be a valid service-account JSON with a real-format RSA private key: the store signs its token request before the mocked `fetch` answers it, so a hand-made fake key fails at flow start with a key decoding error. A throwaway key is fine, it is never sent anywhere:
+
+<CodeSnippet
+  code={`export GCP_SA=$(node -e 'const {privateKey}=require("crypto").generateKeyPairSync("rsa",{modulusLength:2048,privateKeyEncoding:{type:"pkcs8",format:"pem"},publicKeyEncoding:{type:"spki",format:"pem"}});console.log(JSON.stringify({type:"service_account",project_id:"demo",client_email:"sim@demo.iam.gserviceaccount.com",private_key:privateKey}))')`}
+  language="bash"
+/>
+
 ### JSON Output
 
 For CI/CD pipelines, use `--json` for machine-readable output:
 
 <CodeSnippet
-  code={`walkeros push flow.json --event '{"name":"page view"}' --json --silent`}
+  code={`walkeros push flow.json --event '{"name":"page view"}' --json`}
   language="bash"
 />
 
@@ -655,6 +729,8 @@ On error:
   "duration": 5023
 }
 ```
+
+For a real and a simulated push alike, stdout carries only this JSON document (logs go to stderr), so it pipes straight into `jq`. With `--simulate`, the result also carries `simulations` (see [Simulation output](#simulation-output)).
 
 ### Multi-Flow
 
@@ -848,7 +924,7 @@ The `--type` option accepts four validation types. Default is `flow`:
 | Type | What it validates |
 |------|-------------------|
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
-| `flow` (default) | Flow.Json config: schema, references, packages, and cross-step example compatibility |
+| `flow` (default) | Flow.Json config: schema, references, packages, cross-step example compatibility, and the examples of `@walkeros/transformer-validate` steps against their linked contracts |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
 | `contract` | Contract structure: named entries with optional `extend`, `tagging`, `description`, `events`, and `schema` fields |
 
@@ -927,6 +1003,24 @@ Flow validation reads every chain field (`source.before`, `source.next`, `transf
 | `many` with no entry, or with a single entry | Warning | `empty many at ...`, `single-entry many at ...` |
 
 At runtime an unknown id is logged and skipped, and the chain continues. A `stop` inside `many` ends only its own copy, so it never makes its siblings dead code. Repeated steps and a transformer's own `next` inside an array are valid and not reported.
+
+### Reference checks
+
+`$flow.`, `$store.`, `$secret.` and `$contract.` resolve only as the whole string value; `$var.` and `$env.` also resolve inline. Flow validation warns when a whole-value reference would not resolve:
+
+| Value | Warning |
+|-------|---------|
+| `"$flow.server.url/collect"` | `does not match the $flow.NAME grammar (...); it would not resolve. To build a longer string, compose with $var or $env.` |
+| `"$secret.api_key"` | `does not match the $secret.NAME grammar (uppercase letters, digits and _); it would not resolve. ...` |
+| `"https://x/$store.cache"` | `uses $store. inline. $store. references resolve only as the whole value; it would ship as literal text. ...` |
+
+Values under `title`, `description` and `$comment`, and `$code:` values, are not checked.
+
+### Example checks
+
+Flow validation compares each step's example `out` with the `in` of the steps it connects to. An `out` written as effects (`[["elb", event]]`, `[["return", { "event": ... }]]`, `[["return", [...]]]`) contributes the events those effects pass on; other effects (`message.ack`, `response`, vendor calls, `["return", false]`) pass nothing on.
+
+Contracts are checked where the runtime applies them: only in `@walkeros/transformer-validate` steps. Each validate step's own examples run through that step's `contract`, `mode`, `format` and `output` settings, and the example `out` must agree with the verdict. See [Validate](/docs/getting-started/flow/validate#design-time-checks).
 
 ### Options
 

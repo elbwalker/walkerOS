@@ -5,20 +5,36 @@ import type {
   SetupFn as CoreSetupFn,
 } from '@walkeros/core';
 import type {
-  SNSClient,
   SNSClientConfig,
-  CreateTopicCommand,
-  PublishCommand,
-  GetTopicAttributesCommand,
-  SubscribeCommand,
+  CreateTopicCommandInput,
+  PublishCommandInput,
+  GetTopicAttributesCommandInput,
+  SubscribeCommandInput,
 } from '@aws-sdk/client-sns';
-import type { STSClient, GetCallerIdentityCommand } from '@aws-sdk/client-sts';
+import type {
+  STSClientConfig,
+  GetCallerIdentityCommandInput,
+} from '@aws-sdk/client-sts';
+
+/**
+ * The part of an AWS SDK v3 client this destination calls: `send` with a
+ * command. `SNSClient` and `STSClient` satisfy it, and so does an injected
+ * mock (tests, simulate) without a cast.
+ */
+export interface SendClient {
+  send(command: object): Promise<unknown>;
+}
+
+/** An AWS SDK v3 command class, as far as this destination builds one. */
+export type CommandConstructor<Input> = new (input: Input) => {
+  readonly input: Input;
+};
 
 export interface Settings {
   /** Topic name (without `.fifo` suffix unless fifoTopic is true). REQUIRED. */
   topicName: string;
   /** Pre-configured client. Optional; created from env if absent. */
-  client?: SNSClient;
+  client?: SendClient;
   /** AWS region. Mirrors setup.region default ('eu-central-1'). */
   region?: string;
   /** SDK client config (credentials, etc.). Optional. */
@@ -29,7 +45,7 @@ export interface Settings {
 
 export interface InitSettings {
   topicName: string;
-  client?: SNSClient;
+  client?: SendClient;
   region?: string;
   config?: SNSClientConfig;
   topicArn?: string;
@@ -55,13 +71,13 @@ export interface Mapping {
 
 export interface Env extends DestinationServer.Env {
   AWS: {
-    SNSClient: typeof SNSClient;
-    CreateTopicCommand: typeof CreateTopicCommand;
-    PublishCommand: typeof PublishCommand;
-    GetTopicAttributesCommand: typeof GetTopicAttributesCommand;
-    SubscribeCommand: typeof SubscribeCommand;
-    STSClient: typeof STSClient;
-    GetCallerIdentityCommand: typeof GetCallerIdentityCommand;
+    SNSClient: new (config: SNSClientConfig) => SendClient;
+    CreateTopicCommand: CommandConstructor<CreateTopicCommandInput>;
+    PublishCommand: CommandConstructor<PublishCommandInput>;
+    GetTopicAttributesCommand: CommandConstructor<GetTopicAttributesCommandInput>;
+    SubscribeCommand: CommandConstructor<SubscribeCommandInput>;
+    STSClient: new (config: STSClientConfig) => SendClient;
+    GetCallerIdentityCommand: CommandConstructor<GetCallerIdentityCommandInput>;
   };
 }
 

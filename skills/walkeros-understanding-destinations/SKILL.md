@@ -88,6 +88,28 @@ destination that reaches its vendor through `getEnv(env)` is automatically
 observable; one that reaches a global directly, bypassing `env`, is not. This is
 one more reason to route every external call through `env`.
 
+Rules that keep the seam intact:
+
+- **`init` keeps an injected env.** A client built in `init` (SDK client, auth
+  client, writer) is taken from `env` when present and created only otherwise
+  (`env?.BigQuery ?? BigQuery`). Every key the mock env declares must be read as
+  `env.<key>` in `src`.
+- **`simulation` names the request call** (`sendServer`,
+  `call:PubSub.topic.publishMessage`, `call:JSONWriter.appendRows`), not a
+  constructor. The one recorder is `observeEnv` in `@walkeros/core`; it
+  navigates constructors, factories and Promises, and records only the leaf.
+- **Trace-mode limit.** CLI and MCP simulate inject the mock env before `init`,
+  so a client built in `init` is recorded. Runtime trace mode wraps the env per
+  push only, so calls through a client built in `init` are not recorded there.
+- **Client IP and user agent.** Server conversion-API destinations (Meta,
+  TikTok, Snapchat, Pinterest, Bing, Reddit, Criteo, X, Data Manager, Piwik PRO)
+  expose `ip` and `userAgent` settings (`Mapping.Value | false`), defaulting to
+  `['ingest.ip', 'event.user.ip']` and
+  `['ingest.userAgent', 'event.user.userAgent']`, resolved with
+  `getMappingValue(createMappingRoot(ingest, event), setting, { collector })`.
+  `false` disables, an explicit mapped vendor field wins, each package carries
+  its own few lines (no shared helper).
+
 ## Destination Config
 
 ```typescript

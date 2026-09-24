@@ -7,16 +7,15 @@ import type { Env } from '../types';
  * and development without requiring external dependencies.
  */
 
-const noop = () => Promise.resolve({ ok: true });
+const sendServer: NonNullable<Env['sendServer']> = () =>
+  Promise.resolve({ ok: true });
 
 export const init: Env | undefined = {
   sendServer: undefined,
 };
 
-export const standard: Env = {
-  sendServer: Object.assign(noop, {
-    // Add any specific properties if needed for sendServer
-  }) as unknown as Env['sendServer'],
+export const push: Env = {
+  sendServer,
 };
 
 /**

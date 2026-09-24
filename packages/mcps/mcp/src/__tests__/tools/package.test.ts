@@ -242,6 +242,37 @@ describe('package_get tool', () => {
     expect(hints['setup']).toEqual({ text: 'Install SDK first' });
   });
 
+  it.each([
+    ['examples', true],
+    [undefined, false],
+  ])('returns exportExamples for section=%s: %s', async (section, expected) => {
+    const exportExamples = {
+      destinationBigQuery: { step: {} },
+      destinationPubSub: { step: {} },
+    };
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/server-destination-gcp',
+      version: '1.0.0',
+      type: 'destination',
+      platform: 'server',
+      schemas: {},
+      examples: { step: {} },
+      exportExamples,
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+
+    const tool = mockServer.getTool('package_get');
+    const result = await tool.handler({
+      package: '@walkeros/server-destination-gcp',
+      section,
+    });
+
+    expect(result.structuredContent.exportExamples).toEqual(
+      expected ? exportExamples : undefined,
+    );
+  });
+
   it('should return full content when section=all', async () => {
     mockFetchPackage.mockResolvedValue({
       packageName: 'pkg',

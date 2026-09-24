@@ -16,6 +16,7 @@ interface CachedToken {
 
 export function createTokenProvider(
   credentials?: ServiceAccountCredentials,
+  doFetch: typeof fetch = fetch,
 ): TokenProvider {
   let cached: CachedToken | undefined;
 
@@ -23,15 +24,15 @@ export function createTokenProvider(
     if (cached && Date.now() < cached.expiresAt) return cached.token;
 
     cached = credentials
-      ? await fetchServiceAccountToken(credentials)
-      : await fetchMetadataToken();
+      ? await fetchServiceAccountToken(credentials, doFetch)
+      : await fetchMetadataToken(doFetch);
 
     return cached.token;
   };
 }
 
-async function fetchMetadataToken(): Promise<CachedToken> {
-  const res = await fetch(METADATA_URL, {
+async function fetchMetadataToken(doFetch: typeof fetch): Promise<CachedToken> {
+  const res = await doFetch(METADATA_URL, {
     headers: { 'Metadata-Flavor': 'Google' },
     signal: AbortSignal.timeout(5000),
   });
@@ -49,6 +50,7 @@ async function fetchMetadataToken(): Promise<CachedToken> {
 
 async function fetchServiceAccountToken(
   creds: ServiceAccountCredentials,
+  doFetch: typeof fetch,
 ): Promise<CachedToken> {
   const now = Math.floor(Date.now() / 1000);
   const jwt = signJwt(
@@ -62,7 +64,7 @@ async function fetchServiceAccountToken(
     creds.private_key,
   );
 
-  const res = await fetch(OAUTH_URL, {
+  const res = await doFetch(OAUTH_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,

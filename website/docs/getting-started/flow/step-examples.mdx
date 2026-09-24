@@ -20,6 +20,8 @@ Add `examples` to any step in your flow config to document what it expects and p
 
 Examples are test fixtures, documentation, and simulation data in one place. They live in your flow config, get stripped at build time, and have zero runtime impact.
 
+Examples are mainly internal: packages use them for tests, docs and demos. In your own flow, use them sparingly, where one shows something the package examples cannot, for example a client flow's source with an example of its default behaviour. Mark such a fixture `"public": false` to keep it out of docs, UI and MCP default output while tests and `--simulate` still use it.
+
 ## What are step examples
 
 Every source, transformer, and destination in a walkerOS flow is a **step**. Each step receives input and produces output. Step examples are named `{ in, out }` pairs that capture concrete data for each step: what goes in, what comes out.
@@ -77,6 +79,7 @@ Each example has a human-readable name and two fields:
 | `mapping` | object | The mapping rule applied to this event (destinations only) |
 | `out` | any | The data the step produces |
 | `out: false` | `false` | The step rejects or filters this event |
+| `public` | boolean | `false` keeps a test fixture out of docs, UI and MCP default output (default `true`) |
 | `command` | string | Route `in` through a walker command instead of pushing it as an event (`config`, `consent`, `user`, `run`) |
 
 For destinations, the optional `mapping` field captures the mapping rule that transforms the walkerOS event into the vendor-specific output. This ties the example to a specific mapping configuration, so tests and simulations can register it dynamically as `{ [entity]: { [action]: example.mapping } }`.
@@ -193,7 +196,7 @@ walkeros push flow.json --simulate destination.ga4 --event '{"name":"page view",
   language="bash"
 />
 
-The CLI feeds `in` to the step, runs it through the pipeline, and compares the actual output against `out`. Mismatches are reported as errors.
+The CLI runs the event through the flow with the step mocked and prints what the step did: for a destination, the matched mapping rule and every recorded vendor call. See [simulation output](/docs/apps/cli#simulation-output).
 
 ### Validate examples
 
@@ -217,7 +220,9 @@ Cross-step validation checks that:
 - Source `out` types match transformer `in` types
 - Transformer `out` types match destination `in` types
 - Steps without examples produce warnings
-- Contract compliance when contracts are defined
+- Each `@walkeros/transformer-validate` step's own examples agree with its linked contract and settings (see [Validate](/docs/getting-started/flow/validate#design-time-checks)); examples of other steps are not checked against contracts
+
+An `out` written as effects is read for the events it passes on: `[["elb", event]]` and `[["return", { "event": ... }]]` pass the event, `[["return", [...]]]` passes each item, and `["return", false]`, `message.ack`, `response` or vendor calls pass nothing.
 
 ## Using examples in tests
 
@@ -269,6 +274,17 @@ export * as examples from './examples';`}
 />
 
 These are included in the package's `walkerOS.json` metadata and discoverable via CDN, following the same `{ in, out }` format used in flow configs.
+
+A package with several exports (for example `destinationBigQuery` and `destinationPubSub` in `@walkeros/server-destination-gcp`) also exports `exportExamples`, a map from every export name, the default included, to that export's examples. The CLI, MCP and `walkerOS.json` pick the entry for the step's `import`:
+
+<CodeSnippet
+  code={`// src/dev.ts
+export const exportExamples = {
+  destinationBigQuery: bigqueryExamples,
+  destinationPubSub: pubsubExamples,
+};`}
+  language="typescript"
+/>
 
 </details>
 

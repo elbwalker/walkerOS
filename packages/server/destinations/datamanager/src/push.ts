@@ -1,13 +1,14 @@
 import type { PushFn } from './types';
 import type { IngestEventsRequest, IngestEventsResponse } from './types';
-import { getMappingValue, isObject } from '@walkeros/core';
+import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
+import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
 import { formatEvent, formatConsent } from './format';
 import { getAccessToken } from './auth';
 import { getConfig } from './config';
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, env, logger },
+  { config, rule, data, ingest, collector, env, logger },
 ) {
   // Validate config and get typed settings
   const validatedConfig = getConfig(config, logger);
@@ -25,6 +26,8 @@ export const push: PushFn = async function (
     sessionAttributes,
     consentAdUserData,
     consentAdPersonalization,
+    ip,
+    userAgent,
   } = validatedConfig.settings;
 
   // Extract Settings guided helpers
@@ -59,8 +62,21 @@ export const push: PushFn = async function (
         ? event.consent[consentAdPersonalization]
         : undefined;
 
+  // Client IP and user agent auto-fill, overridden by any mapped value
+  const root = createMappingRoot(ingest, event);
+  const clientIp = await resolveClient(ip, DEFAULT_IP, root, collector);
+  const clientUserAgent = await resolveClient(
+    userAgent,
+    DEFAULT_USER_AGENT,
+    root,
+    collector,
+  );
+
   // Build Settings helpers object
   const settingsHelpers: Record<string, unknown> = {};
+  if (clientIp !== undefined) settingsHelpers.ipAddress = clientIp;
+  if (clientUserAgent !== undefined)
+    settingsHelpers.userAgent = clientUserAgent;
   if (isObject(userDataMapped)) {
     Object.assign(settingsHelpers, userDataMapped);
   }
@@ -190,3 +206,21 @@ export const push: PushFn = async function (
     );
   }
 };
+
+const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
+const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [
+  'ingest.userAgent',
+  'event.user.userAgent',
+];
+
+/** A client IP or user agent setting resolved to a non-empty string. */
+async function resolveClient(
+  setting: WalkerOSMapping.Value | false | undefined,
+  fallback: WalkerOSMapping.Value,
+  root: WalkerOSMapping.Root,
+  collector: Collector.Instance,
+): Promise<string | undefined> {
+  if (setting === false) return undefined;
+  const value = await getMappingValue(root, setting ?? fallback, { collector });
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}

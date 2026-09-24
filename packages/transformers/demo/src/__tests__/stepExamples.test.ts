@@ -3,6 +3,7 @@ import { createMockContext } from '@walkeros/core';
 import { transformerDemo } from '../index';
 import type { Types } from '../types';
 import { examples } from '../dev';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 describe('Step Examples', () => {
   const createInitContext = (
@@ -48,3 +49,6 @@ describe('Step Examples', () => {
     }
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

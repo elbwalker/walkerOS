@@ -1,68 +1,53 @@
 {
   "$schema": "https://walkeros.io/schema/flow/v4.json",
   "version": 4,
+  "include": ["./shared"],
   "variables": {
     "currency": "EUR",
-    "flowVersion": "1.0.0",
-    "ga4MeasurementId": "$env.GA4_MEASUREMENT_ID:G-DEMO123456",
-    "apiUrl": "$env.API_URL:http://localhost:8080/collect",
-    "ga4ItemsLoop": {
-      "loop": [
-        "nested",
-        {
-          "condition": "$code:(value, context) => value.entity === 'product'",
-          "map": {
-            "item_id": "data.id",
-            "item_name": "data.name",
-            "price": "data.price",
-            "quantity": {
-              "key": "data.quantity",
-              "value": 1
-            }
-          }
-        }
-      ]
-    },
-    "metaContentsLoop": {
-      "loop": [
-        "nested",
-        {
-          "map": {
-            "id": "data.id",
-            "item_price": "data.price",
-            "quantity": {
-              "key": "data.quantity",
-              "value": 1
-            }
-          }
-        }
-      ]
+    "gcp": {
+      "project": "$env.GCP_PROJECT:demo-project",
+      "dataset": "$env.BQ_DATASET:walkeros",
+      "topic": "$env.PUBSUB_TOPIC:walkeros-events"
     }
   },
   "contract": {
     "default": {
-      "description": "Web shop tracking contract",
+      "description": "Every event from the shop: explicit consent, a page language, and complete ecommerce data.",
+      "tagging": 1,
       "schema": {
         "type": "object",
+        "required": ["consent", "globals"],
         "properties": {
-          "globals": {
-            "type": "object",
-            "properties": {
-              "environment": {
-                "type": "string"
-              },
-              "version": {
-                "type": "string"
-              }
-            }
-          },
           "consent": {
             "type": "object",
             "required": ["functional"],
             "properties": {
               "functional": {
-                "type": "boolean",
                 "const": true
+              },
+              "marketing": {
+                "const": true
+              }
+            }
+          },
+          "globals": {
+            "type": "object",
+            "required": ["language"],
+            "properties": {
+              "language": {
+                "type": "string",
+                "pattern": "^[a-z]{2}$"
+              }
+            }
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "device": {
+                "type": "string"
+              },
+              "session": {
+                "type": "string"
               }
             }
           }
@@ -71,31 +56,75 @@
       "events": {
         "product": {
           "*": {
-            "description": "A product in the catalog",
             "properties": {
               "data": {
                 "type": "object",
-                "required": ["id", "name"],
+                "required": ["id", "name", "price"],
                 "properties": {
                   "id": {
                     "type": "string",
-                    "description": "Product SKU"
+                    "minLength": 1
                   },
                   "name": {
                     "type": "string",
-                    "description": "Display name"
+                    "minLength": 1
+                  },
+                  "price": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "impression": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["id", "name", "price"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "price": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "list": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 1
                   }
                 }
               }
             }
           },
           "add": {
-            "description": "Product added to cart",
             "properties": {
               "data": {
                 "type": "object",
-                "required": ["quantity"],
+                "required": ["id", "name", "price", "quantity"],
                 "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "price": {
+                    "type": "number",
+                    "minimum": 0
+                  },
                   "quantity": {
                     "type": "integer",
                     "minimum": 1
@@ -107,20 +136,89 @@
         },
         "order": {
           "complete": {
-            "description": "Purchase completed",
+            "required": ["nested"],
             "properties": {
               "data": {
                 "type": "object",
-                "required": ["id", "total"],
+                "required": ["id", "total", "currency"],
                 "properties": {
                   "id": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                   },
                   "total": {
                     "type": "number",
                     "minimum": 0
+                  },
+                  "currency": {
+                    "enum": ["EUR", "GBP", "USD"]
                   }
                 }
+              },
+              "nested": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "entity": {
+                      "const": "product"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "session": {
+          "start": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "isNew": {
+                    "type": "boolean"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "marketing": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "server": {
+      "extend": "default",
+      "description": "What the server adds before any vendor sees an event.",
+      "schema": {
+        "type": "object",
+        "required": ["user"],
+        "properties": {
+          "user": {
+            "type": "object",
+            "required": ["hash"],
+            "properties": {
+              "hash": {
+                "type": "string",
+                "description": "Cookieless visitor id: HMAC-SHA256 with a secret salt over the anonymized IP, browser with major version, OS and site. Rotates daily (UTC) and is per site, so count visitors per day."
+              },
+              "ltv": {
+                "type": "number",
+                "minimum": 0
+              },
+              "segment": {
+                "type": "string"
               }
             }
           }
@@ -130,7 +228,288 @@
   },
   "flows": {
     "web": {
+      "config": {
+        "platform": "web",
+        "url": "$env.SITE_URL:https://www.example.com",
+        "settings": {
+          "windowCollector": "walkerCollector"
+        },
+        "observe": {
+          "url": "$env.OBSERVE_URL:https://app.walkeros.io/observe",
+          "binding": "$env.OBSERVE_BINDING:obs-web"
+        },
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/web-source-cmp-usercentrics": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/web-source-session": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/web-source-datalayer": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/web-source-browser": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/web-destination-gtag": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/web-destination-api": {
+              "version": "4.7.0-next-1790245733116"
+            }
+          },
+          "env": {
+            "ENVIRONMENT": "production"
+          }
+        }
+      },
+      "collector": {
+        "globals": {
+          "language": "en"
+        },
+        "globalsStatic": {
+          "site": "$env.SITE_ID:shop"
+        },
+        "custom": {
+          "environment": "$env.ENVIRONMENT"
+        },
+        "next": "pageGroup"
+      },
       "sources": {
+        "usercentrics": {
+          "package": "@walkeros/web-source-cmp-usercentrics",
+          "config": {
+            "settings": {
+              "explicitOnly": true,
+              "categoryMap": {
+                "essential": "functional",
+                "functional": "functional",
+                "marketing": "marketing"
+              }
+            }
+          },
+          "examples": {
+            "explicitDecision": {
+              "title": "Explicit decision",
+              "description": "The user accepts every category in the banner. categoryMap turns essential and functional into functional, so the collector receives exactly the consent keys the contract names.",
+              "public": true,
+              "trigger": {
+                "type": "consent",
+                "options": {
+                  "dispatch": "cmp"
+                }
+              },
+              "in": [
+                {
+                  "categorySlug": "essential",
+                  "consent": {
+                    "status": true,
+                    "history": [
+                      {
+                        "type": "explicit",
+                        "status": true
+                      }
+                    ]
+                  }
+                },
+                {
+                  "categorySlug": "functional",
+                  "consent": {
+                    "status": true,
+                    "history": [
+                      {
+                        "type": "explicit",
+                        "status": true
+                      }
+                    ]
+                  }
+                },
+                {
+                  "categorySlug": "marketing",
+                  "consent": {
+                    "status": true,
+                    "history": [
+                      {
+                        "type": "explicit",
+                        "status": true
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "implicitSuppressed": {
+              "title": "First visit, no decision yet",
+              "description": "A page load with only implicit defaults publishes nothing: explicitOnly keeps consent absent until the user decides, so consent.functional present always means a real decision.",
+              "trigger": {
+                "type": "consent",
+                "options": {
+                  "dispatch": "init"
+                }
+              },
+              "in": [
+                {
+                  "categorySlug": "essential",
+                  "consent": {
+                    "status": true,
+                    "history": [
+                      {
+                        "type": "implicit",
+                        "status": true
+                      }
+                    ]
+                  }
+                },
+                {
+                  "categorySlug": "functional",
+                  "consent": {
+                    "status": false,
+                    "history": [
+                      {
+                        "type": "implicit",
+                        "status": false
+                      }
+                    ]
+                  }
+                },
+                {
+                  "categorySlug": "marketing",
+                  "consent": {
+                    "status": false,
+                    "history": [
+                      {
+                        "type": "implicit",
+                        "status": false
+                      }
+                    ]
+                  }
+                }
+              ],
+              "out": []
+            }
+          }
+        },
+        "session": {
+          "package": "@walkeros/web-source-session",
+          "config": {
+            "settings": {
+              "storage": true,
+              "consent": "functional",
+              "length": 30
+            }
+          },
+          "examples": {
+            "marketingSession": {
+              "title": "New session from an ad click",
+              "description": "A visit from a Google Ads click starts a session: the source sets user.session and user.device and emits session start with the raw gclid, which the server keeps for the conversion.",
+              "public": true,
+              "trigger": {
+                "type": "load",
+                "options": {
+                  "url": "https://www.example.com/?utm_source=google&utm_medium=cpc&utm_campaign=trail&gclid=gclid-abc123"
+                }
+              },
+              "in": {
+                "storage": true
+              }
+            }
+          }
+        },
+        "dataLayer": {
+          "package": "@walkeros/web-source-datalayer",
+          "config": {
+            "require": ["consent", "session"],
+            "settings": {
+              "filter": "$code:(e) => { const a = e && typeof e === 'object' && !Array.isArray(e) && Object.prototype.toString.call(e) === '[object Arguments]'; const n = e && typeof e.event === 'string' ? e.event : ''; return a || n.startsWith('elb '); }"
+            },
+            "mapping": {
+              "dataLayer": {
+                "add_to_cart": {
+                  "name": "product add",
+                  "data": {
+                    "map": {
+                      "id": "data.items.0.item_id",
+                      "name": "data.items.0.item_name",
+                      "price": "data.items.0.price",
+                      "quantity": {
+                        "key": "data.items.0.quantity",
+                        "value": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "examples": {
+            "gtagAddToCart": {
+              "title": "Existing gtag add_to_cart",
+              "description": "The shop already calls gtag(\"event\", \"add_to_cart\", ...). The source emits it as dataLayer add_to_cart; its mapping then renames it to product add with id, name, price and quantity, so nothing on the page changes.",
+              "public": true,
+              "trigger": {
+                "type": "gtag"
+              },
+              "in": [
+                "event",
+                "add_to_cart",
+                {
+                  "currency": "EUR",
+                  "value": 129.9,
+                  "items": [
+                    {
+                      "item_id": "SKU-1",
+                      "item_name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  ]
+                }
+              ],
+              "out": [
+                [
+                  "elb",
+                  {
+                    "name": "dataLayer add_to_cart",
+                    "data": {
+                      "currency": "EUR",
+                      "value": 129.9,
+                      "items": [
+                        {
+                          "item_id": "SKU-1",
+                          "item_name": "Trail Runner",
+                          "price": 129.9,
+                          "quantity": 1
+                        }
+                      ]
+                    },
+                    "source": {
+                      "type": "dataLayer",
+                      "platform": "web"
+                    }
+                  }
+                ]
+              ]
+            },
+            "ownPushSkipped": {
+              "title": "Own GTM push skipped",
+              "description": "The gtm destination pushes \"elb product add\" into the same dataLayer. The filter skips that prefix (and gtag arguments pushes), so walkerOS never reads back what it wrote.",
+              "trigger": {
+                "type": "direct"
+              },
+              "in": {
+                "event": "elb product add",
+                "data": {
+                  "id": "SKU-1"
+                }
+              },
+              "out": []
+            }
+          }
+        },
         "browser": {
           "package": "@walkeros/web-source-browser",
           "primary": true,
@@ -138,229 +517,357 @@
             "settings": {
               "prefix": "data-elb",
               "pageview": true,
-              "session": {
-                "consent": {
-                  "marketing": true
+              "elb": "elb"
+            }
+          },
+          "examples": {
+            "pageView": {
+              "title": "Page view",
+              "description": "The page load becomes a page view with domain, title and path; pageview: true needs no tagging.",
+              "public": true,
+              "trigger": {
+                "type": "load",
+                "options": {
+                  "url": "https://www.example.com/product/trail-runner",
+                  "title": "Trail Runner",
+                  "referrer": "https://www.example.com/"
                 }
               },
-              "elb": "elb",
-              "elbLayer": true
-            }
-          }
-        },
-        "dataLayer": {
-          "package": "@walkeros/web-source-datalayer",
-          "next": "enricher",
-          "config": {
-            "require": ["session"],
-            "settings": {
-              "name": "dataLayer",
-              "prefix": "gtag"
-            },
-            "mapping": {
-              "gtag": {
-                "add_to_cart": {
-                  "name": "product add",
-                  "data": {
-                    "map": {
-                      "id": "items.0.item_id",
-                      "name": "items.0.item_name",
-                      "price": "items.0.price",
-                      "currency": "currency",
-                      "quantity": {
-                        "key": "items.0.quantity",
-                        "value": 1
-                      }
-                    }
-                  }
-                },
-                "purchase": {
-                  "name": "order complete",
-                  "data": {
-                    "map": {
-                      "id": "transaction_id",
-                      "total": "value",
-                      "currency": "currency",
-                      "tax": "tax",
-                      "shipping": "shipping"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "demo": {
-          "package": "@walkeros/source-demo",
-          "config": {
-            "settings": {
-              "events": [
-                {
-                  "name": "page view",
-                  "data": {
-                    "title": "Home",
-                    "path": "/"
-                  },
-                  "delay": 0
-                },
-                {
-                  "name": "product view",
-                  "data": {
-                    "id": "SKU-001",
-                    "name": "Blue Shirt",
-                    "price": 49.99,
-                    "currency": "EUR",
-                    "category": "Clothing"
-                  },
-                  "delay": 300
-                },
-                {
-                  "name": "product add",
-                  "data": {
-                    "id": "SKU-001",
-                    "name": "Blue Shirt",
-                    "price": 49.99,
-                    "currency": "EUR",
-                    "quantity": 2
-                  },
-                  "delay": 600
-                },
-                {
-                  "name": "test debug",
-                  "data": {
-                    "message": "This should be ignored"
-                  },
-                  "delay": 800
-                },
-                {
-                  "name": "order complete",
-                  "data": {
-                    "id": "ORD-123",
-                    "total": 149.97,
-                    "currency": "EUR",
-                    "tax": 12.5,
-                    "shipping": 5.99
-                  },
-                  "user": {
-                    "email": "customer@example.com",
-                    "id": "U-456",
-                    "device": "d3v1c3",
-                    "session": "s3ss10n"
-                  },
-                  "nested": [
-                    {
-                      "entity": "product",
-                      "data": {
-                        "id": "SKU-001",
-                        "name": "Blue Shirt",
-                        "price": 49.99,
-                        "quantity": 2
-                      }
+              "in": "",
+              "out": [
+                [
+                  "elb",
+                  {
+                    "name": "page view",
+                    "data": {
+                      "domain": "localhost",
+                      "title": "Trail Runner",
+                      "referrer": "https://www.example.com/",
+                      "id": "/product/trail-runner"
                     },
-                    {
-                      "entity": "product",
-                      "data": {
-                        "id": "SKU-002",
-                        "name": "Red Cap",
-                        "price": 24.99,
-                        "quantity": 1
-                      }
+                    "context": {},
+                    "globals": {},
+                    "trigger": "load",
+                    "source": {
+                      "type": "browser",
+                      "platform": "web",
+                      "url": "http://localhost/product/trail-runner",
+                      "referrer": "https://www.example.com/"
                     }
-                  ],
-                  "delay": 1000
-                }
+                  }
+                ]
+              ]
+            },
+            "productImpression": {
+              "title": "Product impression",
+              "description": "A product tile scrolled into view fires a product impression with the list and position from its data-elb attributes.",
+              "trigger": {
+                "type": "impression",
+                "options": "div"
+              },
+              "in": "<div data-elb=\"product\" data-elb-product=\"id:SKU-1;name:Trail Runner;price:129.9;list:Running;position:1\" data-elbaction=\"impression:impression\"></div>",
+              "out": [
+                [
+                  "elb",
+                  {
+                    "name": "product impression",
+                    "entity": "product",
+                    "action": "impression",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "list": "Running",
+                      "position": 1
+                    },
+                    "trigger": "impression",
+                    "context": {},
+                    "nested": [],
+                    "source": {
+                      "type": "browser",
+                      "platform": "web",
+                      "url": "http://localhost/",
+                      "referrer": ""
+                    },
+                    "globals": {}
+                  }
+                ]
+              ]
+            },
+            "productAdd": {
+              "title": "Add to cart click",
+              "description": "A click on the tagged add-to-cart button becomes a product add with the product data and quantity.",
+              "trigger": {
+                "type": "click",
+                "options": "button"
+              },
+              "in": "<button data-elb=\"product\" data-elb-product=\"id:SKU-1;name:Trail Runner;price:129.9;quantity:1\" data-elbaction=\"click:add\">Add to cart</button>",
+              "out": [
+                [
+                  "elb",
+                  {
+                    "name": "product add",
+                    "entity": "product",
+                    "action": "add",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    },
+                    "trigger": "click",
+                    "context": {},
+                    "nested": [],
+                    "source": {
+                      "type": "browser",
+                      "platform": "web",
+                      "url": "http://localhost/",
+                      "referrer": ""
+                    },
+                    "globals": {}
+                  }
+                ]
               ]
             }
           }
         }
       },
       "transformers": {
-        "enricher": {
+        "pageGroup": {
           "code": {
-            "type": "enricher",
-            "push": "$code:(event) => ({ ...event, context: { ...event.context, enrichedAt: Date.now() } })"
+            "type": "pageGroup",
+            "push": "$code:(event) => { const url = event.source && event.source.url ? event.source.url : ''; const path = url ? new URL(url).pathname : ''; const pageGroup = path.startsWith('/product') ? 'product' : path.startsWith('/checkout') ? 'checkout' : 'content'; return { event: { ...event, globals: { ...event.globals, pageGroup } } }; }"
           },
-          "config": {}
+          "examples": {
+            "checkout": {
+              "title": "Checkout page group",
+              "description": "The inline code step derives globals.pageGroup from the page path once per event, so every destination can group pages the same way.",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n"
+                },
+                "source": {
+                  "type": "browser",
+                  "platform": "web",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n"
+                      },
+                      "source": {
+                        "type": "browser",
+                        "platform": "web",
+                        "url": "https://www.example.com/checkout/thanks"
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            },
+            "product": {
+              "title": "Product page group",
+              "description": "A product detail path gets the product group.",
+              "in": {
+                "name": "product view",
+                "entity": "product",
+                "action": "view",
+                "data": {
+                  "id": "SKU-1",
+                  "name": "Trail Runner",
+                  "price": 129.9
+                },
+                "id": "ev-product-view",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n"
+                },
+                "source": {
+                  "type": "browser",
+                  "platform": "web",
+                  "url": "https://www.example.com/product/trail-runner"
+                }
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "product view",
+                      "entity": "product",
+                      "action": "view",
+                      "data": {
+                        "id": "SKU-1",
+                        "name": "Trail Runner",
+                        "price": 129.9
+                      },
+                      "id": "ev-product-view",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "product"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n"
+                      },
+                      "source": {
+                        "type": "browser",
+                        "platform": "web",
+                        "url": "https://www.example.com/product/trail-runner"
+                      }
+                    }
+                  }
+                ]
+              ]
+            }
+          }
         }
       },
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
-            "require": ["consent", "user"],
+            "loadScript": true,
             "consent": {
-              "marketing": true
+              "functional": true
+            },
+            "include": ["globals"],
+            "policy": {
+              "data.currency": [
+                "data.currency",
+                {
+                  "value": "$var.currency"
+                }
+              ]
             },
             "settings": {
               "ga4": {
-                "measurementId": "$var.ga4MeasurementId"
-              }
+                "measurementId": "$env.GA4_MEASUREMENT_ID:G-MAINSITE"
+              },
+              "como": true
             },
             "mapping": {
-              "page": {
-                "view": {
-                  "name": "page_view",
-                  "data": {
-                    "map": {
-                      "page_title": "data.title",
-                      "page_location": "data.path"
-                    }
-                  }
-                }
-              },
               "product": {
                 "view": {
                   "name": "view_item",
                   "data": {
                     "map": {
-                      "currency": {
-                        "key": "data.currency",
-                        "value": "$var.currency"
-                      },
+                      "currency": [
+                        "data.currency",
+                        {
+                          "value": "$var.currency"
+                        }
+                      ],
                       "value": "data.price",
                       "items": {
-                        "loop": [
-                          "this",
-                          {
-                            "map": {
-                              "item_id": [
-                                {
-                                  "key": "data.sku"
-                                },
-                                {
-                                  "key": "data.id"
-                                }
-                              ],
-                              "item_name": "data.name",
-                              "item_category": "data.category",
-                              "price": "data.price"
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                },
-                "add": {
-                  "name": "add_to_cart",
-                  "data": {
-                    "map": {
-                      "currency": {
-                        "key": "data.currency",
-                        "value": "$var.currency"
-                      },
-                      "value": "data.price",
-                      "items": {
-                        "loop": [
-                          "this",
+                        "set": [
                           {
                             "map": {
                               "item_id": "data.id",
                               "item_name": "data.name",
-                              "quantity": {
-                                "key": "data.quantity",
-                                "value": 1
-                              }
+                              "price": "data.price"
                             }
                           }
                         ]
@@ -372,425 +879,33 @@
               "order": {
                 "complete": {
                   "name": "purchase",
+                  "condition": "$code:(event) => event.data && event.data.total > 0",
                   "data": {
                     "map": {
                       "transaction_id": "data.id",
                       "value": {
-                        "fn": "$code:(event) => Math.round(event.data.total * 100)"
+                        "key": "data.total",
+                        "fn": "$code:(value) => Math.round(Number(value) * 100) / 100"
                       },
-                      "currency": {
-                        "key": "data.currency",
-                        "value": "$var.currency"
-                      },
-                      "tax": "data.tax",
-                      "shipping": "data.shipping",
-                      "items": "$var.ga4ItemsLoop"
-                    }
-                  }
-                }
-              },
-              "test": {
-                "*": {
-                  "ignore": true
-                }
-              }
-            }
-          },
-          "examples": {
-            "page-view": {
-              "in": {
-                "name": "page view",
-                "data": {
-                  "title": "Home",
-                  "path": "/"
-                },
-                "entity": "page",
-                "action": "view"
-              },
-              "mapping": {
-                "name": "page_view",
-                "data": {
-                  "map": {
-                    "page_title": "data.title",
-                    "page_location": "data.path"
-                  }
-                }
-              },
-              "out": [
-                "event",
-                "page_view",
-                {
-                  "page_title": "Home",
-                  "page_location": "/"
-                }
-              ]
-            },
-            "product-add": {
-              "in": {
-                "name": "product add",
-                "data": {
-                  "id": "SKU-001",
-                  "name": "Blue Shirt",
-                  "price": 49.99,
-                  "currency": "EUR",
-                  "quantity": 2
-                },
-                "entity": "product",
-                "action": "add"
-              },
-              "mapping": {
-                "name": "add_to_cart",
-                "data": {
-                  "map": {
-                    "currency": {
-                      "key": "data.currency",
-                      "value": "EUR"
-                    },
-                    "value": "data.price",
-                    "items": {
-                      "loop": [
-                        "this",
+                      "currency": [
+                        "data.currency",
                         {
-                          "map": {
-                            "item_id": "data.id",
-                            "item_name": "data.name",
-                            "quantity": {
-                              "key": "data.quantity",
-                              "value": 1
-                            }
-                          }
+                          "value": "$var.currency"
                         }
-                      ]
-                    }
-                  }
-                }
-              },
-              "out": [
-                "event",
-                "add_to_cart",
-                {
-                  "currency": "EUR",
-                  "value": 49.99,
-                  "items": [
-                    {
-                      "item_id": "SKU-001",
-                      "item_name": "Blue Shirt",
-                      "quantity": 2
-                    }
-                  ]
-                }
-              ]
-            },
-            "test-ignored": {
-              "in": {
-                "name": "test debug",
-                "data": {
-                  "message": "This should be ignored"
-                },
-                "entity": "test",
-                "action": "debug"
-              },
-              "out": false
-            }
-          }
-        },
-        "api": {
-          "package": "@walkeros/web-destination-api",
-          "config": {
-            "settings": {
-              "url": "$var.apiUrl",
-              "batch": 5,
-              "transform": "$code:(data) => JSON.stringify(data)"
-            },
-            "data": {
-              "map": {
-                "sent_at": {
-                  "fn": "$code:() => Date.now()"
-                },
-                "flow_version": "$var.flowVersion"
-              }
-            },
-            "mapping": {
-              "order": {
-                "complete": {
-                  "data": {
-                    "map": {
-                      "transaction_id": "data.id",
-                      "value": "data.total",
-                      "currency": "data.currency",
-                      "user_email": {
-                        "key": "user.email",
-                        "consent": {
-                          "marketing": true
-                        }
+                      ],
+                      "coupon": {
+                        "key": "data.coupon",
+                        "condition": "$code:(event) => Boolean(event.data && event.data.coupon)"
                       },
-                      "items": "$var.ga4ItemsLoop"
-                    }
-                  }
-                }
-              },
-              "test": {
-                "*": {
-                  "ignore": true
-                }
-              }
-            }
-          }
-        },
-        "debug": {
-          "code": {
-            "type": "debug-logger",
-            "push": "$code:(event, ctx) => { ctx.logger.info('[DEBUG]', event.name, event.data); }"
-          },
-          "config": {
-            "consent": {}
-          }
-        }
-      },
-      "collector": {
-        "consent": {
-          "functional": true,
-          "marketing": false
-        },
-        "user": {
-          "id": "anonymous"
-        },
-        "globals": {
-          "environment": "demo",
-          "version": "$var.flowVersion"
-        },
-        "custom": {
-          "campaign": "flow-demo"
-        }
-      },
-      "config": {
-        "platform": "web",
-        "bundle": {
-          "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/web-source-browser": {},
-            "@walkeros/web-source-datalayer": {},
-            "@walkeros/source-demo": {},
-            "@walkeros/web-destination-gtag": {},
-            "@walkeros/web-destination-api": {}
-          }
-        }
-      }
-    },
-    "server": {
-      "variables": {
-        "metaPixelId": "$env.META_PIXEL_ID:123456789012345",
-        "metaAccessToken": "$env.META_ACCESS_TOKEN:demo_token"
-      },
-      "sources": {
-        "http": {
-          "package": "@walkeros/server-source-express",
-          "primary": true,
-          "next": ["filter"],
-          "cache": {
-            "rules": [
-              {
-                "match": {
-                  "key": "ingest.method",
-                  "operator": "eq",
-                  "value": "GET"
-                },
-                "key": ["ingest.method", "ingest.path"],
-                "ttl": 300,
-                "update": {
-                  "headers.X-Cache": {
-                    "key": "cache.status"
-                  }
-                }
-              }
-            ]
-          },
-          "config": {
-            "settings": {
-              "path": "/collect",
-              "port": 8080,
-              "cors": true,
-              "healthCheck": true
-            },
-            "ingest": {
-              "map": {
-                "method": { "key": "method" },
-                "path": { "key": "path" },
-                "context": {
-                  "map": {
-                    "ip": { "key": "ip" },
-                    "userAgent": { "key": "headers.user-agent" },
-                    "language": { "key": "headers.accept-language" },
-                    "referer": { "key": "headers.referer" },
-                    "anonymizedIp": {
-                      "fn": "$code:(req) => req.ip ? req.ip.replace(/\\.\\d+$/, '.0') : ''"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "examples": {
-            "post-event": {
-              "in": {
-                "method": "POST",
-                "path": "/collect",
-                "headers": {
-                  "content-type": "application/json"
-                },
-                "body": {
-                  "name": "page view",
-                  "data": {
-                    "title": "Home",
-                    "url": "https://example.com"
-                  }
-                }
-              },
-              "out": {
-                "name": "page view",
-                "data": {
-                  "title": "Home",
-                  "url": "https://example.com"
-                },
-                "entity": "page",
-                "action": "view"
-              }
-            }
-          }
-        }
-      },
-      "transformers": {
-        "filter": {
-          "code": {
-            "type": "filter",
-            "push": "$code:(event) => event.name.startsWith('internal_') || event.name.startsWith('debug_') ? false : event"
-          },
-          "next": "fingerprint",
-          "config": {},
-          "examples": {
-            "passes-normal": {
-              "in": {
-                "name": "page view",
-                "data": {
-                  "title": "Home"
-                },
-                "entity": "page",
-                "action": "view"
-              },
-              "out": {
-                "name": "page view",
-                "data": {
-                  "title": "Home"
-                },
-                "entity": "page",
-                "action": "view"
-              }
-            },
-            "filters-internal": {
-              "in": {
-                "name": "internal_heartbeat",
-                "data": {},
-                "entity": "internal",
-                "action": "heartbeat"
-              },
-              "out": false
-            }
-          }
-        },
-        "fingerprint": {
-          "package": "@walkeros/server-transformer-fingerprint",
-          "config": {
-            "settings": {
-              "fields": [
-                "context.ip",
-                "context.userAgent",
-                "context.language",
-                {
-                  "fn": "$code:() => new Date().toISOString().slice(0, 10)"
-                }
-              ],
-              "output": "user.hash",
-              "length": 16
-            }
-          }
-        }
-      },
-      "destinations": {
-        "meta": {
-          "package": "@walkeros/server-destination-meta",
-          "before": "fingerprint",
-          "config": {
-            "settings": {
-              "pixelId": "$var.metaPixelId",
-              "accessToken": "$var.metaAccessToken",
-              "user_data": {
-                "external_id": {
-                  "set": ["user.device", "user.session"]
-                }
-              }
-            },
-            "policy": {
-              "user_data.em": {
-                "key": "user.email",
-                "consent": {
-                  "marketing": true
-                }
-              },
-              "user_data.external_id": "user.id",
-              "custom_data.server_processed": {
-                "value": true
-              },
-              "custom_data.request_meta": {
-                "map": {
-                  "ip": "context.ip",
-                  "ua": "context.userAgent"
-                }
-              }
-            },
-            "mapping": {
-              "page": {
-                "view": {
-                  "name": "PageView",
-                  "data": "data"
-                }
-              },
-              "product": {
-                "view": {
-                  "name": "ViewContent",
-                  "data": {
-                    "map": {
-                      "value": "data.price",
-                      "currency": {
-                        "key": "data.currency",
-                        "value": "$var.currency"
-                      },
-                      "content_type": {
-                        "value": "product"
-                      },
-                      "content_ids": {
-                        "set": ["data.id"]
-                      }
-                    }
-                  }
-                },
-                "add": {
-                  "name": "AddToCart",
-                  "data": {
-                    "map": {
-                      "value": "data.price",
-                      "currency": {
-                        "key": "data.currency",
-                        "value": "$var.currency"
-                      },
-                      "content_type": {
-                        "value": "product"
-                      },
-                      "contents": {
+                      "items": {
                         "loop": [
-                          "this",
+                          "nested",
                           {
+                            "condition": "$code:(entity) => entity && entity.entity === 'product'",
                             "map": {
-                              "id": "data.id",
+                              "item_id": "data.id",
+                              "item_name": "data.name",
+                              "price": "data.price",
                               "quantity": {
                                 "key": "data.quantity",
                                 "value": 1
@@ -800,113 +915,3950 @@
                         ]
                       }
                     }
+                  },
+                  "consent": {
+                    "functional": true
                   }
-                }
-              },
-              "order": {
-                "complete": {
-                  "name": "Purchase",
-                  "data": {
-                    "map": {
-                      "value": "data.total",
-                      "currency": {
-                        "key": "data.currency",
-                        "value": "$var.currency"
-                      },
-                      "order_id": "data.id",
-                      "contents": "$var.metaContentsLoop"
-                    }
-                  }
-                }
-              },
-              "test": {
-                "*": {
-                  "ignore": true
-                }
-              },
-              "*": {
-                "click": {
-                  "name": "CustomEvent",
-                  "data": "data"
                 }
               }
             }
           },
           "examples": {
             "purchase": {
-              "in": {
-                "name": "order complete",
-                "data": {
-                  "id": "ORD-123",
-                  "total": 149.97,
-                  "currency": "EUR"
-                },
-                "entity": "order",
-                "action": "complete"
-              },
+              "title": "Purchase with items",
+              "description": "order complete becomes a GA4 purchase: value rounded by fn, items looped from nested products, coupon only when present, the page group sent as a global.",
+              "public": true,
               "mapping": {
-                "name": "Purchase",
+                "name": "purchase",
+                "condition": "$code:(event) => event.data && event.data.total > 0",
                 "data": {
                   "map": {
-                    "value": "data.total",
-                    "currency": {
-                      "key": "data.currency",
-                      "value": "EUR"
+                    "transaction_id": "data.id",
+                    "value": {
+                      "key": "data.total",
+                      "fn": "$code:(value) => Math.round(Number(value) * 100) / 100"
                     },
-                    "order_id": "data.id"
+                    "currency": [
+                      "data.currency",
+                      {
+                        "value": "$var.currency"
+                      }
+                    ],
+                    "coupon": {
+                      "key": "data.coupon",
+                      "condition": "$code:(event) => Boolean(event.data && event.data.coupon)"
+                    },
+                    "items": {
+                      "loop": [
+                        "nested",
+                        {
+                          "condition": "$code:(entity) => entity && entity.entity === 'product'",
+                          "map": {
+                            "item_id": "data.id",
+                            "item_name": "data.name",
+                            "price": "data.price",
+                            "quantity": {
+                              "key": "data.quantity",
+                              "value": 1
+                            }
+                          }
+                        }
+                      ]
+                    }
                   }
+                },
+                "consent": {
+                  "functional": true
                 }
               },
-              "out": {
-                "data": [
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n"
+                },
+                "source": {
+                  "type": "browser",
+                  "platform": "web",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
                   {
-                    "event_name": "Purchase",
-                    "custom_data": {
-                      "value": 149.97,
-                      "currency": "EUR",
-                      "order_id": "ORD-123"
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
                     }
                   }
                 ]
+              },
+              "out": [
+                [
+                  "window.gtag",
+                  "consent",
+                  "default",
+                  {
+                    "ad_storage": "denied",
+                    "ad_user_data": "denied",
+                    "ad_personalization": "denied",
+                    "analytics_storage": "denied"
+                  }
+                ],
+                ["window.gtag", "config", "G-MAINSITE", {}],
+                [
+                  "window.gtag",
+                  "event",
+                  "purchase",
+                  {
+                    "globals_site": "shop",
+                    "globals_language": "en",
+                    "globals_pageGroup": "checkout",
+                    "transaction_id": "ORD-100",
+                    "value": 149.8,
+                    "currency": "EUR",
+                    "coupon": "WELCOME10",
+                    "items": [
+                      {
+                        "item_id": "SKU-1",
+                        "item_name": "Trail Runner",
+                        "price": 129.9,
+                        "quantity": 1
+                      },
+                      {
+                        "item_id": "SKU-2",
+                        "item_name": "Running Socks",
+                        "price": 9.95,
+                        "quantity": 2
+                      }
+                    ],
+                    "send_to": "G-MAINSITE"
+                  }
+                ]
+              ]
+            },
+            "purchaseWithoutCoupon": {
+              "title": "Purchase without coupon",
+              "description": "The coupon condition leaves the parameter out when the order has none.",
+              "mapping": {
+                "name": "purchase",
+                "condition": "$code:(event) => event.data && event.data.total > 0",
+                "data": {
+                  "map": {
+                    "transaction_id": "data.id",
+                    "value": {
+                      "key": "data.total",
+                      "fn": "$code:(value) => Math.round(Number(value) * 100) / 100"
+                    },
+                    "currency": [
+                      "data.currency",
+                      {
+                        "value": "$var.currency"
+                      }
+                    ],
+                    "coupon": {
+                      "key": "data.coupon",
+                      "condition": "$code:(event) => Boolean(event.data && event.data.coupon)"
+                    },
+                    "items": {
+                      "loop": [
+                        "nested",
+                        {
+                          "condition": "$code:(entity) => entity && entity.entity === 'product'",
+                          "map": {
+                            "item_id": "data.id",
+                            "item_name": "data.name",
+                            "price": "data.price",
+                            "quantity": {
+                              "key": "data.quantity",
+                              "value": 1
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "consent": {
+                  "functional": true
+                }
+              },
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-101",
+                  "total": 129.9,
+                  "currency": "EUR"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n"
+                },
+                "source": {
+                  "type": "browser",
+                  "platform": "web",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  }
+                ]
+              },
+              "out": [
+                ["window.gtag", "config", "G-MAINSITE", {}],
+                [
+                  "window.gtag",
+                  "event",
+                  "purchase",
+                  {
+                    "globals_site": "shop",
+                    "globals_language": "en",
+                    "globals_pageGroup": "checkout",
+                    "transaction_id": "ORD-101",
+                    "value": 129.9,
+                    "currency": "EUR",
+                    "items": [
+                      {
+                        "item_id": "SKU-1",
+                        "item_name": "Trail Runner",
+                        "price": 129.9,
+                        "quantity": 1
+                      }
+                    ],
+                    "send_to": "G-MAINSITE"
+                  }
+                ]
+              ]
+            },
+            "productView": {
+              "title": "Product view",
+              "description": "product view becomes view_item; the currency falls back to the flow variable.",
+              "mapping": {
+                "name": "view_item",
+                "data": {
+                  "map": {
+                    "currency": [
+                      "data.currency",
+                      {
+                        "value": "$var.currency"
+                      }
+                    ],
+                    "value": "data.price",
+                    "items": {
+                      "set": [
+                        {
+                          "map": {
+                            "item_id": "data.id",
+                            "item_name": "data.name",
+                            "price": "data.price"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "in": {
+                "name": "product view",
+                "entity": "product",
+                "action": "view",
+                "data": {
+                  "id": "SKU-1",
+                  "name": "Trail Runner",
+                  "price": 129.9
+                },
+                "id": "ev-product-view",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "product"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n"
+                },
+                "source": {
+                  "type": "browser",
+                  "platform": "web",
+                  "url": "https://www.example.com/product/trail-runner"
+                }
+              },
+              "out": [
+                ["window.gtag", "config", "G-MAINSITE", {}],
+                [
+                  "window.gtag",
+                  "event",
+                  "view_item",
+                  {
+                    "globals_site": "shop",
+                    "globals_language": "en",
+                    "globals_pageGroup": "product",
+                    "currency": "EUR",
+                    "value": 129.9,
+                    "items": [
+                      {
+                        "item_id": "SKU-1",
+                        "item_name": "Trail Runner",
+                        "price": 129.9
+                      }
+                    ],
+                    "send_to": "G-MAINSITE"
+                  }
+                ]
+              ]
+            },
+            "consentUpdate": {
+              "title": "Consent Mode update",
+              "description": "como: true turns the walker consent command into gtag consent default and update calls.",
+              "command": "consent",
+              "in": {
+                "functional": true,
+                "marketing": true
               }
             }
           }
         },
-        "demo": {
-          "package": "@walkeros/destination-demo",
+        "gtm": {
+          "package": "@walkeros/web-destination-gtag",
+          "before": {
+            "match": {
+              "key": "event.source.type",
+              "operator": "eq",
+              "value": "dataLayer"
+            },
+            "stop": true
+          },
           "config": {
+            "consent": {
+              "marketing": true
+            },
+            "require": ["consent"],
+            "queue": true,
+            "data": {
+              "map": {
+                "consent": "consent",
+                "globals": "globals",
+                "user": "user",
+                "data": "data"
+              }
+            },
             "settings": {
-              "name": "Server Events",
-              "values": ["name", "data", "nested", "user", "consent", "context"]
+              "gtm": {
+                "containerId": "$env.GTM_ID:GTM-SHOP01"
+              }
+            },
+            "mapping": {
+              "product": {
+                "add": {
+                  "name": "elb product add"
+                }
+              },
+              "order": {
+                "complete": {
+                  "name": "elb order complete"
+                }
+              }
+            }
+          },
+          "examples": {
+            "productAdd": {
+              "title": "Feed GTM with the whole event",
+              "description": "The container keeps its triggers: every mapped event arrives as \"elb <event>\" with consent, globals, user and data, so GTM variables read what walkerOS already knows.",
+              "public": true,
+              "mapping": {
+                "name": "elb product add"
+              },
+              "in": {
+                "name": "product add",
+                "entity": "product",
+                "action": "add",
+                "data": {
+                  "id": "SKU-1",
+                  "name": "Trail Runner",
+                  "price": 129.9,
+                  "quantity": 1
+                },
+                "id": "ev-product-add",
+                "trigger": "click",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "product"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n"
+                },
+                "source": {
+                  "type": "browser",
+                  "platform": "web",
+                  "url": "https://www.example.com/product/trail-runner"
+                }
+              }
+            },
+            "dataLayerEcho": {
+              "title": "No echo back to GTM",
+              "description": "An event the dataLayer source read from GTM itself is stopped in before, so GTM never receives its own push twice.",
+              "in": {
+                "name": "product add",
+                "entity": "product",
+                "action": "add",
+                "data": {
+                  "id": "SKU-1",
+                  "name": "Trail Runner",
+                  "price": 129.9,
+                  "quantity": 1
+                },
+                "id": "ev-product-add",
+                "trigger": "click",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "product"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n"
+                },
+                "source": {
+                  "type": "dataLayer",
+                  "platform": "web"
+                }
+              }
+            }
+          }
+        },
+        "collect": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "batch": {
+              "wait": 1000
+            },
+            "policy": {
+              "user.email": {
+                "key": "user.email",
+                "consent": {
+                  "marketing": true
+                }
+              }
+            },
+            "settings": {
+              "url": "$flow.server.url",
+              "transport": "beacon",
+              "transform": "$code:(event) => { const { timing, ...rest } = event; return rest; }"
+            },
+            "mapping": {
+              "product": {
+                "impression": {
+                  "batch": {
+                    "wait": 5000,
+                    "size": 50
+                  }
+                }
+              }
+            }
+          },
+          "examples": {
+            "orderComplete": {
+              "title": "Order to the server",
+              "description": "The event goes to the first-party server as JSON; the email stays because marketing consent is granted.",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com"
+                },
+                "source": {
+                  "type": "browser",
+                  "platform": "web",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "sendWeb",
+                  "http://localhost:8080/collect",
+                  "[{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"context\":{},\"globals\":{\"site\":\"shop\",\"language\":\"en\",\"pageGroup\":\"checkout\"},\"custom\":{},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"jane@example.com\"},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}],\"consent\":{\"functional\":true,\"marketing\":true},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"entity\":\"order\",\"action\":\"complete\",\"timestamp\":1700000000000,\"source\":{\"type\":\"browser\",\"platform\":\"web\",\"url\":\"https://www.example.com/checkout/thanks\",\"count\":1,\"release\":{\"web\":\"4.6.1\"}}}]",
+                  {
+                    "transport": "beacon"
+                  }
+                ]
+              ]
+            },
+            "emailWithoutMarketing": {
+              "title": "Email removed without marketing consent",
+              "description": "The config policy resolves user.email with consent marketing, so without it the email never leaves the browser.",
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com"
+                },
+                "source": {
+                  "type": "browser",
+                  "platform": "web",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "sendWeb",
+                  "http://localhost:8080/collect",
+                  "[{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"context\":{},\"globals\":{\"site\":\"shop\",\"language\":\"en\",\"pageGroup\":\"checkout\"},\"custom\":{},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\"},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}],\"consent\":{\"functional\":true},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"entity\":\"order\",\"action\":\"complete\",\"timestamp\":1700000000000,\"source\":{\"type\":\"browser\",\"platform\":\"web\",\"url\":\"https://www.example.com/checkout/thanks\",\"count\":1,\"release\":{\"web\":\"4.6.1\"}}}]",
+                  {
+                    "transport": "beacon"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    "server": {
+      "config": {
+        "platform": "server",
+        "url": "$env.SERVER_URL:http://localhost:8080/collect",
+        "observe": {
+          "level": "standard",
+          "sample": 0.1
+        },
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-source-express": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/transformer-ga4": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/transformer-validate": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-transformer-bot": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-transformer-fingerprint": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-transformer-file": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-store-fs": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-store-sheets": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-destination-gcp": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-destination-meta": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-destination-piwikpro": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-destination-datamanager": {
+              "version": "4.7.0-next-1790245733116"
             }
           }
         }
       },
+      "variables": {
+        "logLevel": "$env.LOG_LEVEL:INFO"
+      },
       "collector": {
-        "consent": {
-          "functional": true
+        "logger": {
+          "level": "$var.logLevel"
         },
-        "globals": {
-          "environment": "demo",
-          "version": "$var.flowVersion",
-          "platform": "server",
-          "startedAt": "$code:Date.now()"
+        "next": [
+          "fingerprint",
+          "bot",
+          {
+            "match": {
+              "key": "event.trigger",
+              "operator": "regex",
+              "value": "^(impression|visible)$",
+              "not": true
+            },
+            "next": "enrich"
+          }
+        ]
+      },
+      "stores": {
+        "assets": {
+          "package": "@walkeros/server-store-fs",
+          "config": {
+            "file": true,
+            "settings": {
+              "basePath": "$env.ASSETS_DIR:./shared"
+            }
+          }
+        },
+        "customers": {
+          "package": "@walkeros/server-store-sheets",
+          "config": {
+            "credentials": "$secret.GCP_SA",
+            "settings": {
+              "id": "$env.CUSTOMERS_SHEET_ID:customers-sheet",
+              "sheet": "customers",
+              "key": "A",
+              "value": "B",
+              "headerRows": 1
+            }
+          },
+          "cache": {
+            "rules": [
+              {
+                "ttl": 300
+              }
+            ]
+          }
         }
       },
+      "sources": {
+        "express": {
+          "package": "@walkeros/server-source-express",
+          "primary": true,
+          "config": {
+            "settings": {
+              "port": 8080,
+              "paths": [
+                {
+                  "path": "/collect",
+                  "methods": ["POST"]
+                },
+                {
+                  "path": "/g/collect",
+                  "methods": ["GET", "POST"]
+                },
+                {
+                  "path": "/walker.js",
+                  "methods": ["GET"]
+                }
+              ],
+              "cors": {
+                "origin": "$env.SITE_ORIGIN:https://www.example.com",
+                "methods": ["GET", "POST"],
+                "headers": ["Content-Type"],
+                "credentials": false,
+                "maxAge": 600
+              }
+            },
+            "async": {
+              "POST": true,
+              "GET": false
+            },
+            "ingest": {
+              "map": {
+                "ip": "ip",
+                "path": "path",
+                "method": "method",
+                "url": "url",
+                "body": "body",
+                "origin": "headers.origin",
+                "userAgent": "headers.user-agent",
+                "acceptLanguage": "headers.accept-language"
+              }
+            }
+          },
+          "before": {
+            "one": [
+              {
+                "match": {
+                  "and": [
+                    {
+                      "key": "ingest.path",
+                      "operator": "prefix",
+                      "value": "/g/collect"
+                    },
+                    {
+                      "key": "ingest.url",
+                      "operator": "regex",
+                      "value": "[?&]tid=G-SUBSITE(&|$)"
+                    }
+                  ]
+                },
+                "next": "ga4Decode"
+              },
+              {
+                "match": {
+                  "key": "ingest.path",
+                  "operator": "suffix",
+                  "value": ".js"
+                },
+                "next": "file"
+              },
+              {
+                "match": {
+                  "key": "ingest.path",
+                  "operator": "prefix",
+                  "value": "/g/collect"
+                },
+                "stop": true
+              }
+            ]
+          },
+          "next": "dedup",
+          "examples": {
+            "postCollect": {
+              "title": "Event from the web flow",
+              "description": "A POST from the browser collect destination becomes one event; ingest keeps ip, user agent and language for later steps.",
+              "public": true,
+              "trigger": {
+                "type": "POST"
+              },
+              "in": {
+                "method": "POST",
+                "path": "/collect",
+                "headers": {
+                  "content-type": "application/json",
+                  "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                  "accept-language": "en-GB,en;q=0.9",
+                  "origin": "https://www.example.com"
+                },
+                "body": {
+                  "name": "order complete",
+                  "entity": "order",
+                  "action": "complete",
+                  "data": {
+                    "id": "ORD-100",
+                    "total": 149.8,
+                    "currency": "EUR",
+                    "coupon": "WELCOME10"
+                  },
+                  "id": "ev-order-complete",
+                  "trigger": "load",
+                  "timestamp": 1700000000000,
+                  "consent": {
+                    "functional": true,
+                    "marketing": true
+                  },
+                  "globals": {
+                    "language": "en",
+                    "pageGroup": "checkout"
+                  },
+                  "user": {
+                    "device": "d3v1c3",
+                    "session": "s3ss10n",
+                    "id": "cust-42",
+                    "email": "jane@example.com"
+                  },
+                  "source": {
+                    "type": "browser",
+                    "platform": "web",
+                    "url": "https://www.example.com/checkout/thanks"
+                  },
+                  "nested": [
+                    {
+                      "entity": "product",
+                      "data": {
+                        "id": "SKU-1",
+                        "name": "Trail Runner",
+                        "price": 129.9,
+                        "quantity": 1
+                      }
+                    },
+                    {
+                      "entity": "product",
+                      "data": {
+                        "id": "SKU-2",
+                        "name": "Running Socks",
+                        "price": 9.95,
+                        "quantity": 2
+                      }
+                    }
+                  ]
+                }
+              },
+              "out": [
+                [
+                  "elb",
+                  {
+                    "name": "order complete",
+                    "entity": "order",
+                    "action": "complete",
+                    "data": {
+                      "id": "ORD-100",
+                      "total": 149.8,
+                      "currency": "EUR",
+                      "coupon": "WELCOME10"
+                    },
+                    "trigger": "load",
+                    "timestamp": 1700000000000,
+                    "consent": {
+                      "functional": true,
+                      "marketing": true
+                    },
+                    "globals": {
+                      "language": "en",
+                      "pageGroup": "checkout"
+                    },
+                    "user": {
+                      "device": "d3v1c3",
+                      "session": "s3ss10n",
+                      "id": "cust-42",
+                      "email": "jane@example.com"
+                    },
+                    "source": {
+                      "type": "browser",
+                      "platform": "web",
+                      "url": "https://www.example.com/checkout/thanks"
+                    },
+                    "nested": [
+                      {
+                        "entity": "product",
+                        "data": {
+                          "id": "SKU-1",
+                          "name": "Trail Runner",
+                          "price": 129.9,
+                          "quantity": 1
+                        }
+                      },
+                      {
+                        "entity": "product",
+                        "data": {
+                          "id": "SKU-2",
+                          "name": "Running Socks",
+                          "price": 9.95,
+                          "quantity": 2
+                        }
+                      }
+                    ]
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "transformers": {
+        "ga4Decode": {
+          "package": "@walkeros/transformer-ga4",
+          "config": {
+            "settings": {
+              "mapping": {
+                "purchase": {
+                  "extend": {
+                    "data": {
+                      "map": {
+                        "currency": {
+                          "key": "params.ep.currency",
+                          "value": "EUR"
+                        }
+                      }
+                    }
+                  },
+                  "remove": ["coupon"]
+                }
+              }
+            }
+          },
+          "next": "ga4Consent",
+          "examples": {
+            "subsitePurchase": {
+              "title": "Purchase from a sub-site not yet migrated",
+              "description": "A GA4 hit from the sub-site property (tid G-SUBSITE, not the main site measurement id) with analytics and ads storage granted (gcs G111) becomes order complete; ga4Consent turns analytics into functional. Its gtag transport points here, the main site uses collect, so nothing counts twice.",
+              "public": true,
+              "in": {
+                "url": "https://collect.example.com/g/collect?v=2&tid=G-SUBSITE&_p=p7&cid=cid-9&sid=1700000000&_s=3&gcs=G111&en=purchase&dl=https%3A%2F%2Fshop.example.org%2Fthanks&ep.transaction_id=SUB-77&epn.value=59.9&ep.coupon=SUMMER"
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "SUB-77",
+                        "currency": "EUR",
+                        "total": 59.9
+                      },
+                      "user": {
+                        "device": "cid-9",
+                        "session": "1700000000"
+                      },
+                      "source": {
+                        "type": "ga4",
+                        "url": "https://shop.example.org/thanks",
+                        "pageLoadId": "p7",
+                        "hitSequence": "3"
+                      },
+                      "consent": {
+                        "marketing": true,
+                        "analytics": true,
+                        "functional": true
+                      },
+                      "id": "3825861be3baea76",
+                      "timestamp": 1790270783376,
+                      "timing": 0,
+                      "trigger": "ga4"
+                    }
+                  }
+                ]
+              ]
+            },
+            "subsitePageView": {
+              "title": "Page view from the sub-site",
+              "description": "A sub-site page_view becomes a page view; no currency default applies outside purchase.",
+              "in": {
+                "url": "https://collect.example.com/g/collect?v=2&tid=G-SUBSITE&_p=p7&cid=cid-9&sid=1700000000&_s=1&gcs=G111&en=page_view&dl=https%3A%2F%2Fshop.example.org%2F&dt=Sub%20shop"
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "page view",
+                      "entity": "page",
+                      "action": "view",
+                      "data": {
+                        "id": "https://shop.example.org/",
+                        "title": "Sub shop"
+                      },
+                      "user": {
+                        "device": "cid-9",
+                        "session": "1700000000"
+                      },
+                      "source": {
+                        "type": "ga4",
+                        "url": "https://shop.example.org/",
+                        "pageLoadId": "p7",
+                        "hitSequence": "1"
+                      },
+                      "consent": {
+                        "marketing": true,
+                        "analytics": true,
+                        "functional": true
+                      },
+                      "id": "5db509431efb0b8c",
+                      "timestamp": 1790270783381,
+                      "timing": 0,
+                      "trigger": "ga4"
+                    }
+                  }
+                ]
+              ]
+            },
+            "subsiteRefused": {
+              "title": "Cookieless ping, consent refused",
+              "description": "With analytics and ads storage refused (gcs G100) GA4 still sends a cookieless ping. It decodes with functional false, so it fails the contract and stays in the warehouse.",
+              "in": {
+                "url": "https://collect.example.com/g/collect?v=2&tid=G-SUBSITE&_p=p7&cid=cid-9&sid=1700000000&_s=2&gcs=G100&en=page_view&dl=https%3A%2F%2Fshop.example.org%2F&dt=Sub%20shop"
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "page view",
+                      "entity": "page",
+                      "action": "view",
+                      "data": {
+                        "id": "https://shop.example.org/",
+                        "title": "Sub shop"
+                      },
+                      "user": {
+                        "device": "cid-9",
+                        "session": "1700000000"
+                      },
+                      "source": {
+                        "type": "ga4",
+                        "url": "https://shop.example.org/",
+                        "pageLoadId": "p7",
+                        "hitSequence": "2"
+                      },
+                      "consent": {
+                        "marketing": false,
+                        "analytics": false,
+                        "functional": false
+                      },
+                      "id": "853ff68a89ce43af",
+                      "timestamp": 1790270783385,
+                      "timing": 0,
+                      "trigger": "ga4"
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "ga4Consent": {
+          "mapping": {
+            "policy": {
+              "consent.functional": "consent.analytics"
+            }
+          },
+          "examples": {
+            "analyticsGranted": {
+              "title": "Analytics storage granted",
+              "public": true,
+              "description": "The decoder reads gcs into consent.analytics and consent.marketing; this code-free mapping hop copies analytics into functional, the key the contract asks for. No consent is stamped.",
+              "in": {
+                "name": "page view",
+                "entity": "page",
+                "action": "view",
+                "data": {
+                  "id": "https://shop.example.org/",
+                  "title": "Sub shop"
+                },
+                "user": {
+                  "device": "cid-9",
+                  "session": "1700000000"
+                },
+                "source": {
+                  "type": "ga4",
+                  "url": "https://shop.example.org/",
+                  "pageLoadId": "p7",
+                  "hitSequence": "1"
+                },
+                "consent": {
+                  "marketing": true,
+                  "analytics": true
+                },
+                "id": "5db509431efb0b8c",
+                "timestamp": 1790000000000,
+                "timing": 0,
+                "trigger": "ga4"
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "page view",
+                      "entity": "page",
+                      "action": "view",
+                      "data": {
+                        "id": "https://shop.example.org/",
+                        "title": "Sub shop"
+                      },
+                      "user": {
+                        "device": "cid-9",
+                        "session": "1700000000"
+                      },
+                      "source": {
+                        "type": "ga4",
+                        "url": "https://shop.example.org/",
+                        "pageLoadId": "p7",
+                        "hitSequence": "1"
+                      },
+                      "consent": {
+                        "marketing": true,
+                        "analytics": true,
+                        "functional": true
+                      },
+                      "id": "5db509431efb0b8c",
+                      "timestamp": 1790000000000,
+                      "timing": 0,
+                      "trigger": "ga4"
+                    }
+                  }
+                ]
+              ]
+            },
+            "analyticsRefused": {
+              "title": "Analytics storage refused",
+              "description": "Refused analytics storage becomes functional false, so the event fails the contract and vendors never see it.",
+              "in": {
+                "name": "page view",
+                "entity": "page",
+                "action": "view",
+                "data": {
+                  "id": "https://shop.example.org/",
+                  "title": "Sub shop"
+                },
+                "user": {
+                  "device": "cid-9",
+                  "session": "1700000000"
+                },
+                "source": {
+                  "type": "ga4",
+                  "url": "https://shop.example.org/",
+                  "pageLoadId": "p7",
+                  "hitSequence": "2"
+                },
+                "consent": {
+                  "marketing": false,
+                  "analytics": false
+                },
+                "id": "853ff68a89ce43af",
+                "timestamp": 1790000000000,
+                "timing": 0,
+                "trigger": "ga4"
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "page view",
+                      "entity": "page",
+                      "action": "view",
+                      "data": {
+                        "id": "https://shop.example.org/",
+                        "title": "Sub shop"
+                      },
+                      "user": {
+                        "device": "cid-9",
+                        "session": "1700000000"
+                      },
+                      "source": {
+                        "type": "ga4",
+                        "url": "https://shop.example.org/",
+                        "pageLoadId": "p7",
+                        "hitSequence": "2"
+                      },
+                      "consent": {
+                        "marketing": false,
+                        "analytics": false,
+                        "functional": false
+                      },
+                      "id": "853ff68a89ce43af",
+                      "timestamp": 1790000000000,
+                      "timing": 0,
+                      "trigger": "ga4"
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "file": {
+          "package": "@walkeros/server-transformer-file",
+          "env": {
+            "store": "$store.assets"
+          },
+          "config": {
+            "settings": {
+              "headers": {
+                "Cache-Control": "public, max-age=300",
+                "Cross-Origin-Resource-Policy": "same-site"
+              }
+            }
+          },
+          "next": {
+            "stop": true
+          },
+          "examples": {
+            "walkerJs": {
+              "title": "Serve walker.js first party",
+              "description": "GET /walker.js is answered from the assets store with the configured headers; the step returns false and its next stops, so a script request never becomes an event. Proven over HTTP in the flow test.",
+              "public": true,
+              "in": {
+                "name": "page view",
+                "entity": "page",
+                "action": "view",
+                "data": {
+                  "domain": "www.example.com",
+                  "title": "Trail Runner",
+                  "id": "/product/trail-runner"
+                },
+                "id": "ev-page-view",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "product"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server"
+                }
+              }
+            }
+          }
+        },
+        "dedup": {
+          "cache": {
+            "stop": true,
+            "namespace": "dedup",
+            "rules": [
+              {
+                "key": ["event.id"],
+                "ttl": 3600
+              }
+            ]
+          },
+          "examples": {
+            "firstDelivery": {
+              "title": "First delivery passes",
+              "description": "The first event with this id passes and its id is remembered for an hour. A resend with the same id is stopped (second request, proven in the flow test).",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com"
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks"
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "fingerprint": {
+          "package": "@walkeros/server-transformer-fingerprint",
+          "config": {
+            "settings": {
+              "salt": "$env.FINGERPRINT_SALT",
+              "length": 16,
+              "site": ["event.source.url", "ingest.origin"]
+            }
+          },
+          "examples": {
+            "cookielessId": {
+              "title": "Cookieless visitor id",
+              "description": "user.hash is an HMAC over the anonymized IP, browser with major version, OS and site with the secret salt, rotating daily. It is a visitor id for Piwik PRO, not hashing of personal data.",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com",
+                        "hash": "7f1b2860213c9d3d"
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks"
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "bot": {
+          "package": "@walkeros/server-transformer-bot",
+          "examples": {
+            "human": {
+              "title": "Human browser",
+              "description": "A current Chrome with matching headers scores 0 as human; bot only annotates, it never drops.",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com",
+                        "botScore": 0,
+                        "botCategory": "human"
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks"
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            },
+            "curl": {
+              "title": "Scripted client",
+              "description": "curl scores 80 as automation, so eventFilter keeps it away from vendors while the warehouse still gets it.",
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com",
+                        "botScore": 80,
+                        "botCategory": "automation"
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks"
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "enrich": {
+          "next": [
+            {
+              "match": {
+                "key": "event.user.id",
+                "operator": "exists",
+                "value": ""
+              },
+              "next": "loadUser"
+            },
+            {
+              "match": {
+                "key": "event.name",
+                "operator": "eq",
+                "value": "session start"
+              },
+              "next": "sessionSave"
+            },
+            {
+              "match": {
+                "key": "event.name",
+                "operator": "eq",
+                "value": "order complete"
+              },
+              "next": "sessionLoad"
+            },
+            "validate"
+          ],
+          "examples": {
+            "orderComplete": {
+              "title": "Enrich an order",
+              "description": "A logged-in order loads the customer lifetime value, restores the session with its gclid and is validated against the server contract, in that order.",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com",
+                        "hash": "5f1c0a9e7d3b2c41",
+                        "botScore": 0,
+                        "botCategory": "human"
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks",
+                        "valid": true
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "loadUser": {
+          "state": {
+            "mode": "get",
+            "store": "customers",
+            "key": "event.user.id",
+            "value": "event.user.ltv"
+          },
+          "examples": {
+            "knownCustomer": {
+              "title": "Customer lookup",
+              "description": "The customer id is looked up in the customers sheet (store cache five minutes) and a hit lands in user.ltv as a number. The Sheets mock used by simulation holds no cust-42, so here it is a miss and the event passes unchanged; the flow test seeds cust-42 with 420 and shows user.ltv 420.",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com",
+                        "hash": "5f1c0a9e7d3b2c41",
+                        "botScore": 0,
+                        "botCategory": "human"
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks"
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "sessionSave": {
+          "state": {
+            "mode": "set",
+            "key": ["event.user.session", "event.user.hash"],
+            "value": {
+              "map": {
+                "gclid": "event.data.gclid",
+                "started": "event.timestamp"
+              }
+            }
+          },
+          "examples": {
+            "sessionStart": {
+              "title": "Remember the session",
+              "description": "session start stores gclid and start time under the session and visitor hash in the built-in cache; the event passes unchanged. The later order reads it (flow test).",
+              "public": true,
+              "in": {
+                "name": "session start",
+                "entity": "session",
+                "action": "start",
+                "data": {
+                  "id": "s3ss10n",
+                  "isNew": true,
+                  "count": 1,
+                  "marketing": true,
+                  "gclid": "gclid-abc123"
+                },
+                "id": "ev-session-start",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "content"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/"
+                }
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "session start",
+                      "entity": "session",
+                      "action": "start",
+                      "data": {
+                        "id": "s3ss10n",
+                        "isNew": true,
+                        "count": 1,
+                        "marketing": true,
+                        "gclid": "gclid-abc123"
+                      },
+                      "id": "ev-session-start",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "content"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "hash": "5f1c0a9e7d3b2c41",
+                        "botScore": 0,
+                        "botCategory": "human"
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/"
+                      }
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "sessionLoad": {
+          "state": {
+            "mode": "get",
+            "key": ["event.user.session", "event.user.hash"],
+            "value": "event.data.session"
+          },
+          "examples": {
+            "orderWithoutSession": {
+              "title": "Order without a stored session",
+              "description": "No session start was seen for this session in this instance, so nothing is restored and the event passes unchanged. With a stored session data.session carries the gclid (flow test).",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com",
+                        "hash": "5f1c0a9e7d3b2c41",
+                        "botScore": 0,
+                        "botCategory": "human"
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks"
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "validate": {
+          "package": "@walkeros/transformer-validate",
+          "config": {
+            "settings": {
+              "contract": ["$contract.server"],
+              "mode": "pass"
+            }
+          },
+          "examples": {
+            "validOrder": {
+              "title": "Order matches the server contract",
+              "description": "The order has everything the server contract asks for, so source.valid is true and the event continues.",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com",
+                        "hash": "5f1c0a9e7d3b2c41",
+                        "botScore": 0,
+                        "botCategory": "human",
+                        "ltv": 420
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks",
+                        "valid": true
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            },
+            "missingHash": {
+              "title": "Order without visitor id",
+              "description": "Without user.hash the event breaks the server contract. mode pass keeps it for the warehouse and writes source.valid false; eventFilter keeps it from vendors.",
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "botScore": 0,
+                  "botCategory": "human"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks"
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com",
+                        "botScore": 0,
+                        "botCategory": "human"
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks",
+                        "valid": false
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "eventFilter": {
+          "next": {
+            "match": {
+              "or": [
+                {
+                  "key": "event.trigger",
+                  "operator": "regex",
+                  "value": "^(impression|visible)$"
+                },
+                {
+                  "key": "event.user.botScore",
+                  "operator": "gt",
+                  "value": "50"
+                },
+                {
+                  "key": "event.source.valid",
+                  "operator": "eq",
+                  "value": "false"
+                }
+              ]
+            },
+            "stop": true
+          },
+          "examples": {
+            "validPasses": {
+              "title": "Valid human order passes",
+              "description": "A valid event from a human reaches the vendor.",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks",
+                  "valid": true
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "jane@example.com",
+                        "hash": "5f1c0a9e7d3b2c41",
+                        "botScore": 0,
+                        "botCategory": "human",
+                        "ltv": 420
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks",
+                        "valid": true
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            },
+            "impressionStopped": {
+              "title": "Impressions stay out of vendors",
+              "description": "An impression is stopped before Meta, Piwik PRO and Data Manager; Pub/Sub has no eventFilter and keeps it.",
+              "in": {
+                "name": "product impression",
+                "entity": "product",
+                "action": "impression",
+                "data": {
+                  "id": "SKU-1",
+                  "name": "Trail Runner",
+                  "price": 129.9,
+                  "list": "Running",
+                  "position": 1
+                },
+                "id": "ev-product-impression",
+                "trigger": "impression",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "content"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human"
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/"
+                }
+              },
+              "out": [["return", false]]
+            },
+            "botStopped": {
+              "title": "Likely bot stopped",
+              "description": "A botScore above 50 is stopped for vendors.",
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 80,
+                  "botCategory": "automation",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks",
+                  "valid": true
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [["return", false]]
+            },
+            "invalidStopped": {
+              "title": "Invalid event stopped",
+              "description": "source.valid false (contract broken) is stopped for vendors; the warehouse keeps it.",
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks",
+                  "valid": false
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [["return", false]]
+            }
+          }
+        },
+        "pseudonymize": {
+          "package": "@walkeros/server-transformer-fingerprint",
+          "config": {
+            "settings": {
+              "salt": "$env.EMAIL_SALT",
+              "rotate": "none",
+              "output": "user.email",
+              "fields": [
+                {
+                  "key": "event.user.email",
+                  "fn": "$code:(value) => String(value).trim().toLowerCase()"
+                }
+              ]
+            }
+          },
+          "examples": {
+            "emailToWarehouse": {
+              "title": "Email pseudonymised for the warehouse",
+              "public": true,
+              "description": "Before Pub/Sub the email is normalized (trimmed, lowercase) and replaced by an HMAC-SHA256 keyed with EMAIL_SALT, stable over time, so analysts can join on it without reading it. Meta and Data Manager still get the raw email and hash it themselves. Events without an email skip this step (pubsub before).",
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "Jane.Doe@Example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks",
+                  "valid": true
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "id": "ORD-100",
+                        "total": 149.8,
+                        "currency": "EUR",
+                        "coupon": "WELCOME10"
+                      },
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "timestamp": 1700000000000,
+                      "consent": {
+                        "functional": true,
+                        "marketing": true
+                      },
+                      "globals": {
+                        "language": "en",
+                        "pageGroup": "checkout"
+                      },
+                      "user": {
+                        "device": "d3v1c3",
+                        "session": "s3ss10n",
+                        "id": "cust-42",
+                        "email": "2ebdd938981aa8d6dd63f6506966d950dfee28f29f978f071c7bda393ce0f3d2",
+                        "hash": "5f1c0a9e7d3b2c41",
+                        "botScore": 0,
+                        "botCategory": "human",
+                        "ltv": 420
+                      },
+                      "source": {
+                        "type": "express",
+                        "platform": "server",
+                        "url": "https://www.example.com/checkout/thanks",
+                        "valid": true
+                      },
+                      "nested": [
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-1",
+                            "name": "Trail Runner",
+                            "price": 129.9,
+                            "quantity": 1
+                          }
+                        },
+                        {
+                          "entity": "product",
+                          "data": {
+                            "id": "SKU-2",
+                            "name": "Running Socks",
+                            "price": 9.95,
+                            "quantity": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "destinations": {
+        "pubsub": {
+          "package": "@walkeros/server-destination-gcp",
+          "import": "destinationPubSub",
+          "before": {
+            "match": {
+              "key": "event.user.email",
+              "operator": "exists",
+              "value": ""
+            },
+            "next": "pseudonymize"
+          },
+          "config": {
+            "credentials": "$secret.GCP_SA",
+            "setup": {
+              "messageStoragePolicy": {
+                "allowedPersistenceRegions": [
+                  "europe-west1",
+                  "europe-west3",
+                  "europe-west4"
+                ]
+              }
+            },
+            "settings": {
+              "projectId": "$var.gcp.project",
+              "topic": "$var.gcp.topic"
+            },
+            "breaker": {
+              "threshold": 5,
+              "cooldown": 30000
+            },
+            "timeout": 10000,
+            "dlqMax": 1000
+          },
+          "examples": {
+            "everyEvent": {
+              "title": "Every event to the topic",
+              "description": "Pub/Sub publishes each event raw, impressions and bots included, as the warehouse input.",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks",
+                  "valid": true
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "PubSub.topic.publishMessage",
+                  {
+                    "data": "{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"context\":{},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"custom\":{},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"4cdea64501d6109d0a25750a7ce1d5c87e5fc927c61b674f191b73e28b582c93\",\"hash\":\"cea3ca84340feb4a\",\"botScore\":null,\"botCategory\":\"unknown\",\"ltv\":420},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}],\"consent\":{\"functional\":true,\"marketing\":true},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"entity\":\"order\",\"action\":\"complete\",\"timestamp\":1700000000000,\"timing\":0,\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true,\"count\":1,\"release\":{\"server\":\"4.6.1\"}}}"
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "meta": {
+          "package": "@walkeros/server-destination-meta",
+          "before": "eventFilter",
+          "config": {
+            "consent": {
+              "marketing": true
+            },
+            "settings": {
+              "pixelId": "$env.META_PIXEL_ID:1234567890",
+              "accessToken": "$env.META_ACCESS_TOKEN",
+              "action_source": "website",
+              "user_data": {
+                "em": {
+                  "key": "user.email",
+                  "validate": "$code:(value) => typeof value === 'string' && value.includes('@')"
+                }
+              }
+            },
+            "mapping": {
+              "product": {
+                "add": {
+                  "name": "AddToCart",
+                  "data": {
+                    "map": {
+                      "content_ids": {
+                        "set": ["data.id"]
+                      },
+                      "value": "data.price",
+                      "currency": {
+                        "value": "$var.currency"
+                      }
+                    }
+                  }
+                }
+              },
+              "order": {
+                "complete": {
+                  "name": "Purchase",
+                  "policy": {
+                    "id": "data.id"
+                  },
+                  "data": {
+                    "map": {
+                      "value": "data.total",
+                      "currency": [
+                        "data.currency",
+                        {
+                          "value": "$var.currency"
+                        }
+                      ],
+                      "order_id": "data.id"
+                    }
+                  }
+                }
+              },
+              "*": {
+                "*": {
+                  "ignore": true
+                }
+              }
+            },
+            "breaker": {
+              "threshold": 5,
+              "cooldown": 30000
+            },
+            "timeout": 5000
+          },
+          "cache": {
+            "stop": true,
+            "rules": [
+              {
+                "match": {
+                  "key": "event.name",
+                  "operator": "eq",
+                  "value": "order complete"
+                },
+                "key": ["event.data.id"],
+                "ttl": 86400
+              }
+            ]
+          },
+          "examples": {
+            "purchase": {
+              "title": "Purchase to Conversions API",
+              "description": "order complete becomes Purchase with the order id as event_id (rule policy), value and currency; em is normalized and hashed by the package.",
+              "public": true,
+              "mapping": {
+                "name": "Purchase",
+                "policy": {
+                  "id": "data.id"
+                },
+                "data": {
+                  "map": {
+                    "value": "data.total",
+                    "currency": [
+                      "data.currency",
+                      {
+                        "value": "$var.currency"
+                      }
+                    ],
+                    "order_id": "data.id"
+                  }
+                }
+              },
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks",
+                  "valid": true
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "sendServer",
+                  "https://graph.facebook.com/v22.0/1234567890/events",
+                  "{\"data\":[{\"event_name\":\"Purchase\",\"event_id\":\"ORD-100\",\"event_time\":1700000000,\"action_source\":\"website\",\"value\":149.8,\"currency\":\"EUR\",\"order_id\":\"ORD-100\",\"user_data\":{\"client_ip_address\":\"203.0.113.42\",\"client_user_agent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\",\"em\":\"8c87b489ce35cf2e2f39f80e282cb2e804932a56a213983eeeb428407d43b52d\"},\"event_source_url\":\"https://www.example.com/checkout/thanks\"}]}",
+                  {
+                    "headers": {
+                      "Authorization": "Bearer meta-access-token"
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "piwikpro": {
+          "package": "@walkeros/server-destination-piwikpro",
+          "before": "eventFilter",
+          "variables": {
+            "siteId": "$env.PIWIK_SITE_ID:e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b"
+          },
+          "config": {
+            "consent": {
+              "functional": true
+            },
+            "settings": {
+              "url": "$env.PIWIK_URL:https://example.piwik.pro/",
+              "appId": "$var.siteId",
+              "visitorId": [
+                "event.user.device",
+                "event.user.session",
+                "event.user.hash"
+              ]
+            },
+            "mapping": {
+              "page": {
+                "view": {
+                  "data": "data.title"
+                }
+              },
+              "product": {
+                "view": {
+                  "name": "ecommerceProductDetailView",
+                  "data": {
+                    "set": [
+                      {
+                        "set": [
+                          {
+                            "map": {
+                              "sku": "data.id",
+                              "name": "data.name",
+                              "price": "data.price",
+                              "quantity": {
+                                "value": 1
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "add": {
+                  "name": "ecommerceAddToCart",
+                  "data": {
+                    "set": [
+                      {
+                        "set": [
+                          {
+                            "map": {
+                              "sku": "data.id",
+                              "name": "data.name",
+                              "price": "data.price",
+                              "quantity": "data.quantity"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "order": {
+                "complete": {
+                  "name": "ecommerceOrder",
+                  "settings": {
+                    "goalId": "$env.PIWIK_ORDER_GOAL:6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c",
+                    "goalValue": "data.total"
+                  },
+                  "data": {
+                    "set": [
+                      {
+                        "loop": [
+                          "nested",
+                          {
+                            "map": {
+                              "sku": "data.id",
+                              "name": "data.name",
+                              "price": "data.price",
+                              "quantity": {
+                                "key": "data.quantity",
+                                "value": 1
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "map": {
+                          "orderId": "data.id",
+                          "grandTotal": "data.total"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "breaker": {
+              "threshold": 5,
+              "cooldown": 30000
+            },
+            "timeout": 5000
+          },
+          "examples": {
+            "orderWithGoal": {
+              "title": "Order with goal",
+              "description": "order complete becomes an ecommerce order plus a goal hit with the order value; the visitor id falls back to the cookieless hash.",
+              "public": true,
+              "mapping": {
+                "name": "ecommerceOrder",
+                "settings": {
+                  "goalId": "$env.PIWIK_ORDER_GOAL:6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c",
+                  "goalValue": "data.total"
+                },
+                "data": {
+                  "set": [
+                    {
+                      "loop": [
+                        "nested",
+                        {
+                          "map": {
+                            "sku": "data.id",
+                            "name": "data.name",
+                            "price": "data.price",
+                            "quantity": {
+                              "key": "data.quantity",
+                              "value": 1
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "map": {
+                        "orderId": "data.id",
+                        "grandTotal": "data.total"
+                      }
+                    }
+                  ]
+                }
+              },
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks",
+                  "valid": true
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "sendServer",
+                  "https://example.piwik.pro/ppms.php",
+                  "{\"requests\":[\"?idsite=e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b&rec=1&send_image=0&ts_n=walkerOS&ts_v=4.6.1&e_t=order&ec_id=ORD-100&revenue=149.8&ec_products=%5B%5B%22SKU-1%22%2C%22Trail+Runner%22%2Cnull%2C129.9%2C1%2Cnull%2Cnull%2Cnull%5D%2C%5B%22SKU-2%22%2C%22Running+Socks%22%2Cnull%2C9.95%2C2%2Cnull%2Cnull%2Cnull%5D%5D&url=https%3A%2F%2Fwww.example.com%2Fcheckout%2Fthanks&cip=203.0.113.42&ua=Mozilla%2F5.0+%28Macintosh%3B+Intel+Mac+OS+X+10_15_7%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F128.0.0.0+Safari%2F537.36&_id=174c88fbd5a4b357&uid=cust-42&cdt=1700000000\",\"?idsite=e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b&rec=1&send_image=0&ts_n=walkerOS&ts_v=4.6.1&idgoal=6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c&revenue=149.8&url=https%3A%2F%2Fwww.example.com%2Fcheckout%2Fthanks&cip=203.0.113.42&ua=Mozilla%2F5.0+%28Macintosh%3B+Intel+Mac+OS+X+10_15_7%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F128.0.0.0+Safari%2F537.36&_id=174c88fbd5a4b357&uid=cust-42&cdt=1700000000\"]}",
+                  {
+                    "timeout": 5000
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "datamanager": {
+          "package": "@walkeros/server-destination-datamanager",
+          "before": "eventFilter",
+          "config": {
+            "consent": {
+              "marketing": true
+            },
+            "credentials": "$secret.GCP_SA",
+            "settings": {
+              "destinations": [
+                {
+                  "operatingAccount": {
+                    "accountId": "$env.GADS_ACCOUNT_ID:123-456-7890",
+                    "accountType": "GOOGLE_ADS"
+                  },
+                  "productDestinationId": "$env.GADS_CONVERSION_ACTION:AW-CONVERSION-123"
+                }
+              ]
+            },
+            "mapping": {
+              "order": {
+                "complete": {
+                  "name": "purchase",
+                  "data": {
+                    "map": {
+                      "transactionId": "data.id",
+                      "conversionValue": "data.total",
+                      "currency": [
+                        "data.currency",
+                        {
+                          "value": "$var.currency"
+                        }
+                      ],
+                      "gclid": "data.session.gclid"
+                    }
+                  }
+                }
+              },
+              "*": {
+                "*": {
+                  "ignore": true
+                }
+              }
+            },
+            "breaker": {
+              "threshold": 5,
+              "cooldown": 30000
+            },
+            "timeout": 10000
+          },
+          "examples": {
+            "conversionWithGclid": {
+              "title": "Conversion with the restored gclid",
+              "description": "The purchase goes to Google Ads through the Data Manager API with the gclid sessionLoad restored from session start.",
+              "public": true,
+              "mapping": {
+                "name": "purchase",
+                "data": {
+                  "map": {
+                    "transactionId": "data.id",
+                    "conversionValue": "data.total",
+                    "currency": [
+                      "data.currency",
+                      {
+                        "value": "$var.currency"
+                      }
+                    ],
+                    "gclid": "data.session.gclid"
+                  }
+                }
+              },
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10",
+                  "session": {
+                    "gclid": "gclid-abc123",
+                    "started": 1700000000000
+                  }
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "email": "jane@example.com",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks",
+                  "valid": true
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "fetch",
+                  "https://datamanager.googleapis.com/v1/events:ingest",
+                  {
+                    "method": "POST",
+                    "headers": {
+                      "Authorization": "Bearer ya29.c.test_token",
+                      "Content-Type": "application/json"
+                    },
+                    "body": "{\"events\":[{\"eventTimestamp\":\"2023-11-14T22:13:20.000Z\",\"transactionId\":\"ORD-100\",\"adIdentifiers\":{\"gclid\":\"gclid-abc123\"},\"conversionValue\":149.8,\"currency\":\"EUR\",\"eventDeviceInfo\":{\"ipAddress\":\"203.0.113.42\",\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\"},\"consent\":{\"adUserData\":\"CONSENT_GRANTED\"},\"eventSource\":\"WEB\"}],\"destinations\":[{\"operatingAccount\":{\"accountId\":\"123-456-7890\",\"accountType\":\"GOOGLE_ADS\"},\"productDestinationId\":\"AW-CONVERSION-123\"}],\"encoding\":\"HEX\"}"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    "warehouse": {
       "config": {
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/core": {
-              "path": "../../core"
-            },
             "@walkeros/collector": {
-              "path": "../../collector"
+              "version": "4.7.0-next-1790245733116"
             },
-            "@walkeros/server-source-express": {},
-            "@walkeros/server-destination-meta": {},
-            "@walkeros/destination-demo": {},
-            "@walkeros/server-transformer-fingerprint": {}
+            "@walkeros/server-source-gcp": {
+              "version": "4.7.0-next-1790245733116"
+            },
+            "@walkeros/server-destination-gcp": {
+              "version": "4.7.0-next-1790245733116"
+            }
+          }
+        }
+      },
+      "sources": {
+        "pubsub": {
+          "package": "@walkeros/server-source-gcp",
+          "import": "sourcePubSubPull",
+          "config": {
+            "credentials": "$secret.GCP_SA",
+            "settings": {
+              "projectId": "$var.gcp.project",
+              "subscription": "$env.PUBSUB_SUBSCRIPTION:walkeros-warehouse",
+              "topic": "$var.gcp.topic"
+            },
+            "setup": {
+              "ackDeadlineSeconds": 60,
+              "deadLetterPolicy": {
+                "deadLetterTopic": "projects/$var.gcp.project/topics/walkeros-dead-letter",
+                "maxDeliveryAttempts": 5,
+                "createDeadLetterTopic": true
+              }
+            }
+          },
+          "examples": {
+            "message": {
+              "title": "Message from the topic",
+              "description": "Each Pub/Sub message holds one event as JSON, the email already pseudonymised; the source decodes it, forwards it and acks.",
+              "public": true,
+              "in": {
+                "id": "msg-1",
+                "dataString": "{\"name\":\"order complete\",\"entity\":\"order\",\"action\":\"complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"timestamp\":1700000000000,\"consent\":{\"functional\":true,\"marketing\":true},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"2ebdd938981aa8d6dd63f6506966d950dfee28f29f978f071c7bda393ce0f3d2\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420},\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}]}",
+                "attributes": {}
+              },
+              "out": [
+                [
+                  "elb",
+                  {
+                    "name": "order complete",
+                    "entity": "order",
+                    "action": "complete",
+                    "data": {
+                      "id": "ORD-100",
+                      "total": 149.8,
+                      "currency": "EUR",
+                      "coupon": "WELCOME10"
+                    },
+                    "trigger": "load",
+                    "timestamp": 1700000000000,
+                    "consent": {
+                      "functional": true,
+                      "marketing": true
+                    },
+                    "globals": {
+                      "language": "en",
+                      "pageGroup": "checkout"
+                    },
+                    "user": {
+                      "device": "d3v1c3",
+                      "session": "s3ss10n",
+                      "id": "cust-42",
+                      "email": "2ebdd938981aa8d6dd63f6506966d950dfee28f29f978f071c7bda393ce0f3d2",
+                      "hash": "5f1c0a9e7d3b2c41",
+                      "botScore": 0,
+                      "botCategory": "human",
+                      "ltv": 420
+                    },
+                    "source": {
+                      "type": "express",
+                      "platform": "server",
+                      "url": "https://www.example.com/checkout/thanks",
+                      "valid": true
+                    },
+                    "nested": [
+                      {
+                        "entity": "product",
+                        "data": {
+                          "id": "SKU-1",
+                          "name": "Trail Runner",
+                          "price": 129.9,
+                          "quantity": 1
+                        }
+                      },
+                      {
+                        "entity": "product",
+                        "data": {
+                          "id": "SKU-2",
+                          "name": "Running Socks",
+                          "price": 9.95,
+                          "quantity": 2
+                        }
+                      }
+                    ]
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "destinations": {
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "import": "destinationBigQuery",
+          "config": {
+            "credentials": "$secret.GCP_SA",
+            "setup": true,
+            "settings": {
+              "projectId": "$var.gcp.project",
+              "datasetId": "$var.gcp.dataset",
+              "tableId": "events"
+            },
+            "batch": {
+              "size": 500,
+              "age": 10000
+            },
+            "breaker": {
+              "threshold": 5,
+              "cooldown": 60000
+            },
+            "timeout": 30000,
+            "dlqMax": 10000
+          },
+          "examples": {
+            "row": {
+              "title": "Event row",
+              "description": "Every event becomes one BigQuery row, contract violations and bots included, batched by size and age. This order has no email (guest checkout).",
+              "public": true,
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "id": "ORD-100",
+                  "total": 149.8,
+                  "currency": "EUR",
+                  "coupon": "WELCOME10"
+                },
+                "id": "ev-order-complete",
+                "trigger": "load",
+                "timestamp": 1700000000000,
+                "consent": {
+                  "functional": true,
+                  "marketing": true
+                },
+                "globals": {
+                  "language": "en",
+                  "pageGroup": "checkout"
+                },
+                "user": {
+                  "device": "d3v1c3",
+                  "session": "s3ss10n",
+                  "id": "cust-42",
+                  "hash": "5f1c0a9e7d3b2c41",
+                  "botScore": 0,
+                  "botCategory": "human",
+                  "ltv": 420
+                },
+                "source": {
+                  "type": "express",
+                  "platform": "server",
+                  "url": "https://www.example.com/checkout/thanks",
+                  "valid": true
+                },
+                "nested": [
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  },
+                  {
+                    "entity": "product",
+                    "data": {
+                      "id": "SKU-2",
+                      "name": "Running Socks",
+                      "price": 9.95,
+                      "quantity": 2
+                    }
+                  }
+                ]
+              },
+              "out": [
+                [
+                  "JSONWriter.appendRows",
+                  [
+                    {
+                      "name": "order complete",
+                      "data": "{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"}",
+                      "context": null,
+                      "globals": "{\"language\":\"en\",\"pageGroup\":\"checkout\"}",
+                      "custom": null,
+                      "user": "{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420}",
+                      "nested": "[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}]",
+                      "consent": "{\"functional\":true,\"marketing\":true}",
+                      "id": "ev-order-complete",
+                      "trigger": "load",
+                      "entity": "order",
+                      "action": "complete",
+                      "timestamp": 1700000000000000,
+                      "timing": 0,
+                      "source": "{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true,\"count\":1,\"trace\":\"4d040dd4fa69fbbe224cf39061e5d788\",\"release\":{\"server\":\"4.6.1\"}}"
+                    }
+                  ]
+                ]
+              ]
+            }
           }
         }
       }

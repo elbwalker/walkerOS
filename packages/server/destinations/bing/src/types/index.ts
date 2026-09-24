@@ -12,6 +12,18 @@ export interface Settings {
   user_data?: WalkerOSMapping.Map;
   dataProvider?: string;
   continueOnValidationError?: boolean;
+  /**
+   * Client IP, sent as userData.clientIpAddress. Resolves against { ingest, event }.
+   * `false` switches it off.
+   * @default ['ingest.ip', 'event.user.ip']
+   */
+  ip?: WalkerOSMapping.Value | false;
+  /**
+   * Client user agent, sent as userData.clientUserAgent. Resolves against
+   * { ingest, event }. `false` switches it off.
+   * @default ['ingest.userAgent', 'event.user.userAgent']
+   */
+  userAgent?: WalkerOSMapping.Value | false;
 }
 
 export type InitSettings = Partial<Settings>;

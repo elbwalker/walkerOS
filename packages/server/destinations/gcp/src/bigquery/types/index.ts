@@ -121,7 +121,6 @@ export interface Env extends DestinationServer.Env {
   WriterClient?: typeof managedwriter.WriterClient;
   JSONWriter?: typeof managedwriter.JSONWriter;
   adapt?: typeof import('@google-cloud/bigquery-storage').adapt;
-  managedwriterModule?: typeof managedwriter;
 }
 
 export type Types = CoreDestination.Types<

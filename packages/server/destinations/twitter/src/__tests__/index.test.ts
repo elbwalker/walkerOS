@@ -2,6 +2,7 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Rules, Settings } from '../types';
 import {
   clone,
+  createIngest,
   getEvent,
   createMockContext,
   createMockLogger,
@@ -518,5 +519,77 @@ describe('Server Destination Twitter', () => {
     for (const id of identifiers) {
       expect(Object.keys(id).length).toBe(1);
     }
+  });
+
+  describe('client IP and user agent auto-fill', () => {
+    const ingest = {
+      ...createIngest('test'),
+      ip: '203.0.113.7',
+      userAgent: 'Mozilla/5.0 test',
+    };
+    const sent = () => JSON.parse(mockSendServer.mock.calls[0][1]);
+    const identifier = (key: string) =>
+      sent().conversions[0].identifiers.find(
+        (id: Record<string, string>) => key in id,
+      )?.[key];
+
+    test('fills client IP and user agent from ingest by default', async () => {
+      await destination.push(
+        getEvent('form submit', { user: { email: 'test@test.com' } }),
+        createMockContext({
+          config: { settings: { ...baseSettings } },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(identifier('ip_address')).toBe('203.0.113.7');
+      expect(identifier('user_agent')).toBeDefined();
+    });
+
+    test('falls back to event.user.ip and userAgent', async () => {
+      await destination.push(
+        getEvent('form submit', {
+          user: {
+            email: 'test@test.com',
+            ip: '198.51.100.2',
+            userAgent: 'UA2',
+          },
+        }),
+        createMockContext({
+          config: { settings: { ...baseSettings } },
+          env: testEnv,
+        }),
+      );
+      expect(identifier('ip_address')).toBe('198.51.100.2');
+      expect(identifier('user_agent')).toBeDefined();
+    });
+
+    test('sends neither when disabled with false', async () => {
+      await destination.push(
+        getEvent('form submit', { user: { email: 'test@test.com' } }),
+        createMockContext({
+          config: {
+            settings: { ...baseSettings, ip: false, userAgent: false },
+          },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(identifier('ip_address')).toBeUndefined();
+      expect(identifier('user_agent')).toBeUndefined();
+    });
+
+    test('lets an explicitly mapped value win', async () => {
+      await destination.push(
+        getEvent('form submit', { user: { email: 'test@test.com' } }),
+        createMockContext({
+          config: { settings: { ...baseSettings } },
+          data: { user_data: { ip_address: '10.0.0.1' } },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(identifier('ip_address')).toBe('10.0.0.1');
+    });
   });
 });

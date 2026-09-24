@@ -16,6 +16,8 @@ export type PrepareInput =
       mock?: string[];
       silent?: boolean;
       verbose?: boolean;
+      /** Log to stderr so stdout carries only the result. */
+      json?: boolean;
     }
   | {
       mode: 'prebuilt';
@@ -26,6 +28,8 @@ export type PrepareInput =
       mock?: string[];
       silent?: boolean;
       verbose?: boolean;
+      /** Log to stderr so stdout carries only the result. */
+      json?: boolean;
     };
 
 export interface PreparedFlow {
@@ -49,6 +53,7 @@ export async function prepareFlow(input: PrepareInput): Promise<PreparedFlow> {
   const logger = createCLILogger({
     silent: input.silent,
     verbose: input.verbose,
+    stderr: input.json,
   });
 
   // Resolve config to flowSettings + buildOptions

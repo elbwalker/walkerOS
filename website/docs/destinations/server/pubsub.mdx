@@ -17,7 +17,7 @@ export const data = {
     settings: gcpData.schemas?.pubsubSettings,
     mapping: gcpData.schemas?.pubsubMapping,
   },
-  examples: {},
+  examples: gcpData.exportExamples?.destinationPubSub ?? {},
 };
 
 # Google Pub/Sub
@@ -173,6 +173,18 @@ export PUBSUB_EMULATOR_HOST=localhost:8085`}
 />
 
 The SDK automatically picks up `PUBSUB_EMULATOR_HOST`. For explicit configuration, set `settings.apiEndpoint` (e.g. `localhost:8085`).
+
+## Simulate
+
+`walkeros push --simulate destination.pubsub` runs offline with the package's mock Pub/Sub client and prints the publish it would make; nothing reaches GCP. The step's `import` (`destinationPubSub`) selects the Pub/Sub examples and mock, not BigQuery's.
+
+<CodeSnippet
+  code={`success: true
+  destination.pubsub
+    mapping: none
+    call PubSub.topic.publishMessage({"data":"{\\"name\\":\\"order complete\\",...}"})`}
+  language="text"
+/>
 
 ## Troubleshooting
 

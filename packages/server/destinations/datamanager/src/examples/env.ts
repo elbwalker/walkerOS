@@ -1,5 +1,4 @@
-import type { OAuth2Client } from 'google-auth-library';
-import type { Env } from '../types';
+import type { AuthClient, Env } from '../types';
 
 /**
  * Example environment configurations for Google Data Manager destination.
@@ -14,17 +13,15 @@ import type { Env } from '../types';
  */
 
 async function mockFetch(): Promise<Response> {
-  return {
-    ok: true,
-    status: 200,
-    json: async () => ({ requestId: 'mock-request-id', validationErrors: [] }),
-    text: async () => '',
-  } as unknown as Response;
+  return new Response(
+    JSON.stringify({ requestId: 'mock-request-id', validationErrors: [] }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } },
+  );
 }
 
-const mockAuthClient = {
+const mockAuthClient: AuthClient = {
   getAccessToken: async () => ({ token: 'ya29.c.test_token' }),
-} as unknown as OAuth2Client;
+};
 
 export const push: Env = {
   fetch: mockFetch,

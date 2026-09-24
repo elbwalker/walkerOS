@@ -17,6 +17,7 @@ import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { Env, RudderStackAnalyticsMock, Settings } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type Captured = [callable: string, ...args: unknown[]];
 
@@ -96,3 +97,6 @@ describe('rudderstack server destination -- step examples', () => {
     expect(collected()).toEqual(example.out);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

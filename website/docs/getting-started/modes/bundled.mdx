@@ -371,8 +371,9 @@ destination), `push` builds and simulates it:
 />
 
 `push --simulate` builds the flow, runs the event through it with
-`destination.console` replaced by a mock, and prints the resolved outcome
-(`success` and `Duration`); add `--json` to get the same result as JSON.
+`destination.console` replaced by a mock, and prints the outcome, the matched
+mapping rule and the recorded vendor calls; add `--json` to get the same result
+as JSON.
 Nothing is sent to a vendor. Event names use a space (`page view`).
 
   </TabItem>

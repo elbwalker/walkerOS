@@ -13,6 +13,18 @@ export interface Settings {
   url?: string;
   user_data?: WalkerOSMapping.Map;
   partner_name?: string;
+  /**
+   * Client IP, sent as user_data.client_ip_address. Resolves against { ingest, event }.
+   * `false` switches it off.
+   * @default ['ingest.ip', 'event.user.ip']
+   */
+  ip?: WalkerOSMapping.Value | false;
+  /**
+   * Client user agent, sent as user_data.client_user_agent. Resolves against
+   * { ingest, event }. `false` switches it off.
+   * @default ['ingest.userAgent', 'event.user.userAgent']
+   */
+  userAgent?: WalkerOSMapping.Value | false;
 }
 
 export type InitSettings = Partial<Settings>;

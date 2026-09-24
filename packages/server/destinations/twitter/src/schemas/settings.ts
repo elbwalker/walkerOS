@@ -1,5 +1,10 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
 import { ApiVersionSchema, EventIdSchema } from './primitives';
+
+const InputSchema = z.union([
+  schemas.MappingSchemas.ValueSchema,
+  z.literal(false),
+]);
 
 export const SettingsSchema = z.object({
   pixelId: z
@@ -44,6 +49,12 @@ export const SettingsSchema = z.object({
       "Mapping configuration for user identifiers (like { email: 'user.email', twclid: 'context.twclid' })",
     )
     .optional(),
+  ip: InputSchema.describe(
+    'Client IP, sent as the ip_address identifier. Resolves against { ingest, event }. Default: ["ingest.ip", "event.user.ip"]. false switches it off. A mapped user_data.ip_address wins.',
+  ).optional(),
+  userAgent: InputSchema.describe(
+    'Client user agent, sent as the user_agent identifier. Resolves against { ingest, event }. Default: ["ingest.userAgent", "event.user.userAgent"]. false switches it off. A mapped user_data.user_agent wins.',
+  ).optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

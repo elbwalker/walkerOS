@@ -4,6 +4,7 @@ import { clone, createLogger, isObject } from '@walkeros/core';
 import type { Config, Rule } from '../types';
 import { examples } from '../dev';
 import destinationMatomo from '..';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 
@@ -103,3 +104,6 @@ describe('matomo web destination -- step examples', () => {
     expect(actual).toEqual([...(example.out ?? [])]);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));
