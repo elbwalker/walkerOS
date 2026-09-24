@@ -10,17 +10,16 @@ let context: ClientContext | undefined;
 /**
  * Set the client context used to identify this process to the walkerOS app.
  *
- * The CLI binary calls this at startup, the MCP server calls it on boot, and
- * the runner Docker image overrides the resolved type via the
- * `WALKEROS_CLIENT_TYPE` env var (env wins over `input.type`).
+ * The CLI binary calls this at startup and the MCP server calls it on boot.
+ * The `WALKEROS_CLIENT_TYPE` env var overrides the resolved type (env wins
+ * over `input.type`).
  */
 export function setClientContext(input: {
   type?: ClientType;
   version: string;
 }): void {
   const envType = process.env.WALKEROS_CLIENT_TYPE as ClientType | undefined;
-  // Env wins over input.type — lets the runner Docker image override the
-  // default chosen by the binary entry point without code changes.
+  // Env wins over input.type.
   const type = envType ?? input.type ?? 'cli';
   context = { type, version: input.version };
 }

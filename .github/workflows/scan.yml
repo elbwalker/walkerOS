@@ -3,12 +3,12 @@ name: Scan
 # Weekly vulnerability scan of the published runtime images. A CVE can appear
 # in an unchanged base image between releases; this finds it before a
 # customer's scanner does. Fixable CRITICAL/HIGH are reported; the issue
-# opens on OS CRITICAL+HIGH and library CRITICAL only (node's bundled npm
-# carries library HIGHs we cannot fix).
+# opens on OS CRITICAL+HIGH and library CRITICAL only (walkeros/cli is built on
+# node, whose bundled npm carries library HIGHs we cannot fix).
 #
 # Images are published by release.yml after npm, so they can lag it (a failed
-# image step, say). The staleness check opens an issue when the newest
-# published package has no image yet.
+# image step, say). The staleness check opens an issue when the newest STABLE
+# published package has no image yet; prereleases never move :latest.
 
 on:
   schedule:
@@ -146,9 +146,21 @@ jobs:
           STALE=""
           for entry in flow:@walkeros/runner:runneros cli:@walkeros/cli:walkeros; do
             IFS=: read -r img pkg bin <<< "$entry"
-            PUBLISHED="$(npm view "$pkg" version 2>/dev/null || true)"
+            # Newest stable version: the one :latest follows.
+            # node -e bodies are JavaScript; their $ is not shell.
+            # shellcheck disable=SC2016
+            PUBLISHED="$( (npm view "$pkg" versions --json 2>/dev/null || echo '[]') | node -e '
+              const key = (x) => x.split(".").map(Number);
+              const stable = [].concat(JSON.parse(require("fs").readFileSync(0, "utf8") || "[]"))
+                .filter((x) => /^\d+\.\d+\.\d+$/.test(x))
+                .sort((a, b) => {
+                  const [p, q] = [key(a), key(b)];
+                  return q[0] - p[0] || q[1] - p[1] || q[2] - p[2];
+                });
+              process.stdout.write(stable[0] || "");
+            ')"
             if [ -z "$PUBLISHED" ]; then
-              echo "::notice::${pkg} is not on npm yet; staleness check skipped."
+              echo "::notice::${pkg} has no stable version on npm yet; staleness check skipped."
               continue
             fi
             INSIDE="$(docker run --rm --entrypoint "$bin" "walkeros/${img}:latest" --version 2>/dev/null || echo none)"

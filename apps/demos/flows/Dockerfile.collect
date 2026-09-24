@@ -1,9 +1,9 @@
-# walkerOS server flow on the walkeros/flow runtime
-FROM walkeros/flow:latest
+# walkerOS server flow on the walkeros/flow runtime.
+# Build context: dist/ from `npx walkeros bundle ./server.json -o dist/`.
+# WALKEROS_VERSION: the @walkeros/cli version that built dist/ (the matching
+# walkeros/flow tag ships runneros). The image supplies BUNDLE, PORT and the
+# `runneros start` command.
+ARG WALKEROS_VERSION
+FROM walkeros/flow:${WALKEROS_VERSION}
 
-ENV BUNDLE=/app/flow/bundle.mjs
-ENV PORT=8080
-
-COPY bundle.mjs /app/flow/bundle.mjs
-
-EXPOSE 8080
+COPY . /app/flow/

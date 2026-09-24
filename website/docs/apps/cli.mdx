@@ -43,7 +43,6 @@ npx walkeros --version`}
 | `push` | Execute event with real API calls (or `--simulate` for mocked) | Testing and production validation |
 | `setup` | Run the optional `setup()` lifecycle on one component | Provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook registrations) |
 | `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
-| `run` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
 | `auth` | Authentication and identity | Log in, log out, check identity |
 | `projects` | Manage walkerOS projects | Create, list, update, delete projects |
@@ -428,10 +427,13 @@ The bundle is now ready to deploy!
 | `-o, --output <path>` | Write bundle to file, directory, or presigned URL |
 | `-f, --flow <name>` | Build specific flow (for multi-flow configs) |
 | `--all` | Build all flows |
-| `-s, --stats` | Show bundle statistics |
+| `--stats` | Show bundle statistics |
 | `--json` | Output statistics as JSON (for CI/CD) |
 | `--no-cache` | Skip package cache, download fresh |
+| `--release <id>` | Config release id, stamped on `event.source.release` |
+| `--manifest [source]` | Build from a manifest, see [manifest builds](#manifest-builds---manifest) |
 | `-v, --verbose` | Detailed logging |
+| `-s, --silent` | Suppress output |
 
 When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads via HTTP PUT. This is used by the walkerOS cloud service for remote builds.
 
@@ -450,6 +452,86 @@ walkeros bundle config.json --flow production --stats
 walkeros bundle config.json --all`}
   language="bash"
 />
+
+### Build-time values (`config.bundle.env`)
+
+A web flow resolves its `$env.NAME` references when it is bundled and inlines
+the values into `walker.js`. The flow declares those values under
+`config.bundle.env`, so the same config bundles the same way wherever it is
+built:
+
+<CodeSnippet
+  code={`"flows": {
+  "default": {
+    "config": {
+      "platform": "web",
+      "bundle": {
+        "env": { "GA4_MEASUREMENT_ID": "G-XXXXXXX" }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+- Values must be literal strings. A reference inside one (`$env.`, `$var.`,
+  `$secret.`, `$flow.`, `$contract.`, `$code:`) is refused.
+- A local `walkeros bundle` layers `config.bundle.env` over your shell
+  environment, declared values winning. A hosted build and a
+  [manifest build](#manifest-builds---manifest) use the declared values alone, so a
+  missing name fails the build instead of reading the build machine's
+  environment.
+- A `$flow.<sibling>` reference resolves against the entry flow's
+  `config.bundle.env`, not the sibling's own.
+- Everything declared here ends up in a public bundle. Never put a secret in
+  it; web flows cannot hold secrets.
+
+Server flows ignore `config.bundle.env`: their `$env` references are read at
+runtime from the process environment of the runtime.
+
+### Package specs
+
+Every package the bundler installs must come from the npm registry: a
+version (`1.2.3`), a range (`^1.2.0`) or a tag (`latest`). This applies to
+`config.bundle.packages`, to `config.bundle.overrides` values, and to the
+dependencies those packages pull in. Git, `github:`, `file:`, `link:` and
+tarball-URL specs are refused before any download, because fetching them can
+run code. An optional transitive dependency with such a spec is skipped with a
+warning. Install scripts of downloaded packages do not run. For local
+development, use a [local package](#local-packages) `path` instead.
+
+### Manifest builds (`--manifest`)
+
+`walkeros bundle --manifest <url-or-path>` builds from a JSON manifest instead
+of a config file. It is the contract a build orchestrator (a CI job, a hosted
+build job, your own script) uses to drive the CLI: the manifest names the flow,
+the artifacts to build and a presigned PUT URL for each; the CLI builds them,
+uploads each one, then uploads a result. A bare `--manifest` reads the
+location from `BUILD_MANIFEST_URL`. Only `--json`, `--verbose` and `--silent`
+combine with it.
+
+| Field | Description |
+|---|---|
+| `version` | `1` |
+| `toolchain` | The exact `@walkeros/cli` version. Any other version refuses the build |
+| `flowConfig` | The `flow.json` content. Required when any bundle artifact is requested |
+| `flowName` | Flow to build in a multi-flow config |
+| `buildEnv` | Base values for web `$env`, beneath `config.bundle.env`. Never the CLI process's own environment |
+| `artifacts[]` | At least one. Each has a unique `outputName` (a bare file name), a `putUrl`, and optional `contentType` and `headers`. A bundle artifact sets `target` (`cdn`, `cdn-skeleton`, `runner`, `simulate` or `push`); a wrap artifact sets `target: "wrap"`, `platform` and `skeleton` |
+| `resultPutUrl` | Presigned PUT URL for the result JSON |
+
+The result is `{ ok, toolchain, artifacts: [{ target, outputName, bytes, sha256 }], error? }`,
+where `error` carries a `code`, a `message` and the `outputName` being built.
+Error codes: `INVALID_MANIFEST`, `TOOLCHAIN_MISMATCH`, `INVALID_CONFIG`,
+`MISSING_BUILD_ENV`, `WEB_SECRET_REF`, `UNSUPPORTED_PACKAGE_SPEC`,
+`LOCAL_PATH_NOT_ALLOWED`, `BUILD_FAILED`, `UPLOAD_FAILED`.
+
+Unknown top-level fields are ignored, so an orchestrator can keep its own
+bookkeeping in the manifest. Artifact entries are strict. A manifest build
+refuses every local filesystem input (local step packages, a package `path`,
+`bundle.traceInclude`, `include`) with `LOCAL_PATH_NOT_ALLOWED`. The Zod
+schemas are exported from `@walkeros/cli` as `BuildManifestSchema` and
+`BuildResultSchema`, the codes as `BUILD_ERROR_CODES`.
 
 ## Push command
 
@@ -1789,214 +1871,23 @@ credential or the expiry.
 A timeout is not a teardown: the session keeps arming server-side, and it is the
 app or a re-run of `observe start` that reports where it landed.
 
-## Run command
+## Running a built flow
 
-The `run` command starts an HTTP server that accepts events and processes them through your flow.
-
-### Use Case
-
-You need an HTTP endpoint to:
-- Receive events from browser clients, mobile apps, or server-side sources
-- Process events through your collector and destinations
-- Test the full event pipeline locally before deploying to production
-
-This is similar to running a Segment or Jitsu collection endpoint.
-
-### Basic Usage
+The CLI builds flows; it does not start them. A built server flow runs with
+`runneros`, the runtime in the separate `@walkeros/runner` package and the
+`walkeros/flow` image:
 
 <CodeSnippet
-  code={`walkeros run flow.json --port 8080`}
+  code={`walkeros bundle flow.json -o dist/
+npx --package=@walkeros/runner runneros start dist/flow.mjs`}
   language="bash"
 />
 
-### Step-by-Step Guide
-
-**1. Create a collection flow**
-
-Create `collect.json`:
-
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "flows": {
-    "default": {
-      "config": {
-        "platform": "server",
-        "bundle": {
-          "packages": {
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
-          }
-        }
-      },
-      "sources": {
-        "http": {
-          "package": "@walkeros/server-source-express",
-          "config": {
-            "settings": {
-              "path": "/collect",
-              "port": 8080,
-              "cors": true
-            }
-          }
-        }
-      },
-      "destinations": {
-        "console": {
-          "package": "@walkeros/destination-demo",
-          "config": {
-            "settings": {
-              "name": "Event Collector",
-              "values": ["name", "data", "user.id", "timestamp"]
-            }
-          }
-        }
-      },
-      "collector": {
-        "run": true,
-        "globals": {
-          "environment": "development"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-**2. Start the collector**
-
-<CodeSnippet
-  code={`walkeros run flow.json`}
-  language="bash"
-/>
-
-Output:
-```
-📦 Bundling flow...
-✓ Bundle ready
-
-🚀 Starting collection server...
-✓ Server running on http://localhost:8080
-✓ Endpoint: POST http://localhost:8080/collect
-✓ Health check: GET http://localhost:8080/health
-```
-
-**3. Send test events**
-
-Open a new terminal and send events:
-
-<CodeSnippet
-  code={`# Page view event
-curl -X POST http://localhost:8080/collect \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "page view",
-    "data": {
-      "title": "Home Page",
-      "path": "/"
-    },
-    "user": {
-      "id": "user123"
-    }
-  }'
-
-# Product view event
-curl -X POST http://localhost:8080/collect \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "product view",
-    "data": {
-      "id": "P123",
-      "name": "Laptop",
-      "price": 999
-    }
-  }'`}
-  language="bash"
-/>
-
-**4. See events in console**
-
-The collector terminal shows:
-```
-[Event Collector] page view
-  data: {"title":"Home Page","path":"/"}
-  user.id: user123
-  timestamp: 1701234567890
-
-[Event Collector] product view
-  data: {"id":"P123","name":"Laptop","price":999}
-  timestamp: 1701234567891
-```
-
-### Options
-
-<CodeSnippet
-  code={`walkeros run <config|bundle|archive> [options]`}
-  language="bash"
-/>
-
-The input can be a flow config, a pre-built bundle, or a `.tar.gz`/`.tgz` flow archive (local file or URL).
-
-| Option | Description |
-|--------|-------------|
-| `-p, --port <number>` | Server port (default: 8080) |
-| `-h, --host <address>` | Host address (default: 0.0.0.0) |
-| `--deploy <id-or-slug>` | Deployment ID or slug (enables heartbeat to walkerOS cloud) |
-| `--project <id>` | Project ID (used with `--deploy`) |
-| `--url <url>` | Public URL of this server (used with `--deploy`) |
-| `--health-endpoint <path>` | Health check path (default: `/health`) |
-| `--heartbeat-interval <seconds>` | Heartbeat interval in seconds (default: 60) |
-| `--json` | Output as JSON |
-| `-v, --verbose` | Detailed logging |
-| `-s, --silent` | Suppress output |
-
-<details>
-<summary>Heartbeat registration</summary>
-
-When `--deploy` is provided, the collector registers itself with the walkerOS cloud via periodic heartbeats. This makes the running instance visible in the project dashboard and enables remote management.
-
-<CodeSnippet
-  code={`walkeros run flow.json \\
-  --deploy dep_abc123 \\
-  --project proj_def456 \\
-  --url https://collect.example.com \\
-  --heartbeat-interval 30`}
-  language="bash"
-/>
-
-The heartbeat sends instance ID, uptime, CLI version, and mode. The server can respond with `update` (triggering a bundle refresh) or `stop` (graceful shutdown).
-
-</details>
-
-### Running Pre-Built Bundles
-
-You can also run pre-built bundles directly:
-
-<CodeSnippet
-  code={`# First, bundle
-walkeros bundle collect.json
-
-# Then run the bundle
-walkeros run dist/flow.mjs --port 8080`}
-  language="bash"
-/>
-
-### Running flow archives
-
-`run` also accepts a `.tar.gz`/`.tgz` flow archive, either a local file or a URL. The CLI fetches or reads the gzip, extracts the bundle and its sibling `node_modules/`, and runs the entry. This lets server flows whose step packages are external resolve those packages at runtime from the extracted `node_modules/`.
-
-<CodeSnippet
-  code={`# Bundle to an archive
-walkeros bundle collect.json -o flow.tar.gz
-
-# Run a local archive
-walkeros run flow.tar.gz --port 8080
-
-# Run an archive from a URL
-walkeros run https://example.com/flow.tar.gz`}
-  language="bash"
-/>
+`runneros start` accepts the `flow.mjs` entry of a built directory, a
+`.tar.gz`/`.tgz` archive from `walkeros bundle -o flow.tar.gz`, or an http(s)
+URL to either. It has no bundler: a local flow config is refused, and one fetched by URL fails to import. See the
+[runtime](/docs/apps/runtime) for its options, environment variables, health
+checks and the Docker image.
 
 ## Complete example: Web → Server flow
 
@@ -2092,19 +1983,21 @@ Create `web-track.json`:
 
 ### 3. Start Collection Server
 
-Terminal 1:
+Terminal 1, build the server flow and start it with the runtime:
 
 <CodeSnippet
-  code={`walkeros run server-collect.json`}
+  code={`walkeros bundle server-collect.json -o dist/server/
+npx --package=@walkeros/runner runneros start dist/server/flow.mjs`}
   language="bash"
 />
 
-### 4. Start Web Server
+### 4. Serve the Web Bundle
 
-Terminal 2:
+Terminal 2, build the web flow and serve `walker.js` with any static file server:
 
 <CodeSnippet
-  code={`walkeros run web-track.json --port 3000`}
+  code={`walkeros bundle web-track.json -o dist/web/
+npx serve dist/web -l 3000`}
   language="bash"
 />
 
@@ -2255,18 +2148,20 @@ These options work with all commands:
 | `WALKEROS_PROJECT_ID` | Default project ID for `projects`, `flows`, and `deploy` commands |
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
 | `WALKEROS_DEPLOY_TOKEN` | Deploy token for container heartbeat authentication |
-| `WALKEROS_CLIENT_TYPE` | Override client identity sent to the app. Defaults to `cli`; set to `runner` for long-lived flow runners. Used by the runtime image. |
-| `WALKEROS_OBSERVE_LEVEL` | Baseline telemetry level for `walkeros run` (`off`, `standard`, or `trace`). Invalid values are warned about and ignored. |
-| `WALKEROS_CONFIG_FROZEN` | Set to `1` or `true` to make `walkeros run` serve the bundle as an immutable snapshot: secrets are still injected at boot, but config hot-swap and heartbeat are disabled. |
+| `WALKEROS_OBSERVE_LEVEL` | Baseline telemetry level for `runneros start` (`off`, `standard`, or `trace`). Invalid values are warned about and ignored. |
+| `BUILD_MANIFEST_URL` | Manifest location read by a bare `walkeros bundle --manifest` |
+| `BUNDLER_STRICT_RANGES` | Set to `0` to bypass strict range validation when the npm registry is unreachable during a build |
+
+The runtime reads its own variables, see the [runtime environment variables](/docs/apps/runtime#environment-variables).
 
 ## API version compatibility
 
-Official clients (CLI, MCP, runner image) send three headers on every request
+Official clients (CLI, MCP) send three headers on every request
 to the walkerOS app so the server can tell them apart and enforce minimum
 versions per endpoint:
 
 - `User-Agent`: e.g. `walkeros-cli/1.4.0 (node/18.19.0; linux)`
-- `X-WalkerOS-Client`: `cli`, `mcp`, or `runner`
+- `X-WalkerOS-Client`: `cli` or `mcp`
 - `X-WalkerOS-Client-Version`: the installed package version
 
 If you call an endpoint that has been updated in a way that requires a newer
@@ -2282,10 +2177,6 @@ See https://walkeros.io/docs/upgrading for details.
 The MCP server surfaces the same information in tool error responses so AI
 assistants can tell the user to upgrade. See
 [Upgrading](/docs/upgrading) for the full version-negotiation rules.
-
-Set `WALKEROS_CLIENT_TYPE=runner` to identify the CLI binary as a long-lived
-flow runner instead of an interactive CLI session. The official runner Docker
-image sets this automatically.
 
 ## CI/CD integration
 
@@ -2320,22 +2211,24 @@ jobs:
 
 ### Docker Build
 
-The canonical multi-stage Dockerfile installs the CLI in the build stage, bundles the flow into a `dist/` directory, then copies the directory into the runtime image. You do not need to declare step packages in `package.json`; pacote installs them transparently from `flow.json`.
+The canonical multi-stage Dockerfile installs the CLI in the build stage, bundles the flow into a `dist/` directory, then copies the directory into the runtime image. You do not need to declare step packages in `package.json`; pacote installs them transparently from `flow.json`. The runtime stage has no npm and no bundler.
 
 <CodeSnippet
-  code={`FROM node:22.23.0-alpine AS builder
+  code={`ARG WALKEROS_VERSION
+
+FROM node:24-alpine AS builder
+ARG WALKEROS_VERSION
 WORKDIR /build
-RUN npm init -y && npm install --save-dev @walkeros/cli
+RUN npm init -y && npm install --save-dev @walkeros/cli@\${WALKEROS_VERSION}
 COPY flow.json ./
 RUN npx walkeros bundle flow.json -o dist/
 
-FROM walkeros/flow:4
-WORKDIR /app/flow
-COPY --from=builder /build/dist/ ./
-ENV PORT=8080
-EXPOSE 8080`}
+FROM walkeros/flow:\${WALKEROS_VERSION}
+COPY --from=builder /build/dist/ /app/flow/`}
   language="dockerfile"
 />
+
+Build it with `docker build --build-arg WALKEROS_VERSION=<version> .`, using a version whose `walkeros/flow` image ships `runneros`. The image supplies `BUNDLE=/app/flow/flow.mjs`, `PORT=8080` and the `runneros start` command. See the [runtime](/docs/apps/runtime#canonical-dockerfile).
 
 ## Troubleshooting
 
@@ -2370,8 +2263,8 @@ walkeros bundle flow.json --verbose`}
 If the port is already in use:
 
 <CodeSnippet
-  code={`# Use a different port
-walkeros run flow.json --port 8081
+  code={`# Start the built flow on a different port
+runneros start dist/flow.mjs --port 8081
 
 # Or kill the process using the port
 lsof -ti:8080 | xargs kill`}
@@ -2439,8 +2332,7 @@ The bundler caches downloads under `process.env.NPM_CACHE_DIR` (default
 ## Next steps
 
 - **[Flow Configuration](/docs/getting-started/modes/bundled)** - Learn about flow config structure
-- **[Docker Deployment](/docs/apps/docker)** - Deploy flows to production
-- **[Runner](/docs/apps/runner)** - Self-hosted runner with config polling and hot-swap
+- **[Runtime](/docs/apps/runtime)** - Run built flows with `runneros` and the `walkeros/flow` image
 - **[MCP Server](/docs/apps/mcp)** - Use CLI tools from AI assistants
 - **[Sources](/docs/sources/)** - Explore event sources
 - **[Destinations](/docs/destinations/)** - Configure analytics tools

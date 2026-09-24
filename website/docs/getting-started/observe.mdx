@@ -180,6 +180,73 @@ Observers are advisory by contract: they run inside the collector's emit loop,
 and a throwing observer never breaks event processing. Use this to stream
 records to your own endpoint, a log pipeline, or a test assertion.
 
+## Observability and runtime tracing
+
+A flow's baseline observability is set by the `flow.<name>.config.observe` block:
+
+| Level | What the runtime emits |
+|-------|------------------------|
+| `off` | No baseline records are emitted. In a managed deployment the observer and trace poll stay wired, so runtime trace can still elevate to `trace`; a self-hosted bundle built with no telemetry option makes no fetches at all. |
+| `standard` (default) | Structural FlowState records, without inbound or outbound event payloads. |
+| `trace` | Full payloads on every hop (inbound and outbound), sample rate `1`. |
+
+When `observe` is omitted, managed deployments default to `standard`.
+
+### Activating trace at runtime (no redeploy)
+
+Trace can be turned on and off for a running deployment without rebuilding or redeploying. The mechanism is a poll, not the heartbeat:
+
+1. The deployment carries a trace window timestamp (`traceUntil`).
+2. The observer exposes `GET /trace/:deploymentId` (authenticated with the ingest token), returning `{ "traceUntil": "<ISO timestamp>" | null }`.
+3. Both the server runtime (`runneros start`) and the deployed browser bundle poll that endpoint about every 15 seconds and feed the returned value into `resolveTelemetryOptions({ traceUntil })` in `@walkeros/core`.
+
+The resolver applies the value per emit:
+
+- A `traceUntil` that parses to a **future** ISO timestamp forces `level: trace` with full inbound and outbound payloads and `sample: 1`, overriding the flow's `observe` block.
+- A `null` or **past** value reverts to the flow's `observe` baseline.
+- The window self-expires once the timestamp passes, so trace stops on its own with no further action.
+
+Only a `200` with a parseable body changes the active trace state. A network error, a non-200, or an unparseable response leaves the current window untouched, so a transient observer outage never silently disables (or enables) tracing.
+
+### Journey correlation across flows
+
+Every FlowState record carries correlation fields so a single observer can stitch one request across web and server flows. These fields survive every level, including `standard`; they are never gated behind `trace`.
+
+| Field | Meaning |
+|-------|---------|
+| `traceId` | W3C 32-hex trace id of the originating run. Resolved as `event.source.trace`, falling back to an inbound header's trace, then the run-scoped collector trace. Never synthesized per hop. |
+| `eventId` | W3C span id of the walker event at this hop (`event.id`). |
+| `parentEventId` | The upstream runtime's `event.id`, present when this flow was entered across a `$flow` crossing (from an inbound `traceparent`). |
+| `sourceId` | The originating source id. |
+| `seq` | Per-poster monotonic counter, stamped on transport (see [Loss-visible transport](#loss-visible-transport)). |
+
+Correlation crosses the wire via the W3C `traceparent` header:
+
+- **Emit.** The web `api` destination adds `traceparent: 00-<traceId>-<eventId>-01` to each non-batched send when the event carries both ids. A `traceparent` you configure yourself always wins (matched case-insensitively). Batched sends carry no `traceparent`, since one batch may aggregate distinct upstream traces.
+- **Adopt.** Any server source with a request header bag (for example an Express or fetch handler) reads a valid inbound `traceparent` and threads its trace and parent span into the ingest context, so the receiving flow's records share the caller's `traceId` and link back via `parentEventId`. An absent or malformed header is ignored. The AWS and GCP handlers do not yet adopt inbound request identity.
+
+### Journey status
+
+The records of one event assemble into a single journey, identified by that event's id. A `traceId` is run-scoped rather than per event, so it is carried as a shared handle that links every journey of one page load or container run. Each journey carries a status derived from the hops observed so far:
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | The journey is still settling: a record arrived recently, or an expected hop has no terminal record yet. |
+| `complete` | Every expected hop reached a terminal state (`out`, `error`, or `skip`). |
+| `partial` | The journey has settled, but an expected hop never produced a terminal record. |
+
+"Expected" comes from the flow's step topology when one is known (only steps downstream of a processed hop are expected); without a topology, a journey is `complete` once every observed hop is terminal. A separate `lossy` flag is orthogonal to status: a journey is `lossy` when a `seq` gap (see [Loss-visible transport](#loss-visible-transport)) overlaps its window, so a journey can be `complete` and `lossy`, or `partial` and `lossy`, at once.
+
+### Vendor-call capture
+
+At `trace` level a destination can record the outgoing vendor calls it makes, so an observer sees not just the mapped event but the exact call that left for the vendor. A destination opts in by declaring its observable callables as dot-paths (the `gtag` destination declares `call:window.gtag`); the runtime then wraps those callables and records each `{ fn, args, ts }` onto the record's outbound payload, with arguments sanitized to JSON-safe markers.
+
+Capture works whenever the destination reaches its callable through the env. Server and simulate runs carry the callable in the env directly. On live web a destination resolves a real global (for example `window.gtag`) through `@walkeros/web-core`'s `getEnv`; the runtime wraps the declared callables at that resolution point, so calls are recorded without the destination or the page changing. The batched delivery path is not captured: batched sends flush against the unwrapped env, so a batching destination shows its per-event input and output but not its vendor calls. Recorded calls are payload-class: they appear only when the outbound payload does (`trace`, or an explicit `includeOut`).
+
+### Loss-visible transport
+
+The batched poster stamps each record with a monotonic `seq` before sending. A dropped or rejected POST is never re-sequenced, so a gap in `seq` at the observer makes lost telemetry visible instead of silent. The poster also splits a batch by real UTF-8 byte size (`maxBodyBytes`, default 60000) rather than letting an oversized body fail with a 413.
+
 ## Starting an Observe session
 
 :::cloud

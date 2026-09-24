@@ -22,14 +22,20 @@ npm install -g @walkeros/cli
 ## Quick start
 
 ```bash
-# Bundle a flow configuration
-walkeros bundle flow.json
-
 # Test with simulated events (no real API calls)
 walkeros push flow.json --event '{"name":"product view"}' --simulate destination.demo
 
-# Run a collection server locally
-walkeros run dist/flow.mjs --port 3000
+# Bundle a flow configuration into dist/
+walkeros bundle flow.json -o dist/
+```
+
+The CLI builds flows; it does not run them. Start a built server flow with
+`runneros` from
+[`@walkeros/runner`](https://www.npmjs.com/package/@walkeros/runner) (also the
+`walkeros/flow` Docker image):
+
+```bash
+npx --package=@walkeros/runner runneros start dist/flow.mjs --port 3000
 ```
 
 ## Documentation

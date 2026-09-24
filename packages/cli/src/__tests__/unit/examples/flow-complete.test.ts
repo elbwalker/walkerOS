@@ -20,6 +20,7 @@ const filePath = path.resolve(
 );
 const raw = fs.readFileSync(filePath, 'utf8');
 const file: unknown = JSON.parse(raw);
+const guide = fs.readFileSync(filePath.replace(/\.json$/, '.md'), 'utf8');
 
 const CHAPTERS: ChapterId[] = [
   'tour',
@@ -287,5 +288,64 @@ describe('flow-complete.json', () => {
     expect(result.errors).toEqual([]);
     expect(result.warnings).toEqual([]);
     expect(result.valid).toBe(true);
+  });
+});
+
+describe('flow-complete.md', () => {
+  /** Chapter id to its section text, in the order the headings appear. */
+  const sections = new Map<string, string>();
+  for (const part of guide.split(/^## /m).slice(1)) {
+    const id = /^([a-z-]+): /.exec(part)?.[1];
+    if (id) sections.set(id, part);
+  }
+
+  it('has one heading per chapter, in learning order', () => {
+    expect([...sections.keys()]).toEqual(CHAPTERS);
+  });
+
+  it.each(
+    flowCompleteFeatures.map((f) => [f.id, f.chapter, f.pointer] as const),
+  )('lists %s in chapter %s at its pointer', (id, chapter, pointer) => {
+    expect(sections.get(chapter)).toContain(`\`${id}\` at \`${pointer}\``);
+  });
+
+  it('points only at paths that exist in the file', () => {
+    const pointers = [
+      ...guide.matchAll(/`(\/(?:flows|contract|variables|include)[^`]*)`/g),
+    ].map((m) => m[1]);
+    expect(pointers.length).toBeGreaterThan(0);
+    expect(pointers.filter((p) => at(p) === undefined)).toEqual([]);
+  });
+
+  // Command lines inside code blocks.
+  const lines = [...guide.matchAll(/```bash\n([\s\S]*?)```/g)]
+    .flatMap((m) => m[1].split('\n'))
+    .filter((line) => /^(walkeros|runneros) /.test(line));
+
+  it('teaches every manifest command as a line of its own', () => {
+    const taught = [
+      ...flowCompleteCli.map((entry) => entry.command),
+      ...flowCompleteFeatures.flatMap((f) => f.cli ?? []),
+    ];
+    expect(taught.filter((command) => !lines.includes(command))).toEqual([]);
+  });
+
+  it('uses only real commands', () => {
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines)
+      expect(line).not.toMatch(/^walkeros (simulate|run) /);
+  });
+
+  it.each(lines.filter((line) => line.includes('--simulate')))(
+    'plans every simulate target of: %s',
+    (line) => {
+      const targets = [...line.matchAll(/--simulate (\S+)/g)].map((m) => m[1]);
+      for (const target of targets)
+        expect(planSimulate([target]).kind).not.toBe('none');
+    },
+  );
+
+  it('holds no em dash', () => {
+    expect(guide).not.toContain(String.fromCharCode(0x2014));
   });
 });

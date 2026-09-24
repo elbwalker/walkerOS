@@ -113,7 +113,7 @@ Create `flow.json`:
 
 This writes the bundle to stdout. Use `-o` to write to a file:
 - **Web**: `-o ./dist/walker.js` (IIFE format, loadable via script tag)
-- **Server**: `-o ./dist/bundle.mjs` (ESM format, runnable with Node.js)
+- **Server**: `-o ./dist/` (a directory: ESM `flow.mjs`, `package.json` and the traced `node_modules/`)
 
 ### 4. Deploy
 
@@ -129,16 +129,16 @@ Add to your HTML:
   </TabItem>
   <TabItem value="server" label="Server">
 
-Run directly:
+Start the artifact with the runtime:
 
 ```bash
-node ./dist/bundle.mjs
+npx --package=@walkeros/runner runneros start dist/flow.mjs
 ```
 
-Or with Docker:
+Or with Docker, mounting the whole directory:
 
 ```bash
-walkeros run flow.json
+docker run -p 8080:8080 -v "$PWD/dist:/app/flow:ro" walkeros/flow:<version>
 ```
 
   </TabItem>
@@ -312,7 +312,7 @@ Build specific flow: `walkeros bundle flow.json --flow production`
 | `walkeros bundle` | Build production bundle |
 | `walkeros push --simulate` | Test with mocked events |
 | `walkeros push` | Test with real API calls |
-| `walkeros run` | Start HTTP collection server |
+| `runneros start` | Run a built server flow (the separate `@walkeros/runner` package) |
 
 See [CLI documentation](/docs/apps/cli) for full details.
 
@@ -323,18 +323,17 @@ See [CLI documentation](/docs/apps/cli) for full details.
 For production server deployments:
 
 <CodeSnippet
-  code={`# Build the bundle
-walkeros bundle flow.json
+  code={`# Build the artifact directory
+walkeros bundle flow.json -o dist/
 
 # Run with Docker
 docker run -d -p 8080:8080 \\
-  -v $(pwd)/dist/bundle.mjs:/app/flow.mjs \\
-  -e BUNDLE=/app/flow.mjs \\
-  walkeros/flow:latest`}
+  -v "$PWD/dist:/app/flow:ro" \\
+  walkeros/flow:<version>`}
   language="bash"
 />
 
-See [Docker documentation](/docs/apps/docker) for complete deployment guides.
+Use a `walkeros/flow` version that ships `runneros`, ideally the CLI version you bundled with. See the [runtime](/docs/apps/runtime) for image tags, the canonical Dockerfile and every environment variable.
 
 ---
 
@@ -410,7 +409,7 @@ credential lifecycle.
 ## Next steps
 
 - [**CLI documentation**](/docs/apps/cli): All CLI commands and options
-- [**Docker deployment**](/docs/apps/docker): Production container deployment
+- [**Runtime**](/docs/apps/runtime): Run built flows in production
 - [**Mapping**](/docs/mapping): Transform events for destinations
 
 ---

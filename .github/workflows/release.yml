@@ -376,14 +376,17 @@ jobs:
           echo "Commented on PR #$PR_NUMBER"
 
       # Docker images. walkeros/flow:<v> holds @walkeros/runner@<v>,
-      # walkeros/cli:<v> holds @walkeros/cli@<v>. That tag is immutable: an
-      # existing one is an error, never rebuilt in place, so a base-image-only
-      # fix (a new OpenSSL, say) needs an npm patch release for a new tag.
-      # latest, <M.m> and <M> are moving tags, flipped only after the scan,
-      # smoke and parity gates pass, and only for the newest stable version on
-      # that line (a prerelease moves nothing). Both images are built, scanned
-      # and smoked before either is pushed, so a failing gate burns no tag.
-      # images_only=<version> reruns just these steps for a published version.
+      # walkeros/cli:<v> holds @walkeros/cli@<v>. That tag is immutable: it is
+      # never rebuilt or overwritten, so a base-image-only fix (a new OpenSSL,
+      # say) needs an npm patch release for a new tag. latest, <M.m> and <M>
+      # are moving tags, flipped only after the scan, smoke and parity gates
+      # pass, and only for the newest stable version on that line (a
+      # prerelease moves nothing). New images are built, scanned and smoked
+      # before any is pushed, so a failing gate burns no tag.
+      # images_only=<version> reruns just these steps for a published version
+      # and resumes a partial run: an image whose tag already exists is not
+      # rebuilt, only pulled, smoked and parity-checked, then its moving tags
+      # are completed.
       - name: Images - resolve version
         env:
           # Dispatch text stays in env, never spliced into the script body.
@@ -422,16 +425,24 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Images - refuse an existing immutable tag
+      # NEW_IMAGES are built, scanned, smoked and pushed. An existing tag is
+      # never touched again: it goes straight to the parity gate.
+      - name: Images - check existing tags
         run: |
           set -euo pipefail
-          for REPO in walkeros/flow walkeros/cli; do
-            if docker manifest inspect "${REPO}:${IMAGE_VERSION}" >/dev/null 2>&1; then
-              echo "::error::${REPO}:${IMAGE_VERSION} already exists. Image tags are immutable; publish a new npm version instead."
-              exit 1
+          NEW=""
+          for IMG in flow cli; do
+            KEY="$(echo "$IMG" | tr '[:lower:]' '[:upper:]')_NEW"
+            if docker manifest inspect "walkeros/${IMG}:${IMAGE_VERSION}" >/dev/null 2>&1; then
+              echo "walkeros/${IMG}:${IMAGE_VERSION} already exists: immutable, not rebuilt; parity-checked below."
+              echo "${KEY}=false" >> "$GITHUB_ENV"
+            else
+              echo "walkeros/${IMG}:${IMAGE_VERSION} is free: built, scanned and pushed below."
+              echo "${KEY}=true" >> "$GITHUB_ENV"
+              NEW="${NEW}${NEW:+ }${IMG}"
             fi
-            echo "OK: ${REPO}:${IMAGE_VERSION} is free."
           done
+          echo "NEW_IMAGES=${NEW}" >> "$GITHUB_ENV"
 
       - name: Images - wait for the packages and their walkerOS dependencies on npm
         run: |
@@ -499,11 +510,13 @@ jobs:
           done
 
       - name: Images - set up Docker Buildx
+        if: env.NEW_IMAGES != ''
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       # Single-arch (amd64). Loaded, not pushed: scan, SBOM and smoke run on
       # the local images so a failing build never burns an immutable tag.
       - name: Images - build flow
+        if: env.FLOW_NEW == 'true'
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: packages/runner
@@ -516,6 +529,7 @@ jobs:
           tags: walkeros/flow:${{ env.IMAGE_VERSION }}
 
       - name: Images - build cli
+        if: env.CLI_NEW == 'true'
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: packages/cli
@@ -530,6 +544,7 @@ jobs:
       # The lockfile describes the intended tree and stays out of the runtime
       # image; it is kept here, beside the SBOM, which describes the actual one.
       - name: Images - export flow lockfile
+        if: env.FLOW_NEW == 'true'
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: packages/runner
@@ -541,12 +556,14 @@ jobs:
           outputs: type=local,dest=lockfile
 
       - name: Images - upload flow lockfile
+        if: env.FLOW_NEW == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lockfile-flow-${{ env.IMAGE_VERSION }}
           path: lockfile/package-lock.json
 
       - name: Images - SBOM flow
+        if: env.FLOW_NEW == 'true'
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: walkeros/flow:${{ env.IMAGE_VERSION }}
@@ -555,6 +572,7 @@ jobs:
           dependency-snapshot: false
 
       - name: Images - SBOM cli
+        if: env.CLI_NEW == 'true'
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: walkeros/cli:${{ env.IMAGE_VERSION }}
@@ -563,6 +581,7 @@ jobs:
           dependency-snapshot: false
 
       - name: Images - install Trivy
+        if: env.NEW_IMAGES != ''
         uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
         with:
           version: v0.70.0
@@ -571,10 +590,11 @@ jobs:
       # One scan per image, fixable CRITICAL/HIGH of every package type,
       # reused by the report uploads and the gate below.
       - name: Images - scan
+        if: env.NEW_IMAGES != ''
         run: |
           set -euo pipefail
           mkdir -p scan
-          for IMG in flow cli; do
+          for IMG in $NEW_IMAGES; do
             trivy image --quiet --severity CRITICAL,HIGH --ignore-unfixed \
               --format json --output "scan/${IMG}.json" "walkeros/${IMG}:${IMAGE_VERSION}"
             trivy convert --format sarif --output "scan/${IMG}.sarif" "scan/${IMG}.json"
@@ -583,12 +603,14 @@ jobs:
           done
 
       - name: Images - upload scan reports
+        if: env.NEW_IMAGES != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: trivy-${{ env.IMAGE_VERSION }}
           path: scan/*.sarif
 
       - name: Images - upload SARIF flow
+        if: env.FLOW_NEW == 'true'
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
         with:
@@ -596,6 +618,7 @@ jobs:
           category: trivy-image-flow
 
       - name: Images - upload SARIF cli
+        if: env.CLI_NEW == 'true'
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
         with:
@@ -605,10 +628,11 @@ jobs:
       # Block on fixable OS CRITICAL+HIGH and library CRITICAL. Library HIGHs
       # stay reported above and never block.
       - name: Images - scan gate
+        if: env.NEW_IMAGES != ''
         run: |
           set -euo pipefail
           FAIL=0
-          for IMG in flow cli; do
+          for IMG in $NEW_IMAGES; do
             BLOCKING=$(jq '[.Results[]? | select(.Class == "os-pkgs" or .Class == "lang-pkgs") | .Class as $c | .Vulnerabilities[]? | select($c == "os-pkgs" or .Severity == "CRITICAL")] | length' "scan/${IMG}.json")
             echo "walkeros/${IMG}:${IMAGE_VERSION} blocking findings: $BLOCKING"
             if [ "$BLOCKING" != "0" ]; then
@@ -619,35 +643,54 @@ jobs:
           [ "$FAIL" = "0" ]
 
       - name: Images - smoke
+        if: env.NEW_IMAGES != ''
         run: |
           set -euo pipefail
-          for IMG in flow cli; do
+          for IMG in $NEW_IMAGES; do
             images/smoke.sh "$IMG" "walkeros/${IMG}:${IMAGE_VERSION}" "$IMAGE_VERSION"
           done
 
       - name: Images - push
+        if: env.NEW_IMAGES != ''
         run: |
           set -euo pipefail
-          for IMG in flow cli; do
+          for IMG in $NEW_IMAGES; do
+            # Re-check right before pushing: never overwrite an immutable tag,
+            # even one that appeared since the check above.
+            if docker manifest inspect "walkeros/${IMG}:${IMAGE_VERSION}" >/dev/null 2>&1; then
+              echo "::error::walkeros/${IMG}:${IMAGE_VERSION} appeared during this run. Image tags are immutable; not overwriting it."
+              exit 1
+            fi
             docker push "walkeros/${IMG}:${IMAGE_VERSION}"
           done
 
-      # The parity gate: pull each pushed tag back from the registry, boot it,
-      # and assert it reports the package version this run resolved.
+      # The parity gate: pull each tag back from the registry (just pushed, or
+      # already existing on a resumed run), boot it, and assert it reports the
+      # package version this run resolved.
       - name: Images - parity gate
         run: |
           set -euo pipefail
           for IMG in flow cli; do
-            docker image rm "walkeros/${IMG}:${IMAGE_VERSION}"
+            if docker image inspect "walkeros/${IMG}:${IMAGE_VERSION}" >/dev/null 2>&1; then
+              docker image rm "walkeros/${IMG}:${IMAGE_VERSION}"
+            fi
             docker pull "walkeros/${IMG}:${IMAGE_VERSION}"
             images/smoke.sh "$IMG" "walkeros/${IMG}:${IMAGE_VERSION}" "$IMAGE_VERSION"
           done
 
       # Each moving tag follows the newest stable version of its line, so a
-      # backfill of an older version (or a prerelease) leaves it alone.
+      # backfill of an older version (or a prerelease) leaves it alone. skopeo
+      # copies the version tag's manifest byte for byte, so a moving tag
+      # carries the exact digest of <version> (imagetools create would wrap a
+      # single-platform image in a new manifest list with a new digest).
+      # skopeo is preinstalled on ubuntu-latest and reads docker login's auth.
       - name: Images - move tags
         run: |
           set -euo pipefail
+          AUTHFILE="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+          digest() {
+            skopeo inspect --raw --authfile "$AUTHFILE" "docker://$1" | sha256sum | cut -d' ' -f1
+          }
           MOVED=""
           for ENTRY in flow:@walkeros/runner cli:@walkeros/cli; do
             IMG="${ENTRY%%:*}"
@@ -675,10 +718,18 @@ jobs:
               echo "No moving tag follows walkeros/${IMG}:${IMAGE_VERSION}."
               continue
             fi
-            ARGS=""
-            for t in $TAGS; do ARGS="$ARGS --tag walkeros/${IMG}:${t}"; done
-            # shellcheck disable=SC2086
-            docker buildx imagetools create $ARGS "walkeros/${IMG}:${IMAGE_VERSION}"
+            SRC="walkeros/${IMG}:${IMAGE_VERSION}"
+            WANT="$(digest "$SRC")"
+            for t in $TAGS; do
+              skopeo copy --all --preserve-digests --authfile "$AUTHFILE" \
+                "docker://${SRC}" "docker://walkeros/${IMG}:${t}"
+              GOT="$(digest "walkeros/${IMG}:${t}")"
+              if [ "$GOT" != "$WANT" ]; then
+                echo "::error::walkeros/${IMG}:${t} is sha256:${GOT}, expected sha256:${WANT} (${SRC})."
+                exit 1
+              fi
+              echo "OK: walkeros/${IMG}:${t} -> sha256:${WANT}"
+            done
             MOVED="${MOVED}walkeros/${IMG}: ${TAGS}; "
           done
           echo "MOVED=${MOVED}" >> "$GITHUB_ENV"

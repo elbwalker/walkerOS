@@ -1227,7 +1227,7 @@ const teaching = {
     useCases: ['contracts'],
     note: 'The contract names what every event must carry; the validate step and validate --strict read it.',
     docs: [{ page: 'getting-started/flow/contract' }],
-    cli: [`walkeros validate ${FILE} -t contract`],
+    cli: [`walkeros validate "$(jq .contract ${FILE})" -t contract`],
   },
   'contract-extend': {
     pointer: '/contract/server/extend',
@@ -1713,7 +1713,7 @@ const teaching = {
     docs: [],
     cli: [
       `walkeros bundle ${FILE} -f web --stats`,
-      `walkeros bundle ${FILE} --all`,
+      `walkeros bundle ${FILE} --all -o dist/all`,
       `walkeros bundle ${FILE} -f server -o dist/server.mjs --release 2026-09-26`,
       'walkeros cache info',
     ],
@@ -2183,7 +2183,10 @@ export interface CliEntry {
 /** Every command line the guide teaches, run against this file. */
 export const flowCompleteCli: CliEntry[] = [
   { command: `walkeros validate ${FILE} --strict`, chapter: 'tour' },
-  { command: `walkeros validate ${FILE} -t contract`, chapter: 'contract' },
+  {
+    command: `walkeros validate "$(jq .contract ${FILE})" -t contract`,
+    chapter: 'contract',
+  },
   {
     command: `walkeros validate ${FILE} --path destinations.collect`,
     chapter: 'step-envelope',
@@ -2209,7 +2212,10 @@ export const flowCompleteCli: CliEntry[] = [
     chapter: 'quality',
   },
   { command: `walkeros bundle ${FILE} -f web --stats`, chapter: 'build-run' },
-  { command: `walkeros bundle ${FILE} --all`, chapter: 'build-run' },
+  {
+    command: `walkeros bundle ${FILE} --all -o dist/all`,
+    chapter: 'build-run',
+  },
   {
     command: `walkeros bundle ${FILE} -f server -o dist/server.mjs --release 2026-09-26`,
     chapter: 'build-run',

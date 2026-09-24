@@ -161,7 +161,7 @@ const RE_ALL_HEX = /^[0-9a-fA-F]+$/;
 const RE_ALL_DIGIT = /^[0-9]+$/;
 // Real base64 padding/special chars. `/` is intentionally EXCLUDED: it is a
 // structural path/URL separator (FQNs, gs:// paths, request paths, googleapis
-// URLs), not a secret signal. Since redaction now runs on every console line,
+// URLs), not a secret signal. Since redaction runs on every logger line,
 // treating `/` as a secret char nuked legitimate BigQuery/GCS diagnostics. Real
 // base64 secrets still carry `+`/`=` padding, are all-hex, or are high-entropy.
 const RE_BASE64_SPECIAL = /[+=]/;
@@ -320,8 +320,10 @@ function maskLine(line: string): string {
 
 /**
  * Scrub credential material from a log line (or multi-line entry) WITHOUT
- * truncating. This is the shared secret redactor used by the CLI logger handler
- * (covers console/stderr and the ring before egress).
+ * truncating. This is the shared secret redactor used by the CLI and runtime
+ * logger handlers (covers their console/stderr lines and the ring before
+ * egress). Output a dependency writes straight to `console` or stderr never
+ * passes through it.
  *
  * Algorithm:
  * 1. Mask JSON service-account fields (private_key, client_email,

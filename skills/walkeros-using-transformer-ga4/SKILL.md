@@ -36,14 +36,14 @@ tids only by default. Per-field patching via `extend`/`remove` is supported.
 send several events in one POST body (one per line, as `text/plain`), so the
 source must keep a non-JSON body as `ingest.body`. These server sources do:
 
-- `@walkeros/server-source-express` (shown below), the source `walkeros run` and
-  the `walkeros/flow` image serve. A `text/plain` body that is valid JSON is
-  parsed; any other `text/plain` body reaches the decoder as the raw string.
+- `@walkeros/server-source-express` (shown below), the source `runneros` and the
+  `walkeros/flow` image serve. A `text/plain` body that is valid JSON is parsed;
+  any other `text/plain` body reaches the decoder as the raw string.
 - `@walkeros/server-source-fetch`: a `(Request) => Response` handler with no
   `port`, for a runtime that calls it (Cloudflare Workers, Deno, Bun, Node.js
   18+ with a fetch adapter), e.g.
-  `export default { fetch: collector.sources.http.push }`. `walkeros run` and
-  the `walkeros/flow` image cannot serve it (they only mount a source's Node
+  `export default { fetch: collector.sources.http.push }`. `runneros` and the
+  `walkeros/flow` image cannot serve it (they only mount a source's Node
   `httpHandler`).
 - `sourceCloudFunction` from `@walkeros/server-source-gcp` on Google Cloud
   Functions.

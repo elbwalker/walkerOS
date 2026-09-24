@@ -7,8 +7,10 @@ import {
   deleteDeployment,
   deleteDeploymentByFlowId,
   createDeployCommand,
+  selfHostServerHint,
   DeploymentAmbiguityError,
 } from '../../../commands/deployments/index.js';
+import { VERSION } from '../../../version.js';
 
 jest.mock('../../../core/auth.js', () => ({
   ...jest.requireActual('../../../core/auth.js'),
@@ -385,7 +387,9 @@ describe('deployments', () => {
         .mockResolvedValueOnce(
           new Response(
             JSON.stringify({
-              config: { flows: { default: { server: {} } } },
+              config: {
+                flows: { default: { config: { platform: 'server' } } },
+              },
             }),
             { status: 200 },
           ),
@@ -413,6 +417,101 @@ describe('deployments', () => {
       // The instruction must point the user at minting a real deploy token.
       expect(output.toLowerCase()).toContain('deploy token');
       expect(output).toContain('WALKEROS_DEPLOY_TOKEN');
+    });
+
+    it('prints a runnable bundle and docker command pinned to this CLI version', async () => {
+      mockApiFetch
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              config: {
+                flows: { default: { config: { platform: 'server' } } },
+              },
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ id: 'dep_a1b2', slug: 's', type: 'server' }),
+            { status: 201 },
+          ),
+        );
+
+      await createDeployCommand('cfg_remoteflow', {
+        project: 'proj_123',
+        flow: 'default',
+      });
+
+      const output = renderedLines();
+      expect(output).toContain('walkeros bundle flow.json -o dist/');
+      expect(output).toContain('-v "$PWD/dist:/app/flow:ro"');
+      expect(output).toContain('-e WALKEROS_PROJECT_ID="proj_123"');
+      expect(output).toContain('-e WALKEROS_FLOW_ID="cfg_remoteflow"');
+      expect(output).toContain('-e WALKEROS_DEPLOYMENT_ID="dep_a1b2"');
+      expect(output).toContain(`walkeros/flow:${VERSION}`);
+      expect(output).not.toContain(':latest');
+    });
+
+    it('prints no self-host command for a web deployment', async () => {
+      mockApiFetch
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              config: { flows: { default: { config: { platform: 'web' } } } },
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ id: 'dep_w', slug: 's', type: 'web' }),
+            { status: 201 },
+          ),
+        );
+
+      await createDeployCommand('cfg_webflow', { project: 'proj_123' });
+
+      const output = renderedLines();
+      expect(output).toContain('Deployment created: dep_w');
+      expect(output).not.toContain('docker run');
+    });
+  });
+
+  describe('selfHostServerHint', () => {
+    it('matches the app self-host command shape, one continued docker command', () => {
+      const lines = selfHostServerHint({
+        config: 'flow.json',
+        flowId: 'cfg_1',
+        projectId: 'proj_1',
+        deploymentId: 'dep_1',
+        appUrl: 'https://app.example.com',
+        version: '9.9.9',
+      });
+      const start = lines.indexOf('  docker run --rm -p 8080:8080 \\');
+      const end = lines.indexOf('    walkeros/flow:9.9.9');
+      expect(start).toBeGreaterThan(-1);
+      expect(end).toBeGreaterThan(start);
+      for (const line of lines.slice(start, end))
+        expect(line.endsWith(' \\')).toBe(true);
+      expect(lines).toContain(
+        '    -e WALKEROS_APP_URL="https://app.example.com" \\',
+      );
+      expect(lines).toContain(
+        '  npx --yes --package=@walkeros/runner@9.9.9 runneros start dist/flow.mjs',
+      );
+    });
+
+    it('prints a flow id placeholder for a local config', () => {
+      const lines = selfHostServerHint({
+        config: './flow.json',
+        projectId: 'proj_1',
+        deploymentId: 'dep_1',
+        appUrl: 'https://app.walkeros.io',
+        version: '1.0.0',
+      });
+      expect(lines).toContain('  walkeros bundle ./flow.json -o dist/');
+      expect(lines).toContain('    -e WALKEROS_FLOW_ID="<your-flow-id>" \\');
     });
   });
 });

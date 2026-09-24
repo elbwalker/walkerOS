@@ -94,13 +94,13 @@ export function refusalHint(error: unknown, fallback: string): string {
 
 /**
  * Every route named here runs outside the tool's process: the app's own deploy
- * pipeline and simulation surface, or the caller's own machine. A refused
+ * pipeline, or the caller's own machine. A refused
  * caller is never pointed at another in-process route, such as saving the
  * flow and simulating it by id, which would be the same execution one step
  * later.
  */
 export const HINT_OUT_OF_PROCESS =
-  'Build and deploy through the app with deploy_manage, or simulate the flow in the app. On your own machine, use the walkerOS CLI.';
+  'Build and deploy through the app with deploy_manage. To simulate, validate or bundle, use the walkerOS CLI on your own machine.';
 
 /** The refusal a tool raises when its runtime does not provide an operation. */
 export function unavailableOperation(

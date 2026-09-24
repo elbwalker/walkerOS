@@ -13,7 +13,7 @@ This package cannot bundle. Build a flow with `walkeros bundle` (from
 artifact:
 
 ```bash
-walkeros bundle flow.json
+walkeros bundle flow.json -o dist/
 runneros start dist/flow.mjs --port 8080
 ```
 

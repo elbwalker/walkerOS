@@ -128,28 +128,37 @@ walkeros push flow.json -e event.json --simulate collector.default --mock collec
 
 ---
 
-## run
+## Running a built flow (not a CLI command)
 
-Run flows locally without Docker.
+The CLI has no `run` command. A built server flow runs with `runneros` from the
+separate `@walkeros/runner` package (also the `walkeros/flow` image). It cannot
+bundle: a local flow config is refused, one fed by URL or stdin fails at import.
 
 ### Usage
 
 ```bash
-walkeros run <config|bundle> [options]
+runneros start [artifact] [options]
 
 Options:
+  --flow-id <id>        App flow ID (enables heartbeat and secrets)
+  --project <id>        Project ID (required with --flow-id)
   -p, --port <number>   Port (default: 8080)
-  -h, --host <string>   Host (default: localhost)
+  --env-file <path>     Load a dotenv file first (existing env wins)
+  --json                JSON output
+  -v, --verbose         Verbose output
+  -s, --silent          Silent mode
 ```
 
 ### Examples
 
 ```bash
-# Start collection server
-walkeros run flow.json --port 3000
+# Build, then start the entry inside dist/
+walkeros bundle flow.json -o dist/
+runneros start dist/flow.mjs --port 3000
 
-# Use pre-built server bundle (the entry inside dist/)
-walkeros run dist/flow.mjs
+# Start a packed archive
+walkeros bundle flow.json -o flow.tar.gz
+runneros start flow.tar.gz
 ```
 
 ---

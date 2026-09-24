@@ -9,40 +9,59 @@ sidebar_position: 7
 You have a working flow. Every path below runs on infrastructure you control;
 managed hosting is the optional alternative at the end.
 
+## From config to running flow
+
+Every self-hosted path is the same two steps, with checks before them:
+
+1. **Validate** the config: `walkeros validate flow.json`
+2. **Simulate** an event through it locally, destinations mocked, see
+   [bundled mode](/docs/getting-started/modes/bundled#see-your-event)
+3. **Bundle** it into an artifact: `walkeros bundle flow.json -o dist/`
+4. **Run** the artifact: `runneros start dist/flow.mjs`
+
+Building and running are two tools. `walkeros` (the CLI) validates,
+simulates and bundles. `runneros` (the runtime) only starts a prebuilt
+artifact: it has no bundler, so a production host never needs a package
+manager or registry access. See the [runtime](/docs/apps/runtime) for why the
+stages are kept apart.
+
 ## Build once
 
-Bundle your `flow.json` into a standalone artifact:
+<CodeSnippet code={`npx @walkeros/cli bundle flow.json -o dist/`} language="bash" />
 
-<CodeSnippet
-  code={`npx walkeros bundle flow.json --output flow.mjs`}
-  language="bash"
-/>
+A server flow builds to a **directory**, `dist/` holding `flow.mjs`,
+`package.json` and `node_modules/`. Always ship the whole directory. A web
+flow builds to a single `dist/walker.js` that any static host can serve.
 
 ## Run it yourself
 
-**Docker**, the standard path:
+**Docker**, the standard path. Mount the directory where the image expects it:
 
 <CodeSnippet
   code={`docker run -d -p 8080:8080 \\
-  -v $(pwd)/flow.mjs:/app/flow.mjs \\
-  -e BUNDLE=/app/flow.mjs \\
-  walkeros/flow:latest`}
+  -v "$PWD/dist:/app/flow:ro" \\
+  walkeros/flow:<version>`}
   language="bash"
 />
 
-**Node, from the config** (bundles on start, no separate build step):
+Use a `walkeros/flow` version that ships `runneros`, ideally the same version
+as the CLI that built the artifact, see [image tags](/docs/apps/runtime#image-tags).
+For a self-contained image, use the
+[canonical Dockerfile](/docs/apps/runtime#canonical-dockerfile).
 
-<CodeSnippet code={`npx walkeros run flow.json`} language="bash" />
+**Node**, without Docker:
 
-**Node, from the bundle**:
-
-<CodeSnippet code={`node flow.mjs`} language="bash" />
+<CodeSnippet
+  code={`npx --package=@walkeros/runner runneros start dist/flow.mjs`}
+  language="bash"
+/>
 
 Integrated mode needs none of this: the flow deploys with your application and
 needs nothing extra. See [integrated mode](/docs/getting-started/modes/integrated).
 
 The same `flow.json` drives every path, so switching between them (or between
-providers) is a redeploy, not a migration.
+providers) is a rebuild and a redeploy, not a migration. To change a running
+flow, bundle again and redeploy the new artifact.
 
 ## Before production
 
@@ -56,10 +75,11 @@ providers) is a redeploy, not a migration.
 ## Managed hosting
 
 :::cloud
-Hosting flow settings as a shared team space, managed deploys, and live observability are part of the hosted app. Self-hosting? Docker plus your own repo gets you the same running flow. [What Cloud adds →](https://app.walkeros.io)
+Hosting flow settings as a shared team space, managed deploys, and live observability are part of the hosted app. Self-hosting? `walkeros bundle`, `runneros start` and your own repo get you the same running flow. [What Cloud adds →](https://app.walkeros.io)
 :::
 
 ## Next steps
 
-- [Docker](/docs/getting-started/quickstart/docker): image, environment variables, compose
+- [Runtime](/docs/apps/runtime): the image, inputs, environment variables, constraints
+- [Docker quickstart](/docs/getting-started/quickstart/docker): a server flow running in five minutes
 - [CLI reference](/docs/apps/cli): all commands and options

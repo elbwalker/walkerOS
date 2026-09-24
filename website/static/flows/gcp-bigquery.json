@@ -1,22 +1,20 @@
 {
   "version": 4,
-  "variables": {
-    "GCP_PROJECT_ID": "your-project-id",
-    "BQ_DATASET": "walkerOS",
-    "BQ_TABLE": "events",
-    "BQ_LOCATION": "EU"
-  },
   "flows": {
     "server": {
-      "packages": {
-        "@walkeros/collector": {},
-        "@walkeros/server-source-express": {},
-        "@walkeros/server-destination-gcp": {}
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": {},
+            "@walkeros/server-source-express": {},
+            "@walkeros/server-destination-gcp": {}
+          }
+        }
       },
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
-          "code": "sourceExpress",
           "config": {
             "settings": {
               "path": "/collect",
@@ -29,19 +27,15 @@
       "destinations": {
         "bigquery": {
           "package": "@walkeros/server-destination-gcp",
-          "code": "destinationBigQuery",
           "config": {
             "settings": {
-              "projectId": "${GCP_PROJECT_ID}",
-              "datasetId": "${BQ_DATASET}",
-              "tableId": "${BQ_TABLE}",
-              "location": "${BQ_LOCATION}"
+              "projectId": "$env.GCP_PROJECT_ID",
+              "datasetId": "$env.BQ_DATASET:walkerOS",
+              "tableId": "$env.BQ_TABLE:events",
+              "location": "$env.BQ_LOCATION:EU"
             }
           }
         }
-      },
-      "config": {
-        "platform": "server"
       }
     }
   }

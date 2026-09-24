@@ -119,7 +119,7 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-Server sources require platform-specific handlers. For containerized deployments, see [Docker](/docs/apps/docker).
+Server sources require platform-specific handlers. For containerized deployments, see the [runtime](/docs/apps/runtime).
 
 [See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
@@ -154,7 +154,7 @@ never reaches a destination. This follows the shared
 behave the same way.
 
 :::tip Health checks
-Health check endpoints (`/health` and `/ready`) are provided by the [runner](/docs/apps/runner), not by individual sources. This means health checks work regardless of which source type you use.
+Health check endpoints (`/health` and `/ready`) are provided by the [runtime](/docs/apps/runtime#health-checks), not by individual sources. This means health checks work regardless of which source type you use.
 :::
 
 ### Response modes (`async`)
