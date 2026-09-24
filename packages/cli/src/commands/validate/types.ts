@@ -1,8 +1,16 @@
 // walkerOS/packages/cli/src/commands/validate/types.ts
 
-export type ValidationType = 'contract' | 'event' | 'flow' | 'mapping';
+import type { ValidationType } from '@walkeros/core/dev';
 
-export type ValidateResultType = ValidationType | 'entry';
+// Result types are declared in @walkeros/core/dev beside
+// validateFlowStructure, so consumers can type its return without the CLI.
+export type {
+  ValidateResult,
+  ValidateResultType,
+  ValidationType,
+  ValidationError,
+  ValidationWarning,
+} from '@walkeros/core/dev';
 
 export interface ValidateCommandOptions {
   type: ValidationType;
@@ -14,26 +22,4 @@ export interface ValidateCommandOptions {
   verbose?: boolean;
   strict?: boolean;
   silent?: boolean;
-}
-
-export interface ValidationError {
-  path: string;
-  message: string;
-  value?: unknown;
-  code?: string;
-}
-
-export interface ValidationWarning {
-  path: string;
-  message: string;
-  suggestion?: string;
-  code?: string;
-}
-
-export interface ValidateResult {
-  valid: boolean;
-  type: ValidateResultType;
-  errors: ValidationError[];
-  warnings: ValidationWarning[];
-  details: Record<string, unknown>;
 }

@@ -50,4 +50,10 @@ export const push: Env = {
   logger: noopLogger,
 };
 
-export const simulation = ['AWS.SQSClient'];
+/**
+ * No recorded calls. The SQS client is not part of this mock env (tests
+ * substitute the SDK module-wide), so a path such as `AWS.SQSClient` never
+ * resolved here. Recording receive and delete calls needs an `AWS.SQSClient`
+ * mock in `push`, which would bypass those module mocks.
+ */
+export const simulation: string[] = [];

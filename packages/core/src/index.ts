@@ -46,6 +46,8 @@ export { emitStep } from './emitStep';
 export * from './batchedPoster';
 export * from './userAgent';
 export * from './wrapInlineCode';
+export { createTimer, type Timer } from './timer';
+export { getErrorMessage } from './getErrorMessage';
 export * from './cdn';
 export * from './contract';
 export * from './observeEnv';

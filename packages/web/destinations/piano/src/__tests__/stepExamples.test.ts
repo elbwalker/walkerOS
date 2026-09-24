@@ -4,6 +4,7 @@ import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { Config, Env, Rule } from '../types';
 import destinationPiano from '..';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type Effect = [string, ...unknown[]];
 
@@ -78,3 +79,6 @@ describe('piano destination — step examples', () => {
     expect(calls).toEqual([...initOut, ...expected]);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

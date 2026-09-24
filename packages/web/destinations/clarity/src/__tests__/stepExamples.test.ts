@@ -13,6 +13,7 @@ import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 import type { ClarityStepExample } from '../examples/step';
 import type { Env, Settings } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 
@@ -102,3 +103,6 @@ describe('clarity destination — step examples', () => {
     },
   );
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

@@ -735,6 +735,10 @@ const config: Config = {
             to: '/docs/apps/walkerjs',
           },
           {
+            from: ['/docs/apps/runner', '/docs/apps/docker'],
+            to: '/docs/apps/runtime',
+          },
+          {
             from: [
               '/docs/intro',
               '/docs/walkeros',

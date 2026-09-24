@@ -1,5 +1,10 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
 import { ActionSourceSchema } from './primitives';
+
+const InputSchema = z.union([
+  schemas.MappingSchemas.ValueSchema,
+  z.literal(false),
+]);
 
 export const SettingsSchema = z.object({
   accessToken: z
@@ -44,6 +49,12 @@ export const SettingsSchema = z.object({
     .string()
     .describe('Third-party partner name for attribution (like ss-walkeros)')
     .optional(),
+  ip: InputSchema.describe(
+    'Client IP, sent as user_data.client_ip_address. Resolves against { ingest, event }. Default: ["ingest.ip", "event.user.ip"]. false switches it off. A mapped user_data.client_ip_address wins.',
+  ).optional(),
+  userAgent: InputSchema.describe(
+    'Client user agent, sent as user_data.client_user_agent. Resolves against { ingest, event }. Default: ["ingest.userAgent", "event.user.userAgent"]. false switches it off. A mapped user_data.client_user_agent wins.',
+  ).optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

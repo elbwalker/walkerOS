@@ -148,4 +148,30 @@ describe('getEnv observe wrapping', () => {
 
     expect(records).toEqual([{ fn: 'window.a.b.c', args: ['deep', 1] }]);
   });
+
+  it('records a leaf reached through a constructor, once per call', () => {
+    const { records, record } = makeRecorder();
+    class Client {
+      #sent: unknown[] = [];
+      send(payload: unknown) {
+        this.#sent.push(payload);
+        return this.#sent.length;
+      }
+    }
+
+    const env = getEnv<Env>({
+      observe: { paths: ['sdk.Client.send', 'sdk.Client.send'], record },
+      sdk: { Client },
+    });
+
+    const Ctor = read(env.sdk, 'Client');
+    if (typeof Ctor !== 'function') throw new Error('Client missing');
+    const client: unknown = Reflect.construct(Ctor, []);
+    expect(client instanceof Client).toBe(true);
+    const send = read(client, 'send');
+    if (typeof send !== 'function') throw new Error('send missing');
+    expect(Reflect.apply(send, client, [{ n: 1 }])).toBe(1);
+
+    expect(records).toEqual([{ fn: 'sdk.Client.send', args: [{ n: 1 }] }]);
+  });
 });

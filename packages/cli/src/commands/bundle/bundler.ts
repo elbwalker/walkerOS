@@ -20,16 +20,12 @@ import {
   validateComponentNames,
   validateReference,
   validateStoreReferences,
-} from './structural-validators.js';
+} from '@walkeros/core/dev';
 
-// Re-export the structural validators so existing import sites (and the public
-// package entry) keep resolving them from `./bundler`. The implementations live
-// in `./structural-validators` so they can run without loading esbuild.
-export {
-  validateComponentNames,
-  validateReference,
-  validateStoreReferences,
-} from './structural-validators.js';
+// Re-export the structural validators so existing import sites keep resolving
+// them from `./bundler`. The implementations live in `@walkeros/core/dev` so
+// they can run without loading esbuild.
+export { validateComponentNames, validateReference, validateStoreReferences };
 
 import {
   parsePackageSpec,
@@ -1016,6 +1012,11 @@ export function detectNamedImports(
 interface ImportGenerationResult {
   importStatements: string[];
   devExportEntries: string[];
+  // `'<pkg>': ["exportA", "exportB"]` per package declaring
+  // `walkerOS.exports`, read from the copy being bundled. Emitted beside
+  // `__devExports` so simulate can tell which export a step's examples
+  // belong to.
+  packageExportEntries: string[];
   // Packages that received a lazy `/dev` registry entry. Exposed so a later
   // browser-build step can externalize the same `<pkg>/dev` specifiers without
   // recomputing the set (preventing drift between the registry and externals).
@@ -1118,8 +1119,46 @@ async function generateImportStatements(
   const devExportEntries = devPackages.map(
     (packageName) => `'${packageName}': () => import('${packageName}/dev')`,
   );
+  const packageExports = withDev
+    ? await computePackageExports(usedPackages, packagePaths)
+    : {};
+  const packageExportEntries = Object.entries(packageExports).map(
+    ([packageName, exportNames]) =>
+      `'${packageName}': ${JSON.stringify(exportNames)}`,
+  );
 
-  return { importStatements, devExportEntries, devPackages };
+  return {
+    importStatements,
+    devExportEntries,
+    packageExportEntries,
+    devPackages,
+  };
+}
+
+/**
+ * Reads the export names each package declares in its package.json
+ * `walkerOS.exports`, from the copy being bundled (`packagePaths`).
+ * Packages without the field are left out.
+ */
+export async function computePackageExports(
+  usedPackages: Iterable<string>,
+  packagePaths: Map<string, string>,
+): Promise<Record<string, string[]>> {
+  const result: Record<string, string[]> = {};
+  for (const packageName of usedPackages) {
+    const localPath = packagePaths.get(packageName);
+    if (!localPath) continue;
+
+    try {
+      const pkgJson = await fs.readJSON(path.join(localPath, 'package.json'));
+      const exports = pkgJson?.walkerOS?.exports;
+      if (exports && typeof exports === 'object' && !Array.isArray(exports))
+        result[packageName] = Object.keys(exports);
+    } catch {
+      // Package doesn't have a readable package.json, skip gracefully
+    }
+  }
+  return result;
 }
 
 /**
@@ -1284,17 +1323,21 @@ export async function createEntryPoint(
     buildOptions.withDev !== undefined
       ? buildOptions.withDev === true
       : buildOptions.skipWrapper === true;
-  const { importStatements, devExportEntries, devPackages } =
-    await generateImportStatements(
-      buildOptions.packages,
-      destinationPackages,
-      sourcePackages,
-      transformerPackages,
-      storePackages,
-      namedImports,
-      packagePaths,
-      withDev,
-    );
+  const {
+    importStatements,
+    devExportEntries,
+    packageExportEntries,
+    devPackages,
+  } = await generateImportStatements(
+    buildOptions.packages,
+    destinationPackages,
+    sourcePackages,
+    transformerPackages,
+    storePackages,
+    namedImports,
+    packagePaths,
+    withDev,
+  );
 
   const importsCode = importStatements.join('\n');
   const hasFlow =
@@ -1332,9 +1375,17 @@ export async function createEntryPoint(
     devExportEntries.length > 0
       ? `\nexport const __devExports = {\n  ${devExportEntries.join(',\n  ')},\n};`
       : '';
+  // Declared exports per package, beside the registry (same withDev gate).
+  // Always emitted with the dev surface, `{}` included, so a bundle without
+  // it is reliably one built before it existed.
+  const packageExportsBlock = withDev
+    ? packageExportEntries.length > 0
+      ? `\nexport const __packageExports = {\n  ${packageExportEntries.join(',\n  ')},\n};`
+      : '\nexport const __packageExports = {};'
+    : '';
 
   // Return ESM module (imports + wireConfig + startFlow re-export + optional devExports)
-  const fullModule = wireConfigModule + devExportsBlock;
+  const fullModule = wireConfigModule + devExportsBlock + packageExportsBlock;
   const codeEntry = importsCode
     ? `${importsCode}\n\n${fullModule}`
     : fullModule;

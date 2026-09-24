@@ -145,11 +145,21 @@
           "items": {
             "type": "string"
           }
+        },
+        "env": {
+          "description": "Declared build-time values for web $env references (inlined into public bundles, never secrets)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false,
       "title": "Flow.Bundle",
-      "description": "Bundle configuration (packages + overrides + traceInclude)."
+      "description": "Bundle configuration (packages + overrides + traceInclude + env)."
     },
     "FlowObserve": {
       "type": "object",

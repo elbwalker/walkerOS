@@ -1,112 +1,111 @@
 ---
 title: Docker
-description: Get walkerOS running with Docker in 5 minutes
+description: Get a server flow running with Docker in 5 minutes
 sidebar_position: 3
 ---
 
 # Docker
 
-## Try the demo
+Build a flow with the CLI, then run it in the `walkeros/flow` image. The image
+runs prebuilt artifacts only, so every Docker path starts with
+`walkeros bundle`.
+
+## 1. Write a flow
+
+Save as `flow.json`: an HTTP endpoint at `/collect` that logs every event it
+receives.
 
 <CodeSnippet
-  code={`docker run -p 8080:8080 -e BUNDLE=/app/demos/demo-collect.mjs walkeros/flow:latest`}
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "packages": {
+            "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+            "@walkeros/server-source-express": { "version": "latest" },
+            "@walkeros/destination-demo": { "version": "latest" }
+          }
+        }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "primary": true,
+          "config": { "settings": { "path": "/collect", "port": 8080, "cors": true } }
+        }
+      },
+      "destinations": {
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "config": { "settings": { "name": "Demo" } }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## 2. Bundle it
+
+<CodeSnippet code={`npx @walkeros/cli bundle flow.json -o dist/`} language="bash" />
+
+This writes the artifact directory `dist/`: `flow.mjs`, `package.json` and
+the traced `node_modules/`.
+
+## 3. Run it
+
+<CodeSnippet
+  code={`docker run --rm -p 8080:8080 \\
+  -v "$PWD/dist:/app/flow:ro" \\
+  walkeros/flow:<version>`}
   language="bash"
 />
 
-Output:
+Replace `<version>` with a `walkeros/flow` version that ships `runneros`,
+ideally the CLI version you bundled with, see
+[image tags](/docs/apps/runtime#image-tags). The image starts
+`/app/flow/flow.mjs` by default, so the mount is all it needs.
+
+## 4. Send an event
 
 <CodeSnippet
-  code={`INFO [runner] Loading flow from /app/demos/demo-collect.mjs
-INFO [runner] Flow running
-INFO [runner] Port: 8080`}
-  language="bash"
-/>
+  code={`curl http://localhost:8080/ready
 
-Test it:
-
-<CodeSnippet
-  code={`curl -X POST http://localhost:8080/collect \\
-  -H "Content-Type: application/json" \\
-  -d '{"name":"page view","data":{"title":"Test Page"}}'`}
-  language="bash"
-/>
-
-## HTTP event collection
-
-<CodeSnippet
-  code={`docker run -d -p 8080:8080 \\
-  -e BUNDLE=/app/demos/demo-collect.mjs \\
-  walkeros/flow
-
-# Send event
 curl -X POST http://localhost:8080/collect \\
   -H "Content-Type: application/json" \\
   -d '{"name":"page view","data":{"title":"Home"}}'`}
   language="bash"
 />
 
-## Built-in demos
+`/ready` answers `{"status":"ready"}` once the flow is up, and the container
+log shows the event arriving at the demo destination.
 
-The Docker image includes demo bundles at `/app/demos/`:
+## Bake it into an image
 
-- `demo-collect.mjs` - Server collector demo
-- `demo-serve.js` - Web bundle demo
+For deployment, build the artifact inside a multi-stage Dockerfile so the
+image carries it. Use the
+[canonical Dockerfile](/docs/apps/runtime#canonical-dockerfile).
 
-## Custom flow
-
-### Build your flow
-
-Docker runtime requires **pre-built bundles**, not JSON configs.
-
-**Workflow:**
-
-1. Create a [flow.json](/docs/getting-started/flow/) config
-2. Bundle with CLI: `walkeros bundle flow.json --output flow.mjs`
-3. Run in Docker: `docker run -e BUNDLE=/app/flow.mjs`
-
-### Build custom image
+## Docker Compose
 
 <CodeSnippet
-  code={`FROM walkeros/flow:latest
-COPY flow.mjs /app/flow.mjs
-ENV BUNDLE=/app/flow.mjs`}
-  language="docker"
-/>
-
-<CodeSnippet
-  code={`docker build -t my-walker .
-docker run -p 8080:8080 my-walker`}
-  language="bash"
-/>
-
-## Docker compose
-
-<CodeSnippet
-  code={`version: '3.8'
-
-services:
+  code={`services:
   walkeros:
-    image: walkeros/flow:latest
-    environment:
-      BUNDLE: /app/demos/demo-collect.mjs
+    image: walkeros/flow:<version>
+    volumes:
+      - ./dist:/app/flow:ro
     ports:
       - '8080:8080'
     restart: unless-stopped`}
   language="yaml"
 />
 
-## Environment variables
-
-| Variable     | Description                                         | Default           |
-| ------------ | --------------------------------------------------- | ----------------- |
-| `BUNDLE`     | Path to pre-bundled flow file                       | Required          |
-| `PORT`       | Server port                                         | 8080              |
-| `HOST`       | Server host                                         | 0.0.0.0           |
-| `SERVE_NAME` | Filename in URL (serve mode)                        | walker.js         |
-| `SERVE_PATH` | URL directory (serve mode)                          | (empty = root)    |
-
 ## Next steps
 
-- [Available sources](../../sources/)
-- [Available destinations](../../destinations/)
-- [Docker Package README](https://github.com/elbwalker/walkerOS/tree/main/packages/docker)
+- [Runtime](/docs/apps/runtime): inputs, environment variables, health checks, constraints
+- [Available sources](/docs/sources/)
+- [Available destinations](/docs/destinations/)

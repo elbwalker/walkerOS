@@ -43,5 +43,6 @@ export const push: Env = {
 };
 
 export const simulation = [
-  'call:window.gtag', // Track gtag function calls
+  'call:window.gtag', // Track gtag function calls (GA4, Ads)
+  'call:window.dataLayer.push', // Track GTM dataLayer pushes
 ];

@@ -8,6 +8,7 @@ import {
 import { transformerFile } from '../transformer';
 import type { Types } from '../types';
 import { examples } from '../dev';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 function createMockStore(): Store.Instance {
   const data = new Map<string, Store.StoreValue>();
@@ -101,3 +102,6 @@ describe('Step Examples', () => {
     expect(capturedOptions!.headers).toMatchObject(expected.headers);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

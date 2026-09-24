@@ -59,8 +59,8 @@ export const push: Env = {
 
 /** Simulation tracking paths for CLI --simulate. */
 export const simulation = [
-  'call:client.capture',
-  'call:client.identify',
-  'call:client.groupIdentify',
-  'call:client.shutdown',
+  'call:PostHog.capture',
+  'call:PostHog.identify',
+  'call:PostHog.groupIdentify',
+  'call:PostHog.shutdown',
 ];

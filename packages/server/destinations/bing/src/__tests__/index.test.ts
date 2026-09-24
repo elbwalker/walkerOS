@@ -2,6 +2,7 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import {
   clone,
+  createIngest,
   getEvent,
   createMockContext,
   createMockLogger,
@@ -438,5 +439,69 @@ describe('Server Destination Bing', () => {
     expect(body.data[0].eventType).toBe('custom');
     expect(body.data[0].eventName).toBe('page view');
     expect(body.data[0].eventSourceUrl).toBe('https://example.com/home');
+  });
+
+  describe('client IP and user agent auto-fill', () => {
+    const ingest = {
+      ...createIngest('test'),
+      ip: '203.0.113.7',
+      userAgent: 'Mozilla/5.0 test',
+    };
+    const sent = () => JSON.parse(mockSendServer.mock.calls[0][1]);
+
+    test('fills client IP and user agent from ingest by default', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: { settings: { accessToken, tagId } },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sent().data[0].userData.clientIpAddress).toBe('203.0.113.7');
+      expect(sent().data[0].userData.clientUserAgent).toBeDefined();
+    });
+
+    test('falls back to event.user.ip and userAgent', async () => {
+      await destination.push(
+        getEvent('entity action', {
+          user: { id: 'us3r', ip: '198.51.100.2', userAgent: 'UA2' },
+        }),
+        createMockContext({
+          config: { settings: { accessToken, tagId } },
+          env: testEnv,
+        }),
+      );
+      expect(sent().data[0].userData.clientIpAddress).toBe('198.51.100.2');
+      expect(sent().data[0].userData.clientUserAgent).toBeDefined();
+    });
+
+    test('sends neither when disabled with false', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: {
+            settings: { accessToken, tagId, ip: false, userAgent: false },
+          },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sent().data[0].userData.clientIpAddress).toBeUndefined();
+      expect(sent().data[0].userData.clientUserAgent).toBeUndefined();
+    });
+
+    test('lets an explicitly mapped value win', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: { settings: { accessToken, tagId } },
+          data: { userData: { clientIpAddress: '10.0.0.1' } },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sent().data[0].userData.clientIpAddress).toBe('10.0.0.1');
+    });
   });
 });

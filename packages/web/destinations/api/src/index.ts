@@ -37,6 +37,17 @@ function send(
   sendWebFn(url, body, { headers, method, transport });
 }
 
+/** A transformed body as a batch item: JSON object or array text becomes its value. */
+function fromBody(body: SendDataValue): unknown {
+  if (typeof body !== 'string') return body;
+  try {
+    const parsed: unknown = JSON.parse(body);
+    return typeof parsed === 'object' && parsed !== null ? parsed : body;
+  } catch {
+    return body;
+  }
+}
+
 export const destinationAPI: Destination = {
   type: 'api',
 
@@ -80,9 +91,11 @@ export const destinationAPI: Destination = {
       isDefined(e.data) ? e.data : e.event,
     );
 
-    // Apply transform to each item if defined, then stringify array
+    // Apply transform to each item if defined, then stringify the array. A
+    // transform returns one serialized body, so a JSON string joins the array
+    // as its value instead of as an escaped string.
     const payload = transform
-      ? items.map((item) => transform(item, config, rule))
+      ? items.map((item) => fromBody(transform(item, config, rule)))
       : items;
 
     // No traceparent here: a batch may aggregate events from distinct

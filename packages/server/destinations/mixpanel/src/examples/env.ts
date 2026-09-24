@@ -5,7 +5,14 @@ import type {
   MixpanelGroups,
 } from '../types';
 
-const noop = (() => {}) as (...args: unknown[]) => void;
+/**
+ * The SDK reports completion through an optional trailing callback, which the
+ * destination awaits; call it so a simulated push completes.
+ */
+const noop = (...args: unknown[]): void => {
+  const callback = args[args.length - 1];
+  if (typeof callback === 'function') callback();
+};
 
 const noopPeople: MixpanelPeople = {
   set: noop,
@@ -52,21 +59,21 @@ export const push: Env = {
 /** Simulation tracking paths for CLI --simulate. */
 export const simulation = [
   'call:Mixpanel.init',
-  'call:mp.track',
-  'call:mp.import',
-  'call:mp.alias',
-  'call:mp.people.set',
-  'call:mp.people.set_once',
-  'call:mp.people.increment',
-  'call:mp.people.append',
-  'call:mp.people.union',
-  'call:mp.people.remove',
-  'call:mp.people.unset',
-  'call:mp.people.delete_user',
-  'call:mp.groups.set',
-  'call:mp.groups.set_once',
-  'call:mp.groups.union',
-  'call:mp.groups.remove',
-  'call:mp.groups.unset',
-  'call:mp.groups.delete_group',
+  'call:Mixpanel.init.track',
+  'call:Mixpanel.init.import',
+  'call:Mixpanel.init.alias',
+  'call:Mixpanel.init.people.set',
+  'call:Mixpanel.init.people.set_once',
+  'call:Mixpanel.init.people.increment',
+  'call:Mixpanel.init.people.append',
+  'call:Mixpanel.init.people.union',
+  'call:Mixpanel.init.people.remove',
+  'call:Mixpanel.init.people.unset',
+  'call:Mixpanel.init.people.delete_user',
+  'call:Mixpanel.init.groups.set',
+  'call:Mixpanel.init.groups.set_once',
+  'call:Mixpanel.init.groups.union',
+  'call:Mixpanel.init.groups.remove',
+  'call:Mixpanel.init.groups.unset',
+  'call:Mixpanel.init.groups.delete_group',
 ];

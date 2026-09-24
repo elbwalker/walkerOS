@@ -156,6 +156,7 @@ async function ensureBucketExists(
   credentials: Store.Credentials<Types> | undefined,
   getToken: () => Promise<string>,
   logger: Logger.Instance,
+  doFetch: typeof fetch,
 ): Promise<void> {
   const existing = bucketExistsCache.get(bucket);
   if (existing !== undefined) {
@@ -168,7 +169,7 @@ async function ensureBucketExists(
     try {
       const token = await getToken();
       const url = `${GCS_BASE}/storage/v1/b/${encodeURIComponent(bucket)}`;
-      res = await fetch(url, {
+      res = await doFetch(url, {
         method: 'HEAD',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -211,7 +212,10 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
   const prefix = normalizePrefix(settings.prefix);
   const rawCreds = resolveCredentials(context.config, context.logger);
   const creds = parseCredentials(rawCreds);
-  const getToken = createTokenProvider(creds);
+  // An injected fetch (tests, simulate) carries every request, token exchange
+  // included; the global fetch is the runtime default.
+  const doFetch = context.env?.fetch ?? context.config.env?.fetch ?? fetch;
+  const getToken = createTokenProvider(creds, doFetch);
   const bucketRaw = settings.bucket;
   const bucket = encodeURIComponent(bucketRaw);
   const id = context.id;
@@ -250,13 +254,20 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
       const gcsKey = resolveKey(key);
       if (!gcsKey) return undefined;
 
-      await ensureBucketExists(bucketRaw, id, rawCreds, getToken, logger);
+      await ensureBucketExists(
+        bucketRaw,
+        id,
+        rawCreds,
+        getToken,
+        logger,
+        doFetch,
+      );
 
       let bytes: Buffer;
       try {
         const token = await getToken();
         const url = `${GCS_BASE}/download/storage/v1/b/${bucket}/o/${encodeURIComponent(gcsKey)}?alt=media`;
-        const res = await fetch(url, {
+        const res = await doFetch(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return undefined;
@@ -305,11 +316,18 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
         contentType = JSON_CONTENT_TYPE;
       }
 
-      await ensureBucketExists(bucketRaw, id, rawCreds, getToken, logger);
+      await ensureBucketExists(
+        bucketRaw,
+        id,
+        rawCreds,
+        getToken,
+        logger,
+        doFetch,
+      );
 
       const token = await getToken();
       const url = `${GCS_BASE}/upload/storage/v1/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(gcsKey)}`;
-      await fetch(url, {
+      await doFetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -323,12 +341,19 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
       const gcsKey = resolveKey(key);
       if (!gcsKey) return;
 
-      await ensureBucketExists(bucketRaw, id, rawCreds, getToken, logger);
+      await ensureBucketExists(
+        bucketRaw,
+        id,
+        rawCreds,
+        getToken,
+        logger,
+        doFetch,
+      );
 
       try {
         const token = await getToken();
         const url = `${GCS_BASE}/storage/v1/b/${bucket}/o/${encodeURIComponent(gcsKey)}`;
-        await fetch(url, {
+        await doFetch(url, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
         });

@@ -37,6 +37,11 @@ export interface WalkerOSPackage extends WalkerOSPackageInfo {
   source?: string;
   hintKeys: string[];
   exampleSummaries: ExampleSummary[];
+  /**
+   * Examples per export, keyed by export name. Present only for packages
+   * that ship several exports; `examples` then holds the default export's.
+   */
+  exportExamples?: Record<string, unknown>;
 }
 
 /**
@@ -57,6 +62,7 @@ interface UnifiedPackageResponse {
   hintKeys?: string[];
   exampleSummaries?: ExampleSummary[];
   examples?: Record<string, unknown>;
+  exportExamples?: Record<string, unknown>;
 }
 
 export async function fetchPackage(
@@ -115,6 +121,7 @@ function shapeFromDetail(
   const hintKeys = detail.hintKeys ?? (hints ? Object.keys(hints) : []);
   const exampleSummaries = detail.exampleSummaries ?? [];
   const platform = detail.platform;
+  const exportExamples = detail.exportExamples;
 
   return {
     packageName: detail.package || packageName,
@@ -131,7 +138,12 @@ function shapeFromDetail(
     ...(hints && Object.keys(hints).length > 0 ? { hints } : {}),
     hintKeys,
     exampleSummaries,
+    ...(isObjectRecord(exportExamples) ? { exportExamples } : {}),
   };
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 async function fetchJson(
@@ -155,6 +167,7 @@ function parsePackage(
   const examples = (walkerOSJson.examples as Record<string, unknown>) || {};
   const hints = walkerOSJson.hints as Record<string, unknown> | undefined;
   const hintKeys = hints ? Object.keys(hints) : [];
+  const exportExamples = walkerOSJson.exportExamples;
 
   const exampleSummaries: ExampleSummary[] = [];
   const stepExamples = (examples.step || {}) as Record<string, unknown>;
@@ -183,6 +196,7 @@ function parsePackage(
     ...(hints && Object.keys(hints).length > 0 ? { hints } : {}),
     hintKeys,
     exampleSummaries,
+    ...(isObjectRecord(exportExamples) ? { exportExamples } : {}),
   };
 }
 

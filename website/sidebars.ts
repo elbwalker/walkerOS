@@ -572,8 +572,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'apps/walkerjs',
             'apps/cli',
-            'apps/docker',
-            'apps/runner',
+            'apps/runtime',
             {
               type: 'category',
               label: 'Core',

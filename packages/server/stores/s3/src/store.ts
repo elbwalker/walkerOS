@@ -94,11 +94,15 @@ export const storeS3Init: Store.Init<Types> = async (context) => {
   // through the shared core codec, stored as application/json.
   const fileMode = context.config.file === true;
 
+  // An injected fetch (tests, simulate) carries every S3 request; s3mini
+  // uses the global fetch when none is given.
+  const injectedFetch = context.env?.fetch ?? context.config.env?.fetch;
   const client = new S3mini({
     endpoint: buildEndpoint(settings.endpoint, settings.bucket),
     accessKeyId: settings.accessKeyId,
     secretAccessKey: settings.secretAccessKey,
     region: settings.region || 'auto',
+    ...(injectedFetch ? { fetch: injectedFetch } : {}),
   });
 
   function resolveKey(key: string): string | undefined {

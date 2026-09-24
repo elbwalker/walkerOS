@@ -9,10 +9,9 @@ const config = {
   // forceExit, and keep --detectOpenHandles in CI as a guard.
   maxWorkers: 3,
   testTimeout: 30000,
-  // Transform ESM packages: jsdom and its dependency closure are pure ESM,
-  // as are p-limit and the yocto-queue it pulls in.
+  // Transform ESM packages: jsdom and its dependency closure are pure ESM.
   transformIgnorePatterns: [
-    'node_modules/(?!(@walkeros|chalk|jsdom|parse5|nwsapi|entities|@exodus/bytes|@asamuzakjp|@bramus|@csstools|css-tree|tough-cookie|msw|until-async|rettime|@bundled-es-modules|@mswjs|@open-draft|p-limit|yocto-queue)/)',
+    'node_modules/(?!(@walkeros|chalk|jsdom|parse5|nwsapi|entities|@exodus/bytes|@asamuzakjp|@bramus|@csstools|css-tree|tough-cookie|msw|until-async|rettime|@bundled-es-modules|@mswjs|@open-draft)/)',
   ],
   testPathIgnorePatterns: [
     ...(baseConfig.testPathIgnorePatterns || []),

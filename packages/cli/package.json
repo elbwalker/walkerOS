@@ -47,9 +47,7 @@
     "lint": "eslint \"src/**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage && rm -rf .temp && rm -rf .tmp",
     "docker:build": "bash scripts/build-docker.sh",
-    "docker:build:flow": "bash scripts/build-flow.sh",
-    "docker:test": "bash scripts/test-docker.sh",
-    "docker:publish": "bash scripts/publish-docker.sh"
+    "docker:test": "bash scripts/test-docker.sh"
   },
   "dependencies": {
     "@vercel/nft": "^1.10.2",
@@ -62,14 +60,12 @@
     "chalk": "^5.6.2",
     "ci-info": "^4.4.0",
     "commander": "^15.0.0",
-    "cors": "^2.8.5",
     "esbuild": "^0.28.0",
-    "express": "^5.2.1",
     "fs-extra": "^11.3.2",
     "jsdom": "^29.1.1",
+    "npm-package-arg": "^13.0.2",
     "open": "^11.0.0",
     "openapi-fetch": "^0.17.0",
-    "p-limit": "^7.3.0",
     "pacote": "^21.0.4",
     "picomatch": "^4.0.4",
     "semver": "^7.7.4",
@@ -77,10 +73,9 @@
     "zod": "^4.0"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.6",
     "@types/fs-extra": "^11.0.4",
     "@types/jsdom": "^28.0.3",
+    "@types/npm-package-arg": "^6.1.4",
     "@types/pacote": "^11.1.8",
     "@types/picomatch": "4.0.3",
     "@types/semver": "^7.7.1",

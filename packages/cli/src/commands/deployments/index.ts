@@ -1,9 +1,11 @@
-import { getPlatform } from '@walkeros/core';
+import { getPlatform, isObject } from '@walkeros/core';
 import { requireProjectId } from '../../core/auth.js';
 import { apiFetch } from '../../core/http.js';
 import { handleCliError, throwApiError } from '../../core/api-error.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
+import { resolveAppUrl } from '../../lib/config-file.js';
+import { VERSION } from '../../version.js';
 import { loadFlowConfig } from '../../config/loader.js';
 import type { GlobalOptions } from '../../types/global.js';
 
@@ -277,12 +279,17 @@ export async function createDeployCommand(
       const flowName = options.flow ?? Object.keys(flows)[0];
       if (!flowName) throw new Error('No flows found in config');
       const flowSettings = flows[flowName];
-      if (!flowSettings || typeof flowSettings !== 'object')
-        throw new Error('Invalid flow config');
+      if (!isObject(flowSettings)) throw new Error('Invalid flow config');
 
-      if ('web' in flowSettings) type = 'web';
-      else if ('server' in flowSettings) type = 'server';
-      else throw new Error('Flow must have "web" or "server" key');
+      // A v4 flow declares its platform at flows.<name>.config.platform.
+      const platform = isObject(flowSettings.config)
+        ? flowSettings.config.platform
+        : undefined;
+      if (platform !== 'web' && platform !== 'server')
+        throw new Error(
+          `Flow "${flowName}" must have config.platform set to "web" or "server"`,
+        );
+      type = platform;
     } else {
       // Local file: use config loader + core getPlatform
       const result = await loadFlowConfig(config, {
@@ -312,19 +319,61 @@ export async function createDeployCommand(
     log.info(`Deployment created: ${result.id}`);
     log.info(`  Slug:  ${result.slug}`);
     log.info(`  Type:  ${result.type}`);
-    log.info('');
-    log.info('Run locally:');
-    log.info(
-      `  walkeros run ${isRemoteFlow ? 'flow.json' : config} --deploy ${result.id}`,
-    );
-    log.info('');
-    log.info('Create a deploy token for this flow in the app');
-    log.info('(Settings, Self-hosted deploy token) and set it as');
-    log.info('WALKEROS_DEPLOY_TOKEN, then run with Docker:');
-    log.info('  docker run -e WALKEROS_DEPLOY_TOKEN \\');
-    log.info('             -e WALKEROS_APP_URL=https://app.walkeros.io \\');
-    log.info('             walkeros/flow:latest');
+
+    if (type === 'server') {
+      for (const line of selfHostServerHint({
+        config: isRemoteFlow ? 'flow.json' : config,
+        flowId: isRemoteFlow ? config : undefined,
+        projectId: options.project ?? requireProjectId(),
+        deploymentId: String(result.id),
+        appUrl: resolveAppUrl(),
+        version: VERSION,
+      }))
+        log.info(line);
+    }
   } catch (err) {
     handleCliError(err);
   }
+}
+
+/**
+ * The self-host instructions for a server deployment: build `dist/` with the
+ * CLI, then run it in the `walkeros/flow` image (or with `runneros`) pinned to
+ * this CLI's version. Mirrors the app's self-hosted command: the whole `dist/`
+ * directory mounted at `/app/flow`, the token passed through from the shell,
+ * and the project, flow and deployment ids the heartbeat needs.
+ * Keep in step with the app's CI-executed source of this shape,
+ * `components/src/flow/deploy/self-host-command.ts` (a copy, not an import:
+ * public packages never depend on the app).
+ */
+export function selfHostServerHint(input: {
+  config: string;
+  /** Known for a remote flow; a local config prints a placeholder. */
+  flowId?: string;
+  projectId: string;
+  deploymentId: string;
+  appUrl: string;
+  version: string;
+}): string[] {
+  const env: Array<[string, string]> = [
+    ['WALKEROS_PROJECT_ID', input.projectId],
+    ['WALKEROS_FLOW_ID', input.flowId ?? '<your-flow-id>'],
+    ['WALKEROS_DEPLOYMENT_ID', input.deploymentId],
+    ['WALKEROS_APP_URL', input.appUrl],
+  ];
+  return [
+    '',
+    'Create a deploy token for this flow in the app',
+    '(Settings, Self-hosted deploy token) and export it as',
+    'WALKEROS_DEPLOY_TOKEN. Then build and run it with Docker:',
+    `  walkeros bundle ${input.config} -o dist/`,
+    '  docker run --rm -p 8080:8080 \\',
+    '    -v "$PWD/dist:/app/flow:ro" \\',
+    '    -e WALKEROS_DEPLOY_TOKEN \\',
+    ...env.map(([name, value]) => `    -e ${name}="${value}" \\`),
+    `    walkeros/flow:${input.version}`,
+    '',
+    'Or run the built flow with Node, with the same variables exported:',
+    `  npx --yes --package=@walkeros/runner@${input.version} runneros start dist/flow.mjs`,
+  ];
 }

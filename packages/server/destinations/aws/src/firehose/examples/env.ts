@@ -26,12 +26,17 @@ class MockFirehoseClient {
   }
 }
 
-// Mock PutRecordBatchCommand class
+// Mock PutRecordBatchCommand class. The build minifies class names; the tag
+// keeps the SDK command name in printed simulate output.
 class MockPutRecordBatchCommand {
   input: unknown;
 
   constructor(input: unknown) {
     this.input = input;
+  }
+
+  get [Symbol.toStringTag](): string {
+    return 'PutRecordBatchCommand';
   }
 }
 
@@ -45,4 +50,4 @@ export const push: Env = {
   },
 };
 
-export const simulation = ['AWS.FirehoseClient'];
+export const simulation = ['call:AWS.FirehoseClient.send'];

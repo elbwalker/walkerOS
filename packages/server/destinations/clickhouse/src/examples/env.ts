@@ -12,4 +12,4 @@ export const push: Env = {
   ClickHouseClient: createClient,
 };
 
-export const simulation = ['ClickHouseClient'];
+export const simulation = ['call:ClickHouseClient.insert'];

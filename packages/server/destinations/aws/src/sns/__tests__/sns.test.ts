@@ -24,6 +24,8 @@ import {
 } from '@walkeros/core';
 import type { Collector } from '@walkeros/core';
 import type { Config, Destination, Env } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
+import * as snsExamples from '../examples';
 
 const env: Env = {
   AWS: {
@@ -221,3 +223,6 @@ describe('SNS destination', () => {
     );
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(snsExamples.env));

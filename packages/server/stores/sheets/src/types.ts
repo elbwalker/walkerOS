@@ -49,9 +49,17 @@ export interface Setup {
   headers?: string[];
 }
 
+/**
+ * Injected dependencies (tests, simulate). Every Sheets and token request
+ * goes through `fetch`; without it the global `fetch` is used.
+ */
+export interface Env extends Store.BaseEnv {
+  fetch?: typeof fetch;
+}
+
 export type Types = Store.Types<
   SheetsStoreSettings,
-  Store.BaseEnv,
+  Env,
   SheetsStoreSettings,
   Setup,
   Credential<ServiceAccount>

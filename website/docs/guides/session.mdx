@@ -95,6 +95,8 @@ sessionStart({ storage: true });
 
 In addition, with `storage: true` and optionally granted `consent`, the `id` and
 `device` values are set automatically as `user.session` and `user.device` ids.
+Window mode sets neither: its `id` is only available as `data.id` of the
+`session start` event.
 
 :::
 

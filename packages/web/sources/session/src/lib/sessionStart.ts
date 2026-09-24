@@ -87,10 +87,8 @@ const defaultCb: SessionCallback = (
 ): Collector.SessionData => {
   const user: WalkerOS.User = {};
 
-  // User.session is the session ID
-  if (session.id) user.session = session.id;
-
-  // Set device ID only in storage mode
+  // User ids only in storage mode; a window session id lives in session start data.id
+  if (session.storage && session.id) user.session = session.id;
   if (session.storage && session.device) user.device = session.device;
 
   // Set user IDs and broadcast session data

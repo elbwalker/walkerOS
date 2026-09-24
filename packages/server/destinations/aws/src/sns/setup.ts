@@ -1,8 +1,14 @@
 import type { DestinationServer } from '@walkeros/server-core';
-import type { Env, Setup, SetupSubscription, Settings, Types } from './types';
+import type {
+  Env,
+  SendClient,
+  Setup,
+  SetupSubscription,
+  Settings,
+  Types,
+} from './types';
 import type { LifecycleContext } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
-import type { SNSClient as SNSClientType } from '@aws-sdk/client-sns';
 
 // Setup is wired to the destination's `setup` slot which uses the broader
 // `DestinationServer.Config<Types>` (settings is optional). We runtime-narrow
@@ -71,7 +77,7 @@ function resolveClient(
   settings: Settings | undefined,
   env: Env,
   region: string,
-): SNSClientType {
+): SendClient {
   if (settings?.client) return settings.client;
   const config = settings?.config ?? {};
   const merged = config.region ? config : { ...config, region };
@@ -127,7 +133,7 @@ function buildSubscribeAttributes(
 }
 
 async function applyDeclaredSubscriptions(
-  client: SNSClientType,
+  client: SendClient,
   env: Env,
   topicArn: string,
   declared: SetupSubscription[],

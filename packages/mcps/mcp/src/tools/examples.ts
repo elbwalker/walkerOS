@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
-import type { Flow } from '@walkeros/core';
+import type { Flow, WalkerOSPackage } from '@walkeros/core';
+import { resolveExportName, selectDevExamples } from '@walkeros/cli';
 import { ExamplesListOutputShape } from '../schemas/output.js';
 import { getPackageBaseUrl, CLIENT_HEADER } from '../catalog.js';
 
@@ -152,22 +153,18 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
       return items;
     };
 
-    // Pull a referenced package's shipped step examples via the same path
+    // Pull a referenced package's shipped examples via the same path
     // package_get uses. A failed fetch must not break the whole tool: the
     // step is skipped and inline examples from other steps still return.
     const baseUrl = getPackageBaseUrl();
-    const loadPackageExamples = async (
+    const loadPackage = async (
       packageName: string,
-    ): Promise<Flow.StepExamples | undefined> => {
+    ): Promise<WalkerOSPackage | undefined> => {
       try {
-        const info = await fetchPackage(packageName, {
+        return await fetchPackage(packageName, {
           baseUrl,
           client: CLIENT_HEADER,
         });
-        const stepExamples = (info.examples as { step?: unknown } | undefined)
-          ?.step;
-        if (stepExamples && typeof stepExamples === 'object')
-          return stepExamples as Flow.StepExamples;
       } catch {
         // Swallow: graceful fallback skip for this package.
       }
@@ -178,27 +175,44 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
     // many packages cannot fan out into an unbounded number of fetches.
     const packageLookups = new Map<
       string,
-      Promise<Flow.StepExamples | undefined>
+      Promise<WalkerOSPackage | undefined>
     >();
     let skippedPackages = false;
-    const examplesForPackage = (
+    const packageFor = (
       packageName: string,
-    ): Promise<Flow.StepExamples | undefined> => {
+    ): Promise<WalkerOSPackage | undefined> => {
       const existing = packageLookups.get(packageName);
       if (existing) return existing;
       if (packageLookups.size >= MAX_PACKAGE_LOOKUPS) {
         skippedPackages = true;
         return Promise.resolve(undefined);
       }
-      const lookup = loadPackageExamples(packageName);
+      const lookup = loadPackage(packageName);
       packageLookups.set(packageName, lookup);
       return lookup;
     };
 
+    // The step examples of the step's own export: a multi-export package
+    // ships `exportExamples` keyed by export name, the same rule simulate
+    // uses (an export missing from the map has no examples).
+    const stepExamplesFor = (
+      info: WalkerOSPackage,
+      exportName: string | undefined,
+    ): Flow.StepExamples | undefined => {
+      const selected = selectDevExamples(
+        { examples: info.examples, exportExamples: info.exportExamples },
+        exportName,
+      );
+      const stepExamples = selected?.step;
+      if (stepExamples && typeof stepExamples === 'object')
+        return stepExamples as Flow.StepExamples;
+      return undefined;
+    };
+
     const stepTypes = [
-      { key: 'sources' as const, type: 'source' },
-      { key: 'transformers' as const, type: 'transformer' },
-      { key: 'destinations' as const, type: 'destination' },
+      { key: 'sources' as const, type: 'source' as const },
+      { key: 'transformers' as const, type: 'transformer' as const },
+      { key: 'destinations' as const, type: 'destination' as const },
     ];
 
     for (const { key, type } of stepTypes) {
@@ -218,7 +232,10 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
         // No inline examples: fall back to the referenced package's shipped
         // examples (only for refs that actually name a package).
         if (!ref.package) continue;
-        const packageExamples = await examplesForPackage(ref.package);
+        const info = await packageFor(ref.package);
+        if (!info) continue;
+        const { exportName } = resolveExportName(flowSettings, type, name);
+        const packageExamples = stepExamplesFor(info, exportName);
         if (packageExamples)
           examples.push(...toItems(packageExamples, type, name, 'package'));
       }

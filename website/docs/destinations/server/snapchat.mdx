@@ -82,6 +82,10 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+## Client IP and user agent
+
+The destination sends the client IP as `user_data.client_ip_address` and the user agent as `user_data.client_user_agent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A value your mapping sets for `user_data.client_ip_address` or `user_data.client_user_agent` wins. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
+
 ## Event mapping
 
 Map walkerOS events to Snapchat standard event names via each rule's `name` field. Snapchat uses **UPPERCASE** standard event names (e.g. `PURCHASE`, not `Purchase`).

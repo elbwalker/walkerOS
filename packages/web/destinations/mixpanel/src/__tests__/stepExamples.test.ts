@@ -13,6 +13,7 @@ import { clone } from '@walkeros/core';
 import { examples } from '../dev';
 import type { MixpanelStepExample } from '../examples/step';
 import type { Env, MixpanelGroup, Settings } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 
@@ -179,3 +180,6 @@ describe('mixpanel destination — step examples', () => {
     },
   );
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

@@ -11,17 +11,19 @@ import type { Flow } from '@walkeros/core';
  *   - Mapped events (fan-out):   `out: [['return', e1], ['return', e2], ...]`
  *   - Dropped (ignore / no en):  `out: [['return', false]]`
  *
- * Examples set `_p` (page load id), `_s` (hit sequence) and `sid` (becomes
- * `event.timestamp` in ms via `sid * 1000`) so the assertions are
- * deterministic. The synthetic walkerOS event shape mirrors what
+ * Examples set `_p` (page load id), `_s` (hit sequence) and `sid` so the
+ * assertions are deterministic. `event.timestamp` is the receive time
+ * (`Date.now()`), so the examples show a fixed value and the examples test
+ * compares without it. The synthetic walkerOS event shape mirrors what
  * `mapHitToEvents` produces in `map.ts`:
  *   - `id` derived from `tid`, `cid`, `_p`, `_s` and the event's position in
  *     the hit: 16 lowercase hex chars, unique per event, identical when the
  *     same hit is delivered twice (see `id.ts`)
  *   - `entity` + `action` derived from rule.name's first/rest words
- *   - `user.{id,device,session}` from `uid/cid/sid`
- *   - `source: { type: 'ga4', platform?, pageLoadId, hitSequence }` from
- *     `p`, `_p` and `_s`
+ *   - `user.{id,device,session,language,screenSize}` from
+ *     `uid/cid/sid/ul/sr`
+ *   - `source: { type: 'ga4', url?, referrer?, platform?, pageLoadId,
+ *     hitSequence }` from `dl`, `dr`, `p`, `_p` and `_s`
  *   - `consent` from `gcs` (`G100` → all false, `G111` → all true)
  *   - `timing` from event `_et` (defaults to 0 if absent)
  *   - `trigger: 'ga4'` (hard-coded in v1)
@@ -30,7 +32,7 @@ import type { Flow } from '@walkeros/core';
 
 // --- helpers (typed, no casts) -----------------------------------------------
 
-const SID = '1700000000'; // → timestamp 1700000000000
+const SID = '1700000000';
 
 function ga4Event(
   hitSequence: string,
@@ -43,7 +45,6 @@ function ga4Event(
     timing: 0,
     trigger: 'ga4',
     user: { device: 'cid-1', session: SID },
-    globals: {},
     source: { type: 'ga4', pageLoadId: 'p1', hitSequence },
     consent: {},
     ...overrides,
@@ -77,6 +78,13 @@ export const pageView: Flow.StepExample = {
           id: 'https://shop.example.com/products/sku-123',
           title: 'Trail Runner Pro',
           referrer: 'https://shop.example.com/',
+        },
+        source: {
+          type: 'ga4',
+          url: 'https://shop.example.com/products/sku-123',
+          referrer: 'https://shop.example.com/',
+          pageLoadId: 'p1',
+          hitSequence: '1',
         },
       }),
     ],
@@ -313,6 +321,12 @@ export const consentDenied: Flow.StepExample = {
         entity: 'page',
         action: 'view',
         data: { id: 'https://x', title: 'X' },
+        source: {
+          type: 'ga4',
+          url: 'https://x',
+          pageLoadId: 'p1',
+          hitSequence: '10',
+        },
         consent: { marketing: false, analytics: false },
       }),
     ],

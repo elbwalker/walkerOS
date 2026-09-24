@@ -241,6 +241,8 @@ async function packageGetHandlerBody(input: unknown) {
     // Examples
     if (section === 'examples' || section === 'all') {
       result.examples = info.examples;
+      // Multi-export packages: examples per export, keyed by export name
+      if (info.exportExamples) result.exportExamples = info.exportExamples;
     } else {
       result.exampleSummaries = info.exampleSummaries;
     }

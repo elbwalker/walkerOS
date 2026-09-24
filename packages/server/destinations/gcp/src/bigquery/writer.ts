@@ -22,6 +22,16 @@ export type StreamConnection = Awaited<
 // from the package root).
 export type RemoveListener = ReturnType<StreamConnection['onConnectionError']>;
 
+/**
+ * The Storage Write API pieces a destination env may inject (tests, simulate).
+ * Each one missing falls back to the SDK, so runtime needs none of them.
+ */
+export interface WriterEnv {
+  WriterClient?: typeof managedwriter.WriterClient;
+  JSONWriter?: typeof managedwriter.JSONWriter;
+  adapt?: typeof adapt;
+}
+
 export interface OpenWriterArgs {
   projectId: string;
   datasetId: string;
@@ -55,6 +65,8 @@ export interface OpenWriterArgs {
    * throw (it runs on a detached emitter tick).
    */
   onConnectionError?: (err: unknown) => void;
+  /** Injected SDK pieces (the destination env); the SDK is the fallback. */
+  env?: WriterEnv;
 }
 
 export interface WriterHandles {
@@ -71,6 +83,9 @@ export interface WriterHandles {
 /**
  * Open a long-lived JSONWriter on the table's _default stream.
  * Requires the dataset and table to already exist (run `walkeros setup` first).
+ *
+ * The SDK pieces come from `args.env` when injected (tests, simulate), else
+ * from `@google-cloud/bigquery-storage`.
  *
  * Sequence (per SDK docs and empirical SDK probe):
  *   1. new WriterClient
@@ -93,7 +108,11 @@ export async function openWriter(
     bigquery,
     timeout,
     onConnectionError,
+    env,
   } = args;
+  const WriterClient = env?.WriterClient ?? managedwriter.WriterClient;
+  const JSONWriter = env?.JSONWriter ?? managedwriter.JSONWriter;
+  const adaptFn = env?.adapt ?? adapt;
   const destinationTable = `projects/${projectId}/datasets/${datasetId}/tables/${tableId}`;
 
   logger.debug('Opening BigQuery Storage Write API writer', {
@@ -116,7 +135,7 @@ export async function openWriter(
   // BigQueryOptions on the query client. Spread the resolved `config.credentials`
   // last so it wins over any `settings.bigquery.credentials`, mirroring the query
   // client's resolution in getConfig (one identity per destination).
-  const writeClient = new managedwriter.WriterClient({
+  const writeClient = new WriterClient({
     projectId,
     ...bigquery,
     ...(credentials !== undefined ? { credentials } : {}),
@@ -160,11 +179,11 @@ export async function openWriter(
         `BigQuery write stream ${streamId} returned no tableSchema; cannot build proto descriptor`,
       );
     }
-    const protoDescriptor = adapt.convertStorageSchemaToProto2Descriptor(
+    const protoDescriptor = adaptFn.convertStorageSchemaToProto2Descriptor(
       writeStream.tableSchema,
       'root',
     );
-    const writer = new managedwriter.JSONWriter({
+    const writer = new JSONWriter({
       connection,
       protoDescriptor,
     });

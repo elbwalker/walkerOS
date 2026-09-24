@@ -181,7 +181,7 @@ With `storage: true`, sessions persist across page loads:
 
 ## Session start event
 
-When a new session is detected, the source pushes a `session start` event and sets the user's session and device IDs on the collector:
+When a new session is detected, the source pushes a `session start` event. In storage mode it also sets `user.session` and `user.device` on the collector, so every event of the session carries them:
 
 <CodeSnippet
   code={`{
@@ -216,6 +216,8 @@ When a new session is detected, the source pushes a `session start` event and se
 | `isNew: true` | This is the device's very first session ever (storage mode only) |
 
 A returning visitor starting their second session has `isStart: true` but `isNew: false`. `isNew` only appears in storage mode since window-only mode has no device memory.
+
+**User IDs only with storage:** `user.session` and `user.device` are set only in storage mode, so they are present exactly when storage consent was given. In window mode the session ID would vanish on the next page load, so it is not a user ID and lives only in `data.id` of the `session start` event. Without storage consent, use a server-side key such as `user.hash` to group events.
 
 **Click ID parameters** are stored twice: `clickId` identifies which platform originated the click (e.g. `'gclid'`), and a separate field stores the actual value (e.g. `gclid: 'AW-123...'`). This makes it easy to filter by platform without inspecting the value.
 

@@ -191,6 +191,14 @@ const buildDev = (customConfig = {}) => {
         : undefined;
 
       const output = { $meta: meta, schemas, examples };
+
+      // Multi-export packages ship examples per export, keyed by export name
+      if (devModule.exportExamples) {
+        const exportExamples = toSerializable(devModule.exportExamples);
+        if (exportExamples && Object.keys(exportExamples).length > 0)
+          output.exportExamples = exportExamples;
+      }
+
       if (hints && Object.keys(hints).length > 0) {
         output.hints = hints;
       }

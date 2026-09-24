@@ -2,8 +2,6 @@ import {
   readConfig,
   writeConfig,
   clearAuthFields,
-  resolveToken,
-  resolveDeployToken,
   resolveAppUrl,
   getDefaultProject,
   type WalkerOSConfig,
@@ -152,18 +150,6 @@ export function credentialSource(): 'env' | 'config' | null {
   const config = readConfig();
   if (config?.token || config?.accessToken) return 'config';
   return null;
-}
-
-/**
- * Resolve token for runtime operations (run command, heartbeat, polling).
- * Priority: WALKEROS_DEPLOY_TOKEN > WALKEROS_TOKEN > config file
- *
- * Deliberately static and deliberately blind to the OAuth session: a runner is
- * a long-lived container handed a token, with no refresh token and no config
- * file to write a rotation back to.
- */
-export function resolveRunToken(): string | null {
-  return resolveDeployToken() ?? resolveToken()?.token ?? null;
 }
 
 export function requireProjectId(): string {

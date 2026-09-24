@@ -8,7 +8,10 @@ import {
   runTransformerChain,
   wrapEnv,
 } from '@walkeros/collector';
-import { createCLILogger } from '../../core/cli-logger.js';
+import {
+  createCLILogger,
+  createCLILoggerConfig,
+} from '../../core/cli-logger.js';
 import {
   getErrorMessage,
   detectInput,
@@ -26,6 +29,8 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
+import { scrubSecrets } from '../../core/redact-line.js';
+import { toPrintable } from '../../core/to-printable.js';
 import { loadFlowConfig, loadJsonConfig } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
 import { bundleCore } from '../bundle/bundler.js';
@@ -38,6 +43,8 @@ import { buildSimulationResult } from './simulation-result.js';
 import { prepareFlow } from './prepare.js';
 import { schemas } from '@walkeros/core/dev';
 import { runPushCommand } from './run.js';
+import { legacyExportRefusal, selectDevExamples } from './dev-examples.js';
+import { resolveExportName } from '../../core/resolve-export-name.js';
 
 /**
  * Narrow runtime check used by the CLI output formatter to read fields off
@@ -89,14 +96,17 @@ function isCallable(value: unknown): value is CreateTrigger {
 }
 
 /**
- * Narrow the awaited `/dev` module of a source package down to its
- * `examples.createTrigger`, validating each hop with `in`/`typeof` instead of
- * a cast. Returns `undefined` if any hop is missing or the wrong shape.
+ * Narrow the awaited `/dev` module of a source package down to the
+ * `createTrigger` of the step's export (see `selectDevExamples`), validating
+ * each hop with `in`/`typeof` instead of a cast. Returns `undefined` if any
+ * hop is missing or the wrong shape.
  */
-function getCreateTrigger(devModule: unknown): CreateTrigger | undefined {
-  if (!isRecord(devModule) || !('examples' in devModule)) return undefined;
-  const examples = devModule.examples;
-  if (!isRecord(examples) || !('createTrigger' in examples)) return undefined;
+function getCreateTrigger(
+  devModule: unknown,
+  exportName: string | undefined,
+): CreateTrigger | undefined {
+  const examples = selectDevExamples(devModule, exportName);
+  if (!examples || !('createTrigger' in examples)) return undefined;
   const createTrigger = examples.createTrigger;
   return isCallable(createTrigger) ? createTrigger : undefined;
 }
@@ -112,14 +122,17 @@ interface DevEnv {
 }
 
 /**
- * Narrow the awaited `/dev` module of a destination package down to its
- * `examples.env`, validating each hop with `in`/`typeof` instead of a cast.
- * Returns `undefined` if any hop is missing or the wrong shape.
+ * Narrow the awaited `/dev` module of a package down to the `examples.env` of
+ * the step's export (see `selectDevExamples`), validating each hop with
+ * `in`/`typeof` instead of a cast. Returns `undefined` if any hop is missing
+ * or the wrong shape.
  */
-function getDevEnv(devModule: unknown): DevEnv | undefined {
-  if (!isRecord(devModule) || !('examples' in devModule)) return undefined;
-  const examples = devModule.examples;
-  if (!isRecord(examples) || !('env' in examples)) return undefined;
+function getDevEnv(
+  devModule: unknown,
+  exportName: string | undefined,
+): DevEnv | undefined {
+  const examples = selectDevExamples(devModule, exportName);
+  if (!examples || !('env' in examples)) return undefined;
   const env = examples.env;
   if (!isRecord(env)) return undefined;
   const result: DevEnv = {};
@@ -129,8 +142,55 @@ function getDevEnv(devModule: unknown): DevEnv | undefined {
   return result;
 }
 
+/**
+ * Injects each flow store's dev-examples mock env (`examples.env.push` of
+ * the store's export, resolved like steps) before `startFlow`, so a store
+ * that reaches the network at start (Sheets existence check, token
+ * exchange) runs against its mock in every simulation. The store definition
+ * object is mutated in place: `$store.<id>` env references resolve by
+ * identity. A store whose package ships no mock env (fs, memory: local
+ * only) runs as configured; its id is returned for a debug line.
+ */
+export async function applyStoreMockEnvs(
+  flowConfig: { stores?: unknown },
+  flowSettings: Flow,
+  devExports: Record<string, () => Promise<unknown>> | undefined,
+): Promise<string[]> {
+  const unmocked: string[] = [];
+  const stores = flowConfig.stores;
+  if (!isRecord(stores)) return unmocked;
+
+  for (const [storeId, storeDef] of Object.entries(stores)) {
+    const packageName = flowSettings.stores?.[storeId]?.package;
+    const loadDev = packageName ? devExports?.[packageName] : undefined;
+    const devModule =
+      typeof loadDev === 'function' ? await loadDev() : undefined;
+    const { exportName } = resolveExportName(flowSettings, 'store', storeId);
+    const push = getDevEnv(devModule, exportName)?.push;
+
+    if (!push || !isRecord(storeDef)) {
+      unmocked.push(storeId);
+      continue;
+    }
+
+    // `context.env` (the def's top-level `env`) is read first by the store
+    // packages, so the mock replaces it and always wins over a configured
+    // env. Assigned by reference: a mock's getters stay live.
+    storeDef.env = push;
+  }
+
+  return unmocked;
+}
+
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(isString);
+}
+
+/** How the running flow logs: `json` routes its logs to stderr. */
+interface FlowLogOptions {
+  json?: boolean;
+  silent?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -152,6 +212,7 @@ async function pushCore(
   const logger = createCLILogger({
     silent: options.silent,
     verbose: options.verbose,
+    stderr: options.json,
   });
   const startTime = Date.now();
   let tempDir: string | undefined;
@@ -180,6 +241,8 @@ async function pushCore(
         {
           config: inputPath,
           flow: options.flow,
+          json: options.json,
+          silent: options.silent,
           verbose: options.verbose,
           mock: options.mock,
         } as PushCommandOptions,
@@ -201,6 +264,7 @@ async function pushCore(
         },
         undefined,
         snapshotCode,
+        options,
       );
     }
 
@@ -227,40 +291,88 @@ async function pushCore(
  */
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
   const result = await runPushCommand(options);
-  const duration = result.duration;
 
-  // Format result
-  let output: string;
-  if (options.json) {
-    output = JSON.stringify({ ...result, duration }, null, 2);
-  } else {
-    const lines: string[] = [];
-    // Reflect the actual outcome. `success: true` only when no destination
-    // recorded a failure during init/push/destroy (see executeDestinationPush).
-    lines.push(`success: ${result.success}`);
-    if (result.success) {
-      const elbResult = isRecord(result.elbResult)
-        ? result.elbResult
-        : undefined;
-      if (elbResult) {
-        if (typeof elbResult.id === 'string')
-          lines.push(`  Event ID: ${elbResult.id}`);
-        if (typeof elbResult.entity === 'string')
-          lines.push(`  Entity: ${elbResult.entity}`);
-        if (typeof elbResult.action === 'string')
-          lines.push(`  Action: ${elbResult.action}`);
-      }
-    } else if (result.error) {
-      lines.push(`  Error: ${result.error}`);
-    }
-    lines.push(`  Duration: ${duration}ms`);
-    output = lines.join('\n');
-  }
+  // Simulate output carries the recorded vendor calls, whose arguments can
+  // hold credentials. It egresses like a log line: serialize, then scrub.
+  const output = scrubSecrets(
+    options.json
+      ? JSON.stringify(toPrintable(result), null, 2)
+      : formatPushResult(result),
+  );
 
   // Write to file or stdout
   await writeResult(output + '\n', { output: options.output });
 
   process.exit(result.success ? 0 : 1);
+}
+
+const MAX_CALL_ARGS_LENGTH = 300;
+
+/** Compact JSON of one printable value; `undefined` has no JSON form. */
+function compactJson(value: unknown): string {
+  return JSON.stringify(toPrintable(value)) ?? 'undefined';
+}
+
+/**
+ * One call's arguments as compact JSON, cut at 300 chars. Scrubbed before the
+ * cut so a secret straddling the cut cannot lose the context that marks it.
+ */
+function formatCallArgs(args: unknown[]): string {
+  const text = scrubSecrets(args.map(compactJson).join(','));
+  return text.length > MAX_CALL_ARGS_LENGTH
+    ? `${text.slice(0, MAX_CALL_ARGS_LENGTH - 3)}...`
+    : text;
+}
+
+function formatSimulation(simulation: Simulation.Result): string[] {
+  const lines = [`  ${simulation.step}.${simulation.name}`];
+  if (simulation.error) {
+    lines.push(`    error: ${simulation.error.message}`);
+    return lines;
+  }
+  if (simulation.step === 'destination') {
+    // No key with calls: the destination has no rule for the event and
+    // pushed it as is. No key and no calls: it was skipped before mapping.
+    const unmapped =
+      simulation.calls.length > 0 ? 'none' : 'none (skipped before mapping)';
+    lines.push(`    mapping: ${simulation.mappingKey ?? unmapped}`);
+    for (const call of simulation.calls)
+      lines.push(`    call ${call.fn}(${formatCallArgs(call.args)})`);
+    if (simulation.calls.length === 0) lines.push('    no calls');
+    return lines;
+  }
+  for (const event of simulation.events)
+    lines.push(`    event ${formatCallArgs([event])}`);
+  if (simulation.events.length === 0) lines.push('    no events');
+  return lines;
+}
+
+/**
+ * Text output of `walkeros push`: the outcome, the push result or one block
+ * per simulated step (its mapping and recorded calls), the error, the
+ * duration. Not yet scrubbed as a whole; `pushCommand` does that at egress.
+ */
+export function formatPushResult(result: PushResult): string {
+  const lines: string[] = [];
+  // Reflect the actual outcome. `success: true` only when no destination
+  // recorded a failure during init/push/destroy (see executeDestinationPush).
+  lines.push(`success: ${result.success}`);
+  if (result.success) {
+    const elbResult = isRecord(result.elbResult) ? result.elbResult : undefined;
+    if (elbResult) {
+      if (typeof elbResult.id === 'string')
+        lines.push(`  Event ID: ${elbResult.id}`);
+      if (typeof elbResult.entity === 'string')
+        lines.push(`  Entity: ${elbResult.entity}`);
+      if (typeof elbResult.action === 'string')
+        lines.push(`  Action: ${elbResult.action}`);
+    }
+  }
+  for (const simulation of result.simulations ?? [])
+    lines.push(...formatSimulation(simulation));
+  if (!result.success && result.error) lines.push(`  Error: ${result.error}`);
+  lines.push(`  Duration: ${result.duration}ms`);
+  return lines.join('\n');
 }
 
 /**
@@ -380,6 +492,7 @@ async function executeConfigPush(
     overrides,
     snapshotCode,
     platform === 'server' ? 60000 : undefined,
+    options,
   );
 }
 
@@ -394,6 +507,7 @@ async function executeBundlePush(
   setTempDir: (dir: string) => void,
   overrides: PushOverrides = {},
   snapshotCode?: string,
+  flowLogs: FlowLogOptions = {},
 ): Promise<PushResult> {
   // Write bundle to temp file
   const tempDir = getTmpPath(
@@ -419,6 +533,7 @@ async function executeBundlePush(
     overrides,
     snapshotCode,
     platform === 'server' ? 60000 : undefined,
+    flowLogs,
   );
 }
 
@@ -445,6 +560,7 @@ async function executeDestinationPush(
   overrides?: PushOverrides,
   snapshotCode?: string,
   timeout?: number,
+  flowLogs: FlowLogOptions = {},
 ): Promise<PushResult> {
   const startTime = Date.now();
   const networkCalls: NetworkCall[] = [];
@@ -472,6 +588,7 @@ async function executeDestinationPush(
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       applyOverrides(config, overrides || {});
+      routeFlowLogsToStderr(config, flowLogs);
 
       const result = await module.startFlow(config);
       if (!result?.collector?.push)
@@ -556,6 +673,24 @@ function buildFailureSummary(failedIds: string[], collector: unknown): string {
 }
 
 /**
+ * In `--json` mode stdout carries only the result, so the simulated flow's own
+ * logs (collector, steps) go to stderr like the CLI's. The flow's configured
+ * level still gates what reaches the handler.
+ */
+function routeFlowLogsToStderr(
+  flowConfig: { logger?: Logger.Config },
+  options: FlowLogOptions,
+): void {
+  if (!options.json) return;
+  const { handler } = createCLILoggerConfig({
+    silent: options.silent,
+    verbose: options.verbose,
+    stderr: true,
+  });
+  flowConfig.logger = { ...flowConfig.logger, handler };
+}
+
+/**
  * Shared data-injection seam for all simulate functions.
  */
 export interface SimulateDataOptions {
@@ -578,6 +713,8 @@ export interface SimulateDataOptions {
 }
 
 export interface SimulateSourceOptions extends SimulateDataOptions {
+  /** Log to stderr so stdout carries only the result (`push --json`). */
+  json?: boolean;
   sourceId: string;
   bundlePath?: string;
   flow?: string;
@@ -620,6 +757,7 @@ export async function simulateSource(
         simulate: ['source.' + options.sourceId],
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       }
     : {
         mode: 'build' as const,
@@ -628,6 +766,7 @@ export async function simulateSource(
         simulate: ['source.' + options.sourceId],
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       };
 
   const prepared = await prepareFlow(prepareInput);
@@ -636,6 +775,7 @@ export async function simulateSource(
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
+      stderr: options.json,
     });
 
     // Resolve source package name (needed for __devExports lookup inside context)
@@ -672,10 +812,23 @@ export async function simulateSource(
         const loadDev = module.__devExports?.[sourceConfig!.package!];
         const devModule =
           typeof loadDev === 'function' ? await loadDev() : undefined;
-        const createTrigger = getCreateTrigger(devModule);
+        const { exportName } = resolveExportName(
+          prepared.flowSettings,
+          'source',
+          options.sourceId,
+        );
+        const legacyRefusal = legacyExportRefusal(
+          devModule,
+          module.__packageExports,
+          sourceConfig!.package!,
+          exportName,
+        );
+        if (legacyRefusal) throw new Error(legacyRefusal);
+        const createTrigger = getCreateTrigger(devModule, exportName);
         if (!createTrigger) {
           throw new Error(
-            `Source package "${sourceConfig!.package}" has no createTrigger in /dev export`,
+            `Source package "${sourceConfig!.package}" has no createTrigger in /dev export` +
+              (exportName ? ` for export ${exportName}` : ''),
           );
         }
 
@@ -683,6 +836,16 @@ export async function simulateSource(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
+        routeFlowLogsToStderr(flowConfig, options);
+        const unmockedStores = await applyStoreMockEnvs(
+          flowConfig,
+          prepared.flowSettings,
+          module.__devExports,
+        );
+        if (unmockedStores.length > 0)
+          logger.debug(
+            `Stores without a mock env run as configured: ${unmockedStores.join(', ')}`,
+          );
 
         // Capture events at the collector.push boundary via prePush hook.
         // Hook is wired by startFlow (inside createTrigger) before events fire.
@@ -774,7 +937,24 @@ export async function runTransformerSimulation(
   return result.copies.map((copy) => copy.event);
 }
 
+/**
+ * The ingest a simulated step starts from: the caller's keys, deep-cloned so
+ * no nested object is shared between runs, under a fresh runtime `_meta`
+ * (a caller-supplied `_meta` never wins).
+ */
+function simulateIngest(
+  stepName: string,
+  ingest: Omit<Ingest, '_meta'> | undefined,
+): Ingest {
+  return {
+    ...(ingest ? structuredClone(ingest) : {}),
+    _meta: createIngest(stepName)._meta,
+  };
+}
+
 export interface SimulateTransformerOptions extends SimulateDataOptions {
+  /** Log to stderr so stdout carries only the result (`push --json`). */
+  json?: boolean;
   transformerId: string;
   bundlePath?: string;
   flow?: string;
@@ -837,6 +1017,7 @@ export async function simulateTransformer(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       }
     : {
         mode: 'build' as const,
@@ -846,6 +1027,7 @@ export async function simulateTransformer(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       };
 
   const prepared = await prepareFlow(prepareInput);
@@ -854,6 +1036,7 @@ export async function simulateTransformer(
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
+      stderr: options.json,
     });
 
     // Load snapshot code if provided
@@ -880,6 +1063,16 @@ export async function simulateTransformer(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
+        routeFlowLogsToStderr(flowConfig, options);
+        const unmockedStores = await applyStoreMockEnvs(
+          flowConfig,
+          prepared.flowSettings,
+          module.__devExports,
+        );
+        if (unmockedStores.length > 0)
+          logger.debug(
+            `Stores without a mock env run as configured: ${unmockedStores.join(', ')}`,
+          );
 
         // Don't initialize sources or destinations during transformer simulation.
         if (flowConfig.sources) flowConfig.sources = {};
@@ -911,10 +1104,7 @@ export async function simulateTransformer(
         }
 
         const inputEvent = event;
-        const ingest = {
-          ...createIngest(options.transformerId),
-          ...options.ingest,
-        };
+        const ingest = simulateIngest(options.transformerId, options.ingest);
         // Output events only: each entry is a transformer output, or `null`
         // when the event was dropped. `buildSimulationResult` drops null
         // entries so a drop yields `events: []` and a passthrough yields
@@ -980,15 +1170,16 @@ export async function simulateTransformer(
 export async function runCollectorSimulation(
   collector: Collector.Instance,
   event: WalkerOS.DeepPartialEvent,
+  ingest: Ingest = createIngest('collector'),
 ): Promise<WalkerOS.Event[]> {
   const enriched = enrichEvent(collector, event);
-  const result = await runCollectorNext(collector, enriched, {
-    ingest: createIngest('collector'),
-  });
+  const result = await runCollectorNext(collector, enriched, { ingest });
   return result.copies.map((copy) => copy.event);
 }
 
 export interface SimulateCollectorOptions extends SimulateDataOptions {
+  /** Log to stderr so stdout carries only the result (`push --json`). */
+  json?: boolean;
   collectorName: string;
   bundlePath?: string;
   flow?: string;
@@ -1003,6 +1194,12 @@ export interface SimulateCollectorOptions extends SimulateDataOptions {
     globals?: WalkerOS.Properties;
     timing?: number; // sets collector.timing, the base from which prepareEvent computes the relative event.timing
   };
+  /**
+   * Pipeline context the collector's chain (`collector.next`) reads via
+   * `ctx.ingest`. Merged onto a fresh ingest so `_meta` is always the
+   * runtime's.
+   */
+  ingest?: Omit<Ingest, '_meta'>;
 }
 
 /**
@@ -1051,6 +1248,7 @@ export async function simulateCollector(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       }
     : {
         mode: 'build' as const,
@@ -1060,6 +1258,7 @@ export async function simulateCollector(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       };
 
   const prepared = await prepareFlow(prepareInput);
@@ -1068,6 +1267,7 @@ export async function simulateCollector(
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
+      stderr: options.json,
     });
 
     // Load snapshot code if provided
@@ -1094,6 +1294,16 @@ export async function simulateCollector(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
+        routeFlowLogsToStderr(flowConfig, options);
+        const unmockedStores = await applyStoreMockEnvs(
+          flowConfig,
+          prepared.flowSettings,
+          module.__devExports,
+        );
+        if (unmockedStores.length > 0)
+          logger.debug(
+            `Stores without a mock env run as configured: ${unmockedStores.join(', ')}`,
+          );
 
         // Don't initialize sources or destinations during collector simulation.
         if (flowConfig.sources) flowConfig.sources = {};
@@ -1118,7 +1328,11 @@ export async function simulateCollector(
             collector.timing = options.state.timing;
         }
 
-        const outputs = await runCollectorSimulation(collector, event);
+        const outputs = await runCollectorSimulation(
+          collector,
+          event,
+          simulateIngest('collector', options.ingest),
+        );
         const captured: Array<{
           event: WalkerOS.DeepPartialEvent | null;
           timestamp: number;
@@ -1160,6 +1374,8 @@ export async function simulateCollector(
 }
 
 export interface SimulateDestinationOptions extends SimulateDataOptions {
+  /** Log to stderr so stdout carries only the result (`push --json`). */
+  json?: boolean;
   destinationId: string;
   bundlePath?: string;
   flow?: string;
@@ -1167,6 +1383,12 @@ export interface SimulateDestinationOptions extends SimulateDataOptions {
   silent?: boolean;
   verbose?: boolean;
   snapshot?: string;
+  /**
+   * Pipeline context the destination's `before` chain and push read via
+   * `ctx.ingest` (e.g. `userAgent` for a conversion API). Merged onto a
+   * fresh ingest so `_meta` is always the runtime's.
+   */
+  ingest?: Omit<Ingest, '_meta'>;
 }
 
 /**
@@ -1214,6 +1436,7 @@ export async function simulateDestination(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       }
     : {
         mode: 'build' as const,
@@ -1223,6 +1446,7 @@ export async function simulateDestination(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       };
 
   const prepared = await prepareFlow(prepareInput);
@@ -1231,6 +1455,7 @@ export async function simulateDestination(
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
+      stderr: options.json,
     });
 
     let snapshotCode: string | undefined;
@@ -1255,6 +1480,16 @@ export async function simulateDestination(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
+        routeFlowLogsToStderr(flowConfig, options);
+        const unmockedStores = await applyStoreMockEnvs(
+          flowConfig,
+          prepared.flowSettings,
+          module.__devExports,
+        );
+        if (unmockedStores.length > 0)
+          logger.debug(
+            `Stores without a mock env run as configured: ${unmockedStores.join(', ')}`,
+          );
 
         // Read env from bundled __devExports
         const destPkg = (prepared.flowSettings.destinations ?? {})[
@@ -1271,27 +1506,45 @@ export async function simulateDestination(
           const loadDev = module.__devExports?.[destPkg.package];
           const devModule =
             typeof loadDev === 'function' ? await loadDev() : undefined;
-          const devEnv = getDevEnv(devModule);
+          const { exportName } = resolveExportName(
+            prepared.flowSettings,
+            'destination',
+            options.destinationId,
+          );
+          const legacyRefusal = legacyExportRefusal(
+            devModule,
+            module.__packageExports,
+            destPkg.package,
+            exportName,
+          );
+          if (legacyRefusal) throw new Error(legacyRefusal);
+          const devEnv = getDevEnv(devModule, exportName);
 
-          if (devEnv?.push) {
-            const destinations = flowConfig.destinations as Record<
-              string,
-              { config?: { env?: Record<string, unknown> } }
-            >;
-            const destConfig = destinations[options.destinationId]?.config;
-            if (destConfig) {
-              destConfig.env = devEnv.push;
-            }
+          // Without a mock env the destination would run against its real
+          // vendor client. Refuse before startFlow so init never runs.
+          if (!devEnv?.push) {
+            throw new Error(
+              `No mock env for ${destPkg.package} export ${exportName ?? 'default'}: simulate would call the real vendor. Add examples.env.push to the package's dev examples.`,
+            );
+          }
 
-            if (devEnv.simulation?.length) {
-              const combined = {
-                ...devEnv.push,
-                simulation: devEnv.simulation,
-              };
-              const { wrappedEnv, calls } = wrapEnv(combined);
-              if (destConfig) destConfig.env = wrappedEnv;
-              trackedCalls = calls;
-            }
+          const destinations = flowConfig.destinations as Record<
+            string,
+            { config?: { env?: Record<string, unknown> } }
+          >;
+          const destConfig = destinations[options.destinationId]?.config;
+          if (destConfig) {
+            destConfig.env = devEnv.push;
+          }
+
+          if (devEnv.simulation?.length) {
+            const combined = {
+              ...devEnv.push,
+              simulation: devEnv.simulation,
+            };
+            const { wrappedEnv, calls } = wrapEnv(combined);
+            if (destConfig) destConfig.env = wrappedEnv;
+            trackedCalls = calls;
           }
         }
 
@@ -1327,10 +1580,14 @@ export async function simulateDestination(
         // The in, out, and error phases can all carry the key, so capture on
         // presence rather than pinning a phase: a throwing destination still
         // reports which rule matched.
+        // A failed init or push of the target is recorded as its error
+        // phase; the result carries it so the simulation reports failure.
+        let stepError: string | undefined;
         const captureMappingKey = (state: FlowState): void => {
-          if (state.stepId === targetStepId && state.mappingKey) {
-            mappingKey = state.mappingKey;
-          }
+          if (state.stepId !== targetStepId) return;
+          if (state.mappingKey) mappingKey = state.mappingKey;
+          if (state.phase === 'error' && state.error && stepError === undefined)
+            stepError = state.error.message;
         };
         // Guarded: a prebuilt bundle may carry a collector without an
         // observer channel; degrade to an undefined key instead of throwing.
@@ -1342,6 +1599,7 @@ export async function simulateDestination(
         // include filter ensures only the target destination receives the event
         await collector.push(event, {
           include: [options.destinationId],
+          ingest: simulateIngest(options.destinationId, options.ingest),
         });
 
         await collector.command('shutdown');
@@ -1354,6 +1612,7 @@ export async function simulateDestination(
             ? { [options.destinationId]: trackedCalls }
             : undefined,
           mappingKey,
+          ...(stepError !== undefined ? { error: stepError } : {}),
         });
       },
       (error) =>

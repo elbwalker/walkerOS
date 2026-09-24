@@ -1,0 +1,222 @@
+name: Scan
+
+# Weekly vulnerability scan of the published runtime images. A CVE can appear
+# in an unchanged base image between releases; this finds it before a
+# customer's scanner does. Fixable CRITICAL/HIGH are reported; the issue
+# opens on OS CRITICAL+HIGH and library CRITICAL only (walkeros/cli is built on
+# node, whose bundled npm carries library HIGHs we cannot fix).
+#
+# Images are published by release.yml after npm, so they can lag it (a failed
+# image step, say). The staleness check opens an issue when the newest STABLE
+# published package has no image yet; prereleases never move :latest.
+
+on:
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+      security-events: write
+    env:
+      # The moving tags release.yml publishes to Docker Hub.
+      IMAGES: walkeros/flow:latest walkeros/cli:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+        with:
+          version: v0.70.0
+          cache: true
+
+      - name: Scan images
+        run: |
+          set -euo pipefail
+          mkdir -p scan
+          for ref in $IMAGES; do
+            name="${ref%%:*}"; name="${name#*/}"
+            trivy image --quiet \
+              --severity CRITICAL,HIGH --ignore-unfixed \
+              --format json --output "scan/$name.json" "$ref"
+            trivy convert --format sarif --output "scan/$name.sarif" "scan/$name.json"
+            trivy convert --format table --output "scan/$name.txt" "scan/$name.json"
+            cat "scan/$name.txt"
+          done
+
+      - name: Upload SARIF (flow)
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          sarif_file: scan/flow.sarif
+          category: trivy-flow
+
+      - name: Upload SARIF (cli)
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          sarif_file: scan/cli.sarif
+          category: trivy-cli
+
+      - name: Open or update issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const title = 'Image scan: fixable blocking vulnerabilities';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const sections = [];
+            let total = 0;
+            for (const ref of process.env.IMAGES.split(' ')) {
+              const name = ref.split(':')[0].split('/')[1];
+              const report = JSON.parse(fs.readFileSync(`scan/${name}.json`, 'utf8'));
+              const count = (report.Results || []).reduce(
+                (sum, r) =>
+                  sum +
+                  (r.Vulnerabilities || []).filter(
+                    (v) => r.Class === 'os-pkgs' || (r.Class === 'lang-pkgs' && v.Severity === 'CRITICAL'),
+                  ).length,
+                0,
+              );
+              total += count;
+              if (count > 0) {
+                const table = fs.readFileSync(`scan/${name}.txt`, 'utf8').slice(0, 25000);
+                sections.push(`### \`${ref}\`: ${count}\n\n\`\`\`\n${table}\n\`\`\``);
+              }
+            }
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              ...context.repo,
+              state: 'open',
+            });
+            const existing = issues.find((i) => i.title === title && !i.pull_request);
+
+            if (total === 0) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  ...context.repo,
+                  issue_number: existing.number,
+                  body: `No fixable blocking findings as of ${runUrl}. Closing.`,
+                });
+                await github.rest.issues.update({
+                  ...context.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                });
+              }
+              return;
+            }
+
+            const body = [
+              `Fixable blocking vulnerabilities in the published images (${total}: OS CRITICAL/HIGH, library CRITICAL). Tables list all fixable CRITICAL/HIGH.`,
+              `Rebuild on a patched base to clear them. Run: ${runUrl}`,
+              ...sections,
+            ].join('\n\n');
+
+            if (existing) {
+              await github.rest.issues.update({ ...context.repo, issue_number: existing.number, body });
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: existing.number,
+                body: `Still ${total} fixable findings as of ${runUrl}.`,
+              });
+            } else {
+              await github.rest.issues.create({ ...context.repo, title, body });
+            }
+            core.setFailed(`${total} fixable blocking vulnerabilities`);
+
+      # Runs even when the vulnerability issue step failed the job above.
+      - name: Check image staleness
+        if: always()
+        id: stale
+        run: |
+          set -euo pipefail
+          STALE=""
+          for entry in flow:@walkeros/runner:runneros cli:@walkeros/cli:walkeros; do
+            IFS=: read -r img pkg bin <<< "$entry"
+            # Newest stable version: the one :latest follows.
+            # node -e bodies are JavaScript; their $ is not shell.
+            # shellcheck disable=SC2016
+            PUBLISHED="$( (npm view "$pkg" versions --json 2>/dev/null || echo '[]') | node -e '
+              const key = (x) => x.split(".").map(Number);
+              const stable = [].concat(JSON.parse(require("fs").readFileSync(0, "utf8") || "[]"))
+                .filter((x) => /^\d+\.\d+\.\d+$/.test(x))
+                .sort((a, b) => {
+                  const [p, q] = [key(a), key(b)];
+                  return q[0] - p[0] || q[1] - p[1] || q[2] - p[2];
+                });
+              process.stdout.write(stable[0] || "");
+            ')"
+            if [ -z "$PUBLISHED" ]; then
+              echo "::notice::${pkg} has no stable version on npm yet; staleness check skipped."
+              continue
+            fi
+            INSIDE="$(docker run --rm --entrypoint "$bin" "walkeros/${img}:latest" --version 2>/dev/null || echo none)"
+            echo "walkeros/${img}:latest has ${pkg} ${INSIDE}, newest on npm is ${PUBLISHED}"
+            if [ "$INSIDE" != "$PUBLISHED" ]; then
+              STALE="${STALE}- \`walkeros/${img}:latest\` has \`${pkg}\` ${INSIDE}, npm has ${PUBLISHED}\n"
+            fi
+          done
+          {
+            echo "stale<<EOF"
+            printf '%b' "$STALE"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or close staleness issue
+        if: always() && steps.stale.outcome == 'success'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          STALE: ${{ steps.stale.outputs.stale }}
+        with:
+          script: |
+            const title = 'Image staleness: images lag npm';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const stale = (process.env.STALE || '').trim();
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              ...context.repo,
+              state: 'open',
+            });
+            const existing = issues.find((i) => i.title === title && !i.pull_request);
+
+            if (!stale) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  ...context.repo,
+                  issue_number: existing.number,
+                  body: `Images match npm as of ${runUrl}. Closing.`,
+                });
+                await github.rest.issues.update({
+                  ...context.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                });
+              }
+              return;
+            }
+
+            const body = [
+              'A published package has no image yet. Dispatch release.yml with images_only set to that version to publish it.',
+              stale,
+              `Run: ${runUrl}`,
+            ].join('\n\n');
+
+            if (existing) {
+              await github.rest.issues.update({ ...context.repo, issue_number: existing.number, body });
+            } else {
+              await github.rest.issues.create({ ...context.repo, title, body });
+            }
+            core.setFailed('Images lag npm');

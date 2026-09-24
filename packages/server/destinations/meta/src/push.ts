@@ -5,14 +5,15 @@ import type {
   ServerEventParameters,
   Env,
 } from './types';
-import { getMappingValue, isObject } from '@walkeros/core';
+import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
+import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashEvent } from './hash';
 import { getUnknownUserDataKeys } from './userData';
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, env, logger },
+  { config, rule, data, ingest, collector, env, logger },
 ) {
   const {
     accessToken,
@@ -22,6 +23,8 @@ export const push: PushFn = async function (
     test_event_code,
     url = 'https://graph.facebook.com/v22.0/',
     user_data,
+    ip,
+    userAgent,
   } = config.settings!;
 
   const eventData = isObject(data) ? data : {};
@@ -32,7 +35,21 @@ export const push: PushFn = async function (
     ? await getMappingValue(event, { map: user_data }, { collector })
     : {};
 
+  // Client IP and user agent auto-fill, overridden by any mapped value
+  const root = createMappingRoot(ingest, event);
+  const clientIp = await resolveClient(ip, DEFAULT_IP, root, collector);
+  const clientUserAgent = await resolveClient(
+    userAgent,
+    DEFAULT_USER_AGENT,
+    root,
+    collector,
+  );
+
   const mappedUserData = {
+    ...(clientIp !== undefined ? { client_ip_address: clientIp } : {}),
+    ...(clientUserAgent !== undefined
+      ? { client_user_agent: clientUserAgent }
+      : {}),
     // Destination config
     ...(isObject(configData) && isObject(configData.user_data)
       ? configData.user_data
@@ -106,6 +123,24 @@ export const push: PushFn = async function (
     logger.throw(`Meta API error: ${JSON.stringify(result)}`);
   }
 };
+
+const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
+const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [
+  'ingest.userAgent',
+  'event.user.userAgent',
+];
+
+/** A client IP or user agent setting resolved to a non-empty string. */
+async function resolveClient(
+  setting: WalkerOSMapping.Value | false | undefined,
+  fallback: WalkerOSMapping.Value,
+  root: WalkerOSMapping.Root,
+  collector: Collector.Instance,
+): Promise<string | undefined> {
+  if (setting === false) return undefined;
+  const value = await getMappingValue(root, setting ?? fallback, { collector });
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
 
 function formatClickId(clickId: unknown, time?: number): string | undefined {
   // https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/fbp-and-fbc#2--format-clickid

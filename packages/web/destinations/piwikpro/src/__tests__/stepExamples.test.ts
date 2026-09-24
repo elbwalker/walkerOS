@@ -4,6 +4,7 @@ import { clone, createLogger, isObject } from '@walkeros/core';
 import type { Config, Rule } from '../types';
 import { examples } from '../dev';
 import destinationPiwikPro from '..';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 
@@ -123,3 +124,6 @@ describe('piwikpro web destination -- step examples', () => {
     expect(actual).toEqual(expectedRecords);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

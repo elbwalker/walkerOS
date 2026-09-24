@@ -6,6 +6,7 @@ import {
   __resetMockCalls,
 } from '@google-cloud/bigquery-storage';
 import * as examples from '../examples';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 jest.mock('@google-cloud/bigquery');
 jest.mock('@google-cloud/bigquery-storage');
@@ -69,3 +70,6 @@ describe('Step Examples', () => {
     expect(calls).toEqual(example.out);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

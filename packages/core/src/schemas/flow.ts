@@ -100,14 +100,21 @@ export const BundleSchema = z
       .describe(
         'Extra paths or globs the bundler must include in the trace output (server flows only)',
       ),
+    env: z
+      .record(z.string(), z.string())
+      .optional()
+      .describe(
+        'Declared build-time values for web $env references (inlined into public bundles, never secrets)',
+      ),
   })
   .strict()
   .meta({
     id: 'FlowBundle',
     title: 'Flow.Bundle',
-    description: 'Bundle configuration (packages + overrides + traceInclude).',
+    description:
+      'Bundle configuration (packages + overrides + traceInclude + env).',
   })
-  .describe('Bundle configuration (packages + overrides + traceInclude)');
+  .describe('Bundle configuration (packages + overrides + traceInclude + env)');
 
 // ========================================
 // Inline Code Schema

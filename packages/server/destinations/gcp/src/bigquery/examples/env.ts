@@ -72,9 +72,11 @@ export const push: Env = {
   get adapt() {
     return mockAdapt as unknown as Env['adapt'];
   },
-  get managedwriterModule() {
-    return mockManagedwriter as unknown as Env['managedwriterModule'];
-  },
 };
 
-export const simulation = ['BigQuery', 'WriterClient', 'JSONWriter', 'adapt'];
+/**
+ * Every row goes through the writer's `appendRows`; the writer is built from
+ * `JSONWriter` in init, so the path continues on the constructed instance.
+ * Constructors are not recorded: their arguments carry credentials.
+ */
+export const simulation = ['call:JSONWriter.appendRows'];

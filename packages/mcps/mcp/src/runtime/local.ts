@@ -61,13 +61,18 @@ export function createLocalRuntime(): FlowRuntime {
           return simulateCollector(
             input,
             opts.event as WalkerOS.DeepPartialEvent,
-            { collectorName: opts.stepId, ...common, state: opts.state },
+            {
+              collectorName: opts.stepId,
+              ...common,
+              state: opts.state,
+              ingest: opts.ingest,
+            },
           );
         case 'destination':
           return simulateDestination(
             input,
             opts.event as WalkerOS.DeepPartialEvent,
-            { destinationId: opts.stepId, ...common },
+            { destinationId: opts.stepId, ...common, ingest: opts.ingest },
           );
       }
     },

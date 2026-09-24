@@ -7,6 +7,7 @@ import { startFlow } from '@walkeros/collector';
 import { clone, createLogger } from '@walkeros/core';
 import { examples } from '../dev';
 import type { Env } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 
@@ -95,3 +96,6 @@ describe('snowplow destination — step examples', () => {
     expect(actual).toEqual(expected);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

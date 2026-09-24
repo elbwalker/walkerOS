@@ -6,7 +6,7 @@ import type {
   ServiceAccount,
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
-import type { PubSub, TopicMetadata } from '@google-cloud/pubsub';
+import type { ClientConfig, TopicMetadata } from '@google-cloud/pubsub';
 
 export interface ServiceAccountCredentials {
   client_email: string;
@@ -17,9 +17,32 @@ export interface ServiceAccountCredentials {
 /** Credentials value for this destination: JSON string or service account object. */
 export type Credentials = Credential<ServiceAccount>;
 
+/** The message `push` publishes. */
+export interface PublishMessage {
+  data: Buffer;
+  attributes?: Record<string, string>;
+  orderingKey?: string;
+}
+
+/** The part of a Pub/Sub topic handle `push` calls. */
+export interface TopicPublisher {
+  publishMessage(message: PublishMessage): Promise<string>;
+  resumePublishing(orderingKey: string): void;
+}
+
+/**
+ * The part of the Pub/Sub client `init`, `push` and `destroy` call. The SDK's
+ * `PubSub` satisfies it, and so does an injected mock (tests, simulate)
+ * without a cast. `setup` needs the admin surface and uses the SDK client.
+ */
+export interface PubSubPublisher {
+  topic(name: string, options?: { messageOrdering?: boolean }): TopicPublisher;
+  close(): Promise<void>;
+}
+
 export interface Settings {
   // User-supplied OR populated by init(); single field for both. Mirrors BigQuery.
-  client: PubSub;
+  client: PubSubPublisher;
   // Top-level always wins over credentials.project_id (documented in config.ts).
   projectId: string;
   topic: string;
@@ -36,7 +59,7 @@ export interface Settings {
 export interface InitSettings {
   projectId: string;
   topic: string;
-  client?: PubSub;
+  client?: PubSubPublisher;
   /** @deprecated use config.credentials */
   credentials?: string | ServiceAccountCredentials;
   apiEndpoint?: string;
@@ -72,7 +95,7 @@ export interface Setup {
 }
 
 export interface Env extends DestinationServer.Env {
-  PubSub?: typeof PubSub;
+  PubSub?: new (options?: ClientConfig) => PubSubPublisher;
 }
 
 export type Types = CoreDestination.Types<

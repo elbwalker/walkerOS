@@ -5,6 +5,7 @@ import destination from '../';
 import { examples } from '../dev';
 import type { Credentials, InitSettings, PartialConfig } from '../types';
 import { id, isRecord } from './support';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 const initOut = examples.step.init.out ?? [];
 
@@ -92,3 +93,6 @@ describe('clickhouse destination -- step examples', () => {
     expect(__getCalls().slice(initOut.length)).toEqual(example.out);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

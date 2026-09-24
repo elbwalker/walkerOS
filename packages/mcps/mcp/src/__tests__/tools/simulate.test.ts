@@ -55,17 +55,16 @@ jest.mock('@walkeros/core', () => ({
     ],
     structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
-  mcpError: jest.fn((error) => ({
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }),
-      },
-    ],
-    isError: true,
-  })),
+  mcpError: jest.fn((error) => {
+    const structured = {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+    return {
+      content: [{ type: 'text', text: JSON.stringify(structured) }],
+      structuredContent: structured,
+      isError: true,
+    };
+  }),
 }));
 
 import {
@@ -536,6 +535,118 @@ describe('flow_simulate tool', () => {
         ingest: { url: 'https://example.com/collect?v=2' },
       }),
     );
+  });
+
+  it.each([
+    ['destination', 'destination.meta', mockSimulateDestination],
+    ['collector', 'collector.default', mockSimulateCollector],
+  ])(
+    'forwards ingest into the %s simulation',
+    async (stepType, step, mocked) => {
+      mocked.mockResolvedValue({
+        step: stepType === 'destination' ? 'destination' : 'collector',
+        name: step.split('.')[1],
+        events: [],
+        calls: [],
+        duration: 1,
+      });
+
+      const tool = server.getTool('flow_simulate');
+      await tool.handler({
+        configPath: './flow.json',
+        event: '{"name":"page view"}',
+        step,
+        ingest: { userAgent: 'Mozilla/5.0 test' },
+      });
+
+      expect(mocked).toHaveBeenCalledWith(
+        './flow.json',
+        { name: 'page view' },
+        expect.objectContaining({ ingest: { userAgent: 'Mozilla/5.0 test' } }),
+      );
+    },
+  );
+
+  it('scrubs secrets from an error it returns', async () => {
+    const token =
+      'EAABsbCS1iHgBAKZCZBqwZDZDq7xQ9kLmN3pRsT5vWyZ1aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789';
+    mockSimulateDestination.mockRejectedValue(
+      new Error(
+        `request to https://graph.facebook.com/v19.0/1/events?access_token=${token} failed`,
+      ),
+    );
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"order complete"}',
+      step: 'destination.meta',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).not.toContain(token);
+    expect(result.content[0].text).toContain('graph.facebook.com');
+    expect(JSON.stringify(result.structuredContent)).not.toContain(token);
+  });
+
+  it('scrubs secrets from the recorded calls it returns', async () => {
+    const privateKey =
+      '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7\n-----END PRIVATE KEY-----\n';
+    const metaToken =
+      'EAABsbCS1iHgBAKZCZBqwZDZDq7xQ9kLmN3pRsT5vWyZ1aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789';
+    const bearerToken = 'a8Kf3Lq9Zx2Mv7Np4Rt6Yw1Bc5Hd0Gj8Sk3Tu9Ve';
+    mockSimulateDestination.mockResolvedValue({
+      step: 'destination',
+      name: 'meta',
+      events: [],
+      calls: [
+        {
+          fn: 'BigQuery',
+          args: [
+            {
+              credentials: {
+                private_key: privateKey,
+                client_email: 'svc@my-proj.iam.gserviceaccount.com',
+                private_key_id: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0',
+              },
+            },
+          ],
+          ts: 1,
+        },
+        {
+          fn: 'sendServer',
+          args: [
+            `https://graph.facebook.com/v19.0/1/events?access_token=${metaToken}`,
+            '{"event_name":"order complete"}',
+            { headers: { Authorization: `Bearer ${bearerToken}` } },
+          ],
+          ts: 2,
+        },
+      ],
+      duration: 3,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"order complete"}',
+      step: 'destination.meta',
+      verbose: true,
+    });
+
+    const text = result.content[0].text;
+    for (const secret of [
+      'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7',
+      'svc@my-proj.iam.gserviceaccount.com',
+      'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0',
+      metaToken,
+      bearerToken,
+    ]) {
+      expect(text).not.toContain(secret);
+      expect(JSON.stringify(result.structuredContent)).not.toContain(secret);
+    }
+    expect(text).toContain('graph.facebook.com/v19.0/1/events');
+    expect(text).toContain('order complete');
   });
 
   it('forwards state into simulateCollector for collector step', async () => {

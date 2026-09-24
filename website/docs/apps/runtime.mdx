@@ -1,0 +1,398 @@
+---
+title: Runtime
+description: Run prebuilt walkerOS flow artifacts with runneros and the walkeros/flow image
+sidebar_position: 3
+package: '@walkeros/runner'
+---
+
+# walkerOS runtime
+
+`runneros` runs a prebuilt walkerOS flow artifact. It ships in the npm package
+`@walkeros/runner` and is the entrypoint of the `walkeros/flow` Docker image.
+It never builds a flow: you build with [`walkeros bundle`](/docs/apps/cli),
+then start the result.
+
+<CodeSnippet
+  code={`walkeros bundle flow.json -o dist/
+runneros start dist/flow.mjs`}
+  language="bash"
+/>
+
+The runtime has its own name because it is a different tool with a different
+capability set, not a variant of the CLI. It cannot bundle because the bundler
+is not installed in it: no esbuild, no package manager, no registry access.
+Hand it a local flow config and it refuses with
+`BUNDLE must be a prebuilt artifact (.mjs, .js, .cjs, .tar.gz, .tgz), got flow.json`.
+
+## Build, run, orchestrate
+
+Getting a flow into production has three stages, and each one is kept to what
+it needs:
+
+| Stage | Has | Must not have |
+|---|---|---|
+| **Build** (`walkeros bundle`) | Registry access, esbuild, `@vercel/nft`, a Node toolchain | Production secrets or production traffic |
+| **Run** (`runneros start`) | The artifact, its runtime secrets, the port | A package manager, registry egress, a bundler |
+| **Orchestrate** (you, your CI, or the walkerOS app) | The decision of what runs where | The ability to execute the artifact |
+
+Build values that a web flow bakes into its public bundle are declared in the
+config under `config.bundle.env` and resolved at build time, see
+[build-time values](/docs/apps/cli#build-time-values-configbundleenv). Runtime
+secrets for a server flow reach the running process through its environment.
+
+## The artifact
+
+`walkeros bundle` produces two shapes, depending on the flow's platform:
+
+| Platform | Artifact | Runs where |
+|---|---|---|
+| `server` | A **directory**: `dist/flow.mjs`, `dist/package.json` and `dist/node_modules/` (only the files `@vercel/nft` traced) | `runneros start` |
+| `web` | A **single file**: `dist/walker.js` | The browser, served by any static host |
+
+A server flow always travels as the whole directory. Copying `flow.mjs` alone
+drops `node_modules/`, and a flow with external step packages then fails to
+resolve its imports. To ship the directory as one file, bundle to an archive
+with `walkeros bundle flow.json -o flow.tar.gz`.
+
+## Quick start
+
+Build, then run the directory in the image:
+
+<CodeSnippet
+  code={`npx @walkeros/cli bundle flow.json -o dist/
+
+docker run --rm -p 8080:8080 \\
+  -v "$PWD/dist:/app/flow:ro" \\
+  walkeros/flow:<version>`}
+  language="bash"
+/>
+
+Or without Docker:
+
+<CodeSnippet
+  code={`npx --package=@walkeros/runner runneros start dist/flow.mjs`}
+  language="bash"
+/>
+
+Check it is up:
+
+<CodeSnippet code={`curl http://localhost:8080/ready`} language="bash" />
+
+## Image tags
+
+Every `walkeros/flow` tag is the npm version of the `@walkeros/runner` it
+contains: `walkeros/flow:<version>` runs `@walkeros/runner@<version>`. Version
+tags are immutable. `latest`, `<major>` and `<major>.<minor>` move only on
+stable releases.
+
+Images published before `@walkeros/runner` existed run an older entrypoint.
+Pin a version that ships `runneros`, ideally the same version as the
+`@walkeros/cli` that built the artifact, and check it with:
+
+<CodeSnippet
+  code={`docker run --rm walkeros/flow:<version> runneros --version`}
+  language="bash"
+/>
+
+The image is published for `linux/amd64` only. On an arm64 host, Docker runs
+it under emulation (`--platform linux/amd64`).
+
+## Canonical Dockerfile
+
+Build and run in two stages. The build stage has npm and the registry; the
+runtime stage has neither:
+
+<CodeSnippet
+  code={`ARG WALKEROS_VERSION
+
+FROM node:24-alpine AS builder
+ARG WALKEROS_VERSION
+WORKDIR /build
+RUN npm init -y && npm install --save-dev @walkeros/cli@\${WALKEROS_VERSION}
+COPY flow.json ./
+RUN npx walkeros bundle flow.json -o dist/
+
+FROM walkeros/flow:\${WALKEROS_VERSION}
+COPY --from=builder /build/dist/ /app/flow/`}
+  language="dockerfile"
+/>
+
+<CodeSnippet
+  code={`docker build --build-arg WALKEROS_VERSION=<version> -t my-flow .
+docker run --rm -p 8080:8080 my-flow`}
+  language="bash"
+/>
+
+- `COPY --from=builder /build/dist/ /app/flow/` copies the whole directory, so
+  the traced `node_modules/` comes along.
+- The image already sets `BUNDLE=/app/flow/flow.mjs`, `PORT=8080` and
+  `CMD ["runneros", "start"]`, so the Dockerfile needs no command and no
+  `BUNDLE`.
+- One `WALKEROS_VERSION` pins both the CLI that builds and the runtime that
+  runs.
+
+## What `runneros start` accepts
+
+`runneros start [artifact]` takes the artifact as an argument, or from `BUNDLE`
+when there is none, or `flow.mjs` in the working directory when there is
+neither.
+
+| Input | Example | Notes |
+|---|---|---|
+| Local file | `/app/flow/flow.mjs` (the image default) | `.mjs`, `.js` or `.cjs`. Imported in place, nothing is written |
+| Local archive | `/app/flow.tar.gz` | `.tar.gz` or `.tgz` holding `flow.mjs` at its root. Extracted next to the default write path |
+| URL | `https://cdn.example.com/flow.mjs` | A presigned URL works. Gzip content is extracted as an archive, anything else is written as `flow.mjs` |
+| Stdin | `cat dist/flow.mjs \| docker run -i ... walkeros/flow:<version>` | Read only when the given path does not exist. An empty stdin is ignored |
+
+A fetched, extracted or piped artifact is written to `/app/flow/` when that
+directory exists (in the image it does), otherwise to `/tmp/`. A local path
+with any other extension, a `.json` flow config above all, is refused before
+anything loads. Content from a URL or stdin is checked only by what it is
+written as: a flow config delivered that way is written as `flow.mjs` and then
+fails to import with a syntax error. Either way nothing is bundled.
+
+### Options
+
+| Flag | Environment fallback | Description |
+|---|---|---|
+| `[artifact]` | `BUNDLE` | Artifact path or URL |
+| `-p, --port <number>` | `PORT` | Port to listen on (default `8080`) |
+| `--flow-id <id>` | `WALKEROS_FLOW_ID` | Flow ID in the walkerOS app. Enables the heartbeat and secret injection |
+| `--project <id>` | `WALKEROS_PROJECT_ID` | Project ID, required with `--flow-id` |
+| `--env-file <path>` | none | Load a dotenv file first. Existing variables win; a group- or other-readable file is refused |
+| `--json` | none | JSON output |
+| `-v, --verbose` | none | Verbose output |
+| `-s, --silent` | none | Suppress output |
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `BUNDLE` | `/app/flow/flow.mjs` in the image | Artifact path or URL |
+| `PORT` | `8080` | Port for the health server and the flow's HTTP handler |
+| `WALKEROS_FLOW_ID` | none | Flow ID in the walkerOS app (same as `--flow-id`) |
+| `WALKEROS_PROJECT_ID` | none | Project ID (same as `--project`) |
+| `WALKEROS_DEPLOYMENT_ID` | none | Deployment ID, sent with every heartbeat and used for telemetry |
+| `WALKEROS_DEPLOY_TOKEN` | none | Runner token. Takes precedence over `WALKEROS_TOKEN` |
+| `WALKEROS_TOKEN` | none | Runner token (`wos_run_...`) or automation token (`wos_pat_...`) |
+| `WALKEROS_APP_URL` | `https://app.walkeros.io` | App API base URL |
+| `WALKEROS_HEARTBEAT_INTERVAL` | `60` | Seconds between heartbeats. Values below `10`, or not a number, are clamped to `10` |
+| `WALKEROS_CACHE_DIR` | `$XDG_CACHE_HOME/walkeros`, else `~/.cache/walkeros` | Where the runtime persists recent errors between restarts. `CACHE_DIR` is read as a fallback |
+| `WALKEROS_OBSERVE_LEVEL` | unset (`standard`) | Baseline telemetry level: `off`, `standard` or `trace`. See [Observe](/docs/getting-started/observe#server) |
+| `WALKEROS_OBSERVER_URL`, `WALKEROS_INGEST_TOKEN` | none | Observer connection. With `WALKEROS_DEPLOYMENT_ID`, all three enable telemetry |
+| `NODE_OPTIONS` | `--max-old-space-size=384` in the image | Heap cap sized for a 512 MB container. Raise it with the container's memory |
+
+Credentials come from the environment only. The runtime reads no config file
+and no CLI login, so a token in `~/.walkeros/config.json` does not reach it:
+export `WALKEROS_DEPLOY_TOKEN` (or `WALKEROS_TOKEN`) instead.
+
+## Connecting to the walkerOS app
+
+A flow runs on its own with no account. Setting a flow ID, a project ID and a
+token connects it to the app:
+
+<CodeSnippet
+  code={`docker run --rm -p 8080:8080 \\
+  -v "$PWD/dist:/app/flow:ro" \\
+  -e WALKEROS_TOKEN="wos_run_xxx" \\
+  -e WALKEROS_PROJECT_ID="proj_xxx" \\
+  -e WALKEROS_FLOW_ID="flow_xxx" \\
+  -e WALKEROS_DEPLOYMENT_ID="dep_xxx" \\
+  walkeros/flow:<version>`}
+  language="bash"
+/>
+
+The self-hosted tab of a flow in the app prints this command with the values
+filled in, including a runner token bound to that flow. A flow ID without a
+token or without a project ID stops the runtime at boot with an error naming
+the missing value.
+
+When connected, the runtime:
+
+- **Fetches secrets once at boot** and injects them into the environment before
+  the flow loads, so `$env.NAME` references in a server flow resolve to them.
+- **Sends a heartbeat** to `POST /api/projects/:projectId/runners/heartbeat`
+  every `WALKEROS_HEARTBEAT_INTERVAL` seconds with its instance ID, flow and
+  deployment IDs, version, uptime, event counters, and recent errors and log
+  lines (secrets are redacted before they leave the process). A failed
+  heartbeat is logged and never stops the flow.
+
+The artifact itself never changes while the runtime runs. To ship a new
+version, bundle again and redeploy.
+
+### Secret fetch failures
+
+| Response | Behavior |
+|---|---|
+| **401 or 403** | Fatal: the runtime exits. The token is missing, revoked or not bound to this flow |
+| **404** (no secrets configured) | Warning, the runtime continues |
+| **Any other error** | Warning, the runtime continues without secrets |
+
+Timeouts, network errors, 429 and 5xx responses are retried a few times with
+bounded, jittered backoff before the behavior above applies, so a brief blip
+while the container starts does not fail the boot. The same applies to
+fetching an artifact from a URL.
+
+## Health checks
+
+The runtime serves two endpoints on `PORT`, independent of the flow's sources:
+
+| Endpoint | Status | Body |
+|---|---|---|
+| `GET /health` | Always `200` | `{"status":"ok"}` |
+| `GET /ready` | `200` once the flow's collector is constructed | `{"status":"ready"}` |
+| `GET /ready` | `503` while starting | `{"status":"not_ready"}` |
+| `GET /ready` | `503` when the flow failed to start | `{"status":"failed","reason":"flow failed to start, see the runtime log"}` |
+| `GET /ready` | `503` after a sustained loop of uncaught errors | `{"status":"degraded","reason":"flow degraded, see the runtime log"}` |
+
+Use `/health` for liveness and `/ready` for readiness. The image's
+`HEALTHCHECK` polls `/ready` every 30 seconds after a 30-second start period.
+Every other request goes to the flow's HTTP handler (for example the Express
+source's routes); before a flow is loaded, those answer `503`.
+
+## Serving files
+
+The runtime has no static file mode. A server flow serves files the same way
+it handles events: the `include` field copies a folder next to the artifact,
+the [fs store](/docs/stores) reads from it, and
+[`@walkeros/server-transformer-file`](/docs/transformers/file) answers matching
+requests:
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "include": ["./public"],
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "stores": {
+        "files": {
+          "package": "@walkeros/server-store-fs",
+          "config": { "settings": { "basePath": "./public" } }
+        }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "next": [
+            {
+              "match": { "key": "ingest.method", "operator": "eq", "value": "GET" },
+              "next": "file"
+            }
+          ]
+        }
+      },
+      "transformers": {
+        "file": {
+          "package": "@walkeros/server-transformer-file",
+          "config": { "settings": { "prefix": "/static" } },
+          "env": { "store": "$store.files" }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+`walkeros bundle` copies `public/` into `dist/public/`, and the canonical
+Dockerfile's `COPY` of the whole `dist/` directory carries it into the image.
+Never include the output directory itself (`include: ["./dist"]` with output
+`dist/` is refused as a circular copy), and never point the fs store at a
+directory that holds credentials.
+
+## File paths at runtime
+
+Before loading a flow, the runtime changes its working directory to the
+artifact's directory. Relative paths in flow settings resolve against the
+artifact, not your project root: with the artifact at `/app/flow/flow.mjs`,
+`"filePath": "./data.json"` reads `/app/flow/data.json`. Use `include` to put
+such files next to the artifact.
+
+## Constraints
+
+- **Filesystem.** An archive, URL or stdin input writes to `/app/flow/`, so
+  those inputs need that directory writable. A read-only root filesystem, the
+  usual ECS and Kubernetes hardening, works only with a local `.mjs` artifact
+  already in place (for example the canonical Dockerfile, or a read-only
+  mount). A connected runtime persists recent errors to its cache directory
+  (default `~/.cache/walkeros`), which also needs to be writable; the image's
+  `/app/cache` is writable by the runtime user, so on a read-only root
+  filesystem set `WALKEROS_CACHE_DIR=/app/cache` and mount a volume there.
+  Without a writable cache directory, recent errors are not persisted across
+  restarts, and the flow still runs.
+- **Architecture.** The image is `linux/amd64` only.
+- **In-memory default store.** A `state` operation that names no `store` uses
+  the collector's in-memory `__cache` store, which lives inside one process.
+  Anything relying on it across events (state, deduplication, a rate limiter
+  on the default store) is correct only on a single instance. Managed
+  deployments scale up to five instances; point such steps at a store shared
+  by every instance.
+- **User.** The image runs as `walker` (UID 1001). `node_modules/` in the
+  image is read-only for that user; only `/app/flow` and `/app/cache` are
+  writable.
+
+## Kubernetes
+
+<CodeSnippet
+  code={`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: walkeros-flow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: walkeros-flow
+  template:
+    metadata:
+      labels:
+        app: walkeros-flow
+    spec:
+      containers:
+        - name: flow
+          image: registry.example.com/my-flow:1.0.0 # built from the canonical Dockerfile
+          ports:
+            - containerPort: 8080
+          env:
+            - name: WALKEROS_CACHE_DIR
+              value: /app/cache
+          livenessProbe:
+            httpGet: { path: /health, port: 8080 }
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /ready, port: 8080 }
+            periodSeconds: 10
+          resources:
+            requests: { memory: 256Mi, cpu: 250m }
+            limits: { memory: 512Mi, cpu: 500m }`}
+  language="yaml"
+/>
+
+Keep `replicas: 1` for a flow that relies on the in-memory default store (see
+[Constraints](#constraints)).
+
+## Troubleshooting
+
+**`BUNDLE must be a prebuilt artifact`**: the runtime was given a flow config.
+Build it first with `walkeros bundle` and start the output.
+
+**`Flow artifact not found: /app/flow/flow.mjs`**: nothing was copied or
+mounted at the artifact path. Copy the whole `dist/` directory to `/app/flow/`.
+
+**`Cannot find package` at startup**: only `flow.mjs` was copied. A server
+artifact is the directory, including `node_modules/`.
+
+**`--flow-id requires --project or WALKEROS_PROJECT_ID`**, or
+**`Remote flow requires authentication`**: a flow ID was set without its
+project ID or token. Set both, or unset the flow ID to run unconnected.
+
+**Exits with a 401 or 403 on secrets**: the token is invalid, revoked or bound
+to a different flow. Mint a new one in the app.
+
+## Next steps
+
+- [CLI](/docs/apps/cli): build, validate and simulate flows
+- [Deploy](/docs/getting-started/deploy): the build-then-run path end to end
+- [Observe](/docs/getting-started/observe): watch a running flow's records
+- [Bundled mode](/docs/getting-started/modes/bundled): the `flow.json` format

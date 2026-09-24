@@ -2,14 +2,19 @@
 
 import type { Flow, Transformer, WalkerOS } from '@walkeros/core';
 import {
+  getByPath,
   getFlowSettings,
   getRouteGraph,
   isObject,
+  REF_CONTRACT,
   resolveContracts,
   validateStepEntry,
 } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
-import { validateEventAgainstContract } from '@walkeros/transformer-validate';
+import {
+  validateEventAgainstContract,
+  type ContractSource,
+} from '@walkeros/transformer-validate';
 import type {
   ValidateResult,
   ValidationError,
@@ -205,12 +210,17 @@ export function validateFlow(
       }
       totalConnections += connections.length;
 
-      // Contract compliance (contracts live on Config level only)
-      const contract = input.contract;
-      if (contract) {
-        checkContractCompliance(
-          flowSettings,
-          contract,
+      // Contracts bind only where a transformer-validate step links them,
+      // with exactly that step's settings, as at runtime. The config-level
+      // contract block binds nothing by itself.
+      for (const [stepName, transformer] of Object.entries(
+        flowSettings.transformers || {},
+      )) {
+        if (!isValidateStep(transformer)) continue;
+        checkValidateStepExamples(
+          stepName,
+          transformer,
+          input.contract,
           errors,
           warnings,
           options.strict === true,
@@ -410,16 +420,11 @@ function checkCompatibility(
     return;
   }
 
-  let hasMatch = false;
-  for (const out of fromOuts) {
-    for (const inp of toIns) {
-      if (isStructurallyCompatible(out.value, inp.value)) {
-        hasMatch = true;
-        break;
-      }
-    }
-    if (hasMatch) break;
-  }
+  const hasMatch = fromOuts.some((out) =>
+    outEvents(out.value).some((event) =>
+      toIns.some((inp) => isStructurallyCompatible(event, inp.value)),
+    ),
+  );
 
   if (!hasMatch) {
     errors.push({
@@ -430,13 +435,53 @@ function checkCompatibility(
   }
 }
 
+/** An effect tuple of a StepOut: a string head, then the call arguments. */
+type StepOutEffect = [string, ...unknown[]];
+
 /**
- * An `out` takes part in the compatibility check when it is a non-empty array
- * or string, or a non-empty object such as a single walkerOS event.
+ * A StepOut is an array whose every entry is an array with a string head
+ * (`[]` included): `[['elb', event]]`, `[['return', { event }]]`, ...
  */
+function isStepOut(value: unknown): value is StepOutEffect[] {
+  return (
+    Array.isArray(value) &&
+    value.every((entry) => Array.isArray(entry) && typeof entry[0] === 'string')
+  );
+}
+
+/**
+ * Events a `return` effect passes on: `{ event }` yields the event, a bare
+ * object is the event itself, an array is a fan-out read item by item by the
+ * same rule. `false` and other values pass nothing on.
+ */
+function returnedEvents(value: unknown): unknown[] {
+  if (isObject(value)) return [isObject(value.event) ? value.event : value];
+  if (Array.isArray(value)) return value.flatMap(returnedEvents);
+  return [];
+}
+
+/**
+ * The events an example `out` hands to the next step. A StepOut yields the
+ * object argument of each `elb` effect and the events of each `return`
+ * effect; every other head (`message.ack`, `response`, vendor calls) yields
+ * nothing. A non-StepOut value is the output itself (back compat), when it
+ * is a non-empty array, string or object.
+ */
+function outEvents(out: unknown): unknown[] {
+  if (isStepOut(out)) {
+    return out.flatMap(([head, first]) => {
+      if (head === 'elb') return isObject(first) ? [first] : [];
+      if (head === 'return') return returnedEvents(first);
+      return [];
+    });
+  }
+  if (Array.isArray(out) || typeof out === 'string')
+    return out.length > 0 ? [out] : [];
+  return isObject(out) && Object.keys(out).length > 0 ? [out] : [];
+}
+
 function hasComparableOut(out: unknown): boolean {
-  if (Array.isArray(out) || typeof out === 'string') return out.length > 0;
-  return isObject(out) && Object.keys(out).length > 0;
+  return outEvents(out).length > 0;
 }
 
 function isStructurallyCompatible(a: unknown, b: unknown): boolean {
@@ -618,59 +663,125 @@ function lintRoute(
   }
 }
 
+const VALIDATE_PACKAGE = '@walkeros/transformer-validate';
+
+/** A transformer step that runs `@walkeros/transformer-validate`. */
+export function isValidateStep(step: Flow.Transformer): boolean {
+  return step.package === VALIDATE_PACKAGE;
+}
+
 /**
- * Validate each step example against the flow's resolved top-level contract.
- *
- * - A contract violation → error when {@link strict}, else warning.
- * - An entity.action with no matching contract entry produces NO diagnostic:
- *   the shared {@link validateEventAgainstContract} authority treats no-match
- *   as "no opinion = pass", and so do we. Emitting a warning here would wrongly
- *   fail `walkeros validate --strict` for any event type the contract simply
- *   does not cover.
- *
- * Only the canonical event INPUTS are validated: `destination.in` and
- * `transformer.in`. A source example's `in` is RAW input (an HTTP request, a
- * dataLayer array, an HTML string), not a canonical walkerOS event, so
- * validating it against the event contract would be semantically wrong.
- * Source-input validation (per-package input formats) and canonical-output
- * validation (`source.out`/`transformer.out`, which are `StepOut` effect
- * tuples, not events) are deferred to v2.
- *
- * The verdict comes from the shared {@link validateEventAgainstContract}
- * authority so design-time and runtime stay in lockstep.
+ * The contract sources a validate step runs with, as at runtime: a whole
+ * `$contract.<name>(.<path>)` string resolves against the config-level
+ * contract definitions, an inline schema is used as given. Returns undefined
+ * when an entry cannot be resolved statically, so the step is not judged.
  */
-function checkContractCompliance(
-  config: Flow,
-  contract: Flow.Contract,
+function resolveStepContracts(
+  entries: unknown[],
+  contract: Flow.Contract | undefined,
+): ContractSource[] | undefined {
+  let resolved: Record<string, Flow.ContractRule> = {};
+  if (contract) {
+    try {
+      resolved = resolveContracts(contract);
+    } catch {
+      return undefined;
+    }
+  }
+
+  const sources: ContractSource[] = [];
+  for (const entry of entries) {
+    if (isObject(entry)) {
+      sources.push(entry);
+      continue;
+    }
+    if (typeof entry !== 'string') return undefined;
+    const match = entry.match(REF_CONTRACT);
+    if (!match || !(match[1] in resolved)) return undefined;
+    const rule: unknown = match[2]
+      ? getByPath(resolved[match[1]], match[2])
+      : resolved[match[1]];
+    if (!isObject(rule)) return undefined;
+    sources.push(rule);
+  }
+  return sources;
+}
+
+/**
+ * Check a validate step's own examples against its own contract and
+ * settings: the verdict the step reaches on `in` must agree with what `out`
+ * shows. A valid event goes on (its `output.isValid` flag, when shown, is
+ * true); an invalid one is dropped in `strict` mode and otherwise goes on
+ * with the flag false. A disagreement is CONTRACT_VIOLATION (error when
+ * {@link strict}, else warning). Deterministic: the verdict comes from the
+ * shared {@link validateEventAgainstContract} runtime authority.
+ */
+export function checkValidateStepExamples(
+  name: string,
+  step: Flow.Transformer,
+  contract: Flow.Contract | undefined,
   errors: ValidationError[],
   warnings: ValidationWarning[],
   strict: boolean,
 ): void {
-  // Resolve extend chains + wildcards once; each rule is a ContractSource.
-  const resolved = resolveContracts(contract);
-  const rules = Object.values(resolved);
-  if (rules.length === 0) return;
+  if (!step.examples) return;
+  const settings =
+    isObject(step.config) && isObject(step.config.settings)
+      ? step.config.settings
+      : {};
+  // A contract that is set but not a list cannot be judged statically.
+  if (settings.contract !== undefined && !Array.isArray(settings.contract))
+    return;
+  const contracts = Array.isArray(settings.contract)
+    ? resolveStepContracts(settings.contract, contract)
+    : [];
+  if (!contracts) return;
 
-  const checkExample = (path: string, candidate: unknown): void => {
-    if (!isObject(candidate)) return;
+  const mode = settings.mode === 'strict' ? 'strict' : 'pass';
+  const format = settings.format === true;
+  const output = isObject(settings.output) ? settings.output : {};
+  const isValidPath =
+    typeof output.isValid === 'string' ? output.isValid : 'source.valid';
 
-    const entity =
-      typeof candidate.entity === 'string' ? candidate.entity : undefined;
-    const action =
-      typeof candidate.action === 'string' ? candidate.action : undefined;
-    if (!entity || !action) return;
+  for (const [exName, example] of Object.entries(step.examples)) {
+    if (example.command || !isObject(example.in)) continue;
+    if (example.out === undefined) continue;
 
-    const event: WalkerOS.DeepPartialEvent = candidate;
-    const result = validateEventAgainstContract(event, undefined, {
-      contracts: rules,
+    const event: WalkerOS.DeepPartialEvent = example.in;
+    const verdict = validateEventAgainstContract(event, undefined, {
+      contracts,
+      format,
     });
-    // No-match returns isValid:true (no opinion = pass), so an uncovered
-    // event type produces no diagnostic, matching runtime semantics.
-    if (result.isValid) return;
+    const passed = outEvents(example.out);
+    const dropped =
+      isStepOut(example.out) &&
+      example.out.some(([head, first]) => head === 'return' && first === false);
 
-    const message = `Example violates contract: ${result.errors
-      .map((e) => `${e.path || '/'}: ${e.message}`)
-      .join('; ')}`;
+    let agrees: boolean;
+    if (mode === 'strict' && !verdict.isValid) {
+      agrees = dropped && passed.length === 0;
+    } else {
+      agrees =
+        passed.length > 0 &&
+        passed.every((out) => {
+          if (!isValidPath) return true;
+          const flag = getByPath(out, isValidPath);
+          return verdict.isValid ? flag !== false : flag === false;
+        });
+    }
+    if (agrees) continue;
+
+    const reason = verdict.isValid
+      ? 'the event satisfies the contract'
+      : `the event breaks the contract (${verdict.errors
+          .map((e) => `${e.path || '/'}: ${e.message}`)
+          .join('; ')})`;
+    const expected =
+      mode === 'strict' && !verdict.isValid
+        ? 'drops it (["return", false])'
+        : `passes it on${isValidPath ? ` with ${isValidPath} ${verdict.isValid}` : ''}`;
+    const path = `transformer.${name}.examples.${exName}.out`;
+    const message = `Example out disagrees with the validate step: ${reason}, so with mode "${mode}" the step ${expected}.`;
 
     if (strict) {
       errors.push({ path, message, code: 'CONTRACT_VIOLATION' });
@@ -678,22 +789,9 @@ function checkContractCompliance(
       warnings.push({
         path,
         message,
-        suggestion: 'Fix the example data to satisfy the contract schema.',
+        suggestion:
+          'Make the example out show what the validate step does with its settings.',
       });
-    }
-  };
-
-  for (const [name, dest] of Object.entries(config.destinations || {})) {
-    if (!dest.examples) continue;
-    for (const [exName, example] of Object.entries(dest.examples)) {
-      checkExample(`destination.${name}.examples.${exName}.in`, example.in);
-    }
-  }
-
-  for (const [name, transformer] of Object.entries(config.transformers || {})) {
-    if (!transformer.examples) continue;
-    for (const [exName, example] of Object.entries(transformer.examples)) {
-      checkExample(`transformer.${name}.examples.${exName}.in`, example.in);
     }
   }
 }

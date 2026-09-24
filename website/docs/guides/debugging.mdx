@@ -14,17 +14,22 @@ why. Run your flow against a single event offline and read the result.
   language="bash"
 />
 
-The simulation reports whether the destination accepted the event:
+The simulation reports whether the destination accepted the event, which
+mapping rule matched, and the vendor calls it would have made:
 
 <CodeSnippet
-  code={`Simulating destination: gtag
-success: true
+  code={`success: true
+  destination.gtag
+    mapping: product add
+    call window.gtag("event","add_to_cart",{...})
   Duration: 4302ms`}
   language="text"
 />
 
-Add `--json` to get the same result as machine-readable output
-(`{ "success": true, "duration": 1104 }`). Your `flow.json` must carry
+`mapping: none (skipped before mapping)` with `no calls` means the event never
+reached the destination's mapping (consent, a filter, or no rule). Add `--json`
+to get the same result as machine-readable output, with the recorded calls under
+`simulations` (see [simulation output](/docs/apps/cli#simulation-output)). Your `flow.json` must carry
 `config.platform` (`"web"` or `"server"`), otherwise bundling throws before the
 simulation runs.
 
@@ -91,4 +96,6 @@ simulation is one tool call. `step` is required and uses the `type.name` form
 />
 
 The response includes `_hints.warnings`, which flags when no destination received
-the event.
+the event. For transformer, collector and destination steps, pass `ingest` (for
+example `{ ip, userAgent }`) to simulate the request context an HTTP source would
+provide. Like the CLI output, the result is scrubbed of credentials.

@@ -105,6 +105,33 @@ mapping:
 
 **Consent mapping**: Map your consent field names (string) or use static values (boolean). Event mappings always override Settings helpers.
 
+## Client IP and user agent
+
+The destination sends the client IP and user agent as `eventDeviceInfo.ipAddress`
+and `eventDeviceInfo.userAgent` by default. The `ip` and `userAgent` settings
+resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]`
+and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the
+source provides them (see the `config.ingest` recipe on the
+[Express source](/docs/sources/server/express)). A value your event mapping sets
+for `ipAddress` or `userAgent` wins; a value that resolves to nothing is not
+sent. Set either to `false` to turn it off:
+
+<CodeSnippet
+  code={`settings: {
+  destinations: [...],
+  ip: false,                          // never send the client IP
+  userAgent: 'ingest.userAgent',      // request only, ignore event.user
+}`}
+  language="typescript"
+/>
+
+## Simulate
+
+`walkeros push --simulate destination.<id>` runs offline: the package's mock env
+supplies the auth client and `fetch`, so no token is requested and nothing
+reaches Google. The output shows the `fetch` call with the request body the
+destination would send.
+
 ## Store sales (IN_STORE)
 
 For physical store conversions, set `eventSource: 'IN_STORE'` on the destination

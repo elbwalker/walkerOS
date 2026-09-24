@@ -1,3 +1,7 @@
+# walkeros/cli: the builder image. It carries the full CLI (esbuild, pacote,
+# @vercel/nft, npm) and needs registry egress, which is why it is kept apart
+# from walkeros/flow, the serving runtime. The hosted bundle job runs this image
+# with a per-run command, e.g. `walkeros bundle --manifest <url>`.
 FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
 
 RUN apk upgrade --no-cache && apk add --no-cache curl

@@ -13,7 +13,8 @@ import {
   type Platform,
 } from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
-import type { Simulation, WalkerOS } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
+import type { Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import type { PushCommandOptions, PushResult } from './types.js';
 
 /**
@@ -28,7 +29,26 @@ function simulationToPushResult(result: Simulation.Result): PushResult {
     success: !result.error,
     duration: result.duration,
     ...(result.error ? { error: result.error.message } : {}),
+    simulations: [result],
   };
+}
+
+const INGEST_SCOPE_ERROR =
+  '--ingest applies to transformer, collector and destination simulation only';
+
+/**
+ * Resolve the pipeline context a simulated step reads: the raw `--ingest`
+ * source (JSON string, file path or URL) wins over a programmatic `ingest`.
+ */
+async function resolveIngest(
+  options: PushCommandOptions,
+): Promise<Omit<Ingest, '_meta'> | undefined> {
+  if (options.ingestSource === undefined) return options.ingest;
+  const loaded: unknown = await loadJsonFromSource(options.ingestSource, {
+    name: 'ingest',
+  });
+  if (!isObject(loaded)) throw new Error('--ingest must be a JSON object');
+  return loaded;
 }
 
 /**
@@ -68,7 +88,13 @@ export async function runPushCommand(
       });
     }
 
-    // 4. Route to the correct typed function based on the plan.
+    // 4. Resolve --ingest. Only a simulated transformer, collector or
+    // destination has a pipeline context to seed.
+    const ingest = await resolveIngest(options);
+    if (ingest && (plan.kind === 'none' || plan.kind === 'source'))
+      throw new Error(INGEST_SCOPE_ERROR);
+
+    // 5. Route to the correct typed function based on the plan.
     let result: PushResult;
     switch (plan.kind) {
       case 'none':
@@ -90,6 +116,7 @@ export async function runPushCommand(
             flow: options.flow,
             silent: options.silent,
             verbose: options.verbose,
+            json: options.json,
             snapshot: options.snapshot,
           }),
         );
@@ -104,9 +131,10 @@ export async function runPushCommand(
               transformerId: plan.ids[0],
               flow: options.flow,
               mock: options.mock,
-              ingest: options.ingest,
+              ingest,
               silent: options.silent,
               verbose: options.verbose,
+              json: options.json,
               snapshot: options.snapshot,
             },
           ),
@@ -122,8 +150,10 @@ export async function runPushCommand(
               collectorName: plan.ids[0],
               flow: options.flow,
               mock: options.mock,
+              ingest,
               silent: options.silent,
               verbose: options.verbose,
+              json: options.json,
               snapshot: options.snapshot,
             },
           ),
@@ -136,6 +166,7 @@ export async function runPushCommand(
           resolvedEvent as WalkerOS.DeepPartialEvent,
           plan.ids,
           options,
+          ingest,
         );
         break;
     }
@@ -152,31 +183,37 @@ export async function runPushCommand(
 
 /**
  * Run `simulateDestination` once per destination id and aggregate into a
- * single `PushResult`. Stops on the first failure and returns a structured
- * error referencing the failed id.
+ * single `PushResult` that keeps every per-destination result. Stops on the
+ * first failure and returns a structured error referencing the failed id.
  */
 async function runDestinationSimulationLoop(
   config: string,
   event: WalkerOS.DeepPartialEvent,
   destinationIds: string[],
   options: PushCommandOptions,
+  ingest: Omit<Ingest, '_meta'> | undefined,
 ): Promise<PushResult> {
   const startTime = Date.now();
+  const simulations: Simulation.Result[] = [];
 
   for (const destinationId of destinationIds) {
     const r = await simulateDestination(config, event, {
       destinationId,
       flow: options.flow,
       mock: options.mock,
+      ingest,
       silent: options.silent,
       verbose: options.verbose,
+      json: options.json,
       snapshot: options.snapshot,
     });
+    simulations.push(r);
     if (r.error) {
       return {
         success: false,
         duration: Date.now() - startTime,
         error: `simulate destination.${destinationId}: ${r.error.message}`,
+        simulations,
       };
     }
   }
@@ -184,5 +221,6 @@ async function runDestinationSimulationLoop(
   return {
     success: true,
     duration: Date.now() - startTime,
+    simulations,
   };
 }

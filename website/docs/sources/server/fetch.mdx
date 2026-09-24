@@ -87,7 +87,7 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-Server sources require platform-specific handlers. For containerized deployments, see [Docker](/docs/apps/docker).
+Server sources require platform-specific handlers. For containerized deployments, see the [runtime](/docs/apps/runtime).
 
 [See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
@@ -133,6 +133,22 @@ Extract request metadata and forward it through the pipeline.
     },
   },
 });`}
+  language="typescript"
+/>
+
+Ingest is opt-in: without `config.ingest` the source forwards no request
+metadata. Server destinations with client IP and user agent fields
+(Meta, TikTok, Snapchat, Pinterest, Bing, Reddit, Criteo and X (Twitter) conversion APIs, Google Data Manager and Piwik PRO) read `ingest.ip` and `ingest.userAgent` by default, so name the keys
+`ip` and `userAgent`. This source has no `ip` path (see below); map it from a
+single-value header your own infrastructure sets:
+
+<CodeSnippet
+  code={`ingest: {
+  map: {
+    ip: { key: 'headers.x-client-ip' },
+    userAgent: { key: 'headers.user-agent' },
+  },
+}`}
   language="typescript"
 />
 

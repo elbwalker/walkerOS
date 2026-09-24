@@ -4,29 +4,101 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'Release type'
+        description: 'Release type (ignored when images_only is set)'
         required: true
         type: choice
         options:
           - 'pre-release (next)'
           - 'stable release'
+      images_only:
+        description: 'Images only: an exact npm version already published (e.g. 4.7.0). Skips versioning, build, test and publish; builds and pushes the Docker images for that version. Leave empty for a normal release.'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  release:
+  # The rule: bump first, build once, test exactly what ships. The version
+  # bump runs before the one build, so the dist that is tested is the dist
+  # that is published. A green "Build and test" (test.yml) run on the same
+  # SHA already proved that code, so the release may skip the full suite and
+  # run only the smoke on the bumped build. The gate decides that in seconds
+  # and holds no publish rights.
+  gate:
+    # An images-only run publishes nothing to npm, so there is nothing to gate.
+    if: inputs.images_only == ''
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      tested: ${{ steps.lookup.outputs.tested }}
+    steps:
+      # Matching on the workflow file, then on name, path and head_sha, keeps
+      # any other workflow from satisfying the gate. Only COMPLETED runs count;
+      # a queued or running one is ignored, never waited for. Only a green run
+      # from push or workflow_dispatch lets the release skip its full suite:
+      # those run everything including e2e, while a pull_request run is
+      # affected-only without e2e. Otherwise the release does not wait either;
+      # it tests its own bumped build in the job, so it stays one step.
+      - name: Look up "Build and test" for this commit
+        id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          RUNS="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/test.yml/runs?head_sha=${SHA}&status=completed&per_page=100" \
+            --jq '[.workflow_runs[]
+                   | select(.head_sha == "'"$SHA"'"
+                            and .status == "completed"
+                            and .name == "Build and test"
+                            and .path == ".github/workflows/test.yml")]')"
+
+          SUCCESS="$(jq -r '[.[] | select(.conclusion == "success" and (.event == "push" or .event == "workflow_dispatch"))] | sort_by(.created_at) | last | .html_url // empty' <<<"$RUNS")"
+          if [ -n "$SUCCESS" ]; then
+            echo "OK: \"Build and test\" passed on $SHA: $SUCCESS"
+            echo "The release skips the full suite and runs the smoke only."
+            echo "tested=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A failure from any event, PR runs included, still blocks.
+          FAILED="$(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "cancelled" and .conclusion != "skipped")] | sort_by(.created_at) | last | .html_url // empty' <<<"$RUNS")"
+          if [ -n "$FAILED" ]; then
+            echo "::error::Refusing to release: \"Build and test\" failed on $SHA: $FAILED"
+            echo "Fix the commit, or re-run the failed run if it was a flake, then dispatch the release again."
+            exit 1
+          fi
+
+          echo "No completed green push or dispatch \"Build and test\" run on $SHA; the release runs the full suite on the bumped build."
+          echo "tested=false" >> "$GITHUB_OUTPUT"
+
+  # Needs only the gate, so the npm-publish approval is requested once, at the
+  # start. The reviewer rule stays on npm-publish; no other job carries it.
+  #
+  # The Docker images (walkeros/flow, walkeros/cli) are steps at the end of
+  # this same job, not a job of their own: a second job on npm-publish would
+  # need a second approval. DOCKERHUB_* are read under npm-publish.
+  release:
+    needs: gate
+    if: ${{ !cancelled() && (needs.gate.result == 'success' || (inputs.images_only != '' && needs.gate.result == 'skipped')) }}
+    runs-on: ubuntu-latest
+    # Release (bump, one build, optional full suite, publish) plus images
+    # (tarball wait, two builds, scans, smoke, push, parity).
+    timeout-minutes: 80
     environment: npm-publish
     permissions:
       contents: write
       pull-requests: write
       id-token: write
+      # SARIF upload of the image scans.
+      security-events: write
     env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
       # The tag that follows the newest release of this kind.
       MOVING_TAG: ${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
     steps:
@@ -71,15 +143,19 @@ jobs:
           # holds npm publish rights, so restoring a dependency cache that a
           # lower-privileged workflow can write is a supply-chain path into the
           # release. Install cold instead; correctness beats the cache here.
+          # The same holds for node_modules and turbo caches: none are restored.
           package-manager-cache: false
 
       - name: Install dependencies
+        if: inputs.images_only == ''
         run: npm ci
 
       - name: Clean
+        if: inputs.images_only == ''
         run: npm run clean
 
       - name: Capture changeset info
+        if: inputs.images_only == ''
         id: changesets
         run: |
           CHANGES=""
@@ -131,12 +207,13 @@ jobs:
           echo "release_needed=$RELEASE_NEEDED" >> $GITHUB_OUTPUT
 
       - name: Configure Git
+        if: inputs.images_only == ''
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Version packages (stable)
-        if: inputs.release_type == 'stable release'
+        if: inputs.images_only == '' && inputs.release_type == 'stable release'
         run: |
           # Exit pre-release mode if active; skip if not in pre-release
           if [ -f ".changeset/pre.json" ]; then
@@ -147,20 +224,76 @@ jobs:
           npx changeset version
 
       - name: Version packages (pre-release)
-        if: inputs.release_type == 'pre-release (next)'
+        if: inputs.images_only == '' && inputs.release_type == 'pre-release (next)'
         run: npx changeset version --snapshot next
 
       - name: Update lock file
+        if: inputs.images_only == ''
         run: npm install --package-lock-only
 
       - name: Build
+        if: inputs.images_only == ''
         # Bump runs first so this single build embeds the bumped __VERSION__
         # (see walkerOS/packages/config/tsup/index.mjs). The dist produced here
-        # is exactly what the gate below tests and what publish ships.
+        # is exactly what the steps below test and what publish ships.
         run: npx turbo run build --filter='!@walkeros/website'
 
-      - name: Test, typecheck, lint, integration, e2e
-        run: npx turbo run test typecheck lint test:integration test:e2e
+      # Only when no green "Build and test" run exists for this SHA. The build
+      # tasks replay from this job's local turbo cache (same bumped tree), so
+      # nothing is rebuilt; the website filter keeps its build out.
+      - name: Test, typecheck, lint, integration, e2e (untested SHA only)
+        if: inputs.images_only == '' && needs.gate.outputs.tested != 'true'
+        run: npx turbo run test typecheck lint test:integration test:e2e --filter='!@walkeros/website'
+
+      - name: Smoke-test the bumped build
+        if: inputs.images_only == ''
+        run: |
+          npx turbo run test:e2e --filter=@walkeros/cli
+
+          check_version() {
+            local label="$1" bin="$2" manifest="$3"
+            local want got
+            want="$(node -p "require('./$manifest').version")"
+            got="$(node "$bin" --version)"
+            if [ "$got" != "$want" ]; then
+              echo "::error::$label --version reports '$got', expected bumped '$want'."
+              exit 1
+            fi
+            echo "OK: $label $got"
+          }
+          check_version cli packages/cli/dist/cli.js packages/cli/package.json
+          check_version runner packages/runner/dist/bin.js packages/runner/package.json
+
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          const { execSync } = require('child_process');
+          const workspaces = JSON.parse(execSync('npm query .workspace', { encoding: 'utf8' }));
+          const targets = (value, out) => {
+            if (typeof value === 'string') out.push(value);
+            else if (Array.isArray(value)) value.forEach((v) => targets(v, out));
+            else if (value && typeof value === 'object')
+              Object.values(value).forEach((v) => targets(v, out));
+            return out;
+          };
+          const missing = [];
+          let checked = 0;
+          for (const ws of workspaces) {
+            if (ws.private) continue;
+            const pkg = JSON.parse(fs.readFileSync(path.join(ws.path, 'package.json'), 'utf8'));
+            for (const file of targets([pkg.main, pkg.module, pkg.types, pkg.exports], [])) {
+              if (file.includes('*')) continue;
+              checked++;
+              if (!fs.existsSync(path.join(ws.path, file))) missing.push(`${pkg.name}: ${file}`);
+            }
+          }
+          if (missing.length) {
+            console.log(`::error::${missing.length} published entry point(s) missing from the build:`);
+            missing.forEach((m) => console.log(`  ${m}`));
+            process.exit(1);
+          }
+          console.log(`OK: ${checked} entry points present across public packages.`);
+          EOF
 
       # Trusted Publishing: npm exchanges the GitHub OIDC token at publish time.
       # No NPM_TOKEN. Provenance attestations are generated automatically.
@@ -170,7 +303,7 @@ jobs:
       # git ahead of npm (re-dispatchable: changeset publish ships the missing
       # versions) rather than npm ahead of git (which re-bumps on re-dispatch).
       - name: Commit version changes (stable only)
-        if: inputs.release_type == 'stable release'
+        if: inputs.images_only == '' && inputs.release_type == 'stable release'
         run: |
           git add -A
           if git diff --cached --quiet; then
@@ -181,6 +314,7 @@ jobs:
           git push
 
       - name: Publish to npm (Trusted Publishing via OIDC)
+        if: inputs.images_only == ''
         run: |
           if [ "${{ inputs.release_type }}" = "pre-release (next)" ]; then
             npx changeset publish --tag next
@@ -190,6 +324,7 @@ jobs:
 
       - name: Create GitHub Release
         if: |
+          inputs.images_only == '' &&
           inputs.release_type == 'stable release' &&
           steps.changesets.outputs.release_needed == 'true'
         env:
@@ -215,165 +350,13 @@ jobs:
               --notes-file /tmp/release-notes.md
           fi
 
-      # Docker image publishing
-      - name: Get CLI version
-        id: versions
-        run: |
-          CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
-          echo "cli=$CLI_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Verify CLI and its walkerOS dependencies published to npm
-        env:
-          CLI_VERSION: ${{ steps.versions.outputs.cli }}
-        run: |
-          # The image builds run `npm install @walkeros/cli@$CLI_VERSION` in a
-          # fresh container, which resolves the CLI's whole dependency closure.
-          # `changeset publish` lands those packages on the registry out of
-          # order, so wait for every @walkeros/* dependency too, not just the
-          # CLI. They all carry one version (the `fixed` group in
-          # .changeset/config.json).
-          #
-          # Wait for the tarball, not just the metadata. The packument lists a
-          # version minutes before its tarball is fetchable, and the tarball is
-          # what `npm install` downloads. Probe both, uncached, from this runner:
-          # buildkit shares its network, so a 200 here predicts a 200 there.
-          if ! PKGS="$(node -e '
-            const m = require("./packages/cli/package.json");
-            const deps = { ...m.dependencies, ...m.peerDependencies };
-            const walkeros = Object.keys(deps).filter((n) => n.startsWith("@walkeros/"));
-            process.stdout.write(["@walkeros/cli", ...walkeros].join(" "));
-          ')"; then
-            echo "::error::Could not read packages/cli/package.json to build the wait list"
-            exit 1
-          fi
-
-          # An empty list would pass this gate having verified nothing.
-          case " $PKGS " in
-            *" @walkeros/cli "*) ;;
-            *)
-              echo "::error::Wait list is missing @walkeros/cli (got: '$PKGS')"
-              exit 1
-              ;;
-          esac
-          echo "Waiting for: $PKGS"
-
-          for PKG in $PKGS; do
-            ENCODED="${PKG/\//%2F}"
-            URL="https://registry.npmjs.org/${ENCODED}"
-            OK=0
-            for i in $(seq 1 30); do
-              CODE="$(curl -sS -o /tmp/npm-probe.json -w '%{http_code}' \
-                -H 'Accept: application/vnd.npm.install-v1+json' "$URL" \
-                || echo 000)"
-              TARBALL=""
-              if [ "$CODE" = "200" ]; then
-                TARBALL="$(node -e '
-                  const doc = JSON.parse(
-                    require("fs").readFileSync("/tmp/npm-probe.json", "utf8"),
-                  );
-                  process.stdout.write(
-                    doc.versions?.[process.argv[1]]?.dist?.tarball ?? "",
-                  );
-                ' "$CLI_VERSION")"
-              fi
-              TCODE="-"
-              if [ -n "$TARBALL" ]; then
-                TCODE="$(curl -sS -o /dev/null -w '%{http_code}' -L "$TARBALL" \
-                  || echo 000)"
-                if [ "$TCODE" = "200" ]; then
-                  echo "Verified: ${PKG}@${CLI_VERSION} (metadata + tarball)"
-                  OK=1
-                  break
-                fi
-              fi
-              echo "  ${PKG} attempt $i/30 (meta $CODE, tarball $TCODE): waiting..."
-              sleep 15
-            done
-            if [ "$OK" != "1" ]; then
-              echo "::error::${PKG}@${CLI_VERSION} not installable after ~7min (meta $CODE, tarball $TCODE)"
-              exit 1
-            fi
-          done
-          echo "All packages the CLI install needs are on the registry."
-
-      # Log in before the existence probes: anonymous `docker manifest inspect`
-      # is rate limited, and a 429 is indistinguishable from "missing" below.
-      - name: Login to Docker Hub
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Check if Flow image exists
-        id: check-flow
-        run: |
-          if docker manifest inspect walkeros/flow:${{ steps.versions.outputs.cli }} >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Check if CLI image exists
-        id: check-cli
-        run: |
-          if docker manifest inspect walkeros/cli:${{ steps.versions.outputs.cli }} >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build and push Flow image
-        if: steps.check-flow.outputs.exists == 'false'
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: ./packages/cli
-          file: ./packages/cli/Dockerfile
-          push: true
-          build-args: |
-            CLI_VERSION=${{ steps.versions.outputs.cli }}
-          tags: |
-            walkeros/flow:${{ steps.versions.outputs.cli }}
-            walkeros/flow:${{ env.MOVING_TAG }}
-
-      # Skipping the build must not also skip the moving tag: the two are
-      # independent facts. Point it at the existing image instead of rebuilding.
-      - name: Point flow moving tag at existing image
-        if: steps.check-flow.outputs.exists == 'true'
-        run: |
-          docker buildx imagetools create \
-            --tag walkeros/flow:${MOVING_TAG} \
-            walkeros/flow:${{ steps.versions.outputs.cli }}
-
-      - name: Build and push CLI image
-        if: steps.check-cli.outputs.exists == 'false'
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: ./packages/cli
-          file: ./packages/cli/Dockerfile.cli
-          push: true
-          build-args: |
-            CLI_VERSION=${{ steps.versions.outputs.cli }}
-          tags: |
-            walkeros/cli:${{ steps.versions.outputs.cli }}
-            walkeros/cli:${{ env.MOVING_TAG }}
-
-      - name: Point cli moving tag at existing image
-        if: steps.check-cli.outputs.exists == 'true'
-        run: |
-          docker buildx imagetools create \
-            --tag walkeros/cli:${MOVING_TAG} \
-            walkeros/cli:${{ steps.versions.outputs.cli }}
-
       - name: Comment on PR
-        if: steps.changesets.outputs.packages != ''
+        if: inputs.images_only == '' && steps.changesets.outputs.packages != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # As with the release notes: changeset-authored text stays in env.
           PACKAGES: ${{ steps.changesets.outputs.packages }}
           RELEASE_TYPE: ${{ inputs.release_type }}
-          CLI_VERSION: ${{ steps.versions.outputs.cli }}
-          FLOW_EXISTS: ${{ steps.check-flow.outputs.exists }}
-          CLI_EXISTS: ${{ steps.check-cli.outputs.exists }}
         run: |
           PR_NUMBER=$(gh pr list --head "${GITHUB_REF_NAME}" --state open --json number --jq '.[0].number' || true)
 
@@ -390,24 +373,412 @@ jobs:
             TITLE="Stable release published"
           fi
 
-          DOCKER_SECTION=""
-          if [ "$FLOW_EXISTS" = "false" ] || [ "$CLI_EXISTS" = "false" ]; then
-            DOCKER_SECTION=$(printf '\n\n🐳 **Docker images published**')
-            if [ "$FLOW_EXISTS" = "false" ]; then
-              DOCKER_SECTION=$(printf '%s\n- walkeros/flow:%s (:%s)' \
-                "$DOCKER_SECTION" "$CLI_VERSION" "$MOVING_TAG")
-            fi
-            if [ "$CLI_EXISTS" = "false" ]; then
-              DOCKER_SECTION=$(printf '%s\n- walkeros/cli:%s (:%s)' \
-                "$DOCKER_SECTION" "$CLI_VERSION" "$MOVING_TAG")
-            fi
-            DOCKER_SECTION=$(printf '%s\n\nDocker: `docker pull walkeros/flow:%s`' \
-              "$DOCKER_SECTION" "$MOVING_TAG")
-          fi
-
-          printf '%s **%s**\n\n**Packages**\n%s\n\nInstall: `npm i @walkeros/core@%s`%s\n' \
-            "$EMOJI" "$TITLE" "$PACKAGES" "$MOVING_TAG" "$DOCKER_SECTION" \
+          printf '%s **%s**\n\n**Packages**\n%s\n\nInstall: `npm i @walkeros/core@%s`\n' \
+            "$EMOJI" "$TITLE" "$PACKAGES" "$MOVING_TAG" \
             > /tmp/pr-comment.md
 
           gh pr comment "$PR_NUMBER" --body-file /tmp/pr-comment.md
           echo "Commented on PR #$PR_NUMBER"
+
+      # Docker images. walkeros/flow:<v> holds @walkeros/runner@<v>,
+      # walkeros/cli:<v> holds @walkeros/cli@<v>. That tag is immutable: it is
+      # never rebuilt or overwritten, so a base-image-only fix (a new OpenSSL,
+      # say) needs an npm patch release for a new tag. latest, <M.m> and <M>
+      # are moving tags, flipped only after the scan, smoke and parity gates
+      # pass, and only for the newest stable version on that line (a
+      # prerelease moves nothing). New images are built, scanned and smoked
+      # before any is pushed, so a failing gate burns no tag.
+      # images_only=<version> reruns just these steps for a published version
+      # and resumes a partial run: an image whose tag already exists is not
+      # rebuilt, only pulled, smoked and parity-checked, then its moving tags
+      # are completed.
+      - name: Images - resolve version
+        env:
+          # Dispatch text stays in env, never spliced into the script body.
+          IMAGES_ONLY: ${{ inputs.images_only }}
+        run: |
+          set -euo pipefail
+          if [ -n "$IMAGES_ONLY" ]; then
+            VERSION="$IMAGES_ONLY"
+            if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+              echo "::error::images_only '${VERSION}' is not an exact npm version"
+              exit 1
+            fi
+            for PKG in @walkeros/runner @walkeros/cli; do
+              if [ "$(npm view "${PKG}@${VERSION}" version 2>/dev/null || true)" != "$VERSION" ]; then
+                echo "::error::${PKG}@${VERSION} is not on npm. images_only packages an already published version."
+                exit 1
+              fi
+            done
+          else
+            VERSION="$(node -p "require('./packages/cli/package.json').version")"
+            RUNNER="$(node -p "require('./packages/runner/package.json').version")"
+            # One version for both: the changesets `fixed` group bumps them together.
+            if [ "$RUNNER" != "$VERSION" ]; then
+              echo "::error::@walkeros/runner ${RUNNER} and @walkeros/cli ${VERSION} differ; expected one fixed-group version."
+              exit 1
+            fi
+          fi
+          echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Images package version ${VERSION}"
+
+      # Log in before the existence probe: anonymous `docker manifest inspect`
+      # is rate limited, and a 429 is indistinguishable from "missing".
+      - name: Images - login to Docker Hub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # NEW_IMAGES are built, scanned, smoked and pushed. An existing tag is
+      # never touched again: it goes straight to the parity gate. A run where
+      # only one tag exists (a partial earlier run) builds just the other one.
+      - name: Images - check existing tags
+        run: |
+          set -euo pipefail
+          # exists | free. Only a definite "not found" counts as free; any other
+          # failure (auth, 5xx, network) fails the step, so a registry hiccup
+          # can never lead to overwriting an immutable tag.
+          tag_state() {
+            local out
+            if out="$(docker manifest inspect "$1" 2>&1 >/dev/null)"; then
+              echo exists
+            elif printf '%s' "$out" | grep -qiE 'no such manifest|manifest unknown'; then
+              echo free
+            else
+              echo "::error::Could not tell whether $1 exists: $out" >&2
+              return 1
+            fi
+          }
+          NEW=""
+          for IMG in flow cli; do
+            KEY="$(echo "$IMG" | tr '[:lower:]' '[:upper:]')_NEW"
+            STATE="$(tag_state "walkeros/${IMG}:${IMAGE_VERSION}")"
+            if [ "$STATE" = "exists" ]; then
+              echo "walkeros/${IMG}:${IMAGE_VERSION} already exists: immutable, not rebuilt; parity-checked below."
+              echo "${KEY}=false" >> "$GITHUB_ENV"
+            else
+              echo "walkeros/${IMG}:${IMAGE_VERSION} is free: built, scanned and pushed below."
+              echo "${KEY}=true" >> "$GITHUB_ENV"
+              NEW="${NEW}${NEW:+ }${IMG}"
+            fi
+          done
+          echo "NEW_IMAGES=${NEW}" >> "$GITHUB_ENV"
+
+      - name: Images - wait for the packages and their walkerOS dependencies on npm
+        run: |
+          set -euo pipefail
+          # The builds run `npm install <pkg>@<version>` in a fresh container,
+          # which resolves the whole dependency closure, and `changeset publish`
+          # lands packages on the registry out of order.
+          #
+          # Wait for the tarball, not just the metadata. The packument lists a
+          # version minutes before its tarball is fetchable, and the tarball is
+          # what `npm install` downloads. Probe both, uncached, from this runner:
+          # buildkit shares its network, so a 200 here predicts a 200 there.
+          WAIT=""
+          for PKG in @walkeros/runner @walkeros/cli; do
+            # node -e bodies are JavaScript; their $ and backticks are not shell.
+            # shellcheck disable=SC2016
+            WAIT="${WAIT} ${PKG}@${IMAGE_VERSION} $(npm view "${PKG}@${IMAGE_VERSION}" dependencies --json \
+              | node -e '
+                const deps = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}");
+                process.stdout.write(
+                  Object.entries(deps)
+                    .filter(([n, v]) => n.startsWith("@walkeros/") && /^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$/.test(v))
+                    .map(([n, v]) => `${n}@${v}`)
+                    .join(" "),
+                );
+              ')"
+          done
+          WAIT="$(echo "$WAIT" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ')"
+          echo "Waiting for: $WAIT"
+
+          for SPEC in $WAIT; do
+            NAME="${SPEC%@*}"
+            VER="${SPEC##*@}"
+            URL="https://registry.npmjs.org/${NAME/\//%2F}"
+            OK=0
+            CODE=000
+            TCODE=-
+            for i in $(seq 1 30); do
+              CODE="$(curl -sS -o /tmp/npm-probe.json -w '%{http_code}' \
+                -H 'Accept: application/vnd.npm.install-v1+json' "$URL" \
+                || echo 000)"
+              TARBALL=""
+              if [ "$CODE" = "200" ]; then
+                TARBALL="$(node -e '
+                  const doc = JSON.parse(require("fs").readFileSync("/tmp/npm-probe.json", "utf8"));
+                  process.stdout.write(doc.versions?.[process.argv[1]]?.dist?.tarball ?? "");
+                ' "$VER")"
+              fi
+              TCODE="-"
+              if [ -n "$TARBALL" ]; then
+                TCODE="$(curl -sS -o /dev/null -w '%{http_code}' -L "$TARBALL" || echo 000)"
+                if [ "$TCODE" = "200" ]; then
+                  echo "Verified: ${SPEC} (metadata + tarball)"
+                  OK=1
+                  break
+                fi
+              fi
+              echo "  ${SPEC} attempt $i/30 (meta $CODE, tarball $TCODE): waiting..."
+              sleep 15
+            done
+            if [ "$OK" != "1" ]; then
+              echo "::error::${SPEC} not installable after ~7min (meta $CODE, tarball $TCODE)"
+              exit 1
+            fi
+          done
+
+      - name: Images - set up Docker Buildx
+        if: env.NEW_IMAGES != ''
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      # Single-arch (amd64). Loaded, not pushed: scan, SBOM and smoke run on
+      # the local images so a failing build never burns an immutable tag.
+      - name: Images - build flow
+        if: env.FLOW_NEW == 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: packages/runner
+          file: packages/runner/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          build-args: |
+            RUNNER_VERSION=${{ env.IMAGE_VERSION }}
+          tags: walkeros/flow:${{ env.IMAGE_VERSION }}
+
+      - name: Images - build cli
+        if: env.CLI_NEW == 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: packages/cli
+          file: packages/cli/Dockerfile.cli
+          platforms: linux/amd64
+          load: true
+          push: false
+          build-args: |
+            CLI_VERSION=${{ env.IMAGE_VERSION }}
+          tags: walkeros/cli:${{ env.IMAGE_VERSION }}
+
+      # The lockfile describes the intended tree and stays out of the runtime
+      # image; it is kept here, beside the SBOM, which describes the actual one.
+      - name: Images - export flow lockfile
+        if: env.FLOW_NEW == 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: packages/runner
+          file: packages/runner/Dockerfile
+          platforms: linux/amd64
+          target: lockfile
+          build-args: |
+            RUNNER_VERSION=${{ env.IMAGE_VERSION }}
+          outputs: type=local,dest=lockfile
+
+      - name: Images - upload flow lockfile
+        if: env.FLOW_NEW == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lockfile-flow-${{ env.IMAGE_VERSION }}
+          path: lockfile/package-lock.json
+
+      - name: Images - SBOM flow
+        if: env.FLOW_NEW == 'true'
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: walkeros/flow:${{ env.IMAGE_VERSION }}
+          format: spdx-json
+          artifact-name: sbom-flow-${{ env.IMAGE_VERSION }}.spdx.json
+          dependency-snapshot: false
+
+      - name: Images - SBOM cli
+        if: env.CLI_NEW == 'true'
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: walkeros/cli:${{ env.IMAGE_VERSION }}
+          format: spdx-json
+          artifact-name: sbom-cli-${{ env.IMAGE_VERSION }}.spdx.json
+          dependency-snapshot: false
+
+      - name: Images - install Trivy
+        if: env.NEW_IMAGES != ''
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+        with:
+          version: v0.70.0
+          cache: true
+
+      # One scan per image, fixable CRITICAL/HIGH of every package type,
+      # reused by the report uploads and the gate below.
+      - name: Images - scan
+        if: env.NEW_IMAGES != ''
+        run: |
+          set -euo pipefail
+          mkdir -p scan
+          for IMG in $NEW_IMAGES; do
+            trivy image --quiet --severity CRITICAL,HIGH --ignore-unfixed \
+              --format json --output "scan/${IMG}.json" "walkeros/${IMG}:${IMAGE_VERSION}"
+            trivy convert --format sarif --output "scan/${IMG}.sarif" "scan/${IMG}.json"
+            echo "### walkeros/${IMG}:${IMAGE_VERSION}"
+            trivy convert --format table "scan/${IMG}.json"
+          done
+
+      - name: Images - upload scan reports
+        if: env.NEW_IMAGES != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trivy-${{ env.IMAGE_VERSION }}
+          path: scan/*.sarif
+
+      - name: Images - upload SARIF flow
+        if: env.FLOW_NEW == 'true'
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          sarif_file: scan/flow.sarif
+          category: trivy-image-flow
+
+      - name: Images - upload SARIF cli
+        if: env.CLI_NEW == 'true'
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          sarif_file: scan/cli.sarif
+          category: trivy-image-cli
+
+      # Block on fixable OS CRITICAL+HIGH and library CRITICAL. Library HIGHs
+      # stay reported above and never block.
+      - name: Images - scan gate
+        if: env.NEW_IMAGES != ''
+        run: |
+          set -euo pipefail
+          FAIL=0
+          for IMG in $NEW_IMAGES; do
+            BLOCKING=$(jq '[.Results[]? | select(.Class == "os-pkgs" or .Class == "lang-pkgs") | .Class as $c | .Vulnerabilities[]? | select($c == "os-pkgs" or .Severity == "CRITICAL")] | length' "scan/${IMG}.json")
+            echo "walkeros/${IMG}:${IMAGE_VERSION} blocking findings: $BLOCKING"
+            if [ "$BLOCKING" != "0" ]; then
+              echo "::error::walkeros/${IMG}:${IMAGE_VERSION} has ${BLOCKING} fixable blocking vulnerabilities."
+              FAIL=1
+            fi
+          done
+          [ "$FAIL" = "0" ]
+
+      - name: Images - smoke
+        if: env.NEW_IMAGES != ''
+        run: |
+          set -euo pipefail
+          for IMG in $NEW_IMAGES; do
+            images/smoke.sh "$IMG" "walkeros/${IMG}:${IMAGE_VERSION}" "$IMAGE_VERSION"
+          done
+
+      - name: Images - push
+        if: env.NEW_IMAGES != ''
+        run: |
+          set -euo pipefail
+          # exists | free. Only a definite "not found" counts as free; any other
+          # failure (auth, 5xx, network) fails the step, so a registry hiccup
+          # can never lead to overwriting an immutable tag.
+          tag_state() {
+            local out
+            if out="$(docker manifest inspect "$1" 2>&1 >/dev/null)"; then
+              echo exists
+            elif printf '%s' "$out" | grep -qiE 'no such manifest|manifest unknown'; then
+              echo free
+            else
+              echo "::error::Could not tell whether $1 exists: $out" >&2
+              return 1
+            fi
+          }
+          for IMG in $NEW_IMAGES; do
+            # Re-check right before pushing: never overwrite an immutable tag,
+            # even one that appeared since the check above.
+            STATE="$(tag_state "walkeros/${IMG}:${IMAGE_VERSION}")"
+            if [ "$STATE" != "free" ]; then
+              echo "::error::walkeros/${IMG}:${IMAGE_VERSION} appeared during this run. Image tags are immutable; not overwriting it."
+              exit 1
+            fi
+            docker push "walkeros/${IMG}:${IMAGE_VERSION}"
+          done
+
+      # The parity gate: pull each tag back from the registry (just pushed, or
+      # already existing on a resumed run), boot it, and assert it reports the
+      # package version this run resolved.
+      - name: Images - parity gate
+        run: |
+          set -euo pipefail
+          for IMG in flow cli; do
+            if docker image inspect "walkeros/${IMG}:${IMAGE_VERSION}" >/dev/null 2>&1; then
+              docker image rm "walkeros/${IMG}:${IMAGE_VERSION}"
+            fi
+            docker pull "walkeros/${IMG}:${IMAGE_VERSION}"
+            images/smoke.sh "$IMG" "walkeros/${IMG}:${IMAGE_VERSION}" "$IMAGE_VERSION"
+          done
+
+      # Each moving tag follows the newest stable version of its line, so a
+      # backfill of an older version (or a prerelease) leaves it alone. skopeo
+      # copies the version tag's manifest byte for byte, so a moving tag
+      # carries the exact digest of <version> (imagetools create would wrap a
+      # single-platform image in a new manifest list with a new digest).
+      # skopeo is preinstalled on ubuntu-latest and reads docker login's auth.
+      - name: Images - move tags
+        run: |
+          set -euo pipefail
+          AUTHFILE="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+          digest() {
+            skopeo inspect --raw --authfile "$AUTHFILE" "docker://$1" | sha256sum | cut -d' ' -f1
+          }
+          MOVED=""
+          for ENTRY in flow:@walkeros/runner cli:@walkeros/cli; do
+            IMG="${ENTRY%%:*}"
+            PKG="${ENTRY#*:}"
+            # node -e bodies are JavaScript; their $ and backticks are not shell.
+            # shellcheck disable=SC2016
+            TAGS="$(npm view "${PKG}" versions --json | node -e '
+              const v = process.argv[1];
+              const all = [].concat(JSON.parse(require("fs").readFileSync(0, "utf8")));
+              const stable = all.filter((x) => /^\d+\.\d+\.\d+$/.test(x));
+              if (!stable.includes(v)) process.exit(0);
+              const key = (x) => x.split(".").map(Number);
+              const newest = (xs) => xs.sort((a, b) => {
+                const [p, q] = [key(a), key(b)];
+                return q[0] - p[0] || q[1] - p[1] || q[2] - p[2];
+              })[0];
+              const [ma, mi] = key(v);
+              const tags = [];
+              if (newest(stable) === v) tags.push("latest");
+              if (newest(stable.filter((x) => key(x)[0] === ma)) === v) tags.push(`${ma}`);
+              if (newest(stable.filter((x) => key(x)[0] === ma && key(x)[1] === mi)) === v) tags.push(`${ma}.${mi}`);
+              process.stdout.write(tags.join(" "));
+            ' "$IMAGE_VERSION")"
+            if [ -z "$TAGS" ]; then
+              echo "No moving tag follows walkeros/${IMG}:${IMAGE_VERSION}."
+              continue
+            fi
+            SRC="walkeros/${IMG}:${IMAGE_VERSION}"
+            WANT="$(digest "$SRC")"
+            for t in $TAGS; do
+              skopeo copy --all --preserve-digests --authfile "$AUTHFILE" \
+                "docker://${SRC}" "docker://walkeros/${IMG}:${t}"
+              GOT="$(digest "walkeros/${IMG}:${t}")"
+              if [ "$GOT" != "$WANT" ]; then
+                echo "::error::walkeros/${IMG}:${t} is sha256:${GOT}, expected sha256:${WANT} (${SRC})."
+                exit 1
+              fi
+              echo "OK: walkeros/${IMG}:${t} -> sha256:${WANT}"
+            done
+            MOVED="${MOVED}walkeros/${IMG}: ${TAGS}; "
+          done
+          echo "MOVED=${MOVED}" >> "$GITHUB_ENV"
+
+      - name: Images - summary
+        env:
+          IMAGES_ONLY: ${{ inputs.images_only }}
+        run: |
+          {
+            echo "### Docker images ${IMAGE_VERSION}${IMAGES_ONLY:+ (images only)}"
+            echo ""
+            for IMG in flow cli; do
+              echo "- walkeros/${IMG}:${IMAGE_VERSION} digest $(docker buildx imagetools inspect "walkeros/${IMG}:${IMAGE_VERSION}" --format '{{json .Manifest.Digest}}')"
+            done
+            echo "- moving tags: ${MOVED:-none}"
+          } >> "$GITHUB_STEP_SUMMARY"

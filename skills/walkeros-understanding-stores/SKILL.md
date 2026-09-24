@@ -233,8 +233,8 @@ import { storeS3Init } from '@walkeros/server-store-s3';
 | `region`          | `string` | No       | `"auto"` | AWS region (SigV4 signing) |
 | `prefix`          | `string` | No       | —        | Key prefix for scoping     |
 
-**Primary use case:** Serving static files in managed deployments (Mode D) where
-files live in a bucket rather than being baked into a Docker image.
+**Primary use case:** Serving static files in managed deployments where files
+live in a bucket rather than being baked into a Docker image.
 
 ### `@walkeros/server-store-gcs` (Google Cloud Storage)
 

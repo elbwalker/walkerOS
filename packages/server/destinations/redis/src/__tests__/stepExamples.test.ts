@@ -31,6 +31,7 @@ import type {
   Settings,
   XaddArg,
 } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 type ExpectedOut = CallRecord | CallRecord[];
@@ -158,3 +159,6 @@ describe('redis server destination -- step examples', () => {
     expect(actual.map((c) => [c[0], normalize(c[1])])).toEqual(expected);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

@@ -4,7 +4,7 @@ export const init: FileEnv | undefined = undefined;
 
 export const push: FileEnv = {
   store: undefined,
-  respond: undefined,
+  respond: () => undefined,
 };
 
 export const simulation = ['call:respond'];

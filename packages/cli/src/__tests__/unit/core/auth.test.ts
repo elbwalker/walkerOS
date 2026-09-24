@@ -5,7 +5,6 @@ import {
   resolveAccessToken,
   getAuthHeaders,
   credentialSource,
-  resolveRunToken,
   requireProjectId,
   resetLegacyTokenNotice,
 } from '../../../core/auth.js';
@@ -340,32 +339,6 @@ describe('core/auth', () => {
     it('returns null for a config that holds no credential at all', () => {
       writeConfig({ defaultProjectId: 'proj_1' });
       expect(credentialSource()).toBeNull();
-    });
-  });
-
-  describe('resolveRunToken', () => {
-    it('returns WALKEROS_DEPLOY_TOKEN when set', () => {
-      process.env.WALKEROS_DEPLOY_TOKEN = 'deploy-token';
-      process.env.WALKEROS_TOKEN = 'regular-token';
-      expect(resolveRunToken()).toBe('deploy-token');
-    });
-
-    it('falls back to WALKEROS_TOKEN when no deploy token', () => {
-      process.env.WALKEROS_TOKEN = 'regular-token';
-      expect(resolveRunToken()).toBe('regular-token');
-    });
-
-    it('returns null when no token available', () => {
-      expect(resolveRunToken()).toBeNull();
-    });
-
-    it('ignores a refreshable session, which a runner cannot refresh', () => {
-      writeConfig({
-        accessToken: 'at',
-        accessTokenExpiresAt: iso(NOW + 3600_000),
-        refreshToken: 'rt',
-      });
-      expect(resolveRunToken()).toBeNull();
     });
   });
 
