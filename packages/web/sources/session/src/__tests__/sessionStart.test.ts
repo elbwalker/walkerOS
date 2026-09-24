@@ -184,6 +184,19 @@ describe('sessionStart', () => {
     );
   });
 
+  test('Callback default window mode keeps the id on session start only', () => {
+    const collector = createMockCollector() as unknown as Collector.Instance;
+    sessionStart({
+      data: { storage: false, isStart: true, id: 'w1nd0w' },
+      collector,
+    });
+    expect(collector.command).toHaveBeenCalledWith('user', {});
+    expect(collector.push).toHaveBeenCalledWith({
+      name: 'session start',
+      data: expect.objectContaining({ id: 'w1nd0w', storage: false }),
+    });
+  });
+
   test('Callback disabled', () => {
     const collector = createMockCollector() as unknown as Collector.Instance;
     // No push calls if callback is disabled

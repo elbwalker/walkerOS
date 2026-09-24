@@ -2,7 +2,7 @@ import type { Flow } from '@walkeros/core';
 
 /**
  * Session source emits three elb calls on start:
- *   1. command('user', { session, device? })
+ *   1. command('user', { session?, device? }), both only in storage mode
  *   2. command('session', <full session data>)
  *   3. push({ name: 'session start', data: <full session data> })
  */
@@ -59,6 +59,54 @@ export const newMarketingSession: Flow.StepExample = {
           isStart: true,
           storage: true,
           updated: 1700000000000,
+        },
+      },
+    ],
+  ],
+};
+
+export const windowSessionWithoutConsent: Flow.StepExample = {
+  title: 'Session without storage consent',
+  description:
+    'Without storage consent the session runs in window mode: no user ids are set, the session id travels only as data.id of the session start event.',
+  trigger: {
+    type: 'load',
+    options: {
+      url: 'https://example.com/?utm_source=google&utm_medium=cpc&utm_campaign=winter-sale',
+    },
+  },
+  in: {},
+  out: [
+    ['elb', 'user', {}],
+    [
+      'elb',
+      'session',
+      {
+        isStart: true,
+        storage: false,
+        start: 1700000000000,
+        id: 's3ss10n-id',
+        referrer: '',
+        marketing: true,
+        source: 'google',
+        medium: 'cpc',
+        campaign: 'winter-sale',
+      },
+    ],
+    [
+      'elb',
+      {
+        name: 'session start',
+        data: {
+          isStart: true,
+          storage: false,
+          start: 1700000000000,
+          id: 's3ss10n-id',
+          referrer: '',
+          marketing: true,
+          source: 'google',
+          medium: 'cpc',
+          campaign: 'winter-sale',
         },
       },
     ],
