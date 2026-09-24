@@ -288,6 +288,34 @@ describe('runBuildManifest', () => {
     expect(result.error?.message).toMatch(/flowConfig/);
   });
 
+  it('reports a network-level PUT failure as UPLOAD_FAILED', async () => {
+    stub = await startStub((base) => ({
+      version: 1,
+      toolchain: VERSION,
+      flowConfig: webFlow('x'),
+      artifacts: [
+        {
+          target: 'cdn',
+          outputName: 'w.js',
+          // Nothing listens on port 1: the connection is refused.
+          putUrl: 'http://127.0.0.1:1/w.js?X-Amz-Signature=secret',
+        },
+      ],
+      resultPutUrl: `${base}/result.json`,
+    }));
+
+    const { result, reported } = await runBuildManifest(
+      `${stub.base}/manifest.json`,
+    );
+
+    expect(reported).toBe(true);
+    expect(result.error).toEqual({
+      code: 'UPLOAD_FAILED',
+      message: 'Upload failed: network error http://127.0.0.1:1/w.js',
+      outputName: 'w.js',
+    });
+  });
+
   it('names the failing artifact and keeps the ones already PUT', async () => {
     mockedBundle
       .mockImplementationOnce(async (_config, options) => {

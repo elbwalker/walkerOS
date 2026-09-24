@@ -120,6 +120,51 @@ describe('collectAllSpecs optional dependencies', () => {
   });
 });
 
+describe('collectAllSpecs with a local package', () => {
+  const local = { name: 'local-x', version: 'latest', path: './missing-x' };
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('ignores an override for the local name without validating it', async () => {
+    const logger = createMockLogger();
+    const manifest = jest.spyOn(pacote, 'manifest');
+
+    const specs = await collectAllSpecs([local], logger, undefined, {
+      'local-x': 'file:../evil',
+    });
+
+    expect(specs.get('local-x')).toEqual([
+      expect.objectContaining({ localPath: './missing-x' }),
+    ]);
+    expect(manifest).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Override for local-x ignored'),
+    );
+  });
+
+  it('never records or fetches a transitive non-registry spec under the local name', async () => {
+    const manifest = jest
+      .spyOn(pacote, 'manifest')
+      .mockImplementation(async () =>
+        fakeManifest('@walkeros/a', '1.0.0', {
+          'local-x': 'git+https://evil.example/x.git',
+        }),
+      );
+
+    const specs = await collectAllSpecs(
+      [{ name: '@walkeros/a', version: '1.0.0' }, local],
+      createMockLogger(),
+    );
+
+    expect(specs.get('local-x')?.map((s) => s.spec)).toEqual(['latest']);
+    expect(manifest.mock.calls.map(([spec]) => spec)).toEqual([
+      '@walkeros/a@1.0.0',
+    ]);
+  });
+});
+
 describe('ignoreScripts', () => {
   it('is set on the default options and survives an .npmrc', async () => {
     expect(PACOTE_OPTS.ignoreScripts).toBe(true);

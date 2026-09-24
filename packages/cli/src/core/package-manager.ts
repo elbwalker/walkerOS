@@ -406,11 +406,15 @@ export async function collectAllSpecs(
     ...packages
       .filter((pkg) => !pkg.path)
       .map((pkg) => ({ name: pkg.name, spec: pkg.version, from: 'flow.json' })),
-    ...Object.entries(overrides).map(([name, spec]) => ({
-      name,
-      spec,
-      from: 'config.bundle.overrides',
-    })),
+    // An override for a directly-local package is ignored (warned above),
+    // so it is never fetched and not validated either.
+    ...Object.entries(overrides)
+      .filter(([name]) => !directLocalNames.has(name))
+      .map(([name, spec]) => ({
+        name,
+        spec,
+        from: 'config.bundle.overrides',
+      })),
   ]);
 
   const queue: QueueItem[] = packages.map((pkg) => ({
@@ -425,16 +429,21 @@ export async function collectAllSpecs(
   while (queue.length > 0) {
     const item = queue.shift()!;
 
-    // A transitive spec for a name the flow supplies from disk is never
-    // fetched: the local copy wins resolution. An OPTIONAL dependency with a
-    // non-registry spec is skipped (never recorded, never fetched), as npm
-    // would skip an optional dependency it cannot install; every other
-    // non-registry transitive spec fails closed.
+    // A transitive spec for a name the flow supplies from disk is dropped
+    // before it is recorded: the local copy wins resolution, so the spec is
+    // never fetched and cannot reach pacote around the check below.
     if (
       !item.localPath &&
       item.source !== 'direct' &&
-      !directLocalNames.has(item.name)
+      directLocalNames.has(item.name)
     ) {
+      continue;
+    }
+
+    // An OPTIONAL dependency with a non-registry spec is skipped (never
+    // recorded, never fetched), as npm would skip an optional dependency it
+    // cannot install; every other non-registry transitive spec fails closed.
+    if (!item.localPath && item.source !== 'direct') {
       if (item.optional && !isRegistrySpec(item.name, item.spec, true)) {
         logger.warn(
           `Skipping optional dependency ${item.name}@${item.spec} (from ${item.from}): only npm registry specs are installed`,

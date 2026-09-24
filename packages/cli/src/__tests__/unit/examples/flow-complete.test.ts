@@ -306,7 +306,11 @@ describe('flow-complete.md', () => {
   it.each(
     flowCompleteFeatures.map((f) => [f.id, f.chapter, f.pointer] as const),
   )('lists %s in chapter %s at its pointer', (id, chapter, pointer) => {
-    expect(sections.get(chapter)).toContain(`\`${id}\` at \`${pointer}\``);
+    // Prettier wraps markdown prose (proseWrap: always), so compare the
+    // section with its line breaks collapsed.
+    expect(sections.get(chapter)?.replace(/\s+/g, ' ')).toContain(
+      `\`${id}\` at \`${pointer}\``,
+    );
   });
 
   it('points only at paths that exist in the file', () => {

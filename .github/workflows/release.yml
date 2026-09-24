@@ -40,7 +40,11 @@ jobs:
     steps:
       # Matching on the workflow file, then on name, path and head_sha, keeps
       # any other workflow from satisfying the gate. Only COMPLETED runs count;
-      # a queued or running one is ignored, never waited for.
+      # a queued or running one is ignored, never waited for. Only a green run
+      # from push or workflow_dispatch lets the release skip its full suite:
+      # those run everything including e2e, while a pull_request run is
+      # affected-only without e2e. Otherwise the release does not wait either;
+      # it tests its own bumped build in the job, so it stays one step.
       - name: Look up "Build and test" for this commit
         id: lookup
         env:
@@ -55,7 +59,7 @@ jobs:
                             and .name == "Build and test"
                             and .path == ".github/workflows/test.yml")]')"
 
-          SUCCESS="$(jq -r '[.[] | select(.conclusion == "success")] | sort_by(.created_at) | last | .html_url // empty' <<<"$RUNS")"
+          SUCCESS="$(jq -r '[.[] | select(.conclusion == "success" and (.event == "push" or .event == "workflow_dispatch"))] | sort_by(.created_at) | last | .html_url // empty' <<<"$RUNS")"
           if [ -n "$SUCCESS" ]; then
             echo "OK: \"Build and test\" passed on $SHA: $SUCCESS"
             echo "The release skips the full suite and runs the smoke only."
@@ -63,14 +67,15 @@ jobs:
             exit 0
           fi
 
-          FAILED="$(jq -r '[.[] | select(.conclusion != "cancelled" and .conclusion != "skipped")] | sort_by(.created_at) | last | .html_url // empty' <<<"$RUNS")"
+          # A failure from any event, PR runs included, still blocks.
+          FAILED="$(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "cancelled" and .conclusion != "skipped")] | sort_by(.created_at) | last | .html_url // empty' <<<"$RUNS")"
           if [ -n "$FAILED" ]; then
             echo "::error::Refusing to release: \"Build and test\" failed on $SHA: $FAILED"
             echo "Fix the commit, or re-run the failed run if it was a flake, then dispatch the release again."
             exit 1
           fi
 
-          echo "No completed green \"Build and test\" run on $SHA; the release runs the full suite on the bumped build."
+          echo "No completed green push or dispatch \"Build and test\" run on $SHA; the release runs the full suite on the bumped build."
           echo "tested=false" >> "$GITHUB_OUTPUT"
 
   # Needs only the gate, so the npm-publish approval is requested once, at the
@@ -426,14 +431,30 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # NEW_IMAGES are built, scanned, smoked and pushed. An existing tag is
-      # never touched again: it goes straight to the parity gate.
+      # never touched again: it goes straight to the parity gate. A run where
+      # only one tag exists (a partial earlier run) builds just the other one.
       - name: Images - check existing tags
         run: |
           set -euo pipefail
+          # exists | free. Only a definite "not found" counts as free; any other
+          # failure (auth, 5xx, network) fails the step, so a registry hiccup
+          # can never lead to overwriting an immutable tag.
+          tag_state() {
+            local out
+            if out="$(docker manifest inspect "$1" 2>&1 >/dev/null)"; then
+              echo exists
+            elif printf '%s' "$out" | grep -qiE 'no such manifest|manifest unknown'; then
+              echo free
+            else
+              echo "::error::Could not tell whether $1 exists: $out" >&2
+              return 1
+            fi
+          }
           NEW=""
           for IMG in flow cli; do
             KEY="$(echo "$IMG" | tr '[:lower:]' '[:upper:]')_NEW"
-            if docker manifest inspect "walkeros/${IMG}:${IMAGE_VERSION}" >/dev/null 2>&1; then
+            STATE="$(tag_state "walkeros/${IMG}:${IMAGE_VERSION}")"
+            if [ "$STATE" = "exists" ]; then
               echo "walkeros/${IMG}:${IMAGE_VERSION} already exists: immutable, not rebuilt; parity-checked below."
               echo "${KEY}=false" >> "$GITHUB_ENV"
             else
@@ -464,7 +485,7 @@ jobs:
                 const deps = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}");
                 process.stdout.write(
                   Object.entries(deps)
-                    .filter(([n, v]) => n.startsWith("@walkeros/") && /^\d+\.\d+\.\d+(-[\w.]+)?$/.test(v))
+                    .filter(([n, v]) => n.startsWith("@walkeros/") && /^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$/.test(v))
                     .map(([n, v]) => `${n}@${v}`)
                     .join(" "),
                 );
@@ -654,10 +675,25 @@ jobs:
         if: env.NEW_IMAGES != ''
         run: |
           set -euo pipefail
+          # exists | free. Only a definite "not found" counts as free; any other
+          # failure (auth, 5xx, network) fails the step, so a registry hiccup
+          # can never lead to overwriting an immutable tag.
+          tag_state() {
+            local out
+            if out="$(docker manifest inspect "$1" 2>&1 >/dev/null)"; then
+              echo exists
+            elif printf '%s' "$out" | grep -qiE 'no such manifest|manifest unknown'; then
+              echo free
+            else
+              echo "::error::Could not tell whether $1 exists: $out" >&2
+              return 1
+            fi
+          }
           for IMG in $NEW_IMAGES; do
             # Re-check right before pushing: never overwrite an immutable tag,
             # even one that appeared since the check above.
-            if docker manifest inspect "walkeros/${IMG}:${IMAGE_VERSION}" >/dev/null 2>&1; then
+            STATE="$(tag_state "walkeros/${IMG}:${IMAGE_VERSION}")"
+            if [ "$STATE" != "free" ]; then
               echo "::error::walkeros/${IMG}:${IMAGE_VERSION} appeared during this run. Image tags are immutable; not overwriting it."
               exit 1
             fi

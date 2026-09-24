@@ -148,19 +148,26 @@ async function put(
   headers: Record<string, string> = {},
 ): Promise<void> {
   // Header values are never logged: a presign may sign secrets into them.
-  const attempt = () =>
-    fetch(url, {
-      method: 'PUT',
-      body,
-      headers: { ...headers, 'Content-Type': contentType },
-      signal: AbortSignal.timeout(60_000),
-    });
+  // A network-level failure (reset, DNS, timeout) is retried once like a 5xx
+  // and reported as UPLOAD_FAILED, never as a build failure.
+  const attempt = async (): Promise<Response | undefined> => {
+    try {
+      return await fetch(url, {
+        method: 'PUT',
+        body,
+        headers: { ...headers, 'Content-Type': contentType },
+        signal: AbortSignal.timeout(60_000),
+      });
+    } catch {
+      return undefined;
+    }
+  };
   let response = await attempt();
-  if (response.status >= 500) response = await attempt();
-  if (!response.ok) {
+  if (!response || response.status >= 500) response = await attempt();
+  if (!response || !response.ok) {
     throw new BuildError(
       'UPLOAD_FAILED',
-      `Upload failed: ${response.status} ${sanitizeUrl(url)}`,
+      `Upload failed: ${response ? response.status : 'network error'} ${sanitizeUrl(url)}`,
     );
   }
 }

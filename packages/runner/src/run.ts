@@ -46,10 +46,21 @@ const DEFAULT_HEARTBEAT_INTERVAL_S = 60;
 export const MIN_HEARTBEAT_INTERVAL_S = 10;
 
 /**
+ * Ceiling for the heartbeat cadence, in milliseconds. Node clamps any timer
+ * delay above 2147483647 ms (2^31 - 1) to 1 ms, and the heartbeat adds up to
+ * +10% jitter to the interval (heartbeat.ts `start`), so the cap is applied
+ * BEFORE jitter with that headroom: floor(2147483647 / 1.1) = 1952257860 ms,
+ * about 22.6 days.
+ */
+export const MAX_HEARTBEAT_INTERVAL_MS = Math.floor(2_147_483_647 / 1.1);
+
+/**
  * Resolve `WALKEROS_HEARTBEAT_INTERVAL` (seconds) to milliseconds. Unset uses
  * the 60 s default. A value that is not a number, or is below 10 s (0 and
- * negatives included), is clamped to the 10 s minimum with a warning, so a
- * typo can never turn the heartbeat into a millisecond loop against the app.
+ * negatives included), is clamped to the 10 s minimum with a warning, and a
+ * value whose jittered delay would pass Node's timer limit is capped at
+ * {@link MAX_HEARTBEAT_INTERVAL_MS} with a warning, so neither a typo nor a
+ * huge value can turn the heartbeat into a millisecond loop against the app.
  */
 export function resolveHeartbeatIntervalMs(
   raw: string | undefined,
@@ -63,6 +74,12 @@ export function resolveHeartbeatIntervalMs(
       `Invalid heartbeat interval "${raw}"; using the ${MIN_HEARTBEAT_INTERVAL_S}s minimum`,
     );
     return MIN_HEARTBEAT_INTERVAL_S * 1000;
+  }
+  if (seconds * 1000 > MAX_HEARTBEAT_INTERVAL_MS) {
+    logger.warn(
+      `Heartbeat interval "${raw}" exceeds the timer limit; using the ${MAX_HEARTBEAT_INTERVAL_MS} ms maximum`,
+    );
+    return MAX_HEARTBEAT_INTERVAL_MS;
   }
   return seconds * 1000;
 }

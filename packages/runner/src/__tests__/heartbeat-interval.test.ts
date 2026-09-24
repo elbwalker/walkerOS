@@ -1,4 +1,5 @@
 import {
+  MAX_HEARTBEAT_INTERVAL_MS,
   MIN_HEARTBEAT_INTERVAL_S,
   resolveHeartbeatIntervalMs,
 } from '../run.js';
@@ -27,4 +28,21 @@ describe('resolveHeartbeatIntervalMs', () => {
       expect(logger.warn).toHaveBeenCalledTimes(1);
     },
   );
+
+  it.each(['2147484', '99999999999'])(
+    'caps %p so the delay plus 10%% jitter stays under the Node timer limit',
+    (raw) => {
+      const logger = createMockLogger();
+      const ms = resolveHeartbeatIntervalMs(raw, logger);
+      expect(ms).toBe(MAX_HEARTBEAT_INTERVAL_MS);
+      expect(ms * 1.1).toBeLessThanOrEqual(2_147_483_647);
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('keeps the largest whole-second value under the cap as given', () => {
+    const logger = createMockLogger();
+    expect(resolveHeartbeatIntervalMs('1952257', logger)).toBe(1_952_257_000);
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
 });
