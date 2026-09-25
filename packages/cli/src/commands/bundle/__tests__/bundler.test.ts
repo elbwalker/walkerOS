@@ -12,8 +12,10 @@ import {
   generateWrapEntry,
   generateWrapEntryServer,
   bundleCore,
+  generateCacheKeyContent,
 } from '../bundler';
-import { cacheBuild } from '../../../core/build-cache.js';
+import { cacheBuild, getBuildCachePath } from '../../../core/build-cache.js';
+import { tmpRunDir } from '../../../core/tmp-names.js';
 import { createCLILogger } from '../../../core/cli-logger.js';
 import type { BuildOptions } from '../../../types/bundle.js';
 import type { Flow, Logger } from '@walkeros/core';
@@ -46,6 +48,11 @@ jest.mock('../../../core/build-cache.js', () => {
     cacheBuild: jest.fn(actual.cacheBuild),
     getCachedBuild: jest.fn(actual.getCachedBuild),
   };
+});
+
+jest.mock('../../../core/tmp-names.js', () => {
+  const actual = jest.requireActual('../../../core/tmp-names.js');
+  return { ...actual, tmpRunDir: jest.fn(actual.tmpRunDir) };
 });
 
 import { traceAndCopy } from '../nft-trace';
@@ -675,8 +682,8 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
   });
 
   /**
-   * Pre-seeds the L1 cache with bundle text for a fixed (flow, options) pair.
-   * Mirrors `generateCacheKeyContent` (private to bundler.ts): the bundler
+   * Pre-seeds the L1 cache with bundle text for a fixed (flow, options) pair,
+   * keyed by the bundler's own `generateCacheKeyContent`. The bundler
    * hashes pacote's resolved top-level package set as `versionsHash`. Tests
    * mock `downloadPackagesWithResolution` to return an empty topLevel, so
    * the runtime versionsHash is the sha256 of the empty string truncated
@@ -693,6 +700,7 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
     bundleText?: string;
     versionsHash?: string;
     extraPackages?: Record<string, Flow.BundlePackage>;
+    include?: string[];
   }): Promise<BuildOptions> {
     const packages: Record<string, Flow.BundlePackage> = {
       ...opts.extraPackages,
@@ -717,15 +725,11 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
       format: 'esm',
       platform: 'node',
       configDir: tmp,
+      ...(opts.include ? { include: opts.include } : {}),
     };
     const versionsHash = opts.versionsHash ?? (await getHashServer('', 12));
-    const configForCache = {
-      flow: opts.flowSettings,
-      build: { ...buildOptions, tempDir: undefined, output: undefined },
-      versionsHash,
-    };
     await cacheBuild(
-      JSON.stringify(configForCache),
+      generateCacheKeyContent(opts.flowSettings, buildOptions, versionsHash),
       opts.bundleText ?? '// cached server bundle\n',
       opts.cacheDir,
     );
@@ -842,6 +846,7 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
       outputPath,
       cacheDir,
       flowSettings,
+      bundleText: "import '@walkeros/server-source-express';\n",
     });
 
     // traceAndCopy returns an empty fileList; the cross-check fires for the
@@ -906,6 +911,7 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
         cacheDir: path.join(tmp, 'cache'),
         flowSettings,
         extraPackages: { 'pkg-util': { imports: ['helper'] } },
+        bundleText: "import { helper } from 'pkg-util';\nhelper();\n",
       });
     }
 
@@ -932,6 +938,109 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
     });
   });
 
+  it('serves a seeded build from the cache', async () => {
+    const outputPath = path.join(tmp, 'out', 'flow.mjs');
+    const flowSettings: Flow = { config: { platform: 'server' } };
+    const buildOptions = await seedCachedServerBuild({
+      outputPath,
+      cacheDir: path.join(tmp, 'cache'),
+      flowSettings,
+      bundleText: '// seeded\n',
+    });
+    const info = jest.spyOn(logger, 'info');
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    expect(info).toHaveBeenCalledWith(
+      expect.stringMatching(/^Output: .* \([\d.]+ KB, cached\)$/),
+    );
+    expect(await fs.readFile(outputPath, 'utf-8')).toBe('// seeded\n');
+  });
+
+  it('copies include folders on a cache hit into a clean output dir', async () => {
+    await fs.outputFile(path.join(tmp, 'shared', 'data.json'), '{}');
+    const outputDir = path.join(tmp, 'out');
+    const flowSettings: Flow = { config: { platform: 'server' } };
+    const buildOptions = await seedCachedServerBuild({
+      outputPath: path.join(outputDir, 'flow.mjs'),
+      cacheDir: path.join(tmp, 'cache'),
+      flowSettings,
+      include: ['shared'],
+    });
+    const info = jest.spyOn(logger, 'info');
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/, cached\)$/));
+    expect(
+      await fs.pathExists(path.join(outputDir, 'shared', 'data.json')),
+    ).toBe(true);
+  });
+
+  it('has removed its own build dir when the bundle resolves', async () => {
+    const flowSettings: Flow = { config: { platform: 'server' } };
+    const seeded = await seedCachedServerBuild({
+      outputPath: path.join(tmp, 'out', 'flow.mjs'),
+      cacheDir: path.join(tmp, 'cache'),
+      flowSettings,
+    });
+    // Without `tempDir` the bundler makes (and must remove) its own run dir;
+    // the cache then lives under the default temp root, so seed it there.
+    const buildOptions: BuildOptions = { ...seeded, tempDir: undefined };
+    const content = generateCacheKeyContent(
+      flowSettings,
+      buildOptions,
+      await getHashServer('', 12),
+    );
+    await cacheBuild(content, '// cached server bundle\n');
+    const created: string[] = [];
+    jest.mocked(tmpRunDir).mockImplementationOnce(async (kind, tmpDir) => {
+      const actual = jest.requireActual<
+        typeof import('../../../core/tmp-names.js')
+      >('../../../core/tmp-names.js');
+      const dir = await actual.tmpRunDir(kind, tmpDir);
+      created.push(dir);
+      return dir;
+    });
+    const info = jest.spyOn(logger, 'info');
+
+    try {
+      await bundleCore(flowSettings, buildOptions, logger);
+
+      expect(info).toHaveBeenCalledWith(expect.stringMatching(/, cached\)$/));
+      expect(created).toHaveLength(1);
+      expect(await fs.pathExists(created[0])).toBe(false);
+    } finally {
+      await fs.remove(await getBuildCachePath(content));
+    }
+  });
+
+  it('logs an Output line for a temp-dir bundle without masking its path', async () => {
+    const runDir = await tmpRunDir('bundle');
+    const lines: string[] = [];
+    const lineLogger = createCLILogger({
+      silent: true,
+      onLine: (_level, message) => lines.push(message),
+    });
+    try {
+      const flowSettings: Flow = { config: { platform: 'server' } };
+      const buildOptions = await seedCachedServerBuild({
+        outputPath: path.join(runDir, 'bundle.mjs'),
+        cacheDir: path.join(tmp, 'cache'),
+        flowSettings,
+      });
+
+      await bundleCore(flowSettings, buildOptions, lineLogger);
+
+      const output = lines.find((line) => line.startsWith('Output: '));
+      expect(output).toMatch(
+        /^Output: \$TMPDIR\/walkeros\/bundle\/[\w-]{6}\/bundle\.mjs \(/,
+      );
+    } finally {
+      await fs.remove(runDir);
+    }
+  });
+
   it('browser (web) platform skips the nft trace step entirely', async () => {
     const cacheDir = path.join(tmp, 'cache');
     const outputDir = path.join(tmp, 'out');
@@ -951,13 +1060,8 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
       configDir: tmp,
     };
     const versionsHash = await getHashServer('', 12);
-    const configForCache = {
-      flow: flowSettings,
-      build: { ...buildOptions, tempDir: undefined, output: undefined },
-      versionsHash,
-    };
     await cacheBuild(
-      JSON.stringify(configForCache),
+      generateCacheKeyContent(flowSettings, buildOptions, versionsHash),
       '// cached web bundle\n',
       cacheDir,
     );
@@ -970,6 +1074,45 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
     expect(await fs.pathExists(path.join(outputDir, 'package.json'))).toBe(
       false,
     );
+  });
+
+  it('a cached browser build logs the include-ignored line once and copies nothing', async () => {
+    await fs.outputFile(path.join(tmp, 'shared', 'data.json'), '{}');
+    const cacheDir = path.join(tmp, 'cache');
+    const outputDir = path.join(tmp, 'out');
+    const flowSettings: Flow = { config: { platform: 'web' } };
+    const buildOptions: BuildOptions = {
+      output: path.join(outputDir, 'walker.js'),
+      tempDir: cacheDir,
+      cache: true,
+      packages: {},
+      format: 'iife',
+      platform: 'browser',
+      configDir: tmp,
+      include: ['shared'],
+    };
+    await cacheBuild(
+      generateCacheKeyContent(
+        flowSettings,
+        buildOptions,
+        await getHashServer('', 12),
+      ),
+      '// cached web bundle\n',
+      cacheDir,
+    );
+    const info = jest.spyOn(logger, 'info');
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/, cached\)$/));
+    expect(
+      info.mock.calls.filter(
+        ([message]) =>
+          message ===
+          'include is ignored for web builds: a browser bundle cannot read local folders.',
+      ),
+    ).toHaveLength(1);
+    expect(await fs.pathExists(path.join(outputDir, 'shared'))).toBe(false);
   });
 });
 

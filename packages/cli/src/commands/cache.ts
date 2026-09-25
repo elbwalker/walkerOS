@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import { Command } from 'commander';
 import { getTmpPath } from '../core/tmp.js';
+import { isCacheTempName } from '../core/atomic-cache.js';
 import { createCLILogger } from '../core/cli-logger.js';
 
 export function registerCacheCommand(program: Command): void {
@@ -15,18 +16,15 @@ export function registerCacheCommand(program: Command): void {
     .option('--silent', 'Suppress output')
     .action(async (options) => {
       const logger = createCLILogger({ silent: options.silent });
-      const tmpDir = options.tmpDir;
-      if (options.packages) {
-        await fs.remove(getTmpPath(tmpDir, 'cache', 'packages'));
-        logger.info('Package cache cleared');
-      } else if (options.builds) {
-        await fs.remove(getTmpPath(tmpDir, 'cache', 'builds'));
-        logger.info('Build cache cleared');
-      } else {
-        const cacheDir = getTmpPath(tmpDir, 'cache');
-        await fs.remove(cacheDir);
-        logger.info(`Cache cleared: ${cacheDir}`);
-      }
+      const scope = options.packages
+        ? 'packages'
+        : options.builds
+          ? 'builds'
+          : 'all';
+      const cleared = await clearCache(scope, options.tmpDir);
+      if (scope === 'packages') logger.info('Package cache cleared');
+      else if (scope === 'builds') logger.info('Build cache cleared');
+      else logger.info(`Cache cleared: ${cleared}`);
     });
 
   cache
@@ -49,8 +47,26 @@ export function registerCacheCommand(program: Command): void {
     });
 }
 
+/**
+ * Remove a cache scope. Whole directories go, so the `.tmp-*` leftovers of
+ * interrupted cache writes inside them go too. Returns the removed path.
+ */
+export async function clearCache(
+  scope: 'packages' | 'builds' | 'all',
+  tmpDir?: string,
+): Promise<string> {
+  const dir =
+    scope === 'all'
+      ? getTmpPath(tmpDir, 'cache')
+      : getTmpPath(tmpDir, 'cache', scope);
+  await fs.remove(dir);
+  return dir;
+}
+
 async function countEntries(dir: string): Promise<number> {
   if (!(await fs.pathExists(dir))) return 0;
+  // Temp siblings of an entry being written (or left by a crash) are not
+  // entries; `cache clear` removes them with the rest.
   const entries = await fs.readdir(dir);
-  return entries.length;
+  return entries.filter((entry) => !isCacheTempName(entry)).length;
 }

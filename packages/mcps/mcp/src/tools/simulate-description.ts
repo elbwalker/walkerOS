@@ -11,8 +11,9 @@ export const FLOW_SIMULATE_DESCRIPTION =
   'step (required) targets the step to simulate, e.g. "destination.gtag". ' +
   'Use flow_examples to discover available test data. ' +
   'A destination simulation starts only its target destination. ' +
+  "A source's own walker commands (e.g. a CMP's walker consent) are returned as elb calls. " +
   'Consent: state.consent is the collector consent the step starts from ' +
-  '(transformer, collector and destination steps). A destination with ' +
+  '(any step; a consent-gated source such as the session source waits for it). A destination with ' +
   'require: ["consent"] waits until consent is present, so pass state.consent to start it; ' +
   'a destination with consent: { marketing: true } receives an event only when that ' +
   "consent is granted in state.consent or in the event's own consent. " +

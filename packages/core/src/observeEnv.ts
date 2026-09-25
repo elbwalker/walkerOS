@@ -246,12 +246,25 @@ export function observeEnv<T extends object = Record<string, unknown>>(
     objectProxies.set(target, byKey);
     const cached = byKey.get(key);
     if (cached) return cached;
-    const shadowed = next.some((t) => !canSubstitute(target, t.rest[0]));
-    const proxy = shadowed
-      ? createShadowProxy(target, next)
-      : createObjectProxy(target, next);
+    const proxy = viewObject(target, next);
     byKey.set(key, proxy);
     return proxy;
+  }
+
+  /**
+   * The view of one object: a shadow view when a tracked property cannot be
+   * substituted on the object itself (frozen, or non-writable and
+   * non-configurable), else a plain view. The root env and nested objects
+   * both go through here.
+   */
+  function viewObject<V extends object>(target: V, next: Tracked[]): V {
+    // A shadow is not callable, so a callable root keeps the plain view; its
+    // unsubstitutable statics are already reported by `resolvesAtWrapTime`.
+    if (isCallable(target)) return createObjectProxy(target, next);
+    const shadowed = next.some((t) => !canSubstitute(target, t.rest[0]));
+    return shadowed
+      ? createShadowProxy(target, next)
+      : createObjectProxy(target, next);
   }
 
   /**
@@ -261,10 +274,10 @@ export function observeEnv<T extends object = Record<string, unknown>>(
    * forward to the real object; descriptors report as configurable, since the
    * shadow does not hold them.
    */
-  function createShadowProxy(target: object, next: Tracked[]): object {
-    const shadow: object = Object.create(Object.getPrototypeOf(target));
+  function createShadowProxy<V extends object>(target: V, next: Tracked[]): V {
+    const shadow: V = Object.create(Object.getPrototypeOf(target));
     const reads = objectHandler(target, next, () => proxy);
-    const proxy: object = new Proxy(shadow, {
+    const proxy: V = new Proxy(shadow, {
       get: (_, prop) => reads.get(prop),
       set: (_, prop, value) => Reflect.set(target, prop, value, target),
       has: (_, prop) => Reflect.has(target, prop),
@@ -396,5 +409,5 @@ export function observeEnv<T extends object = Record<string, unknown>>(
     return proxy;
   }
 
-  return { env: createObjectProxy(env, tracked), calls, unresolved };
+  return { env: viewObject(env, tracked), calls, unresolved };
 }

@@ -5,7 +5,7 @@ import type { PushResult } from '../types';
 jest.mock('../run', () => ({ runPushCommandWithSecrets: jest.fn() }));
 
 import { runPushCommandWithSecrets } from '../run';
-import { formatPushResult, pushCommand } from '../index';
+import { formatPushResult, pushCommand, renderPushOutput } from '../index';
 
 const mockedRun = jest.mocked(runPushCommandWithSecrets);
 
@@ -202,5 +202,25 @@ describe('formatPushResult', () => {
     expect(formatPushResult(result)).toContain(
       '    call fetch({"self":"[Circular]"},{"name":"Error","message":"nope"})',
     );
+  });
+});
+
+describe('renderPushOutput with a numeric known secret', () => {
+  it('keeps --json parseable and masks the number', () => {
+    const output = renderPushOutput(
+      {
+        success: true,
+        duration: 1,
+        simulations: [
+          destination('api', {
+            calls: [{ fn: 'send', args: [{ account: 12345678 }], ts: 1 }],
+          }),
+        ],
+      },
+      { json: true, knownSecrets: ['12345678'] },
+    );
+
+    expect(() => JSON.parse(output)).not.toThrow();
+    expect(output).not.toContain('12345678');
   });
 });

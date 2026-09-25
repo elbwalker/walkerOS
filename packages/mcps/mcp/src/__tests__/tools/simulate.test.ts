@@ -39,6 +39,11 @@ jest.mock('@walkeros/cli', () => ({
   simulateCollector: jest.fn(),
   loadJsonConfig: jest.fn(async () => ({ version: 4, flows: {} })),
   collectKnownSecrets: jest.fn(() => []),
+  // The real masker, from its own module (the cli entry does not load under
+  // this suite): it is pure, and the egress tests depend on it.
+  maskKnownNumbers: jest.requireActual(
+    '../../../../../cli/src/core/known-secrets',
+  ).maskKnownNumbers,
 }));
 
 jest.mock('@walkeros/core', () => ({
@@ -476,7 +481,9 @@ describe('flow_simulate tool', () => {
 
     expect(result.isError).toBeUndefined();
     expect(result.structuredContent.success).toBe(true);
-    expect(result.structuredContent.summary).toBe('Source captured 1 event');
+    expect(result.structuredContent.summary).toBe(
+      'Source captured 1 event and 0 commands',
+    );
     expect(result.structuredContent.capturedEvents).toHaveLength(1);
 
     expect(mockSimulateSource).toHaveBeenCalledWith(
@@ -979,6 +986,82 @@ describe('flow_simulate tool', () => {
     expect(result.content[0].text).toContain('sendServer');
     expect(result.content[0].text).not.toContain(token);
     expect(JSON.stringify(result.structuredContent)).not.toContain(token);
+  });
+
+  it("shows a source's elb calls without verbose, mock-env calls only with it", async () => {
+    mockSimulateSource.mockResolvedValue({
+      step: 'source',
+      name: 'usercentrics',
+      events: [],
+      calls: [
+        { fn: 'elb', args: ['walker consent', { marketing: true }], ts: 1 },
+        { fn: 'AWS.SQSClient.send', args: [{}], ts: 2 },
+      ],
+      duration: 4,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: { content: {} },
+      step: 'source.usercentrics',
+    });
+
+    expect(result.structuredContent.summary).toBe(
+      'Source captured 0 events and 1 command',
+    );
+    expect(result.structuredContent.calls).toEqual([
+      { fn: 'elb', args: ['walker consent', { marketing: true }], ts: 1 },
+    ]);
+  });
+
+  it('forwards state.consent to a source step', async () => {
+    mockSimulateSource.mockResolvedValue({
+      step: 'source',
+      name: 'session',
+      events: [],
+      calls: [],
+      duration: 2,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    await tool.handler({
+      configPath: './flow.json',
+      event: { content: {} },
+      step: 'source.session',
+      state: { consent: { functional: true } },
+    });
+
+    expect(mockSimulateSource).toHaveBeenCalledWith(
+      './flow.json',
+      { content: {} },
+      expect.objectContaining({
+        sourceId: 'session',
+        consent: { functional: true },
+      }),
+    );
+  });
+
+  it('returns a result whose numbers hold a known secret', async () => {
+    mockCollectKnownSecrets.mockReturnValueOnce(['12345678']);
+    mockSimulateDestination.mockResolvedValue({
+      step: 'destination',
+      name: 'api',
+      events: [],
+      calls: [{ fn: 'send', args: [{ account: 12345678 }], ts: 1 }],
+      duration: 3,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: { name: 'page view' },
+      step: 'destination.api',
+      verbose: true,
+    });
+
+    expect(result.isError).toBeUndefined();
+    expect(result.content[0].text).not.toContain('12345678');
   });
 
   it('errors on invalid JSON event string', async () => {

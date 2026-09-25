@@ -213,7 +213,12 @@ success: true
   `skipped: consent (requires marketing; granted functional)` (started, event
   denied by its `consent` check). Source, transformer and collector steps print
   their recorded calls, then `event <json>` or `no events`; a failed step prints
-  `error: <message>`.
+  `error: <message>`. A source step records the walker commands the source
+  issues itself as `elb` calls in its own call shape, e.g.
+  `call elb("walker consent",{"functional":true,"marketing":true})` for a CMP,
+  `call elb("user",...)` and `call elb("session",...)` for the session source.
+  Not recorded: the collector's own commands (starting consent, globals, custom,
+  shutdown) and the wiring commands `on`, `hook`, `destination`.
 - `--json` puts the same data under `simulations` (one
   `{ step, name, events, calls: [{ fn, args, ts }], mappingKey?, skipped?, error? }`
   per simulated step, in order; `skipped` is `{ reason: 'pending', require }` or
@@ -227,10 +232,12 @@ success: true
   `Authorization`, `access_token`, credential-named fields and high-entropy runs
   show as `***`. The values of every `$secret.NAME` the flow references (set in
   the env, 6+ chars) are masked exactly, raw and JSON-escaped. The step still
-  receives the real values. Simulate routes the flow's own logs through the
-  masking CLI logger, so flow DEBUG lines need `--verbose`. A real push masks
-  known values in its output only, not in flow logs; the runner does not mask
-  them yet.
+  receives the real values. With `--json`, a number printing a digits-only known
+  value becomes `"***"`, so the JSON still parses. Simulate and a real push of a
+  flow config route the flow's own logs through the masking CLI logger, so flow
+  DEBUG lines need `--verbose` (a prebuilt bundle keeps its logger unless
+  `--json`). The runner masks the secret values it fetches; values from
+  `--env-file` or the container env get the pattern rules only.
 - **Only the target starts.** Destination simulate keeps only the target
   destination (no source, no other destination initializes); the flow's
   transformers still start, and a store without a mock env runs for real. Source
@@ -258,13 +265,15 @@ success: true
   errors the same way; `simulateTransformer`, `simulateCollector` and
   `simulateDestination` take `ingest` directly.
 - **`--consent <json|file|url>`** (a JSON object of booleans) is the collector
-  consent a transformer, collector or destination simulation starts from
-  (programmatic `consent`; collector: `state.consent`). `startFlow` applies it
-  before the flow runs, as a `consent` command only the simulated destination
-  hears: a `require: ["consent"]` destination starts, its consent check sees the
-  granted keys, and a Consent Mode (`como`) target records its
-  `gtag('consent','update',...)`. Rejected for `source.*` and a real push:
-  `--consent sets collector consent for transformer, collector and destination simulation; for a source, simulate the CMP source's own example or set the event's consent.`
+  consent any simulated step starts from, sources included (programmatic
+  `consent`; MCP and collector: `state.consent`). `startFlow` applies it before
+  the flow runs, as a `consent` command only the simulated step hears: a
+  `require: ["consent"]` destination starts, its consent check sees the granted
+  keys, and a Consent Mode (`como`) target records its
+  `gtag('consent','update',...)`. A consent-gated source (the session source
+  with `settings.consent`) starts from it; without it, `no events`. The starting
+  consent is never recorded as a source call. Rejected for a real push only:
+  `--consent sets the collector's starting consent for a simulation; a real push uses the flow's own consent.`
 - **`--command <config|consent|user|run>`** makes a destination simulation run
   `collector.command(name, event)` instead of a push (a step example's
   `command`); the event is the command's data and its calls are recorded.
@@ -415,7 +424,7 @@ Options:
   --simulate <step>              Simulate a step (repeatable for destination.*). Format: source.NAME | destination.NAME | transformer.NAME | collector.NAME
   --mock <step=value>            Mock a step with a specific return value (repeatable); chain members via destination.NAME.before.ID or collector.next.ID
   --ingest <json|file|url>       Request context for transformer/collector/destination simulate
-  --consent <json|file|url>      Starting collector consent for transformer/collector/destination simulate
+  --consent <json|file|url>      Starting collector consent for a simulation, any step
   --command <name>               Destination simulate runs this command (config|consent|user|run) instead of a push
   --page-url <url>               Page URL of a simulated web source (http/https)
   --snapshot <source>            JS file to eval before execution (sets global state)
@@ -493,6 +502,19 @@ local development with a built package directory.
   folder exists) is copied next to server bundles only. A web build copies
   nothing and logs
   `include is ignored for web builds: a browser bundle cannot read local folders.`
+  A server build served from the build cache copies `include` too. A manifest
+  (hosted) build refuses `include` only on a server flow; on a web flow it is
+  accepted and ignored.
+- **Caches and temp dirs:** caches live in `$TMPDIR/cache/` (`os.tmpdir()`; on
+  Linux `TMPDIR` is often unset, read `$TMPDIR/...` in output as `/tmp/...`).
+  Package entries are written to a temp sibling and renamed in once complete; a
+  failed write warns
+  `Package cache write failed for <name>@<version>: <message>. The build continues without caching it.`
+  Entries from an older CLI miss once. `walkeros cache clear` also removes
+  interrupted writes. Cache keys ignore a local package's (`path`) files: after
+  rebuilding one without a version change, `walkeros cache clear`. Each run
+  works in `$TMPDIR/walkeros/<kind>/<6 chars>` (`push`, `build`, `bundle`,
+  `wrap`, `archive`, `setup`).
 - **Runtime paths:** `runneros` sets CWD to the bundle directory. File paths in
   `settings` resolve relative to the bundle, not the project root.
 - **Component names:** Source, transformer, destination, and store names must be
@@ -604,14 +626,16 @@ resolve against the install root, not the project directory:
 ### Cache (CI)
 
 The bundler caches pacote downloads under `process.env.NPM_CACHE_DIR` (default
-`<tmpDir>/cache/npm`). On CI, persist that path with `actions/cache`:
+`$TMPDIR/cache/npm`). On CI, persist that path with `actions/cache`:
 
 ```yaml
 - uses: actions/cache@v4
   with:
     path: .walkeros-cache/npm
     key: walkeros-${{ hashFiles('**/flow.json') }}
-- run: WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o dist/
+- run: npx walkeros bundle flow.json -o dist/
+  env:
+    NPM_CACHE_DIR: ${{ github.workspace }}/.walkeros-cache/npm
 ```
 
 **CI smoke check:**

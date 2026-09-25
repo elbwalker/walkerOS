@@ -14,7 +14,7 @@
 import os from 'os';
 import path from 'path';
 import { createLogger } from './logger';
-import { scrubSecrets } from './redactLine';
+import { maskKnownValues, scrubSecrets } from './redactLine';
 
 export { scrubSecrets, redactLine } from './redactLine';
 export type { ScrubOptions } from './redactLine';
@@ -80,8 +80,12 @@ export interface CLILoggerOptions {
   json?: boolean;
   stderr?: boolean;
   onLine?: (level: Level, message: string) => void;
-  /** Exact secret values masked in every line (see `scrubSecrets`). */
-  knownSecrets?: readonly string[];
+  /**
+   * Exact secret values masked in every line (see `scrubSecrets`). An array is
+   * copied at creation; a function is read per line, so values learned after
+   * the logger exists (secrets fetched at startup) are masked too.
+   */
+  knownSecrets?: readonly string[] | (() => readonly string[]);
 }
 
 /** Formats one already-scrubbed line for the terminal. */
@@ -99,6 +103,29 @@ export interface CLILoggerColors {
 }
 
 const identity: LineFormatter = (line) => line;
+
+const TMP_ROOT_LABEL = '$TMPDIR';
+
+/**
+ * Replace each occurrence of the literal temp root, followed by a path
+ * separator, with `$TMPDIR`. Only occurrences that start a path count: the
+ * character before must not continue a path, so `/mnt/tmp/x` keeps its text
+ * when the root is `/tmp`. Literal matching only, never a pattern built from
+ * the path.
+ */
+function labelTmpRoot(line: string, root: string): string {
+  if (!root || root === path.sep) return line;
+  const needle = root.endsWith(path.sep) ? root : root + path.sep;
+  const parts = line.split(needle);
+  if (parts.length === 1) return line;
+  let result = parts[0];
+  for (let i = 1; i < parts.length; i++) {
+    const before = result.length > 0 ? result[result.length - 1] : '';
+    const startsPath = before === '' || !/[\w./\\~-]/.test(before);
+    result += (startsPath ? TMP_ROOT_LABEL + path.sep : needle) + parts[i];
+  }
+  return result;
+}
 
 /**
  * Build the `Logger.Config` (level + handler + jsonHandler) that backs a
@@ -129,7 +156,15 @@ export function createCLILoggerConfig(
     stderr = false,
     knownSecrets,
   } = options;
-  const scrubOptions = knownSecrets ? { known: [...knownSecrets] } : {};
+  const knownCopy =
+    typeof knownSecrets === 'function'
+      ? undefined
+      : knownSecrets
+        ? [...knownSecrets]
+        : undefined;
+  const readKnown = (): readonly string[] | undefined =>
+    typeof knownSecrets === 'function' ? knownSecrets() : knownCopy;
+  const tmpRoot = os.tmpdir();
   const out = stderr ? console.error : console.log;
   const errorColor = colors.error ?? identity;
   const warnColor = colors.warn ?? identity;
@@ -165,9 +200,16 @@ export function createCLILoggerConfig(
       // steps) on both paths. Length is preserved here (no truncation); the
       // heartbeat path applies the 256-char wire cap separately as a backstop
       // on already-redacted text.
+      // Order: known values first, so the label can never split one (a
+      // `sqlite:/tmp/...` URL, or a value that only touches the root at its
+      // edge); then the temp root label, since a long per-user root (macOS
+      // `/var/folders/...`) would otherwise read as a token; then the
+      // pattern rules.
       const fullMessage = scrubSecrets(
-        `${scopePath}${message}${meta}`,
-        scrubOptions,
+        labelTmpRoot(
+          maskKnownValues(`${scopePath}${message}${meta}`, readKnown()),
+          tmpRoot,
+        ),
       );
 
       // Tap every line before any early return so no level is dropped from capture.

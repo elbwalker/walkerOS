@@ -6,16 +6,56 @@ import type {
   Credential,
   ServiceAccount,
 } from '@walkeros/core';
-import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
-import type { managedwriter } from '@google-cloud/bigquery-storage';
+import type { BigQueryOptions } from '@google-cloud/bigquery';
 import type {
   WriterHandles,
-  StreamConnection as WriterConnection,
-  RemoveListener as WriterRemoveListener,
+  WriterEnv,
+  WriteClient,
+  WriteConnection,
+  RowWriter,
+  ConnectionListener,
 } from '../writer';
 
+/** Table metadata fields the setup drift check reads. */
+export interface TableMetadataShape {
+  timePartitioning?: unknown;
+  clustering?: unknown;
+  schema?: unknown;
+}
+
+/** The table surface `walkeros setup` calls. */
+export interface QueryTable {
+  exists(): Promise<[boolean, ...unknown[]]>;
+  create(options: {
+    schema: { fields: SetupSchemaField[] };
+    timePartitioning: { type: string; field: string };
+    clustering: { fields: string[] };
+  }): Promise<unknown>;
+  // Matches both real BigQuery Table.getMetadata() (returns [Metadata, ApiResponse])
+  // and a mock returning [Metadata]. Only index 0 is consumed.
+  getMetadata(): Promise<TableMetadataShape[]>;
+}
+
+/** The dataset surface `walkeros setup` calls. */
+export interface QueryDataset {
+  exists(): Promise<[boolean, ...unknown[]]>;
+  create(options: {
+    location: string;
+    storageBillingModel: string;
+  }): Promise<unknown>;
+  table(tableId: string): QueryTable;
+}
+
+/**
+ * The query client surface this destination calls (dataset and table
+ * provisioning). A `BigQuery` from `@google-cloud/bigquery` satisfies it.
+ */
+export interface QueryClient {
+  dataset(datasetId: string): QueryDataset;
+}
+
 export interface Settings {
-  client: BigQuery;
+  client: QueryClient;
   projectId: string;
   datasetId: string;
   tableId: string;
@@ -30,13 +70,13 @@ export interface Settings {
    */
   credentials?: ServiceAccount;
   // Runtime-only handles populated by init(); not user-facing.
-  writeClient?: managedwriter.WriterClient;
-  writer?: managedwriter.JSONWriter;
+  writeClient?: WriteClient<WriteConnection>;
+  writer?: RowWriter;
   // The StreamConnection the writer appends to. Held so the connection-error
   // listener can be removed on re-open/destroy. Runtime-only.
-  connection?: WriterConnection;
+  connection?: WriteConnection;
   // The `{ off }` disposable for the connection-error listener. Runtime-only.
-  connectionErrorListener?: WriterRemoveListener;
+  connectionErrorListener?: ConnectionListener;
   /**
    * Set by the connection's `'error'` handler when the long-lived stream
    * errored out-of-band. The next push self-heals (one re-open attempt) before
@@ -64,16 +104,16 @@ export interface Settings {
 
 export interface InitSettings {
   projectId: string;
-  client?: BigQuery;
+  client?: QueryClient;
   datasetId?: string;
   tableId?: string;
   location?: string;
   bigquery?: BigQueryOptions;
   // Runtime-only handles populated by init(); not user-facing.
-  writeClient?: managedwriter.WriterClient;
-  writer?: managedwriter.JSONWriter;
-  connection?: WriterConnection;
-  connectionErrorListener?: WriterRemoveListener;
+  writeClient?: WriteClient<WriteConnection>;
+  writer?: RowWriter;
+  connection?: WriteConnection;
+  connectionErrorListener?: ConnectionListener;
   writerBroken?: boolean;
   lastStreamError?: Error;
   reopenWriter?: () => Promise<WriterHandles>;
@@ -115,12 +155,10 @@ export interface SetupSchemaField {
   mode?: 'NULLABLE' | 'REQUIRED' | 'REPEATED';
 }
 
-export interface Env extends DestinationServer.Env {
-  BigQuery?: typeof BigQuery;
-  // SDK-shaped mocks for tests/examples. Optional at runtime; populated in test envs.
-  WriterClient?: typeof managedwriter.WriterClient;
-  JSONWriter?: typeof managedwriter.JSONWriter;
-  adapt?: typeof import('@google-cloud/bigquery-storage').adapt;
+// The Storage Write pieces (WriterClient, JSONWriter, adapt) come from
+// WriterEnv: mocks for tests/examples, optional at runtime.
+export interface Env extends DestinationServer.Env, WriterEnv {
+  BigQuery?: new (options?: BigQueryOptions) => QueryClient;
 }
 
 export type Types = CoreDestination.Types<

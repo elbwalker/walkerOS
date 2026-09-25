@@ -103,6 +103,33 @@ export const checkoutPost: Flow.StepExample = {
 };
 ```
 
+### Source Step Example - Commands (CMP, session)
+
+A source that issues walker commands records them in its own call shape: the
+first argument verbatim, callable `'elb'`. Commands come first, in call order,
+then the events. A CMP source:
+
+```typescript
+out: [['elb', 'walker consent', { functional: true, marketing: true }]],
+```
+
+The session source (`env.command('user' | 'session', ...)`, then its event):
+
+```typescript
+out: [
+  ['elb', 'user', { session: 's3ss10n-id', device: 'd3v1c3-id' }],
+  ['elb', 'session', { id: 's3ss10n-id', isStart: true /* ... */ }],
+  ['elb', { name: 'session start', data: { id: 's3ss10n-id' /* ... */ } }],
+],
+```
+
+A source simulation (`walkeros push --simulate source.X`, MCP `flow_simulate`)
+returns exactly these calls: `call elb("walker consent",{...})`. The collector's
+own commands (starting consent from `--consent`, globals, custom, shutdown) and
+the wiring commands `on`, `hook`, `destination` are never part of a source's
+`out`. A consent-gated source needs `--consent` (MCP `state.consent`) to emit
+anything.
+
 ### Source Step Example - Browser
 
 `in` is an HTML string, `out` is a tuple of the `elb()` call:

@@ -12,7 +12,11 @@ const RE_PEM_BODY =
   /-----BEGIN [A-Z ]*PRIVATE KEY-----((?:[A-Za-z0-9+/=]|\s|\\n)*)/g;
 
 const RE_LIVE_TOKEN =
-  /(?:^|[^A-Za-z0-9_])(sk_live_|ghp_|gho_|xoxb-|xoxp-|AKIA[A-Z0-9]{16})/;
+  /(?:^|[^A-Za-z0-9_])(sk_live_|github_pat_|ghp_|gho_|ghu_|ghs_|ghr_|xoxb-|xoxp-|AKIA[A-Z0-9]{16})/;
+
+// Path segment reported for an object key that breaks a rule: the key text is
+// the credential, so it never appears in the message.
+const KEY_PLACEHOLDER = '<key>';
 
 function countKeyChars(body) {
   return body.replace(/\\n|\s/g, '').length;
@@ -47,6 +51,9 @@ function findInValue(value, path) {
   }
   if (value && typeof value === 'object') {
     for (const [key, child] of Object.entries(value)) {
+      // A key is published text too: check it before descending.
+      const keyRule = credentialRule(key);
+      if (keyRule) return { path: `${path}.${KEY_PLACEHOLDER}`, rule: keyRule };
       const hit = findInValue(child, `${path}.${key}`);
       if (hit) return hit;
     }

@@ -51,6 +51,7 @@ export function createLocalRuntime(): FlowRuntime {
           return simulateSource(input, opts.event, {
             sourceId: opts.stepId,
             ...common,
+            consent: opts.state?.consent,
           });
         case 'transformer':
           return simulateTransformer(

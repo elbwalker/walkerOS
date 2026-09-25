@@ -111,9 +111,18 @@ const OWNER = 'docs/plans/2026-09-24-step-examples-real.md';
 
 /** Examples no simulation can reproduce yet, with the reason and owner. */
 const WAITING: Record<string, string> = {
-  'web.sources.usercentrics.explicitDecision': `the decision arrives as a walker consent command, which a source simulation does not capture; it records an empty out (${OWNER})`,
-  'web.sources.session.marketingSession': `the session source waits for functional consent, which a source simulation does not grant; it records an empty out (${OWNER})`,
+  'web.sources.usercentrics.explicitDecision': `needs an out: its walker consent call is now recorded, the example has none to compare (${OWNER})`,
+  'web.sources.session.marketingSession': `needs an out: with SOURCE_CONSENT it starts one session, the example has none to compare (${OWNER})`,
   'server.transformers.file.walkerJs': `simulate transformer does not capture respond; the HTTP test below serves /walker.js (${OWNER})`,
+};
+
+/**
+ * The collector's starting consent per source example: a consent-gated
+ * source (the session source) waits for it. A step example has no consent
+ * field, so it lives here.
+ */
+const SOURCE_CONSENT: Record<string, Record<string, boolean>> = {
+  'web.sources.session.marketingSession': { functional: true },
 };
 
 type Kind = 'sources' | 'transformers' | 'destinations';
@@ -232,8 +241,14 @@ function sourceType(event: unknown): unknown {
     : undefined;
 }
 
-/** The effects a source simulation produced for one example. */
+/**
+ * The effects a source simulation produced for one example: its own walker
+ * commands (recorded as `elb` calls), then the events it emitted.
+ */
 function sourceOut(result: Simulation.Result, c: Case): Flow.StepOut {
+  const commands: Flow.StepOut = result.calls
+    .filter((call) => call.fn === 'elb')
+    .map((call) => ['elb', ...call.args]);
   const { step, example } = c;
   // Keep the simulated source's own events, and of those the ones its
   // trigger fired (a page load also fires the browser page view). Server
@@ -244,10 +259,13 @@ function sourceOut(result: Simulation.Result, c: Case): Flow.StepOut {
   const trigger = example.trigger?.type;
   if (trigger && events.some((event) => event.trigger === trigger))
     events = events.filter((event) => event.trigger === trigger);
-  return events.map((event) => {
-    const { id, ...rest } = event;
-    return ['elb', rest];
-  });
+  return [
+    ...commands,
+    ...events.map((event): Flow.StepOut[number] => {
+      const { id, ...rest } = event;
+      return ['elb', rest];
+    }),
+  ];
 }
 
 function transformerOut(result: Simulation.Result): Flow.StepOut {
@@ -389,7 +407,7 @@ describe('flow-complete.json', () => {
         const result = await simulateSource(
           config,
           { content: c.example.in, trigger: c.example.trigger },
-          { ...base, sourceId: c.step },
+          { ...base, sourceId: c.step, consent: SOURCE_CONSENT[id] },
         );
         expect(result.error).toBeUndefined();
         out = sourceOut(result, c);

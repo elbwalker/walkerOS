@@ -3,6 +3,7 @@ import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isObject, mcpResult, mcpError } from '@walkeros/core';
 import { scrubSecrets, toPrintable } from '@walkeros/core/node';
+import { maskKnownNumbers } from '@walkeros/cli';
 import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
 import { FLOW_SIMULATE_DESCRIPTION } from './simulate-description.js';
@@ -38,13 +39,17 @@ function isStepType(value: string): value is SimulateStepType {
  * Simulate results carry recorded vendor calls and events whose values can
  * hold credentials. They egress like a log line: serialize, scrub (masking
  * the values of the secrets the flow references, `known`), then parse back
- * into the structured result.
+ * into the structured result. A number that prints a known secret is masked
+ * before serializing, so the scrubbed text still parses.
  */
 function scrubbed(
   result: Record<string, unknown>,
   known: readonly string[],
 ): Record<string, unknown> {
-  const text = scrubSecrets(JSON.stringify(toPrintable(result)), { known });
+  const text = scrubSecrets(
+    JSON.stringify(maskKnownNumbers(toPrintable(result), known)),
+    { known },
+  );
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -133,10 +138,10 @@ const inputSchema = {
     })
     .optional()
     .describe(
-      'Collector state the step starts from. consent: transformer, collector ' +
-        'and destination steps (starts a destination that requires consent, ' +
-        'and feeds its consent check). user/globals/timing: collector steps, ' +
-        'seeded before enrichment runs.',
+      'Collector state the step starts from. consent: every step (starts a ' +
+        'destination that requires consent and feeds its consent check; for a ' +
+        'source, the consent a consent-gated source waits for). ' +
+        'user/globals/timing: collector steps, seeded before enrichment runs.',
     ),
   command: z
     .enum(COMMANDS)
@@ -268,10 +273,19 @@ async function flowSimulateHandlerBody(
     const success = !result.error;
     const errorMessage = result.error?.message;
 
-    // Source simulation: captured events are result.events
+    // Source simulation: captured events are result.events, the source's
+    // own walker commands its `elb` calls. Mock-env calls stay verbose-only.
     if (result.step === 'source') {
       const eventCount = result.events.length;
-      const summary = `Source captured ${eventCount} event${eventCount !== 1 ? 's' : ''}`;
+      const commandCount = result.calls.filter(
+        (call) => call.fn === 'elb',
+      ).length;
+      const summary =
+        `Source captured ${eventCount} event${eventCount !== 1 ? 's' : ''}` +
+        ` and ${commandCount} command${commandCount !== 1 ? 's' : ''}`;
+      const shownCalls = verbose
+        ? result.calls
+        : result.calls.filter((call) => call.fn === 'elb');
 
       return mcpResult(
         scrubbed(
@@ -280,16 +294,14 @@ async function flowSimulateHandlerBody(
             error: errorMessage,
             summary,
             capturedEvents: result.events,
-            ...(verbose && result.calls.length > 0
-              ? { calls: result.calls }
-              : {}),
+            ...(shownCalls.length > 0 ? { calls: shownCalls } : {}),
             duration: result.duration,
           },
           known,
         ),
         {
           next:
-            eventCount > 0
+            eventCount + commandCount > 0
               ? [
                   'Use flow_simulate with a destination step to test downstream processing',
                 ]

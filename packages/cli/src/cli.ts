@@ -185,7 +185,7 @@ program
   )
   .option(
     '--consent <source>',
-    'starting collector consent for a simulated transformer, collector or destination (JSON object of booleans, file path, or URL)',
+    'starting collector consent for a simulation, any step (JSON object of booleans, file path, or URL)',
   )
   .addOption(
     new Option(

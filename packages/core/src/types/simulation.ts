@@ -2,7 +2,8 @@ import type { WalkerOS } from '.';
 
 /**
  * A recorded function call made during simulation.
- * Captures what a destination called on its env (e.g., window.gtag).
+ * Captures what a destination called on its env (e.g., window.gtag), or a
+ * walker command a source issued (`fn: 'elb'`, first argument verbatim).
  */
 export interface Call {
   /** Dot-path of the function called: "window.gtag", "dataLayer.push" */
@@ -47,7 +48,14 @@ export interface Result {
    * - destination: [] (destinations don't produce events)
    */
   events: WalkerOS.DeepPartialEvent[];
-  /** Intercepted env calls. Populated for destinations, empty [] for others. */
+  /**
+   * Recorded calls, in time order:
+   * - source: its own walker commands (`fn: 'elb'`, e.g. a CMP's
+   *   `['walker consent', {...}]` or the session's `['user', {...}]`) and
+   *   its mock-env calls
+   * - destination: its intercepted env calls
+   * - transformer, collector: []
+   */
   calls: Call[];
   /** Execution time in ms */
   duration: number;

@@ -65,6 +65,7 @@ const sidebars: SidebarsConfig = {
             id: 'getting-started/flow/index',
           },
           items: [
+            'getting-started/flow/routing',
             'getting-started/flow/step-examples',
             'getting-started/flow/contract',
             'getting-started/flow/validate',

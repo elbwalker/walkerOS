@@ -15,7 +15,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs-extra';
 import type { Flow, Logger } from '@walkeros/core';
-import { getTmpPath } from './tmp.js';
+import { tmpRunDir } from './tmp-names.js';
 import { applyStepPackages, getFlowSection } from './step-packages.js';
 import {
   downloadPackagesWithResolution,
@@ -211,10 +211,7 @@ export async function loadStepPackage(
   const npmConfig = await loadNpmConfigForPacote(opts.configDir);
   // mkdtemp guarantees a unique tree per load: concurrent loads must never
   // share an installDir, since each caller removes its tree when done.
-  await fs.ensureDir(getTmpPath(opts.tmpDir));
-  const installDir = await fs.mkdtemp(
-    getTmpPath(opts.tmpDir, 'walkeros-setup-'),
-  );
+  const installDir = await tmpRunDir('setup', opts.tmpDir);
 
   try {
     const { packagePaths } = await downloadPackagesWithResolution(

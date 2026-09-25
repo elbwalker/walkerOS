@@ -340,7 +340,10 @@ export interface ScrubOptions {
  * a value containing another is masked whole. Literal split/join, never a regex built from the
  * value.
  */
-function maskKnownValues(line: string, known?: readonly string[]): string {
+export function maskKnownValues(
+  line: string,
+  known?: readonly string[],
+): string {
   if (!known || known.length === 0) return line;
   const forms = new Set<string>();
   for (const value of known) {

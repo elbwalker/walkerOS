@@ -39,6 +39,70 @@ describe('assertNoPublishedCredentials', () => {
     },
   );
 
+  it.each(['github_pat_', 'ghu_', 'ghs_', 'ghr_'])(
+    'throws on a GitHub %s token',
+    (prefix) => {
+      const value = `${prefix}${'a1B2c3D4e5'.repeat(3)}f6G7h8`;
+      expect(() =>
+        assertNoPublishedCredentials('@walkeros/x', {
+          examples: { step: { in: value } },
+        }),
+      ).toThrow(`(live key token ${prefix})`);
+    },
+  );
+
+  it.each([
+    [
+      'a credential as an object key',
+      { step: { in: { sk_live_51Habcdefghijkl: 'placeholder' } } },
+      'examples.step.in.<key>',
+      'live key token sk_live_',
+      ['sk_live_51Habcdefghijkl'],
+    ],
+    [
+      'a credential key above a credential value',
+      {
+        step: {
+          in: {
+            ghs_abcdefghijklmnopqrstuvwxyz0123456789: {
+              token: 'github_pat_abcdefghijklmnopqrstuvwxyz0123456789',
+            },
+          },
+        },
+      },
+      'examples.step.in.<key>',
+      'live key token ghs_',
+      [
+        'ghs_abcdefghijklmnopqrstuvwxyz0123456789',
+        'github_pat_abcdefghijklmnopqrstuvwxyz0123456789',
+      ],
+    ],
+  ])(
+    'throws on %s without the key or value text',
+    (_l, examples, path, rule, secrets) => {
+      let message = '';
+      try {
+        assertNoPublishedCredentials('@walkeros/x', { examples });
+      } catch (error) {
+        message = error.message;
+      }
+      expect(message).toBe(
+        `@walkeros/x: ${path} looks like a real credential (${rule}). Replace it with a placeholder, e.g. sk_test_..., or a PEM with fewer than 64 characters of key material.`,
+      );
+      for (const secret of secrets) expect(message).not.toContain(secret);
+    },
+  );
+
+  it('passes a plain header key with a placeholder value', () => {
+    expect(() =>
+      assertNoPublishedCredentials('@walkeros/x', {
+        examples: {
+          step: { in: { headers: { Authorization: 'Bearer ***' } } },
+        },
+      }),
+    ).not.toThrow();
+  });
+
   it('names the section and array index of the hit', () => {
     expect(
       findPublishedCredential({

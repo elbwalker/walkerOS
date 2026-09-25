@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import esbuild from 'esbuild';
 import { builtinModules } from 'module';
 import path from 'path';
@@ -130,6 +129,7 @@ import { assertConsumerDepsSatisfied } from './assert-consumer-deps.js';
 import type { Logger } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 import { getTmpPath } from '../../core/tmp.js';
+import { tmpRunDir } from '../../core/tmp-names.js';
 import { toFileImportSpecifier } from '../../core/import-specifier.js';
 import {
   isBuildCached,
@@ -196,7 +196,7 @@ export async function copyIncludes(
  * NOT maintain a `package-lock.json` for step packages in the zero-setup
  * design, so pacote's resolution is the authoritative version signal.
  */
-function generateCacheKeyContent(
+export function generateCacheKeyContent(
   flowSettings: Flow,
   buildOptions: BuildOptions,
   versionsHash: string,
@@ -242,10 +242,7 @@ export async function bundleCore(
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
 
-  // Per-build isolation: unique working dir, shared cache
-  const buildId = crypto.randomUUID();
-  const TEMP_DIR =
-    buildOptions.tempDir || getTmpPath(undefined, `walkeros-build-${buildId}`);
+  // Shared cache root
   const CACHE_DIR = buildOptions.tempDir || getTmpPath();
 
   // Resolve npm config (registry + scope overrides + auth tokens) from .npmrc
@@ -271,6 +268,9 @@ export async function bundleCore(
   await fs.remove(path.join(outputDirAbs, 'package.json'));
   await fs.remove(path.join(outputDirAbs, 'package-lock.json'));
 
+  // Per-build isolation: a unique working dir, created right before the
+  // `try` whose `finally` removes it.
+  const TEMP_DIR = buildOptions.tempDir || (await tmpRunDir('build'));
   try {
     // Step 1: Ensure temporary directory exists
     await fs.ensureDir(TEMP_DIR);
@@ -411,20 +411,14 @@ export async function bundleCore(
           await fs.ensureDir(path.dirname(outputPath));
           await fs.writeFile(outputPath, cachedBuild);
 
-          if (buildOptions.platform === 'node') {
-            // Server path: trace from the cached bundle, copy files into
-            // `outDir/node_modules/`, write the informational sidecar.
-            await runNftServerPath(
-              outputPath,
-              flowSettings,
-              buildOptions,
-              TEMP_DIR,
-              declaredPackages,
-              logger,
-            );
-          }
-          // Web flows don't ship a sidecar node_modules — esbuild emits a
-          // self-contained IIFE.
+          await finishArtifact(
+            outputPath,
+            flowSettings,
+            buildOptions,
+            TEMP_DIR,
+            declaredPackages,
+            logger,
+          );
 
           const stats = await fs.stat(outputPath);
           const sizeKB = (stats.size / 1024).toFixed(1);
@@ -672,23 +666,14 @@ export async function bundleCore(
       logger.debug('Build cached for future use');
     }
 
-    if (buildOptions.platform === 'node') {
-      // Server path: trace the just-emitted bundle, copy used files into
-      // `outDir/node_modules/`, write an informational sidecar package.json.
-      // This emits the sibling node_modules/ that every server host (deploy
-      // container, simulate-server) resolves the external @walkeros/* from.
-      // Load-bearing, do not remove.
-      await runNftServerPath(
-        outputPath,
-        flowSettings,
-        buildOptions,
-        TEMP_DIR,
-        declaredPackages,
-        logger,
-      );
-    }
-    // Web flows don't ship a sidecar node_modules — esbuild emits a
-    // self-contained IIFE.
+    await finishArtifact(
+      outputPath,
+      flowSettings,
+      buildOptions,
+      TEMP_DIR,
+      declaredPackages,
+      logger,
+    );
 
     // Collect stats if requested
     let stats: BundleStats | undefined;
@@ -701,32 +686,73 @@ export async function bundleCore(
       );
     }
 
-    // Copy included folders to output directory. Only a server artifact reads
-    // them at runtime; a browser bundle is served on its own.
-    if (buildOptions.include && buildOptions.include.length > 0) {
-      if (buildOptions.platform === 'browser') {
-        logger.info(
-          'include is ignored for web builds: a browser bundle cannot read local folders.',
-        );
-      } else {
-        await copyIncludes(
-          buildOptions.include,
-          buildOptions.configDir || process.cwd(),
-          path.dirname(outputPath),
-          logger,
-        );
-      }
-    }
-
     return stats;
   } catch (error) {
     throw error;
   } finally {
-    // Clean up per-build directory (contains entry.js with potential secrets)
+    // Clean up per-build directory (contains entry.js with potential secrets).
+    // Awaited: a process that exits right after the build must not leave it.
     if (!buildOptions.tempDir) {
-      fs.remove(TEMP_DIR).catch(() => {});
+      await fs.remove(TEMP_DIR).catch(() => {});
     }
   }
+}
+
+/**
+ * Whether a build ships the flow's `include` folders. Only a server artifact
+ * reads them at runtime; a browser bundle is served on its own. Shared by the
+ * bundler and the manifest build gate, so both agree on when `include` reads
+ * the local disk.
+ */
+export function includeApplies(buildOptions: {
+  platform: 'node' | 'browser';
+}): boolean {
+  return buildOptions.platform !== 'browser';
+}
+
+/**
+ * The steps every build runs once its output file is written, whether it came
+ * from the cache or a fresh esbuild run, so the two paths cannot drift.
+ */
+async function finishArtifact(
+  outputPath: string,
+  flowSettings: Flow,
+  buildOptions: BuildOptions,
+  tempDir: string,
+  declaredPackages: string[],
+  logger: Logger.Instance,
+): Promise<void> {
+  if (buildOptions.platform === 'node') {
+    // Server path: trace the emitted bundle, copy used files into
+    // `outDir/node_modules/`, write an informational sidecar package.json.
+    // This emits the sibling node_modules/ that every server host (deploy
+    // container, simulate-server) resolves the external @walkeros/* from.
+    // Load-bearing, do not remove.
+    await runNftServerPath(
+      outputPath,
+      flowSettings,
+      buildOptions,
+      tempDir,
+      declaredPackages,
+      logger,
+    );
+  }
+  // Web flows don't ship a sidecar node_modules: esbuild emits a
+  // self-contained IIFE.
+
+  if (!buildOptions.include || buildOptions.include.length === 0) return;
+  if (!includeApplies(buildOptions)) {
+    logger.info(
+      'include is ignored for web builds: a browser bundle cannot read local folders.',
+    );
+    return;
+  }
+  await copyIncludes(
+    buildOptions.include,
+    buildOptions.configDir || process.cwd(),
+    path.dirname(outputPath),
+    logger,
+  );
 }
 
 async function collectBundleStats(

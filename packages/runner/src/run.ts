@@ -136,7 +136,16 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     logRing.add({ time: Date.now(), level: LEVEL_NAME[level], message });
   };
 
-  const logger = createCLILogger({ ...options, onLine }, RUNTIME_COLORS);
+  // Secret values fetched at startup, filled by the pipeline once injected.
+  // Both loggers read the list per line, so every line after the fetch masks
+  // them, in the console and in both rings.
+  const knownSecrets: string[] = [];
+  const readKnownSecrets = (): readonly string[] => knownSecrets;
+
+  const logger = createCLILogger(
+    { ...options, onLine, knownSecrets: readKnownSecrets },
+    RUNTIME_COLORS,
+  );
 
   // The deployed bundle's collector builds its own logger from this config
   // (`context.logger`), so its destination errors flow through the SAME
@@ -145,7 +154,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   // no handler, and destination "Push failed" errors never reach the ErrorRing
   // (the heartbeat would report "No errors reported" despite failed deliveries).
   const collectorLoggerConfig = createCLILoggerConfig(
-    { ...options, onLine },
+    { ...options, onLine, knownSecrets: readKnownSecrets },
     RUNTIME_COLORS,
   );
 
@@ -225,6 +234,9 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       api: apiConfig,
       errorRing,
       logRing,
+      onSecrets: (values) => {
+        knownSecrets.push(...values);
+      },
     });
   } catch (error) {
     const duration = timer.getElapsed() / 1000;
@@ -236,7 +248,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       // scrub here. A failed fetch message can carry a presigned URL.
       logger.json({
         success: false,
-        error: scrubSecrets(errorMessage),
+        error: scrubSecrets(errorMessage, { known: knownSecrets }),
         duration,
       });
     } else {

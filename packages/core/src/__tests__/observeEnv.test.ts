@@ -239,6 +239,50 @@ describe('observeEnv', () => {
     expect(Object.keys(view)).toEqual(['send']);
   });
 
+  it('records a call through a frozen root without mutating it', () => {
+    const sent: unknown[] = [];
+    const root = Object.freeze({
+      lib: { send: (x: unknown) => sent.push(x) },
+    });
+    const { env, calls, unresolved } = observeEnv(root, ['call:lib.send']);
+    expect(unresolved).toEqual([]);
+    call(slot(env.lib, 'send'), 'a');
+    expect(sent).toEqual(['a']);
+    expect(calls).toEqual([
+      { fn: 'lib.send', args: ['a'], ts: expect.any(Number) },
+    ]);
+    expect(Object.isFrozen(root)).toBe(true);
+    expect(Object.keys(env)).toEqual(['lib']);
+  });
+
+  it('records a call through a non-writable, non-configurable root key', () => {
+    const sent: unknown[] = [];
+    const lib = { send: (x: unknown) => sent.push(x) };
+    const root = {};
+    Object.defineProperty(root, 'lib', {
+      value: lib,
+      writable: false,
+      configurable: false,
+      enumerable: true,
+    });
+    const before = Object.getOwnPropertyDescriptor(root, 'lib');
+    const { env, calls, unresolved } = observeEnv(root, ['call:lib.send']);
+    expect(unresolved).toEqual([]);
+    call(slot(slot(env, 'lib'), 'send'), 'a');
+    expect(sent).toEqual(['a']);
+    expect(calls.map((c) => [c.fn, c.args])).toEqual([['lib.send', ['a']]]);
+    expect(Object.getOwnPropertyDescriptor(root, 'lib')).toEqual(before);
+  });
+
+  it('keeps a frozen callable root callable and reports its frozen static', () => {
+    const root = Object.freeze(
+      Object.assign(() => 'called', { lib: { send: () => 'sent' } }),
+    );
+    const { env, unresolved } = observeEnv(root, ['call:lib.send']);
+    expect(call(env)).toBe('called');
+    expect(unresolved).toEqual(['lib.send']);
+  });
+
   it('records a call through a frozen call result', () => {
     const client = Object.freeze({ send: () => 'ok' });
     const { env, calls } = observeEnv({ make: () => client }, [

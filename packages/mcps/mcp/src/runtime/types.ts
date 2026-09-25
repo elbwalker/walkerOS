@@ -65,9 +65,9 @@ export interface SimulateOptions {
    */
   ingest?: Omit<Ingest, '_meta'>;
   /**
-   * Collector state the step starts from. `consent` applies to transformer,
-   * collector and destination steps (the collector's starting consent);
-   * `user`, `globals` and `timing` to collector steps only.
+   * Collector state the step starts from. `consent` applies to every step
+   * (the collector's starting consent); `user`, `globals` and `timing` to
+   * collector steps only.
    */
   state?: {
     consent?: WalkerOS.Consent;

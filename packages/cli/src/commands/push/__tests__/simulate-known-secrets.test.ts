@@ -1,6 +1,7 @@
 /**
  * The values of the secrets a flow references are masked at every simulate
- * egress: the `--json` and text output, and the running flow's own logs.
+ * egress: the `--json` and text output, and the running flow's own logs, in a
+ * simulation and a real push alike.
  */
 
 import fs from 'fs-extra';
@@ -8,7 +9,30 @@ import os from 'os';
 import path from 'path';
 import type { Flow } from '@walkeros/core';
 import { renderPushOutput, simulateDestination } from '../index.js';
+import { runPushCommand } from '../run.js';
 import type { PushResult } from '../types.js';
+
+/**
+ * A real push bundles its flow; here the "bundle" is a stub that logs the
+ * token through the flow's logger, then pushes to a collector that accepts.
+ */
+const STUB_REAL_PUSH = `
+export function wireConfig() {
+  return {};
+}
+export async function startFlow(config) {
+  config.logger.handler(0, 'request failed', { token: process.env.KNOWN_TEST_TOKEN }, ['api']);
+  const ok = async () => ({ ok: true });
+  return { collector: { push: ok, command: ok, status: {}, destinations: {} } };
+}
+`;
+
+jest.mock('../../bundle/bundler.js', () => ({
+  bundleCore: jest.fn(async (_flow: unknown, options: { output: string }) => {
+    const { outputFile } = jest.requireActual('fs-extra');
+    await outputFile(options.output, STUB_REAL_PUSH);
+  }),
+}));
 
 /** A multi-line service account: its JSON escapes the newlines. */
 const PRIVATE_KEY =
@@ -116,6 +140,35 @@ export const __devExports = {
       },
     },
   };
+
+  it.each([true, false])(
+    'masks a referenced secret in a real push flow log line (json: %s)',
+    async (json) => {
+      const configPath = path.join(dir, 'flow.json');
+      await fs.writeJSON(configPath, flowJson);
+      const lines: string[] = [];
+      const capture = (...args: unknown[]) => {
+        lines.push(args.map(String).join(' '));
+      };
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(capture);
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(capture);
+      try {
+        const result = await runPushCommand({
+          config: configPath,
+          event: '{"name":"page view"}',
+          json,
+        });
+        expect(result.error).toBeUndefined();
+      } finally {
+        errorSpy.mockRestore();
+        logSpy.mockRestore();
+      }
+
+      const logged = lines.join('\n');
+      expect(logged).toContain('request failed');
+      expect(logged).not.toContain(TOKEN);
+    },
+  );
 
   it.each([true, false])(
     'masks a referenced secret in a flow log line (json: %s)',

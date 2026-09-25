@@ -12,7 +12,6 @@
  */
 
 import crypto from 'crypto';
-import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import { FlowReferenceError } from '@walkeros/core';
@@ -20,6 +19,7 @@ import { getErrorMessage } from '../../core/index.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { UnsupportedPackageSpecError } from '../../core/package-spec.js';
 import { loadBundleConfig, type LoadConfigResult } from '../../config/index.js';
+import { tmpRunDir } from '../../core/tmp-names.js';
 import { VERSION } from '../../version.js';
 import {
   BuildManifestSchema,
@@ -29,6 +29,7 @@ import {
   type BuildResult,
 } from '../../schemas/build-manifest.js';
 import { bundle } from './index.js';
+import { includeApplies } from './bundler.js';
 import { wrapSkeleton } from './wrap.js';
 import { sanitizeUrl } from './upload.js';
 
@@ -55,8 +56,9 @@ const STEP_SECTIONS = [
 /**
  * A manifest build refuses every config-chosen filesystem path: local step
  * packages (`.` or `/` prefixed), `bundle.packages.<name>.path`,
- * `bundle.traceInclude` and `include`. On a laptop those read the user's own disk; in a
- * build job they would read the job's filesystem into the artifact. Checked
+ * `bundle.traceInclude` and, for a server build, `include`. On a laptop
+ * those read the user's own disk; in a build job they would read the job's
+ * filesystem into the artifact. Checked
  * on the RESOLVED flow, so a `$var` cannot smuggle a path past it. The
  * message names locations only, never the path values.
  */
@@ -71,8 +73,12 @@ function assertNoLocalPaths(loaded: LoadConfigResult): void {
     locations.push('config.bundle.traceInclude');
   }
   // The default `./shared` probe resolves inside the empty work dir, so a
-  // non-empty list here always came from the config's own `include`.
-  if (loaded.buildOptions.include?.length) {
+  // non-empty list here always came from the config's own `include`. A web
+  // build never reads it, so it is refused only where it applies.
+  if (
+    loaded.buildOptions.include?.length &&
+    includeApplies(loaded.buildOptions)
+  ) {
     locations.push('include');
   }
   for (const section of STEP_SECTIONS) {
@@ -291,7 +297,7 @@ export async function runBuildManifest(
     return { result, reported: await report(manifest.resultPutUrl, result) };
   }
 
-  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'walkeros-build-'));
+  const workDir = await tmpRunDir('build');
   try {
     // Load once up front so a config error is reported as one, before any
     // package is fetched.

@@ -6,10 +6,13 @@ import type {
 } from '@walkeros/core';
 import type {
   ClientConfig,
+  CreateSubscriptionOptions,
   Message,
   PubSub,
   Subscription,
   SubscriptionOptions,
+  TopicMetadata,
+  protos,
 } from '@google-cloud/pubsub';
 import type { Decoder, ServiceAccountCredentials } from '../shared/types';
 
@@ -29,11 +32,31 @@ export interface PullSubscription {
 /**
  * The part of a Pub/Sub client the pull source calls at runtime. `PubSub` from
  * `@google-cloud/pubsub` satisfies it, and so does an injected mock (tests,
- * simulate) without a cast. Setup needs the full SDK client.
+ * simulate) without a cast. Setup needs a `PubSubAdminClient`.
  */
 export interface PubSubPullClient {
   subscription(name: string, options?: SubscriptionOptions): PullSubscription;
   close(): Promise<void>;
+}
+
+/**
+ * The part of a Pub/Sub client `walkeros setup` calls (topic and subscription
+ * provisioning, drift check). `PubSub` from `@google-cloud/pubsub` satisfies
+ * it, from any copy of the SDK; a pull-only client does not.
+ */
+export interface PubSubAdminClient {
+  topic(name: string): { exists(): Promise<[boolean, ...unknown[]]> };
+  createTopic(metadata: TopicMetadata): Promise<unknown>;
+  createSubscription(
+    topic: string,
+    name: string,
+    options?: CreateSubscriptionOptions,
+  ): Promise<unknown>;
+  subscription(name: string): {
+    getMetadata(): Promise<
+      [protos.google.pubsub.v1.ISubscription, ...unknown[]]
+    >;
+  };
 }
 
 export interface Settings {

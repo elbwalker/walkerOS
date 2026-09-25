@@ -12,5 +12,5 @@
 Simulation records calls through frozen objects and no longer lists `init` for
 Amplitude and Mixpanel. The file destination records its writes, and the SQS and
 Pub/Sub pull sources ship mock clients. Firehose, PostHog, SQS and Pub/Sub pull
-`Env` and `client` types are now structural; Pub/Sub pull setup needs a real
-PubSub client.
+`Env` and `client` types are now structural; Pub/Sub pull setup accepts any
+client with the admin methods it calls.

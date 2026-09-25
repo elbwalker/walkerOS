@@ -367,16 +367,13 @@ export const __devExports = {
 
 describe('--consent and --command scope', () => {
   const CONSENT_SCOPE =
-    "--consent sets collector consent for transformer, collector and destination simulation; for a source, simulate the CMP source's own example or set the event's consent.";
+    "--consent sets the collector's starting consent for a simulation; a real push uses the flow's own consent.";
 
-  it.each([
-    ['a real push', []],
-    ['source simulation', ['source.browser']],
-  ])('rejects --consent for %s', async (_label, simulate) => {
+  it('rejects --consent for a real push', async () => {
     const result = await runPushCommand({
       config: 'flow.json',
       event: '{"name":"page view"}',
-      simulate,
+      simulate: [],
       consentSource: '{"marketing":true}',
     });
 

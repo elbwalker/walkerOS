@@ -1,12 +1,17 @@
 import type { Logger } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
-import { PubSub } from '@google-cloud/pubsub';
 import type {
   CreateSubscriptionOptions,
   TopicMetadata,
   protos,
 } from '@google-cloud/pubsub';
-import type { Config, Setup, SetupFn } from './types';
+import type {
+  Config,
+  PubSubAdminClient,
+  PubSubPullClient,
+  Setup,
+  SetupFn,
+} from './types';
 
 /**
  * Server-side subscription proto returned by `subscription.getMetadata()`.
@@ -62,8 +67,25 @@ export interface SetupResult {
 
 export const DEFAULT_SETUP: Setup = {};
 
+/**
+ * Whether a client can provision (topics, subscriptions). Structural, so a
+ * client from another copy of the SDK qualifies; a pull-only client does not.
+ */
+export function isAdminClient(
+  client: PubSubPullClient,
+): client is PubSubPullClient & PubSubAdminClient {
+  return (
+    'topic' in client &&
+    typeof client.topic === 'function' &&
+    'createTopic' in client &&
+    typeof client.createTopic === 'function' &&
+    'createSubscription' in client &&
+    typeof client.createSubscription === 'function'
+  );
+}
+
 interface EnsureTopicArgs {
-  client: PubSub;
+  client: PubSubAdminClient;
   projectId: string;
   name: string;
   storageRegions: string[];
@@ -180,7 +202,7 @@ function detectDrift(declared: Setup, actual: ISubscription): DriftField[] {
     if (typeof actualRaw === 'number') {
       actualSeconds = actualRaw;
     } else if (typeof actualRaw === 'object' && actualRaw !== null) {
-      const seconds: unknown = (actualRaw as { seconds?: unknown }).seconds;
+      const seconds: unknown = actualRaw.seconds;
       if (typeof seconds === 'number' || typeof seconds === 'string') {
         actualSeconds = seconds;
       }
@@ -246,13 +268,15 @@ export const setup: SetupFn = async (context) => {
   const settings = wideConfig.settings;
   if (!settings) return logger.throw('settings missing, cannot run setup');
 
-  const { client, projectId, subscription, topic } = settings;
-  if (!client) return logger.throw('client is missing, cannot run setup');
-  if (!(client instanceof PubSub)) {
+  const { projectId, subscription, topic } = settings;
+  if (!settings.client)
+    return logger.throw('client is missing, cannot run setup');
+  if (!isAdminClient(settings.client)) {
     return logger.throw(
       'setup needs a @google-cloud/pubsub client; an injected client only serves pulls',
     );
   }
+  const client: PubSubAdminClient = settings.client;
   if (!projectId) return logger.throw('projectId is missing');
   if (!subscription) return logger.throw('subscription is missing');
 
