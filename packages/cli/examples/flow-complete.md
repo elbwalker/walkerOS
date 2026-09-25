@@ -176,9 +176,10 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"page 
     `/collect`.
   - walkerOS has no server GA4 destination, so decoded hits are forwarded to
     other tools, never back to GA4.
-  - Decoded hits carry no `globals.language`, so under this contract they are
-    `source.valid: false`: they reach the warehouse, and `eventFilter` keeps
-    them from the vendors.
+  - Decoded hits carry the browser language (`ul`, e.g. `en-us`) in
+    `user.language`; `ga4Consent` derives `globals.language` from it (`en`, or
+    `na` when the hit has none), so a decoded hit with analytics consent passes
+    the contract and reaches the vendors like any other event.
 - **CLI:** build the server artifact, then run it. `GCP_SA` must be set (Pub/Sub
   and Data Manager read it as credentials); no step calls Google at start, so a
   throwaway key is enough to become ready and serve `walker.js`, while pushes to
@@ -355,8 +356,9 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
     means the user decided.
   - `session-consent` at `/flows/web/sources/session/config/settings/consent`:
     Storage for session ids waits for the functional consent key.
-  - `ga4-consent-map` at `/flows/server/transformers/ga4Consent`: A code-free
-    mapping hop after the decoder copies GA4 analytics storage into functional;
+  - `ga4-consent-map` at `/flows/server/transformers/ga4Consent`: A mapping hop
+    after the decoder copies GA4 analytics storage into functional and derives
+    the page language from the browser language (na when the hit has none);
     refused pings stay functional false and fail the contract.
   - `destination-consent` at `/flows/server/destinations/meta/config/consent`:
     Destination consent: Meta only gets events with marketing consent.

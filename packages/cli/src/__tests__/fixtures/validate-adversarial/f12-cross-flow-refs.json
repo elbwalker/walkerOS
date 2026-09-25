@@ -1,0 +1,39 @@
+{
+  "version": 4,
+  "flows": {
+    "a": {
+      "config": {
+        "platform": "server"
+      },
+      "variables": {
+        "onlyA": "x"
+      },
+      "stores": {
+        "cache": {
+          "package": "pkg-store",
+          "config": {
+            "settings": {
+              "ttl": 60
+            }
+          }
+        }
+      }
+    },
+    "b": {
+      "config": {
+        "platform": "server"
+      },
+      "destinations": {
+        "d": {
+          "package": "pkg-noschema",
+          "config": {
+            "settings": {
+              "v": "$var.onlyA",
+              "s": "$store.cache"
+            }
+          }
+        }
+      }
+    }
+  }
+}

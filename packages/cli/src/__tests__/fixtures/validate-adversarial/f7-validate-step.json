@@ -1,0 +1,91 @@
+{
+  "version": 4,
+  "contract": {
+    "default": {
+      "events": {
+        "order": {
+          "complete": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["total"],
+                "properties": {
+                  "total": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "server": {
+      "extend": "default",
+      "schema": {
+        "type": "object",
+        "required": ["user"],
+        "properties": {
+          "user": {
+            "type": "object",
+            "required": ["hash"]
+          }
+        }
+      }
+    }
+  },
+  "flows": {
+    "server": {
+      "config": {
+        "platform": "server"
+      },
+      "transformers": {
+        "validate": {
+          "package": "@walkeros/transformer-validate",
+          "config": {
+            "settings": {
+              "contract": ["$contract.server"]
+            }
+          },
+          "examples": {
+            "order": {
+              "in": {
+                "name": "order complete",
+                "entity": "order",
+                "action": "complete",
+                "data": {
+                  "total": 9.99
+                },
+                "user": {},
+                "source": {
+                  "type": "express"
+                }
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "order complete",
+                      "entity": "order",
+                      "action": "complete",
+                      "data": {
+                        "total": 9.99
+                      },
+                      "user": {},
+                      "source": {
+                        "type": "express",
+                        "valid": true
+                      }
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,18 +1,47 @@
 // walkerOS/packages/cli/src/commands/validate/validators/mapping.ts
 
+import { isObject } from '@walkeros/core';
+import { schemas } from '@walkeros/core/dev';
 import type {
+  ValidateDetails,
   ValidateResult,
   ValidationError,
   ValidationWarning,
 } from '../types.js';
 
+const { RuleSchema } = schemas.MappingSchemas;
+
+function isRule(value: unknown): boolean {
+  return isObject(value) && RuleSchema.safeParse(value).success;
+}
+
+/**
+ * The nested runtime shape: an entity key whose value maps actions to a rule
+ * or a list of rules (`{ page: { view: { name: 'page_view' } } }`).
+ */
+function isNestedActions(
+  key: string,
+  value: unknown,
+): value is Record<string, unknown> {
+  if (key.includes(' ') || !isObject(value)) return false;
+  const rules = Object.values(value);
+  return (
+    rules.length > 0 &&
+    rules.every((rule) =>
+      Array.isArray(rule)
+        ? rule.length > 0 && rule.every(isRule)
+        : isRule(rule),
+    )
+  );
+}
+
 export function validateMapping(input: unknown): ValidateResult {
   const errors: ValidationError[] = [];
   const warnings: ValidationWarning[] = [];
-  const details: Record<string, unknown> = {};
+  const details: ValidateDetails = {};
 
   // Must be an object
-  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+  if (!isObject(input)) {
     errors.push({
       path: 'root',
       message: 'Mapping must be an object with event patterns as keys',
@@ -21,13 +50,23 @@ export function validateMapping(input: unknown): ValidateResult {
     return { valid: false, type: 'mapping', errors, warnings, details };
   }
 
-  const mapping = input as Record<string, unknown>;
-  const patterns = Object.keys(mapping);
+  const mapping = input;
+  const nestedPatterns: string[] = [];
+  const flatPatterns: string[] = [];
+  for (const [key, value] of Object.entries(mapping)) {
+    if (isNestedActions(key, value)) {
+      for (const action of Object.keys(value))
+        nestedPatterns.push(`${key} ${action}`);
+    } else {
+      flatPatterns.push(key);
+    }
+  }
+  const patterns = [...nestedPatterns, ...flatPatterns];
   details.eventPatterns = patterns;
   details.patternCount = patterns.length;
 
-  // Validate each event pattern
-  patterns.forEach((pattern, index) => {
+  // Validate each flat "entity action" pattern (legacy flat shape)
+  flatPatterns.forEach((pattern, index) => {
     // Check pattern format: must be "entity action", contain wildcard, or be "*"
     const isWildcard = pattern.includes('*');
     const hasSpace = pattern.includes(' ');
@@ -41,9 +80,10 @@ export function validateMapping(input: unknown): ValidateResult {
     }
 
     // Warn if catch-all is not last
-    if (pattern === '*' && index !== patterns.length - 1) {
+    if (pattern === '*' && index !== flatPatterns.length - 1) {
       warnings.push({
         path: '*',
+        code: 'CATCH_ALL_NOT_LAST',
         message: 'Catch-all pattern (*) should be last',
         suggestion:
           'Move the catch-all pattern (*) to last position for predictable matching',

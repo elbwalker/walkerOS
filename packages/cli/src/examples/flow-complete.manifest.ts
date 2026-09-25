@@ -430,7 +430,7 @@ const teaching = {
     chapter: 'consent-privacy',
     level: 'advanced',
     useCases: ['ga4-migration', 'consent'],
-    note: 'A code-free mapping hop after the decoder copies GA4 analytics storage into functional; refused pings stay functional false and fail the contract.',
+    note: 'A mapping hop after the decoder copies GA4 analytics storage into functional and derives the page language from the browser language (na when the hit has none); refused pings stay functional false and fail the contract.',
     docs: [],
     example: { step: 'ga4Consent', name: 'analyticsRefused' },
   },

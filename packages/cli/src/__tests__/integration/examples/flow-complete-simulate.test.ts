@@ -664,6 +664,11 @@ describe('flow-complete.json', () => {
             const decoded = seen[3];
             expect(decoded.source).toMatchObject({ type: 'ga4' });
             expect(decoded.consent).toMatchObject({ functional: true });
+            // The hit has no browser language (ul), so the page language
+            // falls back to na, and the event passes the contract like any
+            // other event.
+            expect(decoded.globals).toMatchObject({ language: 'na' });
+            expect(decoded.source).toMatchObject({ valid: true });
 
             // Pub/Sub never sees a clear-text email; events without one
             // pass untouched.

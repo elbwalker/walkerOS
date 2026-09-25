@@ -2049,6 +2049,9 @@
                         "analytics": true,
                         "functional": true
                       },
+                      "globals": {
+                        "language": "na"
+                      },
                       "id": "3825861be3baea76",
                       "timestamp": 1790285717017,
                       "timing": 0,
@@ -2090,6 +2093,9 @@
                         "marketing": true,
                         "analytics": true,
                         "functional": true
+                      },
+                      "globals": {
+                        "language": "na"
                       },
                       "id": "5db509431efb0b8c",
                       "timestamp": 1790285717022,
@@ -2133,6 +2139,9 @@
                         "analytics": false,
                         "functional": false
                       },
+                      "globals": {
+                        "language": "na"
+                      },
                       "id": "853ff68a89ce43af",
                       "timestamp": 1790285717026,
                       "timing": 0,
@@ -2147,14 +2156,18 @@
         "ga4Consent": {
           "mapping": {
             "policy": {
-              "consent.functional": "consent.analytics"
+              "consent.functional": "consent.analytics",
+              "globals.language": {
+                "fn": "$code:(event) => { const lang = String(event.user?.language ?? '').slice(0, 2).toLowerCase(); return /^[a-z]{2}$/.test(lang) ? lang : undefined; }",
+                "value": "na"
+              }
             }
           },
           "examples": {
             "analyticsGranted": {
               "title": "Analytics storage granted",
               "public": true,
-              "description": "The decoder reads gcs into consent.analytics and consent.marketing; this code-free mapping hop copies analytics into functional, the key the contract asks for. No consent is stamped.",
+              "description": "The decoder reads gcs into consent.analytics and consent.marketing and the browser language (ul) into user.language. This mapping hop copies analytics into functional and derives the page language the contract asks for from the browser language (en-us becomes en). No consent is stamped.",
               "in": {
                 "name": "page view",
                 "entity": "page",
@@ -2165,7 +2178,8 @@
                 },
                 "user": {
                   "device": "cid-9",
-                  "session": "1700000000"
+                  "session": "1700000000",
+                  "language": "en-us"
                 },
                 "source": {
                   "type": "ga4",
@@ -2196,7 +2210,8 @@
                       },
                       "user": {
                         "device": "cid-9",
-                        "session": "1700000000"
+                        "session": "1700000000",
+                        "language": "en-us"
                       },
                       "source": {
                         "type": "ga4",
@@ -2209,6 +2224,9 @@
                         "analytics": true,
                         "functional": true
                       },
+                      "globals": {
+                        "language": "en"
+                      },
                       "id": "5db509431efb0b8c",
                       "timestamp": 1790000000000,
                       "timing": 0,
@@ -2220,7 +2238,7 @@
             },
             "analyticsRefused": {
               "title": "Analytics storage refused",
-              "description": "Refused analytics storage becomes functional false, so the event fails the contract and vendors never see it.",
+              "description": "Refused analytics storage becomes functional false, so the event fails the contract and vendors never see it. A hit without a browser language gets the language na.",
               "in": {
                 "name": "page view",
                 "entity": "page",
@@ -2274,6 +2292,9 @@
                         "marketing": false,
                         "analytics": false,
                         "functional": false
+                      },
+                      "globals": {
+                        "language": "na"
                       },
                       "id": "853ff68a89ce43af",
                       "timestamp": 1790000000000,

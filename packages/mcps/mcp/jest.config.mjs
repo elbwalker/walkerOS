@@ -2,7 +2,7 @@ import baseConfig from '@walkeros/config/jest/node.config';
 
 const config = {
   transformIgnorePatterns: [
-    'node_modules/(?!(@walkeros|@modelcontextprotocol)/)',
+    'node_modules/(?!(@walkeros|@modelcontextprotocol|chalk|jsdom|parse5|nwsapi|entities|@exodus/bytes|@asamuzakjp|@bramus|@csstools|css-tree|tough-cookie|msw|until-async|rettime|@bundled-es-modules|@mswjs|@open-draft)/)',
   ],
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
