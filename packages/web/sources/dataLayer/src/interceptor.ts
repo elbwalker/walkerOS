@@ -142,24 +142,28 @@ function processEvent(
 /**
  * Page context like the browser source stamps it, read when the event is
  * emitted so SPA navigations are reflected. Fields without a readable value
- * are omitted.
+ * are omitted, including when a getter throws, so the push itself never fails.
  */
 function getPageContext(win: Record<string, unknown> | undefined): {
   url?: string;
   referrer?: string;
 } {
   if (!win) return {};
-  const location = win.location;
-  const doc = win.document;
   // Location and Document are host objects, which `isObject` rejects.
-  const url =
-    isObjectLike(location) && 'href' in location && isString(location.href)
+  const url = tryCatch((): string | undefined => {
+    const location = win.location;
+    return isObjectLike(location) &&
+      'href' in location &&
+      isString(location.href)
       ? location.href
       : undefined;
-  const referrer =
-    isObjectLike(doc) && 'referrer' in doc && isString(doc.referrer)
+  })();
+  const referrer = tryCatch((): string | undefined => {
+    const doc = win.document;
+    return isObjectLike(doc) && 'referrer' in doc && isString(doc.referrer)
       ? doc.referrer
       : undefined;
+  })();
   return {
     ...(url !== undefined ? { url } : {}),
     ...(referrer !== undefined ? { referrer } : {}),

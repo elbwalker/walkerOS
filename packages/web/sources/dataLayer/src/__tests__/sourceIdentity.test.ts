@@ -107,4 +107,50 @@ describe('dataLayer source identity', () => {
       platform: 'web',
     });
   });
+
+  test('an unreadable location or document does not abort the push', () => {
+    const pushed: WalkerOS.DeepPartialEvent[] = [];
+    const push: Collector.PushFn = async (event) => {
+      pushed.push(event);
+      return { ok: true };
+    };
+    const stubWin: Record<string, unknown> = { dataLayer: [] };
+    const unreadable = () => {
+      throw new Error('blocked');
+    };
+    Object.defineProperty(stubWin, 'location', {
+      get: unreadable,
+      configurable: true,
+    });
+    Object.defineProperty(stubWin, 'document', {
+      value: { referrer: 'https://ref.example/' },
+      configurable: true,
+    });
+
+    interceptDataLayer(push, { settings: {} }, stubWin);
+    const dataLayer = stubWin.dataLayer;
+    if (!Array.isArray(dataLayer)) throw new Error('dataLayer not installed');
+    dataLayer.push({ event: 'guarded_entry' });
+
+    expect(Array.from(dataLayer)).toStrictEqual([{ event: 'guarded_entry' }]);
+    expect(pushed).toHaveLength(1);
+    expect(pushed[0].source).toStrictEqual({
+      type: 'dataLayer',
+      platform: 'web',
+      referrer: 'https://ref.example/',
+    });
+
+    Object.defineProperty(stubWin, 'location', {
+      value: { href: 'https://example.com/page' },
+    });
+    Object.defineProperty(stubWin, 'document', { get: unreadable });
+    dataLayer.push({ event: 'guarded_doc' });
+
+    expect(dataLayer).toHaveLength(2);
+    expect(pushed[1].source).toStrictEqual({
+      type: 'dataLayer',
+      platform: 'web',
+      url: 'https://example.com/page',
+    });
+  });
 });

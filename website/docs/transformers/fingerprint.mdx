@@ -133,6 +133,15 @@ The site matters when one collector with one salt serves several sites: it keeps
 
 When `fields` is set, the named inputs are only used if set explicitly, as above. A config with only `fields` hashes exactly those fields, plus the salt and the rotation window.
 
+## In the complete example
+
+[`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json), the tested example flow, runs `fingerprint` first in the server's
+`collector.next` and feeds the id to Piwik PRO as its visitor id:
+
+<FlowSlice feature="fingerprint" />
+
+<FlowExample feature="fingerprint" />
+
 ## Result
 
 The hash is stored at `output` (default `user.hash`), `length` characters long (default: the full 64):

@@ -27,7 +27,17 @@ mapping rule matched, and the vendor calls it would have made:
 />
 
 `mapping: none (skipped before mapping)` with `no calls` means the event never
-reached the destination's mapping (consent, a filter, or no rule). Add `--json`
+reached the destination's mapping (consent, a filter, or no rule). When consent
+is the reason, a line says which kind:
+
+- `pending: waits for consent (require)`: the destination has
+  `require: ["consent"]` and never started. Pass starting consent with
+  `--consent '{"functional":true}'`.
+- `skipped: consent (requires marketing; granted functional)`: the destination
+  started, but the event lacks the consent its `consent` setting requires. Grant
+  it with `--consent` or in the event's `consent`.
+
+See [consent in simulate](/docs/apps/cli#consent-in-simulate). Add `--json`
 to get the same result as machine-readable output, with the recorded calls under
 `simulations` (see [simulation output](/docs/apps/cli#simulation-output)). Your `flow.json` must carry
 `config.platform` (`"web"` or `"server"`), otherwise bundling throws before the
@@ -96,6 +106,8 @@ simulation is one tool call. `step` is required and uses the `type.name` form
 />
 
 The response includes `_hints.warnings`, which flags when no destination received
-the event. For transformer, collector and destination steps, pass `ingest` (for
+the event, and a destination that sent nothing carries `skipped` with the reason.
+Pass `state: { consent: { functional: true } }` to start a destination that
+waits for consent. For transformer, collector and destination steps, pass `ingest` (for
 example `{ ip, userAgent }`) to simulate the request context an HTTP source would
 provide. Like the CLI output, the result is scrubbed of credentials.

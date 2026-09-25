@@ -238,6 +238,16 @@ AI visibility report: `event.user.botCategory IN ('ai-agent', 'ai-crawler')`, gr
 
 Identity verification (`settings.verify`, a CIDR matcher and a `botVerified` output), Web Bot Auth signature verification, reverse DNS, ASN / datacenter-IP, web-side runtime checks, behavioral signals, and TLS / JA4. The input names `ja4` and `headerNames` are reserved and resolved but unconsumed. See the README for why each one is out.
 
+## In the complete example
+
+[`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json), the tested example flow, runs `bot` in the server's `collector.next`,
+so every event carries a score, and its `eventFilter` step keeps likely bots
+from the vendors:
+
+<FlowSlice feature="bot-score" />
+
+<FlowExample feature="bot-score" />
+
 ## Limits
 
 Will not catch residential-proxy + stealth Chrome, CAPTCHA-solver farms, or real-browser-as-a-service. For that threat model use a commercial vendor (Cloudflare Bot Management, DataDome, HUMAN).

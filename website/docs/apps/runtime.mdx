@@ -299,7 +299,8 @@ requests:
 Dockerfile's `COPY` of the whole `dist/` directory carries it into the image.
 Never include the output directory itself (`include: ["./dist"]` with output
 `dist/` is refused as a circular copy), and never point the fs store at a
-directory that holds credentials.
+directory that holds credentials. `include` applies to server builds only: a
+web build copies nothing and logs that it ignored `include`.
 
 ## File paths at runtime
 

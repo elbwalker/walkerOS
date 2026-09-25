@@ -16,11 +16,20 @@ things.
   resolves the workspace CLI. Elsewhere install `@walkeros/cli` (binary
   `walkeros`) and `@walkeros/runner` (binary `runneros`). Lines below are
   written without `npx`.
-- **Environment for simulation:** `GCP_SA` holds a service account JSON (a
-  throwaway key is enough for simulation: every Google client runs on its mock),
-  plus `FINGERPRINT_SALT`, `EMAIL_SALT` and `META_ACCESS_TOKEN`, which have no
-  defaults on purpose. Every other value is `$env.NAME:default` and works out of
-  the box.
+- **Environment for simulation:** the CLI reads the shell environment, not a
+  `.env` file. Run this once in the repo root before the server lines: `GCP_SA`
+  holds a service account JSON (a throwaway key is enough for simulation: every
+  Google client runs on its mock), `FINGERPRINT_SALT`, `EMAIL_SALT` and
+  `META_ACCESS_TOKEN` have no defaults on purpose, and `CUSTOMERS_DIR` points
+  the customers store at the demo data. Every other value is `$env.NAME:default`
+  and works out of the box.
+
+```bash
+export CUSTOMERS_DIR="$PWD/packages/cli/examples/customers"
+export FINGERPRINT_SALT=demo-fingerprint-salt EMAIL_SALT=demo-email-salt META_ACCESS_TOKEN=demo-meta-token
+export GCP_SA="$(node -e "const { generateKeyPairSync } = require('crypto'); const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs8', format: 'pem' }, publicKeyEncoding: { type: 'spki', format: 'pem' } }); console.log(JSON.stringify({ type: 'service_account', project_id: 'demo-project', client_email: 'demo@demo-project.iam.gserviceaccount.com', private_key: privateKey }))")"
+```
+
 - **There is no `walkeros simulate` and no `walkeros run`:** simulate with
   `walkeros push ... --simulate <kind>.<name>`, run with `walkeros bundle` then
   `runneros start`.
@@ -721,9 +730,9 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
 - **Customers:** `customers` is an fs store over fake demo data
   (`packages/cli/examples/customers`, one JSON value per customer id), outside
   root `include`, so no customer data ships in a bundle. `basePath` is relative
-  to the working directory: run `walkeros push` from `packages/cli/examples` or
-  set `CUSTOMERS_DIR`. In production a Sheets or GCS store takes its place;
-  `loadUser` does not change.
+  to the working directory, so `CUSTOMERS_DIR` holds it as an absolute path (the
+  setup block at the top exports it). In production a Sheets or GCS store takes
+  its place; `loadUser` does not change.
 - **walker.js first party:** the `file` transformer answers `GET /walker.js`
   from the `assets` store with `settings.headers` (`Cache-Control`,
   `Cross-Origin-Resource-Policy`) and ends with `next: { stop: true }`. Express
@@ -732,8 +741,14 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
   on every response itself.
 - The `file` example is proven over HTTP in the integration test; its simulation
   is still waiting.
-- **CLI:** build the web bundle straight into the shared folder (web builds
-  ignore root `include`):
+- **CLI:** a known customer gets its lifetime value (`user.ltv: 420`):
+
+```bash
+walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"},"user":{"id":"cust-42"}}' --simulate transformer.loadUser
+```
+
+- Build the web bundle straight into the shared folder (web builds ignore root
+  `include`):
 
 ```bash
 walkeros bundle packages/cli/examples/flow-complete.json -f web -o packages/cli/examples/shared/walker.js

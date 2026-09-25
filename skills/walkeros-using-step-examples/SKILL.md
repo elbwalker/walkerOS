@@ -221,6 +221,15 @@ Supported commands: `config`, `consent`, `user`, `run`.
   through event mapping.
 - The `out` format is destination-specific. For gtag it's
   `[action, subAction, params]` matching `gtag(...)` calls.
+- Simulate a command example with `--command <name>` (MCP: `command`): the
+  destination simulation runs `collector.command(name, in)` instead of a push
+  and records the calls it makes. Add `--consent` when the destination needs
+  starting consent; it applies first, then the command:
+
+  ```bash
+  walkeros push flow.json -e '{"functional":true,"marketing":true}' \
+    --simulate destination.ga4 --command consent
+  ```
 
 ## Writing Examples
 
@@ -303,16 +312,23 @@ real vendor.
 
 - A `simulation` path names the call that CARRIES the vendor request
   (`sendServer`, `fetch`, `call:PubSub.topic.publishMessage`,
-  `call:JSONWriter.appendRows`, `call:AWS.SNSClient.send`), never only a
-  constructor.
+  `call:JSONWriter.appendRows`, `call:AWS.SNSClient.send`,
+  `call:fs.createWriteStream.write`), never only a constructor.
+- **`init` is not the request.** Do not record an `init` call (it carries the
+  API key and sends nothing); a path may pass THROUGH init's result
+  (`call:Mixpanel.init.track`). Amplitude and Mixpanel record their tracking
+  calls, not `init`.
 - Grammar (`parseCallPath`, shared by the recorder): an optional `call:` prefix,
   then `.`-separated segments; an empty segment makes the path unresolvable. The
   one recorder is `observeEnv(env, paths)` in `@walkeros/core` (collector
   `wrapEnv` and web-core `getEnv` delegate to it). It returns a Proxy view;
   nothing on the env objects or prototypes is mutated.
-- Mid-path resolution: a segment is looked up as a property first; if absent and
-  the current value is a function, the call result (or the constructed instance,
-  for `new`) is navigated. A mid-path Promise (async factory) is followed with
+- Mid-path resolution: on an object, a segment is looked up as a property. After
+  a function, a segment is the function's own property or a parent class's
+  static; anything else (including `call`, `bind`, `name`, `length`) navigates
+  the call result (or the constructed instance, for `new`). Frozen objects and
+  frozen call results are recorded through a view; only a static on a frozen
+  function stays unresolved. A mid-path Promise (async factory) is followed with
   `.then`. Only the leaf call is recorded: `fn` is the path without `call:`,
   `args` the leaf call's arguments. `instanceof`, statics and `#private` fields
   keep working, and a chain returning `this` records once.
@@ -327,8 +343,12 @@ real vendor.
     expectSimulationResolves(examples.env));
   ```
 
-- Not recordable: anonymous values such as SQLite prepared-statement rows; pull
-  sources (SQS, Pub/Sub pull) declare `simulation: []`.
+- Not recordable: anonymous values such as SQLite prepared-statement rows.
+- Sources: a source package that declares `simulation` runs on its mock client
+  in a source simulation, and those calls are recorded. SQS records
+  `call:AWS.SQSClient.send` (one receive per 100 ms while running); Pub/Sub pull
+  records `call:PubSub.subscription` (messages arrive as events). Their
+  module-mock tests import `moduleMockEnv`, the same env without the client.
 
 ## Metadata: title, description, public
 
@@ -414,8 +434,10 @@ prints the matched mapping key and every recorded call (`--json`: under
 `simulations`), and exits 1 only when the push fails with an error; a mapping
 that produces the wrong output still exits 0. Assert on `out` in your own tests
 (see Testing with Examples below). Add `--ingest` to give a transformer,
-collector or destination step a request context (see
-[using-cli](../walkeros-using-cli/SKILL.md)).
+collector or destination step a request context, `--consent` for the collector
+consent it starts from, `--command` for a command example, and `--page-url` for
+the page of a web source (default: the trigger's `options.url`, else
+`http://localhost`). See [using-cli](../walkeros-using-cli/SKILL.md).
 
 The MCP `flow_examples` tool returns `trigger` metadata alongside `in`/`out`,
 and `mapping` for destination examples, giving full visibility into how input

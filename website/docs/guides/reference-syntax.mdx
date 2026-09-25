@@ -96,6 +96,23 @@ walks the value.
 - Variables may reference other variables. Resolution is recursive with cycle
   detection.
 
+In [`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json),
+the tested example flow, variables live at all three levels:
+
+<FlowSlice feature="root-variables" />
+
+<FlowSlice feature="flow-variables" />
+
+<FlowSlice feature="step-variables" />
+
+A whole-string reference, a deep path and an inline reference:
+
+<FlowSlice feature="ref-var-whole" />
+
+<FlowSlice feature="ref-var-deep" />
+
+<FlowSlice feature="ref-var-inline" />
+
 **Naming convention:** when variables hold structures (mapping templates,
 matchers, consent objects), pick a name that signals the shape, for example
 `ga4ItemMapping`, `ga4ItemsLoop`, `consentMarketing`, `getMastertagJs`. Keep
@@ -123,6 +140,15 @@ Use `$env.` for non-secret config (IDs, hostnames, regions). For credentials,
 tokens, and private keys managed by the secret manager, use `$secret.`: the
 deploy pipeline only injects values referenced as `$secret.NAME`.
 
+<FlowSlice feature="ref-env-default" />
+
+<FlowSlice feature="ref-env" />
+
+Web flows resolve `$env` at build time, from the set the flow declares under
+`config.bundle.env`:
+
+<FlowSlice feature="bundle-env" />
+
 ## `$contract.` — contract references
 
 Inject a fragment of a named contract entry. Same whole-string and deep-path
@@ -130,6 +156,8 @@ rules as `$var.`. The contract is fully resolved (extend + wildcards) before
 path access, so the value you get is the merged shape.
 
 See [Contract](/docs/getting-started/flow/contract) for the full structure.
+
+<FlowSlice feature="ref-contract" />
 
 ```json
 {
@@ -188,6 +216,8 @@ Inject a store instance declared under `stores`. Wired through a component's
 Store IDs are plain identifiers (camelCase). The `.` is the separator, not a
 path walker, store IDs do not contain dots.
 
+<FlowSlice feature="ref-store" />
+
 ## `$secret.` — secrets
 
 Inject a secret resolved at deploy time. Secrets are stored outside the config
@@ -214,6 +244,8 @@ and never written into customer databases alongside the flow.
 Secret names are uppercase: `[A-Z0-9_]+`. The `.` is the separator, secrets
 have no internal structure.
 
+<FlowSlice feature="ref-secret" />
+
 Use `$secret.` for credentials, tokens, and private keys (for example a service
 account JSON on `config.credentials`). The app's deploy pipeline detects
 `$secret.NAME` references and injects the managed secret value into the server
@@ -238,6 +270,26 @@ real JS at build time. Everything after `$code:` is the raw function body.
 
 The `:` here marks the **payload**. Nothing after the colon is looked up, it
 is compiled as-is.
+
+<FlowSlice feature="ref-code" />
+
+## `$flow.`: cross-flow references
+
+Read a value from another flow's `config` block in the same file. The web flow
+sends to the server flow's URL:
+
+<FlowSlice feature="ref-flow" />
+
+See [Cross-flow references](/docs/getting-started/flow#cross-flow-references-with-flow)
+for the rules.
+
+## Request values: `ingest`
+
+Request context is not a `$` reference. A server source lifts it into `ingest`
+with its `config.ingest` mapping, and later steps read it by path
+(`ingest.ip`, `ingest.path`), for example in a route `match` or a `state` key:
+
+<FlowSlice feature="source-ingest" />
 
 ## Cascade and resolution order
 

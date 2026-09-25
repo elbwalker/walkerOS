@@ -180,6 +180,23 @@ console.log(event.consent);
 elb('walker consent', { marketing: true });
 ```
 
+### Simulated Destination Recorded Nothing: Pending vs Consent Skip
+
+`walkeros push flow.json -e event.json --simulate destination.X` prints why a
+destination sent nothing, from the collector's own records (`--json` and MCP:
+`skipped` on the result):
+
+| Line (`skipped`)                                                                                         | Meaning                                                                    | Fix in simulate                                                  |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `pending: waits for consent (require)` (`{ reason: 'pending', require: ['consent'] }`)                   | `require: ["consent"]`: never started, no consent state exists             | `--consent '{"functional":true}'` (MCP `state.consent`)          |
+| `skipped: consent (requires marketing; granted functional)` (`{ reason: 'consent', required, granted }`) | Started, but `config.consent` denied the event (collector + event consent) | Grant the key in `--consent` or the event's `consent`            |
+| `mapping: none (skipped before mapping)`, no `skipped` line                                              | Not consent: a filter, a `before` chain stop, or an error                  | Check `--verbose` logs, the `before` chain and the mapping rules |
+
+`require` checks that consent state is present at all; `config.consent` checks
+each event's keys. `--consent` is the collector's starting state: any value
+clears the consent `require`, and its granted keys feed the consent check. A
+`require` other than consent (e.g. `user`) cannot be seeded by simulate.
+
 ### Vendor SDK Not Loaded
 
 **Problem:** `TypeError: env.window.gtag is not a function`
@@ -269,9 +286,12 @@ When using walkerOS MCP tools, check `_hints.warnings` in tool responses for
 diagnostic information:
 
 - **`flow_simulate`** warns when 0 destinations exist or none received the
-  event. `step` is required (e.g. `"destination.gtag"`). Source steps take a
-  `{ content, trigger? }` event where `content` is `{ name, data }`; sources,
-  including `@walkeros/source-demo`, can be simulated this way.
+  event; a destination that sent nothing carries `skipped` (pending on its
+  `require`, or a consent skip) and the warning says which. Pass `state.consent`
+  to start a destination that waits for consent. `step` is required (e.g.
+  `"destination.gtag"`). Source steps take a `{ content, trigger? }` event where
+  `content` is `{ name, data }`; sources, including `@walkeros/source-demo`, can
+  be simulated this way.
 - **`flow_bundle`** warns when the build produces no output
 - **`flow_examples`** warns when no examples are found in the config
 - **`package_search`** returns the complete catalog and warns (via the

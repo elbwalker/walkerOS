@@ -37,10 +37,30 @@ const configPath = path.join(examplesDir, 'flow-complete.json');
 const packagesDir = path.resolve(__dirname, '../../../../..');
 
 /**
- * The fingerprint rotates daily (UTC), so its example shows the hash of the
- * day it was recorded. The test checks the shape of the hash instead.
+ * The fingerprint rotates daily (UTC windows from `new Date()`), so the suite
+ * runs on a pinned clock: the day the example outs were recorded.
  */
-const DAILY_HASH = 'server.transformers.fingerprint.cookielessId';
+const RECORDED_DAY = new Date('2026-09-24T12:00:00.000Z');
+
+/** Only Date is faked; timers stay real (bundling, HTTP, polling). */
+const PIN_DATE_ONLY: Parameters<typeof jest.useFakeTimers>[0] = {
+  doNotFake: [
+    'hrtime',
+    'nextTick',
+    'performance',
+    'queueMicrotask',
+    'requestAnimationFrame',
+    'cancelAnimationFrame',
+    'requestIdleCallback',
+    'cancelIdleCallback',
+    'setImmediate',
+    'clearImmediate',
+    'setInterval',
+    'clearInterval',
+    'setTimeout',
+    'clearTimeout',
+  ],
+};
 
 /**
  * The GA4 decoder stamps the receive time (sid is the session start, not the
@@ -54,20 +74,6 @@ function withoutReceiveTime(value: unknown): unknown {
     if (key === 'timestamp' && typeof item === 'number') {
       result[key] = 'receive-time';
     } else result[key] = withoutReceiveTime(item);
-  }
-  return result;
-}
-
-/** Replaces every user.hash with a marker once it has the expected shape. */
-function withoutDailyHash(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(withoutDailyHash);
-  if (!isObject(value)) return value;
-  const result: Record<string, unknown> = {};
-  for (const [key, item] of Object.entries(value)) {
-    if (key === 'user' && isObject(item) && typeof item.hash === 'string') {
-      expect(item.hash).toMatch(/^[0-9a-f]{16}$/);
-      result[key] = { ...item, hash: 'daily' };
-    } else result[key] = withoutDailyHash(item);
   }
   return result;
 }
@@ -272,7 +278,18 @@ function toEvent(value: unknown): Record<string, unknown> {
   return value;
 }
 
+/** Every variable the suite sets; each is restored afterwards. */
+const TEST_ENV = [
+  'GCP_SA',
+  'ASSETS_DIR',
+  'FINGERPRINT_SALT',
+  'META_ACCESS_TOKEN',
+  'EMAIL_SALT',
+  'CUSTOMERS_DIR',
+] as const;
+
 describe('flow-complete.json', () => {
+  const savedEnv: Record<string, string | undefined> = {};
   let tmpDir: string;
   let config: Flow.Json;
   const bundles: Record<string, string> = {};
@@ -291,6 +308,7 @@ describe('flow-complete.json', () => {
       privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
       publicKeyEncoding: { type: 'spki', format: 'pem' },
     });
+    for (const name of TEST_ENV) savedEnv[name] = process.env[name];
     process.env.GCP_SA = JSON.stringify({
       type: 'service_account',
       project_id: 'demo-project',
@@ -321,19 +339,20 @@ describe('flow-complete.json', () => {
       bundles[flowName] = output;
     }
 
+    jest.useFakeTimers({ ...PIN_DATE_ONLY, now: RECORDED_DAY });
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
   }, 600000);
 
   afterAll(async () => {
+    jest.useRealTimers();
     jest.restoreAllMocks();
-    delete process.env.GCP_SA;
-    delete process.env.ASSETS_DIR;
-    delete process.env.FINGERPRINT_SALT;
-    delete process.env.META_ACCESS_TOKEN;
-    delete process.env.EMAIL_SALT;
-    delete process.env.CUSTOMERS_DIR;
+    // Put back what the environment held before the suite.
+    for (const [name, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
     await fs.remove(tmpDir);
   });
 
@@ -416,9 +435,7 @@ describe('flow-complete.json', () => {
       }
       const actual = normalize(out);
       const expected = normalize(c.example.out);
-      if (id === DAILY_HASH)
-        expect(withoutDailyHash(actual)).toEqual(withoutDailyHash(expected));
-      else if (c.step === 'ga4Decode')
+      if (c.step === 'ga4Decode')
         expect(withoutReceiveTime(actual)).toEqual(
           withoutReceiveTime(expected),
         );
@@ -426,6 +443,43 @@ describe('flow-complete.json', () => {
     },
     60000,
   );
+
+  it('rotates the fingerprint: the same request on two days, two hashes', async () => {
+    const example = cases.find(
+      (c) => c.id === 'server.transformers.fingerprint.cookielessId',
+    );
+    if (!example) throw new Error('fingerprint example missing');
+    const hashOn = async (day: string): Promise<unknown> => {
+      jest.setSystemTime(new Date(day));
+      const result = await simulateTransformer(
+        config,
+        toEvent(example.example.in),
+        {
+          flow: 'server',
+          bundlePath: bundles.server,
+          silent: true,
+          transformerId: 'fingerprint',
+          ingest: INGEST[example.id],
+        },
+      );
+      expect(result.error).toBeUndefined();
+      const event = result.events[0];
+      return isObject(event) && isObject(event.user)
+        ? event.user.hash
+        : undefined;
+    };
+    try {
+      const first = await hashOn('2026-09-24T12:00:00.000Z');
+      const second = await hashOn('2026-09-25T12:00:00.000Z');
+      expect(first).toMatch(/^[0-9a-f]{16}$/);
+      expect(second).toMatch(/^[0-9a-f]{16}$/);
+      expect(second).not.toBe(first);
+      // Within one UTC day the hash is stable.
+      expect(await hashOn('2026-09-24T23:59:00.000Z')).toBe(first);
+    } finally {
+      jest.setSystemTime(RECORDED_DAY);
+    }
+  }, 60000);
 
   it.each(waiting.map((c) => [c.id, WAITING[c.id]] as const))(
     'step example %s waits: %s',

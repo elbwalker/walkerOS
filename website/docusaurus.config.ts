@@ -4,6 +4,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plugin-llms-txt';
 import { version as coreVersion } from '../packages/core/package.json';
 import restoreExpressionIndent from './src/remark/restore-expression-indent';
+import flowSnippets from './src/remark/flow-snippets';
+import exportFlowSnippets from './src/rehype/export-flow-snippets';
 import normalizeExportLinks from './src/remark/normalize-export-links';
 import prependExportContext from './src/remark/prepend-export-context';
 
@@ -173,7 +175,18 @@ const config: Config = {
           // expression, which flattens every nested snippet written as
           // `<CodeSnippet code={`...`} />`. Put that indentation back before
           // any other plugin sees the tree.
-          beforeDefaultRemarkPlugins: [restoreExpressionIndent],
+          // <FlowSlice> and <FlowExample> resolve against flow-complete.json
+          // at build time, so a page ships only its own slices.
+          beforeDefaultRemarkPlugins: [
+            restoreExpressionIndent,
+            [
+              flowSnippets,
+              {
+                flowFile:
+                  require.resolve('@walkeros/cli/examples/flow-complete.json'),
+              },
+            ],
+          ],
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl: `${vars.github}edit/main/website/`,
@@ -757,6 +770,11 @@ const config: Config = {
       {
         siteTitle: 'walkerOS Documentation',
         siteDescription: llmsTxtPreamble,
+        // Every .md export is a published artifact behind llms.txt, so a failed
+        // export fails the build and names the route. The default 'warn'
+        // silently drops the page's .md. postBuild does not run in
+        // `docusaurus start`, so local writing is unaffected.
+        onRouteError: 'throw',
         // depth: 2 groups routes like /docs/destinations/web/amplitude into the
         // "docs/destinations" category, mirroring the pipeline taxonomy.
         depth: 2,
@@ -788,6 +806,9 @@ const config: Config = {
           // non-root baseUrl.
           relativePaths: Boolean(process.env.DOCUSAURUS_BASEURL),
           excludeRoutes: ['/search', '/404', '/tags/**'],
+          // Runs on the page hast before the Markdown conversion: restores the
+          // code languages Shiki dropped from the flow-complete snippets.
+          beforeDefaultRehypePlugins: [exportFlowSnippets],
           // These run on the mdast of the per-page exports only, so neither
           // touches llms.txt:
           // - The export appends `.md` to the route path, so a trailing-slash
