@@ -37,6 +37,23 @@ describe('createCLILogger', () => {
     expect(lines[0]).not.toContain('sk-abcdefghijklmnopqrstuvwxyz123456');
     expect(errorSpy.mock.calls[0][0]).toBe(lines[0]);
   });
+
+  it('masks known secret values in the message and the serialized context', () => {
+    const sa = JSON.stringify(
+      { private_key: 'plain\nkey', client_email: 'svc@proj' },
+      null,
+      2,
+    );
+    const lines: string[] = [];
+    createCLILogger({
+      knownSecrets: ['value-123', sa],
+      onLine: (_level, message) => lines.push(message),
+    }).error('auth failed with value-123', { credentials: sa });
+
+    expect(lines[0]).not.toContain('value-123');
+    expect(lines[0]).not.toContain('svc@proj');
+    expect(lines[0]).toContain('auth failed with ***');
+  });
 });
 
 describe('getTmpPath', () => {

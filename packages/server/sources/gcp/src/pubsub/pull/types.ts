@@ -4,7 +4,13 @@ import type {
   Credential,
   ServiceAccount,
 } from '@walkeros/core';
-import type { PubSub, Subscription } from '@google-cloud/pubsub';
+import type {
+  ClientConfig,
+  Message,
+  PubSub,
+  Subscription,
+  SubscriptionOptions,
+} from '@google-cloud/pubsub';
 import type { Decoder, ServiceAccountCredentials } from '../shared/types';
 
 declare module '@walkeros/core' {
@@ -13,9 +19,26 @@ declare module '@walkeros/core' {
   }
 }
 
+/** The part of a Pub/Sub subscription the pull source drives. */
+export interface PullSubscription {
+  on(event: 'message', listener: (message: Message) => void): unknown;
+  on(event: 'error', listener: (error: Error) => void): unknown;
+  close(): Promise<void>;
+}
+
+/**
+ * The part of a Pub/Sub client the pull source calls at runtime. `PubSub` from
+ * `@google-cloud/pubsub` satisfies it, and so does an injected mock (tests,
+ * simulate) without a cast. Setup needs the full SDK client.
+ */
+export interface PubSubPullClient {
+  subscription(name: string, options?: SubscriptionOptions): PullSubscription;
+  close(): Promise<void>;
+}
+
 export interface Settings {
   // User-supplied OR populated by getConfig(); single field for both. Mirrors the destination.
-  client: PubSub;
+  client: PubSubPullClient;
   // Top-level always wins over credentials.project_id.
   projectId: string;
   // Subscription short name. Required.
@@ -40,14 +63,14 @@ export interface Settings {
   // Behavior on push errors: 'nack' (redeliver) or 'ack' (drop). Default: 'nack'.
   onPushError?: 'nack' | 'ack';
   // Runtime-only handle populated by init(); not user-facing.
-  subscriptionHandle?: Subscription;
+  subscriptionHandle?: PullSubscription;
 }
 
 export interface InitSettings {
   projectId: string;
   subscription: string;
   topic?: string;
-  client?: PubSub;
+  client?: PubSubPullClient;
   /** @deprecated Use `config.credentials` instead. Kept for back-compat. */
   credentials?: string | ServiceAccountCredentials;
   apiEndpoint?: string;
@@ -88,7 +111,7 @@ export type Push = (
 ) => Promise<SyntheticPushResult | void>;
 
 export interface Env extends CoreSource.Env {
-  PubSub?: typeof PubSub;
+  PubSub?: new (options?: ClientConfig) => PubSubPullClient;
 }
 
 /**

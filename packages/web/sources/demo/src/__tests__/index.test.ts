@@ -54,7 +54,7 @@ describe('Demo Source', () => {
         },
       },
       env: {
-        elb: collector.push as unknown as WalkerOS.Elb,
+        elb: collector.elb,
         push: collector.push,
         command: collector.command,
         logger: createMockLogger(),
@@ -97,7 +97,7 @@ describe('Demo Source', () => {
         },
       },
       env: {
-        elb: collector.push as unknown as WalkerOS.Elb,
+        elb: collector.elb,
         push: collector.push,
         command: collector.command,
         logger: createMockLogger(),
@@ -148,7 +148,7 @@ describe('Demo Source', () => {
         },
       },
       env: {
-        elb: collector.push as unknown as WalkerOS.Elb,
+        elb: collector.elb,
         push: collector.push,
         command: collector.command,
         logger: createMockLogger(),

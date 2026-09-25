@@ -6,9 +6,9 @@
  *   that prebuilt bundle (pattern: ../simulate/prebuilt-bundle.test.ts).
  * - The committed file stays path-free: local monorepo package paths are
  *   injected in memory only.
- * - Every simulation runs stores and destinations on their packages' mock
- *   envs (Sheets, Pub/Sub, BigQuery, Data Manager); the HTTP test injects
- *   the same Sheets mock, seeded with one customer.
+ * - Every simulation runs destinations on their packages' mock envs
+ *   (Pub/Sub, BigQuery, Data Manager). The customers store is an fs store
+ *   over the committed demo data (CUSTOMERS_DIR).
  * - Examples a simulation cannot reproduce yet are listed in WAITING with the
  *   reason; each shows up as a todo, never as a silent skip.
  */
@@ -105,11 +105,8 @@ const OWNER = 'docs/plans/2026-09-24-step-examples-real.md';
 
 /** Examples no simulation can reproduce yet, with the reason and owner. */
 const WAITING: Record<string, string> = {
-  'web.sources.usercentrics.explicitDecision': `simulate source: the jsdom window rejects the CMP CustomEvent (${OWNER})`,
-  'web.sources.session.marketingSession': `simulate source: localStorage is not defined in the simulate jsdom globals (${OWNER})`,
-  'web.destinations.ga4.consentUpdate': `simulate destination does not run command examples (${OWNER})`,
-  'web.destinations.gtm.productAdd': `simulate destination cannot seed the consent require waits for; dataLayer.push is not recorded (${OWNER})`,
-  'web.destinations.gtm.dataLayerEcho': `simulate destination cannot seed the consent require waits for (${OWNER})`,
+  'web.sources.usercentrics.explicitDecision': `the decision arrives as a walker consent command, which a source simulation does not capture; it records an empty out (${OWNER})`,
+  'web.sources.session.marketingSession': `the session source waits for functional consent, which a source simulation does not grant; it records an empty out (${OWNER})`,
   'server.transformers.file.walkerJs': `simulate transformer does not capture respond; the HTTP test below serves /walker.js (${OWNER})`,
 };
 
@@ -120,6 +117,7 @@ interface Case {
   flow: string;
   kind: Kind;
   step: string;
+  name: string;
   example: Flow.StepExample;
 }
 
@@ -151,16 +149,14 @@ function findPackageDirs(
 
 /**
  * Points every package of a flow, and its @walkeros dependencies, at the
- * monorepo. `@walkeros/server-core` stays on the registry: a flow that only
- * declares it through a dependency fails the bundler's trace check when it is
- * injected as a local path.
+ * monorepo.
  */
 function injectLocalPaths(flow: Flow, dirs: Map<string, string>): void {
   const packages = flow.config?.bundle?.packages;
   if (!packages) return;
   const add = (name: string): void => {
     const dir = dirs.get(name);
-    if (!dir || name === '@walkeros/server-core') return;
+    if (!dir) return;
     if (packages[name]?.path) return;
     packages[name] = { ...packages[name], path: dir };
     const pkg: unknown = fs.readJSONSync(path.join(dir, 'package.json'));
@@ -191,7 +187,7 @@ function collectCases(config: Flow.Json): Case[] {
       for (const [step, def] of Object.entries(steps)) {
         for (const [name, example] of Object.entries(def.examples ?? {})) {
           const id = `${flowName}.${kind}.${step}.${name}`;
-          cases.push({ id, flow: flowName, kind, step, example });
+          cases.push({ id, flow: flowName, kind, step, name, example });
         }
       }
     }
@@ -233,10 +229,9 @@ function sourceType(event: unknown): unknown {
 /** The effects a source simulation produced for one example. */
 function sourceOut(result: Simulation.Result, c: Case): Flow.StepOut {
   const { step, example } = c;
-  // Every source of the flow starts, so the browser's own page view shows up
-  // in every web simulation: keep the simulated source's events, and of those
-  // the ones its trigger fired. Server sources forward the event they
-  // received, whatever its source.type.
+  // Keep the simulated source's own events, and of those the ones its
+  // trigger fired (a page load also fires the browser page view). Server
+  // sources forward the event they received, whatever its source.type.
   let events = result.events.filter(
     (event) => c.flow !== 'web' || sourceType(event) === step,
   );
@@ -263,6 +258,13 @@ function destinationOut(result: Simulation.Result): Flow.StepOut {
     call.fn,
     ...call.args.map((arg) => toPrintable(arg)),
   ]);
+}
+
+function isConsent(value: unknown): value is Record<string, boolean> {
+  return (
+    isObject(value) &&
+    Object.values(value).every((granted) => typeof granted === 'boolean')
+  );
 }
 
 function toEvent(value: unknown): Record<string, unknown> {
@@ -299,6 +301,9 @@ describe('flow-complete.json', () => {
     process.env.FINGERPRINT_SALT = 'flow-complete-test-salt';
     process.env.META_ACCESS_TOKEN = 'meta-access-token';
     process.env.EMAIL_SALT = 'flow-complete-email-salt';
+    // The customers basePath is relative to the working directory; the
+    // test's working directory is the package, so point it at the demo data.
+    process.env.CUSTOMERS_DIR = path.join(examplesDir, 'customers');
 
     config = loadTestConfig();
     for (const flowName of Object.keys(config.flows)) {
@@ -328,8 +333,23 @@ describe('flow-complete.json', () => {
     delete process.env.FINGERPRINT_SALT;
     delete process.env.META_ACCESS_TOKEN;
     delete process.env.EMAIL_SALT;
+    delete process.env.CUSTOMERS_DIR;
     await fs.remove(tmpDir);
   });
+
+  /**
+   * A web destination runs on its own copy of the web bundle. Simulations
+   * share the imported module, and gtag keeps module state (its consent
+   * default is set once per module), so a shared bundle would make an out
+   * depend on which gtag example ran first.
+   */
+  const bundleFor = async (c: Case): Promise<string> => {
+    const shared = bundles[c.flow];
+    if (c.flow !== 'web' || c.kind !== 'destinations') return shared;
+    const copy = path.join(path.dirname(shared), `${c.step}-${c.name}.mjs`);
+    await fs.copy(shared, copy);
+    return copy;
+  };
 
   const cases = collectCases(validateFlowConfig(fs.readJSONSync(configPath)));
   const runnable = cases.filter((c) => !(c.id in WAITING));
@@ -343,7 +363,7 @@ describe('flow-complete.json', () => {
   it.each(runnable.map((c) => [c.id, c] as const))(
     'step example %s simulates to its out',
     async (id, c) => {
-      const bundlePath = bundles[c.flow];
+      const bundlePath = await bundleFor(c);
       const base = { flow: c.flow, bundlePath, silent: true };
       let out: Flow.StepOut;
       if (c.kind === 'sources') {
@@ -369,15 +389,28 @@ describe('flow-complete.json', () => {
         expect(result.error).toBeUndefined();
         out = transformerOut(result);
       } else {
-        const result = await simulateDestination(
-          config,
-          toEvent(c.example.in),
-          {
-            ...base,
-            destinationId: c.step,
-            ingest: INGEST[id],
-          },
-        );
+        // A destination that requires consent starts from the event's own
+        // consent, else from everything granted. Others start without, as
+        // their outs were recorded: seeded consent reaches a Consent Mode
+        // destination as a gtag consent update. A command example runs as
+        // its command.
+        const input = toEvent(c.example.in);
+        const destConfig = config.flows[c.flow]?.destinations?.[c.step]?.config;
+        const requires =
+          isObject(destConfig) &&
+          Array.isArray(destConfig.require) &&
+          destConfig.require.length > 0;
+        const result = await simulateDestination(config, input, {
+          ...base,
+          destinationId: c.step,
+          ingest: INGEST[id],
+          command: c.example.command,
+          consent: !requires
+            ? undefined
+            : isConsent(input.consent)
+              ? input.consent
+              : { functional: true, marketing: true },
+        });
         expect(result.error).toBeUndefined();
         out = destinationOut(result);
       }
@@ -421,9 +454,9 @@ describe('flow-complete.json', () => {
       timestamp: 1700000000000,
       trigger: 'load',
     };
-    const order = (id: string, orderId: string) => ({
+    const order = (id: string, orderId: string, email: string) => ({
       ...base,
-      user: { ...base.user, email: 'Jane.Doe@Example.com' },
+      user: { ...base.user, email },
       id,
       name: 'order complete',
       entity: 'order',
@@ -455,31 +488,14 @@ describe('flow-complete.json', () => {
       const seen: Record<string, unknown>[] = [];
       const metaBodies: unknown[] = [];
 
-      await withFlowContext(
+      // withFlowContext turns a throw inside the callback (a failed expect
+      // included) into { success: false, error }, so the result is checked.
+      const result = await withFlowContext(
         { esmPath: bundles.server, platform: 'server', logger },
         async (module) => {
           const flowConfig = module.wireConfig(module.__configData);
           // The runner owns the port; the test mounts the handler itself.
           delete flowConfig.sources.express.config.settings.port;
-          // The customers sheet runs on the Sheets package mock, seeded with
-          // one customer whose lifetime value is 420.
-          const loadSheetsDev =
-            module.__devExports?.['@walkeros/server-store-sheets'];
-          const sheetsDev: unknown =
-            typeof loadSheetsDev === 'function'
-              ? await loadSheetsDev()
-              : undefined;
-          const createSheetsFetch =
-            isObject(sheetsDev) &&
-            isObject(sheetsDev.examples) &&
-            isObject(sheetsDev.examples.env)
-              ? sheetsDev.examples.env.createSheetsFetch
-              : undefined;
-          if (typeof createSheetsFetch !== 'function')
-            throw new Error('no Sheets mock');
-          flowConfig.stores.customers.env = {
-            fetch: createSheetsFetch([['cust-42', '420']]),
-          };
           const destinations = flowConfig.destinations;
           // No GCP in the test: Data Manager and Piwik PRO leave, and a spy
           // replaces the Pub/Sub code but keeps its before route, so it sees
@@ -501,7 +517,16 @@ describe('flow-complete.json', () => {
           };
 
           const flow = await module.startFlow(flowConfig);
-          const handler: unknown = flow.httpHandler;
+          // As the deploy wrapper does: the HTTP handler of the source that
+          // exposes one (express).
+          const sources: unknown = flow.collector.sources;
+          const handler: unknown = isObject(sources)
+            ? Object.values(sources)
+                .map((source) =>
+                  isObject(source) ? source.httpHandler : undefined,
+                )
+                .find((candidate) => typeof candidate === 'function')
+            : undefined;
           if (typeof handler !== 'function') throw new Error('no httpHandler');
           const server = http.createServer((req, res) => {
             handler(req, res);
@@ -527,12 +552,13 @@ describe('flow-complete.json', () => {
           try {
             await post(sessionStart);
             await settled(1);
-            await post(order('ev-order-1', 'ORD-1'));
+            await post(order('ev-order-1', 'ORD-1', 'Jane.Doe@Example.com'));
             await settled(2);
             // Transport resend: same event id, stopped by dedup.
-            await post(order('ev-order-1', 'ORD-1'));
-            // Thank-you page reload: new event id, same order.
-            await post(order('ev-order-2', 'ORD-1'));
+            await post(order('ev-order-1', 'ORD-1', 'Jane.Doe@Example.com'));
+            // Thank-you page reload: new event id, same order, the email
+            // typed differently (case, spaces).
+            await post(order('ev-order-2', 'ORD-1', ' jane.doe@example.com '));
             await settled(3);
 
             // GA4 hits: the sub-site property is decoded, the main site
@@ -575,6 +601,12 @@ describe('flow-complete.json', () => {
               expect(event.user).toMatchObject({
                 email: expect.stringMatching(/^[0-9a-f]{64}$/),
               });
+            // Normalized before hashing: one person, one hash.
+            expect(seen[1].user).toEqual(
+              expect.objectContaining({
+                email: isObject(seen[2].user) ? seen[2].user.email : undefined,
+              }),
+            );
             const first = seen[1];
             expect(first.data).toMatchObject({
               session: { gclid: 'gclid-abc123' },
@@ -589,6 +621,8 @@ describe('flow-complete.json', () => {
           return { success: true, duration: 0 };
         },
       );
+      expect(result.error).toBeUndefined();
+      expect(result.success).toBe(true);
     }, 60000);
   });
 });

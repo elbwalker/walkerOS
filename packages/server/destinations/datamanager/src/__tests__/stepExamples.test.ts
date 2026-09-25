@@ -1,8 +1,8 @@
 import type { WalkerOS } from '@walkeros/core';
-import type { OAuth2Client } from 'google-auth-library';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
+import type { AuthClient } from '../types';
 
 type Captured = [callable: string, ...args: unknown[]];
 
@@ -32,9 +32,10 @@ import { createAuthClient, getAccessToken } from '../auth';
 describe('Step Examples', () => {
   const mockFetch = jest.fn();
   const mockAccessToken = 'ya29.c.test_token';
-  const mockAuthClient = {
+  const mockAuthClient: AuthClient = {
     getAccessToken: jest.fn(),
-  } as unknown as OAuth2Client;
+  };
+  const fetchSpy: typeof fetch = (input, init) => mockFetch(input, init);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -56,7 +57,7 @@ describe('Step Examples', () => {
     const mapping = example.mapping;
 
     const testEnv = clone(examples.env.push);
-    testEnv.fetch = mockFetch as unknown as typeof fetch;
+    testEnv.fetch = fetchSpy;
     testEnv.authClient = mockAuthClient;
 
     const dest = jest.requireActual('../').default;

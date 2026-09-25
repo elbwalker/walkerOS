@@ -14,6 +14,23 @@ export interface Call {
 }
 
 /**
+ * Why a simulated destination sent nothing, read from the collector's own
+ * records:
+ * - `consent`: the event was skipped at the consent gate (or queued, with
+ *   `queue: true`). `required` is the destination's `config.consent`,
+ *   `granted` the collector consent plus the event's own consent.
+ * - `pending`: the destination is still waiting for its `require` entries
+ *   (listed in `require`), so it never started.
+ */
+export interface Skipped {
+  reason: 'consent' | 'pending';
+  required?: WalkerOS.Consent;
+  granted?: WalkerOS.Consent;
+  /** `pending` only: the `require` entries still unmet. */
+  require?: string[];
+}
+
+/**
  * Result of simulating a single step.
  * Same shape for source, transformer, collector, and destination.
  */
@@ -43,6 +60,11 @@ export interface Result {
    * available.
    */
   mappingKey?: string;
+  /**
+   * Destination simulations only: why nothing was sent, when the collector
+   * recorded a consent skip or the destination is still pending.
+   */
+  skipped?: Skipped;
   /** Error if the step threw */
   error?: Error;
 }

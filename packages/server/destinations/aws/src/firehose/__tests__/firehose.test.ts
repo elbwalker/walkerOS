@@ -55,7 +55,7 @@ describe('Firehose', () => {
           ResponseMetadata: { RequestId: 'mock-request-id' },
         });
       }
-    } as unknown as typeof testEnv.AWS.FirehoseClient;
+    };
 
     settingsConfig = {
       firehose: {
@@ -78,9 +78,8 @@ describe('Firehose', () => {
     });
 
     // Verify the client is created from the environment
-    expect(config.settings.firehose?.client).toBeDefined();
-    expect(config.settings.firehose?.client?.config).toEqual({
-      region: 'eu-central-1',
+    expect(config.settings.firehose?.client).toMatchObject({
+      config: { region: 'eu-central-1' },
     });
   });
 

@@ -670,6 +670,7 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
   });
 
   afterEach(async () => {
+    jest.restoreAllMocks();
     await fs.remove(tmp);
   });
 
@@ -691,8 +692,11 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
     flowSettings: Flow;
     bundleText?: string;
     versionsHash?: string;
+    extraPackages?: Record<string, Flow.BundlePackage>;
   }): Promise<BuildOptions> {
-    const packages: Record<string, Flow.BundlePackage> = {};
+    const packages: Record<string, Flow.BundlePackage> = {
+      ...opts.extraPackages,
+    };
     const hasSourcesOrDests =
       Object.keys(opts.flowSettings.sources ?? {}).length > 0 ||
       Object.keys(opts.flowSettings.destinations ?? {}).length > 0;
@@ -840,7 +844,8 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
       flowSettings,
     });
 
-    // traceAndCopy returns an empty fileList; the cross-check fires.
+    // traceAndCopy returns an empty fileList; the cross-check fires for the
+    // packages the bundle imports.
     mockTraceAndCopy.mockResolvedValue({
       fileList: [],
       copied: 0,
@@ -850,6 +855,81 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
     await expect(
       bundleCore(flowSettings, buildOptions, logger),
     ).rejects.toThrow(/@walkeros\/server-source-express/);
+  });
+
+  it('warns instead of failing for a declared package nothing imports', async () => {
+    const cacheDir = path.join(tmp, 'cache');
+    const outputPath = path.join(tmp, 'out', 'flow.mjs');
+    const warnLogs: string[] = [];
+    jest.spyOn(logger, 'warn').mockImplementation((message: string | Error) => {
+      warnLogs.push(typeof message === 'string' ? message : message.message);
+    });
+
+    // A step package declares @walkeros/server-core as a dependency but only
+    // uses its types, so the bundle never imports it and nft never reaches it.
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+      destinations: {
+        pubsub: { package: '@walkeros/server-destination-gcp' },
+      },
+    };
+    const buildOptions = await seedCachedServerBuild({
+      outputPath,
+      cacheDir,
+      flowSettings,
+      extraPackages: { '@walkeros/server-core': {} },
+    });
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: [
+        'node_modules/@walkeros/collector/package.json',
+        'node_modules/@walkeros/server-destination-gcp/package.json',
+      ],
+      copied: 2,
+      reasons: new Map(),
+    });
+
+    await bundleCore(flowSettings, buildOptions, logger);
+
+    expect(warnLogs).toEqual([
+      'Package @walkeros/server-core is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.',
+    ]);
+  });
+
+  describe('package used only through bundle.packages imports', () => {
+    // The entry codegen turns `imports: ['helper']` into a bare import of
+    // pkg-util, which is how inline code reaches it.
+    const flowSettings: Flow = { config: { platform: 'server' } };
+
+    async function seed(): Promise<BuildOptions> {
+      return seedCachedServerBuild({
+        outputPath: path.join(tmp, 'out', 'flow.mjs'),
+        cacheDir: path.join(tmp, 'cache'),
+        flowSettings,
+        extraPackages: { 'pkg-util': { imports: ['helper'] } },
+      });
+    }
+
+    it('passes without a warning when the trace reaches it', async () => {
+      const warn = jest.spyOn(logger, 'warn');
+      const buildOptions = await seed();
+      mockTraceAndCopy.mockResolvedValue({
+        fileList: ['node_modules/pkg-util/package.json'],
+        copied: 1,
+        reasons: new Map(),
+      });
+
+      await bundleCore(flowSettings, buildOptions, logger);
+
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('is still checked: a trace that misses it throws', async () => {
+      const buildOptions = await seed();
+
+      await expect(
+        bundleCore(flowSettings, buildOptions, logger),
+      ).rejects.toThrow(/resolved packages missing from trace: pkg-util/);
+    });
   });
 
   it('browser (web) platform skips the nft trace step entirely', async () => {
@@ -1168,5 +1248,91 @@ describe('legacy walkerOS.bundle annotation warning', () => {
 
     const bundleWarns = warnLogs.filter((m) => m.includes('walkerOS.bundle'));
     expect(bundleWarns).toEqual([]);
+  });
+});
+
+describe('root include per platform', () => {
+  let tmp: string;
+  let infoLogs: string[];
+  const logger = createCLILogger({ silent: true });
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'bundler-include-'));
+    await fs.outputFile(path.join(tmp, 'shared', 'asset.txt'), 'asset');
+    infoLogs = [];
+    jest.spyOn(logger, 'info').mockImplementation((message: string | Error) => {
+      infoLogs.push(typeof message === 'string' ? message : message.message);
+    });
+    mockDownloadWithResolution.mockResolvedValue({
+      packagePaths: new Map(),
+      resolution: { topLevel: new Map(), nested: [] },
+    });
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: [],
+      copied: 0,
+      reasons: new Map(),
+    });
+  });
+
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    await fs.remove(tmp);
+  });
+
+  function includeBuild(
+    platform: 'browser' | 'node',
+    output: string,
+  ): BuildOptions {
+    return {
+      output,
+      tempDir: path.join(tmp, 'cache'),
+      cache: false,
+      packages: {},
+      format: platform === 'browser' ? 'iife' : 'esm',
+      platform,
+      configDir: tmp,
+      include: ['shared'],
+    };
+  }
+
+  const skipped =
+    'include is ignored for web builds: a browser bundle cannot read local folders.';
+
+  it('skips include for a browser build written into the included folder', async () => {
+    const output = path.join(tmp, 'shared', 'walker.js');
+    await bundleCore(
+      { config: { platform: 'web' } },
+      includeBuild('browser', output),
+      logger,
+    );
+
+    expect(await fs.pathExists(output)).toBe(true);
+    expect(await fs.pathExists(path.join(tmp, 'shared', 'shared'))).toBe(false);
+    expect(infoLogs.filter((m) => m === skipped)).toHaveLength(1);
+  });
+
+  it('copies include next to a server build', async () => {
+    const output = path.join(tmp, 'dist', 'flow.mjs');
+    await bundleCore(
+      { config: { platform: 'server' } },
+      includeBuild('node', output),
+      logger,
+    );
+
+    expect(
+      await fs.readFile(path.join(tmp, 'dist', 'shared', 'asset.txt'), 'utf8'),
+    ).toBe('asset');
+    expect(infoLogs).not.toContain(skipped);
+  });
+
+  it('still refuses a server build written into the included folder', async () => {
+    await expect(
+      bundleCore(
+        { config: { platform: 'server' } },
+        includeBuild('node', path.join(tmp, 'shared', 'flow.mjs')),
+        logger,
+      ),
+    ).rejects.toThrow(/Circular include/);
   });
 });

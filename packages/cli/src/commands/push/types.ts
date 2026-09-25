@@ -1,4 +1,4 @@
-import type { Elb, Ingest, Simulation } from '@walkeros/core';
+import type { Elb, Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 
 /** Captured network call from polyfilled fetch/sendBeacon during simulation */
 export interface NetworkCall {
@@ -36,6 +36,23 @@ export interface PushCommandOptions {
    * destination simulation.
    */
   ingestSource?: string;
+  /**
+   * The collector's starting consent for a simulated transformer, collector
+   * or destination. Forwarded as `consent` (collector: `state.consent`).
+   */
+  consent?: WalkerOS.Consent;
+  /**
+   * Raw `--consent` flag value (JSON string, file path or URL). Loaded as an
+   * object of booleans and used as `consent`.
+   */
+  consentSource?: string;
+  /**
+   * `--command`: a simulated destination runs `collector.command(command,
+   * event)` instead of pushing the event (step examples with `command`).
+   */
+  command?: Flow.StepCommand;
+  /** `--page-url`: the page URL of a simulated web source. */
+  pageUrl?: string;
 }
 
 /**

@@ -121,7 +121,11 @@ import {
   downloadPackagesWithResolution,
   loadNpmConfigForPacote,
 } from '../../core/package-manager.js';
-import { traceAndCopy, assertDepsTraced } from './nft-trace.js';
+import {
+  traceAndCopy,
+  assertDepsTraced,
+  collectImportedPackages,
+} from './nft-trace.js';
 import { assertConsumerDepsSatisfied } from './assert-consumer-deps.js';
 import type { Logger } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
@@ -380,14 +384,12 @@ export async function bundleCore(
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, p]) => `${name}@${p.version}`);
     const versionsHash = await getHashServer(sortedVersions.join('\n'), 12);
-    // Step packages externalized by esbuild and asserted by nft trace. Use
-    // the packages the user (or auto-add) actually declared, not pacote's
-    // full top-level set: peer dependencies pacote installs (e.g. zod for
-    // schema validation) are not necessarily imported by the runtime
-    // bundle. Tree-shaking drops the bare import, nft never sees it, and
-    // the cross-check would otherwise false-positive. The intent that
-    // matters here is "what step packages does the flow declare".
-    const expectedTopLevelPackages = Object.keys(buildOptions.packages).filter(
+    // Step packages externalized by esbuild. Use the packages the user (or
+    // auto-add) actually declared, not pacote's full top-level set: peer
+    // dependencies pacote installs (e.g. zod for schema validation) are
+    // inlined unless declared. The nft cross-check narrows this further to
+    // the declared packages the bundle actually imports.
+    const declaredPackages = Object.keys(buildOptions.packages).filter(
       (name) => !name.startsWith('.') && !name.startsWith('/'),
     );
 
@@ -417,7 +419,7 @@ export async function bundleCore(
               flowSettings,
               buildOptions,
               TEMP_DIR,
-              expectedTopLevelPackages,
+              declaredPackages,
               logger,
             );
           }
@@ -527,7 +529,7 @@ export async function bundleCore(
         TEMP_DIR,
         packagePaths,
         logger,
-        expectedTopLevelPackages,
+        declaredPackages,
         devPackages,
       );
 
@@ -638,10 +640,7 @@ export async function bundleCore(
         // them after stage 1 carefully kept them external. nft traces the
         // bare imports from the final bundle and copies code from
         // `TEMP_DIR/node_modules/` to `dist/node_modules/`.
-        stage2Options.external = [
-          ...getNodeExternals(),
-          ...expectedTopLevelPackages,
-        ];
+        stage2Options.external = [...getNodeExternals(), ...declaredPackages];
         stage2Options.banner = {
           js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
         };
@@ -684,7 +683,7 @@ export async function bundleCore(
         flowSettings,
         buildOptions,
         TEMP_DIR,
-        expectedTopLevelPackages,
+        declaredPackages,
         logger,
       );
     }
@@ -702,15 +701,21 @@ export async function bundleCore(
       );
     }
 
-    // Copy included folders to output directory
+    // Copy included folders to output directory. Only a server artifact reads
+    // them at runtime; a browser bundle is served on its own.
     if (buildOptions.include && buildOptions.include.length > 0) {
-      const outputDir = path.dirname(outputPath);
-      await copyIncludes(
-        buildOptions.include,
-        buildOptions.configDir || process.cwd(),
-        outputDir,
-        logger,
-      );
+      if (buildOptions.platform === 'browser') {
+        logger.info(
+          'include is ignored for web builds: a browser bundle cannot read local folders.',
+        );
+      } else {
+        await copyIncludes(
+          buildOptions.include,
+          buildOptions.configDir || process.cwd(),
+          path.dirname(outputPath),
+          logger,
+        );
+      }
     }
 
     return stats;
@@ -889,16 +894,17 @@ export function getNodeExternals(): string[] {
  * see the same `node_modules/` tree. The bundle at `outputPath` lives
  * outside `tempDir`, so we stage a copy inside `tempDir` to give nft an
  * entry whose relative path under `base` does not escape via `..`.
- * `expectedPackages` is the pacote-resolved top-level set, used for the
- * post-trace cross-check that catches dynamic-require regressions and
- * hoisted-symlink mistakes.
+ * `declaredPackages` are the non-path `bundle.packages` keys. Those the
+ * bundle imports must reach the trace (the cross-check catches
+ * dynamic-require regressions and hoisted-symlink mistakes); those nothing
+ * imports or traces get a warning.
  */
 async function runNftServerPath(
   outputPath: string,
   flowSettings: Flow,
   buildOptions: BuildOptions,
   tempDir: string,
-  expectedPackages: string[],
+  declaredPackages: string[],
   logger: Logger.Instance,
 ): Promise<void> {
   const outDir = path.dirname(outputPath);
@@ -941,16 +947,20 @@ async function runNftServerPath(
   const trimmedFileList = result.fileList.filter((f) => f !== stagedRel);
   await fs.remove(path.join(outDir, stagedRel)).catch(() => {});
 
-  // Cross-check: every package pacote resolved at the top level must appear
-  // in the trace output. Catches hoisted-symlink misses, nft per-release
+  // Cross-check: every declared package the bundle imports must appear in
+  // the trace output. Catches hoisted-symlink misses, nft per-release
   // regressions, and dynamic-require deps nft cannot statically follow.
-  // The check is always meaningful now (the expected set comes from the
-  // install layer, not user package.json), so there is no opt-out flag.
-  if (expectedPackages.length > 0) {
-    assertDepsTraced({
+  if (declaredPackages.length > 0) {
+    const unused = assertDepsTraced({
       fileList: trimmedFileList,
-      expectedPackages,
+      declaredPackages,
+      importedPackages: await collectImportedPackages(outputPath),
     });
+    for (const name of unused) {
+      logger.warn(
+        `Package ${name} is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`,
+      );
+    }
   }
 
   const stepPackages = collectAllStepPackages(flowSettings);

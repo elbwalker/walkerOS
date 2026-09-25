@@ -96,8 +96,8 @@ export const push: Env = {
   },
 };
 
+/** Request-carrying calls only; `init` carries the API key. */
 export const simulation = [
-  'call:amplitude.init',
   'call:amplitude.track',
   'call:amplitude.identify',
   'call:amplitude.revenue',

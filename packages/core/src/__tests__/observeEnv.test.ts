@@ -207,7 +207,73 @@ describe('observeEnv', () => {
     );
     expect(call(slot(env.api, 'track'), 'a')).toBe('sent');
     expect(seen).toEqual(['api.track']);
-    expect(calls).toHaveLength(1);
+    expect(calls).toEqual([]);
+  });
+
+  it('does not keep calls when a record callback is given', () => {
+    const seen: unknown[][] = [];
+    const { env, calls } = observeEnv(
+      { api: { track: () => 'sent' } },
+      ['call:api.track'],
+      (_fn, args) => seen.push(args),
+    );
+    call(slot(env.api, 'track'), 'a');
+    call(slot(env.api, 'track'), 'b');
+    expect(seen).toEqual([['a'], ['b']]);
+    expect(calls).toEqual([]);
+  });
+
+  it('records a call through a frozen object without mutating it', () => {
+    const sent: unknown[] = [];
+    const lib = Object.freeze({ send: (x: unknown) => sent.push(x) });
+    const { env, calls, unresolved } = observeEnv({ lib }, ['call:lib.send']);
+    expect(unresolved).toEqual([]);
+    const view = env.lib;
+    call(slot(view, 'send'), 'a');
+    expect(sent).toEqual(['a']);
+    expect(calls).toEqual([
+      { fn: 'lib.send', args: ['a'], ts: expect.any(Number) },
+    ]);
+    expect(Object.isFrozen(lib)).toBe(true);
+    expect('send' in view).toBe(true);
+    expect(Object.keys(view)).toEqual(['send']);
+  });
+
+  it('records a call through a frozen call result', () => {
+    const client = Object.freeze({ send: () => 'ok' });
+    const { env, calls } = observeEnv({ make: () => client }, [
+      'call:make.send',
+    ]);
+    expect(call(slot(call(env.make), 'send'), 1)).toBe('ok');
+    expect(calls.map((c) => c.fn)).toEqual(['make.send']);
+  });
+
+  it.each(['call', 'bind', 'apply', 'name', 'length', 'toString'])(
+    'navigates a call result whose method is named %s',
+    (key) => {
+      const make = () => ({ [key]: (x: number) => x + 1 });
+      const { env, calls, unresolved } = observeEnv({ make }, [
+        `call:make.${key}`,
+      ]);
+      expect(unresolved).toEqual([]);
+      expect(call(slot(call(env.make), key), 1)).toBe(2);
+      expect(calls.map((c) => c.fn)).toEqual([`make.${key}`]);
+    },
+  );
+
+  it('still navigates a static inherited from a parent class', () => {
+    class Base {
+      static create() {
+        return 'made';
+      }
+    }
+    class Child extends Base {}
+    const { env, calls, unresolved } = observeEnv({ Child }, [
+      'call:Child.create',
+    ]);
+    expect(unresolved).toEqual([]);
+    expect(call(Reflect.get(env.Child, 'create'))).toBe('made');
+    expect(calls.map((c) => c.fn)).toEqual(['Child.create']);
   });
 
   it('skips malformed paths', () => {

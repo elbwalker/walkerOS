@@ -53,12 +53,14 @@ function mockInit(): MixpanelClient {
  * The test runner clones this and replaces methods with spies.
  */
 export const push: Env = {
-  Mixpanel: { init: mockInit as (...args: unknown[]) => MixpanelClient },
+  Mixpanel: { init: mockInit },
 };
 
-/** Simulation tracking paths for CLI --simulate. */
+/**
+ * Simulation tracking paths for CLI --simulate. `init` carries the token and is
+ * not recorded; the paths walk through its result to the request calls.
+ */
 export const simulation = [
-  'call:Mixpanel.init',
   'call:Mixpanel.init.track',
   'call:Mixpanel.init.import',
   'call:Mixpanel.init.alias',

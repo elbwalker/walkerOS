@@ -1,4 +1,5 @@
 import {
+  PAGE_URL_SCOPE_ERROR,
   push,
   simulateCollector,
   simulateDestination,
@@ -12,9 +13,10 @@ import {
   readStdinToTempFile,
   type Platform,
 } from '../../core/index.js';
-import { loadJsonFromSource } from '../../config/index.js';
+import { loadJsonFromSource, loadJsonConfig } from '../../config/index.js';
+import { collectKnownSecrets } from '../../core/known-secrets.js';
 import { isObject } from '@walkeros/core';
-import type { Ingest, Simulation, WalkerOS } from '@walkeros/core';
+import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import type { PushCommandOptions, PushResult } from './types.js';
 
 /**
@@ -35,6 +37,52 @@ function simulationToPushResult(result: Simulation.Result): PushResult {
 
 const INGEST_SCOPE_ERROR =
   '--ingest applies to transformer, collector and destination simulation only';
+
+const CONSENT_SCOPE_ERROR =
+  "--consent sets collector consent for transformer, collector and destination simulation; for a source, simulate the CMP source's own example or set the event's consent.";
+
+const CONSENT_SHAPE_ERROR = '--consent must be a JSON object of booleans';
+
+const COMMAND_SCOPE_ERROR = '--command applies to destination simulation only.';
+
+function isConsent(value: unknown): value is WalkerOS.Consent {
+  return (
+    isObject(value) &&
+    Object.values(value).every((granted) => typeof granted === 'boolean')
+  );
+}
+
+/**
+ * Resolve the collector's starting consent: the raw `--consent` source (JSON
+ * string, file path or URL) wins over a programmatic `consent`.
+ */
+async function resolveConsent(
+  options: PushCommandOptions,
+): Promise<WalkerOS.Consent | undefined> {
+  if (options.consentSource === undefined) return options.consent;
+  const loaded: unknown = await loadJsonFromSource(options.consentSource, {
+    name: 'consent',
+  });
+  if (!isConsent(loaded)) throw new Error(CONSENT_SHAPE_ERROR);
+  return loaded;
+}
+
+function isFlowJson(value: unknown): value is Flow.Json {
+  return isObject(value) && isObject(value.flows);
+}
+
+/**
+ * The values of the `$secret.NAME` references of a flow config, for masking
+ * at egress. A bundle (not a flow config) references none.
+ */
+async function readKnownSecrets(config: string): Promise<string[]> {
+  try {
+    const loaded: unknown = await loadJsonConfig(config);
+    return isFlowJson(loaded) ? collectKnownSecrets(loaded) : [];
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Resolve the pipeline context a simulated step reads: the raw `--ingest`
@@ -66,6 +114,29 @@ async function resolveIngest(
 export async function runPushCommand(
   options: PushCommandOptions,
 ): Promise<PushResult> {
+  return (await runPushCommandWithSecrets(options)).result;
+}
+
+/**
+ * `runPushCommand`, plus the values of the secrets the flow config references
+ * (see `collectKnownSecrets`), so `pushCommand` can mask them in its output.
+ */
+export async function runPushCommandWithSecrets(
+  options: PushCommandOptions,
+): Promise<{ result: PushResult; knownSecrets: string[] }> {
+  let knownSecrets: string[] = [];
+  const result = await runPush(options, (config) =>
+    readKnownSecrets(config).then((values) => {
+      knownSecrets = values;
+    }),
+  );
+  return { result, knownSecrets };
+}
+
+async function runPush(
+  options: PushCommandOptions,
+  onConfig: (config: string) => Promise<void>,
+): Promise<PushResult> {
   const startTime = Date.now();
 
   try {
@@ -79,6 +150,7 @@ export async function runPushCommand(
     } else {
       config = options.config || 'bundle.config.json';
     }
+    await onConfig(config);
 
     // 3. Resolve string event inputs (path/URL → JSON).
     let resolvedEvent: unknown = options.event;
@@ -94,7 +166,18 @@ export async function runPushCommand(
     if (ingest && (plan.kind === 'none' || plan.kind === 'source'))
       throw new Error(INGEST_SCOPE_ERROR);
 
-    // 5. Route to the correct typed function based on the plan.
+    // 5. Scope checks of the other simulate flags, then --consent: the
+    // collector's starting state, so there is none for a source (its own
+    // flow starts inside the trigger) or a real push.
+    if (options.command !== undefined && plan.kind !== 'destination')
+      throw new Error(COMMAND_SCOPE_ERROR);
+    if (options.pageUrl !== undefined && plan.kind !== 'source')
+      throw new Error(PAGE_URL_SCOPE_ERROR);
+    const consent = await resolveConsent(options);
+    if (consent && (plan.kind === 'none' || plan.kind === 'source'))
+      throw new Error(CONSENT_SCOPE_ERROR);
+
+    // 6. Route to the correct typed function based on the plan.
     let result: PushResult;
     switch (plan.kind) {
       case 'none':
@@ -114,6 +197,7 @@ export async function runPushCommand(
           await simulateSource(config, resolvedEvent, {
             sourceId: plan.ids[0],
             flow: options.flow,
+            pageUrl: options.pageUrl,
             silent: options.silent,
             verbose: options.verbose,
             json: options.json,
@@ -132,6 +216,7 @@ export async function runPushCommand(
               flow: options.flow,
               mock: options.mock,
               ingest,
+              consent,
               silent: options.silent,
               verbose: options.verbose,
               json: options.json,
@@ -151,6 +236,7 @@ export async function runPushCommand(
               flow: options.flow,
               mock: options.mock,
               ingest,
+              state: consent ? { consent } : undefined,
               silent: options.silent,
               verbose: options.verbose,
               json: options.json,
@@ -167,6 +253,7 @@ export async function runPushCommand(
           plan.ids,
           options,
           ingest,
+          consent,
         );
         break;
     }
@@ -192,6 +279,7 @@ async function runDestinationSimulationLoop(
   destinationIds: string[],
   options: PushCommandOptions,
   ingest: Omit<Ingest, '_meta'> | undefined,
+  consent: WalkerOS.Consent | undefined,
 ): Promise<PushResult> {
   const startTime = Date.now();
   const simulations: Simulation.Result[] = [];
@@ -202,6 +290,8 @@ async function runDestinationSimulationLoop(
       flow: options.flow,
       mock: options.mock,
       ingest,
+      consent,
+      command: options.command,
       silent: options.silent,
       verbose: options.verbose,
       json: options.json,

@@ -199,7 +199,7 @@ export function registerReferenceResources(server: McpServer) {
     'walkeros://reference/examples',
     {
       description:
-        'Complete flow config example: web + server flows, mapping, contracts, step examples',
+        'Complete, tested flow config (flow-complete.json): web, server and warehouse flows with mapping, consent, contracts, routes, state, stores and step examples. Its guide is examples/flow-complete.md in @walkeros/cli.',
       mimeType: 'application/json',
     },
     async () => {

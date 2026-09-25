@@ -17,6 +17,7 @@ import { createLogger } from './logger';
 import { scrubSecrets } from './redactLine';
 
 export { scrubSecrets, redactLine } from './redactLine';
+export type { ScrubOptions } from './redactLine';
 export { toPrintable } from './toPrintable';
 import type { Config, Instance } from './types/logger';
 import { Level } from './types/logger';
@@ -79,6 +80,8 @@ export interface CLILoggerOptions {
   json?: boolean;
   stderr?: boolean;
   onLine?: (level: Level, message: string) => void;
+  /** Exact secret values masked in every line (see `scrubSecrets`). */
+  knownSecrets?: readonly string[];
 }
 
 /** Formats one already-scrubbed line for the terminal. */
@@ -124,7 +127,9 @@ export function createCLILoggerConfig(
     silent = false,
     json = false,
     stderr = false,
+    knownSecrets,
   } = options;
+  const scrubOptions = knownSecrets ? { known: [...knownSecrets] } : {};
   const out = stderr ? console.error : console.log;
   const errorColor = colors.error ?? identity;
   const warnColor = colors.warn ?? identity;
@@ -160,7 +165,10 @@ export function createCLILoggerConfig(
       // steps) on both paths. Length is preserved here (no truncation); the
       // heartbeat path applies the 256-char wire cap separately as a backstop
       // on already-redacted text.
-      const fullMessage = scrubSecrets(`${scopePath}${message}${meta}`);
+      const fullMessage = scrubSecrets(
+        `${scopePath}${message}${meta}`,
+        scrubOptions,
+      );
 
       // Tap every line before any early return so no level is dropped from capture.
       try {

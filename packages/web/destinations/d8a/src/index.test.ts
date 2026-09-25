@@ -29,6 +29,7 @@ jest.mock(
 
 import type { Destination, WalkerOS } from '@walkeros/core';
 import type { D8aFn, InstallD8aOptions, InstallD8aResult } from '@d8a-tech/wt';
+import { createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from './dev';
 import { resetConsentState } from './index';
@@ -42,30 +43,25 @@ const initExample = examples.step.init;
 const initIn = initExample.in as Destination.Config;
 const initOut = (initExample.out ?? []) as ReadonlyArray<CallRecord>;
 
-const noopLogger = {
-  log: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  throw: (msg: string) => {
-    throw new Error(msg);
-  },
-} as unknown as Destination.Context['logger'];
+const noopLogger = createMockLogger();
 
 function createInstallD8a(calls: CallRecord[]): Env['installD8a'] {
   return (opts?: InstallD8aOptions): InstallD8aResult => {
     const windowRef = opts?.windowRef as Env['window'];
     const globalName = opts?.globalName || 'd8a';
     const dataLayerName = opts?.dataLayerName || 'd8aLayer';
-    const d8a = jest.fn((...args: unknown[]) => {
-      calls.push(['d8a', ...args]);
-    }) as unknown as D8aFn;
-
-    d8a.js = jest.fn();
-    d8a.config = jest.fn();
-    d8a.event = jest.fn();
-    d8a.set = jest.fn();
-    d8a.consent = jest.fn();
+    const d8a: D8aFn = Object.assign(
+      (...args: unknown[]) => {
+        calls.push(['d8a', ...args]);
+      },
+      {
+        js: jest.fn(),
+        config: jest.fn(),
+        event: jest.fn(),
+        set: jest.fn(),
+        consent: jest.fn(),
+      },
+    );
 
     windowRef[dataLayerName] = windowRef[dataLayerName] || [];
     windowRef[globalName] = d8a;

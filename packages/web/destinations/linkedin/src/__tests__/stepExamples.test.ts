@@ -29,10 +29,12 @@ function spyEnv(env: Env): {
   collected: () => CallRecord[];
 } {
   const calls: CallRecord[] = [];
-  const lintrk = ((action: string, data: unknown) => {
-    calls.push(['lintrk', action, data]);
-  }) as unknown as Lintrk;
-  lintrk.q = [];
+  const lintrk: Lintrk = Object.assign(
+    (action: string, data: unknown) => {
+      calls.push(['lintrk', action, data]);
+    },
+    { q: [] },
+  );
   env.window.lintrk = lintrk;
   return { env, collected: () => calls };
 }

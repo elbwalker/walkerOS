@@ -13,7 +13,7 @@ import { setup as setupFn } from '../setup';
 import { createIngest, createMockContext } from '@walkeros/core';
 import type { Ingest, Source } from '@walkeros/core';
 import type { Config, Setup, Types } from '../types';
-import { push as pushEnv } from '../examples/env';
+import { moduleMockEnv as pushEnv } from '../examples/env';
 
 interface SetupResultShape {
   queueCreated: boolean;

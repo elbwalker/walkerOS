@@ -2,12 +2,12 @@ import { generateKeyPairSync } from 'crypto';
 import type { Simulation } from '@walkeros/core';
 import type { PushResult } from '../types';
 
-jest.mock('../run', () => ({ runPushCommand: jest.fn() }));
+jest.mock('../run', () => ({ runPushCommandWithSecrets: jest.fn() }));
 
-import { runPushCommand } from '../run';
+import { runPushCommandWithSecrets } from '../run';
 import { formatPushResult, pushCommand } from '../index';
 
-const mockedRun = jest.mocked(runPushCommand);
+const mockedRun = jest.mocked(runPushCommandWithSecrets);
 
 const privateKey = generateKeyPairSync('rsa', { modulusLength: 2048 })
   .privateKey.export({ type: 'pkcs8', format: 'pem' })
@@ -73,7 +73,7 @@ const secrets = [keyBody, clientEmail, privateKeyId, metaToken, bearerToken];
 class ExitCalled extends Error {}
 
 async function runCommand(json: boolean): Promise<string> {
-  mockedRun.mockResolvedValue(secretResult);
+  mockedRun.mockResolvedValue({ result: secretResult, knownSecrets: [] });
   const written: string[] = [];
   jest.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
     written.push(String(chunk));

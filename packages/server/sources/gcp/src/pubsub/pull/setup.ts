@@ -1,8 +1,8 @@
 import type { Logger } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
+import { PubSub } from '@google-cloud/pubsub';
 import type {
   CreateSubscriptionOptions,
-  PubSub,
   TopicMetadata,
   protos,
 } from '@google-cloud/pubsub';
@@ -248,6 +248,11 @@ export const setup: SetupFn = async (context) => {
 
   const { client, projectId, subscription, topic } = settings;
   if (!client) return logger.throw('client is missing, cannot run setup');
+  if (!(client instanceof PubSub)) {
+    return logger.throw(
+      'setup needs a @google-cloud/pubsub client; an injected client only serves pulls',
+    );
+  }
   if (!projectId) return logger.throw('projectId is missing');
   if (!subscription) return logger.throw('subscription is missing');
 

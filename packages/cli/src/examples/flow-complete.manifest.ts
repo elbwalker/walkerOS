@@ -499,7 +499,7 @@ const teaching = {
     useCases: [],
     note: 'settings are the package options, checked against the package schema.',
     docs: [],
-    cli: [`walkeros validate ${FILE} --path destinations.collect`],
+    cli: [`walkeros validate ${FILE} -f web --path destinations.collect`],
   },
   'step-env': {
     pointer: '/flows/server/transformers/file/env',
@@ -632,7 +632,7 @@ const teaching = {
   },
   'value-key': {
     pointer:
-      '/flows/web/destinations/ga4/config/mapping/order/complete/data/map/value/key',
+      '/flows/web/destinations/ga4/config/mapping/order/complete/data/map/coupon/key',
     chapter: 'mapping',
     level: 'beginner',
     useCases: [],
@@ -645,7 +645,7 @@ const teaching = {
     chapter: 'mapping',
     level: 'intermediate',
     useCases: [],
-    note: 'fn computes a value, here the total rounded to cents.',
+    note: 'fn computes a value from the event, here the total rounded to cents. fn and key are alternatives: next to a key, fn never runs.',
     docs: [],
   },
   'value-loop': {
@@ -1498,12 +1498,12 @@ const teaching = {
     note: 'file: true returns bytes exactly as stored.',
     docs: [],
   },
-  'store-sheets': {
+  'store-customers': {
     pointer: '/flows/server/stores/customers',
     chapter: 'state-stores',
     level: 'advanced',
     useCases: [],
-    note: 'Customer records live in a Google Sheet the team maintains.',
+    note: 'Customer records come from an fs store with fake demo data; in production a Sheets or GCS store takes its place, loadUser stays as it is.',
     docs: [],
   },
   'store-cache': {
@@ -1511,16 +1511,8 @@ const teaching = {
     chapter: 'state-stores',
     level: 'advanced',
     useCases: [],
-    note: 'Store cache memoizes sheet reads for five minutes.',
+    note: 'Store cache memoizes customer reads for five minutes.',
     docs: [{ page: 'collector/cache' }],
-  },
-  'store-credentials': {
-    pointer: '/flows/server/stores/customers/config/credentials',
-    chapter: 'state-stores',
-    level: 'advanced',
-    useCases: ['deploy'],
-    note: 'Stores take credentials like destinations do.',
-    docs: [],
   },
   'file-transformer': {
     pointer: '/flows/server/transformers/file',
@@ -1530,7 +1522,9 @@ const teaching = {
     note: 'walker.js is served first party from the server flow.',
     docs: [{ page: 'transformers/file' }],
     example: { step: 'file', name: 'walkerJs' },
-    cli: [`walkeros bundle ${FILE} -f web -o dist/web/walker.js`],
+    cli: [
+      `walkeros bundle ${FILE} -f web -o packages/cli/examples/shared/walker.js`,
+    ],
   },
   'file-headers': {
     pointer: '/flows/server/transformers/file/config/settings/headers',
@@ -2033,7 +2027,10 @@ export const flowCompleteCoverage = {
   } satisfies Coverage<keyof Transformer.Config>,
   storeConfig: {
     settings: 'step-settings',
-    credentials: 'store-credentials',
+    credentials: {
+      excluded:
+        'the fs demo store needs none; the Sheets or GCS store that replaces it in production takes config.credentials',
+    },
     env: 'step-env',
     id: RUNTIME('id'),
     logger: RUNTIME('step logger'),
@@ -2188,7 +2185,7 @@ export const flowCompleteCli: CliEntry[] = [
     chapter: 'contract',
   },
   {
-    command: `walkeros validate ${FILE} --path destinations.collect`,
+    command: `walkeros validate ${FILE} -f web --path destinations.collect`,
     chapter: 'step-envelope',
   },
   {
@@ -2221,7 +2218,7 @@ export const flowCompleteCli: CliEntry[] = [
     chapter: 'build-run',
   },
   {
-    command: `walkeros bundle ${FILE} -f web -o dist/web/walker.js`,
+    command: `walkeros bundle ${FILE} -f web -o packages/cli/examples/shared/walker.js`,
     chapter: 'state-stores',
   },
   {

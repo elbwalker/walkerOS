@@ -170,9 +170,12 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"page 
   - Decoded hits carry no `globals.language`, so under this contract they are
     `source.valid: false`: they reach the warehouse, and `eventFilter` keeps
     them from the vendors.
-- **CLI:** build the server artifact, then run it. Running needs a real service
-  account: the Sheets store authenticates when the flow starts, so a throwaway
-  key stops the start with a readiness error. The env file must be private
+- **CLI:** build the server artifact, then run it. `GCP_SA` must be set (Pub/Sub
+  and Data Manager read it as credentials); no step calls Google at start, so a
+  throwaway key is enough to become ready and serve `walker.js`, while pushes to
+  Pub/Sub and Data Manager need a real one. The artifact carries `shared/` but
+  not the demo customers: set `CUSTOMERS_DIR` to the absolute path of
+  `packages/cli/examples/customers` in `.env`. The env file must be private
   (`chmod 600 .env`), `runneros` refuses a group-readable one.
 
 ```bash
@@ -181,9 +184,9 @@ chmod 600 .env
 runneros start dist/server.mjs -p 8080 --env-file .env
 ```
 
-- With real credentials, one GA4 batch from the sub-site and the script (needs
-  GCP, not run for this guide; the same requests run in the flow's integration
-  test over HTTP):
+- One GA4 hit from the sub-site and the script (the event reaches Pub/Sub only
+  with a real key; the same requests run in the flow's integration test over
+  HTTP):
 
 ```bash
 curl -X POST 'http://localhost:8080/g/collect?v=2&tid=G-SUBSITE&cid=555.1&en=page_view&dl=https%3A%2F%2Fsub.example.com%2F'
@@ -242,7 +245,7 @@ curl -I http://localhost:8080/walker.js
   example by hand.
 
 ```bash
-walkeros validate packages/cli/examples/flow-complete.json --path destinations.collect
+walkeros validate packages/cli/examples/flow-complete.json -f web --path destinations.collect
 walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"}}' --simulate destination.ga4
 ```
 
@@ -277,11 +280,12 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
     `/flows/web/destinations/ga4/config/mapping/order/complete/data/map`: map
     builds an object key by key.
   - `value-key` at
-    `/flows/web/destinations/ga4/config/mapping/order/complete/data/map/value/key`:
+    `/flows/web/destinations/ga4/config/mapping/order/complete/data/map/coupon/key`:
     key reads a path from the event.
   - `value-fn` at
     `/flows/web/destinations/ga4/config/mapping/order/complete/data/map/value/fn`:
-    fn computes a value, here the total rounded to cents.
+    fn computes a value from the event, here the total rounded to cents. fn and
+    key are alternatives: next to a key, fn never runs.
   - `value-loop` at
     `/flows/web/destinations/ga4/config/mapping/order/complete/data/map/items/loop`:
     loop turns nested products into GA4 items.
@@ -697,12 +701,11 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
     folder.
   - `store-file` at `/flows/server/stores/assets/config/file`: file: true
     returns bytes exactly as stored.
-  - `store-sheets` at `/flows/server/stores/customers`: Customer records live in
-    a Google Sheet the team maintains.
+  - `store-customers` at `/flows/server/stores/customers`: Customer records come
+    from an fs store with fake demo data; in production a Sheets or GCS store
+    takes its place, loadUser stays as it is.
   - `store-cache` at `/flows/server/stores/customers/cache`: Store cache
-    memoizes sheet reads for five minutes.
-  - `store-credentials` at `/flows/server/stores/customers/config/credentials`:
-    Stores take credentials like destinations do.
+    memoizes customer reads for five minutes.
   - `file-transformer` at `/flows/server/transformers/file`: walker.js is served
     first party from the server flow.
   - `file-headers` at `/flows/server/transformers/file/config/settings/headers`:
@@ -714,7 +717,13 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
   use the LRU cache every collector creates. It is per instance: a second
   instance does not see it; a shared store is a later build.
 - **`$store` and store `cache`:** `$store.assets` injects the fs store into
-  `file`; the `customers` store memoizes sheet reads for five minutes.
+  `file`; the `customers` store memoizes customer reads for five minutes.
+- **Customers:** `customers` is an fs store over fake demo data
+  (`packages/cli/examples/customers`, one JSON value per customer id), outside
+  root `include`, so no customer data ships in a bundle. `basePath` is relative
+  to the working directory: run `walkeros push` from `packages/cli/examples` or
+  set `CUSTOMERS_DIR`. In production a Sheets or GCS store takes its place;
+  `loadUser` does not change.
 - **walker.js first party:** the `file` transformer answers `GET /walker.js`
   from the `assets` store with `settings.headers` (`Cache-Control`,
   `Cross-Origin-Resource-Policy`) and ends with `next: { stop: true }`. Express
@@ -723,16 +732,15 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
   on every response itself.
 - The `file` example is proven over HTTP in the integration test; its simulation
   is still waiting.
-- **CLI:** build the web bundle, then copy it into the shared folder (writing
-  straight into it is refused as a circular include):
+- **CLI:** build the web bundle straight into the shared folder (web builds
+  ignore root `include`):
 
 ```bash
-walkeros bundle packages/cli/examples/flow-complete.json -f web -o dist/web/walker.js
-cp dist/web/walker.js packages/cli/examples/shared/walker.js
+walkeros bundle packages/cli/examples/flow-complete.json -f web -o packages/cli/examples/shared/walker.js
 ```
 
-- **MCP:** `flow_bundle`, `package_get` (`@walkeros/server-store-fs`,
-  `@walkeros/server-store-sheets`).
+- **MCP:** `flow_bundle`, `package_get` (`@walkeros/server-store-fs`; for the
+  production swap `@walkeros/server-store-sheets`).
 - **In GTM:** a server container can serve `gtm.js` first party; there is no
   general store.
 - **Docs:** `collector/state`, `collector/cache`, `transformers/file`.

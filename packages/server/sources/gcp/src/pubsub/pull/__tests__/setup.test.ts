@@ -15,7 +15,7 @@ import {
 } from '@walkeros/core';
 import type { Ingest, Source } from '@walkeros/core';
 import type { Types } from '../types';
-import { push as pushEnv } from '../examples/env';
+import { moduleMockEnv as pushEnv } from '../examples/env';
 
 function buildContext(
   config: Partial<Source.Config<Types>>,
