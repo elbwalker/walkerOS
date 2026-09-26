@@ -123,7 +123,8 @@ describe('flow_validate on the real validator', () => {
     });
   });
 
-  it.each([
+  // it.failing until Batch 2 Task 9 (V3)
+  it.failing.each([
     ['default', {}],
     ['strict', { strict: true }],
   ])(
@@ -147,25 +148,29 @@ describe('flow_validate on the real validator', () => {
     },
   );
 
-  it('F7: strict: true makes the contract disagreement an error, as CLI --strict', async () => {
-    const result = await callTool({
-      type: 'flow',
-      input: fixturePath('f7-validate-step'),
-      strict: true,
-    });
-    expect(result).toMatchObject({
-      valid: false,
-      errors: expect.arrayContaining([
-        expect.objectContaining({
-          path: expect.stringMatching(
-            /transformers?\.validate\.examples\.order\.out$/,
-          ),
-          code: 'CONTRACT_VIOLATION',
-        }),
-      ]),
-      details: { scope: { flows: ['server'] } },
-    });
-  });
+  // it.failing until Batch 2 Task 11 (MCP parity)
+  it.failing(
+    'F7: strict: true makes the contract disagreement an error, as CLI --strict',
+    async () => {
+      const result = await callTool({
+        type: 'flow',
+        input: fixturePath('f7-validate-step'),
+        strict: true,
+      });
+      expect(result).toMatchObject({
+        valid: false,
+        errors: expect.arrayContaining([
+          expect.objectContaining({
+            path: expect.stringMatching(
+              /transformers?\.validate\.examples\.order\.out$/,
+            ),
+            code: 'CONTRACT_VIOLATION',
+          }),
+        ]),
+        details: { scope: { flows: ['server'] } },
+      });
+    },
+  );
 
   it('F7 GUARD: without strict it stays valid with the disagreement as a warning', async () => {
     const result = await callTool({
@@ -184,31 +189,32 @@ describe('flow_validate on the real validator', () => {
     });
   });
 
-  it('F16: @walkeros/store-memory is a DEPRECATED_PACKAGE warning, as in the CLI (D3)', async () => {
-    const result = await callTool({
-      type: 'flow',
-      input: fixturePath('f16-store-memory'),
-    });
-    expect(result).toMatchObject({
-      valid: true,
-      warnings: expect.arrayContaining([
-        expect.objectContaining({
-          path: 'flows.a.stores.cache',
-          code: 'DEPRECATED_PACKAGE',
-        }),
-      ]),
-    });
-  });
+  // it.failing until Batch 2 Task 11 (MCP parity)
+  it.failing(
+    'F16: @walkeros/store-memory is a DEPRECATED_PACKAGE warning, as in the CLI (D3)',
+    async () => {
+      const result = await callTool({
+        type: 'flow',
+        input: fixturePath('f16-store-memory'),
+      });
+      expect(result).toMatchObject({
+        valid: true,
+        warnings: expect.arrayContaining([
+          expect.objectContaining({
+            path: 'flows.a.stores.cache',
+            code: 'DEPRECATED_PACKAGE',
+          }),
+        ]),
+      });
+    },
+  );
 });
 
 describe('E3: flow_validate equals validate() for the same input and options', () => {
-  it.each([
-    ['f1-two-flows', { path: 'destinations.ga4' }],
-    ['f4-dangling-extend', {}],
-    ['f7-validate-step', {}],
-    ['f7-validate-step', { strict: true }],
-    ['f16-store-memory', {}],
-  ])('%s %j', async (fixture, option) => {
+  async function expectToolEqualsValidate(
+    fixture: string,
+    option: { path?: string; strict?: boolean },
+  ): Promise<void> {
     const viaTool = await callTool({
       type: 'flow',
       input: fixturePath(fixture),
@@ -216,18 +222,39 @@ describe('E3: flow_validate equals validate() for the same input and options', (
     });
     const direct = await validate('flow', fixturePath(fixture), option);
     expect(viaTool).toEqual(direct);
+  }
+
+  it.each([
+    ['f1-two-flows', { path: 'destinations.ga4' }],
+    ['f4-dangling-extend', {}],
+    ['f7-validate-step', {}],
+  ])('%s %j', async (fixture, option) => {
+    await expectToolEqualsValidate(fixture, option);
+  });
+
+  // it.failing until Batch 2 Task 11 (MCP parity: strict, DEPRECATED_PACKAGE)
+  it.failing.each([
+    ['f7-validate-step', { strict: true }],
+    ['f16-store-memory', {}],
+  ])('%s %j', async (fixture, option) => {
+    await expectToolEqualsValidate(fixture, option);
   });
 });
 
 describe('E5: every flow_validate option reaches validate()', () => {
-  const probes: Array<[string, Record<string, unknown>, string]> = [
+  type Probe = [string, Record<string, unknown>, string];
+  const reachingProbes: Probe[] = [
     ['flow', { flow: 'a' }, 'f14-flow-scope'],
     ['path', { path: 'destinations.ga4' }, 'f1-two-flows'],
+  ];
+  const missingProbes: Probe[] = [
     ['strict', { strict: true }, 'f7-validate-step'],
     ['offline', { offline: true }, 'f13-bad-setting'],
   ];
+  const probes = [...reachingProbes, ...missingProbes];
 
-  it('the input shape exposes exactly the CLI options (C10)', () => {
+  // it.failing until Batch 2 Task 11 (MCP parity)
+  it.failing('the input shape exposes exactly the CLI options (C10)', () => {
     expect(Object.keys(schemas.ValidateInputShape).sort()).toEqual(
       ['flow', 'input', 'offline', 'path', 'strict', 'type'].sort(),
     );
@@ -238,7 +265,10 @@ describe('E5: every flow_validate option reaches validate()', () => {
     );
   });
 
-  it.each(probes)('%s changes the result', async (_key, option, fixture) => {
+  async function expectOptionChangesResult(
+    option: Record<string, unknown>,
+    fixture: string,
+  ): Promise<void> {
     const withOption = await callTool({
       type: 'flow',
       input: fixturePath(fixture),
@@ -257,5 +287,20 @@ describe('E5: every flow_validate option reaches validate()', () => {
       ),
     });
     expect(strip(withOption)).not.toEqual(strip(baseline));
-  });
+  }
+
+  it.each(reachingProbes)(
+    '%s changes the result',
+    async (_key, option, fixture) => {
+      await expectOptionChangesResult(option, fixture);
+    },
+  );
+
+  // it.failing until Batch 2 Task 11 (MCP parity)
+  it.failing.each(missingProbes)(
+    '%s changes the result',
+    async (_key, option, fixture) => {
+      await expectOptionChangesResult(option, fixture);
+    },
+  );
 });

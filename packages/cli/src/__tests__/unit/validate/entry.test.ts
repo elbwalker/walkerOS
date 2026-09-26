@@ -96,7 +96,14 @@ describe('validateEntry (dot-notation)', () => {
   it('should skip remote validation when entry has no package field', async () => {
     const result = await validateEntry('sources.api', flowConfig);
     expect(result.valid).toBe(true);
-    expect(result.details.skipped).toBe(true);
+    expect(result.details.skipped).toEqual([
+      {
+        path: 'flows.default.sources.api',
+        check: 'entry:settings',
+        reason: 'No package field, so there is no settings schema to fetch',
+        code: 'NO_PACKAGE',
+      },
+    ]);
     expect(mockFetch).not.toHaveBeenCalled();
   });
 

@@ -280,7 +280,11 @@ export async function validateCommand(
  * --strict, 0 valid.
  */
 function exitCodeOf(result: ValidateResult, strict: boolean): number {
-  if (result.errors.some((e) => e.code && USAGE_CODES.includes(e.code)))
+  if (
+    result.errors.some((e) =>
+      USAGE_CODES.some((usageCode) => usageCode === e.code),
+    )
+  )
     return 3;
   if (!result.valid) return 1;
   const skipped = result.details.skipped ?? [];

@@ -148,14 +148,14 @@ export interface ValidateDetails {
   [key: string]: unknown;
 }
 
+// `code` stays core's `string` for consumers; validate emits only
+// ValidateCode values.
 export interface ValidationError extends CoreValidationError {
-  code?: ValidateCode;
   /** The JSON Schema keyword of an ENTRY_SCHEMA error. */
   keyword?: string;
 }
 
 export interface ValidationWarning extends CoreValidationWarning {
-  code?: ValidateCode;
   keyword?: string;
 }
 

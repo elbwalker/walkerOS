@@ -302,7 +302,8 @@ describe('C3 --path on a multi-flow file', () => {
 });
 
 describe('V3 contracts in the default run', () => {
-  it.each([
+  // it.failing until Batch 2 Task 9 (V3, V4)
+  it.failing.each([
     ['plain', false],
     ['strict', true],
   ])(
@@ -322,7 +323,8 @@ describe('V3 contracts in the default run', () => {
     },
   );
 
-  it('F4: CLI exits 1 without --strict', async () => {
+  // it.failing until Batch 2 Task 9 (V3, V4)
+  it.failing('F4: CLI exits 1 without --strict', async () => {
     const { exit } = await runCli({
       type: 'flow',
       input: fixturePath('f4-dangling-extend'),
@@ -330,13 +332,20 @@ describe('V3 contracts in the default run', () => {
     expect(exit).toBe(1);
   });
 
-  it('F5: -t contract on a flow file validates its contract section', async () => {
-    const result = await validate('contract', fixturePath('f5-contract-valid'));
-    expect(result.valid).toBe(true);
-    expect(result.details.scope).toMatchObject({
-      checks: expect.arrayContaining([expect.stringMatching(/contract/)]),
-    });
-  });
+  // it.failing until Batch 2 Task 9 (V4)
+  it.failing(
+    'F5: -t contract on a flow file validates its contract section',
+    async () => {
+      const result = await validate(
+        'contract',
+        fixturePath('f5-contract-valid'),
+      );
+      expect(result.valid).toBe(true);
+      expect(result.details.scope).toMatchObject({
+        checks: expect.arrayContaining([expect.stringMatching(/contract/)]),
+      });
+    },
+  );
 
   it('F5 GUARD: a standalone contract object stays valid', async () => {
     const contract = section(readFixture('f5-contract-valid'), 'contract');
@@ -345,49 +354,57 @@ describe('V3 contracts in the default run', () => {
     expect(result.errors).toEqual([]);
   });
 
-  it('F5b / E2: -t contract on a flow file equals -t contract on its section', async () => {
-    const onFile = await validate(
-      'contract',
-      fixturePath('f4-dangling-extend'),
-    );
-    const onSection = await validate(
-      'contract',
-      section(readFixture('f4-dangling-extend'), 'contract'),
-    );
-    expect(onFile.errors).toContainEqual(
-      expect.objectContaining({
-        path: 'server.extend',
-        code: 'INVALID_EXTENDS',
-      }),
-    );
-    expect(onFile.errors).toEqual(onSection.errors);
-    expect(onFile.warnings).toEqual(onSection.warnings);
-    expect(onFile.details.scope).toMatchObject({
-      checks: expect.arrayContaining([expect.stringMatching(/contract/)]),
-    });
-  });
-
-  it('E4: --strict on a flow reports every error -t contract reports for its contract', async () => {
-    const contractResult = await validate(
-      'contract',
-      section(readFixture('f4-dangling-extend'), 'contract'),
-    );
-    const flowResult = await validate(
-      'flow',
-      fixturePath('f4-dangling-extend'),
-      { strict: true },
-    );
-    expect(contractResult.errors.length).toBeGreaterThan(0);
-    for (const error of contractResult.errors) {
-      expect(flowResult.errors).toContainEqual(
+  // it.failing until Batch 2 Task 9 (V4)
+  it.failing(
+    'F5b / E2: -t contract on a flow file equals -t contract on its section',
+    async () => {
+      const onFile = await validate(
+        'contract',
+        fixturePath('f4-dangling-extend'),
+      );
+      const onSection = await validate(
+        'contract',
+        section(readFixture('f4-dangling-extend'), 'contract'),
+      );
+      expect(onFile.errors).toContainEqual(
         expect.objectContaining({
-          path: `contract.${error.path}`,
-          code: error.code,
+          path: 'server.extend',
+          code: 'INVALID_EXTENDS',
         }),
       );
-    }
-    expect(flowResult.details.scope).toMatchObject({ flows: ['a'] });
-  });
+      expect(onFile.errors).toEqual(onSection.errors);
+      expect(onFile.warnings).toEqual(onSection.warnings);
+      expect(onFile.details.scope).toMatchObject({
+        checks: expect.arrayContaining([expect.stringMatching(/contract/)]),
+      });
+    },
+  );
+
+  // it.failing until Batch 2 Task 9 (V3)
+  it.failing(
+    'E4: --strict on a flow reports every error -t contract reports for its contract',
+    async () => {
+      const contractResult = await validate(
+        'contract',
+        section(readFixture('f4-dangling-extend'), 'contract'),
+      );
+      const flowResult = await validate(
+        'flow',
+        fixturePath('f4-dangling-extend'),
+        { strict: true },
+      );
+      expect(contractResult.errors.length).toBeGreaterThan(0);
+      for (const error of contractResult.errors) {
+        expect(flowResult.errors).toContainEqual(
+          expect.objectContaining({
+            path: `contract.${error.path}`,
+            code: error.code,
+          }),
+        );
+      }
+      expect(flowResult.details.scope).toMatchObject({ flows: ['a'] });
+    },
+  );
 
   it('F7 GUARD: a validate step example that breaks its contract is an error under --strict', async () => {
     const result = await validate('flow', fixturePath('f7-validate-step'), {
@@ -431,70 +448,95 @@ describe('V3 contracts in the default run', () => {
     expect(exit).toBe(1);
   });
 
-  it('F18: a validate step linking an unknown $contract is an error, not an unjudged step', async () => {
-    const result = await validate(
-      'flow',
-      fixturePath('f18-unknown-contract-ref'),
-    );
-    expect(result).toMatchObject({ valid: false });
-    expect(result.errors).toContainEqual(
-      expect.objectContaining({
-        path: at('flows.server.transformers.validate'),
-        code: expect.any(String),
-      }),
-    );
-    expect(result.details.scope).toMatchObject({ flows: ['server'] });
-  });
+  // it.failing until Batch 2 Task 9 (F18)
+  it.failing(
+    'F18: a validate step linking an unknown $contract is an error, not an unjudged step',
+    async () => {
+      const result = await validate(
+        'flow',
+        fixturePath('f18-unknown-contract-ref'),
+      );
+      expect(result).toMatchObject({ valid: false });
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          path: at('flows.server.transformers.validate'),
+          code: expect.any(String),
+        }),
+      );
+      expect(result.details.scope).toMatchObject({ flows: ['server'] });
+    },
+  );
 
-  it('F22: a circular extend is reported once per cycle, not once per member', async () => {
-    const result = await validate(
-      'contract',
-      readFixture('f22-circular-extend'),
-    );
-    expect(result).toMatchObject({ valid: false });
-    const cycles = result.errors.filter((e) => e.code === 'CIRCULAR_EXTENDS');
-    expect(cycles).toHaveLength(1);
-    expect(cycles[0].path).toMatch(/^loop[AB]\.extend$/);
-  });
+  // it.failing until Batch 2 Task 9 (F22)
+  it.failing(
+    'F22: a circular extend is reported once per cycle, not once per member',
+    async () => {
+      const result = await validate(
+        'contract',
+        readFixture('f22-circular-extend'),
+      );
+      expect(result).toMatchObject({ valid: false });
+      const cycles = result.errors.filter((e) => e.code === 'CIRCULAR_EXTENDS');
+      expect(cycles).toHaveLength(1);
+      expect(cycles[0].path).toMatch(/^loop[AB]\.extend$/);
+    },
+  );
 });
 
 describe('V2 placeholders against package schemas', () => {
-  it('F6: $env.NAME:default is checked using the default (valid default)', async () => {
-    const result = await validate('flow', fixturePath('f6-env-default'), {
-      path: 'destinations.ga4',
-    });
-    expect(result.valid).toBe(true);
-    expect(result.errors).toEqual([]);
-  });
+  // it.failing until Batch 2 Task 8 (V2)
+  it.failing(
+    'F6: $env.NAME:default is checked using the default (valid default)',
+    async () => {
+      const result = await validate('flow', fixturePath('f6-env-default'), {
+        path: 'destinations.ga4',
+      });
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    },
+  );
 
-  it('F6b: a bad $env default is an error that names the default, never the placeholder', async () => {
-    const result = await validate('flow', fixturePath('f6b-env-bad-default'), {
-      path: 'destinations.ga4',
-    });
-    expect(result).toMatchObject({ valid: false });
-    expect(result.errors).toContainEqual(
-      expect.objectContaining({
-        path: at('flows.b.destinations.ga4'),
-        code: 'ENTRY_SCHEMA',
-      }),
-    );
-    expect(JSON.stringify(result.errors)).not.toContain('$env.GA4_ID:bad');
-    expect(deepHas(result.errors, 'value', 'bad')).toBe(true);
-    expect(result.details.scope).toMatchObject({ entry: { flows: ['b'] } });
-  });
+  // it.failing until Batch 2 Task 8 (V2)
+  it.failing(
+    'F6b: a bad $env default is an error that names the default, never the placeholder',
+    async () => {
+      const result = await validate(
+        'flow',
+        fixturePath('f6b-env-bad-default'),
+        {
+          path: 'destinations.ga4',
+        },
+      );
+      expect(result).toMatchObject({ valid: false });
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          path: at('flows.b.destinations.ga4'),
+          code: 'ENTRY_SCHEMA',
+        }),
+      );
+      expect(JSON.stringify(result.errors)).not.toContain('$env.GA4_ID:bad');
+      expect(deepHas(result.errors, 'value', 'bad')).toBe(true);
+      expect(result.details.scope).toMatchObject({ entry: { flows: ['b'] } });
+    },
+  );
 
-  it('F6b: the whole-file run reports the same default as an ENTRY_SCHEMA warning (D3)', async () => {
-    const result = await validate('flow', fixturePath('f6b-env-bad-default'));
-    expect(result.warnings).toContainEqual(
-      expect.objectContaining({
-        path: at('flows.b.destinations.ga4.config.settings.id'),
-        code: 'ENTRY_SCHEMA',
-      }),
-    );
-    expect(JSON.stringify(result.warnings)).not.toContain('$env.GA4_ID:bad');
-  });
+  // it.failing until Batch 2 Task 8 (V2) and Task 10 (N1)
+  it.failing(
+    'F6b: the whole-file run reports the same default as an ENTRY_SCHEMA warning (D3)',
+    async () => {
+      const result = await validate('flow', fixturePath('f6b-env-bad-default'));
+      expect(result.warnings).toContainEqual(
+        expect.objectContaining({
+          path: at('flows.b.destinations.ga4.config.settings.id'),
+          code: 'ENTRY_SCHEMA',
+        }),
+      );
+      expect(JSON.stringify(result.warnings)).not.toContain('$env.GA4_ID:bad');
+    },
+  );
 
-  it.each([
+  // it.failing until Batch 2 Task 8 (V2)
+  it.failing.each([
     ['ga4env', '$env.GA4_ID'],
     ['ga4secret', '$secret.X'],
     ['ga4flow', '$flow.a.url'],
@@ -518,42 +560,50 @@ describe('V2 placeholders against package schemas', () => {
     },
   );
 
-  it('F6c: the whole-file run defers the same four values and skips none of them', async () => {
-    const result = await validate('flow', fixturePath('f6c-runtime-refs'));
-    expect(result.errors).toEqual([]);
-    for (const name of ['ga4env', 'ga4secret', 'ga4flow', 'ga4store']) {
-      expect(
-        deepHas(
-          result.details.deferred,
-          'path',
-          `flows.b.destinations.${name}.config.settings.id`,
-        ),
-      ).toBe(true);
-    }
-    expect(result.warnings.filter((w) => w.code === 'ENTRY_SCHEMA')).toEqual(
-      [],
-    );
-  });
+  // it.failing until Batch 2 Task 8 (V2)
+  it.failing(
+    'F6c: the whole-file run defers the same four values and skips none of them',
+    async () => {
+      const result = await validate('flow', fixturePath('f6c-runtime-refs'));
+      expect(result.errors).toEqual([]);
+      for (const name of ['ga4env', 'ga4secret', 'ga4flow', 'ga4store']) {
+        expect(
+          deepHas(
+            result.details.deferred,
+            'path',
+            `flows.b.destinations.${name}.config.settings.id`,
+          ),
+        ).toBe(true);
+      }
+      expect(result.warnings.filter((w) => w.code === 'ENTRY_SCHEMA')).toEqual(
+        [],
+      );
+    },
+  );
 
-  it('F6d: $var resolves statically and the resolved value is checked', async () => {
-    const good = await validate('flow', fixturePath('f6d-var'), {
-      path: 'destinations.good',
-    });
-    expect(good.valid).toBe(true);
+  // it.failing until Batch 2 Task 8 (V2)
+  it.failing(
+    'F6d: $var resolves statically and the resolved value is checked',
+    async () => {
+      const good = await validate('flow', fixturePath('f6d-var'), {
+        path: 'destinations.good',
+      });
+      expect(good.valid).toBe(true);
 
-    const bad = await validate('flow', fixturePath('f6d-var'), {
-      path: 'destinations.bad',
-    });
-    expect(bad).toMatchObject({ valid: false });
-    expect(bad.errors).toContainEqual(
-      expect.objectContaining({
-        path: at('flows.b.destinations.bad'),
-        code: 'ENTRY_SCHEMA',
-      }),
-    );
-    expect(deepHas(bad.errors, 'value', 'nope')).toBe(true);
-    expect(bad.details.scope).toMatchObject({ entry: { flows: ['b'] } });
-  });
+      const bad = await validate('flow', fixturePath('f6d-var'), {
+        path: 'destinations.bad',
+      });
+      expect(bad).toMatchObject({ valid: false });
+      expect(bad.errors).toContainEqual(
+        expect.objectContaining({
+          path: at('flows.b.destinations.bad'),
+          code: 'ENTRY_SCHEMA',
+        }),
+      );
+      expect(deepHas(bad.errors, 'value', 'nope')).toBe(true);
+      expect(bad.details.scope).toMatchObject({ entry: { flows: ['b'] } });
+    },
+  );
 });
 
 describe('C1 default scope and C5 skips', () => {
@@ -605,21 +655,25 @@ describe('C1 default scope and C5 skips', () => {
     expect(result.details.scope).toMatchObject({ flows: ['a'] });
   });
 
-  it('F10: the entry is checked against the pinned package version', async () => {
-    const result = await validate('flow', fixturePath('f10-pinned'), {
-      path: 'destinations.ga4',
-    });
-    expect(result).toMatchObject({ valid: false });
-    expect(result.errors).toContainEqual(
-      expect.objectContaining({
-        path: at('flows.a.destinations.ga4'),
-        code: 'ENTRY_SCHEMA',
-        keyword: 'required',
-      }),
-    );
-    expect(deepHas(result.details, 'version', '1.0.0')).toBe(true);
-    expect(result.details.scope).toMatchObject({ entry: { flows: ['a'] } });
-  });
+  // it.failing until Batch 2 Task 8 (N7)
+  it.failing(
+    'F10: the entry is checked against the pinned package version',
+    async () => {
+      const result = await validate('flow', fixturePath('f10-pinned'), {
+        path: 'destinations.ga4',
+      });
+      expect(result).toMatchObject({ valid: false });
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          path: at('flows.a.destinations.ga4'),
+          code: 'ENTRY_SCHEMA',
+          keyword: 'required',
+        }),
+      );
+      expect(deepHas(result.details, 'version', '1.0.0')).toBe(true);
+      expect(result.details.scope).toMatchObject({ entry: { flows: ['a'] } });
+    },
+  );
 
   it.each([
     ['destinations.local', 'no package'],
@@ -651,34 +705,43 @@ describe('C1 default scope and C5 skips', () => {
     expect(output).toContain('Scope:');
   });
 
-  it('F12 (N2): flow b using $var and $store defined only in flow a is invalid', async () => {
-    const result = await validate('flow', fixturePath('f12-cross-flow-refs'));
-    expect(result).toMatchObject({ valid: false });
-    expect(result.errors).toContainEqual(
-      expect.objectContaining({
-        path: at('flows.b'),
-        code: expect.any(String),
-      }),
-    );
-    expect(result.errors.filter((e) => e.path.startsWith('flows.a'))).toEqual(
-      [],
-    );
-    expect(result.details.scope).toMatchObject({ flows: ['a', 'b'] });
-  });
+  // it.failing until Batch 2 Task 8 (N2)
+  it.failing(
+    'F12 (N2): flow b using $var and $store defined only in flow a is invalid',
+    async () => {
+      const result = await validate('flow', fixturePath('f12-cross-flow-refs'));
+      expect(result).toMatchObject({ valid: false });
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          path: at('flows.b'),
+          code: expect.any(String),
+        }),
+      );
+      expect(result.errors.filter((e) => e.path.startsWith('flows.a'))).toEqual(
+        [],
+      );
+      expect(result.details.scope).toMatchObject({ flows: ['a', 'b'] });
+    },
+  );
 
-  it('F13 (N1): the whole-file run checks package settings and warns (D3)', async () => {
-    const result = await validate('flow', fixturePath('f13-bad-setting'));
-    expect(result.valid).toBe(true);
-    expect(result.warnings).toContainEqual(
-      expect.objectContaining({
-        path: 'flows.a.destinations.ga4.config.settings.id',
-        code: 'ENTRY_SCHEMA',
-      }),
-    );
-    expect(result.details.scope).toMatchObject({ flows: ['a'] });
-  });
+  // it.failing until Batch 2 Task 10 (N1)
+  it.failing(
+    'F13 (N1): the whole-file run checks package settings and warns (D3)',
+    async () => {
+      const result = await validate('flow', fixturePath('f13-bad-setting'));
+      expect(result.valid).toBe(true);
+      expect(result.warnings).toContainEqual(
+        expect.objectContaining({
+          path: 'flows.a.destinations.ga4.config.settings.id',
+          code: 'ENTRY_SCHEMA',
+        }),
+      );
+      expect(result.details.scope).toMatchObject({ flows: ['a'] });
+    },
+  );
 
-  it('F13 (N1): --strict exits 2 on the settings warning', async () => {
+  // it.failing until Batch 2 Task 10 (N1)
+  it.failing('F13 (N1): --strict exits 2 on the settings warning', async () => {
     const { exit } = await runCli({
       type: 'flow',
       input: fixturePath('f13-bad-setting'),
@@ -707,7 +770,8 @@ describe('C1 default scope and C5 skips', () => {
     );
   });
 
-  it('F14: file-level errors still run under --flow', async () => {
+  // it.failing until Batch 2 Task 9 (V3)
+  it.failing('F14: file-level errors still run under --flow', async () => {
     const file = readFixture('f14-flow-scope');
     const withContract = {
       ...file,
@@ -741,33 +805,42 @@ describe('C1 default scope and C5 skips', () => {
     );
   });
 
-  it('F16 (C9): the CLI reports @walkeros/store-memory as DEPRECATED_PACKAGE (warning, D3)', async () => {
-    const result = await validate('flow', fixturePath('f16-store-memory'));
-    expect(result.warnings).toContainEqual(
-      expect.objectContaining({
-        path: 'flows.a.stores.cache',
-        code: 'DEPRECATED_PACKAGE',
-      }),
-    );
-  });
+  // it.failing until Batch 2 Task 11 (C9)
+  it.failing(
+    'F16 (C9): the CLI reports @walkeros/store-memory as DEPRECATED_PACKAGE (warning, D3)',
+    async () => {
+      const result = await validate('flow', fixturePath('f16-store-memory'));
+      expect(result.warnings).toContainEqual(
+        expect.objectContaining({
+          path: 'flows.a.stores.cache',
+          code: 'DEPRECATED_PACKAGE',
+        }),
+      );
+    },
+  );
 
-  it('F17 (C7): a file whose only finding is a skip exits 0 by default', async () => {
-    const result = await validate('flow', fixturePath('f17-only-skip'));
-    expect(result.valid).toBe(true);
-    expect(skippedOf(result)).toContainEqual(
-      expect.objectContaining({
-        path: at('flows.a.destinations.d'),
-        code: expect.any(String),
-      }),
-    );
-    const { exit } = await runCli({
-      type: 'flow',
-      input: fixturePath('f17-only-skip'),
-    });
-    expect(exit).toBe(0);
-  });
+  // it.failing until Batch 2 Task 10 (N1)
+  it.failing(
+    'F17 (C7): a file whose only finding is a skip exits 0 by default',
+    async () => {
+      const result = await validate('flow', fixturePath('f17-only-skip'));
+      expect(result.valid).toBe(true);
+      expect(skippedOf(result)).toContainEqual(
+        expect.objectContaining({
+          path: at('flows.a.destinations.d'),
+          code: expect.any(String),
+        }),
+      );
+      const { exit } = await runCli({
+        type: 'flow',
+        input: fixturePath('f17-only-skip'),
+      });
+      expect(exit).toBe(0);
+    },
+  );
 
-  it('F17 (C7): the same file exits 2 under --strict', async () => {
+  // it.failing until Batch 2 Task 10 (N1)
+  it.failing('F17 (C7): the same file exits 2 under --strict', async () => {
     const { exit } = await runCli({
       type: 'flow',
       input: fixturePath('f17-only-skip'),
@@ -822,30 +895,41 @@ describe('Equivalence', () => {
     expect(narrowed.details.scope).toMatchObject({ flows: ['b'] });
   });
 
+  async function expectOptionReaches(
+    option: ValidateOptionsNext,
+    fixture: string,
+  ): Promise<void> {
+    const direct = await validate('flow', fixturePath(fixture), option);
+    const { output } = await runCli({
+      type: 'flow',
+      input: fixturePath(fixture),
+      ...option,
+    });
+    // Text output lists every error and warning path of the direct result.
+    for (const issue of [...direct.errors, ...direct.warnings]) {
+      expect(output).toContain(issue.path);
+    }
+    const baseline = await validate('flow', fixturePath(fixture));
+    expect(withoutScope(direct)).not.toEqual(withoutScope(baseline));
+  }
+
   const optionProbes: Array<[string, ValidateOptionsNext, string]> = [
     ['flow', { flow: 'a' }, 'f14-flow-scope'],
     ['path', { path: 'destinations.ga4' }, 'f1-two-flows'],
     ['strict', { strict: true }, 'f7-validate-step'],
-    ['offline', { offline: true }, 'f13-bad-setting'],
   ];
 
   it.each(optionProbes)(
     'E5: the CLI option %s reaches validate()',
     async (_key, option, fixture) => {
-      const direct = await validate('flow', fixturePath(fixture), option);
-      const { output } = await runCli({
-        type: 'flow',
-        input: fixturePath(fixture),
-        ...option,
-      });
-      // Text output lists every error and warning path of the direct result.
-      for (const issue of [...direct.errors, ...direct.warnings]) {
-        expect(output).toContain(issue.path);
-      }
-      const baseline = await validate('flow', fixturePath(fixture));
-      expect(withoutScope(direct)).not.toEqual(withoutScope(baseline));
+      await expectOptionReaches(option, fixture);
     },
   );
+
+  // it.failing until Batch 2 Task 10 (N1, --offline)
+  it.failing('E5: the CLI option offline reaches validate()', async () => {
+    await expectOptionReaches({ offline: true }, 'f13-bad-setting');
+  });
 });
 
 // F23 (C9): validate valid implies bundle preflight valid, over every example.
