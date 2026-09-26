@@ -1,0 +1,63 @@
+{
+  "pkg-x": {
+    "latest": {
+      "version": "2.0.0",
+      "type": "destination",
+      "platform": "web",
+      "schemas": {
+        "settings": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^G-[A-Z0-9]+$"
+            }
+          }
+        }
+      }
+    },
+    "1.0.0": {
+      "version": "1.0.0",
+      "type": "destination",
+      "platform": "web",
+      "schemas": {
+        "settings": {
+          "type": "object",
+          "required": ["id"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^G-[A-Z0-9]+$"
+            }
+          }
+        }
+      }
+    }
+  },
+  "pkg-store": {
+    "latest": {
+      "version": "1.0.0",
+      "type": "store",
+      "platform": "server",
+      "schemas": {
+        "settings": {
+          "type": "object",
+          "required": ["ttl"],
+          "properties": {
+            "ttl": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    }
+  },
+  "pkg-noschema": {
+    "latest": {
+      "version": "1.0.0",
+      "type": "destination",
+      "platform": "web",
+      "schemas": {}
+    }
+  }
+}

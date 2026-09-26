@@ -1,4 +1,4 @@
-import type { Env } from '../types';
+import type { Env, QueryClient, TableMetadataShape } from '../types';
 import {
   managedwriter as mockManagedwriter,
   adapt as mockAdapt,
@@ -15,14 +15,12 @@ import {
  * code shares a single source of truth with the jest auto-mock.
  */
 
-// Simple no-op function for mocking
-const noop = () => {};
-
 /**
- * Mock BigQuery client class that simulates dataset/table operations
+ * Mock BigQuery query client: dataset and table provisioning calls resolve as
+ * if both already exist.
  */
 function createMockBigQuery() {
-  return class MockBigQuery {
+  return class MockBigQuery implements QueryClient {
     calls: Array<{ method: string; args: unknown[] }>;
     options: unknown;
 
@@ -41,14 +39,18 @@ function createMockBigQuery() {
       return this;
     }
 
-    async insert(rows: unknown[]) {
-      this.calls.push({ method: 'insert', args: [rows] });
-      return Promise.resolve();
+    async exists(): Promise<[boolean]> {
+      this.calls.push({ method: 'exists', args: [] });
+      return [true];
     }
 
-    // For backwards compatibility with tests that might check mockFn
-    get mockFn() {
-      return noop;
+    async create(options: unknown): Promise<void> {
+      this.calls.push({ method: 'create', args: [options] });
+    }
+
+    async getMetadata(): Promise<[TableMetadataShape]> {
+      this.calls.push({ method: 'getMetadata', args: [] });
+      return [{}];
     }
   };
 }
@@ -56,21 +58,21 @@ function createMockBigQuery() {
 /**
  * Standard mock environment for push operations
  *
- * Use this for testing BigQuery insert operations without connecting
+ * Use this for testing BigQuery Storage Write appends without connecting
  * to actual GCP infrastructure.
  */
 export const push: Env = {
   get BigQuery() {
-    return createMockBigQuery() as unknown as Env['BigQuery'];
+    return createMockBigQuery();
   },
   get WriterClient() {
-    return mockManagedwriter.WriterClient as unknown as Env['WriterClient'];
+    return mockManagedwriter.WriterClient;
   },
   get JSONWriter() {
-    return mockManagedwriter.JSONWriter as unknown as Env['JSONWriter'];
+    return mockManagedwriter.JSONWriter;
   },
   get adapt() {
-    return mockAdapt as unknown as Env['adapt'];
+    return mockAdapt;
   },
 };
 

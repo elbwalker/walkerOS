@@ -16,7 +16,6 @@
  */
 
 import * as path from 'path';
-import * as os from 'os';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import * as esbuild from 'esbuild';
@@ -26,6 +25,7 @@ import {
   getNodeExternals,
 } from './bundler.js';
 import type { ObserveWeb } from '@walkeros/core';
+import { tmpRunDir } from '../../core/tmp-names.js';
 import type { WrapEntryPreview } from './bundler.js';
 import type { MinifyOptions } from '../../types/bundle.js';
 
@@ -207,7 +207,7 @@ export async function wrapSkeleton(
 
   // Write the entry to its own temp dir so the caller's outputPath isn't
   // polluted with intermediate files.
-  const entryDir = await fs.mkdtemp(path.join(os.tmpdir(), 'walkeros-wrap-'));
+  const entryDir = await tmpRunDir('wrap');
   const entryPath = path.join(entryDir, 'flow.mjs');
 
   try {

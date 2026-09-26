@@ -2,6 +2,7 @@ import { defineConfig } from 'tsup';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
 import { pathToFileURL } from 'url';
+import { assertNoPublishedCredentials } from './credentialGuard.mjs';
 
 const baseConfig = {
   entry: ['src/index.ts'],
@@ -202,6 +203,13 @@ const buildDev = (customConfig = {}) => {
       if (hints && Object.keys(hints).length > 0) {
         output.hints = hints;
       }
+
+      // Published metadata must never carry a real credential: fail the build
+      assertNoPublishedCredentials(pkg.name, {
+        examples: output.examples,
+        exportExamples: output.exportExamples,
+        hints: output.hints,
+      });
 
       // Validate
       if (Object.keys(schemas).length === 0) {

@@ -11,7 +11,9 @@
     "serve": "docusaurus serve --host 0.0.0.0",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:remark",
+    "test:remark": "../node_modules/.bin/tsx --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./scripts/strict-reporter.mjs --test-reporter-destination=stderr scripts/*.test.mjs"
   },
   "dependencies": {
     "@docusaurus/core": "^3.9.2",
@@ -19,6 +21,7 @@
     "@docusaurus/theme-live-codeblock": "^3.9.2",
     "@docusaurus/theme-mermaid": "^3.9.2",
     "@easyops-cn/docusaurus-search-local": "^0.55.1",
+    "@walkeros/cli": "^4.6.1",
     "@walkeros/collector": "^4.6.1",
     "@walkeros/core": "^4.6.1",
     "@walkeros/explorer": "^4.6.1",

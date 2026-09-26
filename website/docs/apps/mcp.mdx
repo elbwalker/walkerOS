@@ -202,30 +202,52 @@ Returns summarized per-destination results.
 | `flow` | string | No | Flow name for multi-flow configs |
 | `platform` | `"web"` \| `"server"` | No | Override platform detection |
 | `verbose` | boolean | No | Include full payload per destination (default: `false`) |
+| `ingest` | object | No | Request context a step reads via `ctx.ingest` (transformer, collector and destination steps) |
+| `state` | object | No | Collector state the step starts from: `consent` (booleans; every step, for a source the consent a consent-gated source waits for), `user`, `globals`, `timing` (collector steps) |
+| `command` | `"config"` \| `"consent"` \| `"user"` \| `"run"` | No | Destination steps only: run this collector command with `event` as its data instead of pushing it |
 
 There are four step types: `source`, `collector`, `transformer`, and
 `destination`. The `event` shape depends on the step type:
 
 - **Destinations / transformers:** a walkerOS event, `{ name: "entity action",
-  data: {...} }`. Add `consent` (e.g. `{ marketing: true }`) when the
-  destination requires it.
+  data: {...} }`. The event's own `consent` (e.g. `{ marketing: true }`) counts
+  toward the destination's consent check, on top of `state.consent`. With
+  `command`, `event` is the command's data (e.g. `{ marketing: true }` for
+  `consent`).
 - **Collector:** the enrichment step. It takes a post-`next` partial event plus
   an optional state snapshot `{ consent?, user?, globals?, timing? }`, applies
   the collector's `createEvent`, and returns the fully enriched event.
 - **Sources:** `{ content, trigger? }`, where `content` is the walkerOS event
   `{ name, data }` and the optional `trigger` is `{ type?, options? }`. There is
-  no `env` field in the source-step event.
+  no `env` field in the source-step event. A web source's page URL goes in
+  `trigger.options.url` (default `http://localhost`).
 
 Sources can be simulated as a step, including the `@walkeros/source-demo` demo
-source.
+source. Only the simulated source starts, and a destination simulation starts
+only its target destination. A source result lists the walker commands the
+source issues itself (a CMP's `walker consent`, the session source's `user` and
+`session`) as `elb` calls, also without `verbose`, and its summary counts them:
+`Source captured 1 event and 2 commands`. Calls of a source's mock client
+(for example the SQS source) appear only with `verbose`.
+
+**Consent.** `state.consent` is the collector consent the step starts from. A
+destination with `require: ["consent"]` waits until consent is present, so pass
+`state.consent` to start it. A destination with `consent: { marketing: true }`
+receives an event only when that consent is granted in `state.consent` or in
+the event's own consent. When a destination sends nothing, its result carries
+`skipped` (`reason: "pending"` with the unmet `require` entries, or
+`reason: "consent"` with `required` and `granted`), and `_hints.warnings`
+explains it. With `command`, `state.consent` still applies first. See
+[consent in simulate](/docs/apps/cli#consent-in-simulate) for the CLI
+equivalent.
 
 When `configPath` is a cloud flow id, you can simulate a saved flow without a
 manual file round-trip. Repeated simulations of the same configuration reuse a
 prebuilt bundle, so successive calls run faster (local file paths always
 rebuild).
 
-A `transformer` step also accepts an optional `ingest` field, a raw ingest
-without `_meta`. Supply it to test a request decoder standalone, for example a
+Transformer, collector and destination steps also accept an optional `ingest`
+field, a raw ingest without `_meta`. Supply it to test a request decoder standalone, for example a
 GA4 decoder that reads `ctx.ingest.url`: pass `ingest: { url: "..." }` alongside
 the event.
 

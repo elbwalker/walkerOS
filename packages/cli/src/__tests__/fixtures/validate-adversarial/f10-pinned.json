@@ -1,0 +1,25 @@
+{
+  "version": 4,
+  "flows": {
+    "a": {
+      "config": {
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "pkg-x": {
+              "version": "1.0.0"
+            }
+          }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "pkg-x",
+          "config": {
+            "settings": {}
+          }
+        }
+      }
+    }
+  }
+}

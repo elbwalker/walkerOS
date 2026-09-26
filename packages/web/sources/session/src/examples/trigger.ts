@@ -20,7 +20,8 @@ const createTrigger: Trigger.CreateFn<Record<string, unknown>, void> = async (
     async (content: Record<string, unknown>) => {
       const options = (opts || {}) as SessionTriggerOptions;
 
-      // Pre-init: seed world state before source reads it
+      // Seed the world the source reads (page, referrer, storage) before the
+      // flow starts: the source reads it once, at init.
       if (options.url) {
         const urlObj = new URL(options.url);
         window.history.replaceState({}, '', urlObj.pathname + urlObj.search);
@@ -39,45 +40,28 @@ const createTrigger: Trigger.CreateFn<Record<string, unknown>, void> = async (
         const key = options.deviceKey || 'elbDeviceId';
         localStorage.setItem(key, options.deviceId);
       }
+      // A load is a navigation; a simulated page (JSDOM) records none, and
+      // the source starts a session only on one.
+      const perf: Partial<Performance> = window.performance;
+      const entriesByType =
+        typeof perf.getEntriesByType === 'function'
+          ? perf.getEntriesByType.bind(perf)
+          : () => [];
+      if (entriesByType('navigation').length === 0) {
+        Object.defineProperty(perf, 'getEntriesByType', {
+          configurable: true,
+          value: (entryType: string) =>
+            entryType === 'navigation'
+              ? [{ type: 'navigate' }]
+              : entriesByType(entryType),
+        });
+      }
 
-      // Lazy startFlow — session source fires events during init, but
-      // collector.allowed is false until command('run'). The initial
-      // session event is dropped. After startFlow, clear the session
-      // data written by the dropped init, re-seed, and trigger a consent
-      // update to cause session re-init with allowed=true.
+      // The source emits once: at the run barrier, where a consent-gated
+      // source also receives the starting consent (config.consent).
       if (!flow) {
         const result = await startFlow({ ...config, run: config.run ?? true });
         flow = { collector: result.collector, elb: result.elb };
-
-        // Clear session data written by the dropped init
-        const sessionKey =
-          options.sessionKey ||
-          ((
-            config.sources?.session?.config?.settings as Record<string, unknown>
-          )?.sessionKey as string) ||
-          'elbSessionId';
-        const deviceKey =
-          options.deviceKey ||
-          ((
-            config.sources?.session?.config?.settings as Record<string, unknown>
-          )?.deviceKey as string) ||
-          'elbDeviceId';
-        localStorage.removeItem(sessionKey);
-        localStorage.removeItem(deviceKey);
-
-        // Re-seed localStorage if trigger options specified session data
-        if (options.sessionData) {
-          localStorage.setItem(sessionKey, JSON.stringify(options.sessionData));
-        }
-        if (options.deviceId) {
-          localStorage.setItem(deviceKey, options.deviceId);
-        }
-
-        // Re-apply consent to trigger session source on('consent') handler.
-        // Now allowed=true so the session start event reaches destinations.
-        if (config.consent) {
-          await flow.collector.command('consent', config.consent);
-        }
       }
     };
 

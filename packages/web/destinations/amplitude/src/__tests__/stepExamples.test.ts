@@ -152,12 +152,8 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
     }) as NonNullable<Env['amplitude']>['groupIdentify'],
     flush: () => ({ promise: Promise.resolve() }),
     add: () => ({ promise: Promise.resolve() }),
-    Identify: RecordingIdentify as unknown as NonNullable<
-      Env['amplitude']
-    >['Identify'],
-    Revenue: RecordingRevenue as unknown as NonNullable<
-      Env['amplitude']
-    >['Revenue'],
+    Identify: RecordingIdentify,
+    Revenue: RecordingRevenue,
   };
   return { env, collected: () => calls };
 }

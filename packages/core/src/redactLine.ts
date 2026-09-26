@@ -5,7 +5,7 @@
  * snapshot before the POST). A pattern added here covers all of them.
  *
  * Two entry points:
- * - `scrubSecrets(line)`: mask secrets, keep the message length intact (for
+ * - `scrubSecrets(line, { known })`: mask secrets (and the exact known values), keep the message length intact (for
  *   console/stderr legibility).
  * - `redactLine(line)`: `scrubSecrets` plus truncation to the 256-char
  *   heartbeat wire contract.
@@ -77,9 +77,13 @@ const RE_JSON_SECRET_FIELD = new RegExp(
 );
 
 // Escaped `\"key\":\"value\"`, the form a serialized request body carries
-// inside a JSON string. The value ends at the escaped closing quote.
+// inside a JSON string. A string value ends at the escaped closing quote; a
+// quote or backslash inside it is escaped twice (`\\\"`, `\\\\`), so each
+// `\\` pair is consumed together with the escape it carries. Every
+// alternative starts on a different char pair, so the scan is linear. A
+// numeric value runs to its last digit.
 const RE_JSON_SECRET_FIELD_ESCAPED = new RegExp(
-  `(\\\\"(?:${SECRET_FIELD_NAMES})\\\\"\\s*:\\s*\\\\")(?:[^"\\\\]|\\\\[^"])*`,
+  `(\\\\"(?:${SECRET_FIELD_NAMES})\\\\"\\s*:\\s*)(?:(\\\\")(?:[^"\\\\]|\\\\[^"\\\\]|\\\\\\\\(?:\\\\\\\\|\\\\"|[^"\\\\]))*|-?\\d[\\d.eE+-]*)`,
   'gi',
 );
 
@@ -316,6 +320,69 @@ function maskLine(line: string): string {
   return s;
 }
 
+// ── Known secret values ──────────────────────────────────────────────────────
+
+// Shorter values are too likely to occur in ordinary text to mask on sight.
+const MIN_KNOWN_LEN = 6;
+
+export interface ScrubOptions {
+  /**
+   * Exact secret values to mask wherever they occur (e.g. the resolved
+   * `$secret.NAME` values of a flow). Values under 6 characters are ignored.
+   */
+  known?: readonly string[];
+}
+
+/**
+ * Mask every exact occurrence of each known value, raw, JSON-escaped (the
+ * form it takes inside serialized JSON) and escaped twice (a JSON string
+ * serialized again, e.g. a request body inside JSON output), longest first so
+ * a value containing another is masked whole. Literal split/join, never a regex built from the
+ * value.
+ */
+export function maskKnownValues(
+  line: string,
+  known?: readonly string[],
+): string {
+  if (!known || known.length === 0) return line;
+  const forms = new Set<string>();
+  for (const value of known) {
+    if (value.length < MIN_KNOWN_LEN) continue;
+    const escaped = JSON.stringify(value).slice(1, -1);
+    forms.add(value);
+    forms.add(escaped);
+    forms.add(JSON.stringify(escaped).slice(1, -1));
+  }
+  let s = line;
+  for (const form of [...forms].sort((a, b) => b.length - a.length)) {
+    if (s.includes(form)) s = replaceKnown(s, form);
+  }
+  return s;
+}
+
+/**
+ * Replace every occurrence of `form` with `***`. An occurrence right after an
+ * escaping backslash (an odd run of them) keeps the escape's letters, as
+ * `maskLine` does, so serialized JSON stays valid.
+ */
+function replaceKnown(line: string, form: string): string {
+  let out = '';
+  let from = 0;
+  let at = line.indexOf(form);
+  while (at !== -1) {
+    // Count the backslashes just before the match; text before `from` was
+    // an earlier match, now `***`, so the run stops there.
+    let slashes = 0;
+    while (at - slashes > from && line[at - slashes - 1] === '\\') slashes++;
+    const head =
+      slashes % 2 === 1 ? (RE_ESCAPE_HEAD.exec(form)?.[0] ?? form[0]) : '';
+    out += `${line.slice(from, at)}${head}***`;
+    from = at + form.length;
+    at = line.indexOf(form, from);
+  }
+  return out + line.slice(from);
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -326,6 +393,8 @@ function maskLine(line: string): string {
  * passes through it.
  *
  * Algorithm:
+ * 0. Mask each `options.known` value exactly, raw, JSON-escaped and escaped
+ *    twice, longest first.
  * 1. Mask JSON service-account fields (private_key, client_email,
  *    private_key_id, client_id, client_x509_cert_url) and credential-named
  *    JSON fields (password, token, authorization, ...) BEFORE splitting
@@ -340,11 +409,18 @@ function maskLine(line: string): string {
  *    high-entropy/shape-based token runs.
  * 5. Rejoin with \\n.
  */
-export function scrubSecrets(line: string): string {
+export function scrubSecrets(line: string, options: ScrubOptions = {}): string {
+  // Step 0: known secret values, exact, before any pattern can split them
+  const withoutKnown = maskKnownValues(line, options.known);
+
   // Step 1: JSON service-account field masking before any line splitting
-  const withoutJsonKey = line
+  const withoutJsonKey = withoutKnown
     .replace(RE_JSON_SA_FIELD, '$1$2"***$2"')
-    .replace(RE_JSON_SECRET_FIELD_ESCAPED, '$1***')
+    .replace(
+      RE_JSON_SECRET_FIELD_ESCAPED,
+      (_match: string, keyPart: string, quote: string | undefined) =>
+        quote ? `${keyPart}${quote}***` : `${keyPart}\\"***\\"`,
+    )
     .replace(RE_JSON_SECRET_FIELD, '$1"***"');
 
   // Step 2: split

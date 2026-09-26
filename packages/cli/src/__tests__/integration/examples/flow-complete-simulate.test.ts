@@ -6,9 +6,9 @@
  *   that prebuilt bundle (pattern: ../simulate/prebuilt-bundle.test.ts).
  * - The committed file stays path-free: local monorepo package paths are
  *   injected in memory only.
- * - Every simulation runs stores and destinations on their packages' mock
- *   envs (Sheets, Pub/Sub, BigQuery, Data Manager); the HTTP test injects
- *   the same Sheets mock, seeded with one customer.
+ * - Every simulation runs destinations on their packages' mock envs
+ *   (Pub/Sub, BigQuery, Data Manager). The customers store is an fs store
+ *   over the committed demo data (CUSTOMERS_DIR).
  * - Examples a simulation cannot reproduce yet are listed in WAITING with the
  *   reason; each shows up as a todo, never as a silent skip.
  */
@@ -37,10 +37,30 @@ const configPath = path.join(examplesDir, 'flow-complete.json');
 const packagesDir = path.resolve(__dirname, '../../../../..');
 
 /**
- * The fingerprint rotates daily (UTC), so its example shows the hash of the
- * day it was recorded. The test checks the shape of the hash instead.
+ * The fingerprint rotates daily (UTC windows from `new Date()`), so the suite
+ * runs on a pinned clock: the day the example outs were recorded.
  */
-const DAILY_HASH = 'server.transformers.fingerprint.cookielessId';
+const RECORDED_DAY = new Date('2026-09-24T12:00:00.000Z');
+
+/** Only Date is faked; timers stay real (bundling, HTTP, polling). */
+const PIN_DATE_ONLY: Parameters<typeof jest.useFakeTimers>[0] = {
+  doNotFake: [
+    'hrtime',
+    'nextTick',
+    'performance',
+    'queueMicrotask',
+    'requestAnimationFrame',
+    'cancelAnimationFrame',
+    'requestIdleCallback',
+    'cancelIdleCallback',
+    'setImmediate',
+    'clearImmediate',
+    'setInterval',
+    'clearInterval',
+    'setTimeout',
+    'clearTimeout',
+  ],
+};
 
 /**
  * The GA4 decoder stamps the receive time (sid is the session start, not the
@@ -54,20 +74,6 @@ function withoutReceiveTime(value: unknown): unknown {
     if (key === 'timestamp' && typeof item === 'number') {
       result[key] = 'receive-time';
     } else result[key] = withoutReceiveTime(item);
-  }
-  return result;
-}
-
-/** Replaces every user.hash with a marker once it has the expected shape. */
-function withoutDailyHash(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(withoutDailyHash);
-  if (!isObject(value)) return value;
-  const result: Record<string, unknown> = {};
-  for (const [key, item] of Object.entries(value)) {
-    if (key === 'user' && isObject(item) && typeof item.hash === 'string') {
-      expect(item.hash).toMatch(/^[0-9a-f]{16}$/);
-      result[key] = { ...item, hash: 'daily' };
-    } else result[key] = withoutDailyHash(item);
   }
   return result;
 }
@@ -105,12 +111,18 @@ const OWNER = 'docs/plans/2026-09-24-step-examples-real.md';
 
 /** Examples no simulation can reproduce yet, with the reason and owner. */
 const WAITING: Record<string, string> = {
-  'web.sources.usercentrics.explicitDecision': `simulate source: the jsdom window rejects the CMP CustomEvent (${OWNER})`,
-  'web.sources.session.marketingSession': `simulate source: localStorage is not defined in the simulate jsdom globals (${OWNER})`,
-  'web.destinations.ga4.consentUpdate': `simulate destination does not run command examples (${OWNER})`,
-  'web.destinations.gtm.productAdd': `simulate destination cannot seed the consent require waits for; dataLayer.push is not recorded (${OWNER})`,
-  'web.destinations.gtm.dataLayerEcho': `simulate destination cannot seed the consent require waits for (${OWNER})`,
+  'web.sources.usercentrics.explicitDecision': `needs an out: its walker consent call is now recorded, the example has none to compare (${OWNER})`,
+  'web.sources.session.marketingSession': `needs an out: with SOURCE_CONSENT it starts one session, the example has none to compare (${OWNER})`,
   'server.transformers.file.walkerJs': `simulate transformer does not capture respond; the HTTP test below serves /walker.js (${OWNER})`,
+};
+
+/**
+ * The collector's starting consent per source example: a consent-gated
+ * source (the session source) waits for it. A step example has no consent
+ * field, so it lives here.
+ */
+const SOURCE_CONSENT: Record<string, Record<string, boolean>> = {
+  'web.sources.session.marketingSession': { functional: true },
 };
 
 type Kind = 'sources' | 'transformers' | 'destinations';
@@ -120,6 +132,7 @@ interface Case {
   flow: string;
   kind: Kind;
   step: string;
+  name: string;
   example: Flow.StepExample;
 }
 
@@ -151,16 +164,14 @@ function findPackageDirs(
 
 /**
  * Points every package of a flow, and its @walkeros dependencies, at the
- * monorepo. `@walkeros/server-core` stays on the registry: a flow that only
- * declares it through a dependency fails the bundler's trace check when it is
- * injected as a local path.
+ * monorepo.
  */
 function injectLocalPaths(flow: Flow, dirs: Map<string, string>): void {
   const packages = flow.config?.bundle?.packages;
   if (!packages) return;
   const add = (name: string): void => {
     const dir = dirs.get(name);
-    if (!dir || name === '@walkeros/server-core') return;
+    if (!dir) return;
     if (packages[name]?.path) return;
     packages[name] = { ...packages[name], path: dir };
     const pkg: unknown = fs.readJSONSync(path.join(dir, 'package.json'));
@@ -191,7 +202,7 @@ function collectCases(config: Flow.Json): Case[] {
       for (const [step, def] of Object.entries(steps)) {
         for (const [name, example] of Object.entries(def.examples ?? {})) {
           const id = `${flowName}.${kind}.${step}.${name}`;
-          cases.push({ id, flow: flowName, kind, step, example });
+          cases.push({ id, flow: flowName, kind, step, name, example });
         }
       }
     }
@@ -230,23 +241,31 @@ function sourceType(event: unknown): unknown {
     : undefined;
 }
 
-/** The effects a source simulation produced for one example. */
+/**
+ * The effects a source simulation produced for one example: its own walker
+ * commands (recorded as `elb` calls), then the events it emitted.
+ */
 function sourceOut(result: Simulation.Result, c: Case): Flow.StepOut {
+  const commands: Flow.StepOut = result.calls
+    .filter((call) => call.fn === 'elb')
+    .map((call) => ['elb', ...call.args]);
   const { step, example } = c;
-  // Every source of the flow starts, so the browser's own page view shows up
-  // in every web simulation: keep the simulated source's events, and of those
-  // the ones its trigger fired. Server sources forward the event they
-  // received, whatever its source.type.
+  // Keep the simulated source's own events, and of those the ones its
+  // trigger fired (a page load also fires the browser page view). Server
+  // sources forward the event they received, whatever its source.type.
   let events = result.events.filter(
     (event) => c.flow !== 'web' || sourceType(event) === step,
   );
   const trigger = example.trigger?.type;
   if (trigger && events.some((event) => event.trigger === trigger))
     events = events.filter((event) => event.trigger === trigger);
-  return events.map((event) => {
-    const { id, ...rest } = event;
-    return ['elb', rest];
-  });
+  return [
+    ...commands,
+    ...events.map((event): Flow.StepOut[number] => {
+      const { id, ...rest } = event;
+      return ['elb', rest];
+    }),
+  ];
 }
 
 function transformerOut(result: Simulation.Result): Flow.StepOut {
@@ -265,12 +284,30 @@ function destinationOut(result: Simulation.Result): Flow.StepOut {
   ]);
 }
 
+function isConsent(value: unknown): value is Record<string, boolean> {
+  return (
+    isObject(value) &&
+    Object.values(value).every((granted) => typeof granted === 'boolean')
+  );
+}
+
 function toEvent(value: unknown): Record<string, unknown> {
   if (!isObject(value)) throw new Error('example in is not an event');
   return value;
 }
 
+/** Every variable the suite sets; each is restored afterwards. */
+const TEST_ENV = [
+  'GCP_SA',
+  'ASSETS_DIR',
+  'FINGERPRINT_SALT',
+  'META_ACCESS_TOKEN',
+  'EMAIL_SALT',
+  'CUSTOMERS_DIR',
+] as const;
+
 describe('flow-complete.json', () => {
+  const savedEnv: Record<string, string | undefined> = {};
   let tmpDir: string;
   let config: Flow.Json;
   const bundles: Record<string, string> = {};
@@ -289,6 +326,7 @@ describe('flow-complete.json', () => {
       privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
       publicKeyEncoding: { type: 'spki', format: 'pem' },
     });
+    for (const name of TEST_ENV) savedEnv[name] = process.env[name];
     process.env.GCP_SA = JSON.stringify({
       type: 'service_account',
       project_id: 'demo-project',
@@ -299,6 +337,9 @@ describe('flow-complete.json', () => {
     process.env.FINGERPRINT_SALT = 'flow-complete-test-salt';
     process.env.META_ACCESS_TOKEN = 'meta-access-token';
     process.env.EMAIL_SALT = 'flow-complete-email-salt';
+    // The customers basePath is relative to the working directory; the
+    // test's working directory is the package, so point it at the demo data.
+    process.env.CUSTOMERS_DIR = path.join(examplesDir, 'customers');
 
     config = loadTestConfig();
     for (const flowName of Object.keys(config.flows)) {
@@ -316,20 +357,36 @@ describe('flow-complete.json', () => {
       bundles[flowName] = output;
     }
 
+    jest.useFakeTimers({ ...PIN_DATE_ONLY, now: RECORDED_DAY });
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
   }, 600000);
 
   afterAll(async () => {
+    jest.useRealTimers();
     jest.restoreAllMocks();
-    delete process.env.GCP_SA;
-    delete process.env.ASSETS_DIR;
-    delete process.env.FINGERPRINT_SALT;
-    delete process.env.META_ACCESS_TOKEN;
-    delete process.env.EMAIL_SALT;
+    // Put back what the environment held before the suite.
+    for (const [name, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
     await fs.remove(tmpDir);
   });
+
+  /**
+   * A web destination runs on its own copy of the web bundle. Simulations
+   * share the imported module, and gtag keeps module state (its consent
+   * default is set once per module), so a shared bundle would make an out
+   * depend on which gtag example ran first.
+   */
+  const bundleFor = async (c: Case): Promise<string> => {
+    const shared = bundles[c.flow];
+    if (c.flow !== 'web' || c.kind !== 'destinations') return shared;
+    const copy = path.join(path.dirname(shared), `${c.step}-${c.name}.mjs`);
+    await fs.copy(shared, copy);
+    return copy;
+  };
 
   const cases = collectCases(validateFlowConfig(fs.readJSONSync(configPath)));
   const runnable = cases.filter((c) => !(c.id in WAITING));
@@ -343,14 +400,14 @@ describe('flow-complete.json', () => {
   it.each(runnable.map((c) => [c.id, c] as const))(
     'step example %s simulates to its out',
     async (id, c) => {
-      const bundlePath = bundles[c.flow];
+      const bundlePath = await bundleFor(c);
       const base = { flow: c.flow, bundlePath, silent: true };
       let out: Flow.StepOut;
       if (c.kind === 'sources') {
         const result = await simulateSource(
           config,
           { content: c.example.in, trigger: c.example.trigger },
-          { ...base, sourceId: c.step },
+          { ...base, sourceId: c.step, consent: SOURCE_CONSENT[id] },
         );
         expect(result.error).toBeUndefined();
         out = sourceOut(result, c);
@@ -369,23 +426,34 @@ describe('flow-complete.json', () => {
         expect(result.error).toBeUndefined();
         out = transformerOut(result);
       } else {
-        const result = await simulateDestination(
-          config,
-          toEvent(c.example.in),
-          {
-            ...base,
-            destinationId: c.step,
-            ingest: INGEST[id],
-          },
-        );
+        // A destination that requires consent starts from the event's own
+        // consent, else from everything granted. Others start without, as
+        // their outs were recorded: seeded consent reaches a Consent Mode
+        // destination as a gtag consent update. A command example runs as
+        // its command.
+        const input = toEvent(c.example.in);
+        const destConfig = config.flows[c.flow]?.destinations?.[c.step]?.config;
+        const requires =
+          isObject(destConfig) &&
+          Array.isArray(destConfig.require) &&
+          destConfig.require.length > 0;
+        const result = await simulateDestination(config, input, {
+          ...base,
+          destinationId: c.step,
+          ingest: INGEST[id],
+          command: c.example.command,
+          consent: !requires
+            ? undefined
+            : isConsent(input.consent)
+              ? input.consent
+              : { functional: true, marketing: true },
+        });
         expect(result.error).toBeUndefined();
         out = destinationOut(result);
       }
       const actual = normalize(out);
       const expected = normalize(c.example.out);
-      if (id === DAILY_HASH)
-        expect(withoutDailyHash(actual)).toEqual(withoutDailyHash(expected));
-      else if (c.step === 'ga4Decode')
+      if (c.step === 'ga4Decode')
         expect(withoutReceiveTime(actual)).toEqual(
           withoutReceiveTime(expected),
         );
@@ -393,6 +461,43 @@ describe('flow-complete.json', () => {
     },
     60000,
   );
+
+  it('rotates the fingerprint: the same request on two days, two hashes', async () => {
+    const example = cases.find(
+      (c) => c.id === 'server.transformers.fingerprint.cookielessId',
+    );
+    if (!example) throw new Error('fingerprint example missing');
+    const hashOn = async (day: string): Promise<unknown> => {
+      jest.setSystemTime(new Date(day));
+      const result = await simulateTransformer(
+        config,
+        toEvent(example.example.in),
+        {
+          flow: 'server',
+          bundlePath: bundles.server,
+          silent: true,
+          transformerId: 'fingerprint',
+          ingest: INGEST[example.id],
+        },
+      );
+      expect(result.error).toBeUndefined();
+      const event = result.events[0];
+      return isObject(event) && isObject(event.user)
+        ? event.user.hash
+        : undefined;
+    };
+    try {
+      const first = await hashOn('2026-09-24T12:00:00.000Z');
+      const second = await hashOn('2026-09-25T12:00:00.000Z');
+      expect(first).toMatch(/^[0-9a-f]{16}$/);
+      expect(second).toMatch(/^[0-9a-f]{16}$/);
+      expect(second).not.toBe(first);
+      // Within one UTC day the hash is stable.
+      expect(await hashOn('2026-09-24T23:59:00.000Z')).toBe(first);
+    } finally {
+      jest.setSystemTime(RECORDED_DAY);
+    }
+  }, 60000);
 
   it.each(waiting.map((c) => [c.id, WAITING[c.id]] as const))(
     'step example %s waits: %s',
@@ -421,9 +526,9 @@ describe('flow-complete.json', () => {
       timestamp: 1700000000000,
       trigger: 'load',
     };
-    const order = (id: string, orderId: string) => ({
+    const order = (id: string, orderId: string, email: string) => ({
       ...base,
-      user: { ...base.user, email: 'Jane.Doe@Example.com' },
+      user: { ...base.user, email },
       id,
       name: 'order complete',
       entity: 'order',
@@ -455,31 +560,14 @@ describe('flow-complete.json', () => {
       const seen: Record<string, unknown>[] = [];
       const metaBodies: unknown[] = [];
 
-      await withFlowContext(
+      // withFlowContext turns a throw inside the callback (a failed expect
+      // included) into { success: false, error }, so the result is checked.
+      const result = await withFlowContext(
         { esmPath: bundles.server, platform: 'server', logger },
         async (module) => {
           const flowConfig = module.wireConfig(module.__configData);
           // The runner owns the port; the test mounts the handler itself.
           delete flowConfig.sources.express.config.settings.port;
-          // The customers sheet runs on the Sheets package mock, seeded with
-          // one customer whose lifetime value is 420.
-          const loadSheetsDev =
-            module.__devExports?.['@walkeros/server-store-sheets'];
-          const sheetsDev: unknown =
-            typeof loadSheetsDev === 'function'
-              ? await loadSheetsDev()
-              : undefined;
-          const createSheetsFetch =
-            isObject(sheetsDev) &&
-            isObject(sheetsDev.examples) &&
-            isObject(sheetsDev.examples.env)
-              ? sheetsDev.examples.env.createSheetsFetch
-              : undefined;
-          if (typeof createSheetsFetch !== 'function')
-            throw new Error('no Sheets mock');
-          flowConfig.stores.customers.env = {
-            fetch: createSheetsFetch([['cust-42', '420']]),
-          };
           const destinations = flowConfig.destinations;
           // No GCP in the test: Data Manager and Piwik PRO leave, and a spy
           // replaces the Pub/Sub code but keeps its before route, so it sees
@@ -501,7 +589,16 @@ describe('flow-complete.json', () => {
           };
 
           const flow = await module.startFlow(flowConfig);
-          const handler: unknown = flow.httpHandler;
+          // As the deploy wrapper does: the HTTP handler of the source that
+          // exposes one (express).
+          const sources: unknown = flow.collector.sources;
+          const handler: unknown = isObject(sources)
+            ? Object.values(sources)
+                .map((source) =>
+                  isObject(source) ? source.httpHandler : undefined,
+                )
+                .find((candidate) => typeof candidate === 'function')
+            : undefined;
           if (typeof handler !== 'function') throw new Error('no httpHandler');
           const server = http.createServer((req, res) => {
             handler(req, res);
@@ -527,12 +624,13 @@ describe('flow-complete.json', () => {
           try {
             await post(sessionStart);
             await settled(1);
-            await post(order('ev-order-1', 'ORD-1'));
+            await post(order('ev-order-1', 'ORD-1', 'Jane.Doe@Example.com'));
             await settled(2);
             // Transport resend: same event id, stopped by dedup.
-            await post(order('ev-order-1', 'ORD-1'));
-            // Thank-you page reload: new event id, same order.
-            await post(order('ev-order-2', 'ORD-1'));
+            await post(order('ev-order-1', 'ORD-1', 'Jane.Doe@Example.com'));
+            // Thank-you page reload: new event id, same order, the email
+            // typed differently (case, spaces).
+            await post(order('ev-order-2', 'ORD-1', ' jane.doe@example.com '));
             await settled(3);
 
             // GA4 hits: the sub-site property is decoded, the main site
@@ -566,6 +664,11 @@ describe('flow-complete.json', () => {
             const decoded = seen[3];
             expect(decoded.source).toMatchObject({ type: 'ga4' });
             expect(decoded.consent).toMatchObject({ functional: true });
+            // The hit has no browser language (ul), so the page language
+            // falls back to na, and the event passes the contract like any
+            // other event.
+            expect(decoded.globals).toMatchObject({ language: 'na' });
+            expect(decoded.source).toMatchObject({ valid: true });
 
             // Pub/Sub never sees a clear-text email; events without one
             // pass untouched.
@@ -575,6 +678,12 @@ describe('flow-complete.json', () => {
               expect(event.user).toMatchObject({
                 email: expect.stringMatching(/^[0-9a-f]{64}$/),
               });
+            // Normalized before hashing: one person, one hash.
+            expect(seen[1].user).toEqual(
+              expect.objectContaining({
+                email: isObject(seen[2].user) ? seen[2].user.email : undefined,
+              }),
+            );
             const first = seen[1];
             expect(first.data).toMatchObject({
               session: { gclid: 'gclid-abc123' },
@@ -589,6 +698,8 @@ describe('flow-complete.json', () => {
           return { success: true, duration: 0 };
         },
       );
+      expect(result.error).toBeUndefined();
+      expect(result.success).toBe(true);
     }, 60000);
   });
 });

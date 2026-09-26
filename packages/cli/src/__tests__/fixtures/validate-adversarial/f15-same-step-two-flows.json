@@ -1,0 +1,39 @@
+{
+  "version": 4,
+  "flows": {
+    "a": {
+      "config": {
+        "platform": "web"
+      },
+      "destinations": {
+        "api": {
+          "package": "pkg-noschema",
+          "config": {
+            "mapping": {
+              "page.view": {
+                "name": "page_view"
+              }
+            }
+          }
+        }
+      }
+    },
+    "b": {
+      "config": {
+        "platform": "web"
+      },
+      "destinations": {
+        "api": {
+          "package": "pkg-noschema",
+          "config": {
+            "mapping": {
+              "page.view": {
+                "name": "page_view"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

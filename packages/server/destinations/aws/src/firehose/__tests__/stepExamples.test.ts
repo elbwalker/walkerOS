@@ -23,15 +23,15 @@ describe('Step Examples', () => {
           constructor(config?: unknown) {
             this.config = config;
           }
-          async send(command: unknown) {
-            const input = (command as { input: unknown }).input;
+          async send(command: object) {
+            const input = 'input' in command ? command.input : undefined;
             calls.push(['client.send', input]);
             return {
               RecordId: 'mock-record-id',
               ResponseMetadata: { RequestId: 'mock-request-id' },
             };
           }
-        } as unknown as Env['AWS']['FirehoseClient'],
+        },
       },
     };
 

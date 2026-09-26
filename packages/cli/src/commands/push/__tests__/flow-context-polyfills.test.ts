@@ -138,3 +138,73 @@ describe('withFlowContext network polyfills integration', () => {
     expect(global.fetch).toBe(originalFetch);
   });
 });
+
+describe('exposeDomGlobals', () => {
+  const names = ['CustomEvent', 'Event', 'localStorage', 'sessionStorage'];
+  let dom: JSDOM;
+
+  beforeEach(() => {
+    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+      url: 'https://www.example.com/',
+    });
+  });
+
+  afterEach(() => {
+    dom.window.close();
+  });
+
+  it('creates events in the page realm, so the window accepts them', async () => {
+    const { exposeDomGlobals } = await import('../flow-context');
+    const restore = exposeDomGlobals(dom.window);
+    try {
+      const received: unknown[] = [];
+      dom.window.addEventListener('UC_UI_CMP_EVENT', (event) => {
+        received.push(event instanceof dom.window.CustomEvent && event.detail);
+      });
+      dom.window.dispatchEvent(
+        new CustomEvent('UC_UI_CMP_EVENT', { detail: { type: 'ACCEPT_ALL' } }),
+      );
+      localStorage.setItem('elbDeviceId', 'd3v1c3');
+
+      expect(received).toEqual([{ type: 'ACCEPT_ALL' }]);
+      expect(dom.window.localStorage.getItem('elbDeviceId')).toBe('d3v1c3');
+    } finally {
+      restore();
+    }
+  });
+
+  it('defines nothing when a window getter throws', async () => {
+    const { exposeDomGlobals } = await import('../flow-context');
+    const before = names.map((name) =>
+      Object.getOwnPropertyDescriptor(globalThis, name),
+    );
+    const opaque = {
+      CustomEvent: dom.window.CustomEvent,
+      Event: dom.window.Event,
+      get localStorage(): Storage {
+        throw new Error('localStorage is not available for opaque origins');
+      },
+      sessionStorage: dom.window.sessionStorage,
+    };
+
+    expect(() => exposeDomGlobals(opaque)).toThrow('opaque origins');
+    expect(
+      names.map((name) => Object.getOwnPropertyDescriptor(globalThis, name)),
+    ).toEqual(before);
+  });
+
+  it('restores every descriptor, deleting the ones that were absent', async () => {
+    const { exposeDomGlobals } = await import('../flow-context');
+    Reflect.deleteProperty(globalThis, 'sessionStorage');
+    const before = names.map((name) =>
+      Object.getOwnPropertyDescriptor(globalThis, name),
+    );
+
+    exposeDomGlobals(dom.window)();
+
+    expect(
+      names.map((name) => Object.getOwnPropertyDescriptor(globalThis, name)),
+    ).toEqual(before);
+    expect('sessionStorage' in globalThis).toBe(false);
+  });
+});

@@ -6,13 +6,11 @@ Files the server flow of `flow-complete.json` serves first party.
 - The `assets` store (`@walkeros/server-store-fs`,
   `basePath: "$env.ASSETS_DIR:./shared"`) reads from it, and the `file`
   transformer answers `GET /walker.js` with it.
-- `walker.js` is generated, not committed. Build the web flow, then copy it here
-  (root `include` also applies to the web build, so writing the bundle straight
-  into this folder is refused as a circular include):
+- `walker.js` is generated, not committed. Build the web flow straight into this
+  folder (web builds ignore root `include`):
 
 ```bash
-walkeros bundle packages/cli/examples/flow-complete.json -f web -o dist/web/walker.js
-cp dist/web/walker.js packages/cli/examples/shared/walker.js
+walkeros bundle packages/cli/examples/flow-complete.json -f web -o packages/cli/examples/shared/walker.js
 ```
 
 - Then build and start the server flow; the artifact carries its own copy of

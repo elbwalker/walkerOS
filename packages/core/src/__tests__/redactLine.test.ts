@@ -378,6 +378,105 @@ describe('scrubSecrets on serialized vendor calls', () => {
   });
 });
 
+describe('scrubSecrets doubly escaped credential fields', () => {
+  it.each([
+    [
+      'escaped quote in a doubly escaped password',
+      String.raw`{\"password\":\"ab\\\"cdSECRETTAIL\"}`,
+    ],
+    ['doubly escaped numeric token', String.raw`{\"token\":12345678}`],
+  ])('masks %s', (_label, input) => {
+    const out = scrubSecrets(input);
+    expect(out).not.toContain('SECRETTAIL');
+    expect(out).not.toContain('12345678');
+  });
+
+  it.each([
+    ['a string value', { password: 'ab"cd\\efSECRETTAIL' }],
+    ['a numeric value', { token: 12345678 }],
+    ['a value ending in a backslash', { password: 'SECRETTAIL\\' }],
+  ])('keeps the outer JSON valid when masking %s', (_label, value) => {
+    const outer = JSON.stringify({ body: JSON.stringify(value), next: 'kept' });
+    const out = scrubSecrets(outer);
+    expect(out).not.toContain('SECRETTAIL');
+    expect(out).not.toContain('12345678');
+    const parsed: { body: string; next: string } = JSON.parse(out);
+    expect(parsed.next).toBe('kept');
+    expect(() => JSON.parse(parsed.body)).not.toThrow();
+  });
+});
+
+describe('scrubSecrets known values', () => {
+  it('masks known values raw and JSON-escaped, longest first, before patterns', () => {
+    const sa =
+      '{"private_key":"-----BEGIN PRIVATE KEY-----\\nabc\\n","client_email":"a@p"}';
+    const escaped = JSON.stringify(sa).slice(1, -1);
+    expect(
+      scrubSecrets(`raw ${sa} esc ${escaped}`, { known: [sa] }),
+    ).not.toMatch(/abc|a@p/);
+    expect(scrubSecrets('abcdefgh', { known: ['abcdef', 'abcdefgh'] })).toBe(
+      '***',
+    );
+    expect(scrubSecrets('x analyt y', { known: ['analyt'] })).toBe('x *** y');
+    expect(scrubSecrets('short abc', { known: ['abc'] })).toBe('short abc');
+  });
+
+  it('masks a multi-line service account inside JSON output and a log line', () => {
+    const sa = JSON.stringify(
+      {
+        type: 'service_account',
+        private_key: 'plainkeybody',
+        client_email: 'svc@proj',
+      },
+      null,
+      2,
+    );
+    const jsonOutput = JSON.stringify({ calls: [{ args: [sa] }] }, null, 2);
+    const logLine = `[flow] push failed ${JSON.stringify({ credentials: sa })}`;
+    for (const line of [jsonOutput, logLine]) {
+      const out = scrubSecrets(line, { known: [sa] });
+      expect(out).not.toContain('plainkeybody');
+      expect(out).not.toContain('svc@proj');
+      expect(out).not.toContain('service_account');
+    }
+    expect(() =>
+      JSON.parse(scrubSecrets(jsonOutput, { known: [sa] })),
+    ).not.toThrow();
+  });
+
+  it('masks a known value escaped twice, as in a request body inside JSON output', () => {
+    const sa = JSON.stringify(
+      { private_key: 'plainkeybody', client_email: 'svc@proj' },
+      null,
+      2,
+    );
+    const body = JSON.stringify({ credentials: sa });
+    const jsonOutput = JSON.stringify({ calls: [{ args: [body] }] });
+    const out = scrubSecrets(jsonOutput, { known: [sa] });
+    expect(out).not.toContain('plainkeybody');
+    expect(out).not.toContain('svc@proj');
+    expect(() => JSON.parse(out)).not.toThrow();
+  });
+
+  it.each([
+    ['an escape letter', { msg: 'line\nabcdefgh' }, 'nabcdefgh'],
+    ['a unicode escape', { msg: 'x\u0001abcdefgh' }, 'u0001abcdefgh'],
+  ])(
+    'keeps JSON valid when a known value starts inside %s',
+    (_label, value, known) => {
+      const out = scrubSecrets(JSON.stringify(value), { known: [known] });
+      expect(() => JSON.parse(out)).not.toThrow();
+      expect(out).not.toContain('abcdefgh');
+    },
+  );
+
+  it('treats regex characters in a known value literally', () => {
+    expect(scrubSecrets('a (x+y)*[z] b', { known: ['(x+y)*[z]'] })).toBe(
+      'a *** b',
+    );
+  });
+});
+
 describe('redactLine (truncating wire variant)', () => {
   it('still truncates to <= 256 chars for the heartbeat wire contract', () => {
     const long = 'Z'.repeat(300);

@@ -58,7 +58,7 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
   };
 
   return {
-    env: { PostHog: MockPostHog as unknown as Env['PostHog'] },
+    env: { PostHog: MockPostHog },
     collected: () => calls,
   };
 }

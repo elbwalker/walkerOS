@@ -2,7 +2,8 @@ import type { WalkerOS } from '.';
 
 /**
  * A recorded function call made during simulation.
- * Captures what a destination called on its env (e.g., window.gtag).
+ * Captures what a destination called on its env (e.g., window.gtag), or a
+ * walker command a source issued (`fn: 'elb'`, first argument verbatim).
  */
 export interface Call {
   /** Dot-path of the function called: "window.gtag", "dataLayer.push" */
@@ -11,6 +12,23 @@ export interface Call {
   args: unknown[];
   /** Unix timestamp in ms */
   ts: number;
+}
+
+/**
+ * Why a simulated destination sent nothing, read from the collector's own
+ * records:
+ * - `consent`: the event was skipped at the consent gate (or queued, with
+ *   `queue: true`). `required` is the destination's `config.consent`,
+ *   `granted` the collector consent plus the event's own consent.
+ * - `pending`: the destination is still waiting for its `require` entries
+ *   (listed in `require`), so it never started.
+ */
+export interface Skipped {
+  reason: 'consent' | 'pending';
+  required?: WalkerOS.Consent;
+  granted?: WalkerOS.Consent;
+  /** `pending` only: the `require` entries still unmet. */
+  require?: string[];
 }
 
 /**
@@ -30,7 +48,14 @@ export interface Result {
    * - destination: [] (destinations don't produce events)
    */
   events: WalkerOS.DeepPartialEvent[];
-  /** Intercepted env calls. Populated for destinations, empty [] for others. */
+  /**
+   * Recorded calls, in time order:
+   * - source: its own walker commands (`fn: 'elb'`, e.g. a CMP's
+   *   `['walker consent', {...}]` or the session's `['user', {...}]`) and
+   *   its mock-env calls
+   * - destination: its intercepted env calls
+   * - transformer, collector: []
+   */
   calls: Call[];
   /** Execution time in ms */
   duration: number;
@@ -43,6 +68,11 @@ export interface Result {
    * available.
    */
   mappingKey?: string;
+  /**
+   * Destination simulations only: why nothing was sent, when the collector
+   * recorded a consent skip or the destination is still pending.
+   */
+  skipped?: Skipped;
   /** Error if the step threw */
   error?: Error;
 }

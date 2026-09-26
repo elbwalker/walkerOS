@@ -451,8 +451,8 @@ Embed JavaScript in JSON for mappings:
 # Build specific flow
 walkeros bundle config.json --flow analytics
 
-# Build all flows
-walkeros bundle config.json --all
+# Build all flows (--all needs an output directory)
+walkeros bundle config.json --all -o dist/all
 ```
 
 ---
@@ -530,9 +530,46 @@ walkeros bundle config.json --all
 
 ---
 
+## The tested example: flow-complete
+
+[flow-complete.json](../../packages/cli/examples/flow-complete.json) holds three
+flows (`web`, `server`, `warehouse`) and is taught in 15 chapters by its guide
+[flow-complete.md](../../packages/cli/examples/flow-complete.md). The manifest
+(`flowCompleteCli` from `@walkeros/cli/examples`) lists every command line the
+guide runs against it, from the walkerOS repo root. The main ones, by chapter:
+
+```bash
+# tour: validate, then simulate one event
+walkeros validate packages/cli/examples/flow-complete.json --strict
+walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"page view"}' --simulate source.browser
+
+# contract: validate the contract block on its own
+walkeros validate "$(jq .contract packages/cli/examples/flow-complete.json)" -t contract
+
+# chains-routing: follow an impression through the server flow
+walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"product impression","trigger":"impression","data":{"id":"SKU-1"}}' --simulate collector.default
+
+# state-stores: build walker.js into the folder the server flow serves
+walkeros bundle packages/cli/examples/flow-complete.json -f web -o packages/cli/examples/shared/walker.js
+
+# build-run: build every flow, build the server artifact, run it
+walkeros bundle packages/cli/examples/flow-complete.json --all -o dist/all
+walkeros bundle packages/cli/examples/flow-complete.json -f server -o dist/server.mjs --release 2026-09-26
+runneros start dist/server.mjs -p 8080 --env-file .env
+```
+
+Chapters for this file's topics: `tour` and `step-envelope` (structure),
+`references` (`$var`, `$env`, `$flow`, `$secret`, `$code`, `$contract`,
+`$store`), `chains-routing` (`before`, `next`, routes), `state-stores` (stores,
+`include`), `build-run` (bundle and run).
+
+---
+
 ## Reference
 
 - [packages/cli/examples/](../../packages/cli/examples/) - Example configs
 - [packages/cli/README.md](../../packages/cli/README.md) - Full CLI docs
-- [flow-complete.json](../../packages/cli/examples/flow-complete.json) -
-  Comprehensive example
+- [flow-complete.json](../../packages/cli/examples/flow-complete.json) - Tested
+  example with three flows
+- [flow-complete.md](../../packages/cli/examples/flow-complete.md) - Its guide,
+  15 chapters

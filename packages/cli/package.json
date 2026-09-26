@@ -28,6 +28,8 @@
   "files": [
     "dist/**",
     "examples/**",
+    "!examples/shared/walker.js",
+    "!dist/examples/shared/walker.js",
     "openapi/spec.json",
     "src/telemetry/flow.json",
     "README.md",

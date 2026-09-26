@@ -26,9 +26,10 @@ import type {
   Ingest,
   Logger,
   Simulation,
+  Source,
   WalkerOS,
 } from '@walkeros/core';
-import { getTmpPath } from '../../core/tmp.js';
+import { tmpRunDir } from '../../core/tmp-names.js';
 import { scrubSecrets } from '../../core/redact-line.js';
 import { toPrintable } from '../../core/to-printable.js';
 import { loadFlowConfig, loadJsonConfig } from '../../config/index.js';
@@ -42,7 +43,11 @@ import { withFlowContext } from './flow-context.js';
 import { buildSimulationResult } from './simulation-result.js';
 import { prepareFlow } from './prepare.js';
 import { schemas } from '@walkeros/core/dev';
-import { runPushCommand } from './run.js';
+import { runPushCommandWithSecrets } from './run.js';
+import {
+  collectKnownSecrets,
+  maskKnownNumbers,
+} from '../../core/known-secrets.js';
 import { legacyExportRefusal, selectDevExamples } from './dev-examples.js';
 import { resolveExportName } from '../../core/resolve-export-name.js';
 
@@ -53,6 +58,11 @@ import { resolveExportName } from '../../core/resolve-export-name.js';
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
+}
+
+/** A flow config (`Flow.Json`): an object with a `flows` object. */
+export function isFlowJson(value: unknown): value is Flow.Json {
+  return isRecord(value) && isRecord(value.flows);
 }
 
 function isString(value: unknown): value is string {
@@ -207,6 +217,8 @@ async function pushCore(
     platform?: string;
     mock?: string[];
     snapshot?: string;
+    raw?: unknown;
+    knownSecrets?: readonly string[];
   } = {},
 ): Promise<PushResult> {
   const logger = createCLILogger({
@@ -218,12 +230,16 @@ async function pushCore(
   let tempDir: string | undefined;
 
   try {
-    // Detect input type
+    // Detect input type. A `raw` config was already read by the caller: it
+    // is a config, and this run reads the input no more.
     logger.debug('Detecting input type');
-    const detected = await detectInput(
-      inputPath,
-      options.platform as Platform | undefined,
-    );
+    const detected =
+      options.raw !== undefined
+        ? { type: 'config' as const }
+        : await detectInput(
+            inputPath,
+            options.platform as Platform | undefined,
+          );
 
     let result: PushResult;
 
@@ -237,6 +253,16 @@ async function pushCore(
     }
 
     if (detected.type === 'config') {
+      // The config as read once: the one `raw`, else the detected content.
+      const raw: unknown =
+        options.raw !== undefined
+          ? options.raw
+          : 'content' in detected
+            ? JSON.parse(detected.content)
+            : undefined;
+      const knownSecrets =
+        options.knownSecrets ??
+        (isFlowJson(raw) ? collectKnownSecrets(raw) : []);
       result = await executeConfigPush(
         {
           config: inputPath,
@@ -251,6 +277,7 @@ async function pushCore(
         (dir) => {
           tempDir = dir;
         },
+        { raw, knownSecrets },
         snapshotCode,
       );
     } else {
@@ -290,20 +317,40 @@ async function pushCore(
  * `runPushCommand` directly to avoid `process.exit` killing Jest workers.
  */
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
-  const result = await runPushCommand(options);
-
-  // Simulate output carries the recorded vendor calls, whose arguments can
-  // hold credentials. It egresses like a log line: serialize, then scrub.
-  const output = scrubSecrets(
-    options.json
-      ? JSON.stringify(toPrintable(result), null, 2)
-      : formatPushResult(result),
-  );
+  const { result, knownSecrets } = await runPushCommandWithSecrets(options);
+  const output = renderPushOutput(result, {
+    json: options.json,
+    knownSecrets,
+  });
 
   // Write to file or stdout
   await writeResult(output + '\n', { output: options.output });
 
   process.exit(result.success ? 0 : 1);
+}
+
+/**
+ * The `walkeros push` output (`--json` or text). Simulate output carries the
+ * recorded vendor calls, whose arguments can hold credentials. It egresses
+ * like a log line: serialize, then scrub, masking the values of the secrets
+ * the flow references (`knownSecrets`) whatever their shape. A number that
+ * prints a known secret is masked before serializing, so `--json` stays JSON.
+ */
+export function renderPushOutput(
+  result: PushResult,
+  options: { json?: boolean; knownSecrets?: readonly string[] } = {},
+): string {
+  const knownSecrets = options.knownSecrets ?? [];
+  return scrubSecrets(
+    options.json
+      ? JSON.stringify(
+          maskKnownNumbers(toPrintable(result), knownSecrets),
+          null,
+          2,
+        )
+      : formatPushResult(result, { knownSecrets }),
+    { known: knownSecrets },
+  );
 }
 
 const MAX_CALL_ARGS_LENGTH = 300;
@@ -317,14 +364,39 @@ function compactJson(value: unknown): string {
  * One call's arguments as compact JSON, cut at 300 chars. Scrubbed before the
  * cut so a secret straddling the cut cannot lose the context that marks it.
  */
-function formatCallArgs(args: unknown[]): string {
-  const text = scrubSecrets(args.map(compactJson).join(','));
+function formatCallArgs(
+  args: unknown[],
+  knownSecrets: readonly string[],
+): string {
+  const text = scrubSecrets(args.map(compactJson).join(','), {
+    known: knownSecrets,
+  });
   return text.length > MAX_CALL_ARGS_LENGTH
     ? `${text.slice(0, MAX_CALL_ARGS_LENGTH - 3)}...`
     : text;
 }
 
-function formatSimulation(simulation: Simulation.Result): string[] {
+/** `granted functional, marketing` style list of the granted keys. */
+function grantedKeys(consent: WalkerOS.Consent | undefined): string {
+  const keys = Object.entries(consent ?? {})
+    .filter(([, granted]) => granted)
+    .map(([key]) => key);
+  return keys.length > 0 ? keys.join(', ') : 'none';
+}
+
+/** One line saying why a simulated destination sent nothing. */
+function formatSkipped(skipped: Simulation.Skipped): string {
+  if (skipped.reason === 'pending') {
+    const waits = skipped.require?.length ? skipped.require.join(', ') : '';
+    return `    pending: waits for ${waits || 'its require'} (require)`;
+  }
+  return `    skipped: consent (requires ${grantedKeys(skipped.required)}; granted ${grantedKeys(skipped.granted)})`;
+}
+
+function formatSimulation(
+  simulation: Simulation.Result,
+  knownSecrets: readonly string[],
+): string[] {
   const lines = [`  ${simulation.step}.${simulation.name}`];
   if (simulation.error) {
     lines.push(`    error: ${simulation.error.message}`);
@@ -336,23 +408,35 @@ function formatSimulation(simulation: Simulation.Result): string[] {
     const unmapped =
       simulation.calls.length > 0 ? 'none' : 'none (skipped before mapping)';
     lines.push(`    mapping: ${simulation.mappingKey ?? unmapped}`);
+    if (simulation.skipped) lines.push(formatSkipped(simulation.skipped));
     for (const call of simulation.calls)
-      lines.push(`    call ${call.fn}(${formatCallArgs(call.args)})`);
+      lines.push(
+        `    call ${call.fn}(${formatCallArgs(call.args, knownSecrets)})`,
+      );
     if (simulation.calls.length === 0) lines.push('    no calls');
     return lines;
   }
+  for (const call of simulation.calls)
+    lines.push(
+      `    call ${call.fn}(${formatCallArgs(call.args, knownSecrets)})`,
+    );
   for (const event of simulation.events)
-    lines.push(`    event ${formatCallArgs([event])}`);
+    lines.push(`    event ${formatCallArgs([event], knownSecrets)}`);
   if (simulation.events.length === 0) lines.push('    no events');
   return lines;
 }
 
 /**
  * Text output of `walkeros push`: the outcome, the push result or one block
- * per simulated step (its mapping and recorded calls), the error, the
- * duration. Not yet scrubbed as a whole; `pushCommand` does that at egress.
+ * per simulated step (its mapping, why nothing was sent, recorded calls), the
+ * error, the duration. Call arguments are scrubbed here (before their cut),
+ * masking `knownSecrets`; `pushCommand` scrubs the whole text at egress.
  */
-export function formatPushResult(result: PushResult): string {
+export function formatPushResult(
+  result: PushResult,
+  options: { knownSecrets?: readonly string[] } = {},
+): string {
+  const knownSecrets = options.knownSecrets ?? [];
   const lines: string[] = [];
   // Reflect the actual outcome. `success: true` only when no destination
   // recorded a failure during init/push/destroy (see executeDestinationPush).
@@ -369,7 +453,7 @@ export function formatPushResult(result: PushResult): string {
     }
   }
   for (const simulation of result.simulations ?? [])
-    lines.push(...formatSimulation(simulation));
+    lines.push(...formatSimulation(simulation, knownSecrets));
   if (!result.success && result.error) lines.push(`  Error: ${result.error}`);
   lines.push(`  Duration: ${result.duration}ms`);
   return lines.join('\n');
@@ -405,6 +489,16 @@ export async function push(
     platform?: Platform;
     mock?: string[];
     snapshot?: string;
+    /**
+     * The config at `configOrPath`, already read by the caller: used as is,
+     * the path is not read again (it still anchors relative paths).
+     */
+    raw?: unknown;
+    /**
+     * Values masked in the flow's logs. Defaults to the values of the
+     * secrets the config references (see `collectKnownSecrets`).
+     */
+    knownSecrets?: readonly string[];
   } = {},
 ): Promise<PushResult> {
   if (typeof configOrPath !== 'string') {
@@ -433,6 +527,8 @@ export async function push(
     platform: options.platform,
     mock: options.mock,
     snapshot: options.snapshot,
+    raw: options.raw,
+    knownSecrets: options.knownSecrets,
   });
 }
 
@@ -444,6 +540,7 @@ async function executeConfigPush(
   validatedEvent: Record<string, unknown>,
   logger: Logger.Instance,
   setTempDir: (dir: string) => void,
+  loaded: { raw: unknown; knownSecrets: readonly string[] },
   snapshotCode?: string,
 ): Promise<PushResult> {
   // Load config
@@ -451,6 +548,7 @@ async function executeConfigPush(
   const { flowSettings, buildOptions } = await loadFlowConfig(options.config!, {
     flowName: options.flow,
     logger,
+    raw: loaded.raw,
   });
 
   const platform = getPlatform(flowSettings);
@@ -460,12 +558,8 @@ async function executeConfigPush(
 
   // Bundle to temp file (env loading moved to __devExports in the bundle)
   logger.debug('Bundling flow configuration');
-  const tempDir = getTmpPath(
-    undefined,
-    `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-  );
+  const tempDir = await tmpRunDir('push');
   setTempDir(tempDir);
-  await fs.ensureDir(tempDir);
   const tempPath = path.join(tempDir, 'flow.mjs');
 
   const pushBuildOptions = {
@@ -493,6 +587,7 @@ async function executeConfigPush(
     snapshotCode,
     platform === 'server' ? 60000 : undefined,
     options,
+    loaded.knownSecrets,
   );
 }
 
@@ -510,12 +605,8 @@ async function executeBundlePush(
   flowLogs: FlowLogOptions = {},
 ): Promise<PushResult> {
   // Write bundle to temp file
-  const tempDir = getTmpPath(
-    undefined,
-    `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-  );
+  const tempDir = await tmpRunDir('push');
   setTempDir(tempDir);
-  await fs.ensureDir(tempDir);
   const tempPath = path.join(tempDir, 'flow.mjs');
   await fs.writeFile(tempPath, bundleContent, 'utf8');
 
@@ -561,6 +652,7 @@ async function executeDestinationPush(
   snapshotCode?: string,
   timeout?: number,
   flowLogs: FlowLogOptions = {},
+  knownSecrets?: readonly string[],
 ): Promise<PushResult> {
   const startTime = Date.now();
   const networkCalls: NetworkCall[] = [];
@@ -588,7 +680,7 @@ async function executeDestinationPush(
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       applyOverrides(config, overrides || {});
-      routeFlowLogsToStderr(config, flowLogs);
+      routeFlowLogs(config, flowLogs, knownSecrets);
 
       const result = await module.startFlow(config);
       if (!result?.collector?.push)
@@ -673,19 +765,25 @@ function buildFailureSummary(failedIds: string[], collector: unknown): string {
 }
 
 /**
- * In `--json` mode stdout carries only the result, so the simulated flow's own
- * logs (collector, steps) go to stderr like the CLI's. The flow's configured
- * level still gates what reaches the handler.
+ * Routes the running flow's own logs (collector, steps) through the CLI
+ * handler. In `--json` mode stdout carries only the result, so they go to
+ * stderr like the CLI's. A simulation and a real push of a flow config always
+ * route them, passing the values of the secrets the flow references
+ * (`knownSecrets`) so every line is masked; a prebuilt bundle without
+ * `--json` keeps the flow's own logger. The flow's configured level still
+ * gates what reaches the handler.
  */
-function routeFlowLogsToStderr(
+function routeFlowLogs(
   flowConfig: { logger?: Logger.Config },
   options: FlowLogOptions,
+  knownSecrets?: readonly string[],
 ): void {
-  if (!options.json) return;
+  if (!options.json && knownSecrets === undefined) return;
   const { handler } = createCLILoggerConfig({
     silent: options.silent,
     verbose: options.verbose,
-    stderr: true,
+    stderr: options.json,
+    knownSecrets,
   });
   flowConfig.logger = { ...flowConfig.logger, handler };
 }
@@ -721,6 +819,96 @@ export interface SimulateSourceOptions extends SimulateDataOptions {
   silent?: boolean;
   verbose?: boolean;
   snapshot?: string;
+  /**
+   * Web sources only: the absolute URL of the simulated page. Defaults to the
+   * input trigger's `options.url` when it is a string, else
+   * `http://localhost`.
+   */
+  pageUrl?: string;
+  /**
+   * The collector's starting consent, handed to `startFlow` as its state
+   * (e.g. the consent a gated source such as the session source waits for).
+   * Never recorded as a call: only the source's own commands are.
+   */
+  consent?: WalkerOS.Consent;
+}
+
+export const PAGE_URL_SCOPE_ERROR =
+  '--page-url sets the page of a simulated web source; for request context use --ingest.';
+
+const DEFAULT_PAGE_URL = 'http://localhost';
+
+/**
+ * The page a simulated web source runs on: an explicit `pageUrl`, else the
+ * trigger's `options.url` when it is a string, else `http://localhost`.
+ */
+function resolvePageUrl(input: unknown, pageUrl: string | undefined): string {
+  const url = pageUrl ?? triggerUrl(input) ?? DEFAULT_PAGE_URL;
+  let parsed: URL | undefined;
+  try {
+    parsed = new URL(url);
+  } catch {
+    parsed = undefined;
+  }
+  // http(s) only: an opaque origin (file:, about:, data:) has no storage.
+  if (parsed?.protocol !== 'http:' && parsed?.protocol !== 'https:')
+    throw new Error(
+      `--page-url must be an absolute http(s) URL, e.g. https://www.example.com/ (got "${url}")`,
+    );
+  return parsed.href;
+}
+
+function triggerUrl(input: unknown): string | undefined {
+  if (!isRecord(input) || !isRecord(input.trigger)) return undefined;
+  const { options } = input.trigger;
+  return isRecord(options) && isString(options.url) ? options.url : undefined;
+}
+
+/** A source definition's `code`, narrowed off the untyped wired config. */
+function isSourceInit(value: unknown): value is Source.Init {
+  return typeof value === 'function';
+}
+
+/** Commands a source uses to wire itself up, not effects it emits. */
+const WIRING_COMMANDS = new Set(['on', 'hook', 'destination']);
+
+/**
+ * Wraps a source's `code` so the walker commands the source itself issues are
+ * recorded in its call shape (`elb`, first argument verbatim): every
+ * `env.command(name, data)` and every `env.elb('walker <name>', data)`, except
+ * the wiring commands. The env is patched in place before `code` runs, so the
+ * collector's own env object (and every scope derived from it) stays the one
+ * the source sees. Commands the collector issues itself (`startFlow`'s starting
+ * state, the simulator's shutdown) never pass through the source's env.
+ */
+function recordSourceCommands(
+  code: Source.Init,
+  calls: Simulation.Call[],
+): Source.Init {
+  const record = (first: unknown, data: unknown, name: string): void => {
+    if (WIRING_COMMANDS.has(name)) return;
+    calls.push({ fn: 'elb', args: [first, data], ts: Date.now() });
+  };
+  return (context) => {
+    const { env } = context;
+    env.command = new Proxy(env.command, {
+      apply(target, thisArg, args: unknown[]) {
+        const [name, data] = args;
+        if (typeof name === 'string') record(name, data, name);
+        return Reflect.apply(target, thisArg, args);
+      },
+    });
+    env.elb = new Proxy(env.elb, {
+      apply(target, thisArg, args: unknown[]) {
+        const [first, data] = args;
+        // The elb protocol: a `walker ` string is a command (see createElb).
+        if (typeof first === 'string' && first.startsWith('walker '))
+          record(first, data, first.slice('walker '.length));
+        return Reflect.apply(target, thisArg, args);
+      },
+    });
+    return code(context);
+  };
 }
 
 /**
@@ -770,12 +958,15 @@ export async function simulateSource(
       };
 
   const prepared = await prepareFlow(prepareInput);
+  // Values of the secrets the flow references: masked in every log line.
+  const knownSecrets = collectKnownSecrets(config);
 
   try {
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
       stderr: options.json,
+      knownSecrets,
     });
 
     // Resolve source package name (needed for __devExports lookup inside context)
@@ -798,6 +989,13 @@ export async function simulateSource(
 
     const networkCalls: NetworkCall[] = [];
 
+    if (options.pageUrl !== undefined && prepared.platform !== 'web')
+      throw new Error(PAGE_URL_SCOPE_ERROR);
+    const pageUrl =
+      prepared.platform === 'web'
+        ? resolvePageUrl(input, options.pageUrl)
+        : undefined;
+
     return await withFlowContext<Simulation.Result>(
       {
         esmPath: prepared.bundlePath,
@@ -805,6 +1003,7 @@ export async function simulateSource(
         logger,
         snapshotCode,
         networkCalls,
+        pageUrl,
       },
       async (module) => {
         // Look up createTrigger from the lazy __devExports registry: await the
@@ -836,7 +1035,7 @@ export async function simulateSource(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
-        routeFlowLogsToStderr(flowConfig, options);
+        routeFlowLogs(flowConfig, options, knownSecrets);
         const unmockedStores = await applyStoreMockEnvs(
           flowConfig,
           prepared.flowSettings,
@@ -846,6 +1045,49 @@ export async function simulateSource(
           logger.debug(
             `Stores without a mock env run as configured: ${unmockedStores.join(', ')}`,
           );
+
+        // Only the simulated source starts: another source (the browser
+        // source's page view, a CMP) would add events of its own.
+        const wiredSources: unknown = flowConfig.sources;
+        const wiredSource = isRecord(wiredSources)
+          ? wiredSources[options.sourceId]
+          : undefined;
+        // A copy, so what this run writes to it (env, config) stays here.
+        const source: Record<string, unknown> | undefined = isRecord(
+          wiredSource,
+        )
+          ? {
+              ...wiredSource,
+              ...(isRecord(wiredSource.config)
+                ? { config: { ...wiredSource.config } }
+                : {}),
+            }
+          : undefined;
+        flowConfig.sources = source ? { [options.sourceId]: source } : {};
+
+        // The walker commands the source issues are its effects: recorded
+        // from its own env, on this run's copy of the definition.
+        const commandCalls: Simulation.Call[] = [];
+        if (source && isSourceInit(source.code))
+          source.code = recordSourceCommands(source.code, commandCalls);
+
+        // A source whose package declares simulation calls runs on its mock
+        // env (e.g. a queue client), and those calls are recorded like a
+        // destination's. Other sources keep the simulated world (the JSDOM
+        // page for web sources).
+        let trackedCalls: Simulation.Call[] = [];
+        const devEnv = getDevEnv(devModule, exportName);
+        if (source && devEnv?.push && devEnv.simulation?.length) {
+          const { wrappedEnv, calls } = wrapEnv({
+            ...devEnv.push,
+            simulation: devEnv.simulation,
+          });
+          source.env = {
+            ...(isRecord(source.env) ? source.env : {}),
+            ...wrappedEnv,
+          };
+          trackedCalls = calls;
+        }
 
         // Capture events at the collector.push boundary via prePush hook.
         // Hook is wired by startFlow (inside createTrigger) before events fire.
@@ -864,6 +1106,8 @@ export async function simulateSource(
             return { ok: true }; // Stop propagation — don't call fn
           },
         };
+
+        if (options.consent) flowConfig.consent = options.consent;
 
         const instance = await createTrigger(flowConfig, {
           sourceId: options.sourceId,
@@ -890,6 +1134,12 @@ export async function simulateSource(
           name: options.sourceId,
           startTime,
           captured,
+          // One timeline: the source's commands and its mock-env calls.
+          usage: {
+            [options.sourceId]: [...commandCalls, ...trackedCalls].sort(
+              (a, b) => a.ts - b.ts,
+            ),
+          },
         });
       },
       (error) =>
@@ -968,6 +1218,8 @@ export interface SimulateTransformerOptions extends SimulateDataOptions {
    * present; provide only the keys the step reads.
    */
   ingest?: Omit<Ingest, '_meta'>;
+  /** The collector's starting consent, handed to `startFlow` as its state. */
+  consent?: WalkerOS.Consent;
 }
 
 /**
@@ -1031,12 +1283,15 @@ export async function simulateTransformer(
       };
 
   const prepared = await prepareFlow(prepareInput);
+  // Values of the secrets the flow references: masked in every log line.
+  const knownSecrets = collectKnownSecrets(config);
 
   try {
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
       stderr: options.json,
+      knownSecrets,
     });
 
     // Load snapshot code if provided
@@ -1063,7 +1318,7 @@ export async function simulateTransformer(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
-        routeFlowLogsToStderr(flowConfig, options);
+        routeFlowLogs(flowConfig, options, knownSecrets);
         const unmockedStores = await applyStoreMockEnvs(
           flowConfig,
           prepared.flowSettings,
@@ -1077,6 +1332,7 @@ export async function simulateTransformer(
         // Don't initialize sources or destinations during transformer simulation.
         if (flowConfig.sources) flowConfig.sources = {};
         if (flowConfig.destinations) flowConfig.destinations = {};
+        if (options.consent) flowConfig.consent = options.consent;
 
         const result = await module.startFlow(flowConfig);
         if (!result?.collector)
@@ -1262,12 +1518,15 @@ export async function simulateCollector(
       };
 
   const prepared = await prepareFlow(prepareInput);
+  // Values of the secrets the flow references: masked in every log line.
+  const knownSecrets = collectKnownSecrets(config);
 
   try {
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
       stderr: options.json,
+      knownSecrets,
     });
 
     // Load snapshot code if provided
@@ -1294,7 +1553,7 @@ export async function simulateCollector(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
-        routeFlowLogsToStderr(flowConfig, options);
+        routeFlowLogs(flowConfig, options, knownSecrets);
         const unmockedStores = await applyStoreMockEnvs(
           flowConfig,
           prepared.flowSettings,
@@ -1389,27 +1648,60 @@ export interface SimulateDestinationOptions extends SimulateDataOptions {
    * fresh ingest so `_meta` is always the runtime's.
    */
   ingest?: Omit<Ingest, '_meta'>;
+  /**
+   * The collector's starting consent: handed to `startFlow` as its initial
+   * state, which applies it pre-run as a consent command that only the target
+   * (the one registered destination) hears. A `require: ["consent"]`
+   * destination starts, the consent gate sees it, and a Consent Mode target
+   * records its consent update. The event's own consent still applies.
+   */
+  consent?: WalkerOS.Consent;
+  /**
+   * Run `collector.command(command, event)` instead of pushing the event: a
+   * step example with `command` (e.g. `consent`), whose `in` is the command's
+   * data. With `consent`, the starting state applies first, then the command.
+   */
+  command?: Flow.StepCommand;
+}
+
+/** A consent record: an object of booleans. */
+function isConsentRecord(value: unknown): value is WalkerOS.Consent {
+  return (
+    isRecord(value) &&
+    Object.values(value).every((granted) => typeof granted === 'boolean')
+  );
+}
+
+/** The `require` entries of a pending destination definition. */
+function pendingRequire(definition: unknown): string[] {
+  if (!isRecord(definition) || !isRecord(definition.config)) return [];
+  const { require } = definition.config;
+  return isStringArray(require) ? require : [];
 }
 
 /**
  * Self-contained destination simulation.
  *
  * Takes a DeepPartialEvent, validates it with Zod, loads the flow config,
- * bundles it, starts the flow, then pushes via collector.push with an include
- * filter so only the target destination receives the event. This gives full
- * pipeline support — consent checks, event mapping, createEvent enrichment,
- * before chains — without manual wiring.
+ * bundles it, then starts the flow with ONLY the target destination (no
+ * other destination initializes against its real env) and `consent` as the
+ * collector's starting state. It pushes the event through the full pipeline
+ * (consent checks, event mapping, createEvent enrichment, before chains), or
+ * runs `command` with the event as its data. When nothing was sent, the
+ * result's `skipped` says why, from the collector's own records.
  */
 export async function simulateDestination(
   configOrPath: string | Flow.Json,
-  event: WalkerOS.DeepPartialEvent,
+  event: WalkerOS.DeepPartialEvent | Record<string, unknown>,
   options: SimulateDestinationOptions,
 ): Promise<Simulation.Result> {
   const startTime = Date.now();
 
-  // Validate event with Zod
-  const parsed = schemas.PartialEventSchema.safeParse(event);
-  if (!parsed.success) {
+  // Validate event with Zod. A command's data is not an event.
+  const parsed = options.command
+    ? undefined
+    : schemas.PartialEventSchema.safeParse(event);
+  if (parsed && !parsed.success) {
     return buildSimulationResult({
       step: 'destination',
       name: options.destinationId,
@@ -1450,12 +1742,15 @@ export async function simulateDestination(
       };
 
   const prepared = await prepareFlow(prepareInput);
+  // Values of the secrets the flow references: masked in every log line.
+  const knownSecrets = collectKnownSecrets(config);
 
   try {
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
       stderr: options.json,
+      knownSecrets,
     });
 
     let snapshotCode: string | undefined;
@@ -1479,8 +1774,37 @@ export async function simulateDestination(
         const flowConfig = module.wireConfig(
           options.data ?? module.__configData ?? undefined,
         );
+
+        // Only the target starts: no source, and no other destination, whose
+        // init would run against its real env (a vendor script, an SDK
+        // client). A missing target fails here, naming the flow's
+        // destinations. The target's config is a copy, so what this run
+        // writes to it (env, require, overrides) stays in this run.
+        const wiredDestinations: unknown = flowConfig.destinations;
+        const wiredTarget = isRecord(wiredDestinations)
+          ? wiredDestinations[options.destinationId]
+          : undefined;
+        if (!isRecord(wiredTarget)) {
+          const available = isRecord(wiredDestinations)
+            ? Object.keys(wiredDestinations).join(', ')
+            : '';
+          throw new Error(
+            `Destination "${options.destinationId}" not found in collector. ` +
+              `Available: ${available || 'none'}`,
+          );
+        }
+        const target: Record<string, unknown> = {
+          ...wiredTarget,
+          config: isRecord(wiredTarget.config) ? { ...wiredTarget.config } : {},
+        };
+        flowConfig.destinations = { [options.destinationId]: target };
+        if (flowConfig.sources) flowConfig.sources = {};
+        // The starting consent is initial collector state: startFlow applies
+        // it pre-run as a consent command, heard only by the target.
+        if (options.consent) flowConfig.consent = options.consent;
+
         applyOverrides(flowConfig, prepared.overrides);
-        routeFlowLogsToStderr(flowConfig, options);
+        routeFlowLogs(flowConfig, options, knownSecrets);
         const unmockedStores = await applyStoreMockEnvs(
           flowConfig,
           prepared.flowSettings,
@@ -1528,12 +1852,8 @@ export async function simulateDestination(
             );
           }
 
-          const destinations = flowConfig.destinations as Record<
-            string,
-            { config?: { env?: Record<string, unknown> } }
-          >;
-          const destConfig = destinations[options.destinationId]?.config;
-          if (destConfig) {
+          const destConfig = target.config;
+          if (isRecord(destConfig)) {
             destConfig.env = devEnv.push;
           }
 
@@ -1543,13 +1863,10 @@ export async function simulateDestination(
               simulation: devEnv.simulation,
             };
             const { wrappedEnv, calls } = wrapEnv(combined);
-            if (destConfig) destConfig.env = wrappedEnv;
+            if (isRecord(destConfig)) destConfig.env = wrappedEnv;
             trackedCalls = calls;
           }
         }
-
-        // Don't initialize sources — unnecessary overhead
-        if (flowConfig.sources) flowConfig.sources = {};
 
         const result = await module.startFlow(flowConfig);
         if (!result?.collector)
@@ -1583,11 +1900,25 @@ export async function simulateDestination(
         // A failed init or push of the target is recorded as its error
         // phase; the result carries it so the simulation reports failure.
         let stepError: string | undefined;
+        // The consent gate's own record of a skipped event: what the
+        // destination requires and the collector consent at that hop.
+        let consentSkip:
+          | { required?: WalkerOS.Consent; consent?: WalkerOS.Consent }
+          | undefined;
+        let delivered = false;
         const captureMappingKey = (state: FlowState): void => {
           if (state.stepId !== targetStepId) return;
           if (state.mappingKey) mappingKey = state.mappingKey;
           if (state.phase === 'error' && state.error && stepError === undefined)
             stepError = state.error.message;
+          if (state.phase === 'out') delivered = true;
+          if (state.phase === 'skip' && state.skipReason === 'consent') {
+            const required = state.meta?.required;
+            consentSkip = {
+              ...(isConsentRecord(required) ? { required } : {}),
+              ...(state.consent ? { consent: state.consent } : {}),
+            };
+          }
         };
         // Guarded: a prebuilt bundle may carry a collector without an
         // observer channel; degrade to an undefined key instead of throwing.
@@ -1595,12 +1926,35 @@ export async function simulateDestination(
           collector.observers.add(captureMappingKey);
         }
 
-        // Full pipeline: consent, mapping, enrichment, before chains
-        // include filter ensures only the target destination receives the event
-        await collector.push(event, {
-          include: [options.destinationId],
-          ingest: simulateIngest(options.destinationId, options.ingest),
-        });
+        if (options.command) {
+          // A command example: its calls (e.g. gtag consent update) are the
+          // output, recorded as they happen.
+          await collector.command(options.command, event);
+        } else {
+          // Full pipeline: consent, mapping, enrichment, before chains.
+          await collector.push(event, {
+            include: [options.destinationId],
+            ingest: simulateIngest(options.destinationId, options.ingest),
+          });
+        }
+
+        // Why nothing was sent: still waiting for its require, or skipped
+        // at the consent gate (queued with `queue: true`).
+        const pending = collector.pending.destinations[options.destinationId];
+        let skipped: Simulation.Skipped | undefined;
+        if (pending) {
+          skipped = { reason: 'pending', require: pendingRequire(pending) };
+        } else if (consentSkip && !delivered) {
+          const eventConsent =
+            'consent' in event && isConsentRecord(event.consent)
+              ? event.consent
+              : {};
+          skipped = {
+            reason: 'consent',
+            ...(consentSkip.required ? { required: consentSkip.required } : {}),
+            granted: { ...consentSkip.consent, ...eventConsent },
+          };
+        }
 
         await collector.command('shutdown');
 
@@ -1612,6 +1966,7 @@ export async function simulateDestination(
             ? { [options.destinationId]: trackedCalls }
             : undefined,
           mappingKey,
+          skipped,
           ...(stepError !== undefined ? { error: stepError } : {}),
         });
       },

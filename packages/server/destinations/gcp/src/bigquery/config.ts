@@ -34,7 +34,7 @@ export function getConfig(
   }
 
   // Use BigQuery from env if available, otherwise use real BigQuery
-  const BigQueryClass = env?.BigQuery || BigQuery;
+  const BigQueryClass: NonNullable<Env['BigQuery']> = env?.BigQuery || BigQuery;
   client = client || new BigQueryClass(options);
 
   const settingsConfig: Settings = {

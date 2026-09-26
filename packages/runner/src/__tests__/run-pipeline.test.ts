@@ -215,6 +215,54 @@ describe('runPipeline', () => {
     );
   });
 
+  it('hands every fetched secret value to onSecrets after injecting it', async () => {
+    jest
+      .mocked(fetchSecrets)
+      .mockResolvedValueOnce({ API_KEY: 'value-abc123' });
+    const seen: Array<{ values: string[]; env: string | undefined }> = [];
+
+    void runPipeline({
+      ...baseOptions,
+      onSecrets: (values) => seen.push({ values, env: process.env.API_KEY }),
+      api: {
+        appUrl: 'https://app.walkeros.io',
+        token: 'test-token',
+        projectId: 'proj_123',
+        flowId: 'flow_456',
+        heartbeatIntervalMs: 60000,
+        cacheDir: '/tmp/cache',
+      },
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    delete process.env.API_KEY;
+
+    expect(seen).toEqual([{ values: ['value-abc123'], env: 'value-abc123' }]);
+  });
+
+  it('does not call onSecrets when the secrets fetch fails', async () => {
+    jest.mocked(fetchSecrets).mockRejectedValueOnce(new Error('network down'));
+    const onSecrets = jest.fn();
+
+    void runPipeline({
+      ...baseOptions,
+      onSecrets,
+      api: {
+        appUrl: 'https://app.walkeros.io',
+        token: 'test-token',
+        projectId: 'proj_123',
+        flowId: 'flow_456',
+        heartbeatIntervalMs: 60000,
+        cacheDir: '/tmp/cache',
+      },
+    });
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(onSecrets).not.toHaveBeenCalled();
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'Could not fetch secrets: network down',
+    );
+  });
+
   it('marks readiness failed and closes health server if loadFlow fails', async () => {
     const mockClose = jest.fn().mockResolvedValue(undefined);
     const mockSetFailed = jest.fn();

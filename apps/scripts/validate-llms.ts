@@ -10,14 +10,21 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from 'fs';
+import { glob } from 'glob';
 import { join, relative } from 'path';
+import {
+  flowCompleteFeatures,
+  resolvePointer,
+} from '../../packages/cli/src/examples/flow-complete.manifest';
 
 interface Issue {
   file: string;
   message: string;
 }
 
-const ROOT = process.cwd();
+// Resolved from this script's location, not the cwd, so the module behaves the
+// same when imported from website/ (tests) as when run from the repo root.
+const ROOT = join(__dirname, '..', '..');
 const BUILD_DIR = join(ROOT, 'website', 'build');
 
 // Docusaurus stamps every internal link with the configured baseUrl, while the
@@ -48,11 +55,16 @@ function readSiteUrl(): string {
   return match[1].replace(/\/+$/, '');
 }
 
-const SITE_URL = readSiteUrl();
+// Read on first use, so importing this module (tests) touches no file.
+let siteUrlCache: string | undefined;
+function siteUrl(): string {
+  siteUrlCache ??= readSiteUrl();
+  return siteUrlCache;
+}
 
 function emittedPath(target: string): string {
-  const pathname = target.startsWith(SITE_URL)
-    ? target.slice(SITE_URL.length)
+  const pathname = target.startsWith(siteUrl())
+    ? target.slice(siteUrl().length)
     : target;
   const relativeTarget =
     BASE_URL !== '/' && pathname.startsWith(BASE_URL)
@@ -100,7 +112,7 @@ function extractMarkdownLinks(content: string): LinkRef[] {
     }))
     .filter(
       ({ target }) =>
-        (target.startsWith('/') || target.startsWith(`${SITE_URL}/`)) &&
+        (target.startsWith('/') || target.startsWith(`${siteUrl()}/`)) &&
         target.endsWith('.md'),
     );
 }
@@ -166,7 +178,7 @@ function checkIndexLinksAbsolute(): void {
     .filter(({ target }) => !target.startsWith('https://'))
     .map(({ target, line }) => ({
       file: `website/build/llms.txt:${line}`,
-      message: `relative link target ${target} (llms.txt links must be fully qualified, e.g. ${SITE_URL}${target.startsWith('/') ? target : `/${target}`})`,
+      message: `relative link target ${target} (llms.txt links must be fully qualified, e.g. ${siteUrl()}${target.startsWith('/') ? target : `/${target}`})`,
     }));
   pushCapped('relative links in llms.txt', found);
 }
@@ -468,6 +480,94 @@ function checkSkillsExport(): void {
   }
 }
 
+// FlowSlice and FlowExample are resolved at build time by
+// website/src/remark/flow-snippets.ts, and website/src/rehype/export-flow-snippets.ts
+// restores their code languages in the export. A throw in that rehype plugin
+// only warns under the llms plugin's default `onRouteError: 'warn'` and drops
+// the page's .md, so guard the outcome here: every docs page rendering a
+// snippet is exported, carries no unresolved tag, and has a ```json fence when
+// it renders a FlowExample or a FlowSlice of an object or array.
+const SNIPPET_TAG = /<(FlowSlice|FlowExample)\b[^>]*?\bfeature="([^"]+)"/g;
+
+export function needsJsonFence(mdx: string, flow: unknown): boolean {
+  for (const m of mdx.matchAll(SNIPPET_TAG)) {
+    if (m[1] === 'FlowExample') return true;
+    const entry = flowCompleteFeatures.find((f) => f.id === m[2]);
+    const value = entry ? resolvePointer(flow, entry.pointer) : undefined;
+    if (typeof value === 'object' && value !== null) return true;
+  }
+  return false;
+}
+
+/**
+ * `pages` maps a docs page (`collector/state`) to its MDX source; `readExport`
+ * returns the page's emitted .md, or undefined when it was not emitted.
+ */
+export function findFlowSnippetExportIssues(
+  pages: Map<string, string>,
+  readExport: (page: string) => string | undefined,
+  flow: unknown,
+): Issue[] {
+  const found: Issue[] = [];
+  for (const [page, mdx] of pages) {
+    if (!/<(FlowSlice|FlowExample)\b/.test(mdx)) continue;
+    const file = `website/docs/${page}.mdx`;
+    const exported = readExport(page);
+    if (exported === undefined) {
+      found.push({
+        file,
+        message:
+          'renders FlowSlice or FlowExample but has no .md export (a flow-snippets export error drops the page)',
+      });
+      continue;
+    }
+    if (/<(FlowSlice|FlowExample)\b/.test(exported))
+      found.push({
+        file,
+        message:
+          'the .md export still contains an unresolved FlowSlice or FlowExample tag',
+      });
+    if (needsJsonFence(mdx, flow) && !/^```json\s*$/m.test(exported))
+      found.push({
+        file,
+        message:
+          'the .md export has no ```json fence for its flow-complete snippets (export-flow-snippets did not run)',
+      });
+  }
+  return found;
+}
+
+// A page `a/b` is exported as docs/a/b.md; an index page `a/index` routes to
+// `/docs/a/` and is written to docs/a.md.
+function readDocsExport(page: string): string | undefined {
+  const route = page.replace(/(^|\/)index$/, '');
+  for (const candidate of [
+    join(BUILD_DIR, 'docs', `${route}.md`),
+    join(BUILD_DIR, 'docs', route, 'index.md'),
+  ]) {
+    if (existsSync(candidate)) return readFileSync(candidate, 'utf-8');
+  }
+  return undefined;
+}
+
+function checkFlowSnippetExports(): void {
+  const docsDir = join(ROOT, 'website', 'docs');
+  const pages = new Map<string, string>();
+  for (const abs of glob.sync('**/*.mdx', { cwd: docsDir, absolute: true })) {
+    pages.set(
+      relative(docsDir, abs).replace(/\.mdx$/, ''),
+      readFileSync(abs, 'utf-8'),
+    );
+  }
+  const flow: unknown = JSON.parse(
+    readFileSync(
+      join(ROOT, 'packages', 'cli', 'examples', 'flow-complete.json'),
+      'utf-8',
+    ),
+  );
+  issues.push(...findFlowSnippetExportIssues(pages, readDocsExport, flow));
+}
+
 function main(): void {
   if (!existsSync(LLMS_INDEX)) {
     // In CI the website build runs before validation, so a missing llms.txt
@@ -499,6 +599,7 @@ function main(): void {
   checkCodeIndentation();
   checkAmplitudeExport();
   checkSkillsExport();
+  checkFlowSnippetExports();
 
   if (issues.length === 0) {
     console.log('✅ LLM Markdown export is complete and intact!\n');
@@ -514,4 +615,6 @@ function main(): void {
   process.exit(1);
 }
 
-main();
+// Importing this module (tests) must not run main()'s process.exit(). tsx
+// transpiles it to CommonJS, so `require.main` identifies the entry point.
+if (require.main === module) main();

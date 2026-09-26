@@ -149,6 +149,18 @@ Use native cache on the file transformer to serve cached files from memory, avoi
 - **Returns `false`**: a served file stops the chain; no destinations receive the event
 - **Content-Length**: automatically set for string and Buffer content
 
+## In the complete example
+
+The server flow of [`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json), the tested example flow, serves the web bundle
+`walker.js` first party from an fs store. The step stops after serving, so a
+script request never becomes an event:
+
+<FlowSlice feature="file-transformer" />
+
+<FlowSlice feature="file-headers" />
+
+<FlowExample feature="file-transformer" />
+
 ## Next steps
 
 - **[Cache](../collector/cache)** - Add response caching before file serving (integrated collector mode)

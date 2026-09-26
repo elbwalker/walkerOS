@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { getPlatform, type Flow } from '@walkeros/core';
 import { createCLILogger } from '../../core/cli-logger.js';
-import { getTmpPath } from '../../core/tmp.js';
+import { tmpRunDir } from '../../core/tmp-names.js';
 import { loadBundleConfig } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import { buildOverrides, type PushOverrides } from './overrides.js';
@@ -84,11 +84,7 @@ export async function prepareFlow(input: PrepareInput): Promise<PreparedFlow> {
 
   // Build mode: bundle to temp file
   logger.debug('Bundling flow configuration');
-  const tempDir = getTmpPath(
-    undefined,
-    `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-  );
-  await fs.ensureDir(tempDir);
+  const tempDir = await tmpRunDir('push');
   const bundlePath = path.join(tempDir, 'flow.mjs');
 
   const pushBuildOptions = {

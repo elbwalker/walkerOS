@@ -8,6 +8,15 @@ import { existsSync, readFileSync } from 'fs';
 import { glob } from 'glob';
 import { join, relative } from 'path';
 import { schemas } from '@walkeros/core/dev';
+import {
+  flowCompleteFeatures,
+  resolvePointer,
+} from '../../packages/cli/src/examples/flow-complete.manifest';
+import {
+  GUIDE_CHAPTERS,
+  findStepExample,
+  guideHeading,
+} from '../../website/src/components/snippets/flow-complete';
 
 interface Issue {
   file: string;
@@ -899,6 +908,256 @@ function checkGa4MappingSnippet(): void {
   }
 }
 
+// Docs as code: pages render parts of packages/cli/examples/flow-complete.json
+// by manifest feature id (`<FlowSlice feature="..." />`,
+// `<FlowExample feature="..." />`), so a snippet cannot drift from the tested
+// file. The gate runs both ways: every rendered id exists in the manifest (and
+// resolves), and every page a manifest feature lists under `docs` exists and
+// renders that feature. A switched page keeps no hand-written v4 flow.json.
+const FLOW_COMPLETE_FILE = 'packages/cli/examples/flow-complete.json';
+const FLOW_COMPLETE_GUIDE = 'packages/cli/examples/flow-complete.md';
+const DOCS_DIR = 'website/docs';
+
+export const SWITCHED_PAGES = [
+  'getting-started/flow/index',
+  'getting-started/flow/routing',
+  'getting-started/flow/contract',
+  'transformers/validate',
+  'collector/state',
+  'collector/cache',
+  'guides/reference-syntax',
+];
+
+type FeatureRender = {
+  component: string;
+  feature: string | undefined;
+  /** Raw `depth` value: `{2}` or `"2"`, undefined when absent. */
+  depth: string | undefined;
+  /** Every attribute name on the tag. */
+  attributes: string[];
+  line: number;
+};
+
+// MDX renders JSX only outside code: a tag shown in a fence, a CodeSnippet
+// template literal or inline code is text (the flow-snippets remark plugin
+// only visits JSX nodes). Blank those regions, keeping newlines so line
+// numbers still match the source.
+export function blankCode(content: string): string {
+  const blank = (region: string): string => region.replace(/[^\n]/g, ' ');
+  return content
+    .replace(/^[ \t]*(```|~~~)[^\n]*\n[\s\S]*?^[ \t]*\1[^\n]*$/gm, blank)
+    .replace(/code=\{`[\s\S]*?`\}/g, blank)
+    .replace(/`[^`\n]+`/g, blank);
+}
+
+export function findFeatureRenders(content: string): FeatureRender[] {
+  const renders: FeatureRender[] = [];
+  const tagRe = /<(FlowSlice|FlowExample)\b([^>]*)>/g;
+  const source = blankCode(content);
+  let m: RegExpExecArray | null;
+  while ((m = tagRe.exec(source)) !== null) {
+    const attrs = m[2].replace(/\/\s*$/, '');
+    renders.push({
+      component: m[1],
+      feature: /\bfeature="([^"]+)"/.exec(attrs)?.[1],
+      depth: /\bdepth=(\{[^}]*\}|"[^"]*")/.exec(attrs)?.[1],
+      // Each match consumes its value, so names inside values never count.
+      attributes: [
+        ...attrs.matchAll(
+          /([A-Za-z_][\w-]*)(?:\s*=\s*("[^"]*"|'[^']*'|\{[^}]*\}))?/g,
+        ),
+      ].map((a) => a[1]),
+      line: content.slice(0, m.index).split('\n').length,
+    });
+  }
+  return renders;
+}
+
+// A full config (top-level "version": 4 plus "flows") written by hand. Partial
+// fragments stay allowed: they illustrate a single key.
+export function findHandWrittenFlowSnippets(content: string): number[] {
+  return extractCodeBlocks(content)
+    .filter(({ code }) => {
+      const trimmed = code.trim();
+      return (
+        trimmed.startsWith('{') &&
+        /"version"\s*:\s*4\b/.test(trimmed) &&
+        trimmed.includes('"flows"')
+      );
+    })
+    .map(({ line }) => line);
+}
+
+// FlowSlice and FlowExample are not components: the remark plugin
+// website/src/remark/flow-snippets.ts resolves them at build time, so a page
+// never imports them.
+export function findFlowComponentImports(content: string): number[] {
+  const lines: number[] = [];
+  blankCode(content)
+    .split('\n')
+    .forEach((line, index) => {
+      if (/^\s*import\b.*\b(FlowSlice|FlowExample)\b/.test(line))
+        lines.push(index + 1);
+    });
+  return lines;
+}
+
+type DocsFinding = { file: string; line?: number; message: string };
+
+export function findFeatureDriftIssues(
+  pages: Map<string, string>,
+  file: unknown,
+  guide: string,
+): DocsFinding[] {
+  const findings: DocsFinding[] = [];
+  const pageFile = (page: string): string => `${DOCS_DIR}/${page}.mdx`;
+  const rendered = new Map<string, Set<string>>();
+
+  for (const [page, content] of pages) {
+    const ids = new Set<string>();
+    rendered.set(page, ids);
+    for (const line of findFlowComponentImports(content)) {
+      findings.push({
+        file: pageFile(page),
+        line,
+        message:
+          'FlowSlice and FlowExample are resolved at build time by website/src/remark/flow-snippets.ts; remove the import',
+      });
+    }
+    for (const render of findFeatureRenders(content)) {
+      const at = { file: pageFile(page), line: render.line };
+      if (!render.feature) {
+        findings.push({
+          ...at,
+          message: `<${render.component}> needs a double-quoted literal feature="<id>"`,
+        });
+        continue;
+      }
+      const allowed =
+        render.component === 'FlowSlice' ? ['feature', 'depth'] : ['feature'];
+      render.attributes.forEach((name, index) => {
+        if (!allowed.includes(name))
+          findings.push({
+            ...at,
+            message: `<${render.component}>: unknown attribute "${name}"`,
+          });
+        else if (render.attributes.indexOf(name) !== index)
+          findings.push({
+            ...at,
+            message: `<${render.component}>: duplicate attribute "${name}"`,
+          });
+      });
+      if (render.depth !== undefined && !/^\{\s*\d+\s*\}$/.test(render.depth))
+        findings.push({
+          ...at,
+          message: `<${render.component}>: depth must be a non-negative integer literal, depth={1}`,
+        });
+      const entry = flowCompleteFeatures.find((f) => f.id === render.feature);
+      if (!entry) {
+        findings.push({
+          ...at,
+          message: `<${render.component} feature="${render.feature}"> is not a flow-complete manifest feature`,
+        });
+        continue;
+      }
+      if (resolvePointer(file, entry.pointer) === undefined) {
+        findings.push({
+          ...at,
+          message: `feature "${entry.id}" points at ${entry.pointer}, which does not resolve in ${FLOW_COMPLETE_FILE}`,
+        });
+      }
+      if (render.component === 'FlowExample') {
+        if (!entry.example) {
+          findings.push({
+            ...at,
+            message: `<FlowExample feature="${entry.id}">: the feature names no example`,
+          });
+        } else if (!findStepExample(file, entry.pointer, entry.example)) {
+          findings.push({
+            ...at,
+            message: `<FlowExample feature="${entry.id}">: example ${entry.example.step}.${entry.example.name} not found`,
+          });
+        }
+      }
+      ids.add(entry.id);
+    }
+  }
+
+  for (const entry of flowCompleteFeatures) {
+    for (const { page } of entry.docs) {
+      const ids = rendered.get(page);
+      if (!ids) {
+        findings.push({
+          file: pageFile(page),
+          message: `manifest feature "${entry.id}" lists docs page ${page}, which does not exist`,
+        });
+      } else if (!ids.has(entry.id)) {
+        findings.push({
+          file: pageFile(page),
+          message: `manifest feature "${entry.id}" lists this page, but the page does not render it (<FlowSlice feature="${entry.id}" />)`,
+        });
+      }
+    }
+  }
+
+  for (const page of SWITCHED_PAGES) {
+    const content = pages.get(page);
+    if (content === undefined) {
+      findings.push({
+        file: pageFile(page),
+        message: 'switched page missing',
+      });
+      continue;
+    }
+    for (const line of findHandWrittenFlowSnippets(content)) {
+      findings.push({
+        file: pageFile(page),
+        line,
+        message:
+          'hand-written v4 flow.json on a switched page: render the flow-complete feature with <FlowSlice> instead',
+      });
+    }
+  }
+
+  const headings = new Set(
+    guide.split('\n').filter((line) => line.startsWith('## ')),
+  );
+  for (const chapter of Object.keys(GUIDE_CHAPTERS)) {
+    if (!isChapterId(chapter)) continue;
+    if (!headings.has(`## ${guideHeading(chapter)}`)) {
+      findings.push({
+        file: 'website/src/components/snippets/flow-complete.ts',
+        message: `guide link for chapter "${chapter}" has no heading "## ${guideHeading(chapter)}" in ${FLOW_COMPLETE_GUIDE}`,
+      });
+    }
+  }
+
+  return findings;
+}
+
+function isChapterId(value: string): value is keyof typeof GUIDE_CHAPTERS {
+  return Object.prototype.hasOwnProperty.call(GUIDE_CHAPTERS, value);
+}
+
+function checkFlowCompleteDocs(): void {
+  const pages = new Map<string, string>();
+  for (const abs of glob.sync(`${DOCS_DIR}/**/*.mdx`, {
+    cwd: ROOT,
+    ignore: ['**/node_modules/**'],
+    absolute: true,
+  })) {
+    const page = relative(join(ROOT, DOCS_DIR), abs).replace(/\.mdx$/, '');
+    pages.set(page, readFileSync(abs, 'utf-8'));
+  }
+  const file: unknown = JSON.parse(
+    readFileSync(join(ROOT, FLOW_COMPLETE_FILE), 'utf-8'),
+  );
+  const guide = readFileSync(join(ROOT, FLOW_COMPLETE_GUIDE), 'utf-8');
+  for (const finding of findFeatureDriftIssues(pages, file, guide)) {
+    issues.push({ ...finding, severity: 'error' });
+  }
+}
+
 async function main() {
   console.log('📋 Validating documentation standards...\n');
 
@@ -929,6 +1188,7 @@ async function main() {
   checkRecipeProof();
   checkFlowJsonSnippets();
   checkBoundaryRegister();
+  checkFlowCompleteDocs();
 
   const errors = issues.filter((i) => i.severity === 'error');
   const warnings = issues.filter((i) => i.severity === 'warning');

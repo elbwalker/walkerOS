@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { VERSION } from './version.js';
 import { setClientContext } from './core/client-context.js';
 import { handleCliError } from './core/api-error.js';
@@ -183,6 +183,20 @@ program
     '--ingest <source>',
     'pipeline context for a simulated transformer, collector or destination (JSON object, file path, or URL)',
   )
+  .option(
+    '--consent <source>',
+    'starting collector consent for a simulation, any step (JSON object of booleans, file path, or URL)',
+  )
+  .addOption(
+    new Option(
+      '--command <name>',
+      'simulated destination runs this collector command with the event as its data, instead of a push',
+    ).choices(['config', 'consent', 'user', 'run']),
+  )
+  .option(
+    '--page-url <url>',
+    'page URL of a simulated web source (absolute URL; default: the example trigger url, else http://localhost)',
+  )
   .action(async (file, options) => {
     await pushCommand({
       config: file,
@@ -197,6 +211,9 @@ program
       mock: options.mock,
       snapshot: options.snapshot,
       ingestSource: options.ingest,
+      consentSource: options.consent,
+      command: options.command,
+      pageUrl: options.pageUrl,
     });
   });
 

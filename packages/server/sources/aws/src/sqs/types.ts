@@ -7,12 +7,33 @@ import type {
   SQSClientConfig,
   Message,
   ReceiveMessageCommand,
+  ReceiveMessageCommandOutput,
   DeleteMessageCommand,
+  DeleteMessageCommandOutput,
   CreateQueueCommand,
+  CreateQueueCommandOutput,
   GetQueueUrlCommand,
+  GetQueueUrlCommandOutput,
   GetQueueAttributesCommand,
+  GetQueueAttributesCommandOutput,
 } from '@aws-sdk/client-sqs';
 import type { SNSClient, SubscribeCommand } from '@aws-sdk/client-sns';
+
+/**
+ * The part of an AWS SDK v3 SQS client this source calls: `send` with the
+ * commands it builds, and an optional `destroy`. `SQSClient` satisfies it, and
+ * so does an injected mock (tests, simulate) without a cast.
+ */
+export interface SqsClient {
+  send(command: GetQueueUrlCommand): Promise<GetQueueUrlCommandOutput>;
+  send(
+    command: GetQueueAttributesCommand,
+  ): Promise<GetQueueAttributesCommandOutput>;
+  send(command: ReceiveMessageCommand): Promise<ReceiveMessageCommandOutput>;
+  send(command: DeleteMessageCommand): Promise<DeleteMessageCommandOutput>;
+  send(command: CreateQueueCommand): Promise<CreateQueueCommandOutput>;
+  destroy?(): void;
+}
 
 declare module '@walkeros/core' {
   interface SourceMap {
@@ -24,7 +45,7 @@ export type Decoder = 'json' | 'text' | 'raw';
 
 export interface Settings {
   // User-supplied OR populated by getConfig(); single field for both. Mirrors the Pub/Sub pull source.
-  client: SQSClient;
+  client: SqsClient;
   // Required. Used by setup to provision and by init to resolve the URL.
   queueName: string;
   // AWS region. Default: 'eu-central-1'.
@@ -51,7 +72,7 @@ export interface Settings {
 
 export interface InitSettings {
   queueName: string;
-  client?: SQSClient;
+  client?: SqsClient;
   region?: string;
   queueUrl?: string;
   config?: SQSClientConfig;
@@ -101,12 +122,12 @@ export type Push = (
 
 export interface Env extends CoreSource.Env {
   AWS?: {
-    SQSClient: typeof SQSClient;
-    ReceiveMessageCommand: typeof ReceiveMessageCommand;
-    DeleteMessageCommand: typeof DeleteMessageCommand;
-    CreateQueueCommand: typeof CreateQueueCommand;
-    GetQueueUrlCommand: typeof GetQueueUrlCommand;
-    GetQueueAttributesCommand: typeof GetQueueAttributesCommand;
+    SQSClient: new (config: SQSClientConfig) => SqsClient;
+    ReceiveMessageCommand?: typeof ReceiveMessageCommand;
+    DeleteMessageCommand?: typeof DeleteMessageCommand;
+    CreateQueueCommand?: typeof CreateQueueCommand;
+    GetQueueUrlCommand?: typeof GetQueueUrlCommand;
+    GetQueueAttributesCommand?: typeof GetQueueAttributesCommand;
     // SNS used by setup only when subscribeToSnsTopic is set.
     SNSClient?: typeof SNSClient;
     SubscribeCommand?: typeof SubscribeCommand;

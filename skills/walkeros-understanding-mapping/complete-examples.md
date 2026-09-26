@@ -101,9 +101,20 @@ const destinationConfig = {
 
 ## Live Reference
 
-For the most comprehensive example covering 53+ features, see:
+The tested example
+[flow-complete.json](../../packages/cli/examples/flow-complete.json) uses every
+mapping feature on real destinations. Look them up by feature id in the manifest
+(`flowCompleteFeatures` from `@walkeros/cli/examples`: JSON Pointer plus note)
+instead of copying JSON; the guide
+[flow-complete.md](../../packages/cli/examples/flow-complete.md) teaches them in
+the chapters `mapping` and `consent-privacy`.
 
-- [flow-complete.json](../../packages/cli/examples/flow-complete.json) -
-  Comprehensive CLI example
-- [flow-complete.md](../../packages/cli/examples/flow-complete.md) - Feature
-  inventory
+| Mapping feature                       | Feature ids                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------ |
+| Rules per entity and action           | `destination-mapping`, `rule-name`, `rule-data`, `mapping-wildcard-ignore`     |
+| Values                                | `value-key`, `value-map`, `value-loop`, `value-set`, `value-fn`, `value-value` |
+| Conditions and fallbacks              | `value-condition`, `value-fallback`, `rule-condition`                          |
+| Consent and policy                    | `rule-consent`, `value-consent`, `rule-policy`, `value-validate`               |
+| Per-event settings, batching, include | `rule-settings`, `rule-batch`, `destination-include`                           |
+| Patching a package default rule       | `rule-extend`, `rule-remove`                                                   |
+| A whole rule: order complete to GA4   | `ga4-purchase`                                                                 |

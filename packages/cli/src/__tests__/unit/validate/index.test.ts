@@ -133,18 +133,17 @@ describe('validate programmatic API', () => {
         { path: 'destinations.nonexistent' },
       );
       expect(result.valid).toBe(false);
-      expect(result.errors[0].code).toBe('ENTRY_VALIDATION');
+      expect(result.errors[0].code).toBe('ENTRY_NOT_FOUND');
     });
 
-    it('ignores type when path is provided', async () => {
-      // Even though type is 'event', path takes priority
+    it('rejects path with a non-flow type as OPTION_NOT_APPLICABLE', async () => {
       const result = await validate(
         'event',
         {},
         { path: 'destinations.nonexistent' },
       );
       expect(result.valid).toBe(false);
-      expect(result.errors[0].code).toBe('ENTRY_VALIDATION');
+      expect(result.errors[0].code).toBe('OPTION_NOT_APPLICABLE');
     });
   });
 });

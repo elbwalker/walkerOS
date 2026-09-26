@@ -19,56 +19,15 @@ A flow configuration uses the `Flow.Json` format with two required fields:
 1. **`version`** - Schema version (`4`)
 2. **`flows`** - Named flow configurations (each a `Flow`)
 
-### Basic example
+### Example
 
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "flows": {
-    "default": {
-      "config": {
-        "platform": "web",
-        "bundle": {
-          "packages": {
-            "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
-            "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
-          }
-        }
-      },
-      "sources": {
-        "browser": {
-          "package": "@walkeros/web-source-browser",
-          "config": {
-            "settings": {
-              "pageview": true,
-              "session": true
-            }
-          }
-        }
-      },
-      "destinations": {
-        "api": {
-          "package": "@walkeros/web-destination-api",
-          "config": {
-            "settings": {
-              "url": "https://analytics.example.com/events",
-              "method": "POST",
-              "headers": {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer your-api-key"
-              }
-            }
-          }
-        }
-      },
-      "collector": { "run": true }
-    }
-  }
-}`}
-  language="json"
-/>
+The examples on this page come from
+[`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json),
+a tested ecommerce setup with three flows: `web` in the browser, `server`
+behind it, and `warehouse` reading the Pub/Sub topic into BigQuery. For a
+minimal first flow, start with the [Quickstart](/docs/getting-started/quickstart/).
 
-This captures browser DOM events and sends them to your analytics API endpoint via HTTP POST requests.
+<FlowSlice feature="flows-multi" depth={2} />
 
 ## Config syntax: `package:` vs `code:`
 
@@ -126,29 +85,11 @@ Each flow in `flows` is a `Flow` that defines runtime behavior. Per-flow build/r
 
 Platform is set explicitly via `config.platform`:
 
-<CodeSnippet
-  code={`{
-    "version": 4,
-    "flows": {
-      "default": {
-        "config": { "platform": "server" }
-      }
-    }
-}`}
-  language="json"
-/>
+<FlowSlice feature="platform" />
 
-<CodeSnippet
-  code={`{
-    "version": 4,
-    "flows": {
-      "default": {
-        "config": { "platform": "web" }
-      }
-    }
-}`}
-  language="json"
-/>
+It sits in the flow's `config` next to the other build and runtime metadata:
+
+<FlowSlice feature="flow-config" />
 
 **Platform options:**
 - `"platform": "server"` - Node.js server environment (HTTP endpoints, cloud functions)
@@ -410,263 +351,19 @@ For explicit control over the order, use an array instead of a string. The array
 - **Destination chain**: Use `before` on a destination to run transformers for that destination only
 - **Post-push chain**: Use `next` on a destination to process events after the destination push completes
 
-<CodeSnippet
-  code={`{
-  "sources": {
-    "http": {
-      "package": "@walkeros/server-source-express",
-      "before": "decoder",
-      "next": "fingerprint"
-    }
-  },
-  "transformers": {
-    "decoder": { "package": "@walkeros/transformer-decoder" },
-    "fingerprint": { "package": "@walkeros/server-transformer-fingerprint" },
-    "redact": { "package": "@walkeros/transformer-redact" },
-    "auditLog": { "package": "@walkeros/transformer-audit" }
-  },
-  "destinations": {
-    "analytics": {
-      "package": "@walkeros/server-destination-gcp",
-      "before": "redact",
-      "next": "auditLog"
-    }
-  }
-}`}
-  language="json"
-/>
+The server flow of the complete example uses the source, collector and
+destination positions, shown step by step on the [Routing](./routing.mdx#where-transformers-run)
+page.
 
-All chain fields (`before` and `next`, including `collector.next`) accept the same route grammar: a transformer id, an array, or a route config (see [Conditional routing](#conditional-routing) below).
+All chain fields (`before` and `next`, including `collector.next`) accept the same route grammar: a transformer id, an array, or a route config (see [Conditional routing](./routing.mdx#conditional-routing)).
 
 See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
 
 ### Connection rules
 
-Sources, transformers, collectors, and destinations connect in specific ways. This table summarizes every valid connection:
+Sources, transformers, the collector and destinations connect through chain fields (`before` and `next`). The connection table, chain resolution, route operators and dropping events with `stop` are on the [Routing](./routing.mdx) page.
 
-| From | To | Field | Notes |
-|------|----|-------|-------|
-| Source | Transformer | `before` on source | Consent-exempt preprocessing |
-| Source | Transformer | `next` on source | Source chain, runs before the collector |
-| Source | Collector | omit `next` | Default: events go straight to collector |
-| Transformer | Transformer | `before` on transformer | Pre-transform enrichment |
-| Transformer | Transformer | `next` on transformer | Chain continues to next transformer |
-| Collector | Transformer | `next` on collector | Collector chain, runs once per event before the destination fan-out |
-| Collector | Transformer | `before` on destination | Destination chain, runs for that destination only |
-| Collector | Destination | omit `collector.next` and `before` | Default: events go straight to every destination |
-| Destination | Transformer | `next` on destination | Post-push processing |
-
-**Connections that are not allowed:**
-- Source to source
-- Source directly to destination (events must pass through the collector)
-- Collector to source
-
-#### Chain resolution
-
-Every chain field (`source.before`, `source.next`, `transformer.before`, `transformer.next`, `collector.next`, `destination.before`, `destination.next`) accepts the same value and resolves it the same way:
-
-| Value | Behavior |
-|-------|----------|
-| `"fingerprint"` (string) | Runs `fingerprint`, then its own `next`, and so on until a step has no `next` |
-| `["fingerprint", "enrich"]` (array) | Runs the array in order. A member's own `next` is inserted right after that member, then the array continues |
-
-For example, `["bot", "validate", "session"]` where `bot` has `"next": "flag"` runs `bot`, `flag`, `validate`, `session`. Insertion is recursive: if `flag` has a `next` of its own, it runs right after `flag`. A string is the one-member case of the same rule.
-
-The rules that apply everywhere:
-
-1. **Resolved per hop**: each route is evaluated when the event reaches it, never ahead of time. Its `match` reads `{ ingest, event }` as the previous step left them, so a route can decide on a value an earlier step loaded, for example a `state` get that writes `ingest.tier`. A conditional `next` on a transformer sees what that transformer did.
-2. **Repeated steps run as written**: a step listed twice runs twice.
-3. **Cycles**: a transformer's own `next` that leads back to a step already on that insertion path is skipped. Each copy of an event is also limited to 256 steps.
-4. **Unknown ids**: an id that names no transformer is logged as a warning and skipped, and the chain continues. `walkeros validate` reports it as an `UNKNOWN_ROUTE_TARGET` error.
-5. **Forks and stops**: `many` splits the event into independent copies and `stop` ends one copy, see [Route operators](#route-operators) and [Dropping an event with `stop`](#dropping-an-event-with-stop).
-
-#### Where transformers run
-
-All transformers live in a single `transformers` pool. Their position in the pipeline depends on which field references them:
-
-```
-[Source.before] → Source ──[next]──→ Source chain ──→ Collector ──[next]──→ Collector chain ──→ fan-out ──[before]──→ Destination chain ──→ Destination ──[next]──→ Post-push
-```
-
-The same transformer can appear in several chains. For example, you might use `fingerprint` in a source's `next` chain and again in a destination's `before` chain. Each invocation runs independently.
-
-Use `collector.next` for work every destination needs, and `destination.before` for work only one destination needs. The collector chain runs once per event, after the collector completed it (globals, user, consent, ids) and before the event is handed to the destinations.
-
-<CodeSnippet
-  code={`{
-  "sources": {
-    "http": {
-      "package": "@walkeros/server-source-express",
-      "next": "fingerprint"
-    }
-  },
-  "transformers": {
-    "fingerprint": {
-      "package": "@walkeros/server-transformer-fingerprint"
-    },
-    "validate": {
-      "package": "@walkeros/transformer-validate"
-    },
-    "enrich": {
-      "package": "@walkeros/transformer-enricher"
-    }
-  },
-  "collector": {
-    "next": "validate"
-  },
-  "destinations": {
-    "analytics": {
-      "package": "@walkeros/server-destination-gcp",
-      "before": "enrich"
-    },
-    "archive": {
-      "package": "@walkeros/server-destination-gcp"
-    }
-  }
-}`}
-  language="json"
-/>
-
-In this config, `fingerprint` runs before the collector (source chain), `validate` runs once per event for both destinations (collector chain), and `enrich` runs only before the `analytics` destination (destination chain).
-
-#### Conditional routing
-
-Every chain field (`source.before`, `source.next`, `transformer.before`, `transformer.next`, `collector.next`, `destination.before`, `destination.next`) accepts a `Route`. `Route` is recursive:
-
-```typescript
-type Route = string | Route[] | RouteConfig;
-```
-
-A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, `stop`, or none of them (pure gate that only filters by `match`). `match` is optional everywhere; omit it to always match.
-
-At every position, `match` reads the same root: `{ ingest, event }`. Use `ingest.*` for request context and `event.*` for the event as it is at that point (at `source.before`, the source's raw output). Each route is evaluated only when the event reaches it.
-
-##### Route operators
-
-A `RouteConfig` is a disjoint union. Pick the operator that matches the routing shape you need:
-
-- `next`: single continuation. Optionally gated by `match`.
-- `one`: first-match dispatch. Walk entries in order; the first whose `match` passes wins, and the chain continues with that entry's `Route`.
-- `many`: all-match fan-out, allowed in every chain field. Every matching entry becomes its own copy of the event, and each copy finishes the rest of the path on its own: the rest of the array, every enclosing chain, and the positions after it (collector, destinations). Copies are never merged. If only one entry matches, the event continues without a copy.
-- `stop`: `{ "stop": true }` ends the running copy of the event. With `match`, it ends the copy only when the match passes; otherwise the chain continues.
-
-An array made only of route configs, with no transformer id in it, is an implicit `one`: the first matching entry wins. Write `{ "one": [...] }` to make that explicit, or add a transformer id to make it a sequence.
-
-First-match dispatch is the `one` operator:
-
-<CodeSnippet
-  code={`{
-  "sources": {
-    "http": {
-      "package": "@walkeros/server-source-express",
-      "next": {
-        "one": [
-          {
-            "match": { "key": "ingest.path", "operator": "prefix", "value": "/purchase" },
-            "next": "purchase_parser"
-          },
-          { "next": "default_parser" }
-        ]
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-`one` entries are evaluated in order and the first matching `Route` wins. The trailing entry omits `match`, so it always matches and acts as the default branch. If no entry matches, the route selects nothing and the event continues unchanged, here to the collector.
-
-Fan-out is the `many` operator. Use it when one inbound event needs to feed several independent branches, for example a parser plus an audit log:
-
-<CodeSnippet
-  code={`{
-  "sources": {
-    "http": {
-      "package": "@walkeros/server-source-express",
-      "next": {
-        "many": [
-          {
-            "match": { "key": "ingest.path", "operator": "prefix", "value": "/purchase" },
-            "next": "purchase_parser"
-          },
-          { "next": "audit_log" }
-        ]
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-A request to `/purchase` matches both entries, so it becomes two copies: one runs `purchase_parser`, the other `audit_log`, and each then continues to the collector and the destinations on its own. Any other request matches only `audit_log` and continues without a copy. If no entry matches, the event continues unchanged.
-
-Each copy gets its own `event.id`, derived from the original id and the branch position, so deduplication on `event.id` (and vendor deduplication such as Meta's `event_id`) keeps every copy. The copies share the same `trace`. A transformer that returns an array of results forks the same way.
-
-`many` works in every chain field and at any depth. Inside an array, each copy finishes the rest of the array:
-
-```json
-"next": ["decode", { "many": ["enrich_a", "enrich_b"] }, "session"]
-```
-
-This runs `decode`, then two copies: `enrich_a` then `session`, and `enrich_b` then `session`.
-
-#### Dropping an event with `stop`
-
-A `stop` entry ends the running copy of the event. Combine it with `match` to drop only some events; without `match` it always stops. A `stop` that does not match falls through and the chain continues. In a `many`, a `stop` ends only its own copy; the other copies continue.
-
-What a stop means depends on the position it is resolved in:
-
-| Position | A resolved `stop` means |
-|----------|-------------------------|
-| `source.before`, `source.next` | The event never reaches the collector. The push result is `{ ok: true, dropped: true }` |
-| `transformer.before`, `transformer.next`, a transformer result `{ next }` | The running copy ends; the position that started the chain applies its own meaning |
-| `collector.next` | No destination receives the event |
-| `destination.before` | This destination skips the event; other destinations are unaffected |
-| `destination.next` | The post-push chain ends; delivery already happened |
-
-`collector.next` runs before the destination fan-out, so a `stop` there drops the event for **all** destinations. To drop an event for one destination only, put the `stop` in that destination's `before`.
-
-Drop product impressions everywhere:
-
-```json
-"collector": {
-  "next": [
-    { "match": { "key": "event.name", "operator": "eq", "value": "product impression" }, "stop": true },
-    "session"
-  ]
-}
-```
-
-Drop product impressions for one vendor only:
-
-```json
-"destinations": {
-  "meta": {
-    "package": "@walkeros/web-destination-meta",
-    "before": [
-      { "match": { "key": "event.name", "operator": "eq", "value": "product impression" }, "stop": true },
-      "redact"
-    ]
-  }
-}
-```
-
-A dropped event is recorded as a `skip` with reason `dropped` in the flow's observability data. `walkeros validate` warns about entries placed after an unconditional `stop`, because they can never run.
-
-To name and reuse a chain without writing code, declare a **path** transformer: a transformer entry with no `code` / `package`, just `before` / `next` / `cache`. The collector synthesizes a code-less passthrough so the named entry can be referenced from any `Route`:
-
-<CodeSnippet
-  code={`{
-  "transformers": {
-    "purchase_parser": {
-      "next": ["fingerprint", "enrich"]
-    }
-  }
-}`}
-  language="json"
-/>
-
-#### Deferred activation with `require`
+### Deferred activation with `require`
 
 Sources and destinations support `require` to delay initialization until a specific collector event fires. This is commonly used for consent-gated loading:
 
@@ -808,125 +505,31 @@ forwarded to the browser source's `settings.elb` with a warning.
 
 ## Multi-flow configuration
 
-For managing dev/staging/production flows in one file:
-
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "variables": {
-    "defaultCurrency": "USD"
-  },
-  "flows": {
-    "development": {
-      "config": {
-        "platform": "server",
-        "bundle": {
-          "packages": {
-            "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
-          }
-        }
-      },
-      "destinations": {
-        "console": {
-          "package": "@walkeros/destination-demo",
-          "config": {
-            "settings": { "name": "Dev Logger" }
-          }
-        }
-      },
-      "collector": {}
-    },
-    "production": {
-      "config": {
-        "platform": "server",
-        "bundle": {
-          "packages": {
-            "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] }
-          }
-        }
-      },
-      "destinations": {
-        "bigquery": {
-          "package": "@walkeros/server-destination-gcp",
-          "config": {
-            "settings": {
-              "projectId": "prod-project"
-            }
-          }
-        }
-      },
-      "collector": {}
-    }
-  }
-}`}
-  language="json"
-/>
+One file holds several flows. The complete example splits by platform (`web`,
+`server`, `warehouse`, see [Example](#example)); the same works per environment,
+for example `development` and `production`.
 
 Build specific flows using the CLI:
 
 <CodeSnippet
-  code={`# Build development flow
-walkeros bundle config.json --flow development
+  code={`# Build the web flow
+walkeros bundle flow.json --flow web
 
-# Build production flow
-walkeros bundle config.json --flow production
+# Build the server flow
+walkeros bundle flow.json --flow server
 
-# Build all flows
-walkeros bundle config.json --all`}
+# Build all flows (--all needs an output directory)
+walkeros bundle flow.json --all -o dist/all`}
   language="bash"
 />
 
 ### Cross-flow references with `$flow`
 
-Flows in the same file can reference each other's `config` block via `$flow.<name>.<path>`. The most common case is linking a web flow's API destination to a server flow's deployed URL:
+Flows in the same file can reference each other's `config` block via `$flow.<name>.<path>`. The most common case is linking a web flow's destination to a server flow's URL. In the complete example the web `collect` destination sends to the server flow:
 
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "flows": {
-    "server": {
-      "config": {
-        "platform": "server",
-        "url": "https://collect.example.com",
-        "bundle": {
-          "packages": { "@walkeros/server-source-express": {} }
-        }
-      },
-      "sources": {
-        "http": {
-          "package": "@walkeros/server-source-express",
-          "config": { "settings": { "path": "/collect", "port": 8080 } }
-        }
-      }
-    },
-    "web": {
-      "config": {
-        "platform": "web",
-        "bundle": {
-          "packages": {
-            "@walkeros/web-source-browser": {},
-            "@walkeros/web-destination-api": {}
-          }
-        }
-      },
-      "sources": {
-        "browser": { "package": "@walkeros/web-source-browser" }
-      },
-      "destinations": {
-        "api": {
-          "package": "@walkeros/web-destination-api",
-          "config": {
-            "settings": { "url": "$flow.server.url" }
-          }
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
+<FlowSlice feature="ref-flow" />
 
-Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to `https://collect.example.com` at build time. Validate is lenient (warns on missing values), bundle is strict and fails loudly if the referenced value is empty, so production builds never ship with an unresolved URL.
+Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to the server flow's `config.url` at build time. Validate is lenient (warns on missing values), bundle is strict and fails loudly if the referenced value is empty, so production builds never ship with an unresolved URL.
 
 ## Dynamic patterns
 
@@ -936,32 +539,11 @@ Flow configurations support four dynamic patterns for reusable, environment-awar
 
 Reference variables defined in `variables` for shared values across your config:
 
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "variables": {
-    "currency": "EUR",
-    "apiVersion": "v2"
-  },
-  "flows": {
-    "default": {
-      "config": { "platform": "web" },
-      "destinations": {
-        "api": {
-          "package": "@walkeros/web-destination-api",
-          "config": {
-            "settings": {
-              "endpoint": "https://api.example.com/$var.apiVersion/collect",
-              "currency": "$var.currency"
-            }
-          }
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
+<FlowSlice feature="root-variables" />
+
+<FlowSlice feature="ref-var-whole" />
+
+<FlowSlice feature="ref-var-inline" />
 
 Variables can be defined at three levels (higher specificity wins):
 1. **Source/Destination level** - Highest priority
@@ -972,27 +554,9 @@ Variables can be defined at three levels (higher specificity wins):
 
 Reference environment variables with optional defaults:
 
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "flows": {
-    "default": {
-      "config": { "platform": "web" },
-      "destinations": {
-        "ga4": {
-          "package": "@walkeros/web-destination-gtag",
-          "config": {
-            "settings": {
-              "ga4": { "measurementId": "$env.GA4_ID:G-DEMO123456" }
-            }
-          }
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
+<FlowSlice feature="ref-env-default" />
+
+<FlowSlice feature="ref-env" />
 
 **Syntax:**
 - `$env.GA4_ID` - Required, throws if not set
@@ -1096,85 +660,21 @@ walkerOS uses a clear type hierarchy:
 
 ## Complete example
 
-Here's a production-ready flow that accepts HTTP events and sends them to BigQuery:
+The canonical, tested flow is
+[`packages/cli/examples/flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json),
+shown in parts on this page and across the docs. Its
+[guide](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.md)
+teaches it in 15 chapters. `@walkeros/cli/examples` exports the file and its
+feature manifest.
 
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "flows": {
-    "default": {
-      "config": {
-        "platform": "server",
-        "bundle": {
-          "packages": {
-            "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-            "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] },
-            "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
-          }
-        }
-      },
-      "sources": {
-        "http": {
-          "package": "@walkeros/server-source-express",
-          "config": {
-            "settings": {
-              "path": "/collect",
-              "port": 8080,
-              "cors": true
-            }
-          }
-        }
-      },
-      "destinations": {
-        "bigquery": {
-          "package": "@walkeros/server-destination-gcp",
-          "config": {
-            "settings": {
-              "projectId": "my-analytics-project",
-              "datasetId": "events",
-              "tableId": "raw_events"
-            },
-            "mapping": {
-              "page": {
-                "view": {
-                  "name": "page_view",
-                  "data": {
-                    "map": {
-                      "page_title": "data.title",
-                      "page_path": "data.path",
-                      "timestamp": "timestamp"
-                    }
-                  }
-                }
-              },
-              "product": {
-                "view": { "name": "product_view" },
-                "add": { "name": "add_to_cart" }
-              }
-            }
-          }
-        },
-        "console": {
-          "package": "@walkeros/destination-demo",
-          "config": {
-            "settings": {
-              "name": "Debug Logger",
-              "values": ["name", "data", "timestamp"]
-            }
-          }
-        }
-      },
-      "collector": {
-        "globals": {
-          "environment": "production",
-          "version": "1.0.0"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
+Every flow declares its steps in named maps. The web flow's sources, and the
+server flow's transformers and destinations:
+
+<FlowSlice feature="flow-sources" depth={1} />
+
+<FlowSlice feature="flow-transformers" depth={1} />
+
+<FlowSlice feature="flow-destinations" depth={1} />
 
 ## Programmatic usage
 

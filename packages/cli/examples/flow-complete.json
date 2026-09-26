@@ -488,7 +488,9 @@
                     },
                     "source": {
                       "type": "dataLayer",
-                      "platform": "web"
+                      "platform": "web",
+                      "url": "http://localhost/",
+                      "referrer": ""
                     }
                   }
                 ]
@@ -540,7 +542,7 @@
                   {
                     "name": "page view",
                     "data": {
-                      "domain": "localhost",
+                      "domain": "www.example.com",
                       "title": "Trail Runner",
                       "referrer": "https://www.example.com/",
                       "id": "/product/trail-runner"
@@ -551,7 +553,7 @@
                     "source": {
                       "type": "browser",
                       "platform": "web",
-                      "url": "http://localhost/product/trail-runner",
+                      "url": "https://www.example.com/product/trail-runner",
                       "referrer": "https://www.example.com/"
                     }
                   }
@@ -884,8 +886,7 @@
                     "map": {
                       "transaction_id": "data.id",
                       "value": {
-                        "key": "data.total",
-                        "fn": "$code:(value) => Math.round(Number(value) * 100) / 100"
+                        "fn": "$code:(event) => Math.round(Number(event.data.total) * 100) / 100"
                       },
                       "currency": [
                         "data.currency",
@@ -935,8 +936,7 @@
                   "map": {
                     "transaction_id": "data.id",
                     "value": {
-                      "key": "data.total",
-                      "fn": "$code:(value) => Math.round(Number(value) * 100) / 100"
+                      "fn": "$code:(event) => Math.round(Number(event.data.total) * 100) / 100"
                     },
                     "currency": [
                       "data.currency",
@@ -1076,8 +1076,7 @@
                   "map": {
                     "transaction_id": "data.id",
                     "value": {
-                      "key": "data.total",
-                      "fn": "$code:(value) => Math.round(Number(value) * 100) / 100"
+                      "fn": "$code:(event) => Math.round(Number(event.data.total) * 100) / 100"
                     },
                     "currency": [
                       "data.currency",
@@ -1154,6 +1153,17 @@
                 ]
               },
               "out": [
+                [
+                  "window.gtag",
+                  "consent",
+                  "default",
+                  {
+                    "ad_storage": "denied",
+                    "ad_user_data": "denied",
+                    "ad_personalization": "denied",
+                    "analytics_storage": "denied"
+                  }
+                ],
                 ["window.gtag", "config", "G-MAINSITE", {}],
                 [
                   "window.gtag",
@@ -1238,6 +1248,17 @@
                 }
               },
               "out": [
+                [
+                  "window.gtag",
+                  "consent",
+                  "default",
+                  {
+                    "ad_storage": "denied",
+                    "ad_user_data": "denied",
+                    "ad_personalization": "denied",
+                    "analytics_storage": "denied"
+                  }
+                ],
                 ["window.gtag", "config", "G-MAINSITE", {}],
                 [
                   "window.gtag",
@@ -1268,7 +1289,32 @@
               "in": {
                 "functional": true,
                 "marketing": true
-              }
+              },
+              "out": [
+                [
+                  "window.gtag",
+                  "consent",
+                  "default",
+                  {
+                    "ad_storage": "denied",
+                    "ad_user_data": "denied",
+                    "ad_personalization": "denied",
+                    "analytics_storage": "denied"
+                  }
+                ],
+                ["window.gtag", "config", "G-MAINSITE", {}],
+                [
+                  "window.gtag",
+                  "consent",
+                  "update",
+                  {
+                    "analytics_storage": "granted",
+                    "ad_storage": "granted",
+                    "ad_user_data": "granted",
+                    "ad_personalization": "granted"
+                  }
+                ]
+              ]
             }
           }
         },
@@ -1352,7 +1398,56 @@
                   "platform": "web",
                   "url": "https://www.example.com/product/trail-runner"
                 }
-              }
+              },
+              "out": [
+                [
+                  "window.gtag",
+                  "consent",
+                  "default",
+                  {
+                    "ad_storage": "denied",
+                    "ad_user_data": "denied",
+                    "ad_personalization": "denied",
+                    "analytics_storage": "denied"
+                  }
+                ],
+                [
+                  "window.gtag",
+                  "consent",
+                  "update",
+                  {
+                    "analytics_storage": "granted",
+                    "ad_storage": "granted",
+                    "ad_user_data": "granted",
+                    "ad_personalization": "granted"
+                  }
+                ],
+                [
+                  "window.dataLayer.push",
+                  {
+                    "event": "elb product add",
+                    "consent": {
+                      "functional": true,
+                      "marketing": true
+                    },
+                    "globals": {
+                      "site": "shop",
+                      "language": "en",
+                      "pageGroup": "product"
+                    },
+                    "user": {
+                      "device": "d3v1c3",
+                      "session": "s3ss10n"
+                    },
+                    "data": {
+                      "id": "SKU-1",
+                      "name": "Trail Runner",
+                      "price": 129.9,
+                      "quantity": 1
+                    }
+                  }
+                ]
+              ]
             },
             "dataLayerEcho": {
               "title": "No echo back to GTM",
@@ -1386,7 +1481,31 @@
                   "type": "dataLayer",
                   "platform": "web"
                 }
-              }
+              },
+              "out": [
+                [
+                  "window.gtag",
+                  "consent",
+                  "default",
+                  {
+                    "ad_storage": "denied",
+                    "ad_user_data": "denied",
+                    "ad_personalization": "denied",
+                    "analytics_storage": "denied"
+                  }
+                ],
+                [
+                  "window.gtag",
+                  "consent",
+                  "update",
+                  {
+                    "analytics_storage": "granted",
+                    "ad_storage": "granted",
+                    "ad_user_data": "granted",
+                    "ad_personalization": "granted"
+                  }
+                ]
+              ]
             }
           }
         },
@@ -1593,9 +1712,6 @@
             "@walkeros/server-store-fs": {
               "version": "4.7.0-next-1790245733116"
             },
-            "@walkeros/server-store-sheets": {
-              "version": "4.7.0-next-1790245733116"
-            },
             "@walkeros/server-destination-gcp": {
               "version": "4.7.0-next-1790245733116"
             },
@@ -1643,15 +1759,10 @@
           }
         },
         "customers": {
-          "package": "@walkeros/server-store-sheets",
+          "package": "@walkeros/server-store-fs",
           "config": {
-            "credentials": "$secret.GCP_SA",
             "settings": {
-              "id": "$env.CUSTOMERS_SHEET_ID:customers-sheet",
-              "sheet": "customers",
-              "key": "A",
-              "value": "B",
-              "headerRows": 1
+              "basePath": "$env.CUSTOMERS_DIR:./customers"
             }
           },
           "cache": {
@@ -1938,8 +2049,11 @@
                         "analytics": true,
                         "functional": true
                       },
+                      "globals": {
+                        "language": "na"
+                      },
                       "id": "3825861be3baea76",
-                      "timestamp": 1790270783376,
+                      "timestamp": 1790285717017,
                       "timing": 0,
                       "trigger": "ga4"
                     }
@@ -1980,8 +2094,11 @@
                         "analytics": true,
                         "functional": true
                       },
+                      "globals": {
+                        "language": "na"
+                      },
                       "id": "5db509431efb0b8c",
-                      "timestamp": 1790270783381,
+                      "timestamp": 1790285717022,
                       "timing": 0,
                       "trigger": "ga4"
                     }
@@ -2022,8 +2139,11 @@
                         "analytics": false,
                         "functional": false
                       },
+                      "globals": {
+                        "language": "na"
+                      },
                       "id": "853ff68a89ce43af",
-                      "timestamp": 1790270783385,
+                      "timestamp": 1790285717026,
                       "timing": 0,
                       "trigger": "ga4"
                     }
@@ -2036,14 +2156,18 @@
         "ga4Consent": {
           "mapping": {
             "policy": {
-              "consent.functional": "consent.analytics"
+              "consent.functional": "consent.analytics",
+              "globals.language": {
+                "fn": "$code:(event) => { const lang = String(event.user?.language ?? '').slice(0, 2).toLowerCase(); return /^[a-z]{2}$/.test(lang) ? lang : undefined; }",
+                "value": "na"
+              }
             }
           },
           "examples": {
             "analyticsGranted": {
               "title": "Analytics storage granted",
               "public": true,
-              "description": "The decoder reads gcs into consent.analytics and consent.marketing; this code-free mapping hop copies analytics into functional, the key the contract asks for. No consent is stamped.",
+              "description": "The decoder reads gcs into consent.analytics and consent.marketing and the browser language (ul) into user.language. This mapping hop copies analytics into functional and derives the page language the contract asks for from the browser language (en-us becomes en). No consent is stamped.",
               "in": {
                 "name": "page view",
                 "entity": "page",
@@ -2054,7 +2178,8 @@
                 },
                 "user": {
                   "device": "cid-9",
-                  "session": "1700000000"
+                  "session": "1700000000",
+                  "language": "en-us"
                 },
                 "source": {
                   "type": "ga4",
@@ -2085,7 +2210,8 @@
                       },
                       "user": {
                         "device": "cid-9",
-                        "session": "1700000000"
+                        "session": "1700000000",
+                        "language": "en-us"
                       },
                       "source": {
                         "type": "ga4",
@@ -2098,6 +2224,9 @@
                         "analytics": true,
                         "functional": true
                       },
+                      "globals": {
+                        "language": "en"
+                      },
                       "id": "5db509431efb0b8c",
                       "timestamp": 1790000000000,
                       "timing": 0,
@@ -2109,7 +2238,7 @@
             },
             "analyticsRefused": {
               "title": "Analytics storage refused",
-              "description": "Refused analytics storage becomes functional false, so the event fails the contract and vendors never see it.",
+              "description": "Refused analytics storage becomes functional false, so the event fails the contract and vendors never see it. A hit without a browser language gets the language na.",
               "in": {
                 "name": "page view",
                 "entity": "page",
@@ -2163,6 +2292,9 @@
                         "marketing": false,
                         "analytics": false,
                         "functional": false
+                      },
+                      "globals": {
+                        "language": "na"
                       },
                       "id": "853ff68a89ce43af",
                       "timestamp": 1790000000000,
@@ -2856,7 +2988,8 @@
                         "email": "jane@example.com",
                         "hash": "5f1c0a9e7d3b2c41",
                         "botScore": 0,
-                        "botCategory": "human"
+                        "botCategory": "human",
+                        "ltv": 420
                       },
                       "source": {
                         "type": "express",
@@ -2900,8 +3033,8 @@
           },
           "examples": {
             "knownCustomer": {
-              "title": "Customer lookup",
-              "description": "The customer id is looked up in the customers sheet (store cache five minutes) and a hit lands in user.ltv as a number. The Sheets mock used by simulation holds no cust-42, so here it is a miss and the event passes unchanged; the flow test seeds cust-42 with 420 and shows user.ltv 420.",
+              "title": "Known customer",
+              "description": "The customer id is looked up in the customers store (fs demo data, cached for five minutes) and the lifetime value lands in user.ltv as a number.",
               "public": true,
               "in": {
                 "name": "order complete",
@@ -2991,7 +3124,8 @@
                         "email": "jane@example.com",
                         "hash": "5f1c0a9e7d3b2c41",
                         "botScore": 0,
-                        "botCategory": "human"
+                        "botCategory": "human",
+                        "ltv": 420
                       },
                       "source": {
                         "type": "express",
@@ -3843,8 +3977,7 @@
               "output": "user.email",
               "fields": [
                 {
-                  "key": "event.user.email",
-                  "fn": "$code:(value) => String(value).trim().toLowerCase()"
+                  "fn": "$code:({ event }) => String(event.user.email).trim().toLowerCase()"
                 }
               ]
             }
@@ -3941,7 +4074,7 @@
                         "device": "d3v1c3",
                         "session": "s3ss10n",
                         "id": "cust-42",
-                        "email": "2ebdd938981aa8d6dd63f6506966d950dfee28f29f978f071c7bda393ce0f3d2",
+                        "email": "31b4ae339b671c9e81adbe27e74b38f09a4756300de6b81998c83a3964cbb849",
                         "hash": "5f1c0a9e7d3b2c41",
                         "botScore": 0,
                         "botCategory": "human",
@@ -4680,7 +4813,7 @@
               "public": true,
               "in": {
                 "id": "msg-1",
-                "dataString": "{\"name\":\"order complete\",\"entity\":\"order\",\"action\":\"complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"timestamp\":1700000000000,\"consent\":{\"functional\":true,\"marketing\":true},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"2ebdd938981aa8d6dd63f6506966d950dfee28f29f978f071c7bda393ce0f3d2\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420},\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}]}",
+                "dataString": "{\"name\":\"order complete\",\"entity\":\"order\",\"action\":\"complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"timestamp\":1700000000000,\"consent\":{\"functional\":true,\"marketing\":true},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"31b4ae339b671c9e81adbe27e74b38f09a4756300de6b81998c83a3964cbb849\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420},\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}]}",
                 "attributes": {}
               },
               "out": [
@@ -4710,7 +4843,7 @@
                       "device": "d3v1c3",
                       "session": "s3ss10n",
                       "id": "cust-42",
-                      "email": "2ebdd938981aa8d6dd63f6506966d950dfee28f29f978f071c7bda393ce0f3d2",
+                      "email": "31b4ae339b671c9e81adbe27e74b38f09a4756300de6b81998c83a3964cbb849",
                       "hash": "5f1c0a9e7d3b2c41",
                       "botScore": 0,
                       "botCategory": "human",
@@ -4853,7 +4986,7 @@
                       "action": "complete",
                       "timestamp": 1700000000000000,
                       "timing": 0,
-                      "source": "{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true,\"count\":1,\"trace\":\"4d040dd4fa69fbbe224cf39061e5d788\",\"release\":{\"server\":\"4.6.1\"}}"
+                      "source": "{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true,\"count\":1,\"trace\":\"d9a1bb9e9520c6d831dd6ebce1940593\",\"release\":{\"server\":\"4.6.1\"}}"
                     }
                   ]
                 ]

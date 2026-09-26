@@ -211,6 +211,9 @@ When connected, the runtime:
 
 - **Fetches secrets once at boot** and injects them into the environment before
   the flow loads, so `$env.NAME` references in a server flow resolve to them.
+  From then on every log line masks the fetched values (6 characters or
+  longer) as `***`: the runtime's own lines, the flow's lines, the recent
+  errors and log lines a heartbeat carries, and the `--json` error output.
 - **Sends a heartbeat** to `POST /api/projects/:projectId/runners/heartbeat`
   every `WALKEROS_HEARTBEAT_INTERVAL` seconds with its instance ID, flow and
   deployment IDs, version, uptime, event counters, and recent errors and log
@@ -219,6 +222,17 @@ When connected, the runtime:
 
 The artifact itself never changes while the runtime runs. To ship a new
 version, bundle again and redeploy.
+
+Values from `--env-file`, or already set in the container's environment, are
+not known to the runtime as secrets. The pattern rules still catch them where
+they have a recognizable shape (known token prefixes, private keys,
+credential-named fields, long high-entropy strings), but they are not masked
+by exact value. Prefer app-managed secrets for anything that must never reach
+a log.
+
+Log lines print a path under the system temp directory as `$TMPDIR/...`. On
+Linux `TMPDIR` is often unset, so read such a path as the system temp
+directory (usually `/tmp`).
 
 ### Secret fetch failures
 
@@ -299,7 +313,8 @@ requests:
 Dockerfile's `COPY` of the whole `dist/` directory carries it into the image.
 Never include the output directory itself (`include: ["./dist"]` with output
 `dist/` is refused as a circular copy), and never point the fs store at a
-directory that holds credentials.
+directory that holds credentials. `include` applies to server builds only: a
+web build copies nothing and logs that it ignored `include`.
 
 ## File paths at runtime
 

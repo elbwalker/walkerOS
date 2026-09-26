@@ -269,7 +269,7 @@ With `pulse: true`, the source updates the session's last-seen timestamp on each
 
 ## Custom session callback
 
-The `cb` setting lets you hook into session detection. It receives the detected session data, the collector instance, and the default callback:
+The `cb` setting lets you hook into session detection. It receives the detected session data, the source's collector interface, and the default callback. The interface carries only `push` (the source's pipeline) and `command`, with or without a consent gate, so collector state such as `consent` or `user` is not readable there:
 
 <CodeSnippet
   code={`session: {

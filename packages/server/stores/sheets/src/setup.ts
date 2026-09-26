@@ -1,6 +1,7 @@
 import type { LifecycleContext, SetupFn, Store } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
 import type {
+  Env,
   ServiceAccountCredentials,
   Setup,
   SheetsStoreSettings,
@@ -32,8 +33,8 @@ export type SheetsStoreConfig = Store.Config<Types>;
  * `setup.headers` row. Never alters existing data: re-running with the same
  * headers is a no-op overwrite.
  */
-export const setup: SetupFn<SheetsStoreConfig, Store.BaseEnv> = async (
-  context: LifecycleContext<SheetsStoreConfig, Store.BaseEnv>,
+export const setup: SetupFn<SheetsStoreConfig, Env> = async (
+  context: LifecycleContext<SheetsStoreConfig, Env>,
 ) => {
   const { config, logger, id } = context;
   const options = resolveSetup(config.setup, DEFAULT_SETUP);
@@ -46,11 +47,14 @@ export const setup: SetupFn<SheetsStoreConfig, Store.BaseEnv> = async (
   const settings = config.settings;
 
   const creds = parseCredentials(resolveCredentials(config, logger));
-  const getToken = createTokenProvider(creds);
+  // An injected fetch (tests, simulate) carries every request, token exchange
+  // included, as in the store runtime; the global fetch is the default.
+  const doFetch = context.env?.fetch ?? context.config.env?.fetch ?? fetch;
+  const getToken = createTokenProvider(creds, doFetch);
   const token = await getToken();
 
   const probeUrl = `${SHEETS_BASE}/${encodeURIComponent(settings.id)}?fields=spreadsheetId`;
-  const probeRes = await fetch(probeUrl, {
+  const probeRes = await doFetch(probeUrl, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (probeRes.status === 404) {
@@ -71,7 +75,7 @@ export const setup: SetupFn<SheetsStoreConfig, Store.BaseEnv> = async (
     const range = buildHeaderRange(sheet, options.headers.length);
     const url = `${SHEETS_BASE}/${encodeURIComponent(settings.id)}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
     const body = { values: [options.headers], range };
-    const writeRes = await fetch(url, {
+    const writeRes = await doFetch(url, {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`,

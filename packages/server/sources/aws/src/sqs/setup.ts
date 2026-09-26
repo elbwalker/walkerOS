@@ -6,7 +6,7 @@ import {
 import { SNSClient, SubscribeCommand } from '@aws-sdk/client-sns';
 import type { Logger } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
-import type { Config, Env, Setup, SetupFn } from './types';
+import type { Config, Env, Setup, SetupFn, SqsClient } from './types';
 
 const DEFAULT_REGION = 'eu-central-1';
 const DEFAULT_VISIBILITY_TIMEOUT_SECONDS = 30;
@@ -146,7 +146,7 @@ function buildSnsQueuePolicy(args: BuildPolicyArgs): string {
 }
 
 interface EnsureQueueArgs {
-  sqs: SQSClient;
+  sqs: SqsClient;
   logger: Logger.Instance;
   queueName: string;
   attributes: Record<string, string>;
