@@ -79,11 +79,14 @@ describe('runCommand masks secrets fetched after the loggers exist', () => {
 
     const errors = seen?.errorRing?.snapshot() ?? [];
     const logs = seen?.logRing?.snapshot() ?? [];
-    expect(errors.map((e) => e.message)).toEqual([
-      '[runner] runner saw ***',
-      '[bq] Push failed with ***',
-      'Error: boot failed with ***',
-    ]);
+    // The error ring orders by lastSeen, so compare as a set.
+    expect(errors.map((e) => e.message).sort()).toEqual(
+      [
+        '[runner] runner saw ***',
+        '[bq] Push failed with ***',
+        'Error: boot failed with ***',
+      ].sort(),
+    );
     expect(logs.length).toBeGreaterThan(0);
     expect(JSON.stringify(logs)).not.toContain(SECRET);
     expect(printed()).toContain('Push failed with ***');
