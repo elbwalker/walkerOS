@@ -211,12 +211,20 @@ function collectCases(config: Flow.Json): Case[] {
 }
 
 /**
- * Comparable form of an out: JSON strings inside effects are parsed, and the
- * per-run random `trace` is dropped.
+ * Outs record the walkerOS version they ran with, as the default
+ * `source.release` and Piwik PRO's `ts_v`; a release build stamps its own
+ * version, so both compare as one placeholder.
+ */
+const VERSION = '<walkerOS version>';
+const TS_V = /(\bts_v=)[^&"]+/g;
+
+/**
+ * Comparable form of an out: JSON strings inside effects are parsed, the
+ * per-run random `trace` is dropped, and the walkerOS version is replaced.
  */
 function normalize(value: unknown): unknown {
   if (typeof value === 'string') {
-    if (!/^[[{]/.test(value)) return value;
+    if (!/^[[{]/.test(value)) return value.replace(TS_V, `$1${VERSION}`);
     try {
       const parsed: unknown = JSON.parse(value);
       return normalize(parsed);
@@ -228,7 +236,11 @@ function normalize(value: unknown): unknown {
   if (isObject(value)) {
     const result: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) {
-      if (key !== 'trace') result[key] = normalize(item);
+      if (key === 'trace') continue;
+      result[key] =
+        key === 'release' && isObject(item)
+          ? Object.fromEntries(Object.keys(item).map((k) => [k, VERSION]))
+          : normalize(item);
     }
     return result;
   }
