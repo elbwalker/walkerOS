@@ -222,7 +222,15 @@ function isSecretSegment(run: string): boolean {
  * ordinary identifiers and words, which defeats the purpose of legible
  * diagnostics. This is a deliberate trade-off, not an oversight.
  */
+// A semantic version (optionally v-prefixed, with prerelease and build
+// metadata) is never a secret. Release snapshots such as
+// `4.7.0-next-1790408404259` are long enough to reach the token-run length
+// and would otherwise be masked in image tags and package specifiers.
+const RE_SEMVER =
+  /^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+
 function shouldMaskToken(run: string, keyedValue = false): boolean {
+  if (RE_SEMVER.test(run)) return false;
   if (run.includes('/')) {
     // Per-segment: only mask if a long segment is itself secret-shaped. Short
     // path segments (the bulk of any URL) never qualify, keeping URLs legible.

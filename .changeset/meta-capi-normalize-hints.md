@@ -2,10 +2,8 @@
 '@walkeros/server-destination-meta': patch
 ---
 
-Customer information is now normalized per Meta's rules before hashing, so
-`" User@Example.com"` and `"user@example.com"` produce the same hash. The
-earlier `user_data` hint showed `email` and `phone`, which were sent to Meta
-unhashed: rename them to `em` and `ph`. Unknown keys in `settings.user_data` are
-now rejected by `walkeros validate` and TypeScript. Unknown keys from any
-source, mappings included, are dropped with a warning at runtime. A `url`
-without a trailing slash also builds a valid endpoint.
+Customer information is normalized per Meta's rules before hashing, so
+differently cased or padded emails hash the same. The earlier `user_data` hint
+sent `email` and `phone` unhashed: rename them to `em` and `ph`. Unknown
+`settings.user_data` keys fail validation, unknown mapped keys are dropped with
+a warning, and a `url` without trailing slash works.

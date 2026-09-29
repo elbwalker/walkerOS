@@ -1,9 +1,11 @@
 ---
-'@walkeros/runner': minor
 '@walkeros/cli': minor
+'@walkeros/core': minor
+'@walkeros/runner': minor
 ---
 
-`walkeros run` is removed, with no alias. Build a flow with `walkeros bundle`,
-then start the prebuilt artifact with `runneros start dist/flow.mjs`. The new
-`@walkeros/runner` package ships the `runneros` binary without esbuild, pacote,
-jsdom or nft, and the `walkeros/flow` image now runs it.
+`walkeros run` is removed. Build with `walkeros bundle`, then start the artifact
+with `runneros start dist/flow.mjs` from the new `@walkeros/runner` package,
+which the `walkeros/flow` image now runs. The CLI no longer depends on
+`express`, `cors` or `p-limit`. New `@walkeros/core/node` entry with the
+Node-only logger, redaction and temp-path helpers.

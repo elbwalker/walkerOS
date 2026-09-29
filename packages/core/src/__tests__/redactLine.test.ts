@@ -490,3 +490,23 @@ describe('redactLine (truncating wire variant)', () => {
     expect(redactLine(`token is ${token} here`)).toBe('token is *** here');
   });
 });
+
+describe('redactLine semver', () => {
+  const snapshot = '4.7.0-next-1790408404259';
+
+  it.each([
+    ['a bare snapshot version', snapshot],
+    ['a docker image tag', `walkeros/flow:${snapshot}`],
+    ['a package at a version', `@walkeros/runner@${snapshot}`],
+    ['a keyed version', `version=${snapshot}`],
+    ['a version with build metadata', '1.12.3+build.20260926.abcdef0123'],
+    ['a v-prefixed version', `v${snapshot}`],
+  ])('keeps %s legible', (_, line) => {
+    expect(redactLine(line)).toBe(line);
+  });
+
+  it('still masks a secret next to a version', () => {
+    const token = 'AKIAIOSFODNN7EXAMPLEKEY1234ABCD';
+    expect(redactLine(`${snapshot} ${token}`)).toBe(`${snapshot} ***`);
+  });
+});
