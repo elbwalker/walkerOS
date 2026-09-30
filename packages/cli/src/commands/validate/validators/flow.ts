@@ -32,11 +32,12 @@ import type {
   ValidationWarning,
 } from '../types.js';
 import { validateContract } from './contract.js';
-import { resolveFlow } from './resolve.js';
+import { resolveFlow, type FlowResolution } from './resolve.js';
 import {
   checkStepSettings,
   createSettingsContext,
   type CheckedPackage,
+  type SettingsOutcome,
 } from './settings.js';
 
 const { validateFlowConfig } = schemas;
@@ -113,7 +114,9 @@ export async function validateFlowWithPackages(
   const context = createSettingsContext(options.configDir);
   const deferred: ValidateDeferred[] = [];
   const packages: CheckedPackage[] = [];
-  const pending: Array<Promise<void>> = [];
+  // Checks run in parallel; outcomes are applied in step order afterwards,
+  // so the result does not depend on which schema arrives first.
+  const pending: Array<Promise<SettingsOutcome>> = [];
   for (const name of scope.flows) {
     const flow = run.resolved.get(name);
     const rawFlow = run.typed?.flows[name];
@@ -139,17 +142,17 @@ export async function validateFlowWithPackages(
             rawFlow,
             'flow:package-settings',
             context,
-          ).then((outcome) => {
-            result.warnings.push(...outcome.findings);
-            run.skipped.push(...outcome.skipped);
-            deferred.push(...outcome.deferred);
-            if (outcome.checked) packages.push(outcome.checked);
-          }),
+          ),
         );
       }
     }
   }
-  await Promise.all(pending);
+  for (const outcome of await Promise.all(pending)) {
+    result.warnings.push(...outcome.findings);
+    run.skipped.push(...outcome.skipped);
+    deferred.push(...outcome.deferred);
+    if (outcome.checked) packages.push(outcome.checked);
+  }
 
   result.details.scope = describeScope(scope, run.checks);
   result.details.deferred = deferred;
@@ -395,6 +398,18 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
     lintFlowRoutes(name, flow, errors, warnings);
   });
 
+  // Each flow is resolved once, as the bundler resolves it: the validate
+  // step check below reads its settings from there, 10d reports failures.
+  const resolutions = new Map<string, FlowResolution>();
+  const resolutionOf = (name: string, file: Flow.Json): FlowResolution => {
+    let resolution = resolutions.get(name);
+    if (!resolution) {
+      resolution = resolveFlow(file, name);
+      resolutions.set(name, resolution);
+    }
+    return resolution;
+  };
+
   // 10c. Cross-step example compatibility, validate step examples against
   //      their contract, and flat dot-separated mapping keys.
   let totalConnections: number | undefined;
@@ -410,10 +425,14 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
       // Contracts bind only where a transformer-validate step links them,
       // with exactly that step's settings, as at runtime. The config-level
       // contract block binds nothing by itself.
+      const resolution = resolutionOf(name, file);
       for (const [stepName, transformer] of Object.entries(
         flow.transformers || {},
       )) {
         if (!isValidateStep(transformer)) continue;
+        const resolvedConfig = resolution.ok
+          ? resolution.flow.transformers?.[stepName]?.config
+          : undefined;
         checkValidateStepExamples(
           `flows.${name}.transformers.${stepName}`,
           transformer,
@@ -422,6 +441,9 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
           warnings,
           options.strict === true,
           skipped,
+          isObject(resolvedConfig) && isObject(resolvedConfig.settings)
+            ? resolvedConfig.settings
+            : undefined,
         );
       }
 
@@ -453,7 +475,7 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
   //      error, since the bundle of that flow fails the same way. Values
   //      known only at runtime ($env without default, $secret) stay deferred.
   perFlow(['flow:resolve'], (name, _flow, file) => {
-    const resolution = resolveFlow(file, name);
+    const resolution = resolutionOf(name, file);
     if (resolution.ok) resolved.set(name, resolution.flow);
     else errors.push(resolution.error);
   });
@@ -940,6 +962,9 @@ function resolveStepContracts(
  * `stepPath` is the step's result path, `flows.<flow>.transformers.<name>`.
  * A contract entry that does not resolve is an error (UNRESOLVED_CONTRACT),
  * examples or not; a contract setting that is not a list is a skip.
+ * `resolvedSettings` are the step's settings as the resolver produced them
+ * (`$var` and `$contract` resolved, as the runtime sees them); without them
+ * the settings as written are read.
  */
 export function checkValidateStepExamples(
   stepPath: string,
@@ -949,11 +974,13 @@ export function checkValidateStepExamples(
   warnings: ValidationWarning[],
   strict: boolean,
   skipped?: ValidateSkip[],
+  resolvedSettings?: Record<string, unknown>,
 ): void {
   const settings =
-    isObject(step.config) && isObject(step.config.settings)
+    resolvedSettings ??
+    (isObject(step.config) && isObject(step.config.settings)
       ? step.config.settings
-      : {};
+      : {});
   const contractPath = `${stepPath}.config.settings.contract`;
   // A contract that is set but not a list cannot be judged statically.
   if (settings.contract !== undefined && !Array.isArray(settings.contract)) {

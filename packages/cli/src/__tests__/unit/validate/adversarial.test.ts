@@ -8,7 +8,7 @@ import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import type { Flow } from '@walkeros/core';
 import { getFlowSettings } from '@walkeros/core';
 import { validateFlowStructure } from '@walkeros/core/dev';
@@ -431,6 +431,42 @@ describe('V3 contracts in the default run', () => {
     expect(exit).toBe(1);
   });
 
+  it('F26: a validate step contract given as $var resolves as at runtime and its examples are checked', async () => {
+    const viaVar = await validate('flow', fixturePath('f26-var-contract'));
+    const direct = await validate('flow', fixturePath('f7-validate-step'));
+    expect(viaVar.errors).toEqual([]);
+    expect(viaVar.warnings).toEqual(direct.warnings);
+    expect(viaVar.warnings).toContainEqual(
+      expect.objectContaining({ code: 'CONTRACT_VIOLATION' }),
+    );
+    expect(viaVar.details.scope).toMatchObject({ flows: ['server'] });
+  });
+
+  it('F26 GUARD: a literal contract entry that is no reference stays UNRESOLVED_CONTRACT', async () => {
+    const result = await validate('flow', {
+      ...readFixture('f7-validate-step'),
+      flows: {
+        server: {
+          config: { platform: 'server' },
+          transformers: {
+            validate: {
+              package: '@walkeros/transformer-validate',
+              config: { settings: { contract: ['server'] } },
+            },
+          },
+        },
+      },
+    });
+    expect(result).toMatchObject({ valid: false });
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.server.transformers.validate.config.settings.contract.0',
+        code: 'UNRESOLVED_CONTRACT',
+      }),
+    );
+    expect(result.details.scope).toMatchObject({ flows: ['server'] });
+  });
+
   it('F18: a validate step linking an unknown $contract is an error, not an unjudged step', async () => {
     const result = await validate(
       'flow',
@@ -801,6 +837,43 @@ describe('C1 default scope and C5 skips', () => {
         }),
       );
     }
+  });
+
+  it('N1: package findings and skips follow step order, not fetch completion order', async () => {
+    // The first steps' schemas arrive last.
+    server.use(
+      http.get(JSDELIVR, async ({ request }) => {
+        if (/\/npm\/(pkg-x|pkg-missing-slow)@/.test(request.url))
+          await delay(80);
+        return undefined;
+      }),
+    );
+    const result = await validate('flow', {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'web' },
+          destinations: {
+            d1: { package: 'pkg-x', config: { settings: { id: 42 } } },
+            d2: { package: 'pkg-store', config: { settings: { ttl: 'x' } } },
+            d3: { package: 'pkg-missing-slow', config: { settings: {} } },
+            d4: { package: 'pkg-missing', config: { settings: {} } },
+          },
+        },
+      },
+    });
+    const stepOf = (p: string) => p.split('.').slice(0, 4).join('.');
+    expect(
+      result.warnings
+        .filter((w) => w.code === 'ENTRY_SCHEMA')
+        .map((w) => stepOf(w.path)),
+    ).toEqual(['flows.a.destinations.d1', 'flows.a.destinations.d2']);
+    expect(
+      (result.details.skipped ?? [])
+        .filter((s) => s.check === 'flow:package-settings')
+        .map((s) => s.path),
+    ).toEqual(['flows.a.destinations.d3', 'flows.a.destinations.d4']);
+    expect(result.details.scope).toMatchObject({ flows: ['a'] });
   });
 
   it('F13 (N1): --strict exits 2 on the settings warning', async () => {

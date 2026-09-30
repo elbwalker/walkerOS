@@ -461,7 +461,7 @@ Options:
 Exit codes:
   0 = Valid (skips alone do not change it)
   1 = Errors found (contract violations count as errors under --strict)
-  2 = No errors, warnings or skipped checks found (with --strict only)
+  2 = No errors, but warnings or skipped checks found (with --strict only)
   3 = Validation could not run (missing file, invalid JSON, option that does not apply)
 ```
 
