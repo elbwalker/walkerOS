@@ -250,6 +250,71 @@ describe('runBuildManifest', () => {
     },
   );
 
+  it('builds a web flow with a root include, which a browser build ignores', async () => {
+    stub = await startStub((base) => ({
+      version: 1,
+      toolchain: VERSION,
+      flowConfig: { ...webFlow('G-1'), include: ['/etc'] },
+      flowName: 'web',
+      artifacts: [
+        { target: 'cdn', outputName: 'walker.js', putUrl: `${base}/w.js` },
+      ],
+      resultPutUrl: `${base}/result.json`,
+    }));
+
+    const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+    expect(result.error).toBeUndefined();
+    expect(result.ok).toBe(true);
+    expect(mockedBundle).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [
+      'a local step package',
+      { d: { package: './my-dest' } },
+      {},
+      'destinations.d.package',
+    ],
+    [
+      'bundle.traceInclude',
+      {},
+      { traceInclude: ['/etc/passwd'] },
+      'config.bundle.traceInclude',
+    ],
+  ])(
+    'still refuses %s on a web flow',
+    async (_label, destinations, bundleConfig, location) => {
+      stub = await startStub((base) => ({
+        version: 1,
+        toolchain: VERSION,
+        flowConfig: {
+          version: 4,
+          include: ['/etc'],
+          flows: {
+            w: {
+              config: { platform: 'web', bundle: bundleConfig },
+              destinations,
+            },
+          },
+        },
+        artifacts: [
+          { target: 'cdn', outputName: 'walker.js', putUrl: `${base}/w.js` },
+        ],
+        resultPutUrl: `${base}/result.json`,
+      }));
+
+      const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+      expect(result.error?.code).toBe('LOCAL_PATH_NOT_ALLOWED');
+      // Only the step's location: the root `include` is not refused here.
+      expect(result.error?.message).toBe(
+        `Local filesystem paths are not allowed in a manifest build: ${location}`,
+      );
+      expect(mockedBundle).not.toHaveBeenCalled();
+    },
+  );
+
   it('refuses a manifest for another toolchain', async () => {
     stub = await startStub((base) => ({
       version: 1,

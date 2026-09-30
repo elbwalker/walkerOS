@@ -55,6 +55,12 @@ export interface PipelineOptions {
   loggerConfig?: Logger.Config;
   errorRing?: ErrorRing;
   logRing?: LogRing;
+  /**
+   * Called with every fetched secret value once the secrets are injected, so
+   * the caller's loggers mask them from then on (their `knownSecrets` reads
+   * the list per line).
+   */
+  onSecrets?: (values: string[]) => void;
   api?: {
     appUrl: string;
     token: string;
@@ -83,7 +89,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 
   // Inject secrets before loading flow
   if (api) {
-    await injectSecrets(api, logger);
+    await injectSecrets(api, logger, options.onSecrets);
   }
 
   logger.info(`walkeros/flow v${VERSION}`);
@@ -746,6 +752,7 @@ function buildObserveLevelSupplier(
 async function injectSecrets(
   api: NonNullable<PipelineOptions['api']>,
   logger: Logger.Instance,
+  onSecrets?: (values: string[]) => void,
 ): Promise<void> {
   try {
     const secrets = await fetchSecrets({
@@ -759,6 +766,7 @@ async function injectSecrets(
       for (const [name, value] of Object.entries(secrets)) {
         process.env[name] = value;
       }
+      onSecrets?.(Object.values(secrets));
       logger.info(`Injected ${count} secret(s) into environment`);
     }
   } catch (error) {

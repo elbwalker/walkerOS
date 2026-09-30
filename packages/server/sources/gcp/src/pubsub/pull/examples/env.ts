@@ -1,15 +1,14 @@
-import type { Env } from '../types';
+import type { Message, SubscriptionOptions } from '@google-cloud/pubsub';
+import type { Env, PubSubPullClient, PullSubscription } from '../types';
 import type { Elb, Logger } from '@walkeros/core';
 
 /**
  * Example environment for the Pub/Sub pull source.
  *
- * Tests substitute the real SDK via `jest.mock('@google-cloud/pubsub')`,
- * which is the recommended pattern: imports of `@google-cloud/pubsub` get
- * replaced module-wide, no env-injection plumbing required at the call site.
- *
- * The `simulation` list documents which globals the source touches during a
- * simulated run, used by the simulator to know what to stub.
+ * `push` injects a structural Pub/Sub client (`env.PubSub`), so a simulated
+ * run never reaches Google Cloud and its subscription call can be recorded.
+ * The unit tests keep substituting the SDK module-wide via
+ * `jest.mock('@google-cloud/pubsub')`; they use `push` without the client.
  */
 
 const noopFn = (): void => undefined;
@@ -30,29 +29,60 @@ const createMockElbFn = (): Elb.Fn => {
   return fn;
 };
 
-/**
- * Standard mock environment for the pull source.
- *
- * `PubSub` is intentionally absent: the canonical pattern is module-level
- * `jest.mock('@google-cloud/pubsub')`, not env-injection.
- */
-export const push: Env = {
-  get push() {
-    return createMockElbFn();
-  },
-  get command() {
-    return createMockElbFn();
-  },
-  get elb() {
-    return createMockElbFn();
-  },
-  logger: noopLogger,
-};
+/** A subscription that never receives: messages arrive by synthetic push. */
+class MockSubscription implements PullSubscription {
+  constructor(
+    public name: string,
+    public options?: SubscriptionOptions,
+  ) {}
+
+  on(
+    _event: 'message' | 'error',
+    _listener: ((message: Message) => void) | ((error: Error) => void),
+  ): this {
+    return this;
+  }
+
+  async close(): Promise<void> {}
+}
+
+class MockPubSub implements PubSubPullClient {
+  constructor(public options?: object) {}
+
+  subscription(name: string, options?: SubscriptionOptions): MockSubscription {
+    return new MockSubscription(name, options);
+  }
+
+  async close(): Promise<void> {}
+}
+
+function createEnv(): Env {
+  return {
+    get push() {
+      return createMockElbFn();
+    },
+    get command() {
+      return createMockElbFn();
+    },
+    get elb() {
+      return createMockElbFn();
+    },
+    logger: noopLogger,
+  };
+}
+
+/** Standard mock environment, with the structural client for simulate. */
+export const push: Env = Object.assign(createEnv(), { PubSub: MockPubSub });
 
 /**
- * No recorded calls. `PubSub` is not part of this mock env (tests substitute
- * the SDK module-wide), so the path never resolved here. Recording pull and
- * ack calls needs a `PubSub` mock in `push`, which would bypass those module
- * mocks.
+ * The same environment without the client, for unit tests that substitute the
+ * SDK module-wide with `jest.mock`.
  */
-export const simulation: string[] = [];
+export const moduleMockEnv: Env = createEnv();
+
+/**
+ * The subscription call binds the source to its subscription; messages then
+ * arrive as events, not calls. Construction is not recorded: its options
+ * carry credentials.
+ */
+export const simulation = ['call:PubSub.subscription'];

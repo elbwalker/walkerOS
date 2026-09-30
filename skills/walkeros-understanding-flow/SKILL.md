@@ -357,7 +357,9 @@ Runs after destination push completes. The push response is available at
   },
   "transformers": {
     "auditLog": {
-      "package": "@walkeros/transformer-audit"
+      "code": {
+        "push": "$code:(event, context) => { context.logger.info('delivered', { id: event.id, response: context.ingest._response }); }"
+      }
     }
   }
 }
@@ -374,10 +376,22 @@ destinations: {
 },
 transformers: {
   auditLog: {
-    code: transformerAudit
-  }
+    code: {
+      push: (event, context) => {
+        context.logger.info('delivered', {
+          id: event.id,
+          response: context.ingest._response,
+        });
+      },
+    },
+  },
 }
 ```
+
+`auditLog` is inline code: there is no audit transformer package. The complete
+example (`packages/cli/examples/flow-complete.json`) has no genuine use for
+`destination.next`, `transformer.before` or `many`; the tested route fixture
+`routeCases` in `@walkeros/core/dev` covers them.
 
 ### Chain Resolution
 
@@ -479,6 +493,25 @@ lifecycle.
 This section defines which components can connect to which, and how chains are
 resolved at runtime. Use it as the canonical reference for building flow graphs,
 validating configurations, and rendering UI visualizations.
+
+Every chain and route shape below has a tested instance in
+`packages/cli/examples/flow-complete.json`. Look them up by feature id in the
+manifest (`flowCompleteFeatures` from `@walkeros/cli/examples`, each with a JSON
+Pointer and a note), taught in the guide chapter `chains-routing`
+(`packages/cli/examples/flow-complete.md`):
+
+| Shape                             | Feature ids                                        |
+| --------------------------------- | -------------------------------------------------- |
+| Source chains                     | `source-before`, `source-next`                     |
+| Collector chain                   | `collector-next`, `web-collector-next`             |
+| Destination chains                | `destination-before`, `pubsub-before`              |
+| `one`, conditional next, sequence | `route-one`, `route-next-match`, `route-sequence`  |
+| `stop` with and without `match`   | `route-stop`, `event-filter`, `stop-unconditional` |
+| Code-less path step               | `code-free-hop`                                    |
+| `and`, `or`, `not`                | `match-and`, `match-or`, `match-not`               |
+
+`many`, `transformer.before` and `destination.next` have no genuine use in that
+file; the route fixture `routeCases` in `@walkeros/core/dev` covers them.
 
 ### Valid connection matrix
 
@@ -738,3 +771,5 @@ every destination needs belongs in `collector.next`, not repeated in each
 - [Website: Flow](../../website/docs/getting-started/modes/bundled.mdx) - Flow
   concept
 - [Website: Collector](../../website/docs/collector/index.mdx) - Collector docs
+- [Website: Routing](../../website/docs/getting-started/flow/routing.mdx) -
+  Connections, chain resolution, route operators, `stop`

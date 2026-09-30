@@ -56,7 +56,10 @@ type Callable = (...args: unknown[]) => unknown;
 export interface ObservedEnv<T extends object = Record<string, unknown>> {
   /** Proxy view of the env; declared paths record, everything else passes through. */
   env: T;
-  /** Mutable array: each call on a declared path is pushed here once. */
+  /**
+   * Mutable array: each call on a declared path is pushed here once. Stays
+   * empty when a `record` callback is given, which then receives every call.
+   */
   calls: Simulation.Call[];
   /**
    * Declared paths whose object intermediates or leaf are absent at wrap time,
@@ -76,6 +79,32 @@ function isNavigable(value: unknown): value is object {
 
 function isThenable(value: unknown): value is PromiseLike<unknown> {
   return isNavigable(value) && 'then' in value && isCallable(value.then);
+}
+
+/**
+ * Own keys every function carries. A path segment with one of these names is
+ * never a static; it continues on the call result.
+ */
+const FUNCTION_KEYS = ['name', 'length', 'prototype', 'arguments', 'caller'];
+
+/**
+ * Whether `key` is a static of `fn`: an own property of the function or of a
+ * parent class, never a standard function key and never inherited from a
+ * realm's `Function.prototype` (`call`, `bind`, `apply`, `toString`, ...).
+ */
+function hasStatic(fn: Callable, key: string): boolean {
+  if (FUNCTION_KEYS.indexOf(key) !== -1) return false;
+  let current: unknown = fn;
+  while (isCallable(current)) {
+    if (Object.prototype.hasOwnProperty.call(current, key)) return true;
+    const parent: unknown = Object.getPrototypeOf(current);
+    // A realm's Function.prototype is the callable whose prototype is not.
+    if (!isCallable(parent) || !isCallable(Object.getPrototypeOf(parent))) {
+      return false;
+    }
+    current = parent;
+  }
+  return false;
 }
 
 /**
@@ -101,13 +130,18 @@ function trackedKey(tracked: Tracked[]): string {
 
 /**
  * Walk a declared path at wrap time. Object intermediates must exist and the
- * leaf must be a function; once the walk reaches a function (or a Promise)
- * whose next segment is not a property of it, the rest resolves at call time.
+ * leaf must be a function; once the walk reaches a function whose next segment
+ * is not a static of it (or a Promise without that property), the rest
+ * resolves at call time. A static the function view cannot substitute (a
+ * frozen function) is unresolvable.
  */
 function resolvesAtWrapTime(env: object, segments: string[]): boolean {
   let current: unknown = env;
   for (const segment of segments) {
-    if (isCallable(current) || isThenable(current)) {
+    if (isCallable(current)) {
+      if (!hasStatic(current, segment)) return true;
+      if (!canSubstitute(current, segment)) return false;
+    } else if (isThenable(current)) {
       if (!(segment in current)) return true;
     } else if (!isNavigable(current) || !(segment in current)) {
       return false;
@@ -122,14 +156,17 @@ function resolvesAtWrapTime(env: object, segments: string[]): boolean {
  *
  * Returns a Proxy view of `env`. Declared paths use the `parseCallPath`
  * grammar; the recorded `fn` is the full path without `call:` and `args` are
- * the leaf call's arguments. A segment is first looked up as a property of the
- * current value; when it is absent and the current value is a function, the
- * call result (or constructed instance) is navigated, and a Promise result is
- * followed with `.then`. Apply and construct traps call the originals through
+ * the leaf call's arguments. After an object, a segment is a property of it.
+ * After a function, a segment is a static (see `hasStatic`) or else continues
+ * on the call result (or constructed instance); a Promise result is followed
+ * with `.then`. An object whose tracked properties a Proxy may not substitute
+ * (frozen, or non-writable and non-configurable) is viewed through a shadow
+ * target, so its calls still record and the object itself is never changed. Apply and construct traps call the originals through
  * `Reflect`, with `this` bound to the real target, so `instanceof`, statics and
  * `#private` fields keep working and a chain that returns `this` records once.
  * Nothing on the caller's objects or prototypes is replaced. `record`, when
- * given, receives every call as well; a throw there never stops the real call.
+ * given, receives every call instead of `calls` (a long-lived view must not
+ * grow an array); a throw there never stops the real call.
  */
 export function observeEnv<T extends object = Record<string, unknown>>(
   env: T,
@@ -156,8 +193,10 @@ export function observeEnv<T extends object = Record<string, unknown>>(
 
   function recordCall(leafs: string[], args: unknown[]): void {
     for (const fn of leafs) {
-      calls.push({ fn, args, ts: Date.now() });
-      if (!record) continue;
+      if (!record) {
+        calls.push({ fn, args, ts: Date.now() });
+        continue;
+      }
       try {
         record(fn, args);
       } catch {
@@ -207,17 +246,83 @@ export function observeEnv<T extends object = Record<string, unknown>>(
     objectProxies.set(target, byKey);
     const cached = byKey.get(key);
     if (cached) return cached;
-    const proxy = createObjectProxy(target, next);
+    const proxy = viewObject(target, next);
     byKey.set(key, proxy);
     return proxy;
   }
 
+  /**
+   * The view of one object: a shadow view when a tracked property cannot be
+   * substituted on the object itself (frozen, or non-writable and
+   * non-configurable), else a plain view. The root env and nested objects
+   * both go through here.
+   */
+  function viewObject<V extends object>(target: V, next: Tracked[]): V {
+    // A shadow is not callable, so a callable root keeps the plain view; its
+    // unsubstitutable statics are already reported by `resolvesAtWrapTime`.
+    if (isCallable(target)) return createObjectProxy(target, next);
+    const shadowed = next.some((t) => !canSubstitute(target, t.rest[0]));
+    return shadowed
+      ? createShadowProxy(target, next)
+      : createObjectProxy(target, next);
+  }
+
+  /**
+   * A view of `target` whose Proxy target is an empty object with the same
+   * prototype. Proxy invariants then bind the shadow, not the real object, so
+   * frozen properties can be substituted. Reads, writes and reflection all
+   * forward to the real object; descriptors report as configurable, since the
+   * shadow does not hold them.
+   */
+  function createShadowProxy<V extends object>(target: V, next: Tracked[]): V {
+    const shadow: V = Object.create(Object.getPrototypeOf(target));
+    const reads = objectHandler(target, next, () => proxy);
+    const proxy: V = new Proxy(shadow, {
+      get: (_, prop) => reads.get(prop),
+      set: (_, prop, value) => Reflect.set(target, prop, value, target),
+      has: (_, prop) => Reflect.has(target, prop),
+      ownKeys: () => Reflect.ownKeys(target),
+      getOwnPropertyDescriptor(_, prop) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(target, prop);
+        return descriptor && { ...descriptor, configurable: true };
+      },
+      defineProperty: (_, prop, descriptor) =>
+        Reflect.defineProperty(target, prop, descriptor),
+      deleteProperty: (_, prop) => Reflect.deleteProperty(target, prop),
+    });
+    views.add(proxy);
+    return proxy;
+  }
+
   function createObjectProxy<T extends object>(target: T, next: Tracked[]): T {
-    const memo = new Map<string, { value: unknown; out: unknown }>();
+    const reads = objectHandler(target, next, () => proxy);
     const proxy: T = new Proxy(target, {
       get(t, prop) {
-        const value: unknown = Reflect.get(t, prop, t);
-        if (typeof prop !== 'string' || !canSubstitute(t, prop)) return value;
+        if (typeof prop === 'string' && !canSubstitute(t, prop)) {
+          return Reflect.get(t, prop, t);
+        }
+        return reads.get(prop);
+      },
+      // Setters run against the real target too (`#private`, host setters).
+      set(t, prop, value) {
+        return Reflect.set(t, prop, value, t);
+      },
+    });
+    views.add(proxy);
+    return proxy;
+  }
+
+  /** Property reads of an object view; `self` is the view handed out. */
+  function objectHandler(
+    target: object,
+    next: Tracked[],
+    self: () => object,
+  ): { get(prop: string | symbol): unknown } {
+    const memo = new Map<string, { value: unknown; out: unknown }>();
+    return {
+      get(prop) {
+        const value: unknown = Reflect.get(target, prop, target);
+        if (typeof prop !== 'string') return value;
         if (!isCallable(value) && !isNavigable(value)) return value;
         if (isView(value)) return value;
 
@@ -229,24 +334,20 @@ export function observeEnv<T extends object = Record<string, unknown>>(
         // Unobserved methods of a class instance or host object are wrapped
         // only to run against the real target (`#private` fields and native
         // brand checks need it); on plain data they pass through as is.
-        if (!observed && (!isCallable(value) || isPlainData(t))) return value;
+        if (!observed && (!isCallable(value) || isPlainData(target))) {
+          return value;
+        }
 
         let out: unknown = value;
         if (isCallable(value)) {
-          out = wrapFunction(value, leafs, deeper, { proxy, target: t });
+          out = wrapFunction(value, leafs, deeper, { proxy: self(), target });
         } else if (deeper.length > 0) {
           out = wrapObject(value, deeper);
         }
         memo.set(prop, { value, out });
         return out;
       },
-      // Setters run against the real target too (`#private`, host setters).
-      set(t, prop, value) {
-        return Reflect.set(t, prop, value, t);
-      },
-    });
-    views.add(proxy);
-    return proxy;
+    };
   }
 
   function wrapFunction(
@@ -258,13 +359,14 @@ export function observeEnv<T extends object = Record<string, unknown>>(
     // Deeper segments that are properties of the function (statics) are
     // navigated by `get`; the rest continue on the call result.
     const onResult = (): Tracked[] =>
-      next.filter((t) => !(t.rest[0] in target));
+      next.filter((t) => !hasStatic(target, t.rest[0]));
 
     const memo = new Map<string, { value: unknown; out: unknown }>();
     const proxy: Callable = new Proxy(target, {
       get(t, prop) {
         const value: unknown = Reflect.get(t, prop, t);
         if (typeof prop !== 'string' || !canSubstitute(t, prop)) return value;
+        if (!hasStatic(t, prop)) return value;
         const { leafs: propLeafs, deeper } = select(next, prop);
         if (propLeafs.length === 0 && deeper.length === 0) return value;
         if (isView(value)) return value;
@@ -307,5 +409,5 @@ export function observeEnv<T extends object = Record<string, unknown>>(
     return proxy;
   }
 
-  return { env: createObjectProxy(env, tracked), calls, unresolved };
+  return { env: viewObject(env, tracked), calls, unresolved };
 }

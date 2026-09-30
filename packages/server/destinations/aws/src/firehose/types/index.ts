@@ -4,10 +4,18 @@ import type {
   Destination as CoreDestination,
 } from '@walkeros/core';
 import type {
-  FirehoseClient,
   FirehoseClientConfig,
-  PutRecordBatchCommand,
+  PutRecordBatchCommandInput,
 } from '@aws-sdk/client-firehose';
+
+/**
+ * The part of an AWS SDK v3 client this destination calls: `send` with a
+ * command. `FirehoseClient` satisfies it, and so does an injected mock (tests,
+ * simulate) without a cast.
+ */
+export interface SendClient {
+  send(command: object): Promise<unknown>;
+}
 
 export interface Settings {
   firehose?: FirehoseConfig;
@@ -19,8 +27,10 @@ export interface Mapping {}
 
 export interface Env extends DestinationServer.Env {
   AWS: {
-    FirehoseClient: typeof FirehoseClient;
-    PutRecordBatchCommand: typeof PutRecordBatchCommand;
+    FirehoseClient: new (config: FirehoseClientConfig) => SendClient;
+    PutRecordBatchCommand: new (input: PutRecordBatchCommandInput) => {
+      readonly input: PutRecordBatchCommandInput;
+    };
   };
 }
 
@@ -46,7 +56,7 @@ export type Rules = WalkerOSMapping.Rules<Rule>;
 
 export interface FirehoseConfig {
   streamName: string;
-  client?: FirehoseClient;
+  client?: SendClient;
   region?: string;
   config?: FirehoseClientConfig;
 }

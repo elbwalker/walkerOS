@@ -12,7 +12,7 @@ import * as examples from '../examples';
 import { createIngest, createMockContext } from '@walkeros/core';
 import type { Collector, Elb, Ingest, Source } from '@walkeros/core';
 import type { Settings, SyntheticMessage, Types } from '../types';
-import { push as pushEnv } from '../examples/env';
+import { moduleMockEnv as pushEnv } from '../examples/env';
 import { createTrigger } from '../examples/trigger';
 
 interface StepShape {

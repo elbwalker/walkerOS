@@ -14,8 +14,69 @@ import {
   createMockLogger,
 } from '@walkeros/core';
 import type { Ingest, Source } from '@walkeros/core';
-import type { Types } from '../types';
-import { push as pushEnv } from '../examples/env';
+import type {
+  Config,
+  PubSub,
+  PubSubAdminClient,
+  PubSubPullClient,
+  PullSubscription,
+  Types,
+} from '../types';
+import type { protos } from '@google-cloud/pubsub';
+import { moduleMockEnv as pushEnv, push as simulateEnv } from '../examples/env';
+import { setup } from '../setup';
+
+// Type pin: the SDK client satisfies the admin surface setup calls.
+const asAdminClient = (client: PubSub): PubSubAdminClient => client;
+
+/** Admin-capable and pull-capable, but not an instance of the SDK's PubSub. */
+class PlainAdminClient implements PubSubPullClient, PubSubAdminClient {
+  calls: string[] = [];
+
+  topic(_name: string) {
+    return {
+      exists: async (): Promise<[boolean]> => {
+        this.calls.push('topic.exists');
+        return [false];
+      },
+    };
+  }
+
+  async createTopic(): Promise<void> {
+    this.calls.push('createTopic');
+  }
+
+  async createSubscription(): Promise<void> {
+    this.calls.push('createSubscription');
+  }
+
+  subscription(_name: string): PullSubscription & {
+    getMetadata(): Promise<[protos.google.pubsub.v1.ISubscription]>;
+  } {
+    return {
+      on: () => undefined,
+      close: async () => undefined,
+      getMetadata: async () => {
+        this.calls.push('subscription.getMetadata');
+        return [{}];
+      },
+    };
+  }
+
+  async close(): Promise<void> {}
+}
+
+function setupConfig(client: PubSubPullClient): Config {
+  return {
+    settings: {
+      client,
+      projectId: 'test-project',
+      subscription: 'test-sub',
+      topic: 'events',
+    },
+    setup: { createTopic: true },
+  };
+}
 
 function buildContext(
   config: Partial<Source.Config<Types>>,
@@ -239,5 +300,47 @@ describe('Pub/Sub pull source setup', () => {
       (c) => String(c[0]) === 'setup.drift',
     );
     expect(warnCall).toBeDefined();
+  });
+});
+
+describe('Pub/Sub pull setup client guard', () => {
+  it('runs setup with any admin-capable client, not only an SDK instance', async () => {
+    expect(typeof asAdminClient).toBe('function');
+    const client = new PlainAdminClient();
+
+    const result = await setup({
+      id: 'pubsub',
+      config: setupConfig(client),
+      env: pushEnv,
+      logger: createMockLogger(),
+    });
+
+    expect(result).toEqual({
+      topicCreated: true,
+      deadLetterTopicCreated: false,
+      subscriptionCreated: true,
+    });
+    expect(client.calls).toEqual([
+      'topic.exists',
+      'createTopic',
+      'createSubscription',
+      'subscription.getMetadata',
+    ]);
+  });
+
+  it('refuses the example pull-only client', async () => {
+    const MockPubSub = simulateEnv.PubSub;
+    if (!MockPubSub) throw new Error('example env has no PubSub');
+
+    await expect(
+      setup({
+        id: 'pubsub',
+        config: setupConfig(new MockPubSub()),
+        env: pushEnv,
+        logger: createMockLogger(),
+      }),
+    ).rejects.toThrow(
+      'setup needs a @google-cloud/pubsub client; an injected client only serves pulls',
+    );
   });
 });

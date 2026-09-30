@@ -253,4 +253,50 @@ describe('Session Source: ungated path respects run', () => {
     // ...while identity still arrives via the command exit, untouched.
     expect(collector.user.session).toBeDefined();
   });
+
+  test('a next chain on a consent-gated session source runs for session start', async () => {
+    const seen: string[] = [];
+    const captured: WalkerOS.Event[] = [];
+
+    const { collector } = await startFlow({
+      consent: { functional: true },
+      sources: {
+        session: {
+          code: sourceSession,
+          config: { settings: { storage: true, consent: 'functional' } },
+          next: 'tap',
+        },
+      },
+      transformers: {
+        tap: {
+          code: async (context): Promise<Transformer.Instance> => ({
+            type: 'tap',
+            config: context.config,
+            push: async (event) => {
+              seen.push(event.name ?? '');
+              return { event };
+            },
+          }),
+        },
+      },
+      destinations: {
+        capture: {
+          code: {
+            type: 'capture',
+            config: {},
+            push: (event: WalkerOS.Event): void => {
+              captured.push(event);
+            },
+          },
+        },
+      },
+    });
+
+    for (let i = 0; i < 50; i++) await Promise.resolve();
+
+    // The consent rule emits through the source's own pipeline too.
+    expect(seen).toContain('session start');
+    expect(sessionStartCount(captured)).toBe(1);
+    expect(collector.user.session).toBeDefined();
+  });
 });

@@ -37,6 +37,13 @@ jest.mock('@walkeros/cli', () => ({
   simulateTransformer: jest.fn(),
   simulateDestination: jest.fn(),
   simulateCollector: jest.fn(),
+  loadJsonConfig: jest.fn(async () => ({ version: 4, flows: {} })),
+  collectKnownSecrets: jest.fn(() => []),
+  // The real masker, from its own module (the cli entry does not load under
+  // this suite): it is pure, and the egress tests depend on it.
+  maskKnownNumbers: jest.requireActual(
+    '../../../../../cli/src/core/known-secrets',
+  ).maskKnownNumbers,
 }));
 
 jest.mock('@walkeros/core', () => ({
@@ -68,16 +75,19 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import {
+  collectKnownSecrets,
   simulateSource,
   simulateTransformer,
   simulateDestination,
   simulateCollector,
 } from '@walkeros/cli';
 import { stubClient } from '../support/stub-client.js';
+import type { Simulation } from '@walkeros/core';
 const mockSimulateSource = jest.mocked(simulateSource);
 const mockSimulateTransformer = jest.mocked(simulateTransformer);
 const mockSimulateDestination = jest.mocked(simulateDestination);
 const mockSimulateCollector = jest.mocked(simulateCollector);
+const mockCollectKnownSecrets = jest.mocked(collectKnownSecrets);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -89,6 +99,23 @@ function createMockServer() {
       return tools[name];
     },
   };
+}
+
+/** One field of a registered tool's input schema, narrowed without a cast. */
+function inputSchemaField(config: unknown, key: string): z.ZodType {
+  if (typeof config !== 'object' || config === null)
+    throw new Error('tool config is not an object');
+  const inputSchema: unknown = Object.entries(config).find(
+    ([name]) => name === 'inputSchema',
+  )?.[1];
+  if (typeof inputSchema !== 'object' || inputSchema === null)
+    throw new Error('tool config has no inputSchema');
+  const field: unknown = Object.entries(inputSchema).find(
+    ([name]) => name === key,
+  )?.[1];
+  if (!(field instanceof z.ZodType))
+    throw new Error(`inputSchema.${key} is not a zod schema`);
+  return field;
 }
 
 describe('flow_simulate tool', () => {
@@ -454,7 +481,9 @@ describe('flow_simulate tool', () => {
 
     expect(result.isError).toBeUndefined();
     expect(result.structuredContent.success).toBe(true);
-    expect(result.structuredContent.summary).toBe('Source captured 1 event');
+    expect(result.structuredContent.summary).toBe(
+      'Source captured 1 event and 0 commands',
+    );
     expect(result.structuredContent.capturedEvents).toHaveLength(1);
 
     expect(mockSimulateSource).toHaveBeenCalledWith(
@@ -794,9 +823,9 @@ describe('flow_simulate tool', () => {
     expect(parsed.error).toContain('Unknown step type');
   });
 
-  it('returns require hint when destination not found in collector', async () => {
+  it('reports a missing destination without pointing at require', async () => {
     mockSimulateDestination.mockRejectedValue(
-      new Error('Destination "gtag" not found in collector. Available: none'),
+      new Error('Destination "gtag" not found in collector. Available: ga4'),
     );
 
     const tool = server.getTool('flow_simulate');
@@ -810,6 +839,229 @@ describe('flow_simulate tool', () => {
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toContain('not found in collector');
+    expect(result.content[0].text).not.toContain('require');
+  });
+
+  it('forwards state.consent and command to a destination step', async () => {
+    mockSimulateDestination.mockResolvedValue({
+      step: 'destination',
+      name: 'ga4',
+      events: [],
+      calls: [{ fn: 'window.gtag', args: ['consent', 'update', {}], ts: 1 }],
+      duration: 4,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    await tool.handler({
+      configPath: './flow.json',
+      event: { marketing: true },
+      step: 'destination.ga4',
+      state: { consent: { functional: true } },
+      command: 'consent',
+    });
+
+    expect(mockSimulateDestination).toHaveBeenCalledWith(
+      './flow.json',
+      { marketing: true },
+      expect.objectContaining({
+        destinationId: 'ga4',
+        consent: { functional: true },
+        command: 'consent',
+      }),
+    );
+  });
+
+  it('forwards state.consent to a transformer step', async () => {
+    mockSimulateTransformer.mockResolvedValue({
+      step: 'transformer',
+      name: 'enrich',
+      events: [{ name: 'page view' }],
+      calls: [],
+      duration: 2,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    await tool.handler({
+      configPath: './flow.json',
+      event: { name: 'page view' },
+      step: 'transformer.enrich',
+      state: { consent: { marketing: true } },
+    });
+
+    expect(mockSimulateTransformer).toHaveBeenCalledWith(
+      './flow.json',
+      { name: 'page view' },
+      expect.objectContaining({
+        transformerId: 'enrich',
+        consent: { marketing: true },
+      }),
+    );
+  });
+
+  it('accepts only booleans in state.consent', () => {
+    const tool = server.getTool('flow_simulate');
+    const state = inputSchemaField(tool.config, 'state');
+
+    expect(state.safeParse({ consent: { marketing: true } }).success).toBe(
+      true,
+    );
+    expect(state.safeParse({ consent: { marketing: 'yes' } }).success).toBe(
+      false,
+    );
+  });
+
+  it('rejects command outside a destination step', async () => {
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: { marketing: true },
+      step: 'transformer.enrich',
+      command: 'consent',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content[0].text).error).toBe(
+      'command applies to destination steps only.',
+    );
+    expect(mockSimulateTransformer).not.toHaveBeenCalled();
+  });
+
+  it.each<[Simulation.Skipped, string]>([
+    [
+      { reason: 'pending', require: ['consent'] },
+      'Destination waits for consent (require) and never started: pass state.consent (e.g. { functional: true }) to start it.',
+    ],
+    [
+      { reason: 'pending', require: ['user'] },
+      'Destination waits for user (require) and never started: it starts once the flow provides user; a simulation cannot seed that.',
+    ],
+    [
+      {
+        reason: 'consent',
+        required: { marketing: true },
+        granted: { functional: true, marketing: false },
+      },
+      "Consent skip: requires marketing; granted functional. Grant it in state.consent or in the event's consent.",
+    ],
+  ])('explains why nothing was sent: %j', async (skipped, warning) => {
+    mockSimulateDestination.mockResolvedValue({
+      step: 'destination',
+      name: 'gtm',
+      events: [],
+      calls: [],
+      duration: 3,
+      skipped,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: { name: 'product add' },
+      step: 'destination.gtm',
+    });
+
+    expect(result.structuredContent.skipped).toEqual(skipped);
+    expect(result.structuredContent._hints.warnings).toEqual([warning]);
+  });
+
+  it('masks the values of the secrets the flow references', async () => {
+    const token = 'tok-flow-known-3b9f';
+    mockCollectKnownSecrets.mockReturnValueOnce([token]);
+    mockSimulateDestination.mockResolvedValue({
+      step: 'destination',
+      name: 'api',
+      events: [],
+      calls: [{ fn: 'sendServer', args: [{ auth: token }], ts: 1 }],
+      duration: 3,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: { name: 'page view' },
+      step: 'destination.api',
+      verbose: true,
+    });
+
+    expect(result.content[0].text).toContain('sendServer');
+    expect(result.content[0].text).not.toContain(token);
+    expect(JSON.stringify(result.structuredContent)).not.toContain(token);
+  });
+
+  it("shows a source's elb calls without verbose, mock-env calls only with it", async () => {
+    mockSimulateSource.mockResolvedValue({
+      step: 'source',
+      name: 'usercentrics',
+      events: [],
+      calls: [
+        { fn: 'elb', args: ['walker consent', { marketing: true }], ts: 1 },
+        { fn: 'AWS.SQSClient.send', args: [{}], ts: 2 },
+      ],
+      duration: 4,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: { content: {} },
+      step: 'source.usercentrics',
+    });
+
+    expect(result.structuredContent.summary).toBe(
+      'Source captured 0 events and 1 command',
+    );
+    expect(result.structuredContent.calls).toEqual([
+      { fn: 'elb', args: ['walker consent', { marketing: true }], ts: 1 },
+    ]);
+  });
+
+  it('forwards state.consent to a source step', async () => {
+    mockSimulateSource.mockResolvedValue({
+      step: 'source',
+      name: 'session',
+      events: [],
+      calls: [],
+      duration: 2,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    await tool.handler({
+      configPath: './flow.json',
+      event: { content: {} },
+      step: 'source.session',
+      state: { consent: { functional: true } },
+    });
+
+    expect(mockSimulateSource).toHaveBeenCalledWith(
+      './flow.json',
+      { content: {} },
+      expect.objectContaining({
+        sourceId: 'session',
+        consent: { functional: true },
+      }),
+    );
+  });
+
+  it('returns a result whose numbers hold a known secret', async () => {
+    mockCollectKnownSecrets.mockReturnValueOnce(['12345678']);
+    mockSimulateDestination.mockResolvedValue({
+      step: 'destination',
+      name: 'api',
+      events: [],
+      calls: [{ fn: 'send', args: [{ account: 12345678 }], ts: 1 }],
+      duration: 3,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: { name: 'page view' },
+      step: 'destination.api',
+      verbose: true,
+    });
+
+    expect(result.isError).toBeUndefined();
+    expect(result.content[0].text).not.toContain('12345678');
   });
 
   it('errors on invalid JSON event string', async () => {

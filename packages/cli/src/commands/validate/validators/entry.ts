@@ -1,8 +1,13 @@
 // walkerOS/packages/cli/src/commands/validate/validators/entry.ts
 
 import Ajv from 'ajv';
-import { fetchPackageSchema } from '@walkeros/core';
-import type { ValidateResult, ValidationError } from '../types.js';
+import { fetchPackageSchema, isObject } from '@walkeros/core';
+import { describeScope, resolveScope, type ScopeEntry } from '../scope.js';
+import type {
+  ValidateResult,
+  ValidateSkip,
+  ValidationError,
+} from '../types.js';
 
 // __VERSION__ is replaced at build time by tsup's `define` (see tsup.config.ts).
 // In tests, it's set as a global by the shared jest config (@walkeros/config/jest).
@@ -10,173 +15,130 @@ declare const __VERSION__: string;
 
 const CLIENT_HEADER = 'walkeros-cli/' + __VERSION__;
 
-const SECTIONS = ['destinations', 'sources', 'transformers'] as const;
+/** Segments of an Ajv instance path (a JSON pointer). */
+function pointerSegments(pointer: string): string[] {
+  if (pointer === '') return [];
+  return pointer
+    .split('/')
+    .slice(1)
+    .map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+}
 
-/**
- * Parse dot-notation path into [section, key].
- * If no section prefix, search all sections.
- */
-function resolveEntry(
-  path: string,
-  flowConfig: Record<string, unknown>,
-): { section: string; key: string; entry: Record<string, unknown> } | string {
-  const flows = flowConfig.flows as Record<string, Record<string, unknown>>;
-  if (!flows || typeof flows !== 'object') return 'No flows found in config';
-
-  // Use first flow
-  const flowName = Object.keys(flows)[0];
-  const flow = flows[flowName];
-  if (!flow) return `Flow "${flowName}" is empty`;
-
-  const parts = path.split('.');
-
-  if (parts.length === 2) {
-    const [section, key] = parts;
-    if (!SECTIONS.includes(section as (typeof SECTIONS)[number])) {
-      return `Unknown section "${section}". Must be one of: ${SECTIONS.join(', ')}`;
-    }
-    const sectionData = flow[section] as Record<string, unknown> | undefined;
-    if (!sectionData || !(key in sectionData)) {
-      return `Entry "${key}" not found in ${section}`;
-    }
-    return {
-      section,
-      key,
-      entry: sectionData[key] as Record<string, unknown>,
-    };
+function valueAt(root: unknown, segments: string[]): unknown {
+  let current = root;
+  for (const segment of segments) {
+    if (Array.isArray(current)) current = current[Number(segment)];
+    else if (isObject(current)) current = current[segment];
+    else return undefined;
   }
+  return current;
+}
 
-  if (parts.length === 1) {
-    const key = parts[0];
-    const matches: { section: string; entry: Record<string, unknown> }[] = [];
-
-    for (const section of SECTIONS) {
-      const sectionData = flow[section] as Record<string, unknown> | undefined;
-      if (sectionData && key in sectionData) {
-        matches.push({
-          section,
-          entry: sectionData[key] as Record<string, unknown>,
-        });
-      }
-    }
-
-    if (matches.length === 0) {
-      return `Entry "${key}" not found in any section`;
-    }
-    if (matches.length > 1) {
-      const sections = matches.map((m) => m.section).join(', ');
-      return `Ambiguous key "${key}" found in multiple sections: ${sections}. Use dot-notation (e.g., destinations.${key})`;
-    }
-    return { section: matches[0].section, key, entry: matches[0].entry };
-  }
-
-  return `Invalid path "${path}". Use "section.key" or just "key"`;
+interface EntryPackage {
+  path: string;
+  package: string;
 }
 
 /**
- * Validate a specific entry (destination/source/transformer) in a flow config
- * against its package's published JSON Schema.
+ * Check one entry's `config.settings` against its package's published
+ * settings schema. Findings are errors; a check that cannot run is a skip.
  */
-export async function validateEntry(
-  path: string,
-  flowConfig: Record<string, unknown>,
-): Promise<ValidateResult> {
-  // Step 1: Resolve the entry
-  const resolved = resolveEntry(path, flowConfig);
-  if (typeof resolved === 'string') {
-    return {
-      valid: false,
-      type: 'entry',
-      errors: [{ path, message: resolved, code: 'ENTRY_VALIDATION' }],
-      warnings: [],
-      details: {},
-    };
-  }
-
-  const { section, key, entry } = resolved;
-
-  // Step 2: Check for package field
-  const packageName = entry.package as string | undefined;
+async function checkEntrySettings(
+  target: ScopeEntry,
+  errors: ValidationError[],
+  skipped: ValidateSkip[],
+  packages: EntryPackage[],
+): Promise<void> {
+  const at = `flows.${target.flow}.${target.section}.${target.key}`;
+  const packageName =
+    typeof target.entry.package === 'string' ? target.entry.package : '';
   if (!packageName) {
-    return {
-      valid: true,
-      type: 'entry',
-      errors: [],
-      warnings: [],
-      details: {
-        section,
-        key,
-        skipped: true,
-        reason: 'No package field — skipping remote schema validation',
-      },
-    };
+    skipped.push({
+      path: at,
+      check: 'entry:settings',
+      reason: 'No package field, so there is no settings schema to fetch',
+      code: 'NO_PACKAGE',
+    });
+    return;
   }
+  packages.push({ path: at, package: packageName });
 
-  // Step 3: Fetch schema from CDN
-  let schemas: Record<string, unknown>;
+  let settingsSchema: unknown;
   try {
     const info = await fetchPackageSchema(packageName, {
       client: CLIENT_HEADER,
     });
-    schemas = info.schemas;
+    settingsSchema = info.schemas?.settings;
   } catch (error) {
-    return {
-      valid: false,
-      type: 'entry',
-      errors: [
-        {
-          path,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          code: 'ENTRY_VALIDATION',
-        },
-      ],
-      warnings: [],
-      details: { section, key, package: packageName },
-    };
+    skipped.push({
+      path: at,
+      check: 'entry:settings',
+      reason: `Schema for ${packageName} could not be fetched: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      code: 'SCHEMA_UNAVAILABLE',
+    });
+    return;
   }
 
-  // Step 4: Validate settings against schema
-  const settingsSchema = schemas?.settings;
-  if (!settingsSchema) {
-    return {
-      valid: true,
-      type: 'entry',
-      errors: [],
-      warnings: [],
-      details: { section, key, note: 'Package has no settings schema' },
-    };
+  if (!isObject(settingsSchema)) {
+    skipped.push({
+      path: at,
+      check: 'entry:settings',
+      reason: `Package ${packageName} has no settings schema`,
+      code: 'NO_SETTINGS_SCHEMA',
+    });
+    return;
   }
 
-  const config = entry.config as Record<string, unknown> | undefined;
-  const settings = config?.settings;
+  const config = isObject(target.entry.config) ? target.entry.config : {};
+  const settings = config.settings ?? {};
 
   // Formats such as `uri` and `email` are not bundled with Ajv; ignore them
   // instead of failing to compile. Every structural keyword is still checked.
   const ajv = new Ajv({ allErrors: true, validateFormats: false });
-  const validate = ajv.compile(settingsSchema as object);
-  const isValid = validate(settings || {});
+  const validate = ajv.compile(settingsSchema);
+  if (validate(settings)) return;
 
-  if (!isValid) {
-    const errors: ValidationError[] = (validate.errors || []).map((e) => ({
-      path: e.instancePath || '/',
+  for (const e of validate.errors || []) {
+    const segments = pointerSegments(e.instancePath);
+    const error: ValidationError = {
+      path: [`${at}.config.settings`, ...segments].join('.'),
       message: e.message || 'Unknown error',
-      code: e.keyword,
-    }));
-
-    return {
-      valid: false,
-      type: 'entry',
-      errors,
-      warnings: [],
-      details: { section, key, package: packageName },
+      code: 'ENTRY_SCHEMA',
+      keyword: e.keyword,
     };
+    if (segments.length > 0) error.value = valueAt(settings, segments);
+    errors.push(error);
+  }
+}
+
+/**
+ * Validate an entry (source, destination, transformer or store) addressed by
+ * `path` (`section.key` or `key`) against its package's published JSON
+ * Schema, in every flow that has it, or only in `options.flow`.
+ */
+export async function validateEntry(
+  path: string,
+  flowConfig: unknown,
+  options: { flow?: string } = {},
+): Promise<ValidateResult> {
+  const resolved = resolveScope(flowConfig, { flow: options.flow, path });
+  const errors: ValidationError[] = [...resolved.errors];
+  const skipped: ValidateSkip[] = [];
+  const packages: EntryPackage[] = [];
+
+  for (const target of resolved.entries) {
+    await checkEntrySettings(target, errors, skipped, packages);
   }
 
   return {
-    valid: true,
+    valid: errors.length === 0,
     type: 'entry',
-    errors: [],
+    errors,
     warnings: [],
-    details: { section, key, package: packageName },
+    details: {
+      scope: describeScope(resolved, ['entry:settings']),
+      skipped,
+      ...(packages.length > 0 ? { packages } : {}),
+    },
   };
 }

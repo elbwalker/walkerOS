@@ -1,4 +1,8 @@
-import { traceAndCopy, assertDepsTraced } from '../nft-trace';
+import {
+  traceAndCopy,
+  assertDepsTraced,
+  collectImportedPackages,
+} from '../nft-trace';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
@@ -157,24 +161,30 @@ describe('traceAndCopy', () => {
     ).rejects.toThrow(/outside outDir|workspace root|traceInclude/);
   });
 
-  it('assertDepsTraced is a no-op when every expected package is in the trace', () => {
-    expect(() =>
+  it('assertDepsTraced passes when every imported declared package is in the trace', () => {
+    expect(
       assertDepsTraced({
         fileList: [
           'node_modules/foo/package.json',
           'node_modules/foo/index.js',
           'node_modules/@scope/bar/package.json',
         ],
-        expectedPackages: ['foo', '@scope/bar'],
+        declaredPackages: ['foo', '@scope/bar'],
+        importedPackages: new Set(['foo', '@scope/bar']),
       }),
-    ).not.toThrow();
+    ).toEqual([]);
   });
 
-  it('assertDepsTraced throws an actionable error listing missing packages', () => {
+  it('assertDepsTraced throws an actionable error listing imported packages missing from the trace', () => {
     expect(() =>
       assertDepsTraced({
         fileList: ['node_modules/foo/package.json'],
-        expectedPackages: ['foo', 'missing-pkg', '@scope/also-missing'],
+        declaredPackages: ['foo', 'missing-pkg', '@scope/also-missing'],
+        importedPackages: new Set([
+          'foo',
+          'missing-pkg',
+          '@scope/also-missing',
+        ]),
       }),
     ).toThrow(/missing-pkg, @scope\/also-missing/);
   });
@@ -183,9 +193,51 @@ describe('traceAndCopy', () => {
     expect(() =>
       assertDepsTraced({
         fileList: [],
-        expectedPackages: ['some-pkg'],
+        declaredPackages: ['some-pkg'],
+        importedPackages: new Set(['some-pkg']),
       }),
     ).toThrow(/traceInclude/);
+  });
+
+  it('assertDepsTraced returns declared packages that are neither imported nor traced', () => {
+    expect(
+      assertDepsTraced({
+        fileList: [
+          'node_modules/foo/package.json',
+          'node_modules/@walkeros/core/package.json',
+        ],
+        declaredPackages: ['foo', '@walkeros/core', '@walkeros/server-core'],
+        importedPackages: new Set(['foo', 'node:fs']),
+      }),
+    ).toEqual(['@walkeros/server-core']);
+  });
+
+  it('collectImportedPackages returns the package of every bare import, static and dynamic', async () => {
+    const tmp = await mkTmp('nft-trace-imports-');
+    const entry = path.join(tmp, 'flow.mjs');
+    await fs.writeFile(
+      entry,
+      [
+        "import { createRequire } from 'module';",
+        "import { readFile } from 'node:fs/promises';",
+        "import foo from 'foo';",
+        "import { helper } from '@scope/util';",
+        "import '@scope/side-effect/register';",
+        "export const dev = () => import('@scope/dest/dev');",
+        'export const run = () => [createRequire, readFile, foo, helper];',
+      ].join('\n'),
+    );
+
+    const imported = await collectImportedPackages(entry);
+
+    expect([...imported].sort()).toEqual([
+      '@scope/dest',
+      '@scope/side-effect',
+      '@scope/util',
+      'foo',
+      'module',
+      'node:fs',
+    ]);
   });
 
   it('extraIncludes literal path is added as a trace entry resolved against base', async () => {

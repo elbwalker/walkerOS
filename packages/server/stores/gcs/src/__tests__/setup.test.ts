@@ -3,6 +3,7 @@ jest.mock('../auth', () => ({
 }));
 
 import { createMockLogger } from '@walkeros/core';
+import { createTokenProvider } from '../auth';
 import type { GcsStoreSettings, Setup } from '../types';
 import { setup, type GcsStoreConfig } from '../setup';
 
@@ -485,5 +486,33 @@ describe('setup (GCS bucket)', () => {
     } finally {
       restore();
     }
+  });
+
+  it('sends every request through an injected env.fetch', async () => {
+    const globalFetch = jest
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new Error('global fetch must not be called'));
+    const responses = [
+      makeResponse({ status: 409 }),
+      makeResponse({ status: 200, json: async () => matchingMetadata }),
+    ];
+    const envFetch = jest.fn<Promise<Response>, Parameters<typeof fetch>>(
+      async () => {
+        const next = responses.shift();
+        if (!next) throw new Error('no response programmed');
+        return next;
+      },
+    );
+    const ctx = { ...createCtx(createConfig()), env: { fetch: envFetch } };
+
+    const result = await setup(ctx);
+
+    expect(result).toEqual({ bucketCreated: false });
+    expect(envFetch).toHaveBeenCalledTimes(2);
+    expect(globalFetch).not.toHaveBeenCalled();
+    expect(createTokenProvider).toHaveBeenLastCalledWith(
+      expect.objectContaining({ project_id: 'my-project' }),
+      envFetch,
+    );
   });
 });

@@ -1,16 +1,21 @@
-import type { Env } from '../types';
+import type {
+  CreateQueueCommandOutput,
+  DeleteMessageCommandOutput,
+  GetQueueAttributesCommandOutput,
+  GetQueueUrlCommandOutput,
+  ReceiveMessageCommandOutput,
+  SQSClientConfig,
+} from '@aws-sdk/client-sqs';
+import type { Env, SqsClient } from '../types';
 import type { Elb, Logger } from '@walkeros/core';
 
 /**
  * Example environment for the AWS SQS source.
  *
- * Tests substitute the real SDK via `jest.mock('@aws-sdk/client-sqs')` and
- * `jest.mock('@aws-sdk/client-sns')`, which is the canonical pattern: imports
- * of those modules get replaced module-wide, no env-injection plumbing
- * required at the call site.
- *
- * The `simulation` list documents which SDK identifiers the source touches
- * during a simulated run, used by the simulator to know what to stub.
+ * `push` injects a structural SQS client (`env.AWS.SQSClient`), so a
+ * simulated run never reaches AWS and its `send` calls can be recorded. The
+ * unit tests keep substituting the SDK module-wide via
+ * `jest.mock('@aws-sdk/client-sqs')`; they use `push` without the client.
  */
 
 const noopFn = (): void => undefined;
@@ -31,29 +36,77 @@ const createMockElbFn = (): Elb.Fn => {
   return fn;
 };
 
-/**
- * Standard mock environment for the SQS source.
- *
- * AWS SDK constructors are intentionally absent: the canonical pattern is
- * module-level `jest.mock('@aws-sdk/client-sqs')` and -sns, not env-injection.
- */
-export const push: Env = {
-  get push() {
-    return createMockElbFn();
-  },
-  get command() {
-    return createMockElbFn();
-  },
-  get elb() {
-    return createMockElbFn();
-  },
-  logger: noopLogger,
-};
+const QUEUE_URL =
+  'https://sqs.eu-central-1.amazonaws.com/000000000000/walkeros-events';
+const QUEUE_ARN = 'arn:aws:sqs:eu-central-1:000000000000:walkeros-events';
+
+/** A long poll that finds nothing, kept short so a simulated run ends fast. */
+const RECEIVE_WAIT_MS = 100;
+
+/** One response that satisfies every command the source sends. */
+type SqsResponse = GetQueueUrlCommandOutput &
+  GetQueueAttributesCommandOutput &
+  ReceiveMessageCommandOutput &
+  DeleteMessageCommandOutput &
+  CreateQueueCommandOutput;
+
+function isReceive(command: object): boolean {
+  if (!('input' in command)) return false;
+  const { input } = command;
+  return (
+    typeof input === 'object' && input !== null && 'WaitTimeSeconds' in input
+  );
+}
 
 /**
- * No recorded calls. The SQS client is not part of this mock env (tests
- * substitute the SDK module-wide), so a path such as `AWS.SQSClient` never
- * resolved here. Recording receive and delete calls needs an `AWS.SQSClient`
- * mock in `push`, which would bypass those module mocks.
+ * Answers every command with the queue URL and ARN and an empty receive, so
+ * init resolves the queue and the long-poll loop idles without messages.
  */
-export const simulation: string[] = [];
+class MockSQSClient implements SqsClient {
+  constructor(public config?: SQSClientConfig) {}
+
+  async send(command: object): Promise<SqsResponse> {
+    if (isReceive(command)) {
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, RECEIVE_WAIT_MS),
+      );
+    }
+    return {
+      $metadata: {},
+      QueueUrl: QUEUE_URL,
+      Attributes: { QueueArn: QUEUE_ARN },
+      Messages: [],
+    };
+  }
+
+  destroy(): void {}
+}
+
+function createEnv(): Env {
+  return {
+    get push() {
+      return createMockElbFn();
+    },
+    get command() {
+      return createMockElbFn();
+    },
+    get elb() {
+      return createMockElbFn();
+    },
+    logger: noopLogger,
+  };
+}
+
+/** Standard mock environment, with the structural client for simulate. */
+export const push: Env = Object.assign(createEnv(), {
+  AWS: { SQSClient: MockSQSClient },
+});
+
+/**
+ * The same environment without the client, for unit tests that substitute the
+ * SDK module-wide with `jest.mock`.
+ */
+export const moduleMockEnv: Env = createEnv();
+
+/** Every request (queue lookup, receive, delete) goes through `send`. */
+export const simulation = ['call:AWS.SQSClient.send'];

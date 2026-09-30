@@ -1,0 +1,12 @@
+{
+  "page": {
+    "view": {
+      "name": "page_view"
+    }
+  },
+  "order": {
+    "complete": {
+      "name": "purchase"
+    }
+  }
+}

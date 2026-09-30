@@ -1,11 +1,8 @@
 import type { Collector, Logger, Source, WalkerOS } from '@walkeros/core';
-import type {
-  Message,
-  Subscription,
-  SubscriptionOptions,
-} from '@google-cloud/pubsub';
+import type { Message, SubscriptionOptions } from '@google-cloud/pubsub';
 import { Duration } from '@google-cloud/pubsub';
 import type {
+  PullSubscription,
   Settings,
   SyntheticMessage,
   SyntheticPushResult,
@@ -136,7 +133,7 @@ export const sourcePubSubPull: Source.Init<Types> = async (context) => {
       seconds: settings.ackDeadline,
     });
   }
-  const subscription: Subscription = settings.client.subscription(
+  const subscription: PullSubscription = settings.client.subscription(
     settings.subscription,
     subscriptionOptions,
   );

@@ -5,6 +5,7 @@ import {
   HUB_MANAGE_DESCRIPTION,
   HUB_MANAGE_INPUT_SCHEMA,
 } from './tools/hub-manage.js';
+import { FLOW_SIMULATE_DESCRIPTION } from './tools/simulate-description.js';
 import {
   FRAME_MANAGE_DESCRIPTION,
   FRAME_MANAGE_INPUT_SCHEMA,
@@ -251,19 +252,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'flow_simulate',
     title: 'Simulate Flow',
-    description:
-      'Simulate events through a walkerOS flow without making real API calls. ' +
-      'For destinations: event is a walkerOS event { name: "entity action", data: {...} }. ' +
-      'For sources: event is { content: ..., trigger?: { type?, options? }, env?: {...} }. ' +
-      'Use step to target a specific step. ' +
-      'Use flow_examples to discover available test data. ' +
-      'IMPORTANT: Destinations with require (e.g. require: ["consent"]) stay pending until ' +
-      'that collector event fires, simulation will error "not found" if require is not satisfied. ' +
-      'Remove require from config or provide consent/user events before simulating. ' +
-      'Separately, destinations with consent (e.g. consent: { marketing: true }) only receive ' +
-      'events where the event includes matching consent. ' +
-      'Mapping transforms event names and data at the destination level. ' +
-      'Policy redacts or injects fields before mapping runs.',
+    description: FLOW_SIMULATE_DESCRIPTION,
     inputSchema: {
       configPath: schemas.SimulateInputShape.configPath,
       event: z

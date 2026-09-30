@@ -1,4 +1,5 @@
-import type { Env } from '../types';
+import type { PutRecordBatchCommandInput } from '@aws-sdk/client-firehose';
+import type { Env, SendClient } from '../types';
 
 /**
  * Example environment configurations for AWS Firehose destination
@@ -8,14 +9,14 @@ import type { Env } from '../types';
  */
 
 // Mock FirehoseClient class
-class MockFirehoseClient {
+class MockFirehoseClient implements SendClient {
   config: unknown;
 
   constructor(config?: unknown) {
     this.config = config;
   }
 
-  async send(command: unknown) {
+  async send(_command: object) {
     // Simulate successful response
     return {
       RecordId: 'mock-record-id',
@@ -29,9 +30,9 @@ class MockFirehoseClient {
 // Mock PutRecordBatchCommand class. The build minifies class names; the tag
 // keeps the SDK command name in printed simulate output.
 class MockPutRecordBatchCommand {
-  input: unknown;
+  readonly input: PutRecordBatchCommandInput;
 
-  constructor(input: unknown) {
+  constructor(input: PutRecordBatchCommandInput) {
     this.input = input;
   }
 
@@ -43,10 +44,8 @@ class MockPutRecordBatchCommand {
 export const push: Env = {
   // Environment for push operations
   AWS: {
-    FirehoseClient:
-      MockFirehoseClient as unknown as Env['AWS']['FirehoseClient'],
-    PutRecordBatchCommand:
-      MockPutRecordBatchCommand as unknown as Env['AWS']['PutRecordBatchCommand'],
+    FirehoseClient: MockFirehoseClient,
+    PutRecordBatchCommand: MockPutRecordBatchCommand,
   },
 };
 

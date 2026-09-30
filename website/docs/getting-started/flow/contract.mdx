@@ -55,85 +55,29 @@ If your flow has a single throwaway event, you do not need a contract. Reach for
 | `events?` | Entity-action keyed JSON Schemas, applied per event |
 | `schema?` | A single JSON Schema applied to every event |
 
-```json
-{
-  "version": 4,
-  "contract": {
-    "default": {
-      "tagging": 1,
-      "schema": {
-        "type": "object",
-        "properties": {
-          "globals": {
-            "required": ["country"],
-            "properties": {
-              "country": { "type": "string" }
-            }
-          },
-          "consent": {
-            "required": ["analytics"],
-            "properties": {
-              "analytics": { "type": "boolean", "const": true }
-            }
-          }
-        }
-      }
-    },
-    "web": {
-      "extend": "default",
-      "events": {
-        "product": {
-          "add": {
-            "properties": {
-              "data": { "required": ["id", "quantity"] }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
+The `default` contract of
+[`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json),
+the tested example flow, uses every field but `extend`:
+
+<FlowSlice feature="contract-default" depth={1} />
+
+<FlowSlice feature="contract-description" />
+
+<FlowSlice feature="contract-tagging" />
 
 ### Schema
 
 `schema` is a JSON Schema for the full event. Standard event field names (`globals`, `context`, `consent`, `user`, `custom`, `source`, `data`) live inside `schema.properties`. The schema runs on every event the contract governs, in addition to any per-event rules under `events`.
 
+<FlowSlice feature="contract-schema" />
+
 ### Event schemas
 
 Inside `events`, entity-action keyed entries define JSON Schemas for a partial `WalkerOS.Event`. The `*` key matches anything (see [Wildcard inheritance](#wildcard-inheritance)).
 
-```json
-"events": {
-  "product": {
-    "*": {
-      "description": "A product in the catalog",
-      "properties": {
-        "data": {
-          "type": "object",
-          "required": ["id", "name"],
-          "properties": {
-            "id": { "type": "string", "description": "Product SKU" },
-            "name": { "type": "string", "description": "Display name" }
-          }
-        }
-      }
-    },
-    "add": {
-      "description": "Product added to cart",
-      "properties": {
-        "data": {
-          "type": "object",
-          "required": ["quantity"],
-          "properties": {
-            "quantity": { "type": "integer", "minimum": 1 }
-          }
-        }
-      }
-    }
-  }
-}
-```
+<FlowSlice feature="contract-events" depth={2} />
+
+<FlowSlice feature="contract-wildcard" />
 
 ## Inheritance with extend
 
@@ -180,6 +124,13 @@ Extend chains are resolved first, then wildcards expand on the merged result. Sc
 ```
 
 `web_loggedin` resolves to: `tagging: 1` (from `default`), `globals.country` required (from `default`), `events.product.add` (from `web`), and `user.id` required (added by `web_loggedin`), all within a single merged `schema`.
+
+In the complete example, the `server` contract extends `default` with what the
+server adds before any vendor sees an event, the cookieless visitor hash:
+
+<FlowSlice feature="contract-extend" />
+
+<FlowSlice feature="contract-server-hash" />
 
 ## Wildcard inheritance
 
@@ -318,81 +269,18 @@ Use `variables` when the same JSON Schema fragment shows up in many events. For 
 A canonical, tested flow with a multi-entry contract lives at
 [`packages/cli/examples/flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json).
 
-A shorter end-to-end illustration:
-
-```json
-{
-  "version": 4,
-  "contract": {
-    "default": {
-      "tagging": 1,
-      "description": "Web shop tracking contract",
-      "schema": {
-        "type": "object",
-        "properties": {
-          "globals": {
-            "required": ["country", "currency"],
-            "properties": {
-              "country":  { "type": "string", "pattern": "^[A-Z]{2}$" },
-              "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
-            }
-          },
-          "consent": {
-            "required": ["analytics"],
-            "properties": {
-              "analytics": { "type": "boolean", "const": true }
-            }
-          }
-        }
-      },
-      "events": {
-        "product": {
-          "*":   { "properties": { "data": { "required": ["id", "name"] } } },
-          "add": { "properties": { "data": { "required": ["quantity"], "properties": { "quantity": { "type": "integer", "minimum": 1 } } } } }
-        },
-        "order": {
-          "complete": { "properties": { "data": { "required": ["total"], "properties": { "total": { "type": "number", "minimum": 0 } } } } }
-        }
-      }
-    },
-    "web_loggedin": {
-      "extend": "default",
-      "schema": {
-        "properties": {
-          "user": {
-            "required": ["id", "email"],
-            "properties": {
-              "id":    { "type": "string" },
-              "email": { "type": "string", "format": "email" }
-            }
-          }
-        }
-      }
-    }
-  },
-  "flows": {
-    "web-shop": {
-      "config": { "platform": "web" },
-      "transformers": {
-        "validate": {
-          "package": "@walkeros/transformer-validate",
-          "config": { "settings": { "contract": ["$contract.web_loggedin"], "mode": "strict" } }
-        }
-      }
-    }
-  }
-}
-```
-
-For `product add`, a validate transformer that references `$contract.web_loggedin` sees these rules (all from the merged shape):
+Its server flow's `validate` step references `$contract.server` (see
+[Validate](/docs/transformers/validate#reference-a-contract)). For
+`product add`, that reference resolves to these rules, all from the merged
+shape:
 
 | Source | Rule |
 |--------|------|
-| `default.schema.properties.globals` | `country`, `currency` required, both match pattern |
-| `default.schema.properties.consent` | `analytics` required and `true` |
-| `default.events.product.*` | `data.id`, `data.name` required |
+| `default.schema.properties.consent` | `functional` required and `true`, `marketing` `true` when present |
+| `default.schema.properties.globals` | `language` required, two lower-case letters |
+| `default.events.product.*` | `data.id`, `data.name` non-empty, `data.price` a number of at least 0 |
 | `default.events.product.add` | `data.quantity` required, integer, minimum 1 |
-| `web_loggedin.schema.properties.user` | `user.id`, `user.email` required |
+| `server.schema.properties.user` | `user.hash` required |
 
 ## Next steps
 

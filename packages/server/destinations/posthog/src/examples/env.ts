@@ -53,7 +53,7 @@ function createMockPostHog() {
  */
 export const push: Env = {
   get PostHog() {
-    return createMockPostHog() as unknown as Env['PostHog'];
+    return createMockPostHog();
   },
 };
 

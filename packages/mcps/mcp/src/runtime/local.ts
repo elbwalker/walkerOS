@@ -1,4 +1,5 @@
 import {
+  collectKnownSecrets,
   loadJsonConfig,
   bundle,
   push,
@@ -7,7 +8,7 @@ import {
   simulateCollector,
   simulateDestination,
 } from '@walkeros/cli';
-import type { WalkerOS } from '@walkeros/core';
+import type { Flow, WalkerOS } from '@walkeros/core';
 import { getOrBuildBundle } from './bundle-cache.js';
 import type { FlowRuntime } from './types.js';
 
@@ -50,12 +51,18 @@ export function createLocalRuntime(): FlowRuntime {
           return simulateSource(input, opts.event, {
             sourceId: opts.stepId,
             ...common,
+            consent: opts.state?.consent,
           });
         case 'transformer':
           return simulateTransformer(
             input,
             opts.event as WalkerOS.DeepPartialEvent,
-            { transformerId: opts.stepId, ...common, ingest: opts.ingest },
+            {
+              transformerId: opts.stepId,
+              ...common,
+              ingest: opts.ingest,
+              consent: opts.state?.consent,
+            },
           );
         case 'collector':
           return simulateCollector(
@@ -72,10 +79,19 @@ export function createLocalRuntime(): FlowRuntime {
           return simulateDestination(
             input,
             opts.event as WalkerOS.DeepPartialEvent,
-            { destinationId: opts.stepId, ...common, ingest: opts.ingest },
+            {
+              destinationId: opts.stepId,
+              ...common,
+              ingest: opts.ingest,
+              consent: opts.state?.consent,
+              command: opts.command,
+            },
           );
       }
     },
+
+    knownSecrets: async (input) =>
+      collectKnownSecrets(await loadJsonConfig<Flow.Json>(input)),
 
     push: (input, event, opts) =>
       push(input, event, {

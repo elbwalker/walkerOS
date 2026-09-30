@@ -1,0 +1,253 @@
+---
+title: Routing
+description: How sources, transformers, the collector and destinations connect, and how routes decide where an event goes
+sidebar_position: 4
+---
+
+# Routing
+
+Every chain field decides where an event goes next. This page is the reference
+for connections, chain resolution, route operators and `stop`. The examples come
+from [`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json),
+the tested example flow, so each one is a real part of a working setup.
+
+## Connection rules
+
+Sources, transformers, collectors, and destinations connect in specific ways. This table summarizes every valid connection:
+
+| From | To | Field | Notes |
+|------|----|-------|-------|
+| Source | Transformer | `before` on source | Consent-exempt preprocessing |
+| Source | Transformer | `next` on source | Source chain, runs before the collector |
+| Source | Collector | omit `next` | Default: events go straight to collector |
+| Transformer | Transformer | `before` on transformer | Pre-transform enrichment |
+| Transformer | Transformer | `next` on transformer | Chain continues to next transformer |
+| Collector | Transformer | `next` on collector | Collector chain, runs once per event before the destination fan-out |
+| Collector | Transformer | `before` on destination | Destination chain, runs for that destination only |
+| Collector | Destination | omit `collector.next` and `before` | Default: events go straight to every destination |
+| Destination | Transformer | `next` on destination | Post-push processing |
+
+**Connections that are not allowed:**
+- Source to source
+- Source directly to destination (events must pass through the collector)
+- Collector to source
+
+## Chain resolution
+
+Every chain field (`source.before`, `source.next`, `transformer.before`, `transformer.next`, `collector.next`, `destination.before`, `destination.next`) accepts the same value and resolves it the same way:
+
+| Value | Behavior |
+|-------|----------|
+| `"fingerprint"` (string) | Runs `fingerprint`, then its own `next`, and so on until a step has no `next` |
+| `["fingerprint", "enrich"]` (array) | Runs the array in order. A member's own `next` is inserted right after that member, then the array continues |
+
+For example, `["bot", "validate", "session"]` where `bot` has `"next": "flag"` runs `bot`, `flag`, `validate`, `session`. Insertion is recursive: if `flag` has a `next` of its own, it runs right after `flag`. A string is the one-member case of the same rule.
+
+The rules that apply everywhere:
+
+1. **Resolved per hop**: each route is evaluated when the event reaches it, never ahead of time. Its `match` reads `{ ingest, event }` as the previous step left them, so a route can decide on a value an earlier step loaded, for example a `state` get that writes `ingest.tier`. A conditional `next` on a transformer sees what that transformer did.
+2. **Repeated steps run as written**: a step listed twice runs twice.
+3. **Cycles**: a transformer's own `next` that leads back to a step already on that insertion path is skipped. Each copy of an event is also limited to 256 steps.
+4. **Unknown ids**: an id that names no transformer is logged as a warning and skipped, and the chain continues. `walkeros validate` reports it as an `UNKNOWN_ROUTE_TARGET` error.
+5. **Forks and stops**: `many` splits the event into independent copies and `stop` ends one copy, see [Route operators](#route-operators) and [Dropping an event with `stop`](#dropping-an-event-with-stop).
+
+## Where transformers run
+
+All transformers live in a single `transformers` pool. Their position in the pipeline depends on which field references them:
+
+```
+[Source.before] → Source ──[next]──→ Source chain ──→ Collector ──[next]──→ Collector chain ──→ fan-out ──[before]──→ Destination chain ──→ Destination ──[next]──→ Post-push
+```
+
+The same transformer can appear in several chains. For example, you might use `fingerprint` in a source's `next` chain and again in a destination's `before` chain. Each invocation runs independently.
+
+Use `collector.next` for work every destination needs, and `destination.before` for work only one destination needs. The collector chain runs once per event, after the collector completed it (globals, user, consent, ids) and before the event is handed to the destinations.
+
+The server flow of the complete example uses every position. The source chain
+runs `dedup` before the collector:
+
+<FlowSlice feature="source-next" />
+
+The collector chain runs once per event, for every destination: `fingerprint`
+and `bot` always, `enrich` for everything but impressions.
+
+<FlowSlice feature="collector-next" />
+
+On the web, `collector.next` runs one inline step:
+
+<FlowSlice feature="web-collector-next" />
+
+<FlowExample feature="web-collector-next" />
+
+A destination chain runs for one destination only. Meta, Piwik PRO and Data
+Manager each name `eventFilter`; Pub/Sub, which feeds the warehouse, does not:
+
+<FlowSlice feature="destination-before" />
+
+A destination chain can be a route too. On Pub/Sub, `pseudonymize` runs only
+when an email exists:
+
+<FlowSlice feature="pubsub-before" />
+
+## Conditional routing
+
+Every chain field (`source.before`, `source.next`, `transformer.before`, `transformer.next`, `collector.next`, `destination.before`, `destination.next`) accepts a `Route`. `Route` is recursive:
+
+```typescript
+type Route = string | Route[] | RouteConfig;
+```
+
+A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, `stop`, or none of them (pure gate that only filters by `match`). `match` is optional everywhere; omit it to always match.
+
+At every position, `match` reads the same root: `{ ingest, event }`. Use `ingest.*` for request context and `event.*` for the event as it is at that point (at `source.before`, the source's raw output). Each route is evaluated only when the event reaches it.
+
+### Route operators
+
+A `RouteConfig` is a disjoint union. Pick the operator that matches the routing shape you need:
+
+- `next`: single continuation. Optionally gated by `match`.
+- `one`: first-match dispatch. Walk entries in order; the first whose `match` passes wins, and the chain continues with that entry's `Route`.
+- `many`: all-match fan-out, allowed in every chain field. Every matching entry becomes its own copy of the event, and each copy finishes the rest of the path on its own: the rest of the array, every enclosing chain, and the positions after it (collector, destinations). Copies are never merged. If only one entry matches, the event continues without a copy.
+- `stop`: `{ "stop": true }` ends the running copy of the event. With `match`, it ends the copy only when the match passes; otherwise the chain continues.
+
+An array made only of route configs, with no transformer id in it, is an implicit `one`: the first matching entry wins. Write `{ "one": [...] }` to make that explicit, or add a transformer id to make it a sequence.
+
+First-match dispatch is the `one` operator. The server source of the complete
+example sorts raw requests before an event exists:
+
+<FlowSlice feature="source-before" />
+
+<FlowSlice feature="route-one" />
+
+`one` entries are evaluated in order and the first matching `Route` wins: a GA4
+hit of the sub-site property is decoded, a script request is served, and any
+other GA4 hit stops. An entry without `match` always matches and acts as a
+default branch. If no entry matches, as for a `POST /collect`, the route selects
+nothing and the event continues unchanged, here to the source's `next`.
+
+<FlowSlice feature="ga4-other-dropped" />
+
+The conditions use the combinator `and` and three operators:
+
+<FlowSlice feature="match-and" />
+
+<FlowSlice feature="op-prefix" />
+
+<FlowSlice feature="op-regex" />
+
+<FlowSlice feature="op-suffix" />
+
+### Conditional next and sequences
+
+A conditional next is a `match` plus a `next`: the target runs only when the
+match holds, otherwise the chain goes on. `not` inverts a condition:
+
+<FlowSlice feature="route-next-match" />
+
+<FlowSlice feature="match-not" />
+
+An array that mixes conditional next entries and step ids is a sequence. Each
+entry decides in turn, and a plain id always runs. The `enrich` step of the
+complete example is such a sequence: the customer lookup only for logged-in
+events, the session steps only for their event, `validate` always last.
+
+<FlowSlice feature="route-sequence" />
+
+<FlowSlice feature="op-exists" />
+
+<FlowSlice feature="op-eq" />
+
+<FlowExample feature="code-free-hop" />
+
+Fan-out is the `many` operator. Use it when one inbound event needs to feed several independent branches, for example a parser plus an audit log:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": {
+        "many": [
+          {
+            "match": { "key": "ingest.path", "operator": "prefix", "value": "/purchase" },
+            "next": "purchase_parser"
+          },
+          { "next": "audit_log" }
+        ]
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+A request to `/purchase` matches both entries, so it becomes two copies: one runs `purchase_parser`, the other `audit_log`, and each then continues to the collector and the destinations on its own. Any other request matches only `audit_log` and continues without a copy. If no entry matches, the event continues unchanged.
+
+Each copy gets its own `event.id`, derived from the original id and the branch position, so deduplication on `event.id` (and vendor deduplication such as Meta's `event_id`) keeps every copy. The copies share the same `trace`. A transformer that returns an array of results forks the same way.
+
+`many` works in every chain field and at any depth. Inside an array, each copy finishes the rest of the array:
+
+```json
+"next": ["decode", { "many": ["enrich_a", "enrich_b"] }, "session"]
+```
+
+This runs `decode`, then two copies: `enrich_a` then `session`, and `enrich_b` then `session`.
+
+The complete example has no genuine use for `many`, `transformer.before` or
+`destination.next`. The tested route fixture `routeCases` in `@walkeros/core/dev`
+covers them.
+
+## Dropping an event with `stop`
+
+A `stop` entry ends the running copy of the event. Combine it with `match` to drop only some events; without `match` it always stops. A `stop` that does not match falls through and the chain continues. In a `many`, a `stop` ends only its own copy; the other copies continue.
+
+What a stop means depends on the position it is resolved in:
+
+| Position | A resolved `stop` means |
+|----------|-------------------------|
+| `source.before`, `source.next` | The event never reaches the collector. The push result is `{ ok: true, dropped: true }` |
+| `transformer.before`, `transformer.next`, a transformer result `{ next }` | The running copy ends; the position that started the chain applies its own meaning |
+| `collector.next` | No destination receives the event |
+| `destination.before` | This destination skips the event; other destinations are unaffected |
+| `destination.next` | The post-push chain ends; delivery already happened |
+
+`collector.next` runs before the destination fan-out, so a `stop` there drops the event for **all** destinations. To drop an event for one destination only, put the `stop` in that destination's `before`.
+
+Drop product impressions everywhere:
+
+```json
+"collector": {
+  "next": [
+    { "match": { "key": "event.name", "operator": "eq", "value": "product impression" }, "stop": true },
+    "session"
+  ]
+}
+```
+
+Drop events for some vendors only: in the complete example, Meta, Piwik PRO and
+Data Manager name `eventFilter` as their `before`. Its own `next` is a `stop`
+with an `or` match: impressions, likely bots and events that failed the
+contract. Pub/Sub does not name it, so the warehouse keeps every event.
+
+<FlowSlice feature="event-filter" />
+
+<FlowSlice feature="transformer-next" />
+
+<FlowSlice feature="match-or" />
+
+<FlowSlice feature="op-gt" />
+
+<FlowSlice feature="route-stop" />
+
+<FlowExample feature="event-filter" />
+
+Without `match`, a stop always ends the copy. The `file` step serves `walker.js`
+and stops, so a script request never becomes an event:
+
+<FlowSlice feature="stop-unconditional" />
+
+A dropped event is recorded as a `skip` with reason `dropped` in the flow's observability data. `walkeros validate` warns about entries placed after an unconditional `stop`, because they can never run.
+
+To name and reuse a chain without writing code, declare a **path** transformer: a transformer entry with no `code` / `package`, just `before` / `next` / `cache`. The collector synthesizes a code-less passthrough so the named entry can be referenced from any `Route`:
+
+<FlowSlice feature="code-free-hop" depth={1} />

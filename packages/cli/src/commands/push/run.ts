@@ -1,4 +1,6 @@
 import {
+  PAGE_URL_SCOPE_ERROR,
+  isFlowJson,
   push,
   simulateCollector,
   simulateDestination,
@@ -12,9 +14,10 @@ import {
   readStdinToTempFile,
   type Platform,
 } from '../../core/index.js';
-import { loadJsonFromSource } from '../../config/index.js';
+import { loadJsonFromSource, loadJsonConfig } from '../../config/index.js';
+import { collectKnownSecrets } from '../../core/known-secrets.js';
 import { isObject } from '@walkeros/core';
-import type { Ingest, Simulation, WalkerOS } from '@walkeros/core';
+import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import type { PushCommandOptions, PushResult } from './types.js';
 
 /**
@@ -35,6 +38,51 @@ function simulationToPushResult(result: Simulation.Result): PushResult {
 
 const INGEST_SCOPE_ERROR =
   '--ingest applies to transformer, collector and destination simulation only';
+
+const CONSENT_SCOPE_ERROR =
+  "--consent sets the collector's starting consent for a simulation; a real push uses the flow's own consent.";
+
+const CONSENT_SHAPE_ERROR = '--consent must be a JSON object of booleans';
+
+const COMMAND_SCOPE_ERROR = '--command applies to destination simulation only.';
+
+function isConsent(value: unknown): value is WalkerOS.Consent {
+  return (
+    isObject(value) &&
+    Object.values(value).every((granted) => typeof granted === 'boolean')
+  );
+}
+
+/**
+ * Resolve the collector's starting consent: the raw `--consent` source (JSON
+ * string, file path or URL) wins over a programmatic `consent`.
+ */
+async function resolveConsent(
+  options: PushCommandOptions,
+): Promise<WalkerOS.Consent | undefined> {
+  if (options.consentSource === undefined) return options.consent;
+  const loaded: unknown = await loadJsonFromSource(options.consentSource, {
+    name: 'consent',
+  });
+  if (!isConsent(loaded)) throw new Error(CONSENT_SHAPE_ERROR);
+  return loaded;
+}
+
+/**
+ * The config a run reads, loaded ONCE: a flow config is handed on as the
+ * object (simulate) or as `raw` (real push), so a URL is fetched once and the
+ * secrets masked are those of the flow that runs. Anything else (a prebuilt
+ * bundle, an unreadable path) keeps the path for the step to read and
+ * report.
+ */
+async function loadFlowJson(config: string): Promise<Flow.Json | undefined> {
+  try {
+    const loaded: unknown = await loadJsonConfig(config);
+    return isFlowJson(loaded) ? loaded : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Resolve the pipeline context a simulated step reads: the raw `--ingest`
@@ -66,6 +114,25 @@ async function resolveIngest(
 export async function runPushCommand(
   options: PushCommandOptions,
 ): Promise<PushResult> {
+  return (await runPushCommandWithSecrets(options)).result;
+}
+
+/**
+ * `runPushCommand`, plus the values of the secrets the flow config references
+ * (see `collectKnownSecrets`), so `pushCommand` can mask them in its output.
+ */
+export async function runPushCommandWithSecrets(
+  options: PushCommandOptions,
+): Promise<{ result: PushResult; knownSecrets: string[] }> {
+  const loaded: { knownSecrets: string[] } = { knownSecrets: [] };
+  const result = await runPush(options, loaded);
+  return { result, knownSecrets: loaded.knownSecrets };
+}
+
+async function runPush(
+  options: PushCommandOptions,
+  loaded: { knownSecrets: string[] },
+): Promise<PushResult> {
   const startTime = Date.now();
 
   try {
@@ -73,12 +140,16 @@ export async function runPushCommand(
     const plan = dispatchSimulate(options.simulate ?? []);
 
     // 2. Resolve config: stdin > argument > default (preserves prior behavior).
-    let config: string;
+    let configPath: string;
     if (isStdinPiped() && !options.config) {
-      config = await readStdinToTempFile('push');
+      configPath = await readStdinToTempFile('push');
     } else {
-      config = options.config || 'bundle.config.json';
+      configPath = options.config || 'bundle.config.json';
     }
+    const flowJson = await loadFlowJson(configPath);
+    const config: string | Flow.Json = flowJson ?? configPath;
+    const knownSecrets = flowJson ? collectKnownSecrets(flowJson) : [];
+    loaded.knownSecrets = knownSecrets;
 
     // 3. Resolve string event inputs (path/URL → JSON).
     let resolvedEvent: unknown = options.event;
@@ -94,11 +165,23 @@ export async function runPushCommand(
     if (ingest && (plan.kind === 'none' || plan.kind === 'source'))
       throw new Error(INGEST_SCOPE_ERROR);
 
-    // 5. Route to the correct typed function based on the plan.
+    // 5. Scope checks of the other simulate flags, then --consent: the
+    // collector's starting state of a simulation (for a source, the state its
+    // trigger's flow starts from). A real push runs the flow's own consent.
+    if (options.command !== undefined && plan.kind !== 'destination')
+      throw new Error(COMMAND_SCOPE_ERROR);
+    if (options.pageUrl !== undefined && plan.kind !== 'source')
+      throw new Error(PAGE_URL_SCOPE_ERROR);
+    const consent = await resolveConsent(options);
+    if (consent && plan.kind === 'none') throw new Error(CONSENT_SCOPE_ERROR);
+
+    // 6. Route to the correct typed function based on the plan.
     let result: PushResult;
     switch (plan.kind) {
       case 'none':
-        result = await push(config, resolvedEvent, {
+        result = await push(configPath, resolvedEvent, {
+          raw: flowJson,
+          knownSecrets,
           flow: options.flow,
           json: options.json,
           verbose: options.verbose,
@@ -114,6 +197,8 @@ export async function runPushCommand(
           await simulateSource(config, resolvedEvent, {
             sourceId: plan.ids[0],
             flow: options.flow,
+            pageUrl: options.pageUrl,
+            consent,
             silent: options.silent,
             verbose: options.verbose,
             json: options.json,
@@ -132,6 +217,7 @@ export async function runPushCommand(
               flow: options.flow,
               mock: options.mock,
               ingest,
+              consent,
               silent: options.silent,
               verbose: options.verbose,
               json: options.json,
@@ -151,6 +237,7 @@ export async function runPushCommand(
               flow: options.flow,
               mock: options.mock,
               ingest,
+              state: consent ? { consent } : undefined,
               silent: options.silent,
               verbose: options.verbose,
               json: options.json,
@@ -167,6 +254,7 @@ export async function runPushCommand(
           plan.ids,
           options,
           ingest,
+          consent,
         );
         break;
     }
@@ -187,11 +275,12 @@ export async function runPushCommand(
  * first failure and returns a structured error referencing the failed id.
  */
 async function runDestinationSimulationLoop(
-  config: string,
+  config: string | Flow.Json,
   event: WalkerOS.DeepPartialEvent,
   destinationIds: string[],
   options: PushCommandOptions,
   ingest: Omit<Ingest, '_meta'> | undefined,
+  consent: WalkerOS.Consent | undefined,
 ): Promise<PushResult> {
   const startTime = Date.now();
   const simulations: Simulation.Result[] = [];
@@ -202,6 +291,8 @@ async function runDestinationSimulationLoop(
       flow: options.flow,
       mock: options.mock,
       ingest,
+      consent,
+      command: options.command,
       silent: options.silent,
       verbose: options.verbose,
       json: options.json,

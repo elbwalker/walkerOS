@@ -11,8 +11,9 @@ name: Scan
 # published package has no image yet; prereleases never move :latest.
 
 on:
-  schedule:
-    - cron: '0 5 * * 1'
+  # schedule disabled: automatic runs turned off to save CI minutes (manual dispatch still available)
+  # schedule:
+  #   - cron: '0 5 * * 1'
   workflow_dispatch:
 
 permissions:

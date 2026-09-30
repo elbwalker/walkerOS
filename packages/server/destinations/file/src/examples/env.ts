@@ -66,3 +66,6 @@ function makeSpyEnv(): SpyEnv {
 
 export const init: SpyEnv = makeSpyEnv();
 export const push: SpyEnv = makeSpyEnv();
+
+/** The write carries each serialized event; opening the stream carries none. */
+export const simulation = ['call:fs.createWriteStream.write'];

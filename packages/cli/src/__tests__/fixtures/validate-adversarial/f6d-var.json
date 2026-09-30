@@ -1,0 +1,32 @@
+{
+  "version": 4,
+  "variables": {
+    "good": "G-VAR123",
+    "bad": "nope"
+  },
+  "flows": {
+    "b": {
+      "config": {
+        "platform": "web"
+      },
+      "destinations": {
+        "good": {
+          "package": "pkg-x",
+          "config": {
+            "settings": {
+              "id": "$var.good"
+            }
+          }
+        },
+        "bad": {
+          "package": "pkg-x",
+          "config": {
+            "settings": {
+              "id": "$var.bad"
+            }
+          }
+        }
+      }
+    }
+  }
+}

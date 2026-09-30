@@ -207,27 +207,54 @@ success: true
 
 - `mapping: <key>` when a rule matched, `mapping: none` when the destination
   pushed without a rule, `mapping: none (skipped before mapping)` plus
-  `no calls` when nothing was sent. Transformer and collector steps print
-  `event <json>` or `no events`; a failed step prints `error: <message>`.
+  `no calls` when nothing was sent. Then why, when consent is the reason:
+  `pending: waits for consent (require)` (never started; names the unmet
+  `require` entries) or
+  `skipped: consent (requires marketing; granted functional)` (started, event
+  denied by its `consent` check). Source, transformer and collector steps print
+  their recorded calls, then `event <json>` or `no events`; a failed step prints
+  `error: <message>`. A source step records the walker commands the source
+  issues itself as `elb` calls in its own call shape, e.g.
+  `call elb("walker consent",{"functional":true,"marketing":true})` for a CMP,
+  `call elb("user",...)` and `call elb("session",...)` for the session source.
+  Not recorded: the collector's own commands (starting consent, globals, custom,
+  shutdown) and the wiring commands `on`, `hook`, `destination`.
 - `--json` puts the same data under `simulations` (one
-  `{ step, name, events, calls: [{ fn, args, ts }], mappingKey?, error? }` per
-  simulated step, in order; a multi-destination simulate stops at the first
-  failure). stdout is pure JSON, logs go to stderr, so `| jq` works without
-  `--silent`. Values pass through `toPrintable` (`@walkeros/core/node`): `Error`
-  to `{ name, message }`, `Buffer` to UTF-8, `bigint` to string, `Map`/`Set` to
-  arrays, cycles to `"[Circular]"`.
+  `{ step, name, events, calls: [{ fn, args, ts }], mappingKey?, skipped?, error? }`
+  per simulated step, in order; `skipped` is `{ reason: 'pending', require }` or
+  `{ reason: 'consent', required, granted }`; a multi-destination simulate stops
+  at the first failure). stdout is pure JSON, logs go to stderr, so `| jq` works
+  without `--silent`. Values pass through `toPrintable` (`@walkeros/core/node`):
+  `Error` to `{ name, message }`, `Buffer` to UTF-8, `bigint` to string,
+  `Map`/`Set` to arrays, cycles to `"[Circular]"`.
 - Text and JSON output (and MCP `flow_simulate`) are scrubbed with
   `scrubSecrets`, the same redactor the loggers use: service accounts, PEM keys,
   `Authorization`, `access_token`, credential-named fields and high-entropy runs
-  show as `***`. The step still receives the real values.
-- **No real vendor calls.** A package destination whose export has no mock env
-  (`examples.env.push`) is refused before the flow starts (an inline `code` step
-  has no package and runs as given):
+  show as `***`. The values of every `$secret.NAME` the flow references (set in
+  the env, 6+ chars) are masked exactly, raw and JSON-escaped. The step still
+  receives the real values. With `--json`, a number printing a digits-only known
+  value becomes `"***"`, so the JSON still parses. Simulate and a real push of a
+  flow config route the flow's own logs through the masking CLI logger, so flow
+  DEBUG lines need `--verbose` (a prebuilt bundle keeps its logger unless
+  `--json`). The runner masks the secret values it fetches; values from
+  `--env-file` or the container env get the pattern rules only.
+- **Only the target starts.** Destination simulate keeps only the target
+  destination (no source, no other destination initializes); the flow's
+  transformers still start, and a store without a mock env runs for real. Source
+  simulate keeps only the simulated source (no browser page view or CMP decision
+  from another source); captured events stop at the collector. A source package
+  that declares `examples.env.simulation` (SQS, Pub/Sub pull) runs on its mock
+  client with those calls recorded.
+- **No real vendor calls** (destinations only). A package destination whose
+  export has no mock env (`examples.env.push`) is refused before the flow starts
+  (an inline `code` step has no package and runs as given):
   `No mock env for <package> export <exportName>: simulate would call the real vendor. Add examples.env.push to the package's dev examples.`
   A named export of a package version without `exportExamples` is refused with
   `...: this package version predates export-keyed examples; use a version with exportExamples or a local path.`
-  Every flow store's mock env is injected too, so a Sheets/GCS/S3 store needs no
-  credentials in simulate.
+  A store whose package ships a mock env runs on it; a store without one runs
+  for real. Sheets and GCS still need a real-format service-account key, since
+  they sign their token request before the mocked `fetch` answers (see the CLI
+  docs, "Secrets in simulate").
 - **`--ingest <json|file|url>`** supplies the request context (a JSON object,
   e.g. `{"ip":"203.0.113.7","userAgent":"Mozilla/5.0"}`) for `transformer.*`,
   `collector.*` and `destination.*` simulation. It reaches the destination
@@ -237,6 +264,34 @@ success: true
   A programmatic `pushCommand({ ingest })` on a real push or source simulate
   errors the same way; `simulateTransformer`, `simulateCollector` and
   `simulateDestination` take `ingest` directly.
+- **`--consent <json|file|url>`** (a JSON object of booleans) is the collector
+  consent any simulated step starts from, sources included (programmatic
+  `consent`; MCP and collector: `state.consent`). `startFlow` applies it before
+  the flow runs, as a `consent` command only the simulated step hears: a
+  `require: ["consent"]` destination starts, its consent check sees the granted
+  keys, and a Consent Mode (`como`) target records its
+  `gtag('consent','update',...)`. A consent-gated source (the session source
+  with `settings.consent`) starts from it; without it, `no events`. The starting
+  consent is never recorded as a source call. Rejected for a real push only:
+  `--consent sets the collector's starting consent for a simulation; a real push uses the flow's own consent.`
+- **`--command <config|consent|user|run>`** makes a destination simulation run
+  `collector.command(name, event)` instead of a push (a step example's
+  `command`); the event is the command's data and its calls are recorded.
+  Starting consent applies first, then the command. Elsewhere:
+  `--command applies to destination simulation only.`
+- **`--page-url <url>`** sets the page of a simulated web source (absolute
+  `http`/`https` only). Precedence: `--page-url`, then the input trigger's
+  `options.url`, then `http://localhost`. Elsewhere:
+  `--page-url sets the page of a simulated web source; for request context use --ingest.`
+
+Consent mental model (what decides whether a destination receives an event):
+
+| Setting                         | Effect                                                                              | In simulate                                              |
+| ------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `require: ["consent"]`          | Destination stays pending until the collector has ANY consent state                 | `--consent` starts it; else `pending: waits for consent` |
+| `config.consent: { marketing }` | Each event checked against collector consent plus `event.consent`; denied = skipped | grant via `--consent` or the event; else `skipped`       |
+| `event.consent`                 | Per event, counted on top of collector consent                                      | part of the `-e` event                                   |
+
 - **Trace-mode limit.** Simulate injects the mock env before `init`, so clients
   built in `init` (BigQuery writer, Pub/Sub client) are recorded. Runtime trace
   mode (an Observe session at trace level) wraps the env per push only, so calls
@@ -369,6 +424,9 @@ Options:
   --simulate <step>              Simulate a step (repeatable for destination.*). Format: source.NAME | destination.NAME | transformer.NAME | collector.NAME
   --mock <step=value>            Mock a step with a specific return value (repeatable); chain members via destination.NAME.before.ID or collector.next.ID
   --ingest <json|file|url>       Request context for transformer/collector/destination simulate
+  --consent <json|file|url>      Starting collector consent for a simulation, any step
+  --command <name>               Destination simulate runs this command (config|consent|user|run) instead of a push
+  --page-url <url>               Page URL of a simulated web source (http/https)
   --snapshot <source>            JS file to eval before execution (sets global state)
   --json                         Pure JSON on stdout (incl. simulations); logs to stderr
 ```
@@ -440,6 +498,23 @@ local development with a built package directory.
 - **Circular copies:** Never include the output directory itself (e.g.,
   `include: ["./dist"]` when output is `dist/`). The CLI detects this and
   errors.
+- **`include` is server-only:** root `include` (default `./shared` when that
+  folder exists) is copied next to server bundles only. A web build copies
+  nothing and logs
+  `include is ignored for web builds: a browser bundle cannot read local folders.`
+  A server build served from the build cache copies `include` too. A manifest
+  (hosted) build refuses `include` only on a server flow; on a web flow it is
+  accepted and ignored.
+- **Caches and temp dirs:** caches live in `$TMPDIR/cache/` (`os.tmpdir()`; on
+  Linux `TMPDIR` is often unset, read `$TMPDIR/...` in output as `/tmp/...`).
+  Package entries are written to a temp sibling and renamed in once complete; a
+  failed write warns
+  `Package cache write failed for <name>@<version>: <message>. The build continues without caching it.`
+  Entries from an older CLI miss once. `walkeros cache clear` also removes
+  interrupted writes. Cache keys ignore a local package's (`path`) files: after
+  rebuilding one without a version change, `walkeros cache clear`. Each run
+  works in `$TMPDIR/walkeros/<kind>/<6 chars>` (`push`, `build`, `bundle`,
+  `wrap`, `archive`, `setup`).
 - **Runtime paths:** `runneros` sets CWD to the bundle directory. File paths in
   `settings` resolve relative to the bundle, not the project root.
 - **Component names:** Source, transformer, destination, and store names must be
@@ -472,6 +547,13 @@ The CLI:
    only those files into `dist/node_modules/`.
 
 There is no `walkerOS.bundle.external` annotation. nft figures it out.
+
+After tracing, every declared `bundle.packages` entry the bundle actually
+imports (bare imports of the built bundle, incl. `imports`) must be in the
+trace, else the build throws `nft-trace: resolved packages missing from trace`.
+A declared package that is neither imported nor traced (e.g. a type-only
+dependency) only warns:
+`Package <name> is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`
 
 **Bundle directory (the server flow's unpacked artifact):**
 
@@ -544,14 +626,16 @@ resolve against the install root, not the project directory:
 ### Cache (CI)
 
 The bundler caches pacote downloads under `process.env.NPM_CACHE_DIR` (default
-`<tmpDir>/cache/npm`). On CI, persist that path with `actions/cache`:
+`$TMPDIR/cache/npm`). On CI, persist that path with `actions/cache`:
 
 ```yaml
 - uses: actions/cache@v4
   with:
     path: .walkeros-cache/npm
     key: walkeros-${{ hashFiles('**/flow.json') }}
-- run: WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o dist/
+- run: npx walkeros bundle flow.json -o dist/
+  env:
+    NPM_CACHE_DIR: ${{ github.workspace }}/.walkeros-cache/npm
 ```
 
 **CI smoke check:**
@@ -661,36 +745,23 @@ filesystem inputs are refused with `LOCAL_PATH_NOT_ALLOWED`. Only `--json`,
 
 ### Destination Not Found in Simulation
 
-If `--simulate destination.NAME` errors with "not found in collector", the
-destination likely has `require: ["consent"]` in its config. This delays
-initialization until a `walker consent` event fires — which doesn't happen
-during simulation.
-
-**Fix:** Remove or comment out the `require` field for simulation testing:
-
-```json
-{
-  "destinations": {
-    "gtag": {
-      "package": "@walkeros/web-destination-gtag",
-      "config": {
-        "settings": { "measurementId": "G-XXXXXX" }
-      }
-    }
-  }
-}
-```
+`Destination "NAME" not found in collector. Available: ...` means the flow has
+no destination with that key; pick one from the list.
 
 ### Destination Silent (0 Events Received)
 
-If the destination is found but receives 0 events:
+Read the line under `mapping:`:
 
-1. **Check consent**: If destination has `consent: { marketing: true }`, the
-   event must include matching consent. Add to event JSON:
-   `{ "name": "page view", "data": {...}, "consent": { "marketing": true } }`
-2. **Check mapping**: The event name must match a mapping rule (entity/action
+1. **`pending: waits for consent (require)`**: the destination has
+   `require: ["consent"]` and never started. Pass starting consent:
+   `--consent '{"functional":true}'` (MCP: `state.consent`). Do not remove
+   `require` to test.
+2. **`skipped: consent (requires marketing; granted functional)`**: its
+   `consent` setting denied the event. Grant the key in `--consent` or in the
+   event's `consent`.
+3. **Check mapping**: The event name must match a mapping rule (entity/action
    keys). Unmapped events pass through unmodified.
-3. **Check policy**: Policy runs BEFORE mapping — verify policy isn't redacting
+4. **Check policy**: Policy runs BEFORE mapping; verify policy isn't redacting
    fields needed by mapping rules.
 
 ### Web Simulation Transport

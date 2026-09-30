@@ -212,7 +212,7 @@ await startFlow({
 />
 
 `next` accepts the same `Route` as every other chain field (see
-[Chain resolution](/docs/getting-started/flow#chain-resolution)); in a flow
+[Chain resolution](/docs/getting-started/flow/routing#chain-resolution)); in a flow
 file it is `collector.next`. Its routes read `{ ingest, event }` with the
 completed event. What the chain does reaches every destination:
 
@@ -427,6 +427,23 @@ ga4Drops?.dlq ?? 0;   // sustained non-zero rate signals destination outage`}
 />
 
 ---
+
+## In the complete example
+
+The server collector of [`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json), the tested example flow, sets a logger and
+runs its chain once per event:
+
+<FlowSlice feature="flow-collector" />
+
+The web collector carries the page defaults. `globals` can be overridden by
+the page, `globalsStatic` survives a run reset, `custom` holds values that are
+not event data:
+
+<FlowSlice feature="collector-globals" />
+
+<FlowSlice feature="collector-globals-static" />
+
+<FlowSlice feature="collector-custom" />
 
 ## See also
 

@@ -266,7 +266,43 @@ const WHOLE_VALUE_REFERENCES: ReadonlyArray<{
   },
 ];
 
-const PROSE_KEYS = ['title', 'description', '$comment'];
+const PROSE_KEYS = ['title', 'description'];
+const STEP_SECTIONS = ['sources', 'transformers', 'destinations', 'stores'];
+
+/**
+ * Prose describes references, it never resolves them. `path` runs from the
+ * config root. Prose is: a `$comment` anywhere; anything under the root
+ * `contract` or a step's `config.settings.contract` (JSON Schema carries
+ * `description` at any depth); a `title` or
+ * `description` on the config root, a flow, a step or a step example. The
+ * same keys inside `settings` or `mapping` are data and stay checked.
+ */
+function isProsePath(path: readonly string[]): boolean {
+  const key = path[path.length - 1];
+  if (key === '$comment') return true;
+  if (path[0] === 'contract') return true;
+  // A step's inline JSON Schema (`config.settings.contract`, the validate
+  // transformer) is prose like the root contract.
+  if (
+    path[0] === 'flows' &&
+    STEP_SECTIONS.includes(path[2]) &&
+    path[4] === 'config' &&
+    path[5] === 'settings' &&
+    path[6] === 'contract'
+  )
+    return true;
+  if (!PROSE_KEYS.includes(key)) return false;
+  // Config root: `title`.
+  if (path.length === 1) return true;
+  if (path[0] !== 'flows') return false;
+  // Flow: `flows.<name>.title`.
+  if (path.length === 3) return true;
+  if (!STEP_SECTIONS.includes(path[2])) return false;
+  // Step: `flows.<name>.<section>.<step>.title`.
+  if (path.length === 5) return true;
+  // Example: `flows.<name>.<section>.<step>.examples.<example>.title`.
+  return path.length === 7 && path[4] === 'examples';
+}
 
 /**
  * Warn on whole-value references that would not resolve: used inside a
@@ -281,8 +317,7 @@ function checkWholeValueReferences(
 ): void {
   walkStringValues(parsed, [], (value, path) => {
     if (value.startsWith(REF_CODE_PREFIX)) return;
-    // Prose fields describe references, they never resolve them.
-    if (PROSE_KEYS.includes(path[path.length - 1])) return;
+    if (isProsePath(path)) return;
     for (const { prefix, regex, grammar } of WHOLE_VALUE_REFERENCES) {
       if (!value.includes(prefix)) continue;
       const name = prefix.slice(0, -1);
@@ -457,7 +492,7 @@ function checkSecretReferences(
   // project's registered set. This is what makes a valid multi-flow config (a
   // web flow forwarding to a server flow that holds the secret) pass instead of
   // having the server flow's secret wrongly flagged as a web violation.
-  for (const flow of Object.values(parsed.flows)) {
+  for (const [flowName, flow] of Object.entries(parsed.flows)) {
     if (!isObject(flow)) continue;
     const cfg = flow.config;
     const platform =
@@ -465,10 +500,10 @@ function checkSecretReferences(
         ? cfg.platform
         : undefined;
 
-    // Scan string values; prose fields describe references, they never
-    // resolve them (same skip as checkWholeValueReferences).
-    walkStringValues(flow, [], (value, path) => {
-      if (PROSE_KEYS.includes(path[path.length - 1])) return;
+    // Scan string values; prose is skipped by the same rule as
+    // checkWholeValueReferences, so the walk starts at the flow's root path.
+    walkStringValues(flow, ['flows', flowName], (value, path) => {
+      if (isProsePath(path)) return;
       SECRET_INLINE_REGEX.lastIndex = 0;
       let match: RegExpExecArray | null;
       while ((match = SECRET_INLINE_REGEX.exec(value)) !== null) {

@@ -71,38 +71,39 @@ Source cache intercepts requests before the pipeline runs. Sources default to `s
 Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment. With `stop: true`, the remaining chain stops on HIT and downstream transformers and destinations are skipped.
 
 :::note Halt scopes
-Transformer caches with `stop: true` in a source chain (`source.before`, `source.next`) or in the collector chain (`collector.next`) halt the event on HIT: no destination sees it. In a destination's `before` chain, a HIT skips the rest of that chain and the destination receives the cached event. Destination caches with `stop: true` halt only the per-destination delivery; sibling destinations still receive the event. To drop an event by rule rather than by cache, use a route `stop` (see [Dropping an event with `stop`](/docs/getting-started/flow#dropping-an-event-with-stop)).
+Transformer caches with `stop: true` in a source chain (`source.before`, `source.next`) or in the collector chain (`collector.next`) halt the event on HIT: no destination sees it. In a destination's `before` chain, a HIT skips the rest of that chain and the destination receives the cached event. Destination caches with `stop: true` halt only the per-destination delivery; sibling destinations still receive the event. To drop an event by rule rather than by cache, use a route `stop` (see [Dropping an event with `stop`](/docs/getting-started/flow/routing#dropping-an-event-with-stop)).
 :::
 
-```json
-"transformers": {
-  "enricher": {
-    "package": "@walkeros/server-transformer-enricher",
-    "cache": {
-      "rules": [
-        { "key": ["event.name"], "ttl": 60 }
-      ]
-    }
-  }
-}
-```
+The `dedup` step of
+[`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json)
+has no code of its own, only a cache. It runs in the server source's `next`
+chain, so a hit with `stop: true` drops a resent event before the collector:
+
+<FlowSlice feature="dedup-by-event-id" />
+
+<FlowSlice feature="cache-stop" />
+
+<FlowSlice feature="cache-namespace" />
+
+<FlowSlice feature="cache-rules" />
+
+<FlowSlice feature="cache-key" />
+
+<FlowSlice feature="cache-ttl" />
+
+<FlowExample feature="dedup-by-event-id" />
 
 ### Destination Cache (deduplication)
 
 Destination cache skips the push on HIT, preventing duplicate events from reaching the destination. Other destinations still receive the event. With `stop: true`, the `before` transformer chain is also skipped on HIT.
 
-```json
-"destinations": {
-  "ga4": {
-    "package": "@walkeros/web-destination-ga4",
-    "cache": {
-      "rules": [
-        { "key": ["event.name", "event.data.id"], "ttl": 300 }
-      ]
-    }
-  }
-}
-```
+A thank-you page reload sends the same order again with a new event id, so the
+`dedup` step above lets it through. Meta dedups on the order id instead, and the
+rule's `match` limits the cache to `order complete`:
+
+<FlowSlice feature="order-dedup-meta" />
+
+<FlowSlice feature="cache-rule-match" />
 
 ## Key Resolution
 
@@ -152,6 +153,11 @@ By default, cache uses a shared in-memory store. Reference a custom store for pe
   }
 }
 ```
+
+A store can carry a cache of its own. In the complete example, reads from the
+`customers` store are memoized for five minutes:
+
+<FlowSlice feature="store-cache" />
 
 Custom stores can be either synchronous (in-memory) or asynchronous (file system, Redis, HTTP, the cache wrapper). Cache lookups await the underlying `store.get` internally, so HIT/MISS semantics behave identically regardless of which backing you wire.
 

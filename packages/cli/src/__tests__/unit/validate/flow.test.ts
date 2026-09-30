@@ -96,7 +96,7 @@ describe('validateFlow', () => {
     );
 
     expect(result.valid).toBe(true);
-    expect(result.details.validatedFlow).toBe('production');
+    expect(result.details.scope).toMatchObject({ flows: ['production'] });
   });
 
   it('fails when specified flow does not exist', () => {
@@ -861,7 +861,7 @@ describe('validateFlow', () => {
         { strict: true },
       );
       expect(result.errors.map((e) => e.path)).toContain(
-        'transformer.validate.examples.example.out',
+        'flows.server.transformers.validate.examples.example.out',
       );
     });
 
@@ -889,7 +889,7 @@ describe('validateFlow', () => {
         { strict: true },
       );
       expect(violations(result).map((e) => e.path)).toEqual([
-        'transformer.validate.examples.example.out',
+        'flows.server.transformers.validate.examples.example.out',
       ]);
     });
 
@@ -904,7 +904,7 @@ describe('validateFlow', () => {
       );
       expect(violations(result)).toEqual([]);
       expect(result.warnings.map((w) => w.path)).toContain(
-        'transformer.validate.examples.example.out',
+        'flows.server.transformers.validate.examples.example.out',
       );
     });
 

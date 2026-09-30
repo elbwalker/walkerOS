@@ -1,6 +1,7 @@
 import type { LifecycleContext, Logger, Store, SetupFn } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
 import type {
+  Env,
   GcsStoreSettings,
   ServiceAccountCredentials,
   Setup,
@@ -39,8 +40,8 @@ export type GcsStoreConfig = Store.Config<Types>;
  * Idempotent: 409 means the bucket exists, drift is logged but never patched.
  * Never auto-mutates an existing bucket.
  */
-export const setup: SetupFn<GcsStoreConfig, Store.BaseEnv> = async (
-  context: LifecycleContext<GcsStoreConfig, Store.BaseEnv>,
+export const setup: SetupFn<GcsStoreConfig, Env> = async (
+  context: LifecycleContext<GcsStoreConfig, Env>,
 ) => {
   const { config, logger } = context;
   const options = resolveSetup(config.setup, DEFAULT_SETUP);
@@ -57,13 +58,16 @@ export const setup: SetupFn<GcsStoreConfig, Store.BaseEnv> = async (
   const rawCreds = resolveCredentials(config, logger);
   const projectId = resolveProjectId(options, rawCreds);
   const creds = parseCredentials(rawCreds);
-  const getToken = createTokenProvider(creds);
+  // An injected fetch (tests, simulate) carries every request, token exchange
+  // included, as in the store runtime; the global fetch is the default.
+  const doFetch = context.env?.fetch ?? context.config.env?.fetch ?? fetch;
+  const getToken = createTokenProvider(creds, doFetch);
   const token = await getToken();
 
   const createUrl = `${GCS_BASE}/storage/v1/b?project=${encodeURIComponent(projectId)}`;
   const body = buildCreateBody(settings.bucket, options);
 
-  const createRes = await fetch(createUrl, {
+  const createRes = await doFetch(createUrl, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -89,7 +93,7 @@ export const setup: SetupFn<GcsStoreConfig, Store.BaseEnv> = async (
   }
 
   logger.debug('setup: bucket already exists', { bucket: settings.bucket });
-  await detectDrift(settings.bucket, token, options, logger);
+  await detectDrift(settings.bucket, token, options, logger, doFetch);
   return { bucketCreated: false };
 };
 
@@ -172,11 +176,12 @@ async function detectDrift(
   token: string,
   options: Setup,
   logger: Logger.Instance,
+  doFetch: typeof fetch,
 ): Promise<void> {
   const url = `${GCS_BASE}/storage/v1/b/${encodeURIComponent(bucket)}`;
   let metadata: BucketMetadata;
   try {
-    const res = await fetch(url, {
+    const res = await doFetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {

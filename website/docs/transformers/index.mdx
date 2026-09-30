@@ -62,8 +62,8 @@ Add a transformer to the `transformers` block of your flow and wire it into the
 pipeline via a source's `next`, the collector's `next`, or a destination's
 `before`. A `stop` in `collector.next` drops the event for every destination; a
 `stop` in a destination's `before` drops it for that destination only. See
-[Chain resolution](/docs/getting-started/flow#chain-resolution) and
-[Dropping an event with `stop`](/docs/getting-started/flow#dropping-an-event-with-stop).
+[Chain resolution](/docs/getting-started/flow/routing#chain-resolution) and
+[Dropping an event with `stop`](/docs/getting-started/flow/routing#dropping-an-event-with-stop).
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';

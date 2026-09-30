@@ -476,11 +476,27 @@ jobs:
           # version minutes before its tarball is fetchable, and the tarball is
           # what `npm install` downloads. Probe both, uncached, from this runner:
           # buildkit shares its network, so a 200 here predicts a 200 there.
+          # Reading the dependencies needs the new version in the packument,
+          # which can lag the publish by minutes: retry like the probe below.
+          deps_of() {
+            local out
+            for i in $(seq 1 30); do
+              if out="$(npm view "$1" dependencies --json 2>/dev/null)"; then
+                echo "$out"
+                return 0
+              fi
+              echo "  $1 not listed yet, attempt $i/30: waiting..." >&2
+              sleep 15
+            done
+            echo "::error::$1 never appeared on npm." >&2
+            return 1
+          }
           WAIT=""
           for PKG in @walkeros/runner @walkeros/cli; do
+            DEPS="$(deps_of "${PKG}@${IMAGE_VERSION}")"
             # node -e bodies are JavaScript; their $ and backticks are not shell.
             # shellcheck disable=SC2016
-            WAIT="${WAIT} ${PKG}@${IMAGE_VERSION} $(npm view "${PKG}@${IMAGE_VERSION}" dependencies --json \
+            WAIT="${WAIT} ${PKG}@${IMAGE_VERSION} $(echo "$DEPS" \
               | node -e '
                 const deps = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}");
                 process.stdout.write(

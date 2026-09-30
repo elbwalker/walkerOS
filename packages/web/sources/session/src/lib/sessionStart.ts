@@ -61,7 +61,9 @@ function onConsentFn(
   cb?: SessionCallback | false,
 ): On.ConsentFn {
   const func: On.ConsentFn = (consent, context) => {
-    const collector = context.collector;
+    // The source's own collector interface (its pipeline) when it has one,
+    // as on the ungated path; the rule's collector otherwise.
+    const collector = config.collector ?? context.collector;
 
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 

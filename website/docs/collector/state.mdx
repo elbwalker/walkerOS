@@ -72,29 +72,50 @@ State is **fail-open**: if a store call or value resolution throws, the error is
 
 ## Examples
 
-### Stash a session value
+The first examples come from
+[`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json),
+the tested example flow. Its `enrich` sequence calls `sessionSave` on
+`session start` and `sessionLoad` on `order complete` (see
+[Routing](/docs/getting-started/flow/routing#conditional-next-and-sequences)).
 
-A transformer in the source chain stashes the inbound `gclid` keyed by session id:
+### Save session data
 
-```json
-"transformers": {
-  "stashGclid": {
-    "state": { "mode": "set", "store": "sessions", "key": "event.user.session", "value": "event.data.gclid" }
-  }
-}
-```
+`sessionSave` stashes the raw click id and the start time of a session in the
+default store:
 
-### Look up a stashed value
+<FlowSlice feature="state-set" />
 
-A later step fetches the stored `gclid` back onto the event:
+The key is a list of paths: the session id when the browser has one, else the
+cookieless visitor hash. The value is a `map`, so one entry stores both fields:
 
-```json
-"transformers": {
-  "restoreGclid": {
-    "state": { "mode": "get", "store": "sessions", "key": "event.user.session", "value": "event.data.gclid" }
-  }
-}
-```
+<FlowSlice feature="state-key" />
+
+<FlowSlice feature="state-value" />
+
+<FlowExample feature="state-set" />
+
+### Load it on the order
+
+`sessionLoad` fetches the stored object back onto the order, where a
+destination maps `data.session.gclid`:
+
+<FlowSlice feature="state-get" />
+
+<FlowExample feature="state-get" />
+
+The default store is per instance. Behind a load balancer, point both steps at
+a shared store so the order finds the session saved on another instance.
+
+### Read from a named store
+
+`loadUser` reads the customer's lifetime value from the `customers` store, only
+for logged-in events:
+
+<FlowSlice feature="load-user" />
+
+<FlowSlice feature="state-store" />
+
+<FlowExample feature="load-user" />
 
 ### Fetch a product margin before sending
 

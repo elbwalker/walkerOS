@@ -76,6 +76,23 @@ export const SimulateOutputShape = {
     .array(z.record(z.string(), z.unknown()))
     .optional()
     .describe('Events captured by source simulation'),
+  calls: z
+    .array(z.unknown())
+    .optional()
+    .describe(
+      'Calls a simulated source made on its mock env (only when verbose: true)',
+    ),
+  skipped: z
+    .object({
+      reason: z.enum(['consent', 'pending']),
+      required: z.record(z.string(), z.boolean()).optional(),
+      granted: z.record(z.string(), z.boolean()).optional(),
+      require: z.array(z.string()).optional(),
+    })
+    .optional()
+    .describe(
+      'Why the destination sent nothing: a consent skip, or waiting for its require',
+    ),
   duration: z.number().optional().describe('Simulation duration in ms'),
 };
 

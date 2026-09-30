@@ -1671,6 +1671,129 @@ describe('validateFlowConfig', () => {
       ).toEqual([]);
     });
 
+    describe('prose skip applies only where prose lives', () => {
+      const bad = '$store.x.y';
+      function flowWith(overrides: {
+        mapping?: Record<string, unknown>;
+        settings?: Record<string, unknown>;
+        step?: Record<string, unknown>;
+        example?: Record<string, unknown>;
+        flow?: Record<string, unknown>;
+        root?: Record<string, unknown>;
+      }): string {
+        return JSON.stringify(
+          {
+            version: 4,
+            ...overrides.root,
+            flows: {
+              web: {
+                config: { platform: 'web' },
+                ...overrides.flow,
+                destinations: {
+                  api: {
+                    package: '@walkeros/web-destination-api',
+                    ...overrides.step,
+                    config: {
+                      settings: {
+                        url: 'https://c.example',
+                        ...overrides.settings,
+                      },
+                      mapping: overrides.mapping ?? {},
+                    },
+                    examples: {
+                      hit: { in: { name: 'page view' }, ...overrides.example },
+                    },
+                  },
+                },
+              },
+            },
+            contract: {
+              web: {
+                events: {
+                  page: {
+                    view: {
+                      type: 'object',
+                      description: 'Read from $store.x.y',
+                      properties: {
+                        title: { type: 'string', description: bad },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          null,
+          2,
+        );
+      }
+      const warned = (json: string) =>
+        validateFlowConfig(json).warnings.some((w) =>
+          /whole value|does not match the/.test(w.message),
+        );
+
+      it.each([
+        [
+          'a mapping title value',
+          { mapping: { page: { view: { data: { map: { title: bad } } } } } },
+        ],
+        [
+          'a mapping description',
+          { mapping: { page: { view: { description: bad } } } },
+        ],
+        [
+          'a description key deep in mapping data',
+          {
+            mapping: {
+              page: { view: { data: { map: { description: bad } } } },
+            },
+          },
+        ],
+        ['a settings description', { settings: { description: bad } }],
+        ['a settings title', { settings: { title: bad } }],
+      ])('checks %s', (_label, overrides) => {
+        expect(warned(flowWith(overrides))).toBe(true);
+      });
+
+      it.each([
+        [
+          'a mapping $comment',
+          { mapping: { page: { view: { $comment: bad } } } },
+        ],
+        ['a settings $comment', { settings: { $comment: bad } }],
+        ['a step title', { step: { title: bad } }],
+        ['a step description', { step: { description: bad } }],
+        ['an example title', { example: { title: bad } }],
+        ['an example description', { example: { description: bad } }],
+        ['a flow description', { flow: { description: bad } }],
+        ['a root title', { root: { title: bad } }],
+        ['nothing but the contract', {}],
+      ])('skips %s', (_label, overrides) => {
+        expect(warned(flowWith(overrides))).toBe(false);
+      });
+
+      it('skips a step settings.contract schema but checks settings.title', () => {
+        const contract = {
+          type: 'object',
+          description: 'Read from $store.x.y',
+          properties: { id: { type: 'string', description: bad } },
+        };
+        expect(warned(flowWith({ settings: { contract } }))).toBe(false);
+        expect(warned(flowWith({ settings: { contract, title: bad } }))).toBe(
+          true,
+        );
+      });
+
+      it('checks a $secret in a settings description of a web flow', () => {
+        const result = validateFlowConfig(
+          flowWith({ settings: { description: '$secret.API_KEY' } }),
+        );
+        expect(
+          result.errors.some((e) => e.message.includes('$secret.API_KEY')),
+        ).toBe(true);
+      });
+    });
+
     it('reports a lowercase $secret name in a web flow', () => {
       const result = validateFlowConfig(
         JSON.stringify(flowWithSetting({ token: '$secret.api_key' }), null, 2),

@@ -17,21 +17,17 @@ function spyTtq(env: Env): {
 } {
   const calls: CallRecord[] = [];
   const ttq = env.window.ttq;
-  const methods: (keyof TTQ)[] = [
-    'load',
-    'page',
-    'track',
-    'identify',
-    'enableCookie',
-    'disableCookie',
-  ];
-  for (const m of methods) {
-    (ttq as unknown as Record<string, unknown>)[m as string] = (
-      ...args: unknown[]
-    ) => {
-      calls.push([`ttq.${String(m)}`, ...args]);
+  const record =
+    (method: keyof TTQ) =>
+    (...args: unknown[]): void => {
+      calls.push([`ttq.${String(method)}`, ...args]);
     };
-  }
+  ttq.load = record('load');
+  ttq.page = record('page');
+  ttq.track = record('track');
+  ttq.identify = record('identify');
+  ttq.enableCookie = record('enableCookie');
+  ttq.disableCookie = record('disableCookie');
   return { env, collected: () => calls };
 }
 

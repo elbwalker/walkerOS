@@ -21,11 +21,12 @@ type CallRecord = [string, ...unknown[]];
  */
 function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
   const calls: CallRecord[] = [];
-  const spy = ((...args: unknown[]) => {
-    calls.push(['pintrk', ...args]);
-  }) as unknown as Pintrk;
-  spy.queue = [];
-  spy.version = '3.0';
+  const spy: Pintrk = Object.assign(
+    (...args: unknown[]) => {
+      calls.push(['pintrk', ...args]);
+    },
+    { queue: [], version: '3.0' },
+  );
   env.window.pintrk = spy;
   return { env, collected: () => calls };
 }

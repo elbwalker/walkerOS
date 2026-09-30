@@ -268,8 +268,10 @@ Two separate mechanisms control when destinations receive events:
 | `consent` | Filter events        | Per-event         | Events without matching consent are silently skipped or queued                         |
 
 **Require** gates the destination _lifecycle_. A destination with
-`require: ["consent"]` does not exist in the collector until a
-`"walker consent"` event fires. Until then, events are queued internally.
+`require: ["consent"]` does not exist in the collector until consent state is
+present: a `"walker consent"` event, or starting consent (`startFlow`'s
+`consent`, which `walkeros push --simulate` sets with `--consent`). Until then,
+events are queued internally.
 
 **Consent** gates _individual event delivery_. A destination with
 `consent: { marketing: true }` only receives events where the collector's

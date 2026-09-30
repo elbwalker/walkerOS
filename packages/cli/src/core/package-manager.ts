@@ -9,6 +9,11 @@ import type { Logger } from '@walkeros/core';
 import { getPackageCacheKey } from './cache-utils.js';
 import { getTmpPath } from './tmp.js';
 import {
+  isCacheDirComplete,
+  readCacheDir,
+  writeCacheDir,
+} from './atomic-cache.js';
+import {
   assertRegistrySpecs,
   assertTransitiveRegistrySpec,
   isRegistrySpec,
@@ -885,7 +890,7 @@ async function downloadPackagesImpl(
       }
       try {
         await fs.ensureDir(path.dirname(packageDir));
-        await fs.copy(cachedPath, packageDir);
+        await readCacheDir(cachedPath, packageDir);
         packagePaths.set(name, packageDir);
         continue;
       } catch {
@@ -912,12 +917,9 @@ async function downloadPackagesImpl(
 
       // Cache for future use
       if (useCache) {
-        try {
-          await fs.ensureDir(path.dirname(cachedPath));
-          await fs.copy(packageDir, cachedPath);
-        } catch {
-          // Silent cache failures
-        }
+        await writeCacheDir(packageDir, cachedPath, logger, {
+          label: packageSpec,
+        });
       }
 
       packagePaths.set(name, packageDir);
@@ -991,7 +993,9 @@ async function isPackageCached(
   tmpDir?: string,
 ): Promise<boolean> {
   const cachedPath = await getCachedPackagePath(pkg, tmpDir);
-  return fs.pathExists(cachedPath);
+  // Entries without the completion marker (cut short, or written before the
+  // marker existed) are misses, so a truncated entry heals on the next build.
+  return isCacheDirComplete(cachedPath);
 }
 
 function validateNoDuplicatePackages(packages: Package[]): void {

@@ -320,10 +320,18 @@ export function getAvailableFlows(rawConfig: unknown): string[] {
  */
 export async function loadFlowConfig(
   configPath: string,
-  options?: Omit<LoadConfigOptions, 'configPath'>,
+  options?: Omit<LoadConfigOptions, 'configPath'> & {
+    /**
+     * The config at `configPath`, already read by the caller: it is used
+     * instead of reading the path again (`configPath` still anchors
+     * relative paths).
+     */
+    raw?: unknown;
+  },
 ): Promise<LoadConfigResult> {
-  const rawConfig = await loadJsonConfig(configPath);
-  return loadBundleConfig(rawConfig, { configPath, ...options });
+  const { raw, ...rest } = options ?? {};
+  const rawConfig = raw !== undefined ? raw : await loadJsonConfig(configPath);
+  return loadBundleConfig(rawConfig, { configPath, ...rest });
 }
 
 /**

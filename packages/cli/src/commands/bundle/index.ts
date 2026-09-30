@@ -18,6 +18,7 @@ import {
   readStdin,
   writeResult,
 } from '../../core/index.js';
+import { tmpRunDir } from '../../core/tmp-names.js';
 import { packBundleDir } from './archive.js';
 import type { Flow, Logger } from '@walkeros/core';
 import type { BundleStats } from './bundler.js';
@@ -117,9 +118,7 @@ async function runBundleCoreWithArchive(
   const archivePath = path.resolve(buildOptions.output);
   // mkdtemp guarantees a unique dir even for same-millisecond parallel node
   // archive builds (e.g. --all), which a Date.now() suffix cannot.
-  const tempDir = await fs.mkdtemp(
-    path.join(getTmpPath(), 'walkeros-archive-'),
-  );
+  const tempDir = await tmpRunDir('archive');
 
   try {
     const stats = await bundleCore(
@@ -245,9 +244,9 @@ export async function bundleCommand(
         if (outputIsUrl) {
           // URL output: bundle to temp file, upload after
           const ext = buildOptions.platform === 'browser' ? '.js' : '.mjs';
-          buildOptions.output = getTmpPath(
-            undefined,
-            `url-bundle-${Date.now()}${ext}`,
+          buildOptions.output = path.join(
+            await tmpRunDir('bundle'),
+            `bundle${ext}`,
           );
         } else if (options.output) {
           buildOptions.output = resolveOutputPath(
@@ -283,7 +282,7 @@ export async function bundleCommand(
         if (uploadUrl) {
           await uploadBundleToUrl(buildOptions.output, uploadUrl);
           logger.info(`Uploaded to: ${sanitizeUrl(uploadUrl)}`);
-          await fs.remove(buildOptions.output);
+          await fs.remove(path.dirname(buildOptions.output));
         }
 
         // Show stats if requested (for non-JSON, non-multi builds)

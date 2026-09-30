@@ -79,31 +79,32 @@ The transformer never throws. A schema the engine cannot compile or apply (for e
 
 The canonical place for event shapes is the top-level `contract` block. Reference it with `$contract.<name>`; the bundler resolves the reference to a concrete schema before deploy, so the runtime transformer only ever sees resolved schemas.
 
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "contract": {
-    "web": { "events": { "order": { "complete": { "properties": { "data": { "required": ["total", "currency"] } } } } } }
-  },
-  "flows": {
-    "default": {
-      "transformers": {
-        "validate": {
-          "package": "@walkeros/transformer-validate",
-          "config": { "settings": {
-            "contract": ["$contract.web"],
-            "format": true,
-            "mode": "strict",
-            "output": { "isValid": "source.valid", "errors": "validation" }
-          } },
-          "next": "ga4"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
+In [`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json)
+the server flow's `validate` step checks every enriched event against the
+`server` contract, which extends `default` with the visitor hash:
+
+<FlowSlice feature="validate-transformer" />
+
+<FlowExample feature="validate-transformer" />
+
+It runs in `pass` mode, so an invalid event keeps flowing with
+`source.valid: false` and the warehouse keeps the violation:
+
+<FlowSlice feature="validate-pass" />
+
+<FlowExample feature="validate-pass" />
+
+The vendors only get valid events: their shared `eventFilter` step stops an
+event whose verdict is `false`. Use `strict` instead when invalid events should
+reach no destination at all.
+
+<FlowSlice feature="event-filter-valid" />
+
+<FlowExample feature="event-filter-valid" />
+
+Add `format: true` to also check the canonical event shape, and `output` to
+move the verdict (`isValid`, default `source.valid`) or the issue list
+(`errors`, default `validation`).
 
 ## Filter unwanted events
 

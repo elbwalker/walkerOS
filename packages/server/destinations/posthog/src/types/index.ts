@@ -9,7 +9,7 @@ export interface Settings {
   /** PostHog project API key (phc_...) */
   apiKey: string;
   /** PostHog client instance, populated by init */
-  client?: PostHog;
+  client?: PostHogClient;
   /** Destination-level identity mapping */
   identify?: WalkerOSMapping.Value;
   /** Destination-level group mapping */
@@ -38,8 +38,25 @@ export interface Mapping {
   group?: WalkerOSMapping.Value;
 }
 
+/**
+ * The part of a PostHog client this destination calls. `PostHog` from
+ * `posthog-node` satisfies it, and so does an injected mock (tests, simulate)
+ * without a cast.
+ */
+export interface PostHogClient {
+  capture(props: Parameters<PostHog['capture']>[0]): void;
+  identify(props: Parameters<PostHog['identify']>[0]): void;
+  groupIdentify(props: Parameters<PostHog['groupIdentify']>[0]): void;
+  shutdown(): Promise<void> | void;
+  enable(): Promise<void> | void;
+  disable(): Promise<void> | void;
+}
+
 export interface Env extends DestinationServer.Env {
-  PostHog?: typeof PostHog;
+  PostHog?: new (
+    apiKey: string,
+    options?: ConstructorParameters<typeof PostHog>[1],
+  ) => PostHogClient;
 }
 
 export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;

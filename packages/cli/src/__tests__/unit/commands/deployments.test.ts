@@ -12,6 +12,11 @@ import {
 } from '../../../commands/deployments/index.js';
 import { VERSION } from '../../../version.js';
 
+// Release builds carry a snapshot version (`changeset version --snapshot`),
+// which is long enough to look like a token to the log redactor.
+jest.mock('../../../version.js', () => ({
+  VERSION: '4.7.0-next-1790408404259',
+}));
 jest.mock('../../../core/auth.js', () => ({
   ...jest.requireActual('../../../core/auth.js'),
   requireProjectId: jest.fn().mockReturnValue('proj_default'),

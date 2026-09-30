@@ -3,8 +3,10 @@ import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isObject, mcpResult, mcpError } from '@walkeros/core';
 import { scrubSecrets, toPrintable } from '@walkeros/core/node';
-import type { Ingest, Simulation, WalkerOS } from '@walkeros/core';
+import { maskKnownNumbers } from '@walkeros/cli';
+import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
+import { FLOW_SIMULATE_DESCRIPTION } from './simulate-description.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
@@ -35,11 +37,19 @@ function isStepType(value: string): value is SimulateStepType {
 
 /**
  * Simulate results carry recorded vendor calls and events whose values can
- * hold credentials. They egress like a log line: serialize, scrub, then parse
- * back into the structured result.
+ * hold credentials. They egress like a log line: serialize, scrub (masking
+ * the values of the secrets the flow references, `known`), then parse back
+ * into the structured result. A number that prints a known secret is masked
+ * before serializing, so the scrubbed text still parses.
  */
-function scrubbed(result: Record<string, unknown>): Record<string, unknown> {
-  const text = scrubSecrets(JSON.stringify(toPrintable(result)));
+function scrubbed(
+  result: Record<string, unknown>,
+  known: readonly string[],
+): Record<string, unknown> {
+  const text = scrubSecrets(
+    JSON.stringify(maskKnownNumbers(toPrintable(result), known)),
+    { known },
+  );
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -54,10 +64,11 @@ function scrubbed(result: Record<string, unknown>): Record<string, unknown> {
 /** The error response egresses the same way: its text and structured copy. */
 function scrubbedError(
   response: ReturnType<typeof mcpError>,
+  known: readonly string[],
 ): ReturnType<typeof mcpError> {
   let structuredContent: Record<string, unknown>;
   try {
-    structuredContent = scrubbed(response.structuredContent);
+    structuredContent = scrubbed(response.structuredContent, known);
   } catch {
     structuredContent = {
       error: 'Simulation failed; the error could not be redacted.',
@@ -67,27 +78,19 @@ function scrubbedError(
     ...response,
     content: response.content.map((part) => ({
       ...part,
-      text: scrubSecrets(part.text),
+      text: scrubSecrets(part.text, { known }),
     })),
     structuredContent,
   };
 }
 
 const TITLE = 'Simulate Flow';
-const DESCRIPTION =
-  'Simulate events through a walkerOS flow without making real API calls. ' +
-  'For destinations: event is a walkerOS event { name: "entity action", data: {...} }. ' +
-  'For sources: event is { content, trigger?: { type?, options? } }, where content is the ' +
-  'walkerOS event { name: "entity action", data: {...} }. ' +
-  'step (required) targets the step to simulate, e.g. "destination.gtag". ' +
-  'Use flow_examples to discover available test data. ' +
-  'IMPORTANT: Destinations with require (e.g. require: ["consent"]) stay pending until ' +
-  'that collector event fires — simulation will error "not found" if require is not satisfied. ' +
-  'Remove require from config or provide consent/user events before simulating. ' +
-  'Separately, destinations with consent (e.g. consent: { marketing: true }) only receive ' +
-  'events where the event includes matching consent. ' +
-  'Mapping transforms event names and data at the destination level. ' +
-  'Policy redacts or injects fields before mapping runs.';
+const COMMANDS: readonly [Flow.StepCommand, ...Flow.StepCommand[]] = [
+  'config',
+  'consent',
+  'user',
+  'run',
+];
 
 const inputSchema = {
   configPath: schemas.SimulateInputShape.configPath,
@@ -95,10 +98,12 @@ const inputSchema = {
     .union([z.record(z.string(), z.unknown()), z.string()])
     .optional()
     .describe(
-      'For destinations: { name, data, consent? }. Include consent (e.g. { marketing: true }) ' +
-        'to satisfy destination consent requirements. ' +
+      "For destinations: { name, data, consent? }; the event's consent counts " +
+        "toward the destination's consent requirement, on top of state.consent. " +
+        "With command: the command's data, e.g. { marketing: true } for consent. " +
         'For sources: { content, trigger? } where content is the walkerOS event ' +
-        '{ name, data }. ' +
+        "{ name, data }. A web source's page URL goes in trigger.options.url " +
+        '(default http://localhost). ' +
         'Can also be a JSON string or file path.',
     ),
   flow: schemas.SimulateInputShape.flow,
@@ -126,15 +131,24 @@ const inputSchema = {
     ),
   state: z
     .object({
-      consent: z.record(z.string(), z.unknown()).optional(),
+      consent: z.record(z.string(), z.boolean()).optional(),
       user: z.record(z.string(), z.unknown()).optional(),
       globals: z.record(z.string(), z.unknown()).optional(),
       timing: z.number().optional(),
     })
     .optional()
     .describe(
-      'Collector-state snapshot for collector steps: consent/user/globals/timing. ' +
-        'Seeds the collector before enrichment runs.',
+      'Collector state the step starts from. consent: every step (starts a ' +
+        'destination that requires consent and feeds its consent check; for a ' +
+        'source, the consent a consent-gated source waits for). ' +
+        'user/globals/timing: collector steps, seeded before enrichment runs.',
+    ),
+  command: z
+    .enum(COMMANDS)
+    .optional()
+    .describe(
+      'Destination steps only: run this collector command with event as its ' +
+        'data instead of pushing it, as a step example with command does.',
     ),
 };
 
@@ -156,7 +170,7 @@ export function createFlowSimulateToolSpec(
   return {
     name: 'flow_simulate',
     title: TITLE,
-    description: DESCRIPTION,
+    description: FLOW_SIMULATE_DESCRIPTION,
     inputSchema,
     annotations,
     handler: (input) => flowSimulateHandlerBody(client, runtime, input),
@@ -168,22 +182,32 @@ async function flowSimulateHandlerBody(
   runtime: FlowRuntime,
   input: unknown,
 ) {
-  const { configPath, event, flow, platform, step, verbose, ingest, state } =
-    (input ?? {}) as {
-      configPath: string;
-      event?: Record<string, unknown> | string;
-      flow?: string;
-      platform?: 'web' | 'server';
-      step?: string;
-      verbose?: boolean;
-      ingest?: Omit<Ingest, '_meta'>;
-      state?: {
-        consent?: WalkerOS.Consent;
-        user?: WalkerOS.User;
-        globals?: WalkerOS.Properties;
-        timing?: number;
-      };
+  const {
+    configPath,
+    event,
+    flow,
+    platform,
+    step,
+    verbose,
+    ingest,
+    state,
+    command,
+  } = (input ?? {}) as {
+    configPath: string;
+    event?: Record<string, unknown> | string;
+    flow?: string;
+    platform?: 'web' | 'server';
+    step?: string;
+    verbose?: boolean;
+    ingest?: Omit<Ingest, '_meta'>;
+    state?: {
+      consent?: WalkerOS.Consent;
+      user?: WalkerOS.User;
+      globals?: WalkerOS.Properties;
+      timing?: number;
     };
+    command?: Flow.StepCommand;
+  };
   // Simulation compiles the config and imports the bundle, running caller
   // controlled flow code. A runtime that must not do that in its process
   // provides no `simulate`, whatever the input looks like.
@@ -191,6 +215,7 @@ async function flowSimulateHandlerBody(
     const refusal = unavailableOperation('simulate');
     return mcpError(refusal, refusal.hint);
   }
+  let known: string[] = [];
   try {
     if (!event) {
       throw new Error(
@@ -232,33 +257,51 @@ async function flowSimulateHandlerBody(
       );
     }
 
+    if (command !== undefined && stepType !== 'destination') {
+      throw new Error('command applies to destination steps only.');
+    }
+
     // Accept a cloud flow/config id as configPath, resolving it to inline JSON.
     const resolvedConfigPath = await resolveConfigPath(client, configPath);
+    known = await knownSecretsOf(runtime, resolvedConfigPath);
 
     const result: Simulation.Result = await runtime.simulate(
       resolvedConfigPath,
-      { stepType, stepId, event: resolvedEvent, flow, ingest, state },
+      { stepType, stepId, event: resolvedEvent, flow, ingest, state, command },
     );
 
     const success = !result.error;
     const errorMessage = result.error?.message;
 
-    // Source simulation: captured events are result.events
+    // Source simulation: captured events are result.events, the source's
+    // own walker commands its `elb` calls. Mock-env calls stay verbose-only.
     if (result.step === 'source') {
       const eventCount = result.events.length;
-      const summary = `Source captured ${eventCount} event${eventCount !== 1 ? 's' : ''}`;
+      const commandCount = result.calls.filter(
+        (call) => call.fn === 'elb',
+      ).length;
+      const summary =
+        `Source captured ${eventCount} event${eventCount !== 1 ? 's' : ''}` +
+        ` and ${commandCount} command${commandCount !== 1 ? 's' : ''}`;
+      const shownCalls = verbose
+        ? result.calls
+        : result.calls.filter((call) => call.fn === 'elb');
 
       return mcpResult(
-        scrubbed({
-          success,
-          error: errorMessage,
-          summary,
-          capturedEvents: result.events,
-          duration: result.duration,
-        }),
+        scrubbed(
+          {
+            success,
+            error: errorMessage,
+            summary,
+            capturedEvents: result.events,
+            ...(shownCalls.length > 0 ? { calls: shownCalls } : {}),
+            duration: result.duration,
+          },
+          known,
+        ),
         {
           next:
-            eventCount > 0
+            eventCount + commandCount > 0
               ? [
                   'Use flow_simulate with a destination step to test downstream processing',
                 ]
@@ -272,13 +315,16 @@ async function flowSimulateHandlerBody(
     // Transformer simulation: surface the transformed events
     if (result.step === 'transformer') {
       return mcpResult(
-        scrubbed({
-          success,
-          error: errorMessage,
-          summary: `Transformer processed event`,
-          capturedEvents: result.events,
-          duration: result.duration,
-        }),
+        scrubbed(
+          {
+            success,
+            error: errorMessage,
+            summary: `Transformer processed event`,
+            capturedEvents: result.events,
+            duration: result.duration,
+          },
+          known,
+        ),
         {
           next: ['Use flow_bundle to build for production'],
         },
@@ -288,13 +334,16 @@ async function flowSimulateHandlerBody(
     // Collector simulation: surface the enriched event
     if (result.step === 'collector') {
       return mcpResult(
-        scrubbed({
-          success,
-          error: errorMessage,
-          summary: `Collector enriched event`,
-          capturedEvents: result.events,
-          duration: result.duration,
-        }),
+        scrubbed(
+          {
+            success,
+            error: errorMessage,
+            summary: `Collector enriched event`,
+            capturedEvents: result.events,
+            duration: result.duration,
+          },
+          known,
+        ),
         {
           next: ['Use flow_simulate with a destination step to test delivery'],
         },
@@ -319,39 +368,70 @@ async function flowSimulateHandlerBody(
     ).length;
 
     const warnings: string[] = [];
-    if (receivedCount === 0) {
-      warnings.push(
-        'Destination did not receive the event. Common causes: ' +
-          '(1) destination config has consent: { marketing: true } but event lacks matching consent, ' +
-          '(2) mapping rules do not match the event name, ' +
-          '(3) policy redacted required fields. ' +
-          'Add consent to the event: { name: "...", data: {...}, consent: { marketing: true } }.',
-      );
-    }
+    if (receivedCount === 0 && success) warnings.push(notReceived(result));
 
     const resultObj = {
       success,
       error: errorMessage,
       summary: `${receivedCount}/${destCount} destinations received the event`,
       destinations,
+      ...(result.skipped ? { skipped: result.skipped } : {}),
       duration: result.duration,
     };
 
-    return mcpResult(scrubbed(resultObj), {
+    return mcpResult(scrubbed(resultObj, known), {
       next: ['Use flow_bundle to build for production'],
       ...(warnings.length > 0 ? { warnings } : {}),
     });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : '';
-    let hint = 'Run flow_validate for detailed error messages';
-    if (msg.includes('not found in collector')) {
-      hint =
-        'If this destination has require: ["consent"] or require: ["user"], it stays ' +
-        'pending until that event fires. For simulation, either remove require from ' +
-        'the config or simulate with a flow that omits require on the target destination.';
-    }
-    return scrubbedError(mcpError(error, refusalHint(error, hint)));
+    const hint = 'Run flow_validate for detailed error messages';
+    return scrubbedError(mcpError(error, refusalHint(error, hint)), known);
   }
+}
+
+/** The flow's secret values; none when the runtime cannot read the config. */
+async function knownSecretsOf(
+  runtime: FlowRuntime,
+  input: string,
+): Promise<string[]> {
+  if (!runtime.knownSecrets) return [];
+  try {
+    return await runtime.knownSecrets(input);
+  } catch {
+    return [];
+  }
+}
+
+function keysOf(consent: WalkerOS.Consent | undefined): string {
+  const keys = Object.entries(consent ?? {})
+    .filter(([, granted]) => granted)
+    .map(([key]) => key);
+  return keys.length > 0 ? keys.join(', ') : 'none';
+}
+
+/** Why a destination received nothing, from the result's own `skipped`. */
+function notReceived(result: Simulation.Result): string {
+  const { skipped } = result;
+  if (skipped?.reason === 'pending') {
+    const require = skipped.require ?? [];
+    const waits = require.length ? require.join(', ') : 'its require';
+    const advice = require.includes('consent')
+      ? 'pass state.consent (e.g. { functional: true }) to start it.'
+      : `it starts once the flow provides ${waits}; a simulation cannot seed that.`;
+    return `Destination waits for ${waits} (require) and never started: ${advice}`;
+  }
+  if (skipped?.reason === 'consent') {
+    return (
+      `Consent skip: requires ${keysOf(skipped.required)}; granted ${keysOf(skipped.granted)}. ` +
+      "Grant it in state.consent or in the event's consent."
+    );
+  }
+  return (
+    'Destination made no calls. Common causes: ' +
+    '(1) mapping rules do not match the event name or ignore it, ' +
+    '(2) policy redacted required fields, ' +
+    '(3) a before chain stopped the event.'
+  );
 }
 
 export function registerFlowSimulateTool(

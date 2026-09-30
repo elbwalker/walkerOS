@@ -1,4 +1,4 @@
-import type { Ingest, Simulation, WalkerOS } from '@walkeros/core';
+import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import type { BundleStats, PushResult } from '@walkeros/cli';
 
 /**
@@ -29,6 +29,11 @@ export interface FlowRuntime {
   bundle?(input: string, opts: BundleOptions): Promise<BundleStats | void>;
   /** Build and run one step of a flow. Absent where that must not happen. */
   simulate?(input: string, opts: SimulateOptions): Promise<Simulation.Result>;
+  /**
+   * The values of the secrets a flow config references (`$secret.NAME`),
+   * masked wherever a simulation result egresses. Absent with `simulate`.
+   */
+  knownSecrets?(input: string): Promise<string[]>;
   /** Build and run a flow against real destinations. Absent where forbidden. */
   push?(
     input: string,
@@ -59,13 +64,22 @@ export interface SimulateOptions {
    * reads via `ctx.ingest`. Source steps ignore it.
    */
   ingest?: Omit<Ingest, '_meta'>;
-  /** Collector steps only: state snapshot seeded before enrichment runs. */
+  /**
+   * Collector state the step starts from. `consent` applies to every step
+   * (the collector's starting consent); `user`, `globals` and `timing` to
+   * collector steps only.
+   */
   state?: {
     consent?: WalkerOS.Consent;
     user?: WalkerOS.User;
     globals?: WalkerOS.Properties;
     timing?: number;
   };
+  /**
+   * Destination steps only: run this collector command with `event` as its
+   * data instead of pushing it (a step example with `command`).
+   */
+  command?: Flow.StepCommand;
 }
 
 export interface PushOptions {
