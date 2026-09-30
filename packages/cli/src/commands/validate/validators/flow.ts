@@ -3,27 +3,41 @@
 import type { Flow, Transformer, WalkerOS } from '@walkeros/core';
 import {
   getByPath,
-  getFlowSettings,
   getRouteGraph,
   isObject,
   REF_CONTRACT,
   resolveContracts,
   validateStepEntry,
 } from '@walkeros/core';
-import { schemas } from '@walkeros/core/dev';
+import { schemas, validateFlowStructure } from '@walkeros/core/dev';
 import {
   validateEventAgainstContract,
   type ContractSource,
 } from '@walkeros/transformer-validate';
-import { describeScope, flowOfPath, resolveScope } from '../scope.js';
+import {
+  describeScope,
+  ENTRY_SECTIONS,
+  flowOfPath,
+  isFlowJson,
+  resolveScope,
+  type ResolvedScope,
+} from '../scope.js';
 import type {
   ValidateCheck,
+  ValidateDeferred,
   ValidateDetails,
   ValidateResult,
   ValidateSkip,
   ValidationError,
   ValidationWarning,
 } from '../types.js';
+import { validateContract } from './contract.js';
+import { resolveFlow } from './resolve.js';
+import {
+  checkStepSettings,
+  createSettingsContext,
+  type CheckedPackage,
+} from './settings.js';
 
 const { validateFlowConfig } = schemas;
 
@@ -33,30 +47,138 @@ interface FlowValidateOptions {
   strict?: boolean;
 }
 
-/**
- * Type guard for a parsed Flow.Json shape (after schema validation).
- * Used only in soft-resolve so we can call core's resolver without casts.
- */
-function isFlowJson(value: unknown): value is Flow.Json {
-  if (!isObject(value)) return false;
-  if (!('version' in value) || !('flows' in value)) return false;
-  return isObject(value.flows);
+interface FlowPackageOptions extends FlowValidateOptions {
+  /** Skip the package settings check (no network); named in the scope. */
+  offline?: boolean;
+  /** Directory local `path` packages resolve against (the input file's). */
+  configDir?: string;
 }
 
+/** Removed packages: reported as a warning for one minor (D3), then errors. */
+const DEPRECATED_PACKAGES: Record<string, string> = {
+  '@walkeros/store-memory':
+    'has been removed. Use the built-in cache by omitting cache.store, or remove the store declaration if it was only used as a cache target.',
+};
+
+/** Step sections without their own closed-schema check (transformers have one). */
+const OPEN_STEP_KINDS = [
+  ['destinations', 'Destination'],
+  ['stores', 'Store'],
+] as const;
+
+/** Everything the synchronous checks produced, for the package pass. */
+interface FlowRun {
+  result: ValidateResult;
+  scope: ResolvedScope;
+  typed?: Flow.Json;
+  resolved: Map<string, Flow>;
+  checks: ValidateCheck[];
+  skipped: ValidateSkip[];
+  gate: (name: string) => string | undefined;
+}
+
+/**
+ * Validate a flow file without the network: schema and references, the
+ * root contract, the bundler's structural preflight, routes, examples and
+ * resolution of every flow in scope. `validate()` adds the package settings
+ * check on top (see {@link validateFlowWithPackages}).
+ */
 export function validateFlow(
   input: unknown,
   options: FlowValidateOptions = {},
 ): ValidateResult {
+  return runFlowChecks(input, options).result;
+}
+
+/**
+ * The whole-file run of `validate()`: {@link validateFlow} plus every step
+ * with a `package` in scope checked against its package settings schema at
+ * the pinned version. Findings are warnings for one minor (D3); a schema
+ * that cannot be loaded is a skip; `offline` removes the check and says so.
+ */
+export async function validateFlowWithPackages(
+  input: unknown,
+  options: FlowPackageOptions = {},
+): Promise<ValidateResult> {
+  const run = runFlowChecks(input, options);
+  const { result, scope } = run;
+  if (options.offline) {
+    const described = describeScope(scope, run.checks);
+    described.offline = true;
+    result.details.scope = described;
+    return result;
+  }
+
+  run.checks.push('flow:package-settings');
+  const context = createSettingsContext(options.configDir);
+  const deferred: ValidateDeferred[] = [];
+  const packages: CheckedPackage[] = [];
+  const pending: Array<Promise<void>> = [];
+  for (const name of scope.flows) {
+    const flow = run.resolved.get(name);
+    const rawFlow = run.typed?.flows[name];
+    const reason = run.gate(name);
+    if (!flow || !rawFlow || reason) {
+      run.skipped.push({
+        path: `flows.${name}`,
+        check: 'flow:package-settings',
+        reason: reason ?? `flows.${name} did not resolve`,
+        code: 'GATED_BY_ERRORS',
+      });
+      continue;
+    }
+    for (const section of ENTRY_SECTIONS) {
+      const steps = isObject(rawFlow[section]) ? rawFlow[section] : {};
+      for (const [key, entry] of Object.entries(steps)) {
+        if (!isObject(entry) || entry.package === undefined) continue;
+        const target = { flow: name, section, key, entry };
+        pending.push(
+          checkStepSettings(
+            target,
+            flow,
+            rawFlow,
+            'flow:package-settings',
+            context,
+          ).then((outcome) => {
+            result.warnings.push(...outcome.findings);
+            run.skipped.push(...outcome.skipped);
+            deferred.push(...outcome.deferred);
+            if (outcome.checked) packages.push(outcome.checked);
+          }),
+        );
+      }
+    }
+  }
+  await Promise.all(pending);
+
+  result.details.scope = describeScope(scope, run.checks);
+  result.details.deferred = deferred;
+  if (packages.length > 0) result.details.packages = packages;
+  return result;
+}
+
+function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
   const errors: ValidationError[] = [];
   const warnings: ValidationWarning[] = [];
   const skipped: ValidateSkip[] = [];
   const checks: ValidateCheck[] = ['file:schema', 'flow:schema'];
   const details: ValidateDetails = {};
+  const resolved = new Map<string, Flow>();
+  // `valid` is set once every error-producing check has run; the package
+  // pass only adds warnings and skips.
+  const result: ValidateResult = {
+    valid: false,
+    type: 'flow',
+    errors,
+    warnings,
+    details,
+  };
 
   // 1. Serialize to JSON for core validator
   //    Core's validateFlowConfig takes a JSON string, but CLI receives parsed objects.
   //    Re-serializing is the bridge between the two interfaces.
   let json: string;
+  const scope = resolveScope(input, { flow: options.flow });
   try {
     json = JSON.stringify(input, null, 2);
   } catch {
@@ -65,11 +187,17 @@ export function validateFlow(
       message: 'Input cannot be serialized to JSON',
       code: 'SERIALIZATION_ERROR',
     });
-    return { valid: false, type: 'flow', errors, warnings, details };
+    return {
+      result,
+      scope,
+      resolved,
+      checks,
+      skipped,
+      gate: () => 'the input cannot be serialized',
+    };
   }
 
   // 2. Scope: every per-flow check below runs on scope.flows only.
-  const scope = resolveScope(input, { flow: options.flow });
   errors.push(...scope.errors);
   const config: Record<string, unknown> = isObject(input) ? input : {};
   const flowsValue = config.flows;
@@ -82,12 +210,28 @@ export function validateFlow(
     return flow === undefined || scope.flows.includes(flow);
   };
 
-  // 3. Run core validation (Zod schema + reference checking). File-level
+  // 3. The root contract, validated as `-t contract` validates it, with
+  //    paths under `contract.`. A file-level check: it runs whatever --flow.
+  let contractErrors = 0;
+  if ('contract' in config) {
+    checks.push('file:contract');
+    const contract = validateContract(config.contract);
+    contractErrors = contract.errors.length;
+    for (const error of contract.errors)
+      errors.push({ ...error, path: `contract.${error.path}` });
+    for (const warning of contract.warnings)
+      warnings.push({ ...warning, path: `contract.${warning.path}` });
+  }
+
+  // 4. Run core validation (Zod schema + reference checking). File-level
   //    findings always count; per-flow findings only for flows in scope.
+  //    Core's own contract-resolution error at `contract` is the same
+  //    finding the contract check above already reported in detail.
   const coreResult = validateFlowConfig(json);
   for (const issue of coreResult.errors) {
     const path = issue.path || 'root';
     if (!inScope(path)) continue;
+    if (path === 'contract' && contractErrors > 0) continue;
     errors.push({ path, message: issue.message, code: 'SCHEMA_VALIDATION' });
   }
   for (const issue of coreResult.warnings) {
@@ -96,7 +240,7 @@ export function validateFlow(
     warnings.push({ path, message: issue.message, code: 'CONFIG_WARNING' });
   }
 
-  // 4. CLI-specific: check for empty flows
+  // 5. CLI-specific: check for empty flows
   if (flows && allFlows.length === 0) {
     errors.push({
       path: 'flows',
@@ -105,34 +249,63 @@ export function validateFlow(
     });
   }
 
-  // 5. CLI-specific: closed-schema check on every transformer entry.
-  //    Delegates to @walkeros/core for a single source of truth.
+  // 6. Step entries. Transformers are closed (errors, single source of
+  //    truth in @walkeros/core); an unknown key on a destination or store is
+  //    dropped by the resolver, so it warns (UNKNOWN_KEY) for one minor.
+  //    Removed packages warn (DEPRECATED_PACKAGE) for one minor (D3).
   checks.push('flow:steps');
   for (const flowName of scope.flows) {
     const flowValue = flows?.[flowName];
     if (!isObject(flowValue)) continue;
     const transformersValue = flowValue.transformers;
-    if (!isObject(transformersValue)) continue;
-    for (const [name, transformerValue] of Object.entries(transformersValue)) {
-      if (!isObject(transformerValue)) continue;
-      const result = validateStepEntry(transformerValue, 'Transformer');
-      if (!result.ok) {
-        errors.push({
-          path: `flows.${flowName}.transformers.${name}`,
-          message: result.reason || 'Invalid transformer entry.',
-          code: result.code,
-        });
+    if (isObject(transformersValue)) {
+      for (const [name, transformerValue] of Object.entries(
+        transformersValue,
+      )) {
+        if (!isObject(transformerValue)) continue;
+        const result = validateStepEntry(transformerValue, 'Transformer');
+        if (!result.ok) {
+          errors.push({
+            path: `flows.${flowName}.transformers.${name}`,
+            message: result.reason || 'Invalid transformer entry.',
+            code: result.code,
+          });
+        }
+      }
+    }
+    for (const [section, kind] of OPEN_STEP_KINDS) {
+      const steps = flowValue[section];
+      if (!isObject(steps)) continue;
+      for (const [name, step] of Object.entries(steps)) {
+        if (!isObject(step)) continue;
+        const at = `flows.${flowName}.${section}.${name}`;
+        for (const key of unknownStepKeys(step, kind)) {
+          warnings.push({
+            path: `${at}.${key}`,
+            message: `Unknown key "${key}" on ${kind} is ignored by the runtime`,
+            suggestion: 'Remove the key, or move it to where it belongs.',
+            code: 'UNKNOWN_KEY',
+          });
+        }
+        const pkg = step.package;
+        if (typeof pkg === 'string' && pkg in DEPRECATED_PACKAGES) {
+          warnings.push({
+            path: at,
+            message: `${kind} "${name}" uses ${pkg}, which ${DEPRECATED_PACKAGES[pkg]}`,
+            code: 'DEPRECATED_PACKAGE',
+          });
+        }
       }
     }
   }
 
-  // 6. Extract flow details
+  // 7. Extract flow details
   if (flows) {
     details.flowNames = allFlows;
     details.flowCount = allFlows.length;
   }
 
-  // 7. CLI-specific: warn about packages without version (per-flow config.bundle.packages)
+  // 8. CLI-specific: warn about packages without version (per-flow config.bundle.packages)
   checks.push('flow:package-versions');
   let totalPackageCount = 0;
   for (const flowName of scope.flows) {
@@ -162,25 +335,21 @@ export function validateFlow(
     details.packageCount = totalPackageCount;
   }
 
-  // 8. Expose core's IntelliSense context in details (bonus for MCP consumers)
+  // 9. Expose core's IntelliSense context in details (bonus for MCP consumers)
   if (coreResult.context) {
     details.context = coreResult.context;
   }
 
-  // 9. Deep checks run per flow on shapes core has already validated: a
-  //    flow with its own errors, or a file whose file-level shape is broken,
-  //    skips them, and every skip is listed.
+  // 10. Deep checks run per flow on shapes core has already validated: a
+  //     flow with its own errors, or a file with file-level errors (its
+  //     shape, its contract), skips them, and every skip is listed.
   const typed = isFlowJson(input) ? input : undefined;
   const gate = (name: string): string | undefined => {
     if (
       !typed ||
-      errors.some(
-        (e) =>
-          e.code === 'SCHEMA_VALIDATION' &&
-          flowOfPath(e.path, allFlows) === undefined,
-      )
+      errors.some((e) => flowOfPath(e.path, allFlows) === undefined)
     )
-      return 'file-level schema errors: the file shape is not valid';
+      return 'file-level errors: the file shape or its contract is not valid';
     if (errors.some((e) => flowOfPath(e.path, allFlows) === name))
       return `earlier errors in flows.${name}`;
     return undefined;
@@ -208,15 +377,26 @@ export function validateFlow(
     }
   };
 
-  // 9a. Route checks on every chain field, read through core's
-  //     getRouteGraph. Unknown targets are errors; shapes the schema
-  //     accepts but the author probably did not intend are warnings.
+  // 10a. The bundler's own structural preflight (identifier names, package
+  //      xor code, per-flow $store targets), so a valid result implies the
+  //      bundle preflight passes.
+  perFlow(['flow:structure'], (name, flow, file) => {
+    const structure = validateFlowStructure({
+      ...file,
+      flows: { [name]: flow },
+    });
+    errors.push(...structure.errors);
+  });
+
+  // 10b. Route checks on every chain field, read through core's
+  //      getRouteGraph. Unknown targets are errors; shapes the schema
+  //      accepts but the author probably did not intend are warnings.
   perFlow(['flow:routes'], (name, flow) => {
     lintFlowRoutes(name, flow, errors, warnings);
   });
 
-  // 9b. Cross-step example compatibility, validate step examples against
-  //     their contract, and flat dot-separated mapping keys.
+  // 10c. Cross-step example compatibility, validate step examples against
+  //      their contract, and flat dot-separated mapping keys.
   let totalConnections: number | undefined;
   perFlow(
     ['flow:examples', 'flow:contract-examples', 'flow:mapping-keys'],
@@ -241,6 +421,7 @@ export function validateFlow(
           errors,
           warnings,
           options.strict === true,
+          skipped,
         );
       }
 
@@ -267,46 +448,49 @@ export function validateFlow(
     details.connectionsChecked = totalConnections;
   }
 
-  // 9c. Soft-resolve $flow refs to surface warnings (does NOT throw on missing
-  //     keys / unknown flows; cycles still throw and become errors).
-  perFlow(['flow:flow-refs'], (name, _flow, file) => {
-    try {
-      getFlowSettings(file, name, {
-        deferred: true, // don't fail on missing $env when validating
-        strictFlowRefs: false,
-        onWarning: (message) => {
-          warnings.push({
-            path: `flows.${name}`,
-            message,
-            code: 'FLOW_REF_WARNING',
-          });
-        },
-      });
-    } catch (err) {
-      // Only surface CYCLES as errors here; other resolver failures (missing
-      // $var / etc.) are already reported by the schema/reference checker
-      // above and should not double-fail this pass.
-      const message = err instanceof Error ? err.message : String(err);
-      if (/Cyclic \$flow reference/.test(message)) {
-        errors.push({
-          path: `flows.${name}`,
-          message,
-          code: 'FLOW_CYCLE',
-        });
-      }
-    }
+  // 10d. Resolve every flow as the bundler does. Every resolver failure
+  //      (unknown $var, unresolvable $flow, unknown contract, cycles) is an
+  //      error, since the bundle of that flow fails the same way. Values
+  //      known only at runtime ($env without default, $secret) stay deferred.
+  perFlow(['flow:resolve'], (name, _flow, file) => {
+    const resolution = resolveFlow(file, name);
+    if (resolution.ok) resolved.set(name, resolution.flow);
+    else errors.push(resolution.error);
   });
 
   details.scope = describeScope(scope, checks);
   details.skipped = skipped;
+  details.deferred = [];
+  result.valid = errors.length === 0;
 
   return {
-    valid: errors.length === 0,
-    type: 'flow',
-    errors,
-    warnings,
-    details,
+    result,
+    scope,
+    typed,
+    resolved,
+    checks,
+    skipped,
+    gate,
   };
+}
+
+/**
+ * Top-level keys of a destination or store that the runtime does not know,
+ * read through core's closed step-entry check (one source of truth).
+ */
+function unknownStepKeys(
+  step: Record<string, unknown>,
+  kind: 'Destination' | 'Store',
+): string[] {
+  const unknown: string[] = [];
+  const rest: Record<string, unknown> = { ...step };
+  for (;;) {
+    const verdict = validateStepEntry(rest, kind);
+    if (verdict.code !== 'UNKNOWN_KEY' || verdict.key === undefined) break;
+    unknown.push(verdict.key);
+    Reflect.deleteProperty(rest, verdict.key);
+  }
+  return unknown;
 }
 
 // --- Deep validation helpers ---
@@ -686,41 +870,63 @@ export function isValidateStep(step: Flow.Transformer): boolean {
   return step.package === VALIDATE_PACKAGE;
 }
 
+type StepContracts =
+  | { ok: true; sources: ContractSource[] }
+  | { ok: false; index?: number; message: string };
+
 /**
  * The contract sources a validate step runs with, as at runtime: a whole
  * `$contract.<name>(.<path>)` string resolves against the config-level
- * contract definitions, an inline schema is used as given. Returns undefined
- * when an entry cannot be resolved statically, so the step is not judged.
+ * contract definitions, an inline schema is used as given. An entry that
+ * does not resolve says which one and why; the step is then not judged.
  */
 function resolveStepContracts(
   entries: unknown[],
   contract: Flow.Contract | undefined,
-): ContractSource[] | undefined {
+): StepContracts {
   let resolved: Record<string, Flow.ContractRule> = {};
   if (contract) {
     try {
       resolved = resolveContracts(contract);
-    } catch {
-      return undefined;
+    } catch (error) {
+      return {
+        ok: false,
+        message: `the root contract does not resolve (${error instanceof Error ? error.message : String(error)})`,
+      };
     }
   }
 
   const sources: ContractSource[] = [];
-  for (const entry of entries) {
+  for (const [index, entry] of entries.entries()) {
     if (isObject(entry)) {
       sources.push(entry);
       continue;
     }
-    if (typeof entry !== 'string') return undefined;
-    const match = entry.match(REF_CONTRACT);
-    if (!match || !(match[1] in resolved)) return undefined;
+    const match = typeof entry === 'string' ? entry.match(REF_CONTRACT) : null;
+    if (!match)
+      return {
+        ok: false,
+        index,
+        message: 'an entry must be a $contract reference or a JSON Schema',
+      };
+    if (!(match[1] in resolved))
+      return {
+        ok: false,
+        index,
+        message: `contract "${match[1]}" is not defined in the root contract (defined: ${Object.keys(resolved).join(', ') || 'none'})`,
+      };
     const rule: unknown = match[2]
       ? getByPath(resolved[match[1]], match[2])
       : resolved[match[1]];
-    if (!isObject(rule)) return undefined;
+    if (!isObject(rule))
+      return {
+        ok: false,
+        index,
+        message: `${match[0]} does not point at a contract rule object`,
+      };
     sources.push(rule);
   }
-  return sources;
+  return { ok: true, sources };
 }
 
 /**
@@ -732,6 +938,8 @@ function resolveStepContracts(
  * {@link strict}, else warning). Deterministic: the verdict comes from the
  * shared {@link validateEventAgainstContract} runtime authority.
  * `stepPath` is the step's result path, `flows.<flow>.transformers.<name>`.
+ * A contract entry that does not resolve is an error (UNRESOLVED_CONTRACT),
+ * examples or not; a contract setting that is not a list is a skip.
  */
 export function checkValidateStepExamples(
   stepPath: string,
@@ -740,19 +948,41 @@ export function checkValidateStepExamples(
   errors: ValidationError[],
   warnings: ValidationWarning[],
   strict: boolean,
+  skipped?: ValidateSkip[],
 ): void {
-  if (!step.examples) return;
   const settings =
     isObject(step.config) && isObject(step.config.settings)
       ? step.config.settings
       : {};
+  const contractPath = `${stepPath}.config.settings.contract`;
   // A contract that is set but not a list cannot be judged statically.
-  if (settings.contract !== undefined && !Array.isArray(settings.contract))
+  if (settings.contract !== undefined && !Array.isArray(settings.contract)) {
+    if (step.examples)
+      skipped?.push({
+        path: stepPath,
+        check: 'flow:contract-examples',
+        reason:
+          'config.settings.contract is not a list, so the step cannot be judged statically',
+        code: 'CONTRACT_NOT_STATIC',
+      });
     return;
-  const contracts = Array.isArray(settings.contract)
+  }
+  const resolution: StepContracts = Array.isArray(settings.contract)
     ? resolveStepContracts(settings.contract, contract)
-    : [];
-  if (!contracts) return;
+    : { ok: true, sources: [] };
+  if (!resolution.ok) {
+    errors.push({
+      path:
+        resolution.index === undefined
+          ? contractPath
+          : `${contractPath}.${resolution.index}`,
+      message: `The validate step's contract does not resolve: ${resolution.message}`,
+      code: 'UNRESOLVED_CONTRACT',
+    });
+    return;
+  }
+  if (!step.examples) return;
+  const contracts = resolution.sources;
 
   const mode = settings.mode === 'strict' ? 'strict' : 'pass';
   const format = settings.format === true;

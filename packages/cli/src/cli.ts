@@ -256,14 +256,18 @@ program
   )
   .option(
     '--path <path>',
-    'validate a specific entry against its package schema (e.g. destinations.snowplow)',
+    'validate one entry against its package schema in every flow that has it, or only in --flow (e.g. destinations.snowplow, stores.cache)',
   )
   .option('-o, --output <path>', 'write result to file')
   .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
-  .option('--strict', 'fail on warnings')
+  .option('--strict', 'fail on warnings and skipped checks')
+  .option(
+    '--offline',
+    'do not fetch package schemas; step settings are not checked against them',
+  )
   .action(async (input, options) => {
     await validateCommand({
       type: options.type || 'flow',
@@ -275,6 +279,7 @@ program
       verbose: options.verbose,
       silent: options.silent,
       strict: options.strict,
+      offline: options.offline,
     });
   });
 

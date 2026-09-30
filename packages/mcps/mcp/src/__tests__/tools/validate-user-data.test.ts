@@ -7,6 +7,11 @@ jest.mock('@walkeros/cli/dev', () => ({
       flow: { type: 'string' },
       path: { type: 'string' },
     },
+    // The handler parses its input with the real schema.
+    ValidateInputSchema:
+      jest.requireActual<typeof import('@walkeros/cli/dev')>(
+        '@walkeros/cli/dev',
+      ).schemas.ValidateInputSchema,
   },
 }));
 

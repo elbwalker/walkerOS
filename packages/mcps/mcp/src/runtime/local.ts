@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   collectKnownSecrets,
   loadJsonConfig,
@@ -25,6 +27,13 @@ import type { FlowRuntime } from './types.js';
 export function createLocalRuntime(): FlowRuntime {
   return {
     load: (input) => loadJsonConfig(input),
+
+    baseDir(input) {
+      const file = path.resolve(input);
+      return fs.existsSync(file) && fs.statSync(file).isFile()
+        ? path.dirname(file)
+        : undefined;
+    },
 
     bundle: (input, opts) =>
       bundle(input, {

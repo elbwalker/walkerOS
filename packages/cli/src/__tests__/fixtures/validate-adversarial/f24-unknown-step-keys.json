@@ -1,0 +1,34 @@
+{
+  "version": 4,
+  "flows": {
+    "a": {
+      "config": {
+        "platform": "server"
+      },
+      "destinations": {
+        "d": {
+          "package": "pkg-x",
+          "config": {
+            "settings": {
+              "id": "G-ABC123"
+            }
+          },
+          "settings": {
+            "id": "G-ABC123"
+          }
+        }
+      },
+      "stores": {
+        "cache": {
+          "package": "pkg-store",
+          "config": {
+            "settings": {
+              "ttl": 60
+            }
+          },
+          "tll": 60
+        }
+      }
+    }
+  }
+}

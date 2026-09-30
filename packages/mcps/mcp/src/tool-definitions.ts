@@ -220,13 +220,15 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     description:
       'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
       'Accepts JSON strings, file paths, or URLs as input; on the hosted server only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
-      'Returns validation results with errors, warnings, and details.',
+      "With only type and input, a flow runs every check on every flow and step, including each package's settings schema (fetched from the package CDN; offline: true skips that and says so). " +
+      'flow and path narrow the run; strict turns warnings and skips into failures: valid is false. ' +
+      'Returns valid, errors and warnings with stable codes, and details.scope (what was checked), details.skipped (checks that could not run) and details.deferred (values known only at runtime).',
     inputSchema: schemas.ValidateInputShape as unknown as ZodRawShape,
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
-      openWorldHint: false,
+      openWorldHint: true,
     },
   },
   {

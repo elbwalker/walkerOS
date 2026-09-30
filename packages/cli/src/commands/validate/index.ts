@@ -1,6 +1,9 @@
 // walkerOS/packages/cli/src/commands/validate/index.ts
 
+import * as fs from 'fs';
+import * as path from 'path';
 import chalk from 'chalk';
+import { isObject } from '@walkeros/core';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   getErrorMessage,
@@ -12,10 +15,11 @@ import { loadJsonConfig } from '../../config/index.js';
 import {
   validateContract,
   validateEvent,
-  validateFlow,
   validateMapping,
 } from './validators/index.js';
 import { validateEntry } from './validators/entry.js';
+import { isFlowJson } from './scope.js';
+import { validateFlowWithPackages } from './validators/flow.js';
 import type { ValidateOptions } from '../../schemas/validate.js';
 import {
   USAGE_CODES,
@@ -28,14 +32,25 @@ import {
 
 /**
  * Options that do not apply to the validation type: `--path` and `--flow`
- * address flow files only. Never ignored silently (OPTION_NOT_APPLICABLE).
+ * address flow files only, `--offline` removes the package settings check
+ * of a whole-file flow run. Never ignored silently (OPTION_NOT_APPLICABLE).
  */
 function inapplicableOptions(
   type: ValidationType,
   options: ValidateOptions,
 ): ValidationError[] {
-  if (type === 'flow') return [];
   const errors: ValidationError[] = [];
+  if (options.offline === true && (type !== 'flow' || options.path)) {
+    errors.push({
+      path: 'options.offline',
+      message:
+        type === 'flow'
+          ? '--offline removes the package settings check, which is all --path checks; drop one of them'
+          : `--offline applies to a whole flow file and does not apply to -t ${type}`,
+      code: 'OPTION_NOT_APPLICABLE',
+    });
+  }
+  if (type === 'flow') return errors;
   if (options.path !== undefined) {
     errors.push({
       path: 'options.path',
@@ -51,6 +66,43 @@ function inapplicableOptions(
     });
   }
   return errors;
+}
+
+/**
+ * `-t contract` on a flow file validates its `contract` section, exactly as
+ * on the section alone (M-dispatch).
+ */
+function validateContractInput(input: unknown): ValidateResult {
+  if (!isFlowJson(input)) return validateContract(input);
+  const contract = isObject(input) ? input.contract : undefined;
+  if (contract === undefined) {
+    return {
+      valid: false,
+      type: 'contract',
+      errors: [
+        {
+          path: 'contract',
+          message: 'The flow file has no contract section to validate',
+          code: 'NO_CONTRACT_SECTION',
+        },
+      ],
+      warnings: [],
+      details: {},
+    };
+  }
+  return validateContract(contract);
+}
+
+/**
+ * The directory a local `path` package resolves against: the input file's,
+ * when the input is a file on disk. Otherwise none, and no disk reads.
+ */
+function configDirOf(input: unknown): string | undefined {
+  if (typeof input !== 'string') return undefined;
+  const candidate = path.resolve(input);
+  return fs.existsSync(candidate) && fs.statSync(candidate).isFile()
+    ? path.dirname(candidate)
+    : undefined;
 }
 
 /** Whole-document validations state their one check as their scope. */
@@ -98,18 +150,43 @@ export async function validate(
     };
   }
 
+  const result = await validateByType(type, input, resolved, options);
+  return options.strict === true ? escalateStrict(result) : result;
+}
+
+/**
+ * `strict` turns warnings and skipped checks into failures (C4), in every
+ * entry point (C9): the result is invalid, with the findings unchanged.
+ */
+function escalateStrict(result: ValidateResult): ValidateResult {
+  const skipped = result.details.skipped ?? [];
+  if (result.warnings.length === 0 && skipped.length === 0) return result;
+  return { ...result, valid: false };
+}
+
+async function validateByType(
+  type: ValidationType,
+  input: unknown,
+  resolved: unknown,
+  options: ValidateOptions,
+): Promise<ValidateResult> {
   switch (type) {
     case 'contract':
-      return withDocumentScope(validateContract(resolved), 'contract');
+      return withDocumentScope(validateContractInput(resolved), 'contract');
     case 'event':
       return withDocumentScope(validateEvent(resolved), 'event');
     case 'flow':
       if (options.path !== undefined) {
-        return validateEntry(options.path, resolved, { flow: options.flow });
+        return validateEntry(options.path, resolved, {
+          flow: options.flow,
+          configDir: options.configDir ?? configDirOf(input),
+        });
       }
-      return validateFlow(resolved, {
+      return validateFlowWithPackages(resolved, {
         flow: options.flow,
         strict: options.strict,
+        offline: options.offline,
+        configDir: options.configDir ?? configDirOf(input),
       });
     case 'mapping':
       return withDocumentScope(validateMapping(resolved), 'mapping');
@@ -132,6 +209,7 @@ function formatScope(result: ValidateResult): string | undefined {
     );
   }
   parts.push(`${scope.checks.length} check(s): ${scope.checks.join(', ')}`);
+  if (scope.offline) parts.push('offline: package settings not checked');
   return `Scope: ${parts.join('; ')}`;
 }
 
@@ -140,7 +218,7 @@ function formatScope(result: ValidateResult): string | undefined {
  */
 function formatResult(
   result: ValidateResult,
-  options: { json?: boolean; verbose?: boolean },
+  options: { json?: boolean; verbose?: boolean; exitCode: number },
 ): string {
   if (options.json) {
     return JSON.stringify(result, null, 2);
@@ -189,7 +267,15 @@ function formatResult(
     );
   }
 
-  if (result.valid && skipped.length === 0) {
+  // The verdict line follows the exit code: a run that fails under
+  // --strict (exit 2) never reads as passed.
+  if (options.exitCode === 2) {
+    lines.push(
+      chalk.red(
+        `  ✗ Failed under --strict: ${result.warnings.length} warning(s) and ${skipped.length} skipped check(s) count as failures`,
+      ),
+    );
+  } else if (result.valid && skipped.length === 0) {
     lines.push(chalk.green(`  ✓ All checks passed`));
   } else if (result.valid) {
     lines.push(
@@ -236,18 +322,20 @@ export async function validateCommand(
       flow: options.flow,
       path: options.path,
       strict: options.strict,
+      offline: options.offline,
     });
+
+    exitCode = exitCodeOf(result, options.strict === true);
 
     // Format and write result; --silent suppresses stdout, never a file
     if (!options.silent || options.output) {
       const formatted = formatResult(result, {
         json: options.json,
         verbose: options.verbose,
+        exitCode,
       });
       await writeResult(formatted + '\n', { output: options.output });
     }
-
-    exitCode = exitCodeOf(result, options.strict === true);
   } catch (error) {
     const errorMessage = getErrorMessage(error);
 
@@ -260,7 +348,7 @@ export async function validateCommand(
             { path: 'input', message: errorMessage, code: 'INPUT_ERROR' },
           ],
           warnings: [],
-          details: {},
+          details: { scope: { flows: [], checks: [] }, skipped: [] },
         },
         null,
         2,
@@ -286,10 +374,10 @@ function exitCodeOf(result: ValidateResult, strict: boolean): number {
     )
   )
     return 3;
-  if (!result.valid) return 1;
+  if (result.errors.length > 0) return 1;
   const skipped = result.details.skipped ?? [];
   if (strict && (result.warnings.length > 0 || skipped.length > 0)) return 2;
-  return 0;
+  return result.valid ? 0 : 1;
 }
 
 // Re-export types

@@ -37,14 +37,6 @@
             }
           }
         },
-        "ga4flow": {
-          "package": "pkg-x",
-          "config": {
-            "settings": {
-              "id": "$flow.a.url"
-            }
-          }
-        },
         "ga4store": {
           "package": "pkg-x",
           "config": {

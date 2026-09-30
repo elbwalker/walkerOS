@@ -1227,7 +1227,7 @@ const teaching = {
     useCases: ['contracts'],
     note: 'The contract names what every event must carry; the validate step and validate --strict read it.',
     docs: [{ page: 'getting-started/flow/contract' }],
-    cli: [`walkeros validate "$(jq .contract ${FILE})" -t contract`],
+    cli: [`walkeros validate ${FILE} -t contract`],
   },
   'contract-extend': {
     pointer: '/contract/server/extend',
@@ -2181,7 +2181,7 @@ export interface CliEntry {
 export const flowCompleteCli: CliEntry[] = [
   { command: `walkeros validate ${FILE} --strict`, chapter: 'tour' },
   {
-    command: `walkeros validate "$(jq .contract ${FILE})" -t contract`,
+    command: `walkeros validate ${FILE} -t contract`,
     chapter: 'contract',
   },
   {

@@ -58,6 +58,27 @@ export class FlowReferenceError extends Error {
   }
 }
 
+/**
+ * A reference cycle the resolver cannot break. Carries a code and the chain
+ * of names, so tooling can report it structurally instead of matching text.
+ * - `FLOW_CYCLE`: `$flow` references that reach a flow already being
+ *   resolved (the entry flow included, so a flow reading itself cycles).
+ * - `VAR_CYCLE`: `$var` values that reference each other.
+ */
+export class FlowCycleError extends Error {
+  readonly code: 'FLOW_CYCLE' | 'VAR_CYCLE';
+  readonly chain: string[];
+
+  constructor(code: 'FLOW_CYCLE' | 'VAR_CYCLE', chain: string[]) {
+    super(
+      `Cyclic ${code === 'FLOW_CYCLE' ? '$flow' : '$var'} reference: ${chain.join(' -> ')}`,
+    );
+    this.name = 'FlowCycleError';
+    this.code = code;
+    this.chain = chain;
+  }
+}
+
 /** Sentinel prefix for deferred $env resolution. Shared with CLI bundler. */
 export const ENV_MARKER_PREFIX = '__WALKEROS_ENV:';
 
@@ -213,8 +234,7 @@ function resolvePatterns(
 
       const visiting = varVisiting ?? new Set<string>();
       if (visiting.has(varName)) {
-        const chain = [...visiting, varName].join(' -> ');
-        throwError(`Cyclic $var reference: ${chain}`);
+        throw new FlowCycleError('VAR_CYCLE', [...visiting, varName]);
       }
 
       visiting.add(varName);
@@ -338,8 +358,7 @@ function resolvePatterns(
 
       const visiting = varVisiting ?? new Set<string>();
       if (visiting.has(varName)) {
-        const chain = [...visiting, varName].join(' -> ');
-        throwError(`Cyclic $var reference: ${chain}`);
+        throw new FlowCycleError('VAR_CYCLE', [...visiting, varName]);
       }
 
       visiting.add(varName);
@@ -515,8 +534,7 @@ export function getFlowSettings(
     if (!targetSettings) return undefined;
 
     if (visiting.has(targetName)) {
-      const chain = [...visitOrder, targetName].join(' -> ');
-      throwError(`Cyclic $flow reference: ${chain}`);
+      throw new FlowCycleError('FLOW_CYCLE', [...visitOrder, targetName]);
     }
 
     visiting.add(targetName);

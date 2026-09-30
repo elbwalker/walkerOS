@@ -15,7 +15,12 @@ import {
   sourceJsonSchema,
   destinationJsonSchema,
 } from '../schemas/flow';
-import { getFlowSettings, getPlatform, packageNameToVariable } from '../flow';
+import {
+  FlowCycleError,
+  getFlowSettings,
+  getPlatform,
+  packageNameToVariable,
+} from '../flow';
 import type { Flow } from '../types';
 
 describe('Flow Schemas', () => {
@@ -2991,5 +2996,66 @@ describe('getFlowSettings resolves $env inside config.credentials', () => {
         private_key: 'private-key-value',
       },
     });
+  });
+});
+
+describe('reference cycles throw a typed FlowCycleError', () => {
+  function thrown(run: () => unknown): unknown {
+    try {
+      run();
+    } catch (error) {
+      return error;
+    }
+    return undefined;
+  }
+
+  it('a $flow cycle between two flows has code FLOW_CYCLE and its chain', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'web', settings: { x: '$flow.b.settings.y' } },
+        },
+        b: {
+          config: { platform: 'server', settings: { y: '$flow.a.settings.x' } },
+        },
+      },
+    };
+    const error = thrown(() => getFlowSettings(config, 'a'));
+    expect(error).toBeInstanceOf(FlowCycleError);
+    expect(error).toMatchObject({ code: 'FLOW_CYCLE', chain: ['a', 'b', 'a'] });
+  });
+
+  it('a step reading its own flow config is a FLOW_CYCLE', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'server', url: 'https://a.test' },
+          destinations: {
+            api: { package: 'x', config: { settings: { url: '$flow.a.url' } } },
+          },
+        },
+      },
+    };
+    expect(thrown(() => getFlowSettings(config, 'a'))).toMatchObject({
+      code: 'FLOW_CYCLE',
+    });
+  });
+
+  it.each([
+    ['whole value', '$var.a'],
+    ['inline', 'x-$var.a'],
+  ])('a $var cycle (%s) has code VAR_CYCLE', (_label, value) => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { a: '$var.b', b: '$var.a' },
+      flows: {
+        default: { config: { platform: 'web', settings: { x: value } } },
+      },
+    };
+    const error = thrown(() => getFlowSettings(config));
+    expect(error).toBeInstanceOf(FlowCycleError);
+    expect(error).toMatchObject({ code: 'VAR_CYCLE' });
   });
 });

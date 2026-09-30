@@ -40,7 +40,19 @@ export const ValidateOptionsSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      'Escalate: warnings and skips fail, contract disagreements error',
+      'Escalate: strict turns warnings and skips into failures (valid is false), contract disagreements error',
+    ),
+  offline: z
+    .boolean()
+    .optional()
+    .describe(
+      'Do not fetch package schemas: step settings are not checked against them, and the result scope says so. Only with type "flow" and no path.',
+    ),
+  configDir: z
+    .string()
+    .optional()
+    .describe(
+      "Directory local `path` packages resolve against. Defaults to the input file's directory; set it when passing a parsed document.",
     ),
 });
 
@@ -65,6 +77,18 @@ export const ValidateInputShape = {
     .optional()
     .describe(
       'Entry path for package schema validation (e.g., "destinations.snowplow"). Only with type "flow": validates the entry against its package JSON Schema in every flow that has it, or only in the given flow.',
+    ),
+  strict: z
+    .boolean()
+    .optional()
+    .describe(
+      'Escalate: strict turns warnings and skips into failures: valid is false (the CLI exits 2), and contract example disagreements become errors. Every check runs with or without it.',
+    ),
+  offline: z
+    .boolean()
+    .optional()
+    .describe(
+      'Do not fetch package schemas: step settings are not checked against them, and details.scope says so. Only with type "flow" and no path.',
     ),
 };
 

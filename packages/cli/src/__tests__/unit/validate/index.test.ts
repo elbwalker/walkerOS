@@ -173,6 +173,11 @@ describe('validateCommand exit codes', () => {
       expect(exitCodes).toEqual([3]);
       const written = JSON.parse(fs.readFileSync(outFile, 'utf-8'));
       expect(written.errors[0].code).toBe('INPUT_ERROR');
+      // C8: the same shape as every other result
+      expect(written.details).toEqual({
+        scope: { flows: [], checks: [] },
+        skipped: [],
+      });
     } finally {
       exitSpy.mockRestore();
       if (fs.existsSync(outFile)) fs.unlinkSync(outFile);

@@ -296,4 +296,10 @@ export type {
   ValidationType,
   ValidationError,
   ValidationWarning,
+  ValidateCode,
+  ValidateCheck,
+  ValidateScope,
+  ValidateSkip,
+  ValidateDeferred,
 } from './commands/validate/types.js';
+export { VALIDATE_CODES } from './commands/validate/types.js';

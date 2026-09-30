@@ -137,7 +137,7 @@ describe('validateFlow', () => {
     }
   });
 
-  it('warns for dangling $var. references', () => {
+  it('errors for dangling $var. references (the bundle fails to resolve them)', () => {
     const result = validateFlow({
       version: 4,
       variables: { gaId: 'G-XXX' },
@@ -154,13 +154,19 @@ describe('validateFlow', () => {
       },
     });
 
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.default',
+        code: 'UNRESOLVED_REFERENCE',
+      }),
+    );
     expect(
       result.warnings.some((w) => w.message.includes('$var.nonExistent')),
     ).toBe(true);
   });
 
-  it('warns for dangling $store. references', () => {
+  it('errors for dangling $store. references (the bundle preflight rejects them)', () => {
     const result = validateFlow({
       version: 4,
       flows: {
@@ -177,7 +183,13 @@ describe('validateFlow', () => {
       },
     });
 
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.default',
+        code: 'STORE_REFERENCE_NOT_FOUND',
+      }),
+    );
     expect(
       result.warnings.some((w) => w.message.includes('$store.bogus')),
     ).toBe(true);
@@ -216,7 +228,10 @@ describe('validateFlow', () => {
         default: {
           config: { platform: 'server' },
           destinations: {
-            api: { config: { settings: { url: '$env.API_URL=fallback' } } },
+            api: {
+              package: '@walkeros/server-destination-api',
+              config: { settings: { url: '$env.API_URL=fallback' } },
+            },
           },
         },
       },
@@ -228,7 +243,7 @@ describe('validateFlow', () => {
     ).toBe(true);
   });
 
-  it('warns for unknown $flow. references', () => {
+  it('errors for unknown $flow. references (the bundle fails to resolve them), and still warns', () => {
     const result = validateFlow({
       version: 4,
       flows: {
@@ -242,13 +257,19 @@ describe('validateFlow', () => {
       },
     });
 
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.web',
+        code: 'UNRESOLVED_REFERENCE',
+      }),
+    );
     expect(result.warnings.some((w) => /\$flow\.serverr/.test(w.message))).toBe(
       true,
     );
   });
 
-  it('warns (not errors) for unresolved $flow.X.url references in soft mode', () => {
+  it('errors for a $flow.X.url whose target has no url, as the bundle does', () => {
     const result = validateFlow({
       version: 4,
       flows: {
@@ -256,20 +277,25 @@ describe('validateFlow', () => {
         web: {
           config: { platform: 'web' },
           destinations: {
-            api: { config: { settings: { url: '$flow.server.url' } } },
+            api: {
+              package: '@walkeros/web-destination-api',
+              config: { settings: { url: '$flow.server.url' } },
+            },
           },
         },
       },
     });
 
-    // Without --strict the validator stays valid; warnings are surfaced.
-    expect(result.valid).toBe(true);
-    expect(
-      result.warnings.some((w) => /\$flow\.server\.url/.test(w.message)),
-    ).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.web',
+        code: 'UNRESOLVED_REFERENCE',
+      }),
+    );
   });
 
-  it('errors on cyclic $flow references even in soft mode', () => {
+  it('errors on cyclic $flow references', () => {
     const result = validateFlow({
       version: 4,
       flows: {
@@ -287,6 +313,43 @@ describe('validateFlow', () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.code === 'FLOW_CYCLE')).toBe(true);
+  });
+
+  it('a step reading its own flow config is a FLOW_CYCLE, as the resolver throws', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'server', url: 'https://a.test' },
+          destinations: {
+            api: {
+              package: '@walkeros/server-destination-api',
+              config: { settings: { url: '$flow.a.url' } },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ path: 'flows.a', code: 'FLOW_CYCLE' }),
+    );
+  });
+
+  it('a $var cycle is VAR_CYCLE', () => {
+    const result = validateFlow({
+      version: 4,
+      variables: { a: '$var.b', b: '$var.a' },
+      flows: {
+        default: {
+          config: { platform: 'web', settings: { x: '$var.a' } },
+        },
+      },
+    });
+
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ path: 'flows.default', code: 'VAR_CYCLE' }),
+    );
   });
 
   it('does not warn for valid $var. references', () => {
