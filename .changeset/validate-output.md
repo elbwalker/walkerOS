@@ -1,11 +1,11 @@
 ---
 '@walkeros/cli': minor
-'@walkeros/mcp': patch
+'@walkeros/mcp': minor
 ---
 
-`walkeros validate` prints a `Scope:` line and returns `details.scope` (flows
-and checks) instead of `details.validatedFlow`; `details.skipped` lists checks
-that did not run, such as an unreachable package schema (exit 0). `--path` and
-`--flow` narrow every check; paths start with `flows.<flow>.`. Errors and
-warnings carry stable codes, settings errors `ENTRY_SCHEMA` plus `keyword`.
-`--path` or `--flow` with a non-flow `-t` exits 3.
+`walkeros validate` prints a `Scope:` line and returns `details.scope` instead
+of `details.validatedFlow`, `details.skipped` for checks that did not run and
+`details.deferred` for values known only at runtime. Skips never read as passed.
+Every finding has a stable `code`. `--strict` fails on warnings or skips (exit
+2), and `validate()` and `flow_validate` with `strict` return `valid: false`;
+`flow_validate` also accepts `offline`.

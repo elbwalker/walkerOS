@@ -51,9 +51,20 @@ export const VALIDATE_CODES = [
   'MAPPING_DOT_KEY',
   'FLOW_REF_WARNING',
   'FLOW_CYCLE',
+  'VAR_CYCLE',
+  // Structure (the bundler's own preflight, validateFlowStructure)
+  'INVALID_COMPONENT_NAME',
+  'INVALID_REFERENCE',
+  'STORE_REFERENCE_NOT_FOUND',
+  // Resolution (getFlowSettings, as the bundler resolves the flow)
+  'UNRESOLVED_REFERENCE',
+  'MISSING_ENV',
+  'WEB_SECRET_REF',
+  'UNRESOLVED_CONTRACT',
   // Entry settings against the package schema
   'ENTRY_SCHEMA',
   // Contract
+  'NO_CONTRACT_SECTION',
   'INVALID_CONTRACT',
   'FLAT_CONTRACT_SHAPE',
   'INVALID_CONTRACT_ENTRY',
@@ -80,6 +91,7 @@ export const VALIDATE_CODES = [
   'CATCH_ALL_NOT_LAST',
   // Skips (details.skipped[].code)
   'GATED_BY_ERRORS',
+  'CONTRACT_NOT_STATIC',
   'NO_PACKAGE',
   'NO_SETTINGS_SCHEMA',
   'SCHEMA_UNAVAILABLE',
@@ -97,14 +109,17 @@ export const USAGE_CODES: readonly ValidateCode[] = ['OPTION_NOT_APPLICABLE'];
  */
 export type ValidateCheck =
   | 'file:schema'
+  | 'file:contract'
   | 'flow:schema'
   | 'flow:steps'
+  | 'flow:structure'
   | 'flow:package-versions'
   | 'flow:routes'
   | 'flow:examples'
   | 'flow:contract-examples'
   | 'flow:mapping-keys'
-  | 'flow:flow-refs'
+  | 'flow:resolve'
+  | 'flow:package-settings'
   | 'entry:settings'
   | 'contract'
   | 'event'
@@ -125,6 +140,8 @@ export interface ValidateScope {
   flows: string[];
   entry?: ValidateScopeEntry;
   checks: ValidateCheck[];
+  /** Set when `offline` removed the package settings check from `checks`. */
+  offline?: true;
 }
 
 /** A check the scope includes that did not run (C5). */
@@ -174,5 +191,7 @@ export interface ValidateCommandOptions {
   json?: boolean;
   verbose?: boolean;
   strict?: boolean;
+  /** Skip every package settings check (no network); named in the scope. */
+  offline?: boolean;
   silent?: boolean;
 }

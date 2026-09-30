@@ -44,54 +44,13 @@ async function loadValidateInput(
   }
 }
 
-/**
- * Detect deprecated `@walkeros/store-memory` references in a flow.json.
- * Returns one validation error per offending store.
- *
- * MCP-layer concern: `@walkeros/store-memory` was removed and replaced by
- * the built-in cache (`Flow.Store.cache`). Surface a clear migration error
- * so users know what to do.
- */
-const DEPRECATED_STORE_PACKAGE = '@walkeros/store-memory';
-
-function detectDeprecatedStorePackages(
-  config: unknown,
-): ValidateResult['errors'] {
-  const errors: ValidateResult['errors'] = [];
-  if (!config || typeof config !== 'object') return errors;
-  const flows = (config as { flows?: unknown }).flows;
-  if (!flows || typeof flows !== 'object') return errors;
-  for (const [flowName, flowEntry] of Object.entries(
-    flows as Record<string, unknown>,
-  )) {
-    if (!flowEntry || typeof flowEntry !== 'object') continue;
-    const stores = (flowEntry as { stores?: unknown }).stores;
-    if (!stores || typeof stores !== 'object') continue;
-    for (const [storeId, storeEntry] of Object.entries(
-      stores as Record<string, unknown>,
-    )) {
-      if (!storeEntry || typeof storeEntry !== 'object') continue;
-      const pkg = (storeEntry as { package?: unknown }).package;
-      if (pkg === DEPRECATED_STORE_PACKAGE) {
-        errors.push({
-          path: `flows.${flowName}.stores.${storeId}`,
-          message:
-            `Store "${storeId}" uses ${DEPRECATED_STORE_PACKAGE}, which has been removed. ` +
-            'Use the built-in cache by omitting cache.store, or remove the store ' +
-            'declaration if it was only used as a cache target.',
-          code: 'DEPRECATED_PACKAGE',
-        });
-      }
-    }
-  }
-  return errors;
-}
-
 const TITLE = 'Validate Flow';
 const DESCRIPTION =
   'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
   'Accepts JSON strings, file paths, or URLs as input; on the hosted server only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
-  'Returns validation results with errors, warnings, and details.';
+  "With only type and input, a flow runs every check on every flow and step, including each package's settings schema (fetched from the package CDN; offline: true skips that and says so). " +
+  'flow and path narrow the run; strict turns warnings and skips into failures: valid is false. ' +
+  'Returns valid, errors and warnings with stable codes, and details.scope (what was checked), details.skipped (checks that could not run) and details.deferred (values known only at runtime).';
 
 const inputSchema = schemas.ValidateInputShape;
 
@@ -99,7 +58,7 @@ const annotations = {
   readOnlyHint: true,
   destructiveHint: false,
   idempotentHint: true,
-  openWorldHint: false,
+  openWorldHint: true,
 } as const;
 
 export function createFlowValidateToolSpec(runtime: FlowRuntime): ToolSpec {
@@ -114,60 +73,61 @@ export function createFlowValidateToolSpec(runtime: FlowRuntime): ToolSpec {
 }
 
 async function flowValidateHandlerBody(runtime: FlowRuntime, input: unknown) {
+  const parsed = schemas.ValidateInputSchema.safeParse(input ?? {});
+  if (!parsed.success) {
+    return mcpError(parsed.error, 'Check the flow_validate input fields');
+  }
   const {
     type,
     input: validateInput,
     flow,
     path,
-  } = (input ?? {}) as {
-    type: ValidateType;
-    input: string;
-    flow?: string;
-    path?: string;
-  };
+    strict,
+    offline,
+  } = parsed.data;
   try {
     // Resolve the input through the runtime and validate the parsed document.
     // Handed a string, the cli `validate` would read files and URLs itself;
     // handing it the parsed object keeps every read behind the runtime.
     const resolved = await loadValidateInput(runtime, validateInput, type);
+    const configDir = runtime.baseDir?.(validateInput);
     const result: ValidateResult = await validate(type, resolved, {
       flow,
       path,
+      strict,
+      offline,
+      ...(configDir ? { configDir } : {}),
     });
 
-    // Post-validation pass: detect deprecated `@walkeros/store-memory`
-    // references in flow configs. MCP-layer concern — keeps core
-    // validation package-agnostic.
-    let augmented = result;
-    if (type === 'flow') {
-      const deprecatedErrors = detectDeprecatedStorePackages(resolved);
-      if (deprecatedErrors.length > 0) {
-        augmented = {
-          ...result,
-          valid: false,
-          errors: [...result.errors, ...deprecatedErrors],
-        };
-      }
-    }
-
-    const hints = augmented.valid
-      ? {
-          next: runtime.simulate
-            ? [
-                'Use flow_simulate to test event flow',
-                'Use flow_bundle to build',
-              ]
-            : [HINT_OUT_OF_PROCESS],
-        }
-      : {
-          next: [
-            'Fix errors above, then run flow_validate again',
-            'Read walkeros://reference/flow-schema for correct structure',
-          ],
-        };
+    const skipped = result.details.skipped ?? [];
+    const next = runtime.simulate
+      ? ['Use flow_simulate to test event flow', 'Use flow_bundle to build']
+      : [HINT_OUT_OF_PROCESS];
+    const hints =
+      !result.valid && result.errors.length === 0
+        ? {
+            next: [
+              `strict: ${result.warnings.length} warning(s) and ${skipped.length} skipped check(s) count as failures; resolve them, or run without strict`,
+            ],
+          }
+        : !result.valid
+          ? {
+              next: [
+                'Fix errors above, then run flow_validate again',
+                'Read walkeros://reference/flow-schema for correct structure',
+              ],
+            }
+          : skipped.length > 0
+            ? {
+                next: [
+                  `Valid in checked scope; ${skipped.length} check(s) skipped, see details.skipped`,
+                  ...next,
+                ],
+              }
+            : { next };
     // Validation `message` and `path` are tool-generated, not echoed user
     // input — both stay literal, never wrapped in <user_data>.
-    return mcpResult(augmented, hints);
+    return mcpResult(result, hints);
   } catch (error) {
     return mcpError(
       error,

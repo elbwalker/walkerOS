@@ -1,7 +1,16 @@
 // walkerOS/packages/cli/src/commands/validate/scope.ts
 
+import type { Flow } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import type { ValidateCheck, ValidateScope, ValidationError } from './types.js';
+
+/**
+ * A parsed Flow.Json shape (a `version` and a `flows` object), so the
+ * validators can hand it to core's resolver and preflight without casts.
+ */
+export function isFlowJson(value: unknown): value is Flow.Json {
+  return isObject(value) && 'version' in value && isObject(value.flows);
+}
 
 /** Step sections a `--path` can address. */
 export const ENTRY_SECTIONS = [

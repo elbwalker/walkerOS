@@ -459,33 +459,40 @@ Validate flow configurations, events, mappings, or contracts.
 walkeros validate <input> [options]
 ```
 
-Default: validates input as Flow.Json (schema, references, cross-step examples).
+Default: validates input as Flow.Json, every check on every flow and step
+(schema, references, routes, root `contract`, bundle preflight, examples,
+package settings). The text output starts with a `Scope:` line; skipped checks
+are always listed.
 
 ### Options
 
 | Option          | Description                                                          |
 | --------------- | -------------------------------------------------------------------- |
 | `--type <type>` | Validation type (default: `flow`). See types below.                  |
-| `--path <path>` | Validate entry against package schema (e.g. `destinations.snowplow`) |
-| `--flow <name>` | Flow name for multi-flow configs                                     |
-| `--strict`      | Fail on warnings (contract violations exit 1, other warnings exit 2) |
+| `--path <path>` | Check one entry in every flow that has it (e.g. `stores.cache`)      |
+| `--flow <name>` | Narrow per-flow checks to one flow; file-level checks still run      |
+| `--strict`      | Contract violations exit 1; other warnings and skipped checks exit 2 |
+| `--offline`     | Do not fetch package schemas; settings are not checked               |
 | `--json`        | JSON output                                                          |
 | `-v, --verbose` | Verbose output                                                       |
 | `-s, --silent`  | Suppress output                                                      |
 
 ### Validation types
 
-| Type             | Input        | What it checks                          |
-| ---------------- | ------------ | --------------------------------------- |
-| `flow` (default) | Flow.Json    | Schema, references, cross-step examples |
-| `event`          | Event object | Name format, schema, consent            |
-| `mapping`        | Mapping      | Pattern format, rule structure          |
-| `contract`       | Contract     | Named entries, extend, sections         |
+| Type             | Input        | What it checks                                                         |
+| ---------------- | ------------ | ---------------------------------------------------------------------- |
+| `flow` (default) | Flow.Json    | Everything, see above                                                  |
+| `event`          | Event object | Name format, schema, consent                                           |
+| `mapping`        | Mapping      | Pattern format, rule structure                                         |
+| `contract`       | Contract     | Named entries, extend, sections; on a flow file its `contract` section |
 
-Flow validation does not check that a `package` exists or that its
-`config.settings` match the package schema. Use `--path` for one entry; it
-fetches the published schema from the CDN (network required), always for the
-`latest` version (version pins are ignored), and reads only the first flow:
+Flow validation checks each step's resolved `config.settings` against its
+package schema at the pinned version (from the CDN, or from disk for a local
+`path`), as warnings for one minor. A step that imports a named export has no
+settings schema yet and is skipped (`NO_SETTINGS_SCHEMA`). `$env.NAME:default`
+is checked as its default; runtime-only values go to `details.deferred`. Use
+`--path` for one entry (findings are errors there); it checks every flow that
+has the entry:
 
 ```bash
 walkeros validate flow.json --path destinations.snowplow
@@ -511,12 +518,12 @@ reported.
 
 ### Exit codes
 
-| Code | Meaning                                                               |
-| ---- | --------------------------------------------------------------------- |
-| 0    | Valid (with `--strict`: no warnings either)                           |
-| 1    | Errors found, including contract violations under `--strict`          |
-| 2    | No errors, but warnings found (with `--strict` only)                  |
-| 3    | Validation could not run (missing file, invalid JSON, unknown --type) |
+| Code | Meaning                                                                |
+| ---- | ---------------------------------------------------------------------- |
+| 0    | Valid (skips alone do not change it)                                   |
+| 1    | Errors found, including contract violations under `--strict`           |
+| 2    | No errors, but warnings or skips found (with `--strict` only)          |
+| 3    | Could not run (missing file, invalid JSON, option that does not apply) |
 
 ### Examples
 
@@ -524,7 +531,7 @@ reported.
 # Validate flow config (full check)
 walkeros validate flow.json
 
-# Validate specific flow
+# Narrow per-flow checks to one flow
 walkeros validate flow.json --flow analytics
 
 # Validate a single event

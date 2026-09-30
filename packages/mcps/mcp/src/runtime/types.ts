@@ -25,6 +25,12 @@ export interface FlowRuntime {
    * path or URL is refused with a `RuntimeRefusal`.
    */
   load(input: string): Promise<unknown>;
+  /**
+   * The directory local `path` packages of a loaded input resolve against:
+   * the input file's directory. Absent on a runtime without a filesystem,
+   * where such packages stay a reported skip.
+   */
+  baseDir?(input: string): string | undefined;
   /** Compile a flow. Absent on a runtime that must not build in its process. */
   bundle?(input: string, opts: BundleOptions): Promise<BundleStats | void>;
   /** Build and run one step of a flow. Absent where that must not happen. */

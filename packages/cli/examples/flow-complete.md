@@ -75,7 +75,10 @@ warehouse  pubsub pull -> bigquery (keeps everything)
   - `flow-collector` at `/flows/server/collector`: The collector sits between
     sources and destinations and runs its own chain once per event.
 - **CLI:** strict validation checks the schema, every reference, every package
-  version and every example link; this file gives 0 errors, 0 warnings.
+  version, every step's settings and every example link; with the published
+  packages of this release this file gives 0 errors and 0 warnings. Three steps
+  import a named export, which has no settings schema yet, so they are listed as
+  skipped and `--strict` exits 2 on them.
 
 ```bash
 walkeros validate packages/cli/examples/flow-complete.json --strict
@@ -622,13 +625,13 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pr
   `event.source.valid eq false` stops invalid events before Meta, Piwik PRO and
   Data Manager only. `mode: "strict"` is the hard-gate variant: it drops invalid
   events for every destination, the warehouse included.
-- **CLI:** `validate --strict` on the flow checks the contract's shape; the
-  contract check proper (`-t contract`, which also resolves every `extend`)
-  takes the contract section alone. Then run the validate step on an order
-  without a visitor hash (out: `source.valid: false`):
+- **CLI:** `validate` on the flow already checks the contract (every `extend`
+  resolved, paths under `contract.`); `-t contract` on the flow file runs that
+  contract check alone. Then run the validate step on an order without a visitor
+  hash (out: `source.valid: false`):
 
 ```bash
-walkeros validate "$(jq .contract packages/cli/examples/flow-complete.json)" -t contract
+walkeros validate packages/cli/examples/flow-complete.json -t contract
 walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"},"globals":{"language":"en"},"consent":{"functional":true}}' --simulate transformer.validate
 ```
 

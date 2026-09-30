@@ -53,8 +53,7 @@ describe('F21 (item 26): prose never resolves references', () => {
   const json = JSON.stringify(config, null, 2);
   const result = validateFlowConfig(json);
 
-  // it.failing until Batch 2 Task 8 (item 26)
-  it.failing('a $store ref inside a step description raises no warning', () => {
+  it('a $store ref inside a step description raises no warning', () => {
     const { line } = positionOf(
       json,
       '"description": "Looks up',
@@ -63,18 +62,14 @@ describe('F21 (item 26): prose never resolves references', () => {
     expect(onLine(result.warnings, line)).toEqual([]);
   });
 
-  // it.failing until Batch 2 Task 8 (item 26)
-  it.failing(
-    'a $store ref inside a contract description raises no warning',
-    () => {
-      const { line } = positionOf(
-        json,
-        '"description": "Reads',
-        '$store.missing',
-      );
-      expect(onLine(result.warnings, line)).toEqual([]);
-    },
-  );
+  it('a $store ref inside a contract description raises no warning', () => {
+    const { line } = positionOf(
+      json,
+      '"description": "Reads',
+      '$store.missing',
+    );
+    expect(onLine(result.warnings, line)).toEqual([]);
+  });
 
   it('GUARD: the same ref in a mapping value warns at its line and column', () => {
     const position = positionOf(json, '"key":', '$store.missing');
@@ -112,38 +107,48 @@ describe('F12 (N2): references resolve per flow, not across flows', () => {
   const result = validateFlowConfig(json);
   const issues = [...result.errors, ...result.warnings];
 
-  // it.failing until Batch 2 Task 8 (N2)
-  it.failing(
-    'flow b using $var.onlyA from flow a is reported at its position',
-    () => {
-      const position = positionOf(json, '"v":', '$var.onlyA');
-      expect(onLine(issues, position.line)).toContainEqual(
-        expect.objectContaining({
-          line: position.line,
-          column: position.column,
-          path: expect.stringMatching(/^flows\.b\./),
-        }),
-      );
-    },
-  );
+  it('flow b using $var.onlyA from flow a is reported at its position', () => {
+    const position = positionOf(json, '"v":', '$var.onlyA');
+    expect(onLine(issues, position.line)).toContainEqual(
+      expect.objectContaining({
+        line: position.line,
+        column: position.column,
+        path: expect.stringMatching(/^flows\.b\./),
+      }),
+    );
+  });
 
-  // it.failing until Batch 2 Task 8 (N2)
-  it.failing(
-    'flow b using $store.cache from flow a is reported at its position',
-    () => {
-      const position = positionOf(json, '"s":', '$store.cache');
-      expect(onLine(issues, position.line)).toContainEqual(
-        expect.objectContaining({
-          line: position.line,
-          column: position.column,
-          path: expect.stringMatching(/^flows\.b\./),
-        }),
-      );
-    },
-  );
+  it('flow b using $store.cache from flow a is reported at its position', () => {
+    const position = positionOf(json, '"s":', '$store.cache');
+    expect(onLine(issues, position.line)).toContainEqual(
+      expect.objectContaining({
+        line: position.line,
+        column: position.column,
+        path: expect.stringMatching(/^flows\.b\./),
+      }),
+    );
+  });
 
   it('GUARD: the merged IntelliSense context still lists every variable and store', () => {
     expect(result.context?.variables).toMatchObject({ onlyA: 'x' });
     expect(result.context?.stepNames?.stores).toEqual(['cache']);
+  });
+});
+
+describe('V3: the root contract resolves or is an error', () => {
+  it('a dangling extend is an error at contract, not an empty context', () => {
+    const json = JSON.stringify(
+      {
+        version: 4,
+        contract: { server: { extend: 'missing' } },
+        flows: { a: { config: { platform: 'server' } } },
+      },
+      null,
+      2,
+    );
+    const result = validateFlowConfig(json);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ severity: 'error', path: 'contract' }),
+    );
   });
 });

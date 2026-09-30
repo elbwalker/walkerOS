@@ -17,7 +17,20 @@ jest.mock('@walkeros/cli/dev', () => {
   const { z } = require('zod');
   const stringField = z.string().optional();
   const shape = new Proxy({}, { get: () => stringField });
-  return { schemas: new Proxy({}, { get: () => shape }) };
+  // flow_validate parses its input with the real schema.
+  const { ValidateInputSchema } =
+    jest.requireActual<typeof import('@walkeros/cli/dev')>(
+      '@walkeros/cli/dev',
+    ).schemas;
+  return {
+    schemas: new Proxy(
+      {},
+      {
+        get: (_target, key) =>
+          key === 'ValidateInputSchema' ? ValidateInputSchema : shape,
+      },
+    ),
+  };
 });
 
 import * as cli from '@walkeros/cli';

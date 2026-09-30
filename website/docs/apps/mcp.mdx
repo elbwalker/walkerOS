@@ -171,8 +171,25 @@ Validate walkerOS events, flow configurations, mapping rules, or data contracts.
 |-----------|------|----------|-------------|
 | `type` | `"event"` \| `"flow"` \| `"mapping"` \| `"contract"` | Yes | Validation type |
 | `input` | string | Yes | JSON string, file path, or URL to validate |
-| `flow` | string | No | Flow name for multi-flow configs |
-| `path` | string | No | Entry path for package schema validation |
+| `flow` | string | No | Narrow every per-flow check to this flow; file-level checks still run |
+| `path` | string | No | Check one entry (e.g. `destinations.snowplow`, `stores.cache`) against its package schema in every flow that has it, or only in `flow` |
+| `strict` | boolean | No | Turns warnings and skipped checks into failures: `valid` is `false`, the verdict of `walkeros validate --strict` (exit 2). Contract example disagreements become errors |
+| `offline` | boolean | No | Do not fetch package schemas; step settings are not checked, and `details.scope.offline` says so |
+
+With only `type` and `input`, a flow runs every check on every flow and step,
+including each step's settings against its package schema. It returns the same
+result as `walkeros validate --json` (see
+[Validate command](/docs/apps/cli#validate-command) for the fields and codes):
+`valid`, `errors[]` and `warnings[]` with a stable `code`, and
+`details.scope` (what was checked), `details.skipped` (checks that could not
+run, with a reason and code) and `details.deferred` (values known only at
+runtime). A valid result with skips is valid only in the checked scope; the
+hint says how many checks were skipped. Branch on `code`, never on `message`.
+Steps that import a named export are skipped (`NO_SETTINGS_SCHEMA`) until
+packages publish per-export settings schemas. On the local server a step whose
+package is a local `path` is checked from disk relative to the input file, as
+in the CLI; the hosted server has no filesystem and reports it as skipped
+(`SCHEMA_UNAVAILABLE`).
 
 ##### `flow_bundle`
 

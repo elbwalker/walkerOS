@@ -1148,6 +1148,16 @@ Before bundling or deploying your flow, you want to:
 
 Validate gives you fast feedback without the overhead of bundling.
 
+### What validate guarantees
+
+- **Everything by default.** `walkeros validate flow.json` runs every check on every flow and every step: the schema, references, routes, examples, the root `contract`, the bundler's own preflight and resolver, and each step's settings against its package schema.
+- **Narrowing is explicit.** `--flow <name>` narrows every per-flow check to that flow; file-level checks (file shape, root `contract`) still run. `--path <section.key>` checks one entry in every flow that has it, or only in `--flow`. An unknown flow is `FLOW_NOT_FOUND`, an unknown entry `ENTRY_NOT_FOUND` (exit 1).
+- **Every skip is reported.** A check that could not run is listed in `details.skipped` (and in the text output) with a reason and a code. A run with skips never prints `All checks passed`.
+- **The result states its scope.** `details.scope` lists the flows and checks that ran; the text output starts with a `Scope:` line.
+- **`--strict` escalates, never changes the scope.** Warnings and skips fail (exit 2; `validate()` and `flow_validate` return `valid: false` with `strict: true`), and contract example disagreements become errors.
+- **Stable machine output.** `--json` and the MCP tool `flow_validate` return the same shape; every error and warning carries a stable `code`.
+- **One verdict everywhere.** The CLI, `validate()` and `flow_validate` return the same result for the same file, and a valid flow passes the bundle preflight and resolves as the bundler resolves it. One exception: the hosted MCP server has no filesystem, so a step whose package is a local `path` is a skipped check there.
+
 ### Basic usage
 
 <CodeSnippet
@@ -1175,9 +1185,9 @@ The `--type` option accepts four validation types. Default is `flow`:
 | Type | What it validates |
 |------|-------------------|
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
-| `flow` (default) | Flow.Json config: schema, references, packages, cross-step example compatibility, and the examples of `@walkeros/transformer-validate` steps against their linked contracts |
+| `flow` (default) | Flow.Json config: schema, references, routes, the root `contract`, the bundle preflight and resolver, each step's settings against its package schema, cross-step example compatibility, and the examples of `@walkeros/transformer-validate` steps against their linked contracts |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
-| `contract` | Contract structure: named entries with optional `extend`, `tagging`, `description`, `events`, and `schema` fields |
+| `contract` | Contract structure: named entries with optional `extend`, `tagging`, `description`, `events`, and `schema` fields. On a flow file it validates the file's `contract` section (`NO_CONTRACT_SECTION` if there is none) |
 
 Use `--path` for entry validation against package schemas (e.g., `--path destinations.snowplow`).
 
@@ -1194,10 +1204,12 @@ Output (valid):
 ```
 Validating flow...
 
+Scope: flows default; 11 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
+
 Validation Results:
   ✓ All checks passed
 
-Summary: 0 error(s), 0 warning(s)
+Summary: 0 error(s), 0 warning(s), 0 skipped
 ```
 
 **2. Validate with errors**
@@ -1214,10 +1226,14 @@ Output:
 ```
 Validating event...
 
+Scope: 1 check(s): event
+
 Validation Results:
   ✗ name: Event name must be "entity action" format with space (e.g., "page view")
+  ⚠ consent: No consent object provided
+    → Consider adding a consent object for GDPR/privacy compliance
 
-Summary: 1 error(s), 0 warning(s)
+Summary: 1 error(s), 1 warning(s), 0 skipped
 ```
 
 **3. Validate with warnings**
@@ -1234,13 +1250,35 @@ Output:
 ```
 Validating event...
 
+Scope: 1 check(s): event
+
 Validation Results:
-  ✓ All checks passed
   ⚠ consent: No consent object provided
     → Consider adding a consent object for GDPR/privacy compliance
+  ✓ All checks passed
 
-Summary: 0 error(s), 1 warning(s)
+Summary: 0 error(s), 1 warning(s), 0 skipped
 ```
+
+**4. Warnings and skips under `--strict`**
+
+With `--strict`, warnings and skipped checks fail the run (exit 2), and the verdict line says so:
+
+```
+Validating flow...
+
+Scope: flows server; 11 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
+
+Validation Results:
+  ⚠ flows.server.destinations.pubsub.setings: Unknown key "setings" on Destination is ignored by the runtime
+    → Remove the key, or move it to where it belongs.
+  - skipped flow:package-settings at flows.server.destinations.pubsub: The step imports the named export "destinationPubSub"; the package settings schema describes its default export
+  ✗ Failed under --strict: 1 warning(s) and 1 skipped check(s) count as failures
+
+Summary: 0 error(s), 1 warning(s), 1 skipped
+```
+
+Without `--strict` the same file exits 0 and ends with `No errors in checked scope; 1 check(s) skipped`.
 
 ### Route checks
 
@@ -1267,6 +1305,24 @@ At runtime an unknown id is logged and skipped, and the chain continues. A `stop
 
 Values under `title`, `description` and `$comment`, and `$code:` values, are not checked.
 
+References resolve per flow, the way the bundler resolves them: a `$var` or `$store` defined only in another flow does not count. Flow validation resolves every flow with the runtime resolver, so an unknown `$var`, a missing store, a `$flow` that does not resolve (unknown flow, or a target without that value) or a reference cycle is an error (`UNRESOLVED_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `FLOW_CYCLE`, `VAR_CYCLE`), because the bundle of that flow would fail the same way. A step reading its own flow's config through `$flow` is a `FLOW_CYCLE`. An `$env` without a default stays a runtime value and is not an error.
+
+### Contract checks
+
+When the file has a root `contract`, the default run validates it exactly as `walkeros validate flow.json -t contract` does, with paths under `contract.`. A dangling `extend` or a circular chain (reported once per cycle) is an error. A validate step whose `contract` names a `$contract.<name>` that does not exist is an error (`UNRESOLVED_CONTRACT`).
+
+### Package settings checks
+
+Every step with a `package` has its resolved `config.settings` checked against the package's settings schema, at the version the bundle would install: the `config.bundle.packages` pin, else the inline `@version`, else latest. A local `path` package is read from disk.
+
+- Findings are warnings (`ENTRY_SCHEMA`, with `keyword`) for one minor release; they become errors after that. `--strict` fails on them now.
+- Placeholders: `$var` is resolved first and the value checked. `$env.NAME:default` is checked using the default, and an error names the default, never the placeholder. `$flow` resolves statically; an unresolvable `$flow` is an error. Values known only at runtime (`$env.NAME` without default, `$secret`, `$store`, `$code`) are not checked and are listed in `details.deferred`.
+- A schema that cannot be fetched is a skip (`SCHEMA_UNAVAILABLE`); a package without a settings schema is a skip (`NO_SETTINGS_SCHEMA`).
+- **Steps that import a named export** (`"import": "destinationPubSub"`) have no settings schema yet, because a package publishes one settings schema, for its default export. They are reported as skipped (`NO_SETTINGS_SCHEMA`), so `--strict` fails on them. The `flow-complete` example's `--strict` run currently ends with three such skips.
+- `--offline` skips this check without fetching anything; the `Scope:` line says `offline: package settings not checked`.
+
+Unknown top-level keys on a destination or store are warnings (`UNKNOWN_KEY`), and a removed package such as `@walkeros/store-memory` is a warning (`DEPRECATED_PACKAGE`).
+
 ### Example checks
 
 Flow validation compares each step's example `out` with the `in` of the steps it connects to. An `out` written as effects (`[["elb", event]]`, `[["return", { "event": ... }]]`, `[["return", [...]]]`) contributes the events those effects pass on; other effects (`message.ack`, `response`, vendor calls, `["return", false]`) pass nothing on.
@@ -1283,10 +1339,11 @@ Contracts are checked where the runtime applies them: only in `@walkeros/transfo
 | Option | Description |
 |--------|-------------|
 | `-t, --type <type>` | Validation type (default: `flow`). Also: `event`, `mapping`, `contract` |
-| `--path <path>` | Validate a specific entry against its package schema (e.g., `destinations.snowplow`) |
-| `-f, --flow <name>` | Flow name to validate (for multi-flow configs) |
+| `--path <path>` | Check one entry against its package schema in every flow that has it, or only in `--flow` (e.g., `destinations.snowplow`, `stores.cache`) |
+| `-f, --flow <name>` | Narrow every per-flow check to this flow; file-level checks still run |
 | `-o, --output <path>` | Write result to file |
-| `--strict` | Treat warnings as errors (exit code 2) |
+| `--strict` | Warnings and skipped checks fail (exit code 2); contract example disagreements become errors |
+| `--offline` | Do not fetch package schemas; step settings are not checked, and the scope says so |
 | `--json` | Output results as JSON |
 | `-v, --verbose` | Show detailed validation information |
 | `-s, --silent` | Suppress banner output |
@@ -1295,10 +1352,10 @@ Contracts are checked where the runtime applies them: only in `@walkeros/transfo
 
 | Code | Meaning |
 |------|---------|
-| 0 | Valid (no errors) |
+| 0 | Valid (no errors). Skips alone do not change it |
 | 1 | Validation errors found |
-| 2 | Warnings found (with `--strict`) |
-| 3 | Input error (file not found, invalid JSON, etc.) |
+| 2 | Warnings or skipped checks (with `--strict`) |
+| 3 | Could not run: input error (file not found, invalid JSON) or an option that does not apply (`OPTION_NOT_APPLICABLE`, e.g. `--path` with `-t event`) |
 
 ### CI/CD integration
 
@@ -1313,7 +1370,7 @@ walkeros validate flow.json --strict --json || exit 1`}
   language="bash"
 />
 
-JSON output format:
+JSON output format (`details.context`, the IntelliSense context, omitted):
 ```json
 {
   "valid": true,
@@ -1321,35 +1378,66 @@ JSON output format:
   "errors": [],
   "warnings": [
     {
-      "path": "packages.@walkeros/destination-demo",
-      "message": "Package \"@walkeros/destination-demo\" has no version specified",
-      "suggestion": "Consider specifying a version for reproducible builds"
+      "path": "flows.server.destinations.pubsub.setings",
+      "message": "Unknown key \"setings\" on Destination is ignored by the runtime",
+      "suggestion": "Remove the key, or move it to where it belongs.",
+      "code": "UNKNOWN_KEY"
     }
   ],
   "details": {
-    "flowNames": ["default"],
+    "flowNames": ["server"],
     "flowCount": 1,
-    "packageCount": 2
+    "scope": {
+      "flows": ["server"],
+      "checks": ["file:schema", "flow:schema", "flow:steps", "flow:package-versions", "flow:structure", "flow:routes", "flow:examples", "flow:contract-examples", "flow:mapping-keys", "flow:resolve", "flow:package-settings"]
+    },
+    "skipped": [
+      {
+        "path": "flows.server.destinations.pubsub",
+        "check": "flow:package-settings",
+        "reason": "The step imports the named export \"destinationPubSub\"; the package settings schema describes its default export",
+        "code": "NO_SETTINGS_SCHEMA"
+      }
+    ],
+    "deferred": []
   }
 }
 ```
 
+| Field | Meaning |
+|-------|---------|
+| `errors[]`, `warnings[]` | `{ path, message, code, keyword?, value?, suggestion? }`. Paths inside a flow start with `flows.<flow>.`; `keyword` is the JSON Schema keyword of an `ENTRY_SCHEMA` finding |
+| `details.scope` | `{ flows, entry?, checks, offline? }`: what the run covered. With `--path`, `entry` is `{ section?, key, flows, searchedFlows }` |
+| `details.skipped[]` | `{ path, check, reason, code }`: checks in scope that did not run |
+| `details.deferred[]` | `{ path, reference }`: values known only at runtime, not schema-checked |
+| `details.packages[]` | `{ path, package, version? }`: the package version each step was checked against |
+
+Codes group as follows (the full list is exported as `VALIDATE_CODES` from `@walkeros/cli`):
+
+| Group | Codes |
+|-------|-------|
+| Scope and options | `FLOW_NOT_FOUND`, `ENTRY_NOT_FOUND`, `AMBIGUOUS_ENTRY`, `OPTION_NOT_APPLICABLE` |
+| Structure and resolution | `SCHEMA_VALIDATION`, `INVALID_COMPONENT_NAME`, `INVALID_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `UNRESOLVED_REFERENCE`, `FLOW_CYCLE`, `VAR_CYCLE`, `UNKNOWN_KEY`, `DEPRECATED_PACKAGE` |
+| Settings | `ENTRY_SCHEMA` |
+| Contracts | `NO_CONTRACT_SECTION`, `INVALID_EXTENDS`, `CIRCULAR_EXTENDS`, `UNRESOLVED_CONTRACT` |
+| Skips | `GATED_BY_ERRORS`, `CONTRACT_NOT_STATIC`, `NO_PACKAGE`, `NO_SETTINGS_SCHEMA`, `SCHEMA_UNAVAILABLE` |
+
 ### Multi-flow validation
 
-Validate a specific flow in a multi-flow configuration:
+Without `--flow`, validate checks every flow. `--flow` narrows every per-flow check to one flow; file-level checks (the file shape and the root `contract`) still run and can still fail the run:
 
 <CodeSnippet
-  code={`# Validate only the "production" flow
+  code={`# Per-flow checks for the "production" flow, plus the file-level checks
 walkeros validate flow.json --flow production`}
   language="bash"
 />
 
-If the flow doesn't exist:
+If the flow doesn't exist (`FLOW_NOT_FOUND`, exit 1):
 ```
 Validation Results:
   ✗ flows: Flow "production" not found. Available: default, staging
 
-Summary: 1 error(s), 0 warning(s)
+Summary: 1 error(s), 0 warning(s), 0 skipped
 ```
 
 ### Event validation details
@@ -1423,7 +1511,7 @@ walkeros validate '{
 
 ### Entry validation (`--path`)
 
-Entry validation checks a specific destination, source, or transformer in your flow config against the package's published JSON Schema. The CLI fetches the schema from the package on the CDN and validates the `config.settings` object using AJV.
+Entry validation checks one destination, source, transformer or store against its package's settings schema, the same check the default run applies to every step (see [Package settings checks](#package-settings-checks)). Findings are errors here, since you asked for this entry.
 
 <CodeSnippet
   code={`# Validate a specific destination entry
@@ -1432,16 +1520,19 @@ walkeros validate flow.json --path destinations.snowplow
 # Validate a specific source entry
 walkeros validate flow.json --path sources.browser
 
+# A store entry, only in the "server" flow
+walkeros validate flow.json --path stores.cache --flow server
+
 # Short form (works if the key is unique across sections)
 walkeros validate flow.json --path snowplow`}
   language="bash"
 />
 
 The entry validator:
-1. Resolves the entry from the flow config (first flow is used)
-2. Reads the `package` field to identify the npm package
-3. Fetches the package's JSON Schema from the CDN
-4. Validates the entry's `config.settings` against the schema
+1. Finds the entry in every flow that has it (or only in `--flow`); `details.scope.entry` lists the matching and the searched flows
+2. Resolves each of those flows as the bundler does (a flow that does not resolve is an error, and its entry check a skip)
+3. Loads the package's settings schema at the pinned version (from the CDN, or from disk for a local `path`)
+4. Checks the resolved `config.settings` against it, following the placeholder rule; `--path` runs only this check (`details.scope.checks` is `["entry:settings"]`)
 
 ## Auth commands
 

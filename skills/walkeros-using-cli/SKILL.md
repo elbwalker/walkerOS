@@ -341,19 +341,33 @@ source served the last package lookup.
 
 ### Validate flow config
 
-Validate schema, references, and cross-step example compatibility:
+Validate every flow and every step in one run:
 
 ```bash
 walkeros validate flow.json
 ```
 
-All checks run automatically: schema validation, reference checking (a malformed
-or inline `$flow.`/`$store.`/`$secret.`/`$contract.` value is a warning),
-cross-step example compatibility (a StepOut `out` contributes the events its
-`elb` and `return` effects pass on), and the examples of
-`@walkeros/transformer-validate` steps against their own linked contract and
-settings. No other example is checked against a contract. No flags needed for
-full validation; `--strict` turns warnings into errors.
+What validate guarantees:
+
+- **Everything by default:** schema, references (resolved per flow with the
+  runtime resolver; an unknown `$var`, a missing store, an unresolvable `$flow`
+  or a cycle is an error), routes, the root `contract`, the bundle preflight,
+  cross-step example compatibility, the examples of
+  `@walkeros/transformer-validate` steps against their linked contract, and each
+  step's settings against its package schema (warnings for one minor;
+  `--offline` skips the fetch).
+- **Narrowing is explicit:** `--flow <name>` narrows per-flow checks (file-level
+  checks still run); `--path <section.key>` checks one entry in every flow that
+  has it, or only in `--flow`.
+- **Every skip is reported** in `details.skipped` and the text output, with a
+  code. Steps that import a named export have no settings schema yet and are
+  skipped (`NO_SETTINGS_SCHEMA`).
+- **The result states its scope:** a `Scope:` line and `details.scope`.
+- **`--strict`** fails on warnings and skips (exit 2; `validate()` and
+  `flow_validate` return `valid: false`) and makes contract example
+  disagreements errors (exit 1). It never changes what runs.
+- **Stable codes:** every error and warning has a `code`; branch on it, never on
+  the message.
 
 For full details on writing and testing with step examples, see
 [using-step-examples](../walkeros-using-step-examples/SKILL.md).
@@ -438,16 +452,17 @@ walkeros validate <input> [options]
 
 Options:
   --type <type>     Validation type (default: flow). Also: event, mapping, contract
-  --path <path>     Validate entry against package schema (e.g. destinations.snowplow)
-  --flow <name>     Flow name for multi-flow configs
-  --strict          Fail on warnings
+  --path <path>     Check one entry in every flow that has it (e.g. destinations.snowplow, stores.cache)
+  --flow <name>     Narrow per-flow checks to one flow
+  --strict          Fail on warnings and skipped checks
+  --offline         Do not fetch package schemas (settings not checked)
   --json            JSON output
 
 Exit codes:
-  0 = Valid (with --strict: no warnings either)
+  0 = Valid (skips alone do not change it)
   1 = Errors found (contract violations count as errors under --strict)
-  2 = No errors, warnings found (with --strict only)
-  3 = Validation could not run (missing file, invalid JSON, unknown --type)
+  2 = No errors, but warnings or skipped checks found (with --strict only)
+  3 = Validation could not run (missing file, invalid JSON, option that does not apply)
 ```
 
 ### Running a built flow (`runneros`, not the CLI)
@@ -732,13 +747,14 @@ filesystem inputs are refused with `LOCAL_PATH_NOT_ALLOWED`. Only `--json`,
 
 ### Bundle Fails
 
-1. **Check JSON syntax**: `walkeros validate flow.json --flow`
+1. **Check the config**: `walkeros validate flow.json` (add `--flow <name>` to
+   narrow to one flow)
 2. **Check package names**: Ensure packages exist on npm
 3. **Clear cache**: `walkeros cache clear`
 
 ### Events Not Processing
 
-1. **Validate event**: `walkeros validate event.json`
+1. **Validate event**: `walkeros validate event.json --type event`
 2. **Check mapping**: Event must match entity/action in mapping
 3. **Use simulate first**:
    `walkeros push flow.json -e event.json --simulate destination.demo -v`

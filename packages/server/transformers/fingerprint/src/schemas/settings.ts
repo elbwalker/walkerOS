@@ -1,20 +1,8 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
 
-const FieldSchema = z.union([
-  z.string().describe('Dot-notation path: "ingest.ip", "event.data.userId"'),
-  z
-    .object({
-      key: z.string().optional().describe('Source property path'),
-      value: z.unknown().optional().describe('Static value or fallback'),
-      fn: z
-        .string()
-        .optional()
-        .describe(
-          '$code: function receiving { event, ingest } that returns the value. Runs only when no key is set.',
-        ),
-    })
-    .describe('Mapping value config for computed fields'),
-]);
+// A field or input is a Mapping.Value (a path, a constant, a value config
+// or a fallback list), resolved via getMappingValue with { event, ingest }.
+const FieldSchema = schemas.MappingSchemas.ValueSchema;
 
 const InputSchema = z.union([
   FieldSchema,

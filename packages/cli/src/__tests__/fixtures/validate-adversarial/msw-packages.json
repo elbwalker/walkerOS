@@ -59,5 +59,18 @@
       "platform": "web",
       "schemas": {}
     }
+  },
+  "pkg-badschema": {
+    "latest": {
+      "version": "1.0.0",
+      "type": "destination",
+      "platform": "web",
+      "schemas": {
+        "settings": {
+          "type": "object",
+          "notAKeyword": true
+        }
+      }
+    }
   }
 }

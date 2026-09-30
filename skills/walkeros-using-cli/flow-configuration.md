@@ -543,8 +543,8 @@ guide runs against it, from the walkerOS repo root. The main ones, by chapter:
 walkeros validate packages/cli/examples/flow-complete.json --strict
 walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"page view"}' --simulate source.browser
 
-# contract: validate the contract block on its own
-walkeros validate "$(jq .contract packages/cli/examples/flow-complete.json)" -t contract
+# contract: validate the contract section of the flow file
+walkeros validate packages/cli/examples/flow-complete.json -t contract
 
 # chains-routing: follow an impression through the server flow
 walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"product impression","trigger":"impression","data":{"id":"SKU-1"}}' --simulate collector.default

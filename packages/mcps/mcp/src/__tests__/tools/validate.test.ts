@@ -11,6 +11,11 @@ jest.mock('@walkeros/cli/dev', () => ({
       flow: { type: 'string' },
       path: { type: 'string' },
     },
+    // The handler parses its input with the real schema.
+    ValidateInputSchema:
+      jest.requireActual<typeof import('@walkeros/cli/dev')>(
+        '@walkeros/cli/dev',
+      ).schemas.ValidateInputSchema,
   },
 }));
 
@@ -92,7 +97,7 @@ describe('flow_validate tool', () => {
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
-      openWorldHint: false,
+      openWorldHint: true,
     });
   });
 
@@ -297,7 +302,9 @@ describe('flow_validate tool', () => {
   });
 
   describe('deprecated package detection: @walkeros/store-memory', () => {
-    it('rejects flow.json declaring @walkeros/store-memory in a store', async () => {
+    // DEPRECATED_PACKAGE is a cli check (validateFlow, a warning for one
+    // minor); the real cli is exercised in validate-real.test.ts (F16).
+    it('adds no private check: the cli verdict is returned unchanged', async () => {
       const flow = {
         version: 4,
         flows: {
@@ -327,71 +334,8 @@ describe('flow_validate tool', () => {
       });
 
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.valid).toBe(false);
-      expect(
-        parsed.errors.some((e: { message: string }) =>
-          /@walkeros\/store-memory/.test(e.message),
-        ),
-      ).toBe(true);
-      expect(
-        parsed.errors.some((e: { message: string }) =>
-          /omit cache\.store|built-in cache/.test(e.message),
-        ),
-      ).toBe(true);
-    });
-
-    it('detects @walkeros/store-memory across multiple flows and stores', async () => {
-      const flow = {
-        version: 4,
-        flows: {
-          a: {
-            config: { platform: 'server' },
-            stores: {
-              cache1: { package: '@walkeros/store-memory', config: {} },
-              other: { package: '@walkeros/server-store-fs', config: {} },
-            },
-          },
-          b: {
-            config: { platform: 'server' },
-            stores: {
-              cache2: { package: '@walkeros/store-memory', config: {} },
-            },
-          },
-        },
-      };
-      const mockResult: ValidateResult = {
-        valid: true,
-        type: 'flow',
-        errors: [],
-        warnings: [],
-        details: {},
-      };
-      mockValidate.mockResolvedValue(mockResult);
-      mockLoadJsonConfig.mockResolvedValue(flow);
-
-      const tool = server.getTool('flow_validate');
-      const result = await tool.handler({
-        type: 'flow',
-        input: JSON.stringify(flow),
-        flow: undefined,
-      });
-
-      const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.valid).toBe(false);
-      const memoryErrors = parsed.errors.filter((e: { message: string }) =>
-        /@walkeros\/store-memory/.test(e.message),
-      );
-      expect(memoryErrors.length).toBe(2);
-      expect(
-        parsed.errors.some((e: { path: string }) =>
-          /flows\.a\.stores\.cache1/.test(e.path),
-        ),
-      ).toBe(true);
-      expect(
-        parsed.errors.some((e: { path: string }) =>
-          /flows\.b\.stores\.cache2/.test(e.path),
-        ),
-      ).toBe(true);
+      expect(parsed.valid).toBe(true);
+      expect(parsed.errors).toEqual([]);
     });
 
     it('passes a flow.json with no @walkeros/store-memory references', async () => {

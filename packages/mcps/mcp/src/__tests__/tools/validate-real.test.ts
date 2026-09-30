@@ -123,8 +123,7 @@ describe('flow_validate on the real validator', () => {
     });
   });
 
-  // it.failing until Batch 2 Task 9 (V3)
-  it.failing.each([
+  it.each([
     ['default', {}],
     ['strict', { strict: true }],
   ])(
@@ -148,29 +147,59 @@ describe('flow_validate on the real validator', () => {
     },
   );
 
-  // it.failing until Batch 2 Task 11 (MCP parity)
-  it.failing(
-    'F7: strict: true makes the contract disagreement an error, as CLI --strict',
-    async () => {
+  it('F7: strict: true makes the contract disagreement an error, as CLI --strict', async () => {
+    const result = await callTool({
+      type: 'flow',
+      input: fixturePath('f7-validate-step'),
+      strict: true,
+    });
+    expect(result).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          path: expect.stringMatching(
+            /transformers?\.validate\.examples\.order\.out$/,
+          ),
+          code: 'CONTRACT_VIOLATION',
+        }),
+      ]),
+      details: { scope: { flows: ['server'] } },
+    });
+  });
+
+  it.each([
+    ['f24-unknown-step-keys', 'warnings'],
+    ['f17-only-skip', 'skips'],
+  ])(
+    'C9: strict: true on %s (%s) is invalid, the verdict of CLI --strict',
+    async (fixture) => {
       const result = await callTool({
         type: 'flow',
-        input: fixturePath('f7-validate-step'),
+        input: fixturePath(fixture),
         strict: true,
       });
       expect(result).toMatchObject({
         valid: false,
-        errors: expect.arrayContaining([
-          expect.objectContaining({
-            path: expect.stringMatching(
-              /transformers?\.validate\.examples\.order\.out$/,
-            ),
-            code: 'CONTRACT_VIOLATION',
-          }),
-        ]),
-        details: { scope: { flows: ['server'] } },
+        errors: [],
+        details: { scope: { flows: ['a'] } },
       });
     },
   );
+
+  it.each([
+    ['f24-unknown-step-keys', 'warnings'],
+    ['f17-only-skip', 'skips'],
+  ])('C9 GUARD: without strict %s (%s) stays valid', async (fixture) => {
+    const result = await callTool({
+      type: 'flow',
+      input: fixturePath(fixture),
+    });
+    expect(result).toMatchObject({
+      valid: true,
+      errors: [],
+      details: { scope: { flows: ['a'] } },
+    });
+  });
 
   it('F7 GUARD: without strict it stays valid with the disagreement as a warning', async () => {
     const result = await callTool({
@@ -189,25 +218,21 @@ describe('flow_validate on the real validator', () => {
     });
   });
 
-  // it.failing until Batch 2 Task 11 (MCP parity)
-  it.failing(
-    'F16: @walkeros/store-memory is a DEPRECATED_PACKAGE warning, as in the CLI (D3)',
-    async () => {
-      const result = await callTool({
-        type: 'flow',
-        input: fixturePath('f16-store-memory'),
-      });
-      expect(result).toMatchObject({
-        valid: true,
-        warnings: expect.arrayContaining([
-          expect.objectContaining({
-            path: 'flows.a.stores.cache',
-            code: 'DEPRECATED_PACKAGE',
-          }),
-        ]),
-      });
-    },
-  );
+  it('F16: @walkeros/store-memory is a DEPRECATED_PACKAGE warning, as in the CLI (D3)', async () => {
+    const result = await callTool({
+      type: 'flow',
+      input: fixturePath('f16-store-memory'),
+    });
+    expect(result).toMatchObject({
+      valid: true,
+      warnings: expect.arrayContaining([
+        expect.objectContaining({
+          path: 'flows.a.stores.cache',
+          code: 'DEPRECATED_PACKAGE',
+        }),
+      ]),
+    });
+  });
 });
 
 describe('E3: flow_validate equals validate() for the same input and options', () => {
@@ -232,13 +257,35 @@ describe('E3: flow_validate equals validate() for the same input and options', (
     await expectToolEqualsValidate(fixture, option);
   });
 
-  // it.failing until Batch 2 Task 11 (MCP parity: strict, DEPRECATED_PACKAGE)
-  it.failing.each([
+  it.each([
     ['f7-validate-step', { strict: true }],
     ['f16-store-memory', {}],
   ])('%s %j', async (fixture, option) => {
     await expectToolEqualsValidate(fixture, option);
   });
+
+  it.each([
+    ['f25-local-path', {}],
+    ['f25-local-path', { strict: true }],
+    ['f25-local-path', { path: 'destinations.ga4' }],
+  ])(
+    'C9: a local path package is checked from disk, as in the CLI (%s %j)',
+    async (fixture, option) => {
+      await expectToolEqualsValidate(fixture, option);
+      const viaTool = await callTool({
+        type: 'flow',
+        input: fixturePath(fixture),
+        ...option,
+      });
+      expect(viaTool).toMatchObject({
+        details: {
+          scope: { flows: ['a'] },
+          skipped: [],
+          packages: [expect.objectContaining({ version: '0.1.0' })],
+        },
+      });
+    },
+  );
 });
 
 describe('E5: every flow_validate option reaches validate()', () => {
@@ -253,8 +300,7 @@ describe('E5: every flow_validate option reaches validate()', () => {
   ];
   const probes = [...reachingProbes, ...missingProbes];
 
-  // it.failing until Batch 2 Task 11 (MCP parity)
-  it.failing('the input shape exposes exactly the CLI options (C10)', () => {
+  it('the input shape exposes exactly the CLI options (C10)', () => {
     expect(Object.keys(schemas.ValidateInputShape).sort()).toEqual(
       ['flow', 'input', 'offline', 'path', 'strict', 'type'].sort(),
     );
@@ -296,8 +342,7 @@ describe('E5: every flow_validate option reaches validate()', () => {
     },
   );
 
-  // it.failing until Batch 2 Task 11 (MCP parity)
-  it.failing.each(missingProbes)(
+  it.each(missingProbes)(
     '%s changes the result',
     async (_key, option, fixture) => {
       await expectOptionChangesResult(option, fixture);
