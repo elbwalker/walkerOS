@@ -31,7 +31,7 @@ import {
 import { bundle } from './index.js';
 import { includeApplies } from './bundler.js';
 import { wrapSkeleton } from './wrap.js';
-import { sanitizeUrl } from './upload.js';
+import { fetchWithRetry, type FetchRetryOptions } from './fetch-retry.js';
 
 /** Env var a bare `--manifest` reads its source from. */
 export const BUILD_MANIFEST_ENV = 'BUILD_MANIFEST_URL';
@@ -120,17 +120,20 @@ function isHttpUrl(source: string): boolean {
   return source.startsWith('http://') || source.startsWith('https://');
 }
 
-async function readManifestSource(source: string): Promise<unknown> {
+/** Retry hooks for the build's network calls; see `fetchWithRetry`. */
+export type BuildRetryOptions = Pick<FetchRetryOptions, 'warn' | 'sleep'>;
+
+async function readManifestSource(
+  source: string,
+  retry: BuildRetryOptions,
+): Promise<unknown> {
   let text: string;
   if (isHttpUrl(source)) {
-    const response = await fetch(source, {
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!response.ok) {
-      throw new Error(
-        `Manifest fetch failed: ${response.status} ${sanitizeUrl(source)}`,
-      );
-    }
+    const response = await fetchWithRetry(
+      source,
+      {},
+      { ...retry, label: 'Manifest download', timeoutMs: 30_000 },
+    );
     text = await response.text();
   } else {
     text = await fs.readFile(source, 'utf-8');
@@ -151,40 +154,40 @@ async function put(
   url: string,
   body: BodyInit,
   contentType: string,
-  headers: Record<string, string> = {},
+  headers: Record<string, string>,
+  retry: BuildRetryOptions,
 ): Promise<void> {
   // Header values are never logged: a presign may sign secrets into them.
-  // A network-level failure (reset, DNS, timeout) is retried once like a 5xx
-  // and reported as UPLOAD_FAILED, never as a build failure.
-  const attempt = async (): Promise<Response | undefined> => {
-    try {
-      return await fetch(url, {
+  // A failure is reported as UPLOAD_FAILED, never as a build failure.
+  try {
+    await fetchWithRetry(
+      url,
+      {
         method: 'PUT',
         body,
         headers: { ...headers, 'Content-Type': contentType },
-        signal: AbortSignal.timeout(60_000),
-      });
-    } catch {
-      return undefined;
-    }
-  };
-  let response = await attempt();
-  if (!response || response.status >= 500) response = await attempt();
-  if (!response || !response.ok) {
-    throw new BuildError(
-      'UPLOAD_FAILED',
-      `Upload failed: ${response ? response.status : 'network error'} ${sanitizeUrl(url)}`,
+      },
+      { ...retry, label: 'Upload', timeoutMs: 60_000 },
     );
+  } catch (error) {
+    throw new BuildError('UPLOAD_FAILED', getErrorMessage(error));
   }
 }
 
-async function download(url: string, dest: string): Promise<void> {
-  const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-  if (!response.ok) {
-    throw new BuildError(
-      'BUILD_FAILED',
-      `Skeleton fetch failed: ${response.status} ${sanitizeUrl(url)}`,
+async function download(
+  url: string,
+  dest: string,
+  retry: BuildRetryOptions,
+): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetchWithRetry(
+      url,
+      {},
+      { ...retry, label: 'Skeleton download', timeoutMs: 60_000 },
     );
+  } catch (error) {
+    throw new BuildError('BUILD_FAILED', getErrorMessage(error));
   }
   await fs.writeFile(dest, Buffer.from(await response.arrayBuffer()));
 }
@@ -196,6 +199,7 @@ async function buildArtifact(
   workDir: string,
   index: number,
   outputs: Map<string, string>,
+  retry: BuildRetryOptions,
 ): Promise<string> {
   const output = path.join(workDir, 'out', artifact.outputName);
   await fs.ensureDir(path.dirname(output));
@@ -204,7 +208,7 @@ async function buildArtifact(
     let skeletonPath: string;
     if ('url' in artifact.skeleton) {
       skeletonPath = path.join(workDir, `skeleton-${index}.mjs`);
-      await download(artifact.skeleton.url, skeletonPath);
+      await download(artifact.skeleton.url, skeletonPath, retry);
     } else {
       // Schema guarantees an earlier bundle artifact with this name.
       const built = outputs.get(artifact.skeleton.artifact);
@@ -251,10 +255,15 @@ export interface RunBuildManifestResult {
 /**
  * Run a manifest build end to end. Never throws: every failure becomes a
  * result, and `reported` says whether that result reached `resultPutUrl`.
+ * Each download and upload retries transient failures; `retry.warn` hears
+ * about every retry.
  */
 export async function runBuildManifest(
   source: string,
+  retry: BuildRetryOptions = {},
 ): Promise<RunBuildManifestResult> {
+  const report = (url: string, result: BuildResult) =>
+    reportResult(url, result, retry);
   const result: BuildResult = { ok: false, toolchain: VERSION, artifacts: [] };
   const fail = (code: BuildErrorCode, message: string, outputName?: string) => {
     result.error = outputName
@@ -264,7 +273,7 @@ export async function runBuildManifest(
 
   let raw: unknown;
   try {
-    raw = await readManifestSource(source);
+    raw = await readManifestSource(source, retry);
   } catch (error) {
     fail('INVALID_MANIFEST', getErrorMessage(error));
     return { result, reported: false };
@@ -330,6 +339,7 @@ export async function runBuildManifest(
           workDir,
           index,
           outputs,
+          retry,
         );
         outputs.set(artifact.outputName, output);
         const content = await fs.readFile(output);
@@ -337,7 +347,8 @@ export async function runBuildManifest(
           artifact.putUrl,
           content,
           artifact.contentType ?? contentTypeFor(artifact.outputName),
-          artifact.headers,
+          artifact.headers ?? {},
+          retry,
         );
         result.artifacts.push({
           target: artifact.target,
@@ -365,9 +376,13 @@ export async function runBuildManifest(
   }
 }
 
-async function report(url: string, result: BuildResult): Promise<boolean> {
+async function reportResult(
+  url: string,
+  result: BuildResult,
+  retry: BuildRetryOptions,
+): Promise<boolean> {
   try {
-    await put(url, JSON.stringify(result), 'application/json');
+    await put(url, JSON.stringify(result), 'application/json', {}, retry);
     return true;
   } catch {
     return false;
@@ -434,7 +449,9 @@ export async function bundleManifestCommand(
     process.exit(1);
   }
 
-  const { result, reported } = await runBuildManifest(source);
+  const { result, reported } = await runBuildManifest(source, {
+    warn: (message) => logger.warn(message),
+  });
 
   if (options.json) {
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');

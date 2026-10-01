@@ -23,17 +23,26 @@ interface Stub {
   close: () => Promise<void>;
 }
 
-/** Serves GET /manifest.json and /skeleton.mjs, records every PUT. */
-async function startStub(manifest: (base: string) => unknown): Promise<Stub> {
+/**
+ * Serves GET /manifest.json and /skeleton.mjs, records every PUT. `statuses`
+ * answers the first requests to a path with those statuses, in order.
+ */
+async function startStub(
+  manifest: (base: string) => unknown,
+  statuses: Record<string, number[]> = {},
+): Promise<Stub> {
   const puts: Stub['puts'] = new Map();
   let base = '';
   const server = http.createServer((req, res) => {
     const chunks: Buffer[] = [];
     req.on('data', (chunk: Buffer) => chunks.push(chunk));
     req.on('end', () => {
-      const url = req.url ?? '/';
-      if (req.method === 'PUT') {
-        puts.set(url.split('?')[0], {
+      const url = (req.url ?? '/').split('?')[0];
+      const status = statuses[url]?.shift();
+      if (status !== undefined) {
+        res.writeHead(status).end();
+      } else if (req.method === 'PUT') {
+        puts.set(url, {
           body: Buffer.concat(chunks),
           contentType: req.headers['content-type'],
           sse: req.headers['x-amz-server-side-encryption']?.toString(),
@@ -76,6 +85,40 @@ function webFlow(value: string) {
   };
 }
 
+/** Every artifact path: manifest GET, skeleton GET, output PUT. */
+function wrapManifest(base: string) {
+  return {
+    version: 1,
+    toolchain: VERSION,
+    flowConfig: webFlow('x'),
+    artifacts: [
+      {
+        target: 'wrap',
+        platform: 'browser',
+        skeleton: { url: `${base}/skeleton.mjs?X-Amz-Signature=secret` },
+        outputName: 'remote.js',
+        putUrl: `${base}/out/remote.js?X-Amz-Signature=secret`,
+      },
+    ],
+    resultPutUrl: `${base}/result.json`,
+  };
+}
+
+/** A localhost port nothing listens on: connections are refused. */
+async function closedPort(): Promise<number> {
+  const server = http.createServer();
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('no port');
+  await new Promise((resolve) => server.close(resolve));
+  return address.port;
+}
+
+function urlOf(input: string | URL | Request): string {
+  if (typeof input === 'string') return input;
+  return input instanceof URL ? input.href : input.url;
+}
+
 function readResult(stub: Stub) {
   const put = stub.puts.get('/result.json');
   if (!put) throw new Error('no result PUT');
@@ -84,6 +127,9 @@ function readResult(stub: Stub) {
 
 describe('runBuildManifest', () => {
   let stub: Stub | undefined;
+  const sleep = jest.fn(async (_ms: number) => {});
+  const warn = jest.fn((_message: string) => {});
+  const retry = { sleep, warn };
 
   beforeEach(() => {
     mockedBundle.mockImplementation(async (_config, options) => {
@@ -100,6 +146,8 @@ describe('runBuildManifest', () => {
   afterEach(async () => {
     await stub?.close();
     stub = undefined;
+    sleep.mockClear();
+    warn.mockClear();
   });
 
   it('builds, PUTs every output and a result, never passing process.env', async () => {
@@ -353,7 +401,8 @@ describe('runBuildManifest', () => {
     expect(result.error?.message).toMatch(/flowConfig/);
   });
 
-  it('reports a network-level PUT failure as UPLOAD_FAILED', async () => {
+  it('reports a network-level PUT failure as UPLOAD_FAILED after 3 attempts', async () => {
+    const port = await closedPort();
     stub = await startStub((base) => ({
       version: 1,
       toolchain: VERSION,
@@ -362,8 +411,7 @@ describe('runBuildManifest', () => {
         {
           target: 'cdn',
           outputName: 'w.js',
-          // Nothing listens on port 1: the connection is refused.
-          putUrl: 'http://127.0.0.1:1/w.js?X-Amz-Signature=secret',
+          putUrl: `http://127.0.0.1:${port}/w.js?X-Amz-Signature=secret`,
         },
       ],
       resultPutUrl: `${base}/result.json`,
@@ -371,14 +419,130 @@ describe('runBuildManifest', () => {
 
     const { result, reported } = await runBuildManifest(
       `${stub.base}/manifest.json`,
+      retry,
     );
 
     expect(reported).toBe(true);
     expect(result.error).toEqual({
       code: 'UPLOAD_FAILED',
-      message: 'Upload failed: network error http://127.0.0.1:1/w.js',
+      message: 'Upload failed after 3 attempts: fetch failed (ECONNREFUSED)',
       outputName: 'w.js',
     });
+  });
+
+  it('retries a manifest download that rejects once, logging the cause', async () => {
+    const realFetch = globalThis.fetch;
+    let manifestCalls = 0;
+    jest.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      if (urlOf(input).includes('/manifest.json') && manifestCalls++ === 0) {
+        return Promise.reject(
+          new TypeError('fetch failed', { cause: { code: 'ECONNRESET' } }),
+        );
+      }
+      return realFetch(input, init);
+    });
+    stub = await startStub(wrapManifest);
+
+    const { result, reported } = await runBuildManifest(
+      `${stub.base}/manifest.json?X-Amz-Signature=secret`,
+      retry,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(reported).toBe(true);
+    expect(manifestCalls).toBe(2);
+    expect(sleep.mock.calls).toEqual([[1000]]);
+    expect(warn.mock.calls).toEqual([
+      [
+        'Manifest download attempt 1/3 failed: fetch failed (ECONNRESET), retrying in 1s',
+      ],
+    ]);
+  });
+
+  it('fails INVALID_MANIFEST naming the cause after 3 rejected downloads', async () => {
+    const realFetch = globalThis.fetch;
+    const fetchSpy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation((input, init) =>
+        urlOf(input).includes('/manifest.json')
+          ? Promise.reject(
+              new TypeError('fetch failed', { cause: { code: 'ECONNRESET' } }),
+            )
+          : realFetch(input, init),
+      );
+    stub = await startStub(wrapManifest);
+
+    const { result, reported } = await runBuildManifest(
+      `${stub.base}/manifest.json?X-Amz-Signature=secret`,
+      retry,
+    );
+
+    expect(reported).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(sleep.mock.calls).toEqual([[1000], [3000]]);
+    expect(result.error?.code).toBe('INVALID_MANIFEST');
+    expect(result.error?.message).toContain('ECONNRESET');
+    expect(result.error?.message).not.toContain('127.0.0.1');
+  });
+
+  it.each([
+    ['/manifest.json', [503]],
+    ['/manifest.json', [429, 500]],
+    ['/skeleton.mjs', [503, 502]],
+    ['/out/remote.js', [503, 500]],
+  ])('heals transient statuses on %s %j', async (target, codes) => {
+    stub = await startStub(wrapManifest, { [target]: [...codes] });
+
+    const { result, reported } = await runBuildManifest(
+      `${stub.base}/manifest.json`,
+      retry,
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(result.ok).toBe(true);
+    expect(reported).toBe(true);
+    expect(sleep).toHaveBeenCalledTimes(codes.length);
+  });
+
+  it.each([
+    [
+      '/manifest.json',
+      'INVALID_MANIFEST',
+      'Manifest download failed: HTTP 403',
+    ],
+    ['/skeleton.mjs', 'BUILD_FAILED', 'Skeleton download failed: HTTP 403'],
+    ['/out/remote.js', 'UPLOAD_FAILED', 'Upload failed: HTTP 403'],
+  ])('fails %s on 403 at once as %s', async (target, code, message) => {
+    stub = await startStub(wrapManifest, { [target]: [403] });
+
+    const { result } = await runBuildManifest(
+      `${stub.base}/manifest.json`,
+      retry,
+    );
+
+    expect(result.error?.code).toBe(code);
+    expect(result.error?.message).toBe(message);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['/skeleton.mjs', 'BUILD_FAILED', 'Skeleton download'],
+    ['/out/remote.js', 'UPLOAD_FAILED', 'Upload'],
+  ])('gives up on %s after 3 failures as %s', async (target, code, label) => {
+    stub = await startStub(wrapManifest, { [target]: [503, 503, 503] });
+
+    const { result, reported } = await runBuildManifest(
+      `${stub.base}/manifest.json`,
+      retry,
+    );
+
+    expect(reported).toBe(true);
+    expect(result.error).toEqual({
+      code,
+      message: `${label} failed after 3 attempts: HTTP 503`,
+      outputName: 'remote.js',
+    });
+    expect(sleep.mock.calls).toEqual([[1000], [3000]]);
   });
 
   it('names the failing artifact and keeps the ones already PUT', async () => {
