@@ -1,20 +1,16 @@
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { createLocalRuntime } from '../../runtime/local.js';
-import { registerFlowPushTool } from '../../tools/push.js';
+import {
+  createFlowPushToolSpec,
+  registerFlowPushTool,
+} from '../../tools/push.js';
 import { PushOutputShape } from '../../schemas/output.js';
 
-jest.mock('@walkeros/cli/dev', () => ({
-  schemas: {
-    PushInputShape: {
-      configPath: { type: 'string' },
-      event: { type: 'string' },
-      flow: { type: 'string' },
-    },
-  },
-}));
+jest.mock('@walkeros/cli/dev', () => jest.requireActual('@walkeros/cli/dev'));
 
 jest.mock('@walkeros/cli', () => ({
   push: jest.fn(),
-  loadJsonConfig: jest.fn(async () => ({ version: 4, flows: {} })),
+  loadConfig: jest.fn(async () => '{"version":4,"flows":{}}'),
   collectKnownSecrets: jest.fn(() => []),
 }));
 
@@ -45,39 +41,24 @@ jest.mock('@walkeros/core', () => ({
   }),
 }));
 
-import { collectKnownSecrets, loadJsonConfig, push } from '@walkeros/cli';
+import { collectKnownSecrets, loadConfig, push } from '@walkeros/cli';
 import type { PushResult } from '@walkeros/cli';
+import { structured, record, rows, textOf } from '../support/tool-result.js';
 const mockPush = jest.mocked(push);
 const mockCollectKnownSecrets = jest.mocked(collectKnownSecrets);
-const mockLoadJsonConfig = jest.mocked(loadJsonConfig);
-
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: Function) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
-}
+const mockLoadConfig = jest.mocked(loadConfig);
 
 describe('flow_push tool', () => {
-  let server: ReturnType<typeof createMockServer>;
+  let spec: ReturnType<typeof createFlowPushToolSpec>;
 
   beforeEach(() => {
-    server = createMockServer();
-    registerFlowPushTool(server as any, createLocalRuntime());
+    spec = createFlowPushToolSpec(createLocalRuntime());
   });
 
   it('registers with correct name, title, and annotations', () => {
-    const tool = server.getTool('flow_push');
-    expect(tool).toBeDefined();
-
-    const config = tool.config as any;
-    expect(config.title).toBe('Push Events');
-    expect(config.annotations).toEqual({
+    expect(spec.name).toBe('flow_push');
+    expect(spec.title).toBe('Push Events');
+    expect(spec.annotations).toEqual({
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,
@@ -86,61 +67,131 @@ describe('flow_push tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    const tool = server.getTool('flow_push');
-    const config = tool.config as any;
-    expect(config.outputSchema).toBe(PushOutputShape);
+    const server = new McpServer({ name: 'test', version: '0.0.0' });
+    const registerTool = jest.spyOn(server, 'registerTool');
+    registerFlowPushTool(server, createLocalRuntime());
+    const call: unknown[] = registerTool.mock.calls[0] ?? [];
+    expect(record(call[1]).outputSchema).toBe(PushOutputShape);
   });
 
   it('calls push with correct params', async () => {
     const mockResult = { success: true, duration: 120 };
     mockPush.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('flow_push');
-    const result = await tool.handler({
+    const result = await spec.handler({
       configPath: './flow.json',
-      event: '{"name":"page view"}',
+      event: { name: 'page view' },
       flow: undefined,
     });
 
     expect(mockPush).toHaveBeenCalledWith(
       './flow.json',
-      '{"name":"page view"}',
-      { json: true, flow: undefined, platform: undefined },
+      { name: 'page view' },
+      {
+        json: true,
+        flow: undefined,
+        platform: undefined,
+        raw: { version: 4, flows: {} },
+      },
     );
-    expect(result.structuredContent).toEqual(mockResult);
-    expect(result.isError).toBeUndefined();
+    expect(structured(result)).toEqual(mockResult);
+    expect(record(result).isError).toBeUndefined();
   });
+
+  it('refuses an input that fails the schema without pushing', async () => {
+    const result = await spec.handler({ event: {} });
+
+    expect(record(result).isError).toBe(true);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('reads the config once for a push', async () => {
+    mockPush.mockResolvedValue({ success: true, duration: 1 });
+
+    await spec.handler({
+      configPath: './flow.json',
+      event: { name: 'page view' },
+    });
+
+    expect(mockLoadConfig).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(
+      './flow.json',
+      { name: 'page view' },
+      {
+        json: true,
+        flow: undefined,
+        platform: undefined,
+        raw: { version: 4, flows: {} },
+      },
+    );
+  });
+
+  it('refuses the push when the config cannot be read', async () => {
+    mockLoadConfig.mockRejectedValueOnce(new Error('fetch failed'));
+
+    const result = await spec.handler({
+      configPath: 'https://flows.test/flow.json',
+      event: { name: 'page view' },
+    });
+
+    expect(record(result).isError).toBe(true);
+    expect(structured(result)).toEqual({ error: 'fetch failed' });
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it.each(['./flow.mjs', './flow'])(
+    'pushes the prebuilt bundle %s without a config',
+    async (configPath) => {
+      mockLoadConfig.mockResolvedValueOnce('export default {};');
+      mockPush.mockResolvedValue({ success: true, duration: 1 });
+
+      const result = await spec.handler({
+        configPath,
+        event: { name: 'page view' },
+      });
+
+      expect(record(result).isError).toBeUndefined();
+      expect(mockPush).toHaveBeenCalledWith(
+        configPath,
+        { name: 'page view' },
+        { json: true, flow: undefined, platform: undefined },
+      );
+    },
+  );
 
   it('returns isError on CLI failure', async () => {
     mockPush.mockRejectedValue(new Error('Push failed'));
 
-    const tool = server.getTool('flow_push');
-    const result = await tool.handler({
+    const result = await spec.handler({
       configPath: './flow.json',
-      event: '{"name":"page view"}',
+      event: { name: 'page view' },
       flow: undefined,
     });
 
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
+    expect(record(result).isError).toBe(true);
+    const parsed = record(JSON.parse(textOf(result)));
     expect(parsed.error).toBe('Push failed');
   });
 
   it('passes flow and platform parameters', async () => {
     mockPush.mockResolvedValue({ success: true, duration: 0 });
 
-    const tool = server.getTool('flow_push');
-    await tool.handler({
+    await spec.handler({
       configPath: './flow.json',
-      event: '{"name":"page view"}',
+      event: { name: 'page view' },
       flow: 'production',
       platform: 'server',
     });
 
     expect(mockPush).toHaveBeenCalledWith(
       './flow.json',
-      '{"name":"page view"}',
-      { json: true, flow: 'production', platform: 'server' },
+      { name: 'page view' },
+      {
+        json: true,
+        flow: 'production',
+        platform: 'server',
+        raw: { version: 4, flows: {} },
+      },
     );
   });
 
@@ -151,28 +202,26 @@ describe('flow_push tool', () => {
       duration: 50,
     });
 
-    const tool = server.getTool('flow_push');
-    const result = await tool.handler({
+    const result = await spec.handler({
       configPath: './flow.json',
-      event: '{"name":"page view"}',
+      event: { name: 'page view' },
       flow: undefined,
     });
 
-    expect(result.isError).toBe(true);
+    expect(record(result).isError).toBe(true);
   });
 
   it('handles non-Error exceptions', async () => {
     mockPush.mockRejectedValue(42);
 
-    const tool = server.getTool('flow_push');
-    const result = await tool.handler({
+    const result = await spec.handler({
       configPath: './flow.json',
-      event: '{"name":"page view"}',
+      event: { name: 'page view' },
       flow: undefined,
     });
 
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
+    expect(record(result).isError).toBe(true);
+    const parsed = record(JSON.parse(textOf(result)));
     expect(parsed.error).toBe('Unknown error');
   });
 
@@ -251,7 +300,7 @@ describe('flow_push tool', () => {
           duration: 5,
           elbResult: {
             ok: true,
-            done: { api: { type: 'api', data: { echo: `key ${TOKEN}` } } },
+            done: { api: { type: 'api', data: { echo: `seen ${TOKEN}` } } },
           },
         },
         {
@@ -259,19 +308,21 @@ describe('flow_push tool', () => {
           duration: 5,
           elbResult: {
             ok: true,
-            done: { api: { type: 'api', data: { echo: 'key ***' } } },
+            done: { api: { type: 'api', data: { echo: 'seen ***' } } },
           },
         },
       ],
     ])('masks the known value in %s', async (_label, pushed, masked) => {
       mockPush.mockResolvedValue(pushed);
 
-      const result = await server.getTool('flow_push').handler(input);
+      const result = await spec.handler(input);
 
-      expect(mockLoadJsonConfig).toHaveBeenCalledWith('./flow.json');
-      expect(result.structuredContent).toEqual(masked);
-      expect(JSON.parse(result.content[0].text)).toEqual(masked);
-      expect(result.isError).toBeUndefined();
+      expect(mockLoadConfig).toHaveBeenCalledWith('./flow.json', {
+        json: false,
+      });
+      expect(structured(result)).toEqual(masked);
+      expect(JSON.parse(textOf(result))).toEqual(masked);
+      expect(record(result).isError).toBeUndefined();
     });
 
     it('masks a URL-encoded known value in a network call url', async () => {
@@ -289,9 +340,9 @@ describe('flow_push tool', () => {
         ],
       });
 
-      const result = await server.getTool('flow_push').handler(input);
+      const result = await spec.handler(input);
 
-      expect(result.structuredContent.networkCalls[0].url).toBe(
+      expect(rows(structured(result).networkCalls)[0]?.url).toBe(
         'https://vendor.test/***/collect',
       );
     });
@@ -311,9 +362,9 @@ describe('flow_push tool', () => {
         ],
       });
 
-      const result = await server.getTool('flow_push').handler(input);
+      const result = await spec.handler(input);
 
-      expect(result.structuredContent.networkCalls[0].headers).toEqual({
+      expect(rows(structured(result).networkCalls)[0]?.headers).toEqual({
         Authorization: '***',
       });
     });
@@ -329,9 +380,9 @@ describe('flow_push tool', () => {
         },
       });
 
-      const result = await server.getTool('flow_push').handler(input);
+      const result = await spec.handler(input);
 
-      expect(result.structuredContent).toEqual({
+      expect(structured(result)).toEqual({
         success: true,
         duration: 5,
         elbResult: {
@@ -348,21 +399,50 @@ describe('flow_push tool', () => {
         error: `rejected ${TOKEN}`,
       });
 
-      const result = await server.getTool('flow_push').handler(input);
+      const result = await spec.handler(input);
 
-      expect(result.isError).toBe(true);
-      expect(result.content[0].text).toBe('{"error":"rejected ***"}');
-      expect(result.structuredContent).toEqual({ error: 'rejected ***' });
+      expect(record(result).isError).toBe(true);
+      expect(textOf(result)).toBe('{"error":"rejected ***"}');
+      expect(structured(result)).toEqual({ error: 'rejected ***' });
     });
 
     it('masks the known value in a thrown error', async () => {
       mockPush.mockRejectedValue(new Error(`cannot reach ${TOKEN}`));
 
-      const result = await server.getTool('flow_push').handler(input);
+      const result = await spec.handler(input);
 
-      expect(result.isError).toBe(true);
-      expect(result.content[0].text).toBe('{"error":"cannot reach ***"}');
-      expect(result.structuredContent).toEqual({ error: 'cannot reach ***' });
+      expect(record(result).isError).toBe(true);
+      expect(textOf(result)).toBe('{"error":"cannot reach ***"}');
+      expect(structured(result)).toEqual({ error: 'cannot reach ***' });
+    });
+  });
+});
+
+describe('flow_push on a runtime without loadRun', () => {
+  it('masks the values its knownSecrets returns', async () => {
+    const TOKEN = 'harbor-lantern-41';
+    const spec = createFlowPushToolSpec({
+      load: async () => ({}),
+      knownSecrets: async () => [TOKEN],
+      push: async () => ({
+        success: true,
+        duration: 1,
+        elbResult: {
+          ok: true,
+          done: { api: { type: 'api', data: { echo: `seen ${TOKEN}` } } },
+        },
+      }),
+    });
+
+    const result = await spec.handler({
+      configPath: './flow.json',
+      event: { name: 'page view' },
+    });
+
+    expect(result).toMatchObject({
+      structuredContent: {
+        elbResult: { done: { api: { data: { echo: 'seen ***' } } } },
+      },
     });
   });
 });

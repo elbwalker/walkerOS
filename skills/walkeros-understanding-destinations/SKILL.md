@@ -401,7 +401,10 @@ collector awaits it, bounded by `config.timeout`. A handler that does not settle
 in that time, or rejects, holds that destination: its events stay queued until a
 later delivery of the state settles, and are discarded at the next `walker run`.
 Lifecycle handlers such as `on('run')` are awaited too, bounded by the same
-timeout, and never hold events.
+timeout, and never hold events. An async state handler must settle: until it
+settles or reaches `config.timeout`, that destination receives no events. `elb`
+commands and `startFlow` resolve only after the destinations' `on()` handlers
+for that command have settled or timed out.
 
 ## Response Delegation (env.respond)
 

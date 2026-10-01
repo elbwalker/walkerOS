@@ -6,6 +6,7 @@ import { redactNestedStrings, keepStructural } from '../user-data.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { parseToolInput } from './parse-input.js';
 import {
   NO_DEFAULT_PROJECT_ERROR,
   resolveDefaultProject,
@@ -91,10 +92,9 @@ async function flowLoadHandlerBody(
   runtime: FlowRuntime,
   input: unknown,
 ) {
-  const { source, platform } = (input ?? {}) as {
-    source?: string;
-    platform?: 'web' | 'server';
-  };
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { source, platform } = parsed.data;
 
   // Load by cloud flow/config id (flow_… / cfg_…) via the same client seam
   // flow_manage `get` uses. Its NOT_FOUND surfaces directly, never remapped
@@ -171,8 +171,6 @@ export function registerFlowLoadTool(
       outputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => flowLoadHandlerBody(client, runtime, args),
   );
 }

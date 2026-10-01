@@ -433,7 +433,7 @@ flowsCmd
   .command('create <name>')
   .description('Create a new flow')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-c, --content <json>', 'Flow.Json JSON string or file path')
+  .option('-c, --content <content>', 'Flow.Json JSON string, file path or URL')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -447,7 +447,10 @@ flowsCmd
   .description('Update a flow')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('--name <name>', 'new flow name')
-  .option('-c, --content <json>', 'new Flow.Json JSON string or file path')
+  .option(
+    '-c, --content <content>',
+    'new Flow.Json JSON string, file path or URL',
+  )
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')

@@ -1,7 +1,7 @@
 import type { PushResult } from '@walkeros/cli';
 import { isObject, mcpError, mcpResult } from '@walkeros/core';
 import { scrubJson, scrubSecrets } from '@walkeros/core/node';
-import type { FlowRuntime } from '../runtime/types.js';
+import type { FlowRuntime, LoadedRun } from '../runtime/types.js';
 
 /**
  * Simulate and push results carry recorded vendor calls, network requests and
@@ -83,19 +83,6 @@ export function scrubbedPushResult(
   };
 }
 
-/** The flow's secret values; none when the runtime cannot read the config. */
-export async function knownSecretsOf(
-  runtime: FlowRuntime,
-  input: string,
-): Promise<string[]> {
-  if (!runtime.knownSecrets) return [];
-  try {
-    return await runtime.knownSecrets(input);
-  } catch {
-    return [];
-  }
-}
-
 function parseObject(text: string): Record<string, unknown> | undefined {
   try {
     const parsed: unknown = JSON.parse(text);
@@ -103,4 +90,19 @@ function parseObject(text: string): Record<string, unknown> | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * The run input read once: `loadRun`, else, on a runtime without it, the
+ * values its `knownSecrets` returns. A failed read rejects, so the caller
+ * stops instead of egressing with pattern masking only.
+ */
+export async function readRun(
+  runtime: FlowRuntime,
+  input: string,
+): Promise<LoadedRun> {
+  if (runtime.loadRun) return runtime.loadRun(input);
+  return {
+    knownSecrets: runtime.knownSecrets ? await runtime.knownSecrets(input) : [],
+  };
 }

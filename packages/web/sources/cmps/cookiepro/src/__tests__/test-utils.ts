@@ -1,5 +1,6 @@
-import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { WalkerOS, Elb, Source } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 import { sourceCookiePro } from '../index';
 import type { Types, OneTrustAPI } from '../types';
 
@@ -10,33 +11,32 @@ export interface ConsentCall {
   consent: WalkerOS.Consent;
 }
 
-/**
- * Mock window with test helpers for CookiePro/OneTrust testing
- */
-export interface MockWindow extends Window {
-  OneTrust?: OneTrustAPI;
-  OptanonActiveGroups?: string;
-  OptanonWrapper?: () => void;
-  Optanon?: unknown;
+/** Test helpers the mock window carries beside the Window API. */
+export interface MockWindowHelpers {
   __dispatchEvent: (event: string) => void;
   __setActiveGroups: (groups: string) => void;
   __setOneTrust: (api: OneTrustAPI) => void;
 }
 
+/** The real jsdom window, prepared for CookiePro/OneTrust testing. */
+export type MockWindow = Window & typeof globalThis & MockWindowHelpers;
+
 /**
  * Create a mock elb function that tracks consent commands
  */
-export function createMockElb(consentCalls: ConsentCall[]) {
-  const mockElb = jest.fn();
+export function createMockElb(
+  consentCalls: ConsentCall[],
+): jest.MockedFunction<Elb.Fn> {
+  const mockElb: jest.MockedFunction<Elb.Fn> = jest
+    .fn()
+    .mockImplementation((command: string, data?: WalkerOS.Consent) => {
+      if (command === 'walker consent' && data) {
+        consentCalls.push({ consent: data });
+      }
+      return Promise.resolve({ ok: true });
+    });
 
-  mockElb.mockImplementation((command: string, data?: WalkerOS.Consent) => {
-    if (command === 'walker consent' && data) {
-      consentCalls.push({ consent: data });
-    }
-    return Promise.resolve({ ok: true });
-  });
-
-  return mockElb as jest.MockedFunction<Elb.Fn>;
+  return mockElb;
 }
 
 /**
@@ -55,9 +55,16 @@ export interface MockWindowOptions {
   initialOptanonWrapper?: () => void;
 }
 
+// Everything createMockWindow changed on the real window, undone by
+// resetMockWindow.
+const restores: Array<() => void> = [];
+
 /**
- * Create a mock window that supports addEventListener/removeEventListener
- * and can simulate OneTrust SDK behavior for testing.
+ * Prepare the real jsdom window with the OneTrust globals the options ask
+ * for and recorded event listeners. addEventListener/removeEventListener are
+ * spied so tests can assert on them; listeners are recorded instead of
+ * attached, so nothing leaks onto the window between tests. Call
+ * resetMockWindow in afterEach.
  */
 export function createMockWindow(options: MockWindowOptions = {}): MockWindow {
   const {
@@ -68,70 +75,99 @@ export function createMockWindow(options: MockWindowOptions = {}): MockWindow {
     initialOptanonWrapper,
   } = options;
 
-  const listeners: Record<string, Array<(e: Event) => void>> = {};
+  const listeners: Record<string, EventListenerOrEventListenerObject[]> = {};
 
   const oneTrustApi: OneTrustAPI = {
     IsAlertBoxClosed: jest.fn(() => alertBoxClosed),
   };
 
-  const mockWindow: Record<string, unknown> = {
-    addEventListener: jest.fn((event: string, handler: (e: Event) => void) => {
+  const addSpy = jest
+    .spyOn(window, 'addEventListener')
+    .mockImplementation((event, handler) => {
       if (!listeners[event]) listeners[event] = [];
       listeners[event].push(handler);
-    }),
-    removeEventListener: jest.fn(
-      (event: string, handler: (e: Event) => void) => {
-        if (listeners[event]) {
-          listeners[event] = listeners[event].filter((h) => h !== handler);
-        }
-      },
-    ),
-    // Set SDK as loaded if requested
-    ...(sdkLoaded ? { [globalName]: oneTrustApi, Optanon: {} } : {}),
-    // Set active groups if provided
-    ...(activeGroups !== undefined
-      ? { OptanonActiveGroups: activeGroups }
-      : {}),
-    // Set initial OptanonWrapper if provided
-    ...(initialOptanonWrapper ? { OptanonWrapper: initialOptanonWrapper } : {}),
-    // Test helpers
-    __dispatchEvent: (event: string) => {
+    });
+  const removeSpy = jest
+    .spyOn(window, 'removeEventListener')
+    .mockImplementation((event, handler) => {
+      if (listeners[event]) {
+        listeners[event] = listeners[event].filter((h) => h !== handler);
+      }
+    });
+
+  // Set SDK as loaded if requested
+  if (sdkLoaded) {
+    window[globalName] = oneTrustApi;
+    window.Optanon = {};
+  }
+  // Set active groups if provided
+  if (activeGroups !== undefined) window.OptanonActiveGroups = activeGroups;
+  // Set initial OptanonWrapper if provided
+  if (initialOptanonWrapper) window.OptanonWrapper = initialOptanonWrapper;
+
+  const helpers: MockWindowHelpers = {
+    __dispatchEvent: (event) => {
       const e = new Event(event);
-      listeners[event]?.forEach((handler) => handler(e));
+      listeners[event]?.forEach((handler) =>
+        typeof handler === 'function' ? handler(e) : handler.handleEvent(e),
+      );
     },
-    __setActiveGroups: (groups: string) => {
-      mockWindow.OptanonActiveGroups = groups;
+    __setActiveGroups: (groups) => {
+      window.OptanonActiveGroups = groups;
     },
-    __setOneTrust: (api: OneTrustAPI) => {
-      mockWindow[globalName] = api;
-      mockWindow.Optanon = {};
+    __setOneTrust: (api) => {
+      window[globalName] = api;
+      window.Optanon = {};
     },
   };
 
-  return mockWindow as unknown as MockWindow;
+  restores.push(() => {
+    addSpy.mockRestore();
+    removeSpy.mockRestore();
+    for (const key of [
+      globalName,
+      'Optanon',
+      'OptanonActiveGroups',
+      'OptanonWrapper',
+      ...Object.keys(helpers),
+    ]) {
+      Reflect.deleteProperty(window, key);
+    }
+  });
+
+  return Object.assign(window, helpers);
+}
+
+/** Undo every createMockWindow since the last reset. */
+export function resetMockWindow(): void {
+  restores.splice(0).forEach((restore) => restore());
 }
 
 /**
  * Create and initialize a CookiePro source with mock environment
  */
 export async function createCookieProSource(
-  mockWindow: MockWindow,
+  mockWindow: Window & typeof globalThis,
   mockElb: Elb.Fn,
   config?: Partial<Source.Config<Types>>,
 ): Promise<Source.Instance<Types>> {
+  // The source never reads its collector; a real one stands in for a stub.
+  const { collector } = await startFlow({ run: false });
+  const env: Types['env'] = {
+    push: mockElb,
+    command: mockElb,
+    elb: mockElb,
+    window: mockWindow,
+    logger: createMockLogger(),
+  };
   const source = await sourceCookiePro({
-    collector: {} as Collector.Instance,
+    collector,
     config: config || {},
-    env: {
-      push: mockElb,
-      command: mockElb,
-      elb: mockElb,
-      window: mockWindow as unknown as Window & typeof globalThis,
-      logger: createMockLogger(),
-    },
+    env,
     id: 'test-cookiepro',
     logger: createMockLogger(),
-    withScope: async (_r, _resp, body) => body({} as never),
+    withScope: async (_r, respond, body) =>
+      body({ ...env, ingest: createIngest('test-cookiepro'), respond }),
   });
   // Adapter setup (listeners + static read) runs in init(), not the factory.
   await source.init?.();

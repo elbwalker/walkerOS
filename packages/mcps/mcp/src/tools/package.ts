@@ -10,6 +10,8 @@ import {
 } from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
+import { recordField, stringField } from './narrow.js';
+import { parseToolInput } from './parse-input.js';
 
 // `getPackageBaseUrl` lives in ../catalog.js because both these tools and the
 // catalog resources resolve the same app-primary base URL. Re-exported here so
@@ -65,17 +67,9 @@ export function createPackageSearchToolSpec(): ToolSpec {
 }
 
 async function packageSearchHandlerBody(input: unknown) {
-  const {
-    package: packageName,
-    type,
-    platform,
-    version,
-  } = (input ?? {}) as {
-    package?: string;
-    type?: 'source' | 'destination' | 'transformer' | 'store';
-    platform?: 'web' | 'server';
-    version?: string;
-  };
+  const parsed = parseToolInput(searchInputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { package: packageName, type, platform, version } = parsed.data;
   const baseUrl = getPackageBaseUrl();
 
   // Browse mode: no package specified → return catalog
@@ -132,9 +126,7 @@ export function registerPackageSearchTool(server: McpServer) {
       // No outputSchema: browse mode returns {catalog, count}, lookup returns metadata — incompatible shapes
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => packageSearchHandlerBody(args),
   );
 }
 
@@ -180,6 +172,19 @@ export function createPackageGetToolSpec(): ToolSpec {
   };
 }
 
+const STEP_PACKAGE_TYPES = [
+  'source',
+  'destination',
+  'transformer',
+  'store',
+] as const;
+
+function isStepPackageType(
+  type: string | undefined,
+): type is (typeof STEP_PACKAGE_TYPES)[number] {
+  return STEP_PACKAGE_TYPES.some((stepType) => stepType === type);
+}
+
 /**
  * Base config merged with the package settings as `config`; every other
  * schema (mapping, setup, ga4, ...) kept as a sibling.
@@ -190,11 +195,14 @@ function shapeSchemas(
 ): Record<string, unknown> {
   const shaped: Record<string, unknown> = {};
 
-  if (type) {
-    shaped.config = mergeConfigSchema(
-      type as 'source' | 'destination' | 'transformer' | 'store',
-      schemas as Record<string, Record<string, unknown>>,
-    );
+  if (isStepPackageType(type)) {
+    const settings = recordField(schemas, 'settings');
+    const credentials = recordField(schemas, 'credentials');
+    shaped.config = mergeConfigSchema(type, {
+      ...schemas,
+      settings,
+      credentials,
+    });
   }
 
   for (const [key, value] of Object.entries(schemas)) {
@@ -204,15 +212,9 @@ function shapeSchemas(
 }
 
 async function packageGetHandlerBody(input: unknown) {
-  const {
-    package: packageName,
-    version,
-    section,
-  } = (input ?? {}) as {
-    package: string;
-    version?: string;
-    section?: 'hints' | 'examples' | 'all';
-  };
+  const parsed = parseToolInput(getInputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { package: packageName, version, section } = parsed.data;
   const baseUrl = getPackageBaseUrl();
 
   try {
@@ -247,8 +249,8 @@ async function packageGetHandlerBody(input: unknown) {
       } else {
         const hintSummary: Record<string, { text: string }> = {};
         for (const [key, hint] of Object.entries(info.hints)) {
-          const h = hint as { text: string };
-          hintSummary[key] = { text: h.text };
+          const text = stringField(hint, 'text');
+          if (text !== undefined) hintSummary[key] = { text };
         }
         result.hints = hintSummary;
       }
@@ -283,8 +285,6 @@ export function registerGetPackageSchemaTool(server: McpServer) {
       // No outputSchema: removed to avoid SDK -32602 crashes on unexpected field values
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => packageGetHandlerBody(args),
   );
 }

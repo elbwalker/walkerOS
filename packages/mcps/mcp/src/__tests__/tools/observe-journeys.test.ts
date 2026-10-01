@@ -12,13 +12,14 @@ jest.mock('@walkeros/core', () => ({
     ],
     structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
-  mcpError: jest.fn((error, hint) => {
-    const err = error as Error & { code?: string };
+  mcpError: jest.fn((error: unknown, hint?: unknown) => {
+    const err: object =
+      typeof error === 'object' && error !== null ? error : {};
     const structured: Record<string, unknown> = {
-      error: err?.message ?? 'Unknown error',
+      error: ('message' in err ? err.message : undefined) ?? 'Unknown error',
     };
     if (hint) structured.hint = hint;
-    if (err?.code) structured.code = err.code;
+    if ('code' in err && err.code) structured.code = err.code;
     return {
       content: [{ type: 'text', text: JSON.stringify(structured) }],
       structuredContent: structured,
@@ -27,22 +28,26 @@ jest.mock('@walkeros/core', () => ({
   }),
 }));
 
-import { registerObserveJourneysTool } from '../../tools/observe-journeys.js';
+import { createObserveJourneysToolSpec } from '../../tools/observe-journeys.js';
 import { stubClient } from '../support/stub-client.js';
 import type { JourneysResult } from '../../tool-client.js';
+import {
+  structured,
+  record,
+  rows,
+  isErrorResult,
+  textOf,
+} from '../support/tool-result.js';
 
-type HandlerFn = (input: Record<string, unknown>) => Promise<unknown>;
+function parse(text: string): unknown {
+  return JSON.parse(text);
+}
 
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: HandlerFn }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: HandlerFn) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
+/** An array of any values, narrowed. */
+function list(value: unknown): unknown[] {
+  if (!Array.isArray(value))
+    throw new Error(`Not an array: ${JSON.stringify(value)}`);
+  return value;
 }
 
 /**
@@ -124,19 +129,14 @@ function journeysResult(
 }
 
 describe('observe_journeys tool', () => {
-  let server: ReturnType<typeof createMockServer>;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    server = createMockServer();
   });
 
   it('registers with name "observe_journeys" and read-only annotations', () => {
-    registerObserveJourneysTool(server as never, stubClient());
-    const tool = server.getTool('observe_journeys');
-    expect(tool).toBeDefined();
-    const config = tool!.config as { annotations: Record<string, boolean> };
-    expect(config.annotations).toEqual({
+    const tool = createObserveJourneysToolSpec(stubClient());
+    expect(tool.name).toBe('observe_journeys');
+    expect(tool.annotations).toEqual({
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
@@ -145,11 +145,8 @@ describe('observe_journeys tool', () => {
   });
 
   it('describes the flowId-resolved, no-active-session behavior', () => {
-    registerObserveJourneysTool(server as never, stubClient());
-    const tool = server.getTool('observe_journeys')!;
-    const description = (
-      tool.config as { description: string }
-    ).description.toLowerCase();
+    const tool = createObserveJourneysToolSpec(stubClient());
+    const description = tool.description.toLowerCase();
     expect(description).toContain('flowid');
     expect(description).toContain('journey');
     expect(description).toContain('session');
@@ -158,22 +155,18 @@ describe('observe_journeys tool', () => {
   });
 
   it('requires flowId', async () => {
-    registerObserveJourneysTool(server as never, stubClient());
-    const tool = server.getTool('observe_journeys')!;
-    const result = (await tool.handler({})) as {
-      isError: boolean;
-      content: Array<{ text: string }>;
-    };
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toContain('flowId is required');
+    const tool = createObserveJourneysToolSpec(stubClient());
+    const result = await tool.handler({});
+    expect(isErrorResult(result)).toBe(true);
+    const parsed = record(parse(textOf(result)));
+    expect(parsed.error).toBe(
+      'flowId: Invalid input: expected string, received undefined',
+    );
   });
 
   it('passes flowId/projectId/traceId/limit through to listJourneys', async () => {
     const listJourneys = jest.fn().mockResolvedValue(journeysResult('ses_1'));
-    registerObserveJourneysTool(server as never, stubClient({ listJourneys }));
-
-    const tool = server.getTool('observe_journeys')!;
+    const tool = createObserveJourneysToolSpec(stubClient({ listJourneys }));
     await tool.handler({
       flowId: 'flow_1',
       projectId: 'proj_1',
@@ -191,9 +184,7 @@ describe('observe_journeys tool', () => {
 
   it('omits absent optional params from the client call', async () => {
     const listJourneys = jest.fn().mockResolvedValue(journeysResult('ses_1'));
-    registerObserveJourneysTool(server as never, stubClient({ listJourneys }));
-
-    const tool = server.getTool('observe_journeys')!;
+    const tool = createObserveJourneysToolSpec(stubClient({ listJourneys }));
     await tool.handler({ flowId: 'flow_1' });
 
     expect(listJourneys).toHaveBeenCalledWith({ flowId: 'flow_1' });
@@ -201,82 +192,57 @@ describe('observe_journeys tool', () => {
 
   it('keeps correlation handles literal (usable as filter input) while wrapping captured payloads', async () => {
     const listJourneys = jest.fn().mockResolvedValue(journeysResult('ses_1'));
-    registerObserveJourneysTool(server as never, stubClient({ listJourneys }));
+    const tool = createObserveJourneysToolSpec(stubClient({ listJourneys }));
+    const result = await tool.handler({ flowId: 'flow_1' });
 
-    const tool = server.getTool('observe_journeys')!;
-    const result = (await tool.handler({ flowId: 'flow_1' })) as {
-      structuredContent: {
-        sessionId: string;
-        journeys: Array<{
-          id: string;
-          traceId: string;
-          correlation: string;
-          entry: { eventId: string; name: string };
-          hops: Array<{
-            stepId: string;
-            eventId: string;
-            status: string;
-            mappingKey: string;
-            in: { email: string };
-            out: { endpoint: string };
-            error: { message: string };
-            meta: { note: string };
-            calls: Array<{ args: [string, string, { email: string }] }>;
-            branches: Array<{
-              branchId: string;
-              status: string;
-              terminalPhase: string;
-              out: { url: string };
-              error: { message: string };
-              calls: Array<{ args: [string, { user: string }] }>;
-            }>;
-          }>;
-        }>;
-      };
-    };
-
-    expect(result.structuredContent.sessionId).toBe('ses_1');
-    const journey = result.structuredContent.journeys[0];
-    const hop = journey.hops[0];
+    expect(structured(result).sessionId).toBe('ses_1');
+    const journey = rows(structured(result).journeys)[0];
+    const hop = rows(journey.hops)[0];
 
     // Correlation handles stay LITERAL so the agent can re-query by traceId and
     // reference the step / mapping rule verbatim.
     expect(journey.id).toBe('T1');
     expect(journey.traceId).toBe('T1');
     expect(journey.correlation).toBe('trace');
-    expect(journey.entry.eventId).toBe('E1');
+    expect(record(journey.entry).eventId).toBe('E1');
     expect(hop.stepId).toBe('destination.gtag');
     expect(hop.eventId).toBe('E1');
     expect(hop.status).toBe('error');
     expect(hop.mappingKey).toBe('page view');
 
     // Captured, event-controlled payloads are WRAPPED for third-party LLM context.
-    expect(journey.entry.name).toBe('<user_data>page view</user_data>');
-    expect(hop.in.email).toBe('<user_data>user@example.com</user_data>');
-    expect(hop.out.endpoint).toBe(
+    expect(record(journey.entry).name).toBe('<user_data>page view</user_data>');
+    expect(record(hop.in).email).toBe(
+      '<user_data>user@example.com</user_data>',
+    );
+    expect(record(hop.out).endpoint).toBe(
       '<user_data>https://vendor.example/collect</user_data>',
     );
-    expect(hop.error.message).toBe('<user_data>vendor 500</user_data>');
-    expect(hop.meta.note).toBe('<user_data>captured note</user_data>');
+    expect(record(hop.error).message).toBe('<user_data>vendor 500</user_data>');
+    expect(record(hop.meta).note).toBe('<user_data>captured note</user_data>');
 
     // Vendor call args (the deepest captured sub-tree, e.g. gtag args) are
     // wrapped at every string leaf, including nested object values.
-    const callArgs = hop.calls[0].args;
+    const callArgs = list(rows(hop.calls)[0].args);
     expect(callArgs[0]).toBe('<user_data>event</user_data>');
     expect(callArgs[1]).toBe('<user_data>purchase</user_data>');
-    expect(callArgs[2].email).toBe('<user_data>x@y.z</user_data>');
+    expect(record(callArgs[2]).email).toBe('<user_data>x@y.z</user_data>');
 
     // Fan-out branch: structural fields stay literal; every captured payload
     // (out, error.message, and nested call args) is wrapped.
-    const branch = hop.branches[0];
+    const branch = rows(hop.branches)[0];
     expect(branch.branchId).toBe('B1');
     expect(branch.status).toBe('error');
     expect(branch.terminalPhase).toBe('error');
-    expect(branch.out.url).toBe(
+    expect(record(branch.out).url).toBe(
       '<user_data>https://branch.example/x</user_data>',
     );
-    expect(branch.error.message).toBe('<user_data>branch boom</user_data>');
-    expect(branch.calls[0].args[1].user).toBe('<user_data>z@z.z</user_data>');
+    expect(record(branch.error).message).toBe(
+      '<user_data>branch boom</user_data>',
+    );
+    expect(record(list(rows(branch.calls)[0].args)[1]).user).toBe(
+      '<user_data>z@z.z</user_data>',
+    );
   });
 
   it('passes unattributed through, literal, so the agent sees the loss the REST surface reports', async () => {
@@ -296,22 +262,10 @@ describe('observe_journeys tool', () => {
         },
       ]),
     );
-    registerObserveJourneysTool(server as never, stubClient({ listJourneys }));
+    const tool = createObserveJourneysToolSpec(stubClient({ listJourneys }));
+    const result = await tool.handler({ flowId: 'flow_1' });
 
-    const tool = server.getTool('observe_journeys')!;
-    const result = (await tool.handler({ flowId: 'flow_1' })) as {
-      structuredContent: {
-        unattributed?: Array<{
-          platform?: string;
-          count: number;
-          fromMs: number;
-          toMs: number;
-          stepIds: string[];
-        }>;
-      };
-    };
-
-    expect(result.structuredContent.unattributed).toEqual([
+    expect(structured(result).unattributed).toEqual([
       {
         platform: 'web',
         count: 3,
@@ -326,43 +280,29 @@ describe('observe_journeys tool', () => {
     // Absent means "no loss to report", which reads differently from an empty
     // array; the app envelope spreads it conditionally for the same reason.
     const listJourneys = jest.fn().mockResolvedValue(journeysResult('ses_1'));
-    registerObserveJourneysTool(server as never, stubClient({ listJourneys }));
+    const tool = createObserveJourneysToolSpec(stubClient({ listJourneys }));
+    const result = await tool.handler({ flowId: 'flow_1' });
 
-    const tool = server.getTool('observe_journeys')!;
-    const result = (await tool.handler({ flowId: 'flow_1' })) as {
-      structuredContent: Record<string, unknown>;
-    };
-
-    expect('unattributed' in result.structuredContent).toBe(false);
+    expect('unattributed' in structured(result)).toBe(false);
   });
 
   it('surfaces the no-active-session result with a start-a-session hint', async () => {
     const listJourneys = jest.fn().mockResolvedValue(journeysResult(null));
-    registerObserveJourneysTool(server as never, stubClient({ listJourneys }));
+    const tool = createObserveJourneysToolSpec(stubClient({ listJourneys }));
+    const result = await tool.handler({ flowId: 'flow_1' });
 
-    const tool = server.getTool('observe_journeys')!;
-    const result = (await tool.handler({ flowId: 'flow_1' })) as {
-      structuredContent: { sessionId: string | null; journeys: unknown[] };
-      content: Array<{ text: string }>;
-    };
-
-    expect(result.structuredContent.sessionId).toBeNull();
-    expect(result.structuredContent.journeys).toEqual([]);
-    expect(result.content[0].text.toLowerCase()).toContain('no active observe');
+    expect(structured(result).sessionId).toBeNull();
+    expect(structured(result).journeys).toEqual([]);
+    expect(textOf(result).toLowerCase()).toContain('no active observe');
   });
 
   it('catches errors and returns mcpError with an auth hint on auth failure', async () => {
     const listJourneys = jest.fn().mockRejectedValue(new Error('Unauthorized'));
-    registerObserveJourneysTool(server as never, stubClient({ listJourneys }));
+    const tool = createObserveJourneysToolSpec(stubClient({ listJourneys }));
+    const result = await tool.handler({ flowId: 'flow_1' });
 
-    const tool = server.getTool('observe_journeys')!;
-    const result = (await tool.handler({ flowId: 'flow_1' })) as {
-      isError: boolean;
-      content: Array<{ text: string }>;
-    };
-
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
+    expect(isErrorResult(result)).toBe(true);
+    const parsed = record(parse(textOf(result)));
     expect(parsed.error).toBe('Unauthorized');
     expect(parsed.hint).toContain('logged in');
   });

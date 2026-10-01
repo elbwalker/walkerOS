@@ -321,7 +321,7 @@ describe('async destination on() settles before the first push', () => {
           log,
           () =>
             ++calls === 1
-              ? new Promise<void>(() => undefined)
+              ? Promise.reject(new Error('sdk down'))
               : Promise.resolve(),
           { consent: { marketing: true }, timeout: 20 },
         ),
@@ -353,7 +353,7 @@ describe('async destination on() settles before the first push', () => {
           log,
           () =>
             ++calls === 1
-              ? new Promise<void>(() => undefined)
+              ? Promise.reject(new Error('sdk down'))
               : Promise.resolve(),
           { consent: { marketing: true }, timeout: 20 },
         ),
@@ -471,10 +471,19 @@ describe('the hold covers the whole state delivery window', () => {
     const log: string[] = [];
     const gateA = deferred();
     const gateB = deferred();
+    const secondStarted = deferred();
     let calls = 0;
     const { elb, collector } = await startFlow({
       destinations: {
-        d: dataRecorder(log, () => (++calls === 1 ? gateA : gateB).promise, {}),
+        d: dataRecorder(
+          log,
+          () => {
+            if (++calls === 1) return gateA.promise;
+            secondStarted.resolve();
+            return gateB.promise;
+          },
+          {},
+        ),
       },
     });
     await elb('page view', {});
@@ -483,16 +492,16 @@ describe('the hold covers the whole state delivery window', () => {
     const commandB = collector.command('consent', { marketing: true });
     await elb('page view', {});
     gateA.resolve();
-    await commandA;
+    await secondStarted.promise;
     expect(log).not.toContain('push:page view');
     gateB.resolve();
-    await commandB;
-    // B starts before A settles, so the destination holds no consent mark
-    // yet and B carries the whole cell.
+    await Promise.all([commandA, commandB]);
+    // B arrives while A runs, so its handler call waits for A to settle and
+    // then carries the whole cell as it is at that point.
     expect(log).toEqual([
       'start:consent:{"analytics":true}',
-      'start:consent:{"analytics":true,"marketing":true}',
       'end:consent',
+      'start:consent:{"analytics":true,"marketing":true}',
       'end:consent',
       'push:page view',
     ]);

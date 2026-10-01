@@ -436,7 +436,7 @@ The bundle is now ready to deploy!
 | `--stats` | Show bundle statistics |
 | `--json` | Output statistics as JSON (for CI/CD) |
 | `--no-cache` | Skip package cache, download fresh |
-| `--release <id>` | Config release id, stamped on `event.source.release` |
+| `--release <id>` | Config release id, stamped on `event.source.release`. Beats a `collector.release` in the flow. Default: a content id of the config, the resolved packages and the CLI version. Same input, same release. Env and secret values are not part of it, only their names |
 | `--manifest [source]` | Build from a manifest, see [manifest builds](#manifest-builds---manifest) |
 | `-v, --verbose` | Detailed logging |
 | `-s, --silent` | Suppress output |
@@ -796,9 +796,9 @@ With `--json`, the same results arrive under `simulations`, one entry per simula
 
 A destination that sent nothing carries `skipped` in its entry: `{ "reason": "pending", "require": ["consent"] }`, or `{ "reason": "consent", "required": { "marketing": true }, "granted": { "functional": true } }`.
 
-Arguments are made printable (an `Error` becomes `{ name, message }`, a `Buffer` its UTF-8 text, `bigint` a string, `Map` and `Set` arrays, cycles `"[Circular]"`). Both text and JSON output pass through the same secret scrubbing the CLI logs use, so service account keys, private keys, `Authorization` headers, `access_token` parameters and credential fields show as `***`. The values of the secrets the flow references (every `$secret.NAME` that is set in the environment, 6 characters or longer) are masked as they are, also inside JSON strings. With `--json`, a number that prints a digits-only known value becomes the string `"***"`, so the document still parses. The destination itself still receives the real values.
+Arguments are made printable (an `Error` becomes `{ name, message }`, a `Buffer` its UTF-8 text, `bigint` a string, `Map` and `Set` arrays, cycles `"[Circular]"`). Both text and JSON output pass through the same secret scrubbing the CLI logs use, so service account keys, private keys, `Authorization` headers, `access_token` parameters and credential fields show as `***`. The values of the secrets the flow references (every `$secret.NAME` that is set in the environment, 6 characters or longer) are masked as they are, also inside JSON strings and URL-encoded in a URL or form body. With `--json`, a number whose printed form contains a known value (6 characters or longer) becomes the string `"***"`, so the document still parses. The destination itself still receives the real values.
 
-A simulation and a real push of a flow config both route the flow's own logs through the same masking CLI logger (to stderr with `--json`), so the flow's debug lines appear only with `--verbose`. A real push of a prebuilt bundle keeps the bundle's own logger unless `--json` is set. The runtime masks the fetched secret values in its logs too (see [the runtime docs](/docs/apps/runtime#connecting-to-the-walkeros-app)).
+A simulation and a real push of a flow config both route the flow's own logs through the same masking CLI logger (to stderr with `--json`), so the flow's debug lines appear only with `--verbose`. The run's own CLI lines (loading, bundling, pushing) mask the known values too. A real push of a prebuilt bundle keeps the bundle's own logger unless `--json` is set. The runtime masks the fetched secret values in its logs too (see [the runtime docs](/docs/apps/runtime#connecting-to-the-walkeros-app)).
 
 **What starts in a simulation.** A destination simulation starts only its target destination: no source and no other destination initializes, so no other vendor script or SDK client is built. The flow's transformers still start, and a store whose package ships no mock env runs as configured (with `--verbose`: `Stores without a mock env run as configured: ...`). A source simulation starts only the simulated source, so a web source never adds the browser source's page view or a CMP decision of its own. The events it captures stop at the collector and reach no destination. A source whose package declares recorded calls (`examples.env.simulation`, for example the SQS and Pub/Sub pull sources) runs on its mock client, and those calls are listed like a destination's.
 
@@ -849,7 +849,7 @@ The session source of `flow-complete.json` waits for `functional` consent. With 
 success: true
   source.session
     call elb("user",{"session":"bligwfsxsbb0kkjl","device":"pixjjoo217w3rxl4"})
-    call elb("session",{"id":"bligwfsxsbb0kkjl","start":1790334598111,"isNew":true,"count":1,"runs":1,"isStart":true,"storage":true,"referrer":"","campaign":"trail","medium":"cpc","source":"google","gclid":"gclid-abc123","clickId":"gclid","platform":"google","marketing":true,"device":"pixjjoo217w3rxl4","updat...)
+    call elb("session",{"id":"bligwfsxsbb0kkjl","start":1790334598111,"isNew":true,"count":1,"runs":1,"isStart":true,"storage":true,"referrer":"www.google.com","campaign":"trail","medium":"cpc","source":"google","gclid":"gclid-abc123","clickId":"gclid","platform":"google","marketing":true,"device":"pixjjoo217w3rxl4","updat...)
     event {"name":"session start","data":{"id":"bligwfsxsbb0kkjl",...,"gclid":"gclid-abc123","clickId":"gclid","platform":"google","marketing":true,...}}
   Duration: 1564ms
 ```
@@ -1272,7 +1272,7 @@ Scope: flows server; 11 check(s): file:schema, flow:schema, flow:steps, flow:pac
 Validation Results:
   ⚠ flows.server.destinations.pubsub.setings: Unknown key "setings" on Destination is ignored by the runtime
     → Remove the key, or move it to where it belongs.
-  - skipped flow:package-settings at flows.server.destinations.pubsub: The step imports the named export "destinationPubSub"; the package settings schema describes its default export
+  - skipped flow:package-settings at flows.server.destinations.pubsub: @walkeros/server-destination-gcp@4.6.1 predates per-export settings schemas; the step imports "destinationPubSub"
   ✗ Failed under --strict: 1 warning(s) and 1 skipped check(s) count as failures
 
 Summary: 0 error(s), 1 warning(s), 1 skipped
@@ -1318,7 +1318,7 @@ Every step with a `package` has its resolved `config.settings` checked against t
 - Findings are warnings (`ENTRY_SCHEMA`, with `keyword`) for one minor release; they become errors after that. `--strict` fails on them now.
 - Placeholders: `$var` is resolved first and the value checked. `$env.NAME:default` is checked using the default, and an error names the default, never the placeholder. `$flow` resolves statically; an unresolvable `$flow` is an error. Values known only at runtime (`$env.NAME` without default, `$secret`, `$store`, `$code`) are not checked and are listed in `details.deferred`.
 - A schema that cannot be fetched is a skip (`SCHEMA_UNAVAILABLE`); a package without a settings schema is a skip (`NO_SETTINGS_SCHEMA`).
-- **Steps that import a named export** (`"import": "destinationPubSub"`) have no settings schema yet, because a package publishes one settings schema, for its default export. They are reported as skipped (`NO_SETTINGS_SCHEMA`), so `--strict` fails on them. The `flow-complete` example's `--strict` run currently ends with three such skips.
+- **Steps that import a named export** are checked against that export's schema. The export is picked as the bundler picks it: the step's `import`, else the first `imports` entry of its `config.bundle.packages` pin, else the default export. A package with several exports publishes a settings schema per export (`exportSchemas` in its `walkerOS.json`); a package with one export uses its `settings` schema for a named import too. An export missing from `exportSchemas`, a multi-export package version published before per-export schemas, or a package version that does not list its exports, is a skip (`NO_SETTINGS_SCHEMA`), so `--strict` fails on it.
 - `--offline` skips this check without fetching anything; the `Scope:` line says `offline: package settings not checked`.
 
 Unknown top-level keys on a destination or store are warnings (`UNKNOWN_KEY`), and a removed package such as `@walkeros/store-memory` is a warning (`DEPRECATED_PACKAGE`).
@@ -1395,7 +1395,7 @@ JSON output format (`details.context`, the IntelliSense context, omitted):
       {
         "path": "flows.server.destinations.pubsub",
         "check": "flow:package-settings",
-        "reason": "The step imports the named export \"destinationPubSub\"; the package settings schema describes its default export",
+        "reason": "@walkeros/server-destination-gcp@4.6.1 predates per-export settings schemas; the step imports \"destinationPubSub\"",
         "code": "NO_SETTINGS_SCHEMA"
       }
     ],
@@ -1719,7 +1719,10 @@ Retrieves a flow with its full `Flow.Json` content.
   code={`# With inline JSON
 walkeros flows create "My Flow" --content '{"version":4,"flows":{"default":{"config":{"platform":"server"}}}}'
 
-# From a file via stdin
+# From a file
+walkeros flows create "My Flow" --content ./flow.json
+
+# Via stdin
 cat flow.json | walkeros flows create "My Flow"`}
   language="bash"
 />
@@ -1727,7 +1730,7 @@ cat flow.json | walkeros flows create "My Flow"`}
 | Option | Description |
 |--------|-------------|
 | `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `-c, --content <json>` | Flow.Json string or file path |
+| `-c, --content <content>` | Flow.Json as JSON string, file path or URL |
 
 ### Update a flow
 
@@ -1736,7 +1739,10 @@ cat flow.json | walkeros flows create "My Flow"`}
 walkeros flows update cfg_abc123 --name "Updated Flow"
 
 # Update content
-walkeros flows update cfg_abc123 --content '{"version":4,"flows":{"default":{"config":{"platform":"server"}}}}'`}
+walkeros flows update cfg_abc123 --content '{"version":4,"flows":{"default":{"config":{"platform":"server"}}}}'
+
+# Update content from a file
+walkeros flows update cfg_abc123 --content ./flow.json`}
   language="bash"
 />
 
@@ -1744,7 +1750,7 @@ walkeros flows update cfg_abc123 --content '{"version":4,"flows":{"default":{"co
 |--------|-------------|
 | `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
 | `--name <name>` | New flow name |
-| `-c, --content <json>` | New Flow.Config JSON string or file path |
+| `-c, --content <content>` | New Flow.Json as JSON string, file path or URL |
 
 ### Delete a flow
 
@@ -2325,7 +2331,7 @@ Package cache write failed for <name>@<version>: <message>. The build continues 
 - Caches compiled bundles based on flow.json content + date
 - Identical configs reuse cached builds within the same day
 - Dramatically speeds up repeated builds (~100x faster)
-- Keys cover the config and the resolved package versions, not the files of a local package (`path`). After rebuilding a local package without changing its version, run `walkeros cache clear` to see the change
+- Keys cover the config, the resolved package versions, the built contents of local packages (`path`) and the CLI version, so a rebuilt local package or a CLI upgrade builds fresh
 
 **Temporary files.** Each run works in its own directory, `$TMPDIR/walkeros/<kind>/<6 characters>` (`kind` is `push`, `build`, `bundle`, `wrap`, `archive` or `setup`), for example `Output: $TMPDIR/walkeros/push/d6WHM6/flow.mjs (1266.1 KB, 0.6s)`, and removes it afterwards. The short names keep these paths readable in masked logs.
 
@@ -2354,6 +2360,7 @@ Output:
 Cache directory: $TMPDIR/cache
 Cached packages: 12
 Cached builds: 5
+Cached code: 5
 ```
 
 Leftovers of interrupted cache writes are not counted.
@@ -2380,6 +2387,8 @@ Clearing also removes the leftovers of interrupted cache writes.
   code={`walkeros cache clear --builds`}
   language="bash"
 />
+
+This removes cached builds and the compiled code they are made from.
 
 ### Bypassing Cache
 

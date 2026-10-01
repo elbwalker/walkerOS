@@ -588,7 +588,10 @@ Use these templates as your starting point:
    settle in that time, or rejects, holds the destination's events in its queue
    until a later delivery settles; held events are discarded at the next
    `walker run`. Lifecycle handlers such as `on('run')` are awaited too, bounded
-   by the same timeout, and never hold events.
+   by the same timeout, and never hold events. An async state handler must
+   settle: until it settles or reaches `config.timeout`, that destination
+   receives no events. `elb` commands and `startFlow` resolve only after the
+   destinations' `on()` handlers for that command have settled or timed out.
    - For step-example tests, use `command: 'consent'` on `Flow.StepExample` to
      invoke the `on('consent')` handler. Do not push consent data as an event.
 
@@ -812,7 +815,13 @@ requirements (build, test, lint, no `any`):
 
 - [ ] Uses `getEnv<Env>(env)` pattern (never direct `window`/`document` access,
       never `as Window`/`as Document`/`as unknown` casts in src or tests)
-- [ ] `dev.ts` exports `schemas` and `examples`
+- [ ] `dev.ts` exports `schemas` (with `settings`; `z.object({})` when the step
+      has none) and `examples`
+- [ ] Multi-export package (two or more `walkerOS.exports`): `exportExamples`
+      and `exportSchemas` in `dev.ts` list exactly those exports, the default
+      included, and every `exportSchemas` entry has `settings`; the build fails
+      otherwise (see
+      [using-step-examples](../walkeros-using-step-examples/SKILL.md))
 - [ ] Examples match type signatures
 - [ ] Tests use examples for assertions (not hardcoded values)
 - [ ] `walkerOS.json` generated at build time

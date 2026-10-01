@@ -286,6 +286,17 @@ export const exportExamples = {
   language="typescript"
 />
 
+Such a package also exports `exportSchemas`, the same map for schemas: every export name, the default included, to that export's `settings` (and `mapping` or `setup` where it has them). `walkeros validate` and MCP `package_get` use the entry for the step's `import`. The build fails when either map does not list exactly the exports in `package.json` `walkerOS.exports`, or an `exportSchemas` entry has no `settings`:
+
+<CodeSnippet
+  code={`// src/dev.ts
+export const exportSchemas = {
+  destinationBigQuery: { settings: bigquery.settings, mapping: bigquery.mapping },
+  destinationPubSub: { settings: pubsub.settings, mapping: pubsub.mapping, setup: pubsub.setup },
+};`}
+  language="typescript"
+/>
+
 </details>
 
 ## In the complete example

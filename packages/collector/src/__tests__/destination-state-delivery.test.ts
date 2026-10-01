@@ -588,7 +588,7 @@ describe('destination state delivery: held destination retry', () => {
           log,
           () =>
             ++calls === 1
-              ? new Promise<void>(() => undefined)
+              ? Promise.reject(new Error('sdk down'))
               : Promise.resolve(),
           { consent: { marketing: true }, timeout: 20 },
         ),

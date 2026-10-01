@@ -35,18 +35,17 @@ const rect = (r: {
   left: number;
   width: number;
   height: number;
-}): DOMRectReadOnly =>
-  ({
-    x: r.left,
-    y: r.top,
-    top: r.top,
-    left: r.left,
-    width: r.width,
-    height: r.height,
-    right: r.left + r.width,
-    bottom: r.top + r.height,
-    toJSON: () => r,
-  }) as DOMRectReadOnly;
+}): DOMRect => ({
+  x: r.left,
+  y: r.top,
+  top: r.top,
+  left: r.left,
+  width: r.width,
+  height: r.height,
+  right: r.left + r.width,
+  bottom: r.top + r.height,
+  toJSON: () => r,
+});
 
 const boxOf = (element: Element): Box =>
   boxes.get(element) ?? { top: 0, left: 0, width: 0, height: 0 };
@@ -99,7 +98,7 @@ const buildEntry = (element: Element): IntersectionObserverEntry => {
   const intersectionRatio =
     targetArea > 0 ? (width * height) / targetArea : isIntersecting ? 1 : 0;
 
-  return {
+  const entry: IntersectionObserverEntry = {
     target: element,
     time: 0,
     isIntersecting,
@@ -112,7 +111,8 @@ const buildEntry = (element: Element): IntersectionObserverEntry => {
       width: viewport.width,
       height: viewport.height,
     }),
-  } as IntersectionObserverEntry;
+  };
+  return entry;
 };
 
 /** Deliver to every observer, but only where the spec says an entry is queued. */
@@ -150,7 +150,7 @@ export const setBox = (element: Element, box: Box): void => {
   // simulator so production code that legitimately reads geometry OUTSIDE the
   // observer callback (the zero-area seed in triggerVisible, and isVisible at
   // dwell expiry) sees the same world the observer does.
-  element.getBoundingClientRect = () => rect(viewportBox(element)) as DOMRect;
+  element.getBoundingClientRect = () => rect(viewportBox(element));
 };
 
 export const scrollTo = (y: number): void => {
@@ -171,13 +171,14 @@ export const resizeElement = (
     const entries: ResizeObserverEntry[] = [];
     ro.targets.forEach((target) => {
       if (target !== element) return;
-      entries.push({
+      const entry: ResizeObserverEntry = {
         target,
         contentRect: rect({ top: 0, left: 0, width, height }),
         borderBoxSize: [],
         contentBoxSize: [],
         devicePixelContentBoxSize: [],
-      } as unknown as ResizeObserverEntry);
+      };
+      entries.push(entry);
     });
     if (entries.length) ro.callback(entries, ro.instance);
   });
@@ -296,11 +297,8 @@ export const resetSim = (
     configurable: true,
   });
 
-  window.IntersectionObserver =
-    SimIntersectionObserver as unknown as typeof IntersectionObserver;
-  globalThis.IntersectionObserver =
-    SimIntersectionObserver as unknown as typeof IntersectionObserver;
-  window.ResizeObserver = SimResizeObserver as unknown as typeof ResizeObserver;
-  globalThis.ResizeObserver =
-    SimResizeObserver as unknown as typeof ResizeObserver;
+  window.IntersectionObserver = SimIntersectionObserver;
+  globalThis.IntersectionObserver = SimIntersectionObserver;
+  window.ResizeObserver = SimResizeObserver;
+  globalThis.ResizeObserver = SimResizeObserver;
 };

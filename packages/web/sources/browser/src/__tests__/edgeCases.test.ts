@@ -1,6 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { createBrowserSource } from './test-utils';
+import { createBrowserSource, untypedInput } from './test-utils';
 
 describe('Browser Source Edge Cases', () => {
   let collector: Collector.Instance;
@@ -8,13 +8,16 @@ describe('Browser Source Edge Cases', () => {
 
   beforeEach(async () => {
     document.body.innerHTML = '';
-    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+    Reflect.set(window, 'elbLayer', undefined);
 
-    mockPush = jest.fn((...args: unknown[]) => {
+    mockPush = jest.fn<
+      ReturnType<Collector.Instance['push']>,
+      Parameters<Collector.Instance['push']>
+    >(() => {
       return Promise.resolve({
         ok: true,
       });
-    }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
+    });
 
     ({ collector } = await startFlow());
 
@@ -23,7 +26,7 @@ describe('Browser Source Edge Cases', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
-    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+    Reflect.set(window, 'elbLayer', undefined);
   });
 
   describe('Malformed DOM Attributes', () => {
@@ -207,17 +210,15 @@ describe('Browser Source Edge Cases', () => {
         <div data-elb="test" data-elb-test="id:123" data-elbaction="load:view">Test</div>
       `;
 
-      await createBrowserSource(collector, {
-        scope: null as unknown as Element,
-      });
+      // Parsed rather than cast: a null scope only arrives through flow JSON.
+      await createBrowserSource(collector, untypedInput('{"scope": null}'));
 
       expect(() => {}).not.toThrow();
     });
 
     test('handles invalid elbLayer configuration', async () => {
-      await createBrowserSource(collector, {
-        elbLayer: 123 as unknown as boolean,
-      });
+      // Parsed rather than cast: a numeric elbLayer only arrives through flow JSON.
+      await createBrowserSource(collector, untypedInput('{"elbLayer": 123}'));
 
       expect(() => {}).not.toThrow();
     });
@@ -232,7 +233,7 @@ describe('Browser Source Edge Cases', () => {
 
       await createBrowserSource(
         collector,
-        JSON.parse('{"elb": true, "elbLayer": false}'),
+        untypedInput('{"elb": true, "elbLayer": false}'),
       );
 
       expect(

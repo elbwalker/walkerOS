@@ -4,6 +4,8 @@ import { mcpResult, mcpError } from '@walkeros/core';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { fieldsOf } from './narrow.js';
+import { parseToolInput } from './parse-input.js';
 
 const TITLE = 'Authentication';
 const DESCRIPTION =
@@ -41,10 +43,9 @@ export function createAuthToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function authHandlerBody(client: ToolClient, input: unknown) {
-  const { action, deviceCode } = (input ?? {}) as {
-    action?: 'status' | 'login' | 'logout';
-    deviceCode?: string;
-  };
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { action, deviceCode } = parsed.data;
   try {
     switch (action) {
       case 'status': {
@@ -57,7 +58,7 @@ async function authHandlerBody(client: ToolClient, input: unknown) {
         const user = await client.whoami();
         return mcpResult({
           authenticated: true,
-          ...(user as Record<string, unknown>),
+          ...fieldsOf(user),
         });
       }
 
@@ -162,8 +163,6 @@ export function registerAuthTool(server: McpServer, client: ToolClient) {
       inputSchema: spec.inputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => authHandlerBody(client, args),
   );
 }

@@ -5,6 +5,7 @@ import { isAuthError, AUTH_HINT } from '../types.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { parseToolInput } from './parse-input.js';
 import {
   validateActionInput,
   assertParam,
@@ -83,15 +84,9 @@ export function createSecretManageToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function secretManageHandlerBody(client: ToolClient, input: unknown) {
-  const { action, projectId, flowId, name, value, secretId } = (input ??
-    {}) as {
-    action?: 'list' | 'set' | 'update' | 'delete';
-    projectId?: string;
-    flowId?: string;
-    name?: string;
-    value?: string;
-    secretId?: string;
-  };
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { action, projectId, flowId, name, value, secretId } = parsed.data;
   const validationError = validateActionInput(
     'secret_manage',
     action ?? '',
@@ -111,7 +106,7 @@ async function secretManageHandlerBody(client: ToolClient, input: unknown) {
           projectId: resolvedProjectId,
           flowId,
         });
-        return mcpResult(data as Record<string, unknown>, {
+        return mcpResult(data, {
           next: [
             'Reference a listed secret from a flow step as $secret.<NAME>.',
             'Use action "set" to add a secret or "update" to rotate one.',
@@ -130,7 +125,7 @@ async function secretManageHandlerBody(client: ToolClient, input: unknown) {
           value,
         });
         // Response is metadata only; value is never echoed back.
-        return mcpResult(created as Record<string, unknown>, {
+        return mcpResult(created, {
           next: [`Reference it in this flow as $secret.${name}.`],
         });
       }
@@ -145,7 +140,7 @@ async function secretManageHandlerBody(client: ToolClient, input: unknown) {
           secretId,
           value,
         });
-        return mcpResult(updated as Record<string, unknown>);
+        return mcpResult(updated);
       }
 
       case 'delete': {
@@ -158,7 +153,7 @@ async function secretManageHandlerBody(client: ToolClient, input: unknown) {
         });
         return mcpResult(
           deleted && typeof deleted === 'object'
-            ? (deleted as Record<string, unknown>)
+            ? deleted
             : { deleted: true, secretId },
         );
       }
@@ -186,8 +181,6 @@ export function registerSecretManageTool(
       inputSchema: spec.inputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => secretManageHandlerBody(client, args),
   );
 }

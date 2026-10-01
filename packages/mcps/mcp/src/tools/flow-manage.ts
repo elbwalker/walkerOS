@@ -16,25 +16,18 @@ import { links } from '../links.js';
  *  platform is set we fall back to `'server'` so the chat bubble can still
  *  render even if the user is mid-edit. */
 function pickPlatform(content: unknown): 'web' | 'server' {
-  if (content && typeof content === 'object') {
-    const flows = (content as { flows?: unknown }).flows;
-    if (flows && typeof flows === 'object') {
-      for (const flow of Object.values(flows as Record<string, unknown>)) {
-        if (flow && typeof flow === 'object') {
-          const config = (flow as { config?: unknown }).config;
-          if (config && typeof config === 'object') {
-            const platform = (config as { platform?: unknown }).platform;
-            if (platform === 'web' || platform === 'server') return platform;
-          }
-        }
-      }
-    }
+  const flows = recordField(content, 'flows');
+  for (const flow of Object.values(flows ?? {})) {
+    const platform = stringField(recordField(flow, 'config'), 'platform');
+    if (platform === 'web' || platform === 'server') return platform;
   }
   return 'server';
 }
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { fieldsOf, isRecord, recordField, stringField } from './narrow.js';
+import { parseToolInput } from './parse-input.js';
 import {
   validateActionInput,
   assertParam,
@@ -59,24 +52,37 @@ function flowPageUrl(
   return links.flow({ baseUrl: client.appBaseUrl(), projectId, flowId });
 }
 
-function safeSummary<T extends { name?: string }>(flow: T): T {
-  return flow.name !== undefined
-    ? { ...flow, name: wrapUserData(flow.name) }
+/** A flow summary with its display name wrapped as user data. */
+function safeSummary(flow: unknown): unknown {
+  const name = stringField(flow, 'name');
+  return isRecord(flow) && name !== undefined
+    ? { ...flow, name: wrapUserData(name) }
     : flow;
 }
 
-function safeDetail<T extends { name?: string; config?: unknown }>(flow: T): T {
-  const withName =
-    flow.name !== undefined
-      ? { ...flow, name: wrapUserData(flow.name) }
-      : { ...flow };
-  if (flow.config !== undefined) {
-    (withName as { config?: unknown }).config = redactNestedStrings(
-      flow.config,
-      { skip: keepStructural },
-    );
+/** A flow record with its name wrapped and its config's strings redacted. */
+interface SafeFlowDetail {
+  fields: Record<string, unknown>;
+  id?: string;
+  name?: string;
+  config?: Record<string, unknown>;
+}
+
+function safeDetail(flow: unknown): SafeFlowDetail {
+  const fields: Record<string, unknown> = { ...fieldsOf(flow) };
+  const name = stringField(fields, 'name');
+  if (name !== undefined) fields.name = wrapUserData(name);
+  if (fields.config !== undefined) {
+    fields.config = redactNestedStrings(fields.config, {
+      skip: keepStructural,
+    });
   }
-  return withName as T;
+  return {
+    fields,
+    id: stringField(fields, 'id'),
+    name: stringField(fields, 'name'),
+    config: recordField(fields, 'config'),
+  };
 }
 
 const TITLE = 'Flow Management';
@@ -236,10 +242,6 @@ const PREVIEW_SUMMARY_FIELDS = [
   'createdAt',
 ] as const;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function redactPreview(data: unknown): Record<string, unknown> {
   if (!isRecord(data)) return {};
   const out: Record<string, unknown> = {};
@@ -297,6 +299,8 @@ export function createFlowManageToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function flowManageHandlerBody(client: ToolClient, input: unknown) {
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
   const {
     action,
     flowId,
@@ -317,40 +321,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
     siteUrl,
     origins,
     sessionId,
-  } = (input ?? {}) as {
-    action?:
-      | 'list'
-      | 'get'
-      | 'create'
-      | 'update'
-      | 'delete'
-      | 'duplicate'
-      | 'preview_list'
-      | 'preview_get'
-      | 'preview_create'
-      | 'preview_delete'
-      | 'preview_regrant';
-    flowId?: string;
-    projectId?: string;
-    name?: string;
-    content?: Record<string, unknown>;
-    patch?: boolean;
-    fields?: string[];
-    sort?: 'name' | 'updated_at' | 'created_at';
-    order?: 'asc' | 'desc';
-    includeDeleted?: boolean;
-    cursor?: string;
-    limit?: number;
-    previewId?: string;
-    flowName?: string;
-    flowSettingsId?: string;
-    source?:
-      | { kind: 'draft' }
-      | { kind: 'deployment-version'; deploymentVersionId: string };
-    siteUrl?: string;
-    origins?: string[];
-    sessionId?: string;
-  };
+  } = parsed.data;
   const validationError = validateActionInput(
     'flow_manage',
     action ?? '',
@@ -370,11 +341,11 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
             cursor,
             limit,
           });
-          const dataObj = data as { flows?: Array<{ name?: string }> };
-          const flows = dataObj.flows;
-          const safe = Array.isArray(flows)
-            ? { ...dataObj, flows: flows.map(safeSummary) }
-            : data;
+          const flows = isRecord(data) ? data.flows : undefined;
+          const safe =
+            isRecord(data) && Array.isArray(flows)
+              ? { ...data, flows: flows.map(safeSummary) }
+              : data;
           return mcpResult(safe);
         }
         const data = await client.listAllFlows({
@@ -384,9 +355,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           cursor,
           limit,
         });
-        const safe = Array.isArray(data)
-          ? (data as Array<{ name?: string }>).map(safeSummary)
-          : data;
+        const safe = Array.isArray(data) ? data.map(safeSummary) : data;
         return mcpResult(
           { projects: safe },
           {
@@ -409,13 +378,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           projectId: resolvedProjectId,
           fields,
         });
-        const safe = safeDetail(
-          flow as {
-            id?: string;
-            name?: string;
-            config?: Record<string, unknown>;
-          },
-        );
+        const safe = safeDetail(flow);
         const appUrl = flowPageUrl(client, resolvedProjectId, safe.id);
         return flowCanvasResult({
           flowId: safe.id,
@@ -448,13 +411,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           content: content ?? {},
           projectId: resolvedProjectId,
         });
-        const safeCreated = safeDetail(
-          created as {
-            id?: string;
-            name?: string;
-            config?: Record<string, unknown>;
-          },
-        );
+        const safeCreated = safeDetail(created);
         const createdAppUrl = flowPageUrl(
           client,
           resolvedProjectId,
@@ -493,13 +450,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           content,
           mergePatch: patch ?? true,
         });
-        const safeUpdated = safeDetail(
-          updated as {
-            id?: string;
-            name?: string;
-            config?: Record<string, unknown>;
-          },
-        );
+        const safeUpdated = safeDetail(updated);
         return flowCanvasResult({
           flowId: safeUpdated.id,
           configName: safeUpdated.name ?? 'default',
@@ -543,9 +494,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           name,
           projectId: resolvedProjectId,
         });
-        return mcpResult(
-          safeDetail(duplicated as { name?: string; config?: unknown }),
-        );
+        return mcpResult(safeDetail(duplicated).fields);
       }
 
       case 'preview_list': {
@@ -684,8 +633,6 @@ export function registerFlowManageTool(server: McpServer, client: ToolClient) {
       inputSchema: spec.inputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => flowManageHandlerBody(client, args),
   );
 }

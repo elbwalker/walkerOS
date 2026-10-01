@@ -1,5 +1,6 @@
 import type { Trigger, Collector } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
+import type { DataLayer } from '../types';
 
 const createTrigger: Trigger.CreateFn<unknown, void> = async (
   config: Collector.InitConfig,
@@ -30,9 +31,7 @@ const createTrigger: Trigger.CreateFn<unknown, void> = async (
     }
 
     // Push to dataLayer — the interceptor catches it
-    const win = window as Window & { dataLayer?: unknown[] };
-    if (!win.dataLayer) win.dataLayer = [];
-    win.dataLayer.push(content);
+    pushTo(window, content);
   };
 
   return {
@@ -45,9 +44,20 @@ const createTrigger: Trigger.CreateFn<unknown, void> = async (
 
 /** Pushes step example input to window.dataLayer after source init. */
 const trigger = (input: unknown, env: Record<string, unknown>): void => {
-  const win = env.window as Window & { dataLayer?: unknown[] };
-  if (!win.dataLayer) win.dataLayer = [];
-  win.dataLayer.push(input);
+  const win = env.window;
+  if (!isWindow(win)) return;
+  pushTo(win, input);
 };
+
+function pushTo(win: Window, content: DataLayer[number]): void {
+  if (!win.dataLayer) win.dataLayer = [];
+  win.dataLayer.push(content);
+}
+
+function isWindow(value: unknown): value is Window {
+  return (
+    typeof value === 'object' && value !== null && 'addEventListener' in value
+  );
+}
 
 export { createTrigger, trigger };

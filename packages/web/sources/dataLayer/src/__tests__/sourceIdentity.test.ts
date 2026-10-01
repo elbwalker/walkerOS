@@ -12,8 +12,11 @@ const flush = async (): Promise<void> => {
   for (let i = 0; i < 50; i++) await Promise.resolve();
 };
 
-const getDataLayer = (): unknown[] =>
-  (window as unknown as Record<string, unknown>)['dataLayer'] as unknown[];
+const getDataLayer = (): unknown[] => {
+  const dataLayer = window.dataLayer;
+  if (!dataLayer) throw new Error('window.dataLayer is not set');
+  return dataLayer;
+};
 
 const startCapturingFlow = async (): Promise<WalkerOS.Event[]> => {
   const captured: WalkerOS.Event[] = [];
@@ -50,9 +53,7 @@ describe('dataLayer source identity', () => {
 
   test('replayed and live entries reach destinations stamped as dataLayer', async () => {
     // Queued BEFORE the flow starts: replayed by processExistingEvents on run.
-    (window as unknown as Record<string, unknown>)['dataLayer'] = [
-      { event: 'backlog_entry' },
-    ];
+    window.dataLayer = [{ event: 'backlog_entry' }];
 
     const captured = await startCapturingFlow();
 

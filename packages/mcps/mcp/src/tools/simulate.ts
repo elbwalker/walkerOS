@@ -1,15 +1,16 @@
 import { z } from 'zod';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { mcpResult, mcpError } from '@walkeros/core';
+import { filterValues, mcpResult, mcpError } from '@walkeros/core';
 import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
 import { FLOW_SIMULATE_DESCRIPTION } from './simulate-description.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { parseToolInput } from './parse-input.js';
 import { resolveConfigPath } from './resolve-config-path.js';
-import { knownSecretsOf, scrubbed, scrubbedError } from './egress.js';
+import { readRun, scrubbed, scrubbedError } from './egress.js';
 import {
   refusalHint,
   unavailableOperation,
@@ -127,11 +128,26 @@ export function createFlowSimulateToolSpec(
   };
 }
 
+/** Plain values kept as walkerOS properties; values no property can hold dropped. */
+function toProperties(
+  value: Record<string, unknown> | undefined,
+): WalkerOS.Properties | undefined {
+  if (!value) return undefined;
+  const properties: WalkerOS.Properties = {};
+  for (const [key, entry] of Object.entries(value)) {
+    const property = filterValues(entry);
+    if (property !== undefined) properties[key] = property;
+  }
+  return properties;
+}
+
 async function flowSimulateHandlerBody(
   client: ToolClient,
   runtime: FlowRuntime,
   input: unknown,
 ) {
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
   const {
     configPath,
     event,
@@ -142,22 +158,7 @@ async function flowSimulateHandlerBody(
     ingest,
     state,
     command,
-  } = (input ?? {}) as {
-    configPath: string;
-    event?: Record<string, unknown> | string;
-    flow?: string;
-    platform?: 'web' | 'server';
-    step?: string;
-    verbose?: boolean;
-    ingest?: Omit<Ingest, '_meta'>;
-    state?: {
-      consent?: WalkerOS.Consent;
-      user?: WalkerOS.User;
-      globals?: WalkerOS.Properties;
-      timing?: number;
-    };
-    command?: Flow.StepCommand;
-  };
+  } = parsed.data;
   // Simulation compiles the config and imports the bundle, running caller
   // controlled flow code. A runtime that must not do that in its process
   // provides no `simulate`, whatever the input looks like.
@@ -213,11 +214,28 @@ async function flowSimulateHandlerBody(
 
     // Accept a cloud flow/config id as configPath, resolving it to inline JSON.
     const resolvedConfigPath = await resolveConfigPath(client, configPath);
-    known = await knownSecretsOf(runtime, resolvedConfigPath);
+    // Read once: the simulation runs on exactly the config whose secrets
+    // mask the result.
+    const run = await readRun(runtime, resolvedConfigPath);
+    known = run.knownSecrets;
 
     const result: Simulation.Result = await runtime.simulate(
       resolvedConfigPath,
-      { stepType, stepId, event: resolvedEvent, flow, ingest, state, command },
+      {
+        stepType,
+        stepId,
+        event: resolvedEvent,
+        flow,
+        ingest,
+        state: state && {
+          consent: state.consent,
+          user: toProperties(state.user),
+          globals: toProperties(state.globals),
+          timing: state.timing,
+        },
+        command,
+        config: run.config,
+      },
     );
 
     const success = !result.error;
@@ -387,8 +405,6 @@ export function registerFlowSimulateTool(
       outputSchema: SimulateOutputShape,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => flowSimulateHandlerBody(client, runtime, args),
   );
 }

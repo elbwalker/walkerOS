@@ -21,6 +21,14 @@ export const flushChain = async (): Promise<void> => {
   for (let i = 0; i < CHAIN_DRAIN_TURNS; i++) await Promise.resolve();
 };
 
+/**
+ * The single escape hatch for invalid-input tests. Settings and tagger values
+ * can arrive as untyped JSON at runtime, so a test that needs a value outside
+ * the declared type parses it here instead of casting. Grep for `untypedInput`
+ * to find every test that bypasses the type.
+ */
+export const untypedInput = (json: string) => JSON.parse(json);
+
 // Every source `createBrowserSource` builds, paired with the collector it was
 // built against, so a suite can tear all of them down without reaching for a
 // source's registry (which is closure state and is deliberately not exported).

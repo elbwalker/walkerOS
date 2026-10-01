@@ -1,6 +1,6 @@
 import { startFlow } from '@walkeros/collector';
 import type { WalkerOS } from '@walkeros/core';
-import { getConfig } from '../config';
+import { getConfig, settingsFrom } from '../config';
 import { SettingsSchema } from '../schemas';
 import {
   createBrowserSource,
@@ -122,5 +122,18 @@ describe('window footprint', () => {
     await flushChain();
 
     expect(events.map((event) => event.name)).toEqual(['product add']);
+  });
+});
+
+describe('settingsFrom', () => {
+  test('keeps the fields of resolved settings', () => {
+    const resolved = getConfig({ prefix: 'data-x', pageview: false }, document);
+    expect(settingsFrom(resolved)).toEqual(resolved);
+  });
+
+  test('takes the default for a field of the wrong type', () => {
+    expect(settingsFrom({ prefix: 1, pageview: 'no', scope: 'body' })).toEqual(
+      getConfig(),
+    );
   });
 });

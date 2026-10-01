@@ -54,6 +54,7 @@ jest.mock('@walkeros/cli', () => ({
 
 import * as cli from '@walkeros/cli';
 import { HttpToolClient } from '../http-tool-client.js';
+import { record } from './support/tool-result.js';
 import type { HubThreadWire, ObserveSessionResult } from '../tool-client.js';
 
 const observeSession: ObserveSessionResult = {
@@ -83,26 +84,60 @@ const observeSession: ObserveSessionResult = {
   createdAt: '2026-07-20T00:00:00.000Z',
 };
 
+/**
+ * What the CLI returns for the same session: the MCP `ObserveSessionResult`
+ * plus the app fields the client passes through untouched.
+ */
+const cliObserveSession: Awaited<ReturnType<typeof cli.startObserveSession>> = {
+  ...observeSession,
+  configSnapshot: {},
+  serverEndpoint: 'https://obs-ses-1.containers.test',
+  createdBy: 'user_1',
+};
+
+const projectList: Awaited<ReturnType<typeof cli.listProjects>> = {
+  projects: [],
+  total: 0,
+  nextCursor: null,
+};
+
+const preview: Awaited<ReturnType<typeof cli.createPreview>> = {
+  id: 'prv_1',
+  flowId: 'fl_1',
+  flowSettingsId: 'fs_1',
+  projectId: 'proj_1',
+  bundleUrl: 'https://cdn.test/preview/proj_1/walker.abcd1234.js',
+  activationUrl: null,
+  tagMode: false,
+  createdBy: 'user_1',
+  createdAt: '2026-07-20T00:00:00.000Z',
+};
+
+const logoutResult: Awaited<ReturnType<typeof cli.logout>> = {
+  deleted: true,
+  superseded: false,
+};
+
 describe('HttpToolClient', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('delegates listProjects to @walkeros/cli', async () => {
-    (cli.listProjects as jest.Mock).mockResolvedValue({ projects: [] });
+    jest.mocked(cli.listProjects).mockResolvedValue(projectList);
     const client = new HttpToolClient();
     const result = await client.listProjects();
     expect(cli.listProjects).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({ projects: [] });
+    expect(result).toEqual(projectList);
   });
 
   it('forwards pagination options to cli.listProjects', async () => {
-    (cli.listProjects as jest.Mock).mockResolvedValue({ projects: [] });
+    jest.mocked(cli.listProjects).mockResolvedValue(projectList);
     const client = new HttpToolClient();
     await client.listProjects({ cursor: 'abc', limit: 10 });
     expect(cli.listProjects).toHaveBeenCalledWith({ cursor: 'abc', limit: 10 });
   });
 
   it('delegates listJourneys to cli.listJourneys with the flow options', async () => {
-    (cli.listJourneys as jest.Mock).mockResolvedValue({
+    jest.mocked(cli.listJourneys).mockResolvedValue({
       sessionId: 'ses_1',
       flowId: 'flow_1',
       assembledAt: '2026-07-06T00:00:00.000Z',
@@ -133,7 +168,7 @@ describe('HttpToolClient', () => {
   });
 
   it('delegates startObserveSession with settingsName, origins, level, and replace', async () => {
-    (cli.startObserveSession as jest.Mock).mockResolvedValue(observeSession);
+    jest.mocked(cli.startObserveSession).mockResolvedValue(cliObserveSession);
     const client = new HttpToolClient();
     const result = await client.startObserveSession({
       projectId: 'proj_1',
@@ -155,7 +190,7 @@ describe('HttpToolClient', () => {
   });
 
   it('delegates getObserveSession with the session ref', async () => {
-    (cli.getObserveSession as jest.Mock).mockResolvedValue(observeSession);
+    jest.mocked(cli.getObserveSession).mockResolvedValue(cliObserveSession);
     const client = new HttpToolClient();
     const result = await client.getObserveSession({
       projectId: 'proj_1',
@@ -171,7 +206,7 @@ describe('HttpToolClient', () => {
   });
 
   it('delegates endObserveSession with the session ref', async () => {
-    (cli.endObserveSession as jest.Mock).mockResolvedValue(undefined);
+    jest.mocked(cli.endObserveSession).mockResolvedValue(undefined);
     const client = new HttpToolClient();
     await client.endObserveSession({
       projectId: 'proj_1',
@@ -186,19 +221,19 @@ describe('HttpToolClient', () => {
   });
 
   it('delegates regrantPreview to cli.regrantPreview with ids, origins, and sessionId', async () => {
-    (cli.regrantPreview as jest.Mock).mockResolvedValue({
+    jest.mocked(cli.regrantPreview).mockResolvedValue({
       grant: 'gr_x',
       activationUrl: 'https://shop.example.com?elbPreview=gr_x',
       sessionExpiresAt: '2026-04-21T01:00:00Z',
     });
     const client = new HttpToolClient();
-    const result = (await client.regrantPreview({
+    const result = await client.regrantPreview({
       projectId: 'proj_1',
       flowId: 'fl_1',
       previewId: 'prv_1',
       origins: ['https://shop.example.com'],
       sessionId: 'ses_1',
-    })) as { activationUrl: string };
+    });
     expect(cli.regrantPreview).toHaveBeenCalledWith({
       projectId: 'proj_1',
       flowId: 'fl_1',
@@ -206,13 +241,13 @@ describe('HttpToolClient', () => {
       origins: ['https://shop.example.com'],
       sessionId: 'ses_1',
     });
-    expect(result.activationUrl).toBe(
+    expect(record(result).activationUrl).toBe(
       'https://shop.example.com?elbPreview=gr_x',
     );
   });
 
   it('createPreview bridges siteUrl to the CLI url option', async () => {
-    (cli.createPreview as jest.Mock).mockResolvedValue({ id: 'prv_1' });
+    jest.mocked(cli.createPreview).mockResolvedValue(preview);
     const client = new HttpToolClient();
     await client.createPreview({
       projectId: 'proj_1',
@@ -226,7 +261,7 @@ describe('HttpToolClient', () => {
   });
 
   it('createPreview keeps an explicit url over siteUrl', async () => {
-    (cli.createPreview as jest.Mock).mockResolvedValue({ id: 'prv_1' });
+    jest.mocked(cli.createPreview).mockResolvedValue(preview);
     const client = new HttpToolClient();
     await client.createPreview({
       projectId: 'proj_1',
@@ -241,7 +276,7 @@ describe('HttpToolClient', () => {
   });
 
   it('delegates submitFeedback to cli.feedback', async () => {
-    (cli.feedback as jest.Mock).mockResolvedValue(undefined);
+    jest.mocked(cli.feedback).mockResolvedValue(undefined);
     const client = new HttpToolClient();
     await client.submitFeedback('hello', { anonymous: true });
     expect(cli.feedback).toHaveBeenCalledWith('hello', { anonymous: true });
@@ -249,8 +284,8 @@ describe('HttpToolClient', () => {
 
   it('checkHealth returns reachable true with NO token set (tokenless probe)', async () => {
     // credentialSource returns null → logged out; checkHealth must not require auth.
-    (cli.credentialSource as jest.Mock).mockReturnValue(null);
-    (cli.resolveAppUrl as jest.Mock).mockReturnValue('https://app.test');
+    jest.mocked(cli.credentialSource).mockReturnValue(null);
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
     const mockFetch = jest
       .fn()
       .mockResolvedValue({ json: async () => ({ status: 'ok' }) });
@@ -262,13 +297,13 @@ describe('HttpToolClient', () => {
     expect(result.reachable).toBe(true);
     expect(result.status).toBe('ok');
     // Probes the public /api/health route with a plain fetch (no Authorization).
-    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const [url, init] = mockFetch.mock.calls[0];
     expect(url).toBe('https://app.test/api/health');
     expect(init.headers).toBeUndefined();
   });
 
   it('checkHealth returns reachable false on a network/timeout failure', async () => {
-    (cli.resolveAppUrl as jest.Mock).mockReturnValue('https://app.test');
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
     global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
 
     const client = new HttpToolClient();
@@ -277,17 +312,22 @@ describe('HttpToolClient', () => {
   });
 
   it('delegates sync config helpers without awaiting', () => {
-    (cli.credentialSource as jest.Mock).mockReturnValue('env');
-    (cli.getDefaultProject as jest.Mock).mockReturnValue('proj_1');
+    jest.mocked(cli.credentialSource).mockReturnValue('env');
+    jest.mocked(cli.getDefaultProject).mockReturnValue('proj_1');
     const client = new HttpToolClient();
     expect(client.credentialSource()).toBe('env');
     expect(client.getDefaultProject()).toBe('proj_1');
   });
 
   it('starts a device authorization against the resolved app URL', async () => {
-    (cli.resolveAppUrl as jest.Mock).mockReturnValue('https://app.test');
-    (cli.startDeviceAuthorization as jest.Mock).mockResolvedValue({
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
+    jest.mocked(cli.startDeviceAuthorization).mockResolvedValue({
       deviceCode: 'dc_1',
+      userCode: 'ABCD-EFGH',
+      verificationUri: 'https://app.test/device',
+      verificationUriComplete: 'https://app.test/device?code=ABCD-EFGH',
+      expiresIn: 600,
+      interval: 5,
     });
 
     await new HttpToolClient().requestDeviceCode();
@@ -298,7 +338,7 @@ describe('HttpToolClient', () => {
   });
 
   it('resumes a device authorization through completeDeviceLogin', async () => {
-    (cli.completeDeviceLogin as jest.Mock).mockResolvedValue({
+    jest.mocked(cli.completeDeviceLogin).mockResolvedValue({
       status: 'pending',
     });
 
@@ -313,18 +353,16 @@ describe('HttpToolClient', () => {
   });
 
   it('logs out through the revoking cli logout, not a bare config delete', async () => {
-    (cli.logout as jest.Mock).mockResolvedValue({ deleted: true });
+    jest.mocked(cli.logout).mockResolvedValue(logoutResult);
 
-    await expect(new HttpToolClient().logout()).resolves.toEqual({
-      deleted: true,
-    });
+    await expect(new HttpToolClient().logout()).resolves.toEqual(logoutResult);
     expect(cli.logout).toHaveBeenCalled();
   });
 
   it('names the app through the same resolution every other method uses', () => {
-    (cli.resolveAppUrl as jest.Mock).mockReturnValue(
-      'https://stage.app.walkeros.io',
-    );
+    jest
+      .mocked(cli.resolveAppUrl)
+      .mockReturnValue('https://stage.app.walkeros.io');
 
     expect(new HttpToolClient().appBaseUrl()).toBe(
       'https://stage.app.walkeros.io',
@@ -335,9 +373,9 @@ describe('HttpToolClient', () => {
   it('strips a trailing slash the env var or config file may carry', () => {
     // A base a caller concatenates a path onto has to have one shape, and
     // neither WALKEROS_APP_URL nor the CLI config file promises it.
-    (cli.resolveAppUrl as jest.Mock).mockReturnValue(
-      'https://stage.app.walkeros.io/',
-    );
+    jest
+      .mocked(cli.resolveAppUrl)
+      .mockReturnValue('https://stage.app.walkeros.io/');
 
     expect(new HttpToolClient().appBaseUrl()).toBe(
       'https://stage.app.walkeros.io',

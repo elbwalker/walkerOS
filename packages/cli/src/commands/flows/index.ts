@@ -1,3 +1,4 @@
+import { loadJsonConfig } from '../../config/index.js';
 import { createApiClient } from '../../core/api-client.js';
 import { handleCliError, throwApiError } from '../../core/api-error.js';
 import { requireProjectId } from '../../core/auth.js';
@@ -221,26 +222,26 @@ export async function createFlowCommand(
   name: string,
   options: FlowsCommandOptions & { content?: string },
 ): Promise<void> {
-  const content = options.content
-    ? JSON.parse(options.content)
-    : JSON.parse(await readFlowStdin());
-  await handleResult(
-    () => createFlow({ name, content, projectId: options.project }),
-    options,
-  );
+  await handleResult(async () => {
+    const content = options.content
+      ? await loadFlowContent(options.content)
+      : JSON.parse(await readFlowStdin());
+    return createFlow({ name, content, projectId: options.project });
+  }, options);
 }
 
 export async function updateFlowCommand(
   flowId: string,
   options: FlowsCommandOptions & { name?: string; content?: string },
 ): Promise<void> {
-  const content = options.content ? JSON.parse(options.content) : undefined;
   await handleResult(
-    () =>
+    async () =>
       updateFlow({
         flowId,
         name: options.name,
-        content,
+        content: options.content
+          ? await loadFlowContent(options.content)
+          : undefined,
         projectId: options.project,
       }),
     options,
@@ -266,6 +267,11 @@ export async function duplicateFlowCommand(
       duplicateFlow({ flowId, name: options.name, projectId: options.project }),
     options,
   );
+}
+
+/** `--content` takes inline JSON, a file path or a URL. */
+function loadFlowContent(input: string): Promise<Record<string, unknown>> {
+  return loadJsonConfig<Record<string, unknown>>(input);
 }
 
 async function readFlowStdin(): Promise<string> {

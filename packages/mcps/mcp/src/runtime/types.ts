@@ -37,10 +37,16 @@ export interface FlowRuntime {
   simulate?(input: string, opts: SimulateOptions): Promise<Simulation.Result>;
   /**
    * The values of the secrets a flow config references (`$secret.NAME`),
-   * masked wherever a simulation or push result egresses. Absent with
-   * `simulate` and `push`.
+   * masked wherever a simulation or push result egresses. Read by the tools
+   * only on a runtime without `loadRun`; a read that fails stops the run.
    */
   knownSecrets?(input: string): Promise<string[]>;
+  /**
+   * Read a push or simulate input once: the config and the values of the
+   * secrets it references. A prebuilt bundle yields no config. A read that
+   * fails rejects. Absent with `simulate` and `push`.
+   */
+  loadRun?(input: string): Promise<LoadedRun>;
   /** Build and run a flow against real destinations. Absent where forbidden. */
   push?(
     input: string,
@@ -66,6 +72,8 @@ export interface SimulateOptions {
   stepId: string;
   event: unknown;
   flow?: string;
+  /** The config from `loadRun`: the runtime does not read the input again. */
+  config?: Flow.Json;
   /**
    * Transformer, collector and destination steps: pipeline context the step
    * reads via `ctx.ingest`. Source steps ignore it.
@@ -89,9 +97,17 @@ export interface SimulateOptions {
   command?: Flow.StepCommand;
 }
 
+/** A push or simulate input as read once by `loadRun`. */
+export interface LoadedRun {
+  config?: Flow.Json;
+  knownSecrets: string[];
+}
+
 export interface PushOptions {
   flow?: string;
   platform?: 'web' | 'server';
+  /** The config from `loadRun`: the runtime does not read the input again. */
+  config?: Flow.Json;
 }
 
 /**

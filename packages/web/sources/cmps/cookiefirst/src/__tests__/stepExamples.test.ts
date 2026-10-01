@@ -1,57 +1,72 @@
-import type { Collector, Elb, Source, Trigger } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { Elb, Source, Trigger } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 import { sourceCookieFirst } from '../index';
 import { examples } from '../dev';
 import type { CookieFirstConsent, Types } from '../types';
 
 describe('Step Examples', () => {
   beforeEach(() => {
-    (window as unknown as Record<string, unknown>).CookieFirst = undefined;
+    window.CookieFirst = undefined;
   });
 
   afterEach(() => {
-    (window as unknown as Record<string, unknown>).CookieFirst = undefined;
+    window.CookieFirst = undefined;
   });
 
   it.each(Object.entries(examples.step))('%s', async (_name, example) => {
-    const content = example.in as Record<string, boolean>;
-    const mapping = example.mapping as
-      | { settings?: Record<string, unknown> }
-      | undefined;
+    const content = consentOf(example.in);
+    const mapping = example.mapping;
+    const mappingSettings =
+      mapping &&
+      typeof mapping === 'object' &&
+      'settings' in mapping &&
+      mapping.settings &&
+      typeof mapping.settings === 'object'
+        ? mapping.settings
+        : {};
 
-    const mockElb = jest.fn(async () => ({
-      ok: true,
-      successful: [],
-      failed: [],
-      queued: [],
-    })) as unknown as jest.MockedFunction<Elb.Fn>;
+    const mockElb: jest.MockedFunction<Elb.Fn> = jest
+      .fn()
+      .mockImplementation(async () => ({
+        ok: true,
+        successful: [],
+        failed: [],
+        queued: [],
+      }));
 
-    const collectorStub: Collector.Instance = {
-      allowed: true,
-    } as unknown as Collector.Instance;
+    // The source never reads its collector; a real one stands in for the stub.
+    const { collector } = await startFlow({ run: false });
 
     // Pre-init: set CookieFirst global so source reads it during init
-    (window as unknown as Record<string, unknown>).CookieFirst = {
+    window.CookieFirst = {
       consent: content,
     };
 
+    const env: Types['env'] = {
+      push: mockElb,
+      command: mockElb,
+      elb: mockElb,
+      window,
+      logger: createMockLogger(),
+    };
+
     const source = await sourceCookieFirst({
-      collector: collectorStub,
+      collector,
       config: {
         settings: {
-          ...(mapping?.settings || {}),
+          ...mappingSettings,
         },
       },
-      env: {
-        push: mockElb as unknown as Collector.PushFn,
-        command: mockElb as unknown as Collector.CommandFn,
-        elb: mockElb,
-        window,
-        logger: createMockLogger(),
-      },
+      env,
       id: 'test-cookiefirst',
       logger: createMockLogger(),
-      withScope: async (_r, _resp, body) => body({} as never),
+      withScope: async (_r, respond, body) =>
+        body({
+          ...env,
+          ingest: createIngest('test-cookiefirst'),
+          respond,
+        }),
     });
 
     // Adapter setup runs in init(); the static read of window.CookieFirst.consent
@@ -63,9 +78,7 @@ describe('Step Examples', () => {
       await Promise.resolve();
     }
 
-    const captured = mockElb.mock.calls.map(
-      (args) => ['elb', ...args] as unknown[],
-    );
+    const captured = mockElb.mock.calls.map((args) => ['elb', ...args]);
     expect(captured).toEqual(example.out);
   });
 });
@@ -168,5 +181,28 @@ describe('createTrigger', () => {
       ...(examples.step.fullConsent.out ?? []),
       ...(examples.step.partialConsent.out ?? []),
     ]);
+  });
+});
+
+describe('legacy trigger', () => {
+  it('sets the consent on the package mock window', () => {
+    const win = examples.createMockWindow();
+    examples.trigger({ necessary: true }, { window: win });
+    expect(win.CookieFirst).toEqual({ consent: { necessary: true } });
+  });
+
+  afterEach(() => {
+    window.CookieFirst = undefined;
+  });
+
+  it('sets the consent on the window', () => {
+    examples.trigger({ necessary: true }, { window });
+    expect(window.CookieFirst).toEqual({ consent: { necessary: true } });
+  });
+
+  it('ignores a non-window env', () => {
+    const env: Record<string, unknown> = { window: { CookieFirst: undefined } };
+    examples.trigger({ necessary: true }, env);
+    expect(env.window).toEqual({ CookieFirst: undefined });
   });
 });

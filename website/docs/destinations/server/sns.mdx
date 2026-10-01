@@ -14,11 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 export const data = {
   ...awsData,
-  schemas: {
-    settings: awsData.schemas?.snsSettings,
-    mapping: awsData.schemas?.snsMapping,
-    setup: awsData.schemas?.snsSetup,
-  },
+  schemas: awsData.exportSchemas?.destinationSNS ?? {},
   examples: awsData.exportExamples?.destinationSNS ?? {},
 };
 

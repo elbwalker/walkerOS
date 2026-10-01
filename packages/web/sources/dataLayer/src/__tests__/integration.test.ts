@@ -1,5 +1,5 @@
 import { startFlow } from '@walkeros/collector';
-import type { WalkerOS, Collector, Source } from '@walkeros/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import {
   createMockPush,
   getDataLayer,
@@ -161,8 +161,12 @@ describe('DataLayer Source - Integration', () => {
       runOnInit: false,
     });
 
-    // Register source on collector so on-run handler fires
-    freshCollector.sources['dataLayer'] = source as Source.Instance;
+    // Register source on collector so on-run handler fires. Collector typing
+    // gap: Collector.Sources holds default-typed sources, and a typed
+    // instance's destroy hook cannot meet it (parameter variance), so the same
+    // instance is stored by key. Registering through startFlow instead routes
+    // pushes past the mocked collector.push this test observes.
+    Reflect.set(freshCollector.sources, 'dataLayer', source);
 
     // No events should have been collected yet (allowed=false)
     expect(freshEvents).toHaveLength(0);

@@ -8,7 +8,7 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 
 describe('Browser Source Integration Tests', () => {
   let collector: Collector.Instance;
-  let collectedEvents: WalkerOS.Event[];
+  let collectedEvents: WalkerOS.DeepPartialEvent[];
   let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
   beforeEach(async () => {
@@ -19,12 +19,15 @@ describe('Browser Source Integration Tests', () => {
     window.elbLayer = undefined;
 
     // Create mock push function
-    mockPush = jest.fn().mockImplementation((...args: unknown[]) => {
-      collectedEvents.push(args[0] as WalkerOS.Event);
+    mockPush = jest.fn<
+      ReturnType<Collector.Instance['push']>,
+      Parameters<Collector.Instance['push']>
+    >((event) => {
+      collectedEvents.push(event);
       return Promise.resolve({
         ok: true,
       });
-    }) as jest.MockedFunction<Collector.Instance['push']>;
+    });
 
     // Initialize collector without any sources to avoid initial triggers
     ({ collector } = await startFlow());

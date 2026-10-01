@@ -39,3 +39,25 @@ export function hintsOf(result: unknown): string[] {
   }
   return next;
 }
+
+/** Whether a tool result is flagged as an error (`isError: true`). */
+export function isErrorResult(result: unknown): boolean {
+  return isRecord(result) && result.isError === true;
+}
+
+/** The text of a tool result's content block at `index` (the first by default). */
+export function textOf(result: unknown, index = 0): string {
+  const content = isRecord(result) ? result.content : undefined;
+  const block = Array.isArray(content) ? content[index] : undefined;
+  if (!isRecord(block) || typeof block.text !== 'string') {
+    throw new Error(`No text content at ${index}: ${JSON.stringify(result)}`);
+  }
+  return block.text;
+}
+
+/** A string value, or a failure naming what was there instead. */
+export function str(value: unknown): string {
+  if (typeof value !== 'string')
+    throw new Error(`Not a string: ${JSON.stringify(value)}`);
+  return value;
+}

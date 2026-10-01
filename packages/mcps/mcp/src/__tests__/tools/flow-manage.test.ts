@@ -26,37 +26,25 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import { registerFlowManageTool } from '../../tools/flow-manage.js';
+import { createFlowManageToolSpec } from '../../tools/flow-manage.js';
 import { stubClient } from '../support/stub-client.js';
-
-type HandlerFn = (input: Record<string, unknown>) => Promise<unknown>;
-
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: HandlerFn }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: HandlerFn) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
-}
+import {
+  structured,
+  record,
+  rows,
+  hintsOf,
+  textOf,
+} from '../support/tool-result.js';
 
 describe('flow_manage tool', () => {
-  let server: ReturnType<typeof createMockServer>;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    server = createMockServer();
   });
 
   it('registers with name "flow_manage" and correct annotations', () => {
-    registerFlowManageTool(server as never, stubClient());
-    const tool = server.getTool('flow_manage');
-    expect(tool).toBeDefined();
-    const config = tool!.config as { annotations: Record<string, boolean> };
-    expect(config.annotations).toEqual({
+    const spec = createFlowManageToolSpec(stubClient());
+    expect(spec.name).toBe('flow_manage');
+    expect(spec.annotations).toEqual({
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,
@@ -73,12 +61,8 @@ describe('flow_manage tool', () => {
         },
       ];
       const listAllFlows = jest.fn().mockResolvedValue(allFlows);
-      registerFlowManageTool(server as never, stubClient({ listAllFlows }));
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({ action: 'list' })) as {
-        structuredContent: { projects: unknown[] };
-      };
+      const spec = createFlowManageToolSpec(stubClient({ listAllFlows }));
+      const result = await spec.handler({ action: 'list' });
 
       expect(listAllFlows).toHaveBeenCalledWith({
         sort: undefined,
@@ -87,19 +71,17 @@ describe('flow_manage tool', () => {
         cursor: undefined,
         limit: undefined,
       });
-      expect(result.structuredContent.projects).toEqual(allFlows);
+      expect(structured(result).projects).toEqual(allFlows);
     });
 
     it('with projectId calls listFlows', async () => {
       const flows = { flows: [{ id: 'flow_1', name: 'My Flow' }] };
       const listFlows = jest.fn().mockResolvedValue(flows);
-      registerFlowManageTool(server as never, stubClient({ listFlows }));
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient({ listFlows }));
+      const result = await spec.handler({
         action: 'list',
         projectId: 'proj_1',
-      })) as { structuredContent: { flows: unknown[] } };
+      });
 
       expect(listFlows).toHaveBeenCalledWith({
         projectId: 'proj_1',
@@ -109,7 +91,7 @@ describe('flow_manage tool', () => {
         cursor: undefined,
         limit: undefined,
       });
-      expect(result.structuredContent.flows).toEqual([
+      expect(structured(result).flows).toEqual([
         { id: 'flow_1', name: '<user_data>My Flow</user_data>' },
       ]);
     });
@@ -117,10 +99,8 @@ describe('flow_manage tool', () => {
     it('forwards cursor and limit to listFlows', async () => {
       const flows = { flows: [{ id: 'flow_1', name: 'My Flow' }] };
       const listFlows = jest.fn().mockResolvedValue(flows);
-      registerFlowManageTool(server as never, stubClient({ listFlows }));
-
-      const tool = server.getTool('flow_manage')!;
-      await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient({ listFlows }));
+      await spec.handler({
         action: 'list',
         projectId: 'proj_1',
         cursor: 'xyz',
@@ -140,57 +120,46 @@ describe('flow_manage tool', () => {
 
   describe('get', () => {
     it('requires flowId', async () => {
-      registerFlowManageTool(server as never, stubClient());
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({ action: 'get' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const spec = createFlowManageToolSpec(stubClient());
+      const result = await spec.handler({ action: 'get' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('flowId is required for get action');
     });
 
     it('calls getFlow with fields', async () => {
       const flow = { id: 'flow_1', name: 'My Flow', content: {} };
       const getFlow = jest.fn().mockResolvedValue(flow);
-      registerFlowManageTool(server as never, stubClient({ getFlow }));
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient({ getFlow }));
+      const result = await spec.handler({
         action: 'get',
         flowId: 'flow_1',
         projectId: 'proj_1',
         fields: ['name', 'content.flows'],
-      })) as {
-        structuredContent: { kind: string; flowId: string; configName: string };
-      };
+      });
 
       expect(getFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',
         projectId: 'proj_1',
         fields: ['name', 'content.flows'],
       });
-      expect(result.structuredContent.kind).toBe('flow-canvas');
-      expect(result.structuredContent.flowId).toBe('flow_1');
+      expect(structured(result).kind).toBe('flow-canvas');
+      expect(structured(result).flowId).toBe('flow_1');
     });
 
     it('errors with NO_DEFAULT_PROJECT message when no projectId and no default', async () => {
       const getFlow = jest.fn();
-      registerFlowManageTool(
-        server as never,
+      const spec = createFlowManageToolSpec(
         stubClient({ getFlow, getDefaultProject: () => null }),
       );
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const result = await spec.handler({
         action: 'get',
         flowId: 'flow_1',
-      })) as { isError: boolean; content: Array<{ text: string }> };
+      });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('No project selected');
       expect(parsed.error).not.toContain('Flow not found');
       expect(getFlow).not.toHaveBeenCalled();
@@ -219,19 +188,16 @@ describe('flow_manage tool', () => {
     ])(
       'action %s refuses without a project and names the remedy',
       async (action, params) => {
-        registerFlowManageTool(
-          server as never,
+        const spec = createFlowManageToolSpec(
           stubClient({ getDefaultProject: () => null }),
         );
-
-        const tool = server.getTool('flow_manage')!;
-        const result = (await tool.handler({
+        const result = await spec.handler({
           action,
-          ...(params as Record<string, unknown>),
-        })) as { isError: boolean; content: Array<{ text: string }> };
+          ...params,
+        });
 
-        expect(result.isError).toBe(true);
-        const parsed = JSON.parse(result.content[0].text);
+        expect(record(result).isError).toBe(true);
+        const parsed = record(JSON.parse(textOf(result)));
         // Both remedies. Either one alone still leaves a caller stuck: the
         // per-call argument is the one that always works, and the selection is
         // the one that saves repeating it.
@@ -243,23 +209,20 @@ describe('flow_manage tool', () => {
     it('uses the default project when no projectId provided', async () => {
       const flow = { id: 'flow_1', name: 'My Flow', content: {} };
       const getFlow = jest.fn().mockResolvedValue(flow);
-      registerFlowManageTool(
-        server as never,
+      const spec = createFlowManageToolSpec(
         stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
       );
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const result = await spec.handler({
         action: 'get',
         flowId: 'flow_1',
-      })) as { structuredContent: { flowId: string } };
+      });
 
       expect(getFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',
         projectId: 'proj_default',
         fields: undefined,
       });
-      expect(result.structuredContent.flowId).toBe('flow_1');
+      expect(structured(result).flowId).toBe('flow_1');
     });
 
     it('reports top-level platform "web" for a web-only flow (not "server")', async () => {
@@ -269,71 +232,58 @@ describe('flow_manage tool', () => {
         config: { flows: { default: { config: { platform: 'web' } } } },
       };
       const getFlow = jest.fn().mockResolvedValue(flow);
-      registerFlowManageTool(server as never, stubClient({ getFlow }));
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient({ getFlow }));
+      const result = await spec.handler({
         action: 'get',
         flowId: 'flow_1',
         projectId: 'proj_1',
-      })) as { structuredContent: { platform: string } };
+      });
 
-      expect(result.structuredContent.platform).toBe('web');
+      expect(structured(result).platform).toBe('web');
     });
   });
 
   describe('create', () => {
     it('requires name', async () => {
-      registerFlowManageTool(server as never, stubClient());
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({ action: 'create' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const spec = createFlowManageToolSpec(stubClient());
+      const result = await spec.handler({ action: 'create' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('name is required for create action');
     });
 
     it('calls createFlow', async () => {
       const created = { id: 'flow_new', name: 'New Flow' };
       const createFlow = jest.fn().mockResolvedValue(created);
-      registerFlowManageTool(server as never, stubClient({ createFlow }));
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient({ createFlow }));
+      const result = await spec.handler({
         action: 'create',
         name: 'New Flow',
         projectId: 'proj_1',
-      })) as {
-        structuredContent: { kind: string; flowId: string; configName: string };
-      };
+      });
 
       expect(createFlow).toHaveBeenCalledWith({
         name: 'New Flow',
         content: {},
         projectId: 'proj_1',
       });
-      expect(result.structuredContent.kind).toBe('flow-canvas');
-      expect(result.structuredContent.flowId).toBe('flow_new');
+      expect(structured(result).kind).toBe('flow-canvas');
+      expect(structured(result).flowId).toBe('flow_new');
     });
 
     it('errors with NO_DEFAULT_PROJECT message when no projectId and no default', async () => {
       const createFlow = jest.fn();
-      registerFlowManageTool(
-        server as never,
+      const spec = createFlowManageToolSpec(
         stubClient({ createFlow, getDefaultProject: () => null }),
       );
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const result = await spec.handler({
         action: 'create',
         name: 'New Flow',
-      })) as { isError: boolean; content: Array<{ text: string }> };
+      });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('No project selected');
       expect(parsed.error).not.toContain('Project not found');
       expect(createFlow).not.toHaveBeenCalled();
@@ -342,35 +292,29 @@ describe('flow_manage tool', () => {
     it('uses the default project when no projectId provided', async () => {
       const created = { id: 'flow_new', name: 'New Flow' };
       const createFlow = jest.fn().mockResolvedValue(created);
-      registerFlowManageTool(
-        server as never,
+      const spec = createFlowManageToolSpec(
         stubClient({ createFlow, getDefaultProject: () => 'proj_default' }),
       );
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const result = await spec.handler({
         action: 'create',
         name: 'New Flow',
-      })) as { structuredContent: { flowId: string } };
+      });
 
       expect(createFlow).toHaveBeenCalledWith({
         name: 'New Flow',
         content: {},
         projectId: 'proj_default',
       });
-      expect(result.structuredContent.flowId).toBe('flow_new');
+      expect(structured(result).flowId).toBe('flow_new');
     });
 
     it('explicit projectId wins over the default and is passed through', async () => {
       const created = { id: 'flow_new', name: 'New Flow' };
       const createFlow = jest.fn().mockResolvedValue(created);
-      registerFlowManageTool(
-        server as never,
+      const spec = createFlowManageToolSpec(
         stubClient({ createFlow, getDefaultProject: () => 'proj_default' }),
       );
-
-      const tool = server.getTool('flow_manage')!;
-      await tool.handler({
+      await spec.handler({
         action: 'create',
         name: 'New Flow',
         projectId: 'proj_explicit',
@@ -386,32 +330,28 @@ describe('flow_manage tool', () => {
 
   describe('update', () => {
     it('requires flowId', async () => {
-      registerFlowManageTool(server as never, stubClient());
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient());
+      const result = await spec.handler({
         action: 'update',
         name: 'Renamed',
-      })) as { isError: boolean; content: Array<{ text: string }> };
+      });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('flowId is required for update action');
     });
 
     it('defaults patch to true (passes mergePatch: true)', async () => {
       const updated = { id: 'flow_1', name: 'Updated' };
       const updateFlow = jest.fn().mockResolvedValue(updated);
-      registerFlowManageTool(
-        server as never,
+      const spec = createFlowManageToolSpec(
         stubClient({ updateFlow, getDefaultProject: () => 'proj_default' }),
       );
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const result = await spec.handler({
         action: 'update',
         flowId: 'flow_1',
         name: 'Updated',
-      })) as { structuredContent: { configName: string } };
+      });
 
       expect(updateFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',
@@ -420,7 +360,7 @@ describe('flow_manage tool', () => {
         content: undefined,
         mergePatch: true,
       });
-      expect(result.structuredContent.configName).toBe(
+      expect(structured(result).configName).toBe(
         '<user_data>Updated</user_data>',
       );
     });
@@ -428,72 +368,59 @@ describe('flow_manage tool', () => {
 
   describe('delete', () => {
     it('requires flowId', async () => {
-      registerFlowManageTool(server as never, stubClient());
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({ action: 'delete' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const spec = createFlowManageToolSpec(stubClient());
+      const result = await spec.handler({ action: 'delete' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('flowId is required for delete action');
     });
 
     it('calls deleteFlow', async () => {
       const deleteFlow = jest.fn().mockResolvedValue({ success: true });
-      registerFlowManageTool(
-        server as never,
+      const spec = createFlowManageToolSpec(
         stubClient({ deleteFlow, getDefaultProject: () => 'proj_default' }),
       );
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const result = await spec.handler({
         action: 'delete',
         flowId: 'flow_1',
-      })) as { structuredContent: { success: boolean } };
+      });
 
       expect(deleteFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',
         projectId: 'proj_default',
       });
-      expect(result.structuredContent.success).toBe(true);
+      expect(structured(result).success).toBe(true);
     });
   });
 
   describe('duplicate', () => {
     it('requires flowId', async () => {
-      registerFlowManageTool(server as never, stubClient());
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({ action: 'duplicate' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const spec = createFlowManageToolSpec(stubClient());
+      const result = await spec.handler({ action: 'duplicate' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('flowId is required for duplicate action');
     });
 
     it('calls duplicateFlow', async () => {
       const duplicated = { id: 'flow_dup', name: 'My Flow (copy)' };
       const duplicateFlow = jest.fn().mockResolvedValue(duplicated);
-      registerFlowManageTool(server as never, stubClient({ duplicateFlow }));
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient({ duplicateFlow }));
+      const result = await spec.handler({
         action: 'duplicate',
         flowId: 'flow_1',
         name: 'My Flow Copy',
         projectId: 'proj_1',
-      })) as { structuredContent: { id: string } };
+      });
 
       expect(duplicateFlow).toHaveBeenCalledWith({
         flowId: 'flow_1',
         name: 'My Flow Copy',
         projectId: 'proj_1',
       });
-      expect(result.structuredContent.id).toBe('flow_dup');
+      expect(structured(result).id).toBe('flow_dup');
     });
   });
 
@@ -504,16 +431,14 @@ describe('flow_manage tool', () => {
       const getFlow = jest
         .fn()
         .mockResolvedValue({ id: 'flow_1', name: 'My Flow', content: {} });
-      registerFlowManageTool(server as never, stubClient({ getFlow }));
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient({ getFlow }));
+      const result = await spec.handler({
         action: 'get',
         flowId: 'flow_1',
         projectId: 'proj_1',
-      })) as { structuredContent: { appUrl?: string } };
+      });
 
-      expect(result.structuredContent.appUrl).toBe(
+      expect(structured(result).appUrl).toBe(
         'https://app.walkeros.io/projects/proj_1/flows/flow_1',
       );
     });
@@ -522,32 +447,28 @@ describe('flow_manage tool', () => {
       const createFlow = jest
         .fn()
         .mockResolvedValue({ id: 'flow_new', name: 'New Flow' });
-      registerFlowManageTool(server as never, stubClient({ createFlow }));
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient({ createFlow }));
+      const result = await spec.handler({
         action: 'create',
         name: 'New Flow',
         projectId: 'proj_1',
-      })) as { structuredContent: { appUrl?: string } };
+      });
 
-      expect(result.structuredContent.appUrl).toBe(
+      expect(structured(result).appUrl).toBe(
         'https://app.walkeros.io/projects/proj_1/flows/flow_new',
       );
     });
 
     it('links nothing when the response carried no flow id', async () => {
       const getFlow = jest.fn().mockResolvedValue({ name: 'My Flow' });
-      registerFlowManageTool(server as never, stubClient({ getFlow }));
-
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({
+      const spec = createFlowManageToolSpec(stubClient({ getFlow }));
+      const result = await spec.handler({
         action: 'get',
         flowId: 'flow_1',
         projectId: 'proj_1',
-      })) as { structuredContent: Record<string, unknown> };
+      });
 
-      expect(result.structuredContent).not.toHaveProperty('appUrl');
+      expect(structured(result)).not.toHaveProperty('appUrl');
     });
   });
 
@@ -556,16 +477,11 @@ describe('flow_manage tool', () => {
       const listAllFlows = jest
         .fn()
         .mockRejectedValue(new Error('Unauthorized'));
-      registerFlowManageTool(server as never, stubClient({ listAllFlows }));
+      const spec = createFlowManageToolSpec(stubClient({ listAllFlows }));
+      const result = await spec.handler({ action: 'list' });
 
-      const tool = server.getTool('flow_manage')!;
-      const result = (await tool.handler({ action: 'list' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
-
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toBe('Unauthorized');
       expect(parsed.hint).toContain('logged in');
     });

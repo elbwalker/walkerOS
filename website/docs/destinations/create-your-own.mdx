@@ -123,9 +123,20 @@ current state before its first push, and the collector waits for the handler to
 settle before it pushes events to the destination. If such a handler does not
 settle in that time, or rejects, the destination receives no events until a
 later delivery of the state settles; its events stay queued meanwhile and are
-discarded at the next `walker run`. A lifecycle handler that does not settle
-holds no events. Handlers of different destinations run independently, so a
+discarded at the next `walker run`. State updates reach a handler one at a
+time: one that arrives while the handler is still busy, even past its timeout,
+is applied as the current state once the handler finishes, before any held
+event, so the newest state is always applied last. Lifecycle events such as
+`run`, `ready` and `session` still reach a handler that is busy with a state
+update. A lifecycle handler that does not settle holds no events. Handlers of different destinations run independently, so a
 slow handler in one destination does not delay events to other destinations.
+
+An async state handler must settle: until it settles or reaches
+`config.timeout`, that destination receives no events. `elb` commands and
+`startFlow` resolve only after the destinations' `on()` handlers for that
+command have settled or timed out; a command sent while a handler is still
+busy with an earlier state update resolves at once, and its update is applied
+right after the running one, while that destination's events wait for it.
 
 ### Example: Consent-Aware Destination
 
@@ -521,6 +532,8 @@ Use `buildDev()` from the shared tsup config to auto-generate `walkerOS.json`:
 
 This file contains your package's JSON Schemas and examples, enabling MCP tools and the CLI to validate configurations without installing your package.
 
+`buildDev()` fails the build when the package publishes no `schemas.settings`. A package with two or more `walkerOS.exports` also exports `exportExamples` and `exportSchemas` from `src/dev.ts`, each listing exactly those exports, the default included, with `settings` in every `exportSchemas` entry; a package with fewer exports sets neither.
+
 ### Optional: Hints
 
 Packages can export a `hints` record from `src/dev.ts` to provide lightweight, actionable context beyond schemas and examples, such as authentication methods, storage behavior, or troubleshooting tips. Hints are serialized into `walkerOS.json` and surfaced via MCP tools. See the `walkeros-create-destination` skill for details.
@@ -530,6 +543,7 @@ Packages can export a `hints` record from `src/dev.ts` to provide lightweight, a
 - [ ] `walkerOS` field in package.json
 - [ ] Keywords include `walkeros` and `walkeros-destination`
 - [ ] `buildDev()` in tsup.config.ts
+- [ ] `schemas.settings` exported from `src/dev.ts` (per export for multi-export packages)
 - [ ] `dist/walkerOS.json` generated on build
 - [ ] `npm run test` passes
 - [ ] `npm run lint` passes

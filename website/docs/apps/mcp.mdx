@@ -185,8 +185,8 @@ result as `walkeros validate --json` (see
 run, with a reason and code) and `details.deferred` (values known only at
 runtime). A valid result with skips is valid only in the checked scope; the
 hint says how many checks were skipped. Branch on `code`, never on `message`.
-Steps that import a named export are skipped (`NO_SETTINGS_SCHEMA`) until
-packages publish per-export settings schemas. On the local server a step whose
+A step that imports a named export is checked against that export's settings
+schema, as in the CLI. On the local server a step whose
 package is a local `path` is checked from disk relative to the input file, as
 in the CLI; the hosted server has no filesystem and reports it as skipped
 (`SCHEMA_UNAVAILABLE`).
@@ -209,7 +209,9 @@ size and the included package names (no per-package size estimate).
 ##### `flow_simulate`
 
 Simulate events through a walkerOS flow without making real API calls.
-Returns summarized per-destination results.
+Returns summarized per-destination results. The result passes the same secret
+masking as the CLI: credential fields and the values of the secrets the flow
+references show as `***`.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -272,7 +274,9 @@ the event.
 
 Push a real event through a walkerOS flow to actual destinations.
 **This makes real API calls.** Best for server-side flows. Web destinations
-require browser globals not available in Node.js.
+require browser globals not available in Node.js. The result passes the same
+secret masking as the CLI: credential fields and the values of the secrets the
+flow references show as `***`.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -322,6 +326,12 @@ example summaries. Use `section` parameter for full content.
 | `package` | string | Yes | Exact npm package name |
 | `version` | string | No | Package version (default: latest) |
 | `section` | `"hints"` \| `"examples"` \| `"all"` | No | Section to expand with full content |
+
+A package with several exports (for example `@walkeros/server-destination-gcp`
+with `destinationBigQuery` and `destinationPubSub`) also returns
+`exportSchemas`: per export name, the same shape as `schemas`, with `config`
+merged from that export's settings. Configure a step that imports
+`destinationPubSub` from `exportSchemas.destinationPubSub.config`.
 
 ##### `diagnostics`
 

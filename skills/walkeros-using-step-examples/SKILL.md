@@ -309,7 +309,7 @@ and testing while leaving production output clean.
 A `no-restricted-syntax` ESLint rule enforces this, so a `export ... examples`
 from a production entry fails lint.
 
-### Multi-export packages: `exportExamples`
+### Multi-export packages: `exportExamples` and `exportSchemas`
 
 A package whose `package.json` `walkerOS.exports` lists more than one export
 adds a map of EVERY export, the default included, to `src/dev.ts`:
@@ -329,6 +329,32 @@ map, `examples` is used. `selectDevExamples(devModule, exportName)` implements
 this. The CLI simulate, MCP `flow_examples` and `package_get`, core `cdn.ts` and
 the tsup `walkerOS.json` (`exportExamples` key) all follow it. Existing named
 exports (`pubsubExamples`, `sqsExamples`, ...) stay for back compat.
+
+The same package also exports `exportSchemas`, every export to that export's
+schemas in the shape of a single-export `schemas` (`settings` required,
+`mapping`, `setup` where they exist). Reuse the very objects behind
+`schemas.settings` for the default entry, so a `toBe` test pins it:
+
+```typescript
+export const exportSchemas = {
+  destinationBigQuery: {
+    settings: bigquerySchemas.settings,
+    mapping: bigquerySchemas.mapping,
+  },
+  destinationPubSub: {
+    settings: pubsubSchemas.settings,
+    mapping: pubsubSchemas.mapping,
+    setup: pubsubSchemas.setup,
+  },
+};
+```
+
+`walkeros validate` and MCP `package_get` pick the entry for the step's export
+with the same rule. The tsup build (`buildDev`) fails when either map does not
+list exactly the `walkerOS.exports` names, when an `exportSchemas` entry has no
+`settings`, and when any source, transformer, destination or store package
+publishes no `schemas.settings` (a package without settings publishes
+`z.object({})`). Prefixed keys in `schemas` (`pubsubSettings`, ...) stay.
 
 ### Mock env and `simulation` paths
 
@@ -693,7 +719,8 @@ When adding step examples to a package or flow:
 - [ ] Mark internal/test-only examples with `public: false`.
 - [ ] `examples/env.ts` exports `push` and a `simulation` list naming the
       request call, pinned with `expectSimulationResolves(examples.env)`.
-- [ ] Multi-export package: `exportExamples` in `dev.ts` lists every export.
+- [ ] Multi-export package: `exportExamples` and `exportSchemas` in `dev.ts`
+      list every export (the build fails otherwise).
 - [ ] In a flow file, add examples sparingly: they are mainly internal and for
       demos (for example a client flow's source with `public: false` examples
       showing its default behaviour).

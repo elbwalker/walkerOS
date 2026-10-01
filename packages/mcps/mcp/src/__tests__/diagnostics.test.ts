@@ -17,7 +17,9 @@ jest.mock('@walkeros/cli', () => ({
 import { createRequire } from 'module';
 import { dirname, join } from 'path';
 import { readFileSync } from 'fs';
+import { z } from 'zod';
 import { createDiagnosticsToolSpec } from '../tools/diagnostics.js';
+import { structured } from './support/tool-result.js';
 import { stubClient } from './support/stub-client.js';
 import type { ToolClient } from '../tool-client.js';
 import { normalizeBaseUrl } from '../base-url.js';
@@ -35,23 +37,37 @@ const specPath = join(
   'openapi',
   'spec.json',
 );
-const specJson = JSON.parse(readFileSync(specPath, 'utf-8')) as {
-  info: { version: string };
-};
+const specJson = z
+  .object({ info: z.object({ version: z.string() }) })
+  .parse(JSON.parse(readFileSync(specPath, 'utf-8')));
 
-interface DiagnosticsResult {
-  mcp: { version: string };
-  cli: { version: string };
-  appUrl: { resolved: string; source: 'env' | 'default' };
-  app: { reachable: boolean; status?: string };
-  contract: {
-    openapiVersion: string;
-    verdict: 'in-sync' | 'client-older' | 'client-newer' | 'unknown';
-    action?: string;
-  };
-  catalog: { lastSource?: string; lastCount?: number; partial?: boolean };
-  _hints?: { next?: string[]; warnings?: string[] };
-}
+/**
+ * The structured diagnostics payload the assertions read, parsed rather than
+ * cast so a shape drift fails here, naming the field.
+ */
+const DiagnosticsResult = z.object({
+  mcp: z.object({ version: z.string() }),
+  cli: z.object({ version: z.string() }),
+  appUrl: z.object({ resolved: z.string(), source: z.string() }),
+  app: z.object({ reachable: z.boolean(), status: z.string().optional() }),
+  contract: z.object({
+    openapiVersion: z.string(),
+    verdict: z.string(),
+    action: z.string().optional(),
+  }),
+  catalog: z.object({
+    lastSource: z.string().optional(),
+    lastCount: z.number().optional(),
+    partial: z.boolean().optional(),
+  }),
+  _hints: z
+    .object({
+      next: z.array(z.string()).optional(),
+      warnings: z.array(z.string()).optional(),
+    })
+    .optional(),
+});
+type DiagnosticsResult = z.infer<typeof DiagnosticsResult>;
 
 /**
  * A stub standing in for the LOCAL door: its `appBaseUrl` resolves the same
@@ -75,10 +91,7 @@ async function runDiagnostics(
   packageVersion = '7.7.7',
 ): Promise<DiagnosticsResult> {
   const spec = createDiagnosticsToolSpec(client, packageVersion);
-  const result = (await spec.handler({})) as {
-    structuredContent: DiagnosticsResult;
-  };
-  return result.structuredContent;
+  return DiagnosticsResult.parse(structured(await spec.handler({})));
 }
 
 describe('diagnostics tool', () => {

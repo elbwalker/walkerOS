@@ -34,17 +34,7 @@ jest.mock('@walkeros/core', () => ({
 
 // flow_simulate pulls these in at module-eval; the schema-shape and the no-step
 // guard never reach them, but they must resolve for the import to succeed.
-jest.mock('@walkeros/cli/dev', () => ({
-  schemas: {
-    SimulateInputShape: {
-      configPath: { type: 'string' },
-      event: { type: 'string' },
-      flow: { type: 'string' },
-      platform: { type: 'string' },
-      step: { type: 'string' },
-    },
-  },
-}));
+jest.mock('@walkeros/cli/dev', () => jest.requireActual('@walkeros/cli/dev'));
 
 jest.mock('@walkeros/cli', () => ({
   simulateSource: jest.fn(),
@@ -73,23 +63,26 @@ import { createFrameManageToolSpec } from '../tools/frame-manage.js';
 import { createFlowSimulateToolSpec } from '../tools/simulate.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { stubClient } from './support/stub-client.js';
-
-type HandlerResult = {
-  isError?: boolean;
-  content: Array<{ text: string }>;
-};
+import { isErrorResult, record, str, textOf } from './support/tool-result.js';
 
 function errorText(result: unknown): string {
-  const r = result as HandlerResult;
-  expect(r.isError).toBe(true);
-  const parsed = JSON.parse(r.content[0].text) as { error: string };
-  return parsed.error;
+  expect(isErrorResult(result)).toBe(true);
+  const parsed: unknown = JSON.parse(textOf(result));
+  return str(record(parsed).error);
+}
+
+/** A registered param schema, narrowed to the classic zod type it is built as. */
+function zodType(schema: unknown): z.ZodType {
+  if (!(schema instanceof z.ZodType)) {
+    throw new Error('Registered param is not a zod schema');
+  }
+  return schema;
 }
 
 function describeOf(shape: ZodRawShape, param: string): string {
   const schema = shape[param];
   expect(schema).toBeDefined();
-  const description = (schema as z.ZodType).description;
+  const description = zodType(schema).description;
   expect(typeof description).toBe('string');
   return description ?? '';
 }
@@ -192,8 +185,16 @@ describe('action ↔ schema ↔ handler contract is in sync', () => {
             const input = satisfyingInput(tool, action, rule);
             delete input[param];
             const result = await tool.spec.handler(input);
+            // A param the input shape itself requires is refused by the
+            // shape, before the per-action guard runs.
+            const shapeRequired = !z
+              .object(tool.spec.inputSchema)
+              .pick({ [param]: true })
+              .safeParse({}).success;
             expect(errorText(result)).toContain(
-              `${param} is required for ${action} action`,
+              shapeRequired
+                ? `${param}: Invalid input: expected string, received undefined`
+                : `${param} is required for ${action} action`,
             );
           });
         }
@@ -223,7 +224,7 @@ describe('action ↔ schema ↔ handler contract is in sync', () => {
     const spec = createFlowSimulateToolSpec(stubClient(), createLocalRuntime());
 
     it('registers step as a required (non-optional) zod string', () => {
-      const stepSchema = spec.inputSchema.step as z.ZodType;
+      const stepSchema = zodType(spec.inputSchema.step);
       expect(stepSchema.safeParse('destination.gtag').success).toBe(true);
       expect(stepSchema.safeParse(undefined).success).toBe(false);
       expect(stepSchema.isOptional()).toBe(false);
@@ -237,7 +238,9 @@ describe('action ↔ schema ↔ handler contract is in sync', () => {
         platform: undefined,
         step: undefined,
       });
-      expect(errorText(result)).toContain('step is required');
+      expect(errorText(result)).toBe(
+        'step: Invalid input: expected string, received undefined',
+      );
     });
   });
 });

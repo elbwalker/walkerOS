@@ -4,11 +4,12 @@ import type {
   WalkerOS,
   Destination,
   Source,
+  Logger,
 } from '@walkeros/core';
 import { isArray, FatalError } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
-import { mergeEnvironments } from './destination';
+import { mergeEnvironments, pushToDestinations } from './destination';
 import { buildReportError, errorMeta } from './report-error';
 import { reconcilePending } from './pending';
 import { flushSourceQueueOn, isSourceStarted } from './source';
@@ -406,9 +407,16 @@ export async function on(
  * `pushToDestinations` then keeps its events in `queuePush` rather than
  * sending them to a vendor whose consent state was not set. The hold clears
  * once no state delivery to the destination is in flight and every present
- * state cell has reached the handler. A late settle after a timeout changes
- * nothing: the outcome was already recorded, and the next state delivery is
- * what recovers.
+ * state cell has reached the handler.
+ *
+ * One state handler call runs per destination at a time, so the state the
+ * vendor applies last is always the newest. A state delivery that arrives
+ * while a call runs does not call the handler: its cell stays owed, and the
+ * current cells are delivered right after the running call ends. A call that
+ * timed out stays in flight until its handler settles; its late settle marks
+ * nothing, and the current cells, then the held events, follow from there.
+ * Deferring rather than waiting keeps a handler that issues a state command
+ * itself from waiting on its own call.
  *
  * A state delivery carries the command's delta when the destination has
  * received every earlier change of that cell, and the whole cell otherwise
@@ -429,6 +437,21 @@ export async function callDestinationOn(
   // on it; a lifecycle delivery neither holds nor marks. The version is the
   // one this delivery carries, captured before anything can change the cell.
   const gated = isStateDelivery(type);
+
+  // A handler call to this destination is still running: a second call
+  // could settle first and be overwritten by the older state. The cell stays
+  // owed instead. A call that settles in time delivers the current state
+  // right after it; one that timed out does so when it finally settles.
+  if (
+    gated &&
+    (overdueDeliveries.get(destination) || stateCalls.has(destination))
+  ) {
+    markStateLost(collector, destination, type);
+    if (!overdueDeliveries.get(destination))
+      deferredDuringCall.add(destination);
+    return false;
+  }
+
   const version = gated ? cellVersionOf(collector, type) : 0;
   const payload =
     gated && owesMoreThanDelta(collector, destination, type, version)
@@ -460,27 +483,39 @@ export async function callDestinationOn(
   if (gated) {
     openStateDelivery(destination, type);
     setInFlightVersion(destination, type, version);
+    stateCalls.add(destination);
   }
 
   const timeoutMs = resolveDestinationTimeout(destination.config.timeout);
+  // The handler's own promise, kept for a delivery that times out.
+  let running: Promise<unknown> = Promise.resolve();
   let settled = true;
+  let timedOut = false;
+  let threw = true;
   try {
     await tryCatchAsync(
-      () =>
-        withTimeout(
-          Promise.resolve(handler(type, context)),
+      () => {
+        running = Promise.resolve(handler(type, context));
+        return withTimeout(
+          running,
           timeoutMs,
           `Destination "${destId}" on(${type}) did not settle within ${timeoutMs}ms`,
-        ),
+        );
+      },
       (err) => {
         settled = false;
+        if (err instanceof DestinationTimeoutError) timedOut = true;
         logOnCallbackError(collector, 'destination', err, { destId, type });
       },
     )();
+    threw = false;
   } finally {
     // Also runs when a FatalError propagates: the delivery counts as failed
     // and the window closes, so a later settled delivery can release the hold.
+    // No follow-up runs then, so nothing stays deferred.
     if (gated) {
+      stateCalls.delete(destination);
+      if (threw) deferredDuringCall.delete(destination);
       const lost = lostCells.get(destination);
       if (settled) {
         advanceMark(collector, destination, type, version);
@@ -488,12 +523,113 @@ export async function callDestinationOn(
       } else {
         markStateLost(collector, destination, type);
       }
-      clearInFlightVersion(destination, type, version);
-      closeStateDelivery(collector, destination);
+      if (timedOut) {
+        awaitOverdueDelivery(
+          collector,
+          destination,
+          destId,
+          type,
+          version,
+          running,
+          destLogger,
+        );
+      } else {
+        clearInFlightVersion(destination, type, version);
+        closeStateDelivery(collector, destination);
+      }
     }
   }
 
+  // State that arrived while the handler ran follows now, as current cells.
+  if (gated && !timedOut && deferredDuringCall.delete(destination))
+    await catchUpDestinationState(collector, destination, destId);
+
   return settled;
+}
+
+/**
+ * Timed-out state deliveries to a destination whose handler has not settled
+ * yet. While one runs, no other state delivery to the destination starts.
+ */
+const overdueDeliveries = new WeakMap<Destination.Instance, number>();
+
+/**
+ * Destinations whose state handler call is running. Only one runs at a time:
+ * a state delivery that arrives meanwhile is deferred.
+ */
+const stateCalls = new WeakSet<Destination.Instance>();
+
+/**
+ * Destinations with a state delivery deferred behind a running call. When
+ * that call ends in time, the destination catches up on the current state.
+ */
+const deferredDuringCall = new WeakSet<Destination.Instance>();
+
+/**
+ * Keep a timed-out state delivery in flight until its handler settles, then
+ * close its window. The cell was recorded as lost at the timeout and stays
+ * owed, whatever the late outcome, so the hold is released only by a later
+ * delivery that carries the current cell and settles in time. That delivery
+ * starts from the settle itself, followed by the held events. A handler that
+ * never settles keeps the destination held.
+ */
+function awaitOverdueDelivery(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  destId: string,
+  type: On.Types,
+  version: number,
+  running: Promise<unknown>,
+  logger: Logger.Instance,
+): void {
+  overdueDeliveries.set(
+    destination,
+    (overdueDeliveries.get(destination) || 0) + 1,
+  );
+  const settle = () => {
+    const count = (overdueDeliveries.get(destination) || 0) - 1;
+    if (count > 0) overdueDeliveries.set(destination, count);
+    else overdueDeliveries.delete(destination);
+    const lost = lostCells.get(destination);
+    if (lost) lost.add(String(type));
+    else lostCells.set(destination, new Set([String(type)]));
+    clearInFlightVersion(destination, type, version);
+    closeStateDelivery(collector, destination);
+    logger.debug('late settle after timeout');
+    deferredDuringCall.delete(destination);
+    if (collector.allowed && collector.destinations[destId] === destination)
+      recoverDestinationState(collector, destination, destId, logger);
+  };
+  running.then(settle, settle);
+}
+
+/**
+ * Deliver the state a destination still owes, then push the events held for
+ * it, without waiting for its next push.
+ */
+function recoverDestinationState(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  destId: string,
+  logger: Logger.Instance,
+): void {
+  tryCatchAsync(
+    async () => {
+      await catchUpDestinationState(collector, destination, destId);
+      if (!getStateHold(destination) && destination.queuePush?.length)
+        await pushToDestinations(
+          collector,
+          undefined,
+          {},
+          {
+            [destId]: destination,
+          },
+        );
+    },
+    (err) => {
+      logger.error('state recovery failed', errorMeta(err));
+    },
+  )();
 }
 
 /**
@@ -870,27 +1006,99 @@ async function deliverStateToSource(
   if (isStateDelivery(type) && !cascadeAllow(collector, source, type))
     return false;
 
+  // One state handler call runs per source at a time, as for destinations: a
+  // state delivery that arrives meanwhile leaves its cell owed, and the
+  // current cells follow once the running call ends.
+  const gated = isStateDelivery(type);
+  if (gated && sourceStateCalls.has(source)) {
+    deferredSourceCalls.add(source);
+    return false;
+  }
+  const version = gated ? cellVersionOf(collector, type) : 0;
+  if (gated) sourceStateCalls.add(source);
+
   // Sources carry no per-step timeout config and share the destination
   // default, so one hung source handler cannot stall the delivery pass.
   const handler = source.on;
+  let running: Promise<unknown> = Promise.resolve();
   let timedOut = false;
-  const result = await tryCatchAsync(
-    () =>
-      withTimeout(
-        Promise.resolve(handler(type, contextData)),
-        DEFAULT_DESTINATION_TIMEOUT_MS,
-        `Source "${sourceId}" on(${type}) did not settle within ${DEFAULT_DESTINATION_TIMEOUT_MS}ms`,
-      ),
-    (err) => {
-      if (err instanceof DestinationTimeoutError) timedOut = true;
-      logOnCallbackError(collector, 'source', err, { sourceId, type });
-    },
-  )();
+  let result: unknown;
+  try {
+    result = await tryCatchAsync(
+      () => {
+        running = Promise.resolve(handler(type, contextData));
+        return withTimeout(
+          running,
+          DEFAULT_DESTINATION_TIMEOUT_MS,
+          `Source "${sourceId}" on(${type}) did not settle within ${DEFAULT_DESTINATION_TIMEOUT_MS}ms`,
+        );
+      },
+      (err) => {
+        if (err instanceof DestinationTimeoutError) timedOut = true;
+        logOnCallbackError(collector, 'source', err, { sourceId, type });
+      },
+    )();
+  } finally {
+    // A timed-out call stays running until its handler settles.
+    if (gated && !timedOut) sourceStateCalls.delete(source);
+  }
 
-  // A timed-out delivery has not happened: the mark stays, the cell stays owed.
-  if (isStateDelivery(type) && !timedOut) setMark(collector, source, type);
+  if (gated) {
+    if (timedOut) {
+      // A timed-out delivery has not happened: the mark stays, the cell stays
+      // owed, and the current cells follow the late settle.
+      const settle = () => {
+        sourceStateCalls.delete(source);
+        deferredSourceCalls.delete(source);
+        if (collector.allowed && collector.sources[sourceId] === source)
+          tryCatchAsync(
+            () => catchUpSourceState(collector, source, sourceId),
+            (err) => {
+              collector.logger
+                .scope('on')
+                .error('state recovery failed', errorMeta(err));
+            },
+          )();
+      };
+      running.then(settle, settle);
+    } else {
+      advanceMark(collector, source, type, version);
+      if (deferredSourceCalls.delete(source))
+        await catchUpSourceState(collector, source, sourceId);
+    }
+  }
 
   return result === false;
+}
+
+/** Sources whose state handler call is running. */
+const sourceStateCalls = new WeakSet<Source.Instance>();
+
+/** Sources with a state delivery deferred behind a running call. */
+const deferredSourceCalls = new WeakSet<Source.Instance>();
+
+/** Deliver every present state cell a started source still owes. */
+async function catchUpSourceState(
+  collector: Collector.Instance,
+  source: Source.Instance,
+  sourceId: string,
+): Promise<void> {
+  // Opened or joined here, as for destinations, so the bound applies.
+  const exitCascade = enterCascade(collector);
+  try {
+    for (const type of STATE_CELLS) {
+      if (!isStatePresent(collector, type)) continue;
+      await deliverStateToSource(
+        collector,
+        source,
+        sourceId,
+        type,
+        resolveDeliveryData(collector, type),
+      );
+    }
+  } finally {
+    exitCascade();
+  }
 }
 
 /**
@@ -987,15 +1195,22 @@ export async function catchUpDestinationState(
   destId: string,
 ): Promise<void> {
   if (!destination.on) return;
-  for (const type of STATE_CELLS) {
-    if (!isStatePresent(collector, type)) continue;
-    await deliverStateToDestination(
-      collector,
-      destination,
-      destId,
-      type,
-      resolveDeliveryData(collector, type),
-    );
+  // Opened or joined here, so a catch-up outside a command (a push's retry, a
+  // late settle) still counts a handler that re-emits state against the bound.
+  const exitCascade = enterCascade(collector);
+  try {
+    for (const type of STATE_CELLS) {
+      if (!isStatePresent(collector, type)) continue;
+      await deliverStateToDestination(
+        collector,
+        destination,
+        destId,
+        type,
+        resolveDeliveryData(collector, type),
+      );
+    }
+  } finally {
+    exitCascade();
   }
 }
 

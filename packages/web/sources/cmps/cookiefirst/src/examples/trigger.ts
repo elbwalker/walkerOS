@@ -1,13 +1,6 @@
 import type { Trigger, Collector } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-
-interface CookieFirstConsent {
-  necessary?: boolean;
-  functional?: boolean;
-  performance?: boolean;
-  advertising?: boolean;
-  [category: string]: boolean | undefined;
-}
+import type { CookieFirstConsent } from '../types';
 
 const createTrigger: Trigger.CreateFn<CookieFirstConsent, void> = async (
   config: Collector.InitConfig,
@@ -17,9 +10,7 @@ const createTrigger: Trigger.CreateFn<CookieFirstConsent, void> = async (
   const trigger: Trigger.Fn<CookieFirstConsent, void> =
     () => async (content: CookieFirstConsent) => {
       // The banner keeps window.CookieFirst current.
-      (window as unknown as Record<string, unknown>).CookieFirst = {
-        consent: content,
-      };
+      window.CookieFirst = { consent: content };
 
       // First call, the page load: the source reads the global at init and
       // emits once. No cf_init follows: in a browser it fires when the global
@@ -48,8 +39,26 @@ const createTrigger: Trigger.CreateFn<CookieFirstConsent, void> = async (
 
 /** Sets window.CookieFirst.consent before source init (legacy). */
 const trigger = (input: unknown, env: Record<string, unknown>): void => {
-  if (!input || typeof input !== 'object') return;
-  (env.window as Record<string, unknown>).CookieFirst = { consent: input };
+  const win = env.window;
+  if (!isConsent(input) || !isWindow(win)) return;
+  win.CookieFirst = { consent: input };
 };
+
+function isWindow(value: unknown): value is Window {
+  return (
+    typeof value === 'object' && value !== null && 'addEventListener' in value
+  );
+}
+
+function isConsent(value: unknown): value is CookieFirstConsent {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every(
+      (state) => state === undefined || typeof state === 'boolean',
+    )
+  );
+}
 
 export { createTrigger, trigger };
