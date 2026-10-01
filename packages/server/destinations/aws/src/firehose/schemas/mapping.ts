@@ -2,7 +2,7 @@ import { z } from '@walkeros/core/dev';
 
 /**
  * AWS Firehose Mapping Schema
- * AWS Firehose has no event-level mapping configuration
+ * Firehose has no rule-level settings: a rule's `data` becomes the record.
  */
 export const MappingSchema = z.object({});
 

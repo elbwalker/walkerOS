@@ -1,5 +1,6 @@
 export * as schemas from './schemas';
 export * as examples from './examples';
+export { hints } from './hints';
 
 import * as firehoseExamplesNs from './firehose/examples';
 import * as snsExamplesNs from './sns/examples';

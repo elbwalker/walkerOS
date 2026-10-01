@@ -360,5 +360,3 @@ synchronous POST branch.
   Missing all logging
 - [packages/server/destinations/meta/src/push.ts](../../packages/server/destinations/meta/src/push.ts) -
   Missing push logging
-- [packages/server/destinations/aws/src/firehose/push.ts](../../packages/server/destinations/aws/src/firehose/push.ts) -
-  Missing push logging

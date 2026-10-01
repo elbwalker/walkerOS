@@ -2,13 +2,27 @@ import type { PutRecordBatchCommandInput } from '@aws-sdk/client-firehose';
 import type { Env, SendClient } from '../types';
 
 /**
- * Example environment configurations for AWS Firehose destination
+ * Example environment for the AWS Firehose destination.
  *
- * These environments provide standardized mock structures for testing
- * and development without requiring actual AWS SDK dependencies.
+ * `push` is the mock env simulate injects: the client answers every `send`
+ * locally, so nothing reaches AWS. Each command keeps its `input`, so a
+ * recorded `send` shows the request.
  */
 
-// Mock FirehoseClient class
+interface RecordsInput {
+  Records: unknown[];
+}
+
+function hasRecords(value: unknown): value is RecordsInput {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'Records' in value &&
+    Array.isArray(value.Records)
+  );
+}
+
+// Mock FirehoseClient class: every record is accepted.
 class MockFirehoseClient implements SendClient {
   config: unknown;
 
@@ -16,15 +30,19 @@ class MockFirehoseClient implements SendClient {
     this.config = config;
   }
 
-  async send(_command: object) {
-    // Simulate successful response
+  async send(command: object) {
+    const input = 'input' in command ? command.input : undefined;
+    const records = hasRecords(input) ? input.Records : [];
     return {
-      RecordId: 'mock-record-id',
-      ResponseMetadata: {
-        RequestId: 'mock-request-id',
-      },
+      FailedPutCount: 0,
+      Encrypted: false,
+      RequestResponses: records.map((_, index) => ({
+        RecordId: `mock-record-id-${index}`,
+      })),
     };
   }
+
+  destroy(): void {}
 }
 
 // Mock PutRecordBatchCommand class. The build minifies class names; the tag
@@ -42,7 +60,6 @@ class MockPutRecordBatchCommand {
 }
 
 export const push: Env = {
-  // Environment for push operations
   AWS: {
     FirehoseClient: MockFirehoseClient,
     PutRecordBatchCommand: MockPutRecordBatchCommand,

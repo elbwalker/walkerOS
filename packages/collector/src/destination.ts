@@ -1396,10 +1396,38 @@ export async function destinationPush<Destination extends Destination.Instance>(
               0,
               snapshot.entries.length - failedPairs.length,
             );
+            // One entry per failure cause: the error's `code`, else its
+            // `name`, with a count and the first message as a sample.
+            const causes = new Map<
+              string,
+              { code: string; count: number; message: string }
+            >();
+            for (const [, rowError] of failedPairs) {
+              const code =
+                rowError instanceof Error &&
+                'code' in rowError &&
+                typeof rowError.code === 'string'
+                  ? rowError.code
+                  : rowError instanceof Error
+                    ? rowError.name
+                    : 'Error';
+              const cause = causes.get(code);
+              if (cause) cause.count++;
+              else
+                causes.set(code, {
+                  code,
+                  count: 1,
+                  message:
+                    rowError instanceof Error
+                      ? rowError.message
+                      : String(rowError),
+                });
+            }
             destLogger.error('Push batch partial failure', {
               failed: failedPairs.length,
               delivered: succeededCount,
               entries: snapshot.entries.length,
+              causes: [...causes.values()],
             });
           }
         }

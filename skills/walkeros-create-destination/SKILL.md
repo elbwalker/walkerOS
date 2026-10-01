@@ -541,14 +541,6 @@ Guidelines:
 - [ ] Build generates `dist/walkerOS.json`
 - [ ] Keywords include `walkerOS` and `walkerOS-destination`
 
-### Runtime-only npm dependencies
-
-If your package wraps a third-party npm dep that **cannot be ESM-bundled** (uses
-`__dirname`, ships a `.node` binary, etc.), declare it under
-`walkerOS.bundle.external` in your `package.json`. See
-[walkeros-using-cli → Bundle externals](../walkeros-using-cli/SKILL.md#bundle-externals-per-package-walkerosbundleexternal)
-for the complete contract.
-
 ---
 
 ## Phase 7: Implement
@@ -819,6 +811,12 @@ requirements (build, test, lint, no `any`):
 - [ ] Tests use examples for assertions (not hardcoded values)
 - [ ] `walkerOS.json` generated at build time
 - [ ] `walkerOS` field in package.json
+- [ ] Works with no `env`: one test runs the published default export from a
+      pure JSON config (no injected `env`, no mocked SDK) against a local fake
+      endpoint on `127.0.0.1`, with the real vendor SDK and dummy credentials,
+      and asserts what the fake received. Mocked-env tests cannot catch a
+      missing `env?.X ?? X` fallback, which turns a bundled flow into a silent
+      no-op
 
 ---
 

@@ -6,7 +6,8 @@
 
 # @walkeros/server-destination-aws
 
-Stream events to Amazon Kinesis Data Firehose for real-time analytics.
+Stream events to Amazon Data Firehose, or publish them to Amazon SNS topics,
+from a walkerOS server flow.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/aws) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-aws)
@@ -28,17 +29,29 @@ npm install @walkeros/server-destination-aws
     "default": {
       "config": { "platform": "server" },
       "destinations": {
-        "aws": { "package": "@walkeros/server-destination-aws", "config": {} }
+        "firehose": {
+          "package": "@walkeros/server-destination-aws",
+          "import": "destinationFirehose",
+          "config": {
+            "settings": { "streamName": "walkeros-events" }
+          }
+        }
       }
     }
   }
 }
 ```
 
+On AWS compute in the stream's region, that is the whole configuration. Add
+`settings.region` for a stream elsewhere, and `config.credentials` with
+`$secret` references when the flow runs outside AWS. For SNS, import
+`destinationSNS` and set `settings.topicArn`.
+
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:
-**https://www.walkeros.io/docs/destinations/server/aws**
+**https://www.walkeros.io/docs/destinations/server/aws** (Firehose) and
+**https://www.walkeros.io/docs/destinations/server/sns** (SNS)
 
 ## Contribute
 

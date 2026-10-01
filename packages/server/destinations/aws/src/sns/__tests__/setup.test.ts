@@ -35,11 +35,144 @@ const env = {
   },
 };
 
+const savedEnv = { ...process.env };
+
+afterAll(() => {
+  process.env = savedEnv;
+});
+
 describe('SNS setup', () => {
   beforeEach(() => {
     __resetMock();
     __resetStsMock();
     __resetAccountIdCache();
+    delete process.env.AWS_REGION;
+    delete process.env.AWS_PROFILE;
+    process.env.AWS_CONFIG_FILE = '/nonexistent/aws-config';
+  });
+
+  function ctorInput(method: 'SNSClient.ctor'): unknown {
+    return __getMockCalls().find((c) => c.method === method)?.input;
+  }
+
+  function stsCtorInput(): unknown {
+    return __getStsMockCalls().find((c) => c.method === 'STSClient.ctor')
+      ?.input;
+  }
+
+  test('without env builds the SDK clients with config.credentials', async () => {
+    __setStsHarness({ accountId: '111111111111' });
+    const credentials = {
+      accessKeyId: 'AKIDEXAMPLE',
+      secretAccessKey: 'SECRET',
+    };
+    await setup({
+      id: 'sns',
+      config: {
+        settings: { topicName: 'walkeros-events', region: 'us-west-2' },
+        setup: true,
+        credentials,
+      },
+      env: undefined,
+      logger: createMockLogger(),
+    });
+
+    expect(ctorInput('SNSClient.ctor')).toMatchObject({
+      region: 'us-west-2',
+      credentials,
+    });
+    expect(stsCtorInput()).toMatchObject({ region: 'us-west-2', credentials });
+  });
+
+  test.each([
+    [
+      'setup.region first',
+      {
+        settings: { topicName: 'walkeros-events', region: 'us-west-2' },
+        setup: { region: 'sa-east-1' },
+      },
+      'sa-east-1',
+    ],
+    [
+      'then settings.region',
+      {
+        settings: { topicName: 'walkeros-events', region: 'us-west-2' },
+        setup: true,
+      },
+      'us-west-2',
+    ],
+    [
+      'then the topicArn region',
+      {
+        settings: {
+          topicArn: 'arn:aws:sns:ap-south-1:111111111111:walkeros-events',
+        },
+        setup: true,
+      },
+      'ap-south-1',
+    ],
+  ])('region order: %s', async (_case, config, region) => {
+    __setStsHarness({ accountId: '111111111111' });
+    await setup({ id: 'sns', config, env, logger: createMockLogger() });
+    expect(ctorInput('SNSClient.ctor')).toMatchObject({ region });
+  });
+
+  test('region order: then AWS_REGION, then eu-central-1', async () => {
+    __setStsHarness({ accountId: '111111111111' });
+    process.env.AWS_REGION = 'ca-central-1';
+    const config = { settings: { topicName: 'walkeros-events' }, setup: true };
+    await setup({ id: 'sns', config, env, logger: createMockLogger() });
+    expect(ctorInput('SNSClient.ctor')).toMatchObject({
+      region: 'ca-central-1',
+    });
+
+    __resetMock();
+    __resetAccountIdCache();
+    delete process.env.AWS_REGION;
+    await setup({ id: 'sns', config, env, logger: createMockLogger() });
+    expect(ctorInput('SNSClient.ctor')).toMatchObject({
+      region: 'eu-central-1',
+    });
+  });
+
+  test('closes its own client when a call fails', async () => {
+    __setStsHarness({ accountId: '111111111111' });
+    const destroy = jest.fn();
+    class ClosingSNSClient extends SNSClient {
+      destroy = destroy;
+    }
+    __setHarness({
+      nextError: {
+        name: 'AuthorizationErrorException',
+        message: 'denied',
+        $metadata: { httpStatusCode: 403 },
+      },
+    });
+
+    await expect(
+      setup({
+        id: 'sns',
+        config: { settings: { topicName: 'walkeros-events' }, setup: true },
+        env: { AWS: { ...env.AWS, SNSClient: ClosingSNSClient } },
+        logger: createMockLogger(),
+      }),
+    ).rejects.toThrow('denied');
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('a topicArn alone names the topic', async () => {
+    __setStsHarness({ accountId: '111111111111' });
+    await setup({
+      id: 'sns',
+      config: {
+        settings: { topicArn: 'arn:aws:sns:eu-west-1:111111111111:from-arn' },
+        setup: true,
+      },
+      env,
+      logger: createMockLogger(),
+    });
+    const create = __getMockCalls().find((c) => c.method === 'CreateTopic');
+    expect(create?.input).toEqual({ Name: 'from-arn' });
   });
 
   test('creates topic when GetTopicAttributes returns 404', async () => {
