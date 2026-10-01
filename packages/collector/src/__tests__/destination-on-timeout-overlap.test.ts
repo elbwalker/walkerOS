@@ -1,4 +1,4 @@
-import type { Destination, WalkerOS } from '@walkeros/core';
+import type { Destination, On, WalkerOS } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { startFlow } from '..';
 import { getStateHold, isStateDeliveryInFlight } from '../on';
@@ -488,5 +488,45 @@ describe('a handler that re-emits state during a catch-up outside a command', ()
     expect(
       loggerCalls(logger, 'error', 'state delivery did not converge'),
     ).toHaveLength(1);
+  });
+});
+
+describe('a state command deferred behind a running call, for a cell with no content', () => {
+  test('an empty user update sent from a consent rule does not hold the destination', async () => {
+    const events: string[] = [];
+    const types: string[] = [];
+    const code: Destination.Instance = {
+      type: 'capture',
+      config: {},
+      init: () => undefined,
+      push: (event: WalkerOS.Event) => {
+        events.push(event.name);
+      },
+      on: (type) => {
+        types.push(String(type));
+      },
+    };
+    const { collector } = await startFlow({
+      destinations: { capture: { code } },
+    });
+    // As the session source does: the rule sets an (empty) user, then pushes.
+    let fired = 0;
+    const rule: On.ConsentFn = () => {
+      fired++;
+      void collector.command('user', {});
+      if (fired === 1) void collector.push({ name: 'session start' });
+    };
+    await collector.command('on', {
+      type: 'consent',
+      rules: { marketing: rule },
+    });
+    types.length = 0;
+
+    await collector.command('consent', { marketing: false });
+    await collector.command('consent', { marketing: false });
+
+    expect(types).toEqual(['consent', 'user', 'consent', 'user']);
+    expect(events).toEqual(['session start']);
+    expect(getStateHold(collector.destinations.capture)).toBeUndefined();
   });
 });

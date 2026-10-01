@@ -1077,17 +1077,18 @@ const sourceStateCalls = new WeakSet<Source.Instance>();
 /** Sources with a state delivery deferred behind a running call. */
 const deferredSourceCalls = new WeakSet<Source.Instance>();
 
-/** Deliver every present state cell a started source still owes. */
+/** Deliver every state cell a started source still owes. */
 async function catchUpSourceState(
   collector: Collector.Instance,
   source: Source.Instance,
   sourceId: string,
 ): Promise<void> {
-  // Opened or joined here, as for destinations, so the bound applies.
+  // Opened or joined here, as for destinations, so the bound applies. Every
+  // owed cell is delivered, one with no content included: a deferred update
+  // reaches the source as it would have without the running call.
   const exitCascade = enterCascade(collector);
   try {
     for (const type of STATE_CELLS) {
-      if (!isStatePresent(collector, type)) continue;
       await deliverStateToSource(
         collector,
         source,
@@ -1200,7 +1201,14 @@ export async function catchUpDestinationState(
   const exitCascade = enterCascade(collector);
   try {
     for (const type of STATE_CELLS) {
-      if (!isStatePresent(collector, type)) continue;
+      // A cell with no content is not owed, unless its delivery was lost
+      // (failed, or deferred behind a running call): that one still holds the
+      // destination until it arrives.
+      if (
+        !isStatePresent(collector, type) &&
+        !lostCells.get(destination)?.has(String(type))
+      )
+        continue;
       await deliverStateToDestination(
         collector,
         destination,
