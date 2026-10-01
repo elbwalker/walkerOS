@@ -2,6 +2,8 @@
 
 import type { Flow, Transformer, WalkerOS } from '@walkeros/core';
 import {
+  checkWindowCollector,
+  ENV_MARKER_PREFIX,
   getByPath,
   getRouteGraph,
   isObject,
@@ -155,7 +157,7 @@ export async function validateFlowWithPackages(
   }
 
   result.details.scope = describeScope(scope, run.checks);
-  result.details.deferred = deferred;
+  result.details.deferred = [...(result.details.deferred ?? []), ...deferred];
   if (packages.length > 0) result.details.packages = packages;
   return result;
 }
@@ -474,15 +476,22 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
   //      (unknown $var, unresolvable $flow, unknown contract, cycles) is an
   //      error, since the bundle of that flow fails the same way. Values
   //      known only at runtime ($env without default, $secret) stay deferred.
-  perFlow(['flow:resolve'], (name, _flow, file) => {
+  //      The collector global is checked on its resolved value; an `$env`
+  //      value is known only at build time and stays deferred.
+  const deferred: ValidateDeferred[] = [];
+  perFlow(['flow:resolve'], (name, flow, file) => {
     const resolution = resolutionOf(name, file);
-    if (resolution.ok) resolved.set(name, resolution.flow);
-    else errors.push(resolution.error);
+    if (!resolution.ok) {
+      errors.push(resolution.error);
+      return;
+    }
+    resolved.set(name, resolution.flow);
+    checkResolvedWindowCollector(name, flow, resolution.flow, errors, deferred);
   });
 
   details.scope = describeScope(scope, checks);
   details.skipped = skipped;
-  details.deferred = [];
+  details.deferred = deferred;
   result.valid = errors.length === 0;
 
   return {
@@ -494,6 +503,40 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
     skipped,
     gate,
   };
+}
+
+/**
+ * A `$var` / `$env` collector global, checked on its resolved value as the
+ * build checks it. A literal is already checked by the schema; a value that
+ * needs the build env is deferred to the build.
+ */
+function checkResolvedWindowCollector(
+  name: string,
+  raw: Flow,
+  flow: Flow,
+  errors: ValidationError[],
+  deferred: ValidateDeferred[],
+): void {
+  const written = raw.config?.settings?.windowCollector;
+  const value = flow.config?.settings?.windowCollector;
+  if (
+    flow.config?.platform !== 'web' ||
+    typeof written !== 'string' ||
+    !/\$(?:var|env)\./.test(written)
+  )
+    return;
+  const path = `flows.${name}.config.settings.windowCollector`;
+  if (typeof value === 'string' && value.includes(ENV_MARKER_PREFIX)) {
+    deferred.push({ path, reference: written });
+    return;
+  }
+  const check = checkWindowCollector(value);
+  if (check.ok) return;
+  errors.push({
+    path,
+    message: `${JSON.stringify(written)} resolved to ${JSON.stringify(value)}, which ${check.reason}`,
+    code: 'SCHEMA_VALIDATION',
+  });
 }
 
 /**

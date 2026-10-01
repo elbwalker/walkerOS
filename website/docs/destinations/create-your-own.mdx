@@ -269,8 +269,10 @@ config: {},
 on(event, context) {
 switch (event) {
 case 'session':
-  // New session started
-  console.log('New session:', context);
+  // Session detected: on every run, or on every consent change when the
+  // session source is consent-gated. Carries no payload, read the session
+  // from event.user or the session start event instead.
+  console.log('Session detected');
   // Could initialize session-specific tracking
   break;
 

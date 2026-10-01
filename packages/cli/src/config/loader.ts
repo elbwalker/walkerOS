@@ -16,6 +16,10 @@ import {
 } from './validators.js';
 import { getBuildDefaults, getDefaultOutput } from './build-defaults.js';
 import { isUrl, loadJsonConfig } from './utils.js';
+import {
+  assertWindowCollector,
+  type WindowCollectorSource,
+} from './window-collector.js';
 
 /** Default folder for includes if it exists */
 const DEFAULT_INCLUDE_FOLDER = './shared';
@@ -154,9 +158,13 @@ export function loadBundleConfig(
     }
   }
 
-  // Merge build options: defaults + CLI overrides
+  // Merge build options: defaults + flow settings + CLI overrides
   const buildOptions: BuildOptions = {
     ...buildDefaults,
+    ...settingsToBuildOptions(platform, flowSettings.config?.settings, {
+      path: `flows.${flowName}.config.settings.windowCollector`,
+      written: config.flows[flowName]?.config?.settings?.windowCollector,
+    }),
     packages,
     overrides,
     traceInclude,
@@ -180,6 +188,25 @@ export function loadBundleConfig(
     flowName,
     isMultiFlow,
     availableFlows,
+  };
+}
+
+/**
+ * The build options a flow's `config.settings` controls. Each key is mapped
+ * explicitly, so an unknown settings key never reaches generated code.
+ *
+ * - `windowCollector` (web): the global the collector instance is assigned
+ *   to. It is interpolated into the generated entry, so the resolved value
+ *   must be a JavaScript identifier.
+ */
+export function settingsToBuildOptions(
+  platform: 'web' | 'server',
+  settings: Flow.Settings | undefined,
+  source: WindowCollectorSource = {},
+): Pick<BuildOptions, 'windowCollector'> {
+  if (platform !== 'web' || settings?.windowCollector === undefined) return {};
+  return {
+    windowCollector: assertWindowCollector(settings.windowCollector, source),
   };
 }
 

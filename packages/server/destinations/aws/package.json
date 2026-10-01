@@ -38,6 +38,7 @@
     "@aws-sdk/client-firehose": "^3.952.0",
     "@aws-sdk/client-sns": "^3.952.0",
     "@aws-sdk/client-sts": "^3.952.0",
+    "@smithy/core": "^3.24.0",
     "@walkeros/core": "4.6.1",
     "@walkeros/server-core": "4.6.1"
   },

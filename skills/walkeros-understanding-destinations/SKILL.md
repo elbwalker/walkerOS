@@ -220,15 +220,29 @@ records neither: a total outage passes the breaker unseen and it never opens.
 For a whole-batch sink there are two answers and no third one, resolve `void` or
 throw.
 
-Retry belongs to the destination, everything around it to the collector.
-Batching, the delivery timeout, the DLQ and the breaker are the collector's, and
-per-item retry is the destination SDK's responsibility (BigQuery, Kafka, HubSpot
-each have their own backoff semantics). A destination that adds a retry of its
-own therefore owns two obligations: keeping the attempts and their delays inside
-`config.timeout`, and making a repeat safe, through an idempotency key or a
-deduplication token computed once and reused across attempts. Without the
-second, a retry of a delivery the vendor had already accepted duplicates data.
-Counters (`count`, `out`) are bumped only after a successful flush.
+Batching, the delivery timeout, the DLQ and the breaker are the collector's;
+per-call retry is the vendor SDK's (BigQuery, Kafka, HubSpot and the AWS SDK
+each have their own backoff semantics). Where a destination relies on that SDK
+retry, it keeps the attempts and their delays inside `config.timeout`, and makes
+a repeat safe through an idempotency key or a deduplication token computed once
+and reused across attempts. Without that, a retry of a delivery the vendor had
+already accepted duplicates data. Counters (`count`, `out`) are bumped only
+after a successful flush.
+
+**Three rules every destination follows.** First, no retry loops, backoff or DLQ
+code of its own: each request is sent once through the vendor SDK, whose
+built-in retry stays at its defaults, because a standard retry belongs in the
+collector, not in each package. Second, `init` is offline: it validates the
+config and builds clients, but makes no network call, loads no credentials and
+creates no remote resources; authentication and lookups happen on the first
+delivery, and provisioning belongs to `setup`. Third, every failure, thrown or
+reported in a `BatchOutcome`, is an `Error` that names the cause (and, for a
+configuration error, the fix) and carries `code` (the vendor error name or a
+package code), `status` (the HTTP status when the vendor answered) and
+`retryable`. Take `retryable` from the vendor SDK's own public classifier where
+one exists, else from documented codes or statuses, and keep the SDK error
+reachable as `cause`. `@walkeros/server-destination-aws` is the reference
+implementation.
 
 Operators also see `status.destinations[id].inFlightBatch`: the number of events
 buffered but not yet delivered.

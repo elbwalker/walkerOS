@@ -1089,6 +1089,54 @@ describe('Flow Schemas', () => {
       expect(parsed.config?.settings?.windowCollector).toBe('customCollector');
     });
 
+    test.each([
+      'walkerOS',
+      'walkerCollector',
+      '_w$1',
+      '$var.collector',
+      '$env.COLLECTOR_GLOBAL:walkerOS',
+      'walker_$env.BRAND',
+    ])('settings.windowCollector accepts %s', (windowCollector) => {
+      const result = FlowSchema.safeParse({
+        config: { platform: 'web', settings: { windowCollector } },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test.each([
+      'walker-os',
+      '1walker',
+      "x'];alert(1);//",
+      '$secret.GLOBAL',
+      '',
+      42,
+    ])('settings.windowCollector rejects %p', (windowCollector) => {
+      const result = FlowSchema.safeParse({
+        config: { platform: 'web', settings: { windowCollector } },
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual([
+        'config',
+        'settings',
+        'windowCollector',
+      ]);
+    });
+
+    test.each(['elb', 'elbLayer', 'location', '__proto__', 'window', 'top'])(
+      'settings.windowCollector rejects the reserved global %s',
+      (windowCollector) => {
+        const result = FlowSchema.safeParse({
+          config: { platform: 'web', settings: { windowCollector } },
+        });
+        expect(result.success).toBe(false);
+        expect(result.error?.issues[0]?.path).toEqual([
+          'config',
+          'settings',
+          'windowCollector',
+        ]);
+      },
+    );
+
     test('config with server platform accepts free-form settings', () => {
       const flow = {
         config: { platform: 'server', settings: { extra: 'value' } },

@@ -28,6 +28,73 @@ describe('validateFlow', () => {
     expect(result.errors).toHaveLength(0);
   });
 
+  it.each([
+    ['walker-os', false],
+    ['walkerOS', true],
+  ])('windowCollector %s is valid: %s', (windowCollector, valid) => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: { config: { platform: 'web', settings: { windowCollector } } },
+      },
+    });
+
+    expect(result.valid).toBe(valid);
+    const finding = {
+      path: 'flows.default.config.settings.windowCollector',
+      code: 'SCHEMA_VALIDATION',
+    };
+    if (valid) {
+      expect(result.errors).toHaveLength(0);
+    } else {
+      expect(result.errors).toContainEqual(expect.objectContaining(finding));
+    }
+  });
+
+  it('reports a $var windowCollector that resolves to no identifier', () => {
+    const result = validateFlow({
+      version: 4,
+      variables: { collectorName: 'walker-os' },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { windowCollector: '$var.collectorName' },
+          },
+        },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.default.config.settings.windowCollector',
+        code: 'SCHEMA_VALIDATION',
+        message: expect.stringContaining('resolved to "walker-os"'),
+      }),
+    );
+  });
+
+  it('leaves a $env windowCollector to the build', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { windowCollector: '$env.COLLECTOR_GLOBAL' },
+          },
+        },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.details.deferred).toContainEqual({
+      path: 'flows.default.config.settings.windowCollector',
+      reference: '$env.COLLECTOR_GLOBAL',
+    });
+  });
+
   it('fails when version is missing', () => {
     const result = validateFlow({
       flows: {

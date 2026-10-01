@@ -952,6 +952,34 @@ describe('windowElb emission drop', () => {
   });
 });
 
+describe('collector global name check', () => {
+  const DATA_PAYLOAD = '{"sources":{},"destinations":{}}';
+  const INJECTION = "x'];alert(1);//";
+
+  it('generateWebEntry refuses a collector global that is no identifier', () => {
+    expect(() =>
+      generateWebEntry('./skeleton.mjs', DATA_PAYLOAD, {
+        windowCollector: INJECTION,
+      }),
+    ).toThrow(/windowCollector/);
+  });
+
+  it.each(['elb', 'elbLayer', 'location', '__proto__', 'document', 'self'])(
+    'refuses the reserved global %s',
+    (windowCollector) => {
+      expect(() =>
+        generateWrapEntry('./skeleton.mjs', { windowCollector }),
+      ).toThrow(/windowCollector/);
+    },
+  );
+
+  it('generateWrapEntry refuses a collector global that is no identifier', () => {
+    expect(() =>
+      generateWrapEntry('./skeleton.mjs', { windowCollector: 'walker-os' }),
+    ).toThrow(/windowCollector/);
+  });
+});
+
 describe('windowElb bridge (createEntryPoint)', () => {
   const buildOptions: BuildOptions = {
     platform: 'browser',

@@ -86,8 +86,11 @@
     },
     "FlowSettings": {
       "type": "object",
-      "propertyNames": {
-        "type": "string"
+      "properties": {
+        "windowCollector": {
+          "description": "Web: global variable name of the collector instance (default: \"walkerOS\").",
+          "type": "string"
+        }
       },
       "additionalProperties": {},
       "title": "Flow.Settings",

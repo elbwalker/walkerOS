@@ -60,12 +60,17 @@ function onConsentFn(
   config: SessionConfig,
   cb?: SessionCallback | false,
 ): On.ConsentFn {
+  // A page load has one landing per mode. Once a mode has detected, later
+  // consent changes in that mode pass isStart: false, while a first switch
+  // from window to storage still detects with the landing's marketing data.
+  const detected = { window: false, storage: false };
+
   const func: On.ConsentFn = (consent, context) => {
     // The source's own collector interface (its pipeline) when it has one,
     // as on the ungated path; the rule's collector otherwise.
     const collector = config.collector ?? context.collector;
 
-    let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
+    let storage = false; // Window by default
 
     if (config.consent) {
       const consentKeys = (
@@ -74,10 +79,15 @@ function onConsentFn(
 
       if (getGrantedConsent(consentKeys, consent))
         // Use storage if consent is granted
-        sessionFn = () => sessionStorage(config);
+        storage = true;
     }
 
-    callFuncAndCb(sessionFn(), collector, cb);
+    const mode = storage ? 'storage' : 'window';
+    const modeConfig = detected[mode] ? { ...config, isStart: false } : config;
+    detected[mode] = true;
+
+    const sessionFn: SessionFunction = storage ? sessionStorage : sessionWindow;
+    callFuncAndCb(sessionFn(modeConfig), collector, cb);
   };
 
   return func;

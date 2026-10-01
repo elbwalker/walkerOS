@@ -75,7 +75,27 @@ const multiExportModule: Record<string, unknown> = {
   },
 };
 
+// Captures the config init receives, so the secret-marker resolver is
+// observable from the package's side.
+const secretInitCalls: unknown[] = [];
+const secretSetupCalls: unknown[] = [];
+const secretDestinationModule: Record<string, unknown> = {
+  default: {
+    type: 'secret',
+    push: () => {},
+    init: async (ctx: { config: unknown }) => {
+      secretInitCalls.push(ctx.config);
+      return ctx.config;
+    },
+    setup: async (ctx: unknown) => {
+      secretSetupCalls.push(ctx);
+      return { ok: true };
+    },
+  },
+};
+
 const moduleFixtures: Record<string, Record<string, unknown>> = {
+  '@walkeros/__test-secret-destination': secretDestinationModule,
   '@walkeros/__test-fake-destination': fakeDestinationModule,
   '@walkeros/__test-no-setup-destination': noSetupDestinationModule,
   '@walkeros/__test-no-default-export': noDefaultExportModule,
@@ -269,6 +289,91 @@ describe('setupCommand', () => {
     expect(parsed).toMatchObject({
       success: true,
       data: { result: { datasetCreated: true, tableCreated: false } },
+    });
+  });
+
+  describe('$secret markers', () => {
+    const secretValue = 'sk-live-do-not-log-4711';
+
+    function mockSecretFlow(): void {
+      mockLoad({
+        config: { platform: 'server' },
+        destinations: {
+          secret: {
+            package: '@walkeros/__test-secret-destination',
+            config: {
+              credentials: {
+                accessKeyId: '__WALKEROS_SECRET:SETUP_TEST_KEY_ID',
+                secretAccessKey: '__WALKEROS_SECRET:SETUP_TEST_SECRET',
+              },
+              setup: true,
+            },
+          },
+        },
+      });
+    }
+
+    beforeEach(() => {
+      secretInitCalls.length = 0;
+      secretSetupCalls.length = 0;
+      mockSecretFlow();
+    });
+
+    afterEach(() => {
+      delete process.env.SETUP_TEST_KEY_ID;
+      delete process.env.SETUP_TEST_SECRET;
+    });
+
+    test('resolves whole-string secret markers before init', async () => {
+      process.env.SETUP_TEST_KEY_ID = 'AKIDTEST';
+      process.env.SETUP_TEST_SECRET = secretValue;
+
+      await setupCommand({ target: 'destination.secret', logger });
+
+      expect(secretInitCalls).toEqual([
+        {
+          credentials: {
+            accessKeyId: 'AKIDTEST',
+            secretAccessKey: secretValue,
+          },
+          setup: true,
+        },
+      ]);
+      expect(secretSetupCalls).toHaveLength(1);
+    });
+
+    test.each([
+      { name: 'unset', value: undefined },
+      { name: 'empty', value: '' },
+    ])('throws a key-only error before init when $name', async ({ value }) => {
+      process.env.SETUP_TEST_KEY_ID = 'AKIDTEST';
+      if (value !== undefined) process.env.SETUP_TEST_SECRET = value;
+
+      await expect(
+        setupCommand({ target: 'destination.secret', logger }),
+      ).rejects.toThrow(
+        'WalkerOS: required secret "SETUP_TEST_SECRET" is not set',
+      );
+      expect(secretInitCalls).toHaveLength(0);
+      expect(secretSetupCalls).toHaveLength(0);
+    });
+
+    test('never writes the secret value to logs or output', async () => {
+      process.env.SETUP_TEST_KEY_ID = 'AKIDTEST';
+      process.env.SETUP_TEST_SECRET = secretValue;
+
+      await setupCommand({ target: 'destination.secret', json: true, logger });
+      await setupCommand({ target: 'destination.secret', logger });
+
+      const emitted = JSON.stringify([
+        jest.mocked(logger.info).mock.calls,
+        jest.mocked(logger.debug).mock.calls,
+        jest.mocked(logger.warn).mock.calls,
+        jest.mocked(logger.error).mock.calls,
+        jest.mocked(logger.json).mock.calls,
+        mockedWriteResult.mock.calls,
+      ]);
+      expect(emitted).not.toContain(secretValue);
     });
   });
 

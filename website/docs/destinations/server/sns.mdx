@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-aws'
 
 import awsData from '@walkeros/server-destination-aws/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import AwsCredentials from '@site/src/components/snippets/_aws-credentials.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -26,11 +27,11 @@ export const data = {
 <PackageLink env="server" github="packages/server/destinations/aws" npm="@walkeros/server-destination-aws" />
 
 Server-side event publishing to [AWS Simple Notification Service](https://aws.amazon.com/sns/)
-topics. Each event is serialized as JSON and published via the official
-`@aws-sdk/client-sns` SDK. Supports the AWS default credential chain,
-profile-based authentication, and pre-configured client injection. Idempotent
-topic provisioning via the `setup()` lifecycle, with declared subscriptions,
-KMS encryption, FIFO ordering, and per-event message attributes.
+topics. Each event is published as one JSON message via the official
+`@aws-sdk/client-sns` SDK, with FIFO ordering and per-event message attributes.
+The destination needs only the topic ARN and, off AWS, credentials. It never
+creates topics while it runs: provisioning (subscriptions, KMS encryption, FIFO
+attributes) is a separate step, `walkeros setup`.
 
 The destination ships inside `@walkeros/server-destination-aws` alongside
 Firehose. Import the named export `destinationSNS` and reference it via
@@ -43,6 +44,25 @@ the `code` field in `flow.json`.
   }}
   post={<>Publishes events to an SNS topic for fan-out delivery to SQS queues, Lambda functions, HTTPS endpoints, email, SMS, and custom subscribers.</>}
 />
+
+## Quick start
+
+```json
+"destinations": {
+  "sns": {
+    "package": "@walkeros/server-destination-aws",
+    "import": "destinationSNS",
+    "config": {
+      "settings": {
+        "topicArn": "arn:aws:sns:eu-central-1:123456789012:walkeros-events"
+      }
+    }
+  }
+}
+```
+
+The region and the topic name come from the ARN. Add
+[credentials](#credentials) when the flow runs outside AWS.
 
 ## Installation
 
@@ -64,8 +84,7 @@ await startFlow({
       code: destinationSNS,
       config: {
         settings: {
-          topicName: 'walkeros-events',
-          region: 'eu-central-1',
+          topicArn: 'arn:aws:sns:eu-central-1:123456789012:walkeros-events',
         },
       },
     },
@@ -86,8 +105,11 @@ Add to your `flow.json` destinations:
     "import": "destinationSNS",
     "config": {
       "settings": {
-        "topicName": "walkeros-events",
-        "region": "eu-central-1"
+        "topicArn": "arn:aws:sns:eu-central-1:123456789012:walkeros-events"
+      },
+      "credentials": {
+        "accessKeyId": "$secret.AWS_ACCESS_KEY_ID",
+        "secretAccessKey": "$secret.AWS_SECRET_ACCESS_KEY"
       }
     }
   }
@@ -102,17 +124,59 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
-## Authentication
+## Credentials
 
-Three modes, evaluated in order:
+<AwsCredentials />
 
-1. **Default credential chain.** Nothing to configure beyond `region`. The
-   AWS SDK resolves credentials in the standard order: environment variables,
-   shared credentials file, IAM role attached to the runtime (EC2, ECS, Lambda).
-2. **Profile or explicit credentials via `settings.config`.** Pass
-   `config.credentials` or `config.profile`, forwarded directly to the SDK.
-3. **Pre-configured client.** Pass an existing `SNSClient` instance as
-   `settings.client` for shared clients across destinations or custom transport.
+A client passed as `settings.client` is used as is and never closed by the
+destination.
+
+## Topic and region
+
+`settings.topicArn` is the primary setting. Without it, `settings.topicName`
+also works: the destination then completes the ARN once, at the first publish,
+with the account id from STS `GetCallerIdentity`, and caches it. A failed lookup
+is not cached, so the next publish asks again.
+
+At runtime the region is resolved once, when the destination starts:
+
+1. `settings.region`
+2. the region in `settings.topicArn`
+3. `settings.config.region`
+4. `AWS_REGION`, or the `region` of the active profile (`AWS_PROFILE`)
+5. `eu-central-1`
+
+When `settings.region` contradicts the region in `settings.topicArn`, the
+destination refuses to start. Remove `settings.region`; the ARN already names
+it.
+
+## Message payload
+
+Each `Message` is the full walkerOS event as JSON, or the mapped `data` when
+the event's mapping produces an object. Keep the event `id` in mapped data, so
+subscribers can deduplicate on it.
+
+SNS publishes one message per event and has no batching. Setting `config.batch`
+on this destination logs a warning at start; remove it.
+
+## Delivery
+
+Delivery is **at least once**: a message can arrive twice, for example when
+SNS stored it but the answer was lost on the way back. Deduplicate downstream
+on the event `id`.
+
+Each publish resolves once SNS accepted the message, else it fails with an
+error carrying `code` (the AWS error name), `status` (the HTTP status) and
+`retryable` (as classified by the AWS SDK). The AWS SDK's standard retry stays
+on, with each attempt bounded at a quarter of `config.timeout` unless you pass
+your own `settings.config.requestHandler`.
+
+:::caution Messages rejected by AWS are not replayed yet
+There is no retry beyond the SDK's own. A message that SNS throttles or rejects
+goes to the collector's in-memory dead letter queue, which nothing replays, so
+it is lost. The collector logs every failure with its cause, so the loss is
+visible. A standard retry for all destinations is planned in the collector.
+:::
 
 ## Setup
 
@@ -121,6 +185,15 @@ Provision the topic, attributes, tags, and declared subscriptions in one shot:
 ```bash
 walkeros setup destination.sns -c flow.json
 ```
+
+Setup reads the same `config.credentials` as the runtime, and resolves
+`$secret` references from the environment before it runs. An unset secret
+stops setup with a message that names the secret, never its value.
+
+Setup targets the first region in this order: `setup.region`,
+`settings.region`, the region in `settings.topicArn`, `settings.config.region`,
+`AWS_REGION` or the active profile, then `eu-central-1`. Without `setup.region`
+it uses the same region as the runtime.
 
 Setup is **authoritative-apply**: declared state is written to declared
 resources via a single idempotent `CreateTopic` call (plus one `Subscribe`
@@ -195,6 +268,10 @@ value-config form supplies a literal:
 }
 ```
 
+On a FIFO topic (an ARN ending in `.fifo`), `MessageDeduplicationId` defaults
+to the event `id` unless a rule maps one, so SNS drops a resent event within
+its five-minute deduplication window.
+
 ## Message attributes
 
 `messageAttributes` is a `Mapping.Map`. Each value resolves per event to the
@@ -223,13 +300,19 @@ Setup role:
 - `sns:CreateTopic`
 - `sns:GetTopicAttributes` (existence probe)
 - `sns:Subscribe`
-- `sts:GetCallerIdentity` (account-ID resolution)
+
+Setup also calls `sts:GetCallerIdentity` to resolve the account id. That call
+needs no IAM permission.
 
 Runtime push role:
 
-- `sns:Publish`
-- `sns:CreateTopic` (init's idempotent ARN capture). Drop this if you
-  pre-populate `settings.topicArn` from setup output.
+- `sns:Publish` on the topic
+
+When only `settings.topicName` is set, the runtime also calls
+`sts:GetCallerIdentity` once to complete the ARN. That call needs no IAM
+permission.
+
+The runtime never creates topics, so it needs no `sns:CreateTopic`.
 
 Recommended: separate roles for setup and runtime. Setup runs from a
 provisioner identity; runtime push uses a least-privileged role.
@@ -240,13 +323,26 @@ provisioner identity; runtime push uses a least-privileged role.
 
 ## Troubleshooting
 
-**`NotFoundException` at push time.** The topic was deleted or the runtime
-role lacks `sns:Publish`. Re-run `walkeros setup destination.sns` or
-verify IAM.
+**`NotFoundException` at push time.** The topic does not exist in that region.
+Run `walkeros setup destination.sns`, or set `settings.topicArn` to an
+existing topic.
 
-**`AccessDenied` at setup.** The setup role is missing one of the four
-permissions above. Check that `sts:GetCallerIdentity` is granted; SNS errors
-on a missing account-ID probe propagate verbatim.
+**`AuthorizationErrorException` at push time.** The credentials lack
+`sns:Publish` on the topic.
+
+**`UnrecognizedClientException`, `InvalidSignatureException`,
+`ExpiredTokenException`, or no credentials found.** The keys are wrong,
+expired or missing. Check `config.credentials` or the AWS credentials in the
+environment.
+
+**The destination refuses to start.** A configuration error found offline:
+neither `settings.topicArn` nor `settings.topicName` is set,
+`settings.topicArn` is not an SNS topic ARN, `settings.region` contradicts it,
+or `config.credentials` is malformed. The message names the
+field.
+
+**`AccessDenied` at setup.** The setup role is missing one of the three SNS
+permissions above. SNS errors propagate verbatim.
 
 **FIFO suffix error.** A topic name ending in `.fifo` was supplied with
 `setup.fifoTopic: false`, or vice versa. Either set `fifoTopic: true` or

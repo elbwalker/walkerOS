@@ -1,14 +1,23 @@
 import type { DestinationServer } from '@walkeros/server-core';
-import type {
-  Env,
-  SendClient,
-  Setup,
-  SetupSubscription,
-  Settings,
-  Types,
-} from './types';
+import type { Env, SendClient, Setup, SetupSubscription, Types } from './types';
 import type { LifecycleContext } from '@walkeros/core';
+import {
+  CreateTopicCommand,
+  GetTopicAttributesCommand,
+  SubscribeCommand,
+} from '@aws-sdk/client-sns';
 import { resolveSetup } from '@walkeros/core';
+import {
+  DEFAULT_REGION,
+  firstString,
+  isHandlerInstance,
+  loadSdkRegion,
+  parseTopicArn,
+} from '../lib/client';
+import { parseCredentials } from '../lib/credentials';
+import type { DeliveryTarget } from '../lib/errors';
+import type { CallerIdentity, ClientOptions } from './lib/sns';
+import { createSnsClient, createStsClient, getCallerIdentity } from './lib/sns';
 
 // Setup is wired to the destination's `setup` slot which uses the broader
 // `DestinationServer.Config<Types>` (settings is optional). We runtime-narrow
@@ -16,9 +25,9 @@ import { resolveSetup } from '@walkeros/core';
 // type-checks without contravariance issues.
 type WideConfig = DestinationServer.Config<Types>;
 
-export const DEFAULT_SETUP: Required<Pick<Setup, 'region' | 'fifoTopic'>> &
-  Setup = {
-  region: 'eu-central-1',
+// No region default here: an unset `setup.region` falls through to the
+// runtime region order, so setup and publish target the same region.
+export const DEFAULT_SETUP: Required<Pick<Setup, 'fifoTopic'>> & Setup = {
   fifoTopic: false,
 };
 
@@ -30,14 +39,14 @@ export interface SetupResult {
   subscriptionsCreated: number;
 }
 
-// Module-level account-ID cache so re-running setup in the same process is
-// a no-op for the STS GetCallerIdentity call. Keyed by region (in case
+// Module-level caller-identity cache so re-running setup in the same process
+// is a no-op for the STS GetCallerIdentity call. Keyed by region (in case
 // future versions support cross-region setup in one process).
-const accountIdCache: Map<string, string> = new Map();
+const identityCache: Map<string, CallerIdentity> = new Map();
 
-/** Test-only: clear the account-ID cache between test cases. */
+/** Test-only: clear the caller-identity cache between test cases. */
 export function __resetAccountIdCache(): void {
-  accountIdCache.clear();
+  identityCache.clear();
 }
 
 interface CreateTopicResponse {
@@ -73,35 +82,26 @@ function resolveTopicName(name: string, fifo: boolean): string {
   return name;
 }
 
-function resolveClient(
-  settings: Settings | undefined,
-  env: Env,
-  region: string,
-): SendClient {
-  if (settings?.client) return settings.client;
-  const config = settings?.config ?? {};
-  const merged = config.region ? config : { ...config, region };
-  return new env.AWS.SNSClient(merged);
-}
-
-async function getAccountId(env: Env, region: string): Promise<string> {
-  const cached = accountIdCache.get(region);
+/**
+ * Account id and partition of the setup credentials, from STS once per region.
+ * The partition (aws, aws-cn, aws-us-gov) comes from the caller ARN, so the
+ * candidate topic ARN is right outside the standard partition too.
+ */
+async function getIdentity(
+  env: Env | undefined,
+  options: ClientOptions,
+  target: DeliveryTarget,
+): Promise<CallerIdentity> {
+  const cached = identityCache.get(options.region);
   if (cached) return cached;
-  const stsClient = new env.AWS.STSClient({ region });
-  const res: unknown = await stsClient.send(
-    new env.AWS.GetCallerIdentityCommand({}),
-  );
-  if (
-    typeof res === 'object' &&
-    res !== null &&
-    'Account' in res &&
-    typeof (res as { Account?: unknown }).Account === 'string'
-  ) {
-    const accountId = (res as { Account: string }).Account;
-    accountIdCache.set(region, accountId);
-    return accountId;
+  const stsClient = createStsClient(env, options);
+  try {
+    const identity = await getCallerIdentity(stsClient, env, target);
+    identityCache.set(options.region, identity);
+    return identity;
+  } finally {
+    stsClient.destroy?.();
   }
-  throw new Error('STS GetCallerIdentity returned no Account');
 }
 
 function isCreateTopicResponse(v: unknown): v is CreateTopicResponse {
@@ -134,7 +134,7 @@ function buildSubscribeAttributes(
 
 async function applyDeclaredSubscriptions(
   client: SendClient,
-  env: Env,
+  env: Env | undefined,
   topicArn: string,
   declared: SetupSubscription[],
 ): Promise<number> {
@@ -152,14 +152,15 @@ async function applyDeclaredSubscriptions(
     };
     const attrs = buildSubscribeAttributes(sub);
     if (attrs) input.Attributes = attrs;
-    await client.send(new env.AWS.SubscribeCommand(input));
+    const Command = env?.AWS?.SubscribeCommand ?? SubscribeCommand;
+    await client.send(new Command(input));
     count += 1;
   }
   return count;
 }
 
 export async function setup(
-  ctx: LifecycleContext<WideConfig, Env>,
+  ctx: LifecycleContext<WideConfig, Env | undefined>,
 ): Promise<SetupResult | undefined> {
   const { config, env, logger } = ctx;
   const merged = resolveSetup(config.setup, DEFAULT_SETUP);
@@ -168,91 +169,122 @@ export async function setup(
     return;
   }
 
-  const settings = config.settings;
-  if (!settings || !settings.topicName) {
+  const settings = config.settings ?? {};
+  const arn = settings.topicArn ? parseTopicArn(settings.topicArn) : undefined;
+  const topicName = settings.topicName ?? arn?.name;
+  if (!topicName) {
     logger.throw(
-      'setup: settings.topicName is required. There is no safe default for the SNS topic name.',
+      'setup: settings.topicName (or settings.topicArn) is required. There is no safe default for the SNS topic name.',
     );
     return;
   }
 
-  const region = merged.region ?? DEFAULT_SETUP.region;
+  const sdkRegion =
+    typeof settings.config?.region === 'string'
+      ? settings.config.region
+      : undefined;
+  const region =
+    firstString(
+      merged.region,
+      settings.region,
+      arn?.region,
+      sdkRegion,
+      await loadSdkRegion(),
+    ) ?? DEFAULT_REGION;
   const fifo = merged.fifoTopic ?? false;
-  const declaredName = settings.topicName;
-  const finalName = resolveTopicName(declaredName, fifo);
-  if (fifo && finalName !== declaredName) {
+  const finalName = resolveTopicName(topicName, fifo);
+  if (fifo && finalName !== topicName) {
     logger.info(
-      `setup: appended .fifo suffix to FIFO topic name '${declaredName}' -> '${finalName}'`,
+      `setup: appended .fifo suffix to FIFO topic name '${topicName}' -> '${finalName}'`,
     );
   }
 
   // Topic-existence probe via candidate ARN derived from STS account ID.
-  const client = resolveClient(settings, env, region);
-  const accountId = await getAccountId(env, region);
-  const candidateArn = `arn:aws:sns:${region}:${accountId}:${finalName}`;
-
-  let topicCreated = false;
-  try {
-    await client.send(
-      new env.AWS.GetTopicAttributesCommand({ TopicArn: candidateArn }),
-    );
-  } catch (err) {
-    if (isNotFound(err)) {
-      topicCreated = true;
-    } else {
-      throw err;
-    }
-  }
-
-  // Authoritative-apply: full declared state in one CreateTopic call.
-  // SNS:CreateTopic is idempotent on identical Name+Attributes+Tags inputs.
-  const attributes: Record<string, string> = {};
-  if (fifo) {
-    attributes.FifoTopic = 'true';
-    attributes.ContentBasedDeduplication = 'true';
-  }
-  if (merged.displayName !== undefined)
-    attributes.DisplayName = merged.displayName;
-  if (merged.kmsMasterKeyId !== undefined)
-    attributes.KmsMasterKeyId = merged.kmsMasterKeyId;
-
-  const tagEntries = merged.tags
-    ? Object.entries(merged.tags).map(([Key, Value]) => ({ Key, Value }))
-    : undefined;
-
-  const createInput: {
-    Name: string;
-    Attributes?: Record<string, string>;
-    Tags?: Array<{ Key: string; Value: string }>;
-  } = { Name: finalName };
-  if (Object.keys(attributes).length > 0) createInput.Attributes = attributes;
-  if (tagEntries && tagEntries.length > 0) createInput.Tags = tagEntries;
-
-  const createRes = await client.send(
-    new env.AWS.CreateTopicCommand(createInput),
-  );
-  const topicArn = extractTopicArn(createRes);
-
-  if (topicCreated) {
-    logger.info('setup: topic created', { topicArn, region });
-  } else {
-    logger.debug('setup: topic exists; declared state re-applied', {
-      topicArn,
-      region,
-    });
-  }
-
-  const subscriptionsCreated = await applyDeclaredSubscriptions(
-    client,
-    env,
-    topicArn,
-    merged.subscriptions ?? [],
-  );
-
-  return {
-    topicArn,
-    topicCreated,
-    tagsApplied: merged.tags ? Object.keys(merged.tags).length : 0,
-    subscriptionsCreated,
+  const options: ClientOptions = {
+    region,
+    config: settings.config,
+    credentials: parseCredentials(config.credentials),
+    timeout: config.timeout,
   };
+  const client = settings.client ?? createSnsClient(env, options);
+  // A client setup built is closed on every path, unless something in it is
+  // the user's (their client, or their request handler instance).
+  const closesClient =
+    !settings.client && !isHandlerInstance(settings.config?.requestHandler);
+
+  try {
+    const { accountId, partition } = await getIdentity(env, options, {
+      service: 'SNS',
+      resource: finalName,
+      region,
+      id: ctx.id,
+    });
+    const candidateArn = `arn:${partition}:sns:${region}:${accountId}:${finalName}`;
+
+    let topicCreated = false;
+    try {
+      const Command =
+        env?.AWS?.GetTopicAttributesCommand ?? GetTopicAttributesCommand;
+      await client.send(new Command({ TopicArn: candidateArn }));
+    } catch (err) {
+      if (isNotFound(err)) {
+        topicCreated = true;
+      } else {
+        throw err;
+      }
+    }
+
+    // Authoritative-apply: full declared state in one CreateTopic call.
+    // SNS:CreateTopic is idempotent on identical Name+Attributes+Tags inputs.
+    const attributes: Record<string, string> = {};
+    if (fifo) {
+      attributes.FifoTopic = 'true';
+      attributes.ContentBasedDeduplication = 'true';
+    }
+    if (merged.displayName !== undefined)
+      attributes.DisplayName = merged.displayName;
+    if (merged.kmsMasterKeyId !== undefined)
+      attributes.KmsMasterKeyId = merged.kmsMasterKeyId;
+
+    const tagEntries = merged.tags
+      ? Object.entries(merged.tags).map(([Key, Value]) => ({ Key, Value }))
+      : undefined;
+
+    const createInput: {
+      Name: string;
+      Attributes?: Record<string, string>;
+      Tags?: Array<{ Key: string; Value: string }>;
+    } = { Name: finalName };
+    if (Object.keys(attributes).length > 0) createInput.Attributes = attributes;
+    if (tagEntries && tagEntries.length > 0) createInput.Tags = tagEntries;
+
+    const CreateCommand = env?.AWS?.CreateTopicCommand ?? CreateTopicCommand;
+    const createRes = await client.send(new CreateCommand(createInput));
+    const topicArn = extractTopicArn(createRes);
+
+    if (topicCreated) {
+      logger.info('setup: topic created', { topicArn, region });
+    } else {
+      logger.debug('setup: topic exists; declared state re-applied', {
+        topicArn,
+        region,
+      });
+    }
+
+    const subscriptionsCreated = await applyDeclaredSubscriptions(
+      client,
+      env,
+      topicArn,
+      merged.subscriptions ?? [],
+    );
+
+    return {
+      topicArn,
+      topicCreated,
+      tagsApplied: merged.tags ? Object.keys(merged.tags).length : 0,
+      subscriptionsCreated,
+    };
+  } finally {
+    if (closesClient) client.destroy?.();
+  }
 }

@@ -21,6 +21,10 @@ const filePath = path.resolve(
 const raw = fs.readFileSync(filePath, 'utf8');
 const file: unknown = JSON.parse(raw);
 const guide = fs.readFileSync(filePath.replace(/\.json$/, '.md'), 'utf8');
+const cliPackage: unknown = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, '../../../../package.json'), 'utf8'),
+);
+const cliVersion = isObject(cliPackage) ? cliPackage.version : undefined;
 
 const CHAPTERS: ChapterId[] = [
   'tour',
@@ -223,10 +227,14 @@ describe('flow-complete.json', () => {
         expect(pkg.path).toBeUndefined();
   });
 
-  it('pins every package version', () => {
+  it('pins every package to the version it ships with', () => {
+    // release.yml runs scripts/sync-example-pins.mjs after every version bump.
     for (const flow of Object.values(flowComplete.flows))
-      for (const pkg of Object.values(flow.config?.bundle?.packages ?? {}))
-        expect(pkg.version).toMatch(/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/);
+      for (const [name, pkg] of Object.entries(
+        flow.config?.bundle?.packages ?? {},
+      ))
+        if (name.startsWith('@walkeros/'))
+          expect([name, pkg.version]).toEqual([name, cliVersion]);
   });
 
   it('marks exactly one example public per step', () => {

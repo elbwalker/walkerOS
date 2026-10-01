@@ -537,6 +537,73 @@ describe('Destination batch correctness (PROD-004)', () => {
     expect(destStatus.count).toBe(2);
   });
 
+  it('the partial-failure error line keeps its counts and groups the causes by code', async () => {
+    const errors: Array<{ message: string; context: Logger.LogContext }> = [];
+    const handler: Logger.Handler = (level, message, context) => {
+      if (level === Level.ERROR) errors.push({ message, context });
+    };
+    const mockPushBatch = jest.fn(
+      (_batch: Destination.Batch<unknown>): Destination.BatchOutcome => ({
+        failed: [
+          {
+            index: 0,
+            error: Object.assign(new Error('a first'), { code: 'A' }),
+          },
+          {
+            index: 1,
+            error: Object.assign(new Error('a second'), { code: 'A' }),
+          },
+          {
+            index: 2,
+            error: Object.assign(new Error('b only'), { code: 'B' }),
+          },
+          { index: 3, error: new TypeError('plain') },
+        ],
+      }),
+    );
+
+    const dest: Destination.Instance = {
+      type: 'partial-causes',
+      push: jest.fn(),
+      pushBatch: mockPushBatch,
+      config: {
+        init: true,
+        mapping: { '*': { '*': { batch: 1 } } },
+      },
+    };
+
+    const { collector } = await startFlow({
+      destinations: { d: { code: dest } },
+      logger: { handler },
+    });
+
+    for (let i = 0; i < 5; i++) {
+      await pushToDestinations(
+        collector,
+        makeEvent(i),
+        { ingest: createIngest(`req-${i}`) },
+        collector.destinations,
+      );
+    }
+
+    await collector.destinations['d'].batches!['* *'].flush();
+
+    const lines = errors.filter(
+      (e) => e.message === 'Push batch partial failure',
+    );
+    expect(lines).toHaveLength(1);
+    expect(lines[0].context).toMatchObject({
+      failed: 4,
+      delivered: 1,
+      entries: 5,
+    });
+    expect(lines[0].context.causes).toEqual([
+      { code: 'A', count: 2, message: 'a first' },
+      { code: 'B', count: 1, message: 'b only' },
+      { code: 'TypeError', count: 1, message: 'plain' },
+    ]);
+  });
+
   it('a BatchOutcome with empty failed counts the whole batch delivered', async () => {
     const mockPushBatch = jest.fn(
       (_batch: Destination.Batch<unknown>): Destination.BatchOutcome => ({

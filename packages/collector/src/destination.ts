@@ -193,7 +193,10 @@ export async function addDestination(
     });
   }
 
-  const baseConfig = dataConfig || { init: false };
+  // Code defaults sit under the caller's config, the same merge
+  // registerDestination applies, so a runtime destination keeps defaults such
+  // as a code-level `batch` and the require check below sees them too.
+  const baseConfig = { ...code.config, ...(dataConfig || { init: false }) };
   // Merge before, next, and cache into config if provided at root level
   let config = before ? { ...baseConfig, before } : { ...baseConfig };
   if (next) config = { ...config, next };
@@ -1396,10 +1399,38 @@ export async function destinationPush<Destination extends Destination.Instance>(
               0,
               snapshot.entries.length - failedPairs.length,
             );
+            // One entry per failure cause: the error's `code`, else its
+            // `name`, with a count and the first message as a sample.
+            const causes = new Map<
+              string,
+              { code: string; count: number; message: string }
+            >();
+            for (const [, rowError] of failedPairs) {
+              const code =
+                rowError instanceof Error &&
+                'code' in rowError &&
+                typeof rowError.code === 'string'
+                  ? rowError.code
+                  : rowError instanceof Error
+                    ? rowError.name
+                    : 'Error';
+              const cause = causes.get(code);
+              if (cause) cause.count++;
+              else
+                causes.set(code, {
+                  code,
+                  count: 1,
+                  message:
+                    rowError instanceof Error
+                      ? rowError.message
+                      : String(rowError),
+                });
+            }
             destLogger.error('Push batch partial failure', {
               failed: failedPairs.length,
               delivered: succeededCount,
               entries: snapshot.entries.length,
+              causes: [...causes.values()],
             });
           }
         }

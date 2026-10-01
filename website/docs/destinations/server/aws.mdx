@@ -1,12 +1,13 @@
 ---
 title: AWS Firehose
-description: "Stream events to Amazon Kinesis Data Firehose for real-time analytics"
+description: "Stream events to Amazon Data Firehose for S3, Snowflake, Redshift and other analytics targets"
 path: /docs/destinations/server/aws
 sidebar_position: 1
 package: '@walkeros/server-destination-aws'
 ---
 import data from '@walkeros/server-destination-aws/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import AwsCredentials from '@site/src/components/snippets/_aws-credentials.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -15,21 +16,41 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 <PackageLink env="server" github="packages/server/destinations/aws" npm="@walkeros/server-destination-aws" />
 
 :::tip Looking for AWS SNS?
-Topic publishing with FIFO ordering, KMS encryption, and idempotent
-provisioning lives on the dedicated [AWS SNS destination page](/docs/destinations/server/sns).
+Topic publishing with FIFO ordering, KMS encryption, and topic provisioning
+lives on the dedicated [AWS SNS destination page](/docs/destinations/server/sns).
 :::
 
-The AWS destination package provides server-side integration for streaming
-events from walkerOS to Amazon Kinesis Data Firehose for real-time analytics,
-data lakes, and downstream processing.
+Streams events from walkerOS to an [Amazon Data Firehose](https://aws.amazon.com/firehose/)
+stream, which delivers them to S3, Snowflake, Redshift, OpenSearch or an HTTP
+endpoint. Batching is on by default, every record ends with a newline so S3
+objects are valid NDJSON, and a record AWS rejects is reported as failed with
+its cause. The destination needs a stream name and, off AWS, credentials.
 
 <WhereThisFits
   pre={<>AWS Firehose is a <strong>server destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Firehose', highlight: true } },
   }}
-  post={<>Streams events to Amazon Kinesis Data Firehose for real-time analytics, S3 data lakes, and downstream AWS services.</>}
+  post={<>Streams events to Amazon Data Firehose for S3 data lakes, Snowflake, Redshift and other downstream AWS services.</>}
 />
+
+## Quick start
+
+```json
+"destinations": {
+  "firehose": {
+    "package": "@walkeros/server-destination-aws",
+    "import": "destinationFirehose",
+    "config": {
+      "settings": { "streamName": "walkeros-events" }
+    }
+  }
+}
+```
+
+That is the whole configuration on AWS compute in the stream's region. Add
+`settings.region` when the stream lives elsewhere, and
+[credentials](#credentials) when the flow runs outside AWS.
 
 ## Installation
 
@@ -45,22 +66,15 @@ data lakes, and downstream processing.
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationFirehose } from '@walkeros/server-destination-aws';
 
+// Credentials come from the AWS default chain (role, AWS_* variables or profile).
 await startFlow({
   destinations: {
     firehose: {
       code: destinationFirehose,
       config: {
         settings: {
-          firehose: {
-            streamName: 'your-firehose-stream-name',
-            region: 'eu-central-1',
-            config: {
-              credentials: {
-                accessKeyId: 'your-access-key-id',
-                secretAccessKey: 'your-secret-access-key',
-              },
-            },
-          },
+          streamName: 'walkeros-events',
+          region: 'eu-central-1',
         },
       },
     },
@@ -81,16 +95,12 @@ Add to your `flow.json` destinations:
     "import": "destinationFirehose",
     "config": {
       "settings": {
-        "firehose": {
-          "streamName": "your-firehose-stream-name",
-          "region": "eu-central-1",
-          "config": {
-            "credentials": {
-              "accessKeyId": "your-access-key-id",
-              "secretAccessKey": "your-secret-access-key"
-            }
-          }
-        }
+        "streamName": "walkeros-events",
+        "region": "eu-central-1"
+      },
+      "credentials": {
+        "accessKeyId": "$secret.AWS_ACCESS_KEY_ID",
+        "secretAccessKey": "$secret.AWS_SECRET_ACCESS_KEY"
       }
     }
   }
@@ -104,3 +114,205 @@ Add to your `flow.json` destinations:
 </Tabs>
 
 <Configuration type="destination" data={data} />
+
+## Region
+
+The region is resolved once, when the destination starts, in this order:
+
+1. `settings.region`
+2. `settings.config.region`
+3. `AWS_REGION`, or the `region` of the active profile (`AWS_PROFILE`)
+4. `eu-central-1`
+
+AWS compute (Lambda, ECS, App Runner) sets `AWS_REGION`, so a flow running next
+to its stream needs no region at all. Every delivery error names the region the
+destination used.
+
+:::note Migrating from `settings.firehose`
+Earlier versions nested the options under `settings.firehose`. That form is
+still read as an alias of the flat fields `streamName`, `region`, `config` and
+`client`. When a flat field and its alias are both set to different values,
+the destination refuses to start, so a half-done migration never sends events
+to the wrong stream. Move the fields up one level and remove
+`settings.firehose`.
+:::
+
+## Credentials
+
+<AwsCredentials />
+
+### IAM policy
+
+The credentials need `firehose:PutRecordBatch` on the stream:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "firehose:PutRecordBatch",
+      "Resource": "arn:aws:firehose:<region>:<account>:deliverystream/<name>"
+    }
+  ]
+}
+```
+
+## Record format
+
+Each record is one JSON object followed by a newline (`\n`):
+
+```text
+{"name":"page view","entity":"page","action":"view","id":"ev-1700001000","data":{"title":"Home","url":"https://example.com/"},...}
+```
+
+- **Payload:** the full walkerOS event, or the mapped `data` when the event's
+  mapping produces an object. Keep the event `id` in mapped data, because it is
+  the key for deduplication downstream (see [Delivery](#delivery)).
+- **`settings.newline`:** `true` by default. Firehose concatenates records into
+  S3 objects as they arrive, so without a newline an object holds `}{` between
+  records and most readers fail on it.
+
+:::warning Turn one of the two newlines off
+A Firehose stream can add its own delimiter (the "New line delimiter" option of
+its S3 destination settings). When that option is on, `newline: false` is
+required: two newlines per record make Athena read a NULL row after every
+record, or fail the query.
+:::
+
+A mapping that keeps the id and a few fields:
+
+```json
+"mapping": {
+  "order": {
+    "complete": {
+      "data": {
+        "map": {
+          "id": "id",
+          "name": "name",
+          "order_id": "data.id",
+          "total": "data.total"
+        }
+      }
+    }
+  }
+}
+```
+
+### Snowflake
+
+Firehose delivers to Snowflake row by row and needs no delimiter, so set
+`newline: false` for a stream with a Snowflake destination. With the stream's
+option to use JSON keys as table column names, map `data` to an object whose
+keys match the table columns:
+
+```json
+"config": {
+  "settings": { "streamName": "walkeros-snowflake", "newline": false },
+  "mapping": {
+    "*": {
+      "*": {
+        "data": {
+          "map": {
+            "event_id": "id",
+            "event_name": "name",
+            "event_timestamp": "timestamp",
+            "event_data": "data"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+## Batching
+
+Batching is on by default with `config.batch: { size: 500, age: 1000 }`: the
+collector flushes after 500 events or one second, whichever comes first.
+Override `config.batch` to trade latency for fewer calls. Firehose buffers
+again before it writes to the target, so small batches rarely pay off.
+
+A flushed batch goes out as `PutRecordBatch` calls of at most 500 records and
+2,900,000 bytes each, sent concurrently. A failed call fails only its own
+records; every other call still lands. Two kinds of records are refused before
+anything is sent, and only that record fails:
+
+| Code             | Cause                                                     |
+| ---------------- | --------------------------------------------------------- |
+| `RecordTooLarge` | The record is over 1,000,000 bytes, newline included.     |
+| `InvalidRecord`  | The payload does not serialize to JSON (a cycle, BigInt). |
+
+## Delivery
+
+Delivery is **at least once**: a record can arrive twice, for example when AWS
+stored it but the answer was lost on the way back. Deduplicate downstream on
+the event `id`.
+
+The outcome of every delivery is exact. A batch resolves only when every record
+was confirmed. A record AWS rejects inside an accepted call counts as failed
+and is reported to the collector with its index. When nothing landed, the
+whole batch fails with the dominant cause. Each failure is an error with:
+
+| Field       | Meaning                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------ |
+| `code`      | The AWS error name (`ServiceUnavailableException`, `ResourceNotFoundException`, ...) or a code above.   |
+| `status`    | The HTTP status when AWS answered.                                                                     |
+| `retryable` | Whether sending the same record again can succeed, as classified by the AWS SDK.                       |
+
+The destination sends each call once. The AWS SDK's standard retry (up to three
+attempts) stays on, and each attempt is bounded at a quarter of `config.timeout`
+(2.5 seconds at the default 10 seconds), so all attempts end before the
+collector stops waiting. Passing your own `settings.config.requestHandler`
+replaces that bound.
+
+:::caution Records rejected by AWS are not replayed yet
+There is no retry beyond the SDK's own. A record that AWS throttles or rejects
+goes to the collector's in-memory dead letter queue, which nothing replays, so
+it is lost. The collector logs every failure with its cause, so the loss is
+visible. A standard retry for all destinations is planned in the collector.
+:::
+
+On shutdown, the destination waits for the calls still in flight before it
+closes the client it built. A client passed as `settings.client` is never
+closed.
+
+## Troubleshooting
+
+| Symptom                                                                                             | Cause and fix                                                                                                            |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `ResourceNotFoundException`                                                                         | The stream does not exist in that region. Check `settings.streamName` and the region the message names.                  |
+| `AccessDeniedException`                                                                             | The credentials lack `firehose:PutRecordBatch` on the stream. See [IAM policy](#iam-policy).                             |
+| `UnrecognizedClientException`, `InvalidSignatureException`, `ExpiredTokenException`, no credentials | The keys are wrong, expired or missing. Check `config.credentials` or the AWS credentials in the environment.            |
+| NULL rows in Athena, or failed queries                                                              | Records end with two newlines. Turn one of the two newlines off: set `newline: false` or the stream's delimiter off.     |
+| S3 objects contain `}{`                                                                             | Records have no delimiter at all. Leave `newline` at its default `true`.                                                 |
+| The destination refuses to start                                                                    | A configuration error found offline: missing `streamName`, a flat field and `settings.firehose` disagree, or malformed credentials. The message names the field. |
+
+Any other AWS error passes through with its AWS text, the stream and the
+region.
+
+## Simulate and local testing
+
+`walkeros push --simulate destination.firehose` runs offline with the package's
+mock Firehose client and prints each `PutRecordBatch` call with its records;
+nothing reaches AWS.
+
+To send real requests to a local Firehose-compatible endpoint (such as
+LocalStack), set `settings.config.endpoint`:
+
+```json
+"settings": {
+  "streamName": "walkeros-events",
+  "config": { "endpoint": "http://localhost:4566" }
+}
+```
+
+To use a named profile from your AWS config files on a workstation, set
+`AWS_PROFILE`. Its credentials and region are picked up without any change to
+the flow.
+
+## Next steps
+
+- [AWS SNS destination](/docs/destinations/server/sns) for topic fan-out
+- [Mapping configuration](/docs/mapping)
+- [Flow configuration](/docs/getting-started/flow)

@@ -848,10 +848,22 @@ walkeros setup destination.pubsub -c packages/cli/examples/flow-complete.json -f
   - `bundle-packages` at `/flows/server/config/bundle/packages`: bundle.packages
     lists what a flow is built from.
   - `package-version` at
-    `/flows/server/config/bundle/packages/@walkeros~1collector/version`: Pinned
-    versions keep builds reproducible; validate --strict warns without them.
+    `/flows/server/config/bundle/packages/@walkeros~1collector/version`:
+    validate --strict warns for a listed package without a version; an unlisted
+    step package is added as latest.
   - `root-include` at `/include`: include ships the shared folder, walker.js
     included, with the server artifact.
+- **Package versions:** every `@walkeros/*` package releases at one version, and
+  this file pins all of them to the version it ships with. Exact is recommended.
+
+| `version`              | Resolves to                                                    |
+| ---------------------- | -------------------------------------------------------------- |
+| omitted                | `latest`; `validate --strict` warns                            |
+| `latest` or a dist-tag | the version the tag points to at build time, re-resolved daily |
+| a range (`^4.6.0`)     | the highest published version in the range, re-resolved daily  |
+| exact (`4.6.1`)        | that version, cached for good                                  |
+| `path` instead         | a local directory, copied from disk, no registry               |
+
 - `--release` stamps the id on every event as `source.release`; there is no
   release variable in the file.
 - Root `include` ships `shared/` (with `walker.js`) next to every artifact.

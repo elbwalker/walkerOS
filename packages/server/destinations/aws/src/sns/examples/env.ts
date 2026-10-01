@@ -1,3 +1,10 @@
+import type {
+  CreateTopicCommandInput,
+  GetTopicAttributesCommandInput,
+  PublishCommandInput,
+  SubscribeCommandInput,
+} from '@aws-sdk/client-sns';
+import type { GetCallerIdentityCommandInput } from '@aws-sdk/client-sts';
 import type { Env, SendClient } from '../types';
 
 /**
@@ -5,8 +12,8 @@ import type { Env, SendClient } from '../types';
  *
  * `push` is the mock env simulate injects: the SNS and STS clients answer
  * every `send` locally, so nothing reaches AWS. Each command keeps its
- * `input`, so a recorded `send` shows the request (`CreateTopic` at init,
- * `Publish` per event). Unit tests still substitute the SDK module-wide via
+ * `input`, so a recorded `send` shows the request (`Publish` per event).
+ * Unit tests still substitute the SDK module-wide via
  * `jest.mock('@aws-sdk/client-sns')`.
  */
 
@@ -18,37 +25,27 @@ class MockCommand<Input> {
   constructor(public readonly input: Input) {}
 }
 
-class MockCreateTopicCommand extends MockCommand<
-  ConstructorParameters<Env['AWS']['CreateTopicCommand']>[0]
-> {
+class MockCreateTopicCommand extends MockCommand<CreateTopicCommandInput> {
   get [Symbol.toStringTag](): string {
     return 'CreateTopicCommand';
   }
 }
-class MockPublishCommand extends MockCommand<
-  ConstructorParameters<Env['AWS']['PublishCommand']>[0]
-> {
+class MockPublishCommand extends MockCommand<PublishCommandInput> {
   get [Symbol.toStringTag](): string {
     return 'PublishCommand';
   }
 }
-class MockGetTopicAttributesCommand extends MockCommand<
-  ConstructorParameters<Env['AWS']['GetTopicAttributesCommand']>[0]
-> {
+class MockGetTopicAttributesCommand extends MockCommand<GetTopicAttributesCommandInput> {
   get [Symbol.toStringTag](): string {
     return 'GetTopicAttributesCommand';
   }
 }
-class MockSubscribeCommand extends MockCommand<
-  ConstructorParameters<Env['AWS']['SubscribeCommand']>[0]
-> {
+class MockSubscribeCommand extends MockCommand<SubscribeCommandInput> {
   get [Symbol.toStringTag](): string {
     return 'SubscribeCommand';
   }
 }
-class MockGetCallerIdentityCommand extends MockCommand<
-  ConstructorParameters<Env['AWS']['GetCallerIdentityCommand']>[0]
-> {
+class MockGetCallerIdentityCommand extends MockCommand<GetCallerIdentityCommandInput> {
   get [Symbol.toStringTag](): string {
     return 'GetCallerIdentityCommand';
   }
@@ -63,13 +60,18 @@ class MockSNSClient implements SendClient {
       return { MessageId: 'mock-message-id' };
     return {};
   }
+  destroy(): void {}
 }
 
 class MockSTSClient implements SendClient {
   constructor(public config?: object) {}
   async send(): Promise<unknown> {
-    return { Account: '123456789012' };
+    return {
+      Account: '123456789012',
+      Arn: 'arn:aws:iam::123456789012:user/walkeros',
+    };
   }
+  destroy(): void {}
 }
 
 export const push: Env = {

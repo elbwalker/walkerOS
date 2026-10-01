@@ -552,4 +552,125 @@ describe('Config Loader', () => {
       expect(settings?.windowElb).toBe('myElb');
     });
   });
+
+  describe('Flow settings to build options', () => {
+    function webFlow(settings?: Record<string, unknown>, variables?: object) {
+      return {
+        version: 4,
+        ...(variables ? { variables } : {}),
+        flows: {
+          default: {
+            config: {
+              platform: 'web',
+              ...(settings ? { settings } : {}),
+            },
+          },
+        },
+      };
+    }
+
+    const load = (config: unknown) =>
+      loadBundleConfig(config, { configPath: '/test/config.json' });
+
+    test('the flow windowCollector names the collector global', () => {
+      const { buildOptions } = load(
+        webFlow({ windowCollector: 'walkerCollector' }),
+      );
+      expect(buildOptions.windowCollector).toBe('walkerCollector');
+    });
+
+    test('an unset windowCollector keeps the walkerOS default', () => {
+      expect(load(webFlow()).buildOptions.windowCollector).toBe('walkerOS');
+    });
+
+    test('a windowCollector that is no identifier is refused', () => {
+      expect(() => load(webFlow({ windowCollector: 'walker-os' }))).toThrow(
+        /windowCollector/,
+      );
+    });
+
+    test('a $var windowCollector names the global it resolves to', () => {
+      const { buildOptions } = load(
+        webFlow(
+          { windowCollector: '$var.collectorName' },
+          { collectorName: 'tracker' },
+        ),
+      );
+      expect(buildOptions.windowCollector).toBe('tracker');
+    });
+
+    test('a $env windowCollector resolves from config.bundle.env', () => {
+      const config = {
+        version: 4,
+        flows: {
+          default: {
+            config: {
+              platform: 'web',
+              settings: { windowCollector: '$env.COLLECTOR_GLOBAL' },
+              bundle: { env: { COLLECTOR_GLOBAL: 'walkerStage' } },
+            },
+          },
+        },
+      };
+      const { buildOptions } = loadBundleConfig(config, {
+        configPath: '/test/config.json',
+        buildEnv: {},
+      });
+      expect(buildOptions.windowCollector).toBe('walkerStage');
+    });
+
+    test('an unset $env windowCollector without default is a missing env error', () => {
+      expect(() =>
+        loadBundleConfig(
+          webFlow({ windowCollector: '$env.COLLECTOR_GLOBAL' }),
+          {
+            configPath: '/test/config.json',
+            buildEnv: {},
+          },
+        ),
+      ).toThrow(
+        expect.objectContaining({
+          code: 'MISSING_ENV',
+          reference: 'COLLECTOR_GLOBAL',
+        }),
+      );
+    });
+
+    test('a reference resolving to no identifier names both values', () => {
+      expect(() =>
+        load(
+          webFlow(
+            { windowCollector: '$var.collectorName' },
+            { collectorName: 'walker-os' },
+          ),
+        ),
+      ).toThrow(
+        'flows.default.config.settings.windowCollector: "$var.collectorName" resolved to "walker-os", which is not a JavaScript identifier',
+      );
+    });
+
+    test('unknown settings keys never reach the build options', () => {
+      const { buildOptions } = load(
+        webFlow({ minify: false, format: 'esm', custom: 'x' }),
+      );
+      expect(buildOptions.minify).toBe(true);
+      expect(buildOptions.format).toBe('iife');
+      expect(Object.keys(buildOptions)).not.toContain('custom');
+    });
+
+    test('a server flow gets no collector global', () => {
+      const { buildOptions } = load({
+        version: 4,
+        flows: {
+          default: {
+            config: {
+              platform: 'server',
+              settings: { windowCollector: 'walkerCollector' },
+            },
+          },
+        },
+      });
+      expect(buildOptions.windowCollector).toBeUndefined();
+    });
+  });
 });

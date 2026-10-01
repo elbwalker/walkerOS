@@ -140,6 +140,7 @@ import {
   ensureCodeOnDisk,
 } from '../../core/build-cache.js';
 import type { CodeCacheKeyInputs } from '../../core/build-cache.js';
+import { assertWindowCollector } from '../../config/window-collector.js';
 
 export interface BundleStats {
   totalSize: number;
@@ -1882,7 +1883,7 @@ export function generateWebEntry(
   const assignments: string[] = [];
   if (options.windowCollector) {
     assignments.push(
-      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
+      `  if (typeof window !== 'undefined') window['${assertWindowCollector(options.windowCollector)}'] = collector;`,
     );
   }
   // windowElb is intentionally NOT assigned here: the browser source is the
@@ -1992,7 +1993,7 @@ export function generateWrapEntry(
   const assignments: string[] = [];
   if (options.windowCollector) {
     assignments.push(
-      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
+      `  if (typeof window !== 'undefined') window['${assertWindowCollector(options.windowCollector)}'] = collector;`,
     );
   }
   // windowElb is intentionally NOT assigned here (see generateWebEntry): the

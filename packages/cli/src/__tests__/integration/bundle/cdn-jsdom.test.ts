@@ -12,6 +12,7 @@
  * fix, the IIFE would load but pushes to elb/elbLayer would never reach the
  * api destination because the browser source never wired up `window`/`document`.
  */
+import http from 'http';
 import { readFile, mkdtemp, rm } from 'fs/promises';
 import { ensureDir } from 'fs-extra';
 import { tmpdir } from 'os';
@@ -21,6 +22,8 @@ import { JSDOM, VirtualConsole } from 'jsdom';
 import { bundle } from '../../../commands/bundle/index.js';
 import { bundleCore } from '../../../commands/bundle/bundler.js';
 import { wrapSkeleton } from '../../../commands/bundle/wrap.js';
+import { runBuildManifest } from '../../../commands/bundle/manifest.js';
+import { VERSION } from '../../../version.js';
 import { loadBundleConfig } from '../../../config/loader.js';
 import { createCLILogger } from '../../../core/cli-logger.js';
 import { MINIMAL_FLOW } from '../../fixtures/minimal-flow.js';
@@ -384,4 +387,97 @@ describe('CDN bundle without a browser source — window.elb', () => {
     // The collector global is still emitted by the wrap.
     expect(added).toContain('walkerOS');
   }, 120000);
+});
+
+/**
+ * The flow's `config.settings.windowCollector` names the one collector global,
+ * whether the flow is built with `walkeros bundle` or from a build manifest.
+ */
+describe('CDN bundle — collector global from config.settings', () => {
+  const NAMED_FLOW = {
+    ...MINIMAL_FLOW,
+    flows: {
+      default: {
+        ...MINIMAL_FLOW.flows.default,
+        config: {
+          platform: 'web',
+          settings: { windowCollector: 'walkerCollector' },
+        },
+      },
+    },
+  };
+  const NAMED_GLOBALS = ['elb', 'elbLayer', 'walkerCollector'];
+
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'walkeros-named-'));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  });
+
+  it('walkeros bundle assigns only the named global', async () => {
+    const out = join(tmpDir, 'walker.js');
+    await bundle(NAMED_FLOW, {
+      target: 'cdn',
+      silent: true,
+      cache: false,
+      buildOverrides: { output: out },
+    });
+    const script = await readFile(out, 'utf8');
+    const { added } = await runScriptAndDiffGlobals(script);
+    expect(added.sort()).toEqual([...NAMED_GLOBALS].sort());
+  }, 120000);
+
+  it('a manifest cdn build assigns only the named global', async () => {
+    const puts = new Map<string, Buffer>();
+    let base = '';
+    const server = http.createServer((req, res) => {
+      const chunks: Buffer[] = [];
+      req.on('data', (chunk: Buffer) => chunks.push(chunk));
+      req.on('end', () => {
+        const url = (req.url ?? '/').split('?')[0];
+        if (req.method === 'PUT') {
+          puts.set(url, Buffer.concat(chunks));
+          res.writeHead(200).end();
+        } else if (url === '/manifest.json') {
+          res.writeHead(200).end(
+            JSON.stringify({
+              version: 1,
+              toolchain: VERSION,
+              flowConfig: NAMED_FLOW,
+              artifacts: [
+                {
+                  target: 'cdn',
+                  outputName: 'walker.js',
+                  putUrl: `${base}/out/walker.js`,
+                },
+              ],
+              resultPutUrl: `${base}/result.json`,
+            }),
+          );
+        } else {
+          res.writeHead(404).end();
+        }
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('no port');
+    base = `http://127.0.0.1:${address.port}`;
+
+    try {
+      const { result } = await runBuildManifest(`${base}/manifest.json`);
+      expect(result.error).toBeUndefined();
+      expect(result.ok).toBe(true);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+
+    const script = puts.get('/out/walker.js')?.toString('utf8') ?? '';
+    const { added } = await runScriptAndDiffGlobals(script);
+    expect(added.sort()).toEqual([...NAMED_GLOBALS].sort());
+  }, 180000);
 });

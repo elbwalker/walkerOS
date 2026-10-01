@@ -1726,7 +1726,7 @@ const teaching = {
     chapter: 'build-run',
     level: 'beginner',
     useCases: ['deploy'],
-    note: 'Pinned versions keep builds reproducible; validate --strict warns without them.',
+    note: 'validate --strict warns for a listed package without a version; an unlisted step package is added as latest.',
     docs: [],
   },
   'root-include': {

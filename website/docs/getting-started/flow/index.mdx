@@ -496,7 +496,7 @@ For browser bundles, you can configure the collector's window variable name via
 />
 
 **Properties:**
-- **`windowCollector`** - Global variable name for collector instance (default: `"walkerOS"`)
+- **`windowCollector`** - Global variable name for collector instance (default: `"walkerOS"`). The bundle assigns the collector to this one global, whether you build with `walkeros bundle` or deploy it as a hosted flow. Accepts a literal or a `$var`/`$env` reference; the resolved value must be a JavaScript identifier and not a reserved name: `elb`, `elbLayer`, `window`, `document`, `location`, `self`, `top`, `parent`, `frames`, `globalThis`, `__proto__`, `constructor`, `prototype`.
 
 The `window.elb` function is owned by the browser source: set `elb` in the
 browser source's `config.settings` to change its global name (default:

@@ -15,40 +15,58 @@ import type {
   STSClientConfig,
   GetCallerIdentityCommandInput,
 } from '@aws-sdk/client-sts';
+import type { InFlight, SendClient } from '../../lib/client';
+import type { CredentialsInput } from '../../lib/credentials';
 
-/**
- * The part of an AWS SDK v3 client this destination calls: `send` with a
- * command. `SNSClient` and `STSClient` satisfy it, and so does an injected
- * mock (tests, simulate) without a cast.
- */
-export interface SendClient {
-  send(command: object): Promise<unknown>;
-}
+export type { SendClient } from '../../lib/client';
 
 /** An AWS SDK v3 command class, as far as this destination builds one. */
 export type CommandConstructor<Input> = new (input: Input) => {
   readonly input: Input;
 };
 
-export interface Settings {
-  /** Topic name (without `.fifo` suffix unless fifoTopic is true). REQUIRED. */
-  topicName: string;
-  /** Pre-configured client. Optional; created from env if absent. */
-  client?: SendClient;
-  /** AWS region. Mirrors setup.region default ('eu-central-1'). */
-  region?: string;
-  /** SDK client config (credentials, etc.). Optional. */
-  config?: SNSClientConfig;
-  /** Topic ARN, populated at init() from CreateTopic. Operator may pre-set to skip init's CreateTopic call. */
+/**
+ * Settings as a user writes them. `topicArn` alone is enough: region and
+ * topic name derive from it. `topicName` (with `region`) also works, and the
+ * ARN is then completed with the account id at the first publish.
+ */
+export interface InitSettings {
+  /** Topic ARN. Region and topic name derive from it. */
   topicArn?: string;
+  /** Topic name (with `.fifo` for FIFO topics). Needed by `walkeros setup`. */
+  topicName?: string;
+  /** AWS region. Default: the ARN's region, `AWS_REGION` or the profile, else `eu-central-1`. */
+  region?: string;
+  /** Raw `SNSClient` options, passed through to the SDK. */
+  config?: SNSClientConfig;
+  /** A client of your own. Used as is and never closed by the destination. */
+  client?: SendClient;
+  /** Runtime-only, set by `init`: what the destination owns. Not user-facing. */
+  runtime?: Runtime;
 }
 
-export interface InitSettings {
-  topicName: string;
-  client?: SendClient;
-  region?: string;
-  config?: SNSClientConfig;
+/** What `init` resolved. */
+export interface Settings {
   topicArn?: string;
+  topicName?: string;
+  region: string;
+  config?: SNSClientConfig;
+  client: SendClient;
+  runtime: Runtime;
+}
+
+/** Runtime-only state of one initialized instance. */
+export interface Runtime {
+  /**
+   * True when the destination built the client from nothing the user owns,
+   * and so closes it. A user client, or a user request handler instance in
+   * `settings.config`, keeps it false.
+   */
+  ownsClient: boolean;
+  /** Publishes in flight, awaited by `destroy`. */
+  inflight: InFlight;
+  /** The topic ARN, completed once with the account id when only a name was given. */
+  topicArn: () => Promise<string>;
 }
 
 export interface Mapping {
@@ -65,19 +83,26 @@ export interface Mapping {
    * `messageGroupId: 'user.id'` (path) instead of hard-coding a literal.
    */
   messageGroupId?: WalkerOSMapping.Value;
-  /** FIFO deduplication ID. `Mapping.Value`, same reasoning as `messageGroupId`. */
+  /**
+   * FIFO deduplication ID. `Mapping.Value`, same reasoning as
+   * `messageGroupId`. Defaults to the event id on FIFO topics.
+   */
   messageDeduplicationId?: WalkerOSMapping.Value;
 }
 
+/**
+ * Optional SDK overrides. Each one present wins over the SDK the package
+ * imports; tests and simulate inject mocks here.
+ */
 export interface Env extends DestinationServer.Env {
-  AWS: {
-    SNSClient: new (config: SNSClientConfig) => SendClient;
-    CreateTopicCommand: CommandConstructor<CreateTopicCommandInput>;
-    PublishCommand: CommandConstructor<PublishCommandInput>;
-    GetTopicAttributesCommand: CommandConstructor<GetTopicAttributesCommandInput>;
-    SubscribeCommand: CommandConstructor<SubscribeCommandInput>;
-    STSClient: new (config: STSClientConfig) => SendClient;
-    GetCallerIdentityCommand: CommandConstructor<GetCallerIdentityCommandInput>;
+  AWS?: {
+    SNSClient?: new (config: SNSClientConfig) => SendClient;
+    CreateTopicCommand?: CommandConstructor<CreateTopicCommandInput>;
+    PublishCommand?: CommandConstructor<PublishCommandInput>;
+    GetTopicAttributesCommand?: CommandConstructor<GetTopicAttributesCommandInput>;
+    SubscribeCommand?: CommandConstructor<SubscribeCommandInput>;
+    STSClient?: new (config: STSClientConfig) => SendClient;
+    GetCallerIdentityCommand?: CommandConstructor<GetCallerIdentityCommandInput>;
   };
 }
 
@@ -88,7 +113,7 @@ export interface Env extends DestinationServer.Env {
  * `topicName` lives in Settings (one source of truth for setup AND runtime publish).
  */
 export interface Setup {
-  /** AWS region for the topic. Default: 'eu-central-1'. */
+  /** AWS region for the topic. Default: the runtime region order. */
   region?: string;
   /** Display name. Optional. */
   displayName?: string;
@@ -115,7 +140,8 @@ export type Types = CoreDestination.Types<
   Mapping,
   Env,
   InitSettings,
-  Setup
+  Setup,
+  CredentialsInput
 >;
 
 export interface Destination extends DestinationServer.Destination<Types> {
@@ -123,22 +149,14 @@ export interface Destination extends DestinationServer.Destination<Types> {
 }
 
 export type Config = {
-  settings: Settings;
+  settings: InitSettings;
 } & DestinationServer.Config<Types>;
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;
 export type SetupFn = CoreSetupFn<Config, Env>;
 
-// Local override of PartialConfig to forward the Setup (`U`) type arg.
-// Mirrors the BigQuery destination's pattern.
-export type PartialConfig = Omit<
-  DestinationServer.PartialConfig<Types>,
-  'settings' | 'setup'
-> & {
-  settings?: Partial<Settings> | Settings;
-  setup?: boolean | Setup;
-};
+export type PartialConfig = DestinationServer.PartialConfig<Types>;
 
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 
