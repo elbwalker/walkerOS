@@ -34,6 +34,7 @@ jest.mock('@walkeros/core', () => {
 });
 
 import { fetchPackage } from '@walkeros/core';
+import { mergeConfigSchema } from '@walkeros/core/dev';
 const mockFetchPackage = fetchPackage as jest.MockedFunction<
   typeof fetchPackage
 >;
@@ -271,6 +272,73 @@ describe('package_get tool', () => {
     expect(result.structuredContent.exportExamples).toEqual(
       expected ? exportExamples : undefined,
     );
+  });
+
+  it('returns exportSchemas with a merged config per export', async () => {
+    const bigquerySettings = {
+      type: 'object',
+      properties: { projectId: { type: 'string' } },
+    };
+    const pubsubSettings = {
+      type: 'object',
+      properties: { topic: { type: 'string' } },
+    };
+    const pubsubSetup = { type: 'object', properties: {} };
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/server-destination-gcp',
+      version: '1.0.0',
+      type: 'destination',
+      platform: 'server',
+      schemas: { settings: bigquerySettings },
+      examples: {},
+      exportSchemas: {
+        destinationBigQuery: { settings: bigquerySettings },
+        destinationPubSub: { settings: pubsubSettings, setup: pubsubSetup },
+      },
+      exports: {
+        destinationBigQuery: 'BigQuery',
+        destinationPubSub: 'Pub/Sub',
+      },
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+
+    const tool = mockServer.getTool('package_get');
+    const result = await tool.handler({
+      package: '@walkeros/server-destination-gcp',
+    });
+
+    expect(result.structuredContent.exportSchemas).toEqual({
+      destinationBigQuery: {
+        config: mergeConfigSchema('destination', {
+          settings: bigquerySettings,
+        }),
+      },
+      destinationPubSub: {
+        config: mergeConfigSchema('destination', { settings: pubsubSettings }),
+        setup: pubsubSetup,
+      },
+    });
+  });
+
+  it('omits exportSchemas for a single-export package', async () => {
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/web-destination-gtag',
+      version: '1.0.0',
+      type: 'destination',
+      platform: 'web',
+      schemas: { settings: { type: 'object', properties: {} } },
+      examples: {},
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+
+    const tool = mockServer.getTool('package_get');
+    const result = await tool.handler({
+      package: '@walkeros/web-destination-gtag',
+    });
+
+    expect(result.structuredContent.exportSchemas).toBeUndefined();
   });
 
   it('should return full content when section=all', async () => {

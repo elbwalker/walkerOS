@@ -42,6 +42,14 @@ export interface WalkerOSPackage extends WalkerOSPackageInfo {
    * that ship several exports; `examples` then holds the default export's.
    */
   exportExamples?: Record<string, unknown>;
+  /**
+   * Schemas per export, keyed by export name, each entry shaped like
+   * `schemas` of a single-export package (`settings`, `mapping`, `setup`).
+   * Present only for packages that ship several exports.
+   */
+  exportSchemas?: Record<string, Record<string, unknown>>;
+  /** Declared exports (name to description) from `$meta.exports`. */
+  exports?: Record<string, string>;
 }
 
 /**
@@ -63,6 +71,8 @@ interface UnifiedPackageResponse {
   exampleSummaries?: ExampleSummary[];
   examples?: Record<string, unknown>;
   exportExamples?: Record<string, unknown>;
+  exportSchemas?: Record<string, unknown>;
+  exports?: Record<string, unknown>;
 }
 
 export async function fetchPackage(
@@ -122,6 +132,8 @@ function shapeFromDetail(
   const exampleSummaries = detail.exampleSummaries ?? [];
   const platform = detail.platform;
   const exportExamples = detail.exportExamples;
+  const exportSchemas = detail.exportSchemas;
+  const exports = detail.exports;
 
   return {
     packageName: detail.package || packageName,
@@ -139,11 +151,26 @@ function shapeFromDetail(
     hintKeys,
     exampleSummaries,
     ...(isObjectRecord(exportExamples) ? { exportExamples } : {}),
+    ...(isRecordOfRecords(exportSchemas) ? { exportSchemas } : {}),
+    ...(isStringRecord(exports) ? { exports } : {}),
   };
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isRecordOfRecords(
+  value: unknown,
+): value is Record<string, Record<string, unknown>> {
+  return isObjectRecord(value) && Object.values(value).every(isObjectRecord);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return (
+    isObjectRecord(value) &&
+    Object.values(value).every((entry) => typeof entry === 'string')
+  );
 }
 
 async function fetchJson(
@@ -168,6 +195,8 @@ function parsePackage(
   const hints = walkerOSJson.hints as Record<string, unknown> | undefined;
   const hintKeys = hints ? Object.keys(hints) : [];
   const exportExamples = walkerOSJson.exportExamples;
+  const exportSchemas = walkerOSJson.exportSchemas;
+  const exports = meta.exports;
 
   const exampleSummaries: ExampleSummary[] = [];
   const stepExamples = (examples.step || {}) as Record<string, unknown>;
@@ -197,6 +226,8 @@ function parsePackage(
     hintKeys,
     exampleSummaries,
     ...(isObjectRecord(exportExamples) ? { exportExamples } : {}),
+    ...(isRecordOfRecords(exportSchemas) ? { exportSchemas } : {}),
+    ...(isStringRecord(exports) ? { exports } : {}),
   };
 }
 

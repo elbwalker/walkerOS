@@ -205,15 +205,15 @@ describe('web source simulate', () => {
       { ...base(), sourceId: 'cookiefirst' },
     );
 
-    // The package trigger reads the grant at init and again on cf_init.
+    // One page load, one consent: the trigger reads the grant at init only.
     expect(result.error).toBeUndefined();
-    expect(result.calls.length).toBeGreaterThan(0);
-    for (const call of result.calls)
-      expect([call.fn, ...call.args]).toEqual([
+    expect(result.calls.map((call) => [call.fn, ...call.args])).toEqual([
+      [
         'elb',
         'walker consent',
         { functional: true, analytics: true, marketing: true },
-      ]);
+      ],
+    ]);
   });
 
   it('records no call for an implicit first visit', async () => {
@@ -246,6 +246,12 @@ describe('web source simulate', () => {
     expect(starts[0].data).toEqual(
       expect.objectContaining({ marketing: true, gclid: 'gclid-abc123' }),
     );
+    expect(starts[0].source).toEqual({
+      type: 'session',
+      platform: 'web',
+      url: marketingSession.trigger.options.url,
+      referrer: '',
+    });
   });
 
   it('keeps a consent-gated session waiting without consent', async () => {

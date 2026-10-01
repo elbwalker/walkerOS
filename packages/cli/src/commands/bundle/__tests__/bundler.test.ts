@@ -21,6 +21,8 @@ import type { BuildOptions } from '../../../types/bundle.js';
 import type { Flow, Logger } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
+import { releaseDigest } from '../../../core/content-digest.js';
+import { VERSION } from '../../../version.js';
 
 // Partial mocks: keep real implementations as default delegates so other
 // suites in this file (which don't import these mocked symbols) are
@@ -1267,6 +1269,176 @@ describe('cache key hashes pacote-resolved versionsHash', () => {
     expect(mockCacheBuild).toHaveBeenCalledTimes(2);
     const secondKey = mockCacheBuild.mock.calls[1][0];
     expect(secondKey).not.toBe(firstKey);
+  });
+});
+
+describe('cache key covers local package content and the CLI version', () => {
+  let tmp: string;
+  const logger = createCLILogger({ silent: true });
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'bundler-localhash-'));
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: ['node_modules/local-pkg/package.json'],
+      copied: 1,
+      reasons: new Map(),
+    });
+  });
+
+  afterEach(async () => {
+    await fs.remove(tmp);
+  });
+
+  function localResolution(installedDir: string) {
+    return {
+      packagePaths: new Map([['local-pkg', installedDir]]),
+      resolution: {
+        topLevel: new Map([
+          [
+            'local-pkg',
+            { name: 'local-pkg', version: 'local', localPath: './local' },
+          ],
+        ]),
+        nested: [],
+      },
+    };
+  }
+
+  function serverBuild(): { flowSettings: Flow; buildOptions: BuildOptions } {
+    return {
+      flowSettings: { config: { platform: 'server' } },
+      buildOptions: {
+        output: path.join(tmp, 'out', 'flow.mjs'),
+        tempDir: path.join(tmp, 'cache'),
+        cache: true,
+        packages: {},
+        format: 'esm',
+        platform: 'node',
+        configDir: tmp,
+      },
+    };
+  }
+
+  it('includes the CLI version in the build key', () => {
+    const { flowSettings, buildOptions } = serverBuild();
+    const content = JSON.parse(
+      generateCacheKeyContent(flowSettings, buildOptions, 'hash'),
+    );
+    expect(content.toolchain).toBe(VERSION);
+  });
+
+  it('a rebuilt local package misses the cache, an unchanged one hits it', async () => {
+    const installed = path.join(tmp, 'installed', 'local-pkg');
+    await fs.outputFile(path.join(installed, 'package.json'), '{}');
+    await fs.outputFile(path.join(installed, 'dist', 'index.mjs'), 'v1');
+    mockDownloadWithResolution.mockResolvedValue(localResolution(installed));
+
+    const first = serverBuild();
+    await bundleCore(first.flowSettings, first.buildOptions, logger);
+    expect(mockCacheBuild).toHaveBeenCalledTimes(1);
+
+    const same = serverBuild();
+    await bundleCore(same.flowSettings, same.buildOptions, logger);
+    expect(mockCacheBuild).toHaveBeenCalledTimes(1);
+
+    await fs.outputFile(path.join(installed, 'dist', 'index.mjs'), 'v2');
+    const rebuilt = serverBuild();
+    await bundleCore(rebuilt.flowSettings, rebuilt.buildOptions, logger);
+    expect(mockCacheBuild).toHaveBeenCalledTimes(2);
+    expect(mockCacheBuild.mock.calls[1][0]).not.toBe(
+      mockCacheBuild.mock.calls[0][0],
+    );
+  });
+});
+
+describe('bundleCore provenance', () => {
+  let tmp: string;
+  const logger = createCLILogger({ silent: true });
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'bundler-provenance-'));
+    mockTraceAndCopy.mockResolvedValue({
+      fileList: ['node_modules/foo/package.json'],
+      copied: 1,
+      reasons: new Map(),
+    });
+    mockDownloadWithResolution.mockResolvedValue({
+      packagePaths: new Map(),
+      resolution: {
+        topLevel: new Map([['foo', { name: 'foo', version: '1.0.0' }]]),
+        nested: [],
+      },
+    });
+  });
+
+  afterEach(async () => {
+    await fs.remove(tmp);
+  });
+
+  function build(collector?: Flow['collector']): {
+    flowSettings: Flow;
+    buildOptions: BuildOptions;
+  } {
+    return {
+      flowSettings: {
+        config: { platform: 'server' },
+        ...(collector ? { collector } : {}),
+      },
+      buildOptions: {
+        output: path.join(tmp, 'out', 'flow.mjs'),
+        tempDir: path.join(tmp, 'cache'),
+        cache: true,
+        packages: {},
+        format: 'esm',
+        platform: 'node',
+        configDir: tmp,
+      },
+    };
+  }
+
+  const expectedDigest = releaseDigest({
+    configDigest: 'config-digest',
+    versions: ['foo@1.0.0'],
+    toolchain: VERSION,
+  });
+
+  it('defaults the release to the content digest, before the build key is taken', async () => {
+    const { flowSettings, buildOptions } = build();
+    await bundleCore(flowSettings, buildOptions, logger, false, {
+      flowName: 'default',
+      configDigest: 'config-digest',
+    });
+
+    expect(expectedDigest).toMatch(/^[0-9a-f]{12}$/);
+    expect(flowSettings.collector).toEqual({
+      name: 'default',
+      release: expectedDigest,
+    });
+    expect(JSON.parse(mockCacheBuild.mock.calls[0][0]).flow.collector).toEqual({
+      name: 'default',
+      release: expectedDigest,
+    });
+  });
+
+  it.each([
+    ['the --release flag beats an authored release', 'flag', 'flag'],
+    ['an authored release beats the digest', undefined, 'authored'],
+  ])('%s', async (_name, release, expected) => {
+    const { flowSettings, buildOptions } = build({ release: 'authored' });
+    await bundleCore(flowSettings, buildOptions, logger, false, {
+      flowName: 'default',
+      configDigest: 'config-digest',
+      ...(release ? { release } : {}),
+    });
+    expect(flowSettings.collector?.release).toBe(expected);
+  });
+
+  it('leaves the collector untouched without provenance (push and simulate)', async () => {
+    const { flowSettings, buildOptions } = build();
+    await bundleCore(flowSettings, buildOptions, logger, false);
+    expect(flowSettings.collector).toBeUndefined();
   });
 });
 

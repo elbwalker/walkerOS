@@ -1,6 +1,7 @@
 import type { Destination, WalkerOS } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { startFlow } from '..';
+import { getStateHold } from '../on';
 
 function recorder(
   log: string[],
@@ -300,7 +301,7 @@ describe('destination state delivery: no destination stays held, no unseen conte
     });
     await elb('walker consent', { marketing: true });
     await elb('page view', {});
-    expect(collector.destinations.rec.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.rec)).toBeUndefined();
     expect(log).toEqual([
       'init',
       'on:globals:{"site":"a"}',
@@ -318,7 +319,7 @@ describe('destination state delivery: no destination stays held, no unseen conte
     await collector.command('run', { user: { id: 'u1' } });
     await elb('walker consent', { marketing: true });
     await elb('page view', {});
-    expect(collector.destinations.rec.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.rec)).toBeUndefined();
     expect(log).toEqual([
       'init',
       'push:page view',
@@ -336,7 +337,7 @@ describe('destination state delivery: no destination stays held, no unseen conte
     await elb('walker destination', recorder(log, { id: 'rec' }));
     await elb('walker consent', { functional: true });
     await elb('page view', {});
-    expect(collector.destinations.rec.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.rec)).toBeUndefined();
     expect(log).toEqual([
       'init',
       GRANT,
@@ -446,7 +447,7 @@ describe('destination state delivery: the cascade bound before and during init',
     await collector.command('consent', { marketing: true });
     collector.cascade = undefined;
     await collector.push({ name: 'page view' });
-    expect(rec.stateHold).toBeUndefined();
+    expect(getStateHold(rec)).toBeUndefined();
     expect(log).toEqual(['init', GRANT, 'push:page view']);
   });
 
@@ -518,7 +519,7 @@ describe('destination state delivery: state assigned without a command', () => {
     collector.user = { id: 'u1' };
     collector.globals = { foo: 'bar' };
     await elb('walker destination', recorder(log, { id: 'later' }));
-    expect(collector.destinations.later.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.later)).toBeUndefined();
     expect(log).toEqual([
       'init',
       'on:consent:{"demo":true}',
@@ -526,6 +527,19 @@ describe('destination state delivery: state assigned without a command', () => {
       'on:globals:{"foo":"bar"}',
       'push:page view',
     ]);
+  });
+});
+
+describe('destination state delivery: a runtime add overlapping a state command', () => {
+  test('an un-awaited walker destination and a consent command init the destination once, consent before any event', async () => {
+    const log: string[] = [];
+    const { elb } = await startFlow({});
+    await elb('page view', {});
+    const add = elb('walker destination', recorder(log, { id: 'rec' }));
+    await elb('walker consent', { marketing: true });
+    await add;
+    expect(count(log, 'init')).toBe(1);
+    expect(log).toEqual(['init', GRANT, 'push:page view']);
   });
 });
 
@@ -582,12 +596,12 @@ describe('destination state delivery: held destination retry', () => {
     });
     await elb('page view', {});
     await elb('walker consent', { marketing: true });
-    expect(collector.destinations.d.stateHold).toBeDefined();
+    expect(getStateHold(collector.destinations.d)).toBeDefined();
 
     // No further state command: the next event alone must recover it.
     await sleep(30);
     await elb('order complete', {});
-    expect(collector.destinations.d.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.d)).toBeUndefined();
     expect(log).toContain('d:push:page view');
     expect(log).toContain('d:push:order complete');
   });
@@ -607,14 +621,14 @@ describe('destination state delivery: held destination retry', () => {
     await collector.command('consent', { marketing: true });
     collector.cascade = undefined;
     expect(log).not.toContain('d:on:start');
-    expect(d.stateHold?.type).toBe('consent');
+    expect(getStateHold(d)?.type).toBe('consent');
 
     await elb('order complete', {});
     expect(log).not.toContain('d:push:order complete');
 
     await sleep(30);
     await elb('order view', {});
-    expect(d.stateHold).toBeUndefined();
+    expect(getStateHold(d)).toBeUndefined();
     expect(log).toEqual([
       'd:init',
       'd:push:page view',

@@ -16,19 +16,26 @@ const createTrigger: Trigger.CreateFn<CookieFirstConsent, void> = async (
 
   const trigger: Trigger.Fn<CookieFirstConsent, void> =
     () => async (content: CookieFirstConsent) => {
-      // Pre-init: set CookieFirst global (source reads this during init)
+      // The banner keeps window.CookieFirst current.
       (window as unknown as Record<string, unknown>).CookieFirst = {
         consent: content,
       };
 
-      // Lazy startFlow — source reads global + registers event listeners
+      // First call, the page load: the source reads the global at init and
+      // emits once. No cf_init follows: in a browser it fires when the global
+      // appears, so a page where the global is already set has seen it before
+      // the source started. One page load emits one consent.
       if (!flow) {
         const result = await startFlow({ ...config, run: config.run ?? true });
         flow = { collector: result.collector, elb: result.elb };
+        return;
       }
 
-      // Post-init: dispatch cf_init to trigger consent processing
-      window.dispatchEvent(new Event('cf_init'));
+      // Later calls are a decision on the loaded page: CookieFirst announces
+      // it with cf_consent, carrying the new consent.
+      window.dispatchEvent(
+        new CustomEvent<CookieFirstConsent>('cf_consent', { detail: content }),
+      );
     };
 
   return {

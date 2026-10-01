@@ -4,7 +4,8 @@ import type { Flow } from '@walkeros/core';
  * Session source emits three elb calls on start:
  *   1. command('user', { session?, device? }), both only in storage mode
  *   2. command('session', <full session data>)
- *   3. push({ name: 'session start', data: <full session data> })
+ *   3. push({ name: 'session start', data: <full session data>, source }),
+ *      source being the session source with the page url and referrer
  */
 
 export const newMarketingSession: Flow.StepExample = {
@@ -60,6 +61,12 @@ export const newMarketingSession: Flow.StepExample = {
           storage: true,
           updated: 1700000000000,
         },
+        source: {
+          type: 'session',
+          platform: 'web',
+          url: 'https://example.com/?utm_source=google&utm_medium=cpc&utm_campaign=winter-sale',
+          referrer: '',
+        },
       },
     ],
   ],
@@ -107,6 +114,12 @@ export const windowSessionWithoutConsent: Flow.StepExample = {
           source: 'google',
           medium: 'cpc',
           campaign: 'winter-sale',
+        },
+        source: {
+          type: 'session',
+          platform: 'web',
+          url: 'https://example.com/?utm_source=google&utm_medium=cpc&utm_campaign=winter-sale',
+          referrer: '',
         },
       },
     ],
@@ -157,6 +170,12 @@ export const returningVisitor: Flow.StepExample = {
           isStart: true,
           storage: true,
           updated: 1700001000000,
+        },
+        source: {
+          type: 'session',
+          platform: 'web',
+          url: 'https://example.com/',
+          referrer: 'https://google.com',
         },
       },
     ],

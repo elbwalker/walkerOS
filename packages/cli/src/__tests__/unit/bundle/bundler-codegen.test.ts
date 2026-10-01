@@ -1405,11 +1405,14 @@ describe('bundle() target resolution', () => {
     expect(buildOptions.withDev).toBe(false);
   });
 
-  it('bakes release + flow name into the collector handed to the bundler', async () => {
+  it('hands flow name, release and config digest to the bundler as provenance', async () => {
     const { bundle } = await import('../../../commands/bundle/index.js');
     await bundle(MINIMAL_FLOW, { silent: true, release: 'v3' });
-    const flowArg = bundleCoreMock.mock.calls[0][0];
-    expect(flowArg.collector).toMatchObject({ name: 'default', release: 'v3' });
+    expect(bundleCoreMock.mock.calls[0][4]).toEqual({
+      flowName: 'default',
+      release: 'v3',
+      configDigest: expect.stringMatching(/^[0-9a-f]{64}$/),
+    });
   });
 });
 
@@ -1509,6 +1512,8 @@ describe('data payload byte stability', () => {
 });
 
 describe('applyCollectorProvenance', () => {
+  const fallback = () => 'digest';
+
   it('bakes the flow name and passed release onto a plain collector', () => {
     const flowSettings: Flow = {
       config: { platform: 'server' },
@@ -1517,7 +1522,7 @@ describe('applyCollectorProvenance', () => {
       collector: { globals: { tenant: 'a' } },
     };
 
-    applyCollectorProvenance(flowSettings, 'web', 'v3');
+    applyCollectorProvenance(flowSettings, 'web', 'v3', fallback);
 
     const result = buildSplitConfigObject(flowSettings, new Map());
     // A plain collector still rides the data-payload passthrough (no new codegen).
@@ -1527,7 +1532,7 @@ describe('applyCollectorProvenance', () => {
     });
   });
 
-  it('leaves an authored collector.name and collector.release untouched', () => {
+  it('keeps an authored collector.name and lets the explicit release win', () => {
     const flowSettings: Flow = {
       config: { platform: 'server' },
       sources: {},
@@ -1535,44 +1540,39 @@ describe('applyCollectorProvenance', () => {
       collector: { name: 'authored-name', release: 'authored' },
     };
 
-    applyCollectorProvenance(flowSettings, 'web', 'v3');
+    applyCollectorProvenance(flowSettings, 'web', 'v3', fallback);
 
     expect(buildDataPayload(flowSettings)).toMatchObject({
-      collector: { name: 'authored-name', release: 'authored' },
+      collector: { name: 'authored-name', release: 'v3' },
     });
   });
 
-  it('falls back to the injected bundle-time clock when no release is given', () => {
+  it('keeps an authored collector.release over the fallback', () => {
     const flowSettings: Flow = {
       config: { platform: 'server' },
       sources: {},
       destinations: {},
-      collector: { globals: { tenant: 'a' } },
+      collector: { release: 'authored' },
     };
 
-    applyCollectorProvenance(
-      flowSettings,
-      'web',
-      undefined,
-      () => '2020-01-01T00:00:00.000Z',
-    );
+    applyCollectorProvenance(flowSettings, 'web', undefined, fallback);
 
     expect(buildDataPayload(flowSettings)).toMatchObject({
-      collector: { name: 'web', release: '2020-01-01T00:00:00.000Z' },
+      collector: { name: 'web', release: 'authored' },
     });
   });
 
-  it('creates a collector and stamps a string release when the flow authored none', () => {
+  it('creates a collector with the fallback release when the flow authored none', () => {
     const flowSettings: Flow = {
       config: { platform: 'server' },
       sources: {},
       destinations: {},
     };
 
-    applyCollectorProvenance(flowSettings, 'web');
+    applyCollectorProvenance(flowSettings, 'web', undefined, fallback);
 
     expect(buildDataPayload(flowSettings)).toMatchObject({
-      collector: { name: 'web', release: expect.any(String) },
+      collector: { name: 'web', release: 'digest' },
     });
   });
 });

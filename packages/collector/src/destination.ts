@@ -41,6 +41,7 @@ import {
   catchUpDestinationState,
   endInitFlush,
   enterCascade,
+  getStateHold,
   isStateDelivery,
   isStateDeliveryInFlight,
   markStateLost,
@@ -220,7 +221,7 @@ export async function addDestination(
  */
 export function markHeldForDrain(deliveries: DestinationDelivery[]): void {
   for (const delivery of deliveries)
-    if (delivery.destination.stateHold) delivery.drain = true;
+    if (getStateHold(delivery.destination)) delivery.drain = true;
 }
 
 /**
@@ -240,7 +241,7 @@ export async function settleDestinationDeliveries(
       if (
         drain &&
         collector.allowed &&
-        !destination.stateHold &&
+        !getStateHold(destination) &&
         destination.queuePush?.length &&
         collector.destinations[id] === destination
       )
@@ -509,13 +510,13 @@ async function deliverToDestinations(
       if (
         destination.on &&
         destination.config.init &&
-        !destination.stateHold &&
+        !getStateHold(destination) &&
         !isStateDeliveryInFlight(destination) &&
         owesDestinationState(collector, destination)
       )
         await catchUpDestinationState(collector, destination, id);
 
-      const hold = destination.stateHold;
+      const hold = getStateHold(destination);
       if (
         hold &&
         !isStateDeliveryInFlight(destination) &&
@@ -527,7 +528,7 @@ async function deliverToDestinations(
       // State hold: a state delivery to this destination is running or did
       // not settle. Its events stay in its own queue, nothing is delivered,
       // and the queue is not drained. Held, not dropped.
-      if (destination.stateHold) {
+      if (getStateHold(destination)) {
         releaseProbeSlot(); // probe admitted but the destination is held
         if (!event) return { id, destination, skipped: true };
         const held = [clone(event)];
@@ -597,7 +598,7 @@ async function deliverToDestinations(
         }
         // The flush held the destination: there are no events of this call
         // to requeue, and any parked by a concurrent push stay queued.
-        if (destination.stateHold) {
+        if (getStateHold(destination)) {
           releaseProbeSlot();
           return { id, destination, skipped: true };
         }
@@ -711,7 +712,7 @@ async function deliverToDestinations(
       // The init flush held the destination: a state delivery did not settle.
       // The allowed events go back to its queue; the denied ones are there
       // already.
-      if (destination.stateHold) {
+      if (getStateHold(destination)) {
         releaseProbeSlot();
         requeue(allowedEvents);
         return { id, destination, queue: allowedEvents };
@@ -1189,6 +1190,154 @@ function hasConsentRequirement(destination: Destination.Instance): boolean {
   return !!required && Object.keys(required).length > 0;
 }
 
+/**
+ * Run a destination's own `init()` and return the config to install, marked
+ * initialized, or false when `init()` returned false. The caller installs it.
+ */
+async function runDestinationInit(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  init: NonNullable<Destination.Instance['init']>,
+  destId: string,
+): Promise<false | Destination.Config> {
+  // Create scoped logger for this destination: [type:id] or [unknown:id]
+  const destType = destination.type || 'unknown';
+  const destLogger = collector.logger.scope(destType);
+
+  const context: Destination.Context = {
+    collector,
+    logger: destLogger,
+    id: destId,
+    config: destination.config,
+    env: mergeEnvironments(destination.env, destination.config.env),
+    reportError: buildReportError(
+      collector,
+      'destination',
+      destId,
+      destLogger,
+      destination,
+    ),
+  };
+
+  destLogger.debug('init');
+
+  const initStarted = Date.now();
+  emitStep(
+    collector,
+    buildBaseState(collector, {
+      stepId: stepId('destination', destId),
+      stepType: 'destination',
+      phase: 'init',
+      eventId: '',
+      now: initStarted,
+    }),
+  );
+
+  let configResult;
+  try {
+    configResult = await useHooks(
+      init,
+      'DestinationInit',
+      collector.hooks,
+      collector.logger,
+    )(context);
+  } catch (err) {
+    const initErrFinished = Date.now();
+    const errState = buildBaseState(collector, {
+      stepId: stepId('destination', destId),
+      stepType: 'destination',
+      phase: 'error',
+      eventId: '',
+      now: initErrFinished,
+    });
+    errState.durationMs = initErrFinished - initStarted;
+    errState.error =
+      err instanceof Error
+        ? { name: err.name, message: err.message }
+        : { message: String(err) };
+    emitStep(collector, errState);
+    throw err;
+  }
+
+  // Actively check for errors (when false)
+  if (configResult === false) return false; // don't push if init is false
+
+  // The config to install, marked initialized; the caller installs it.
+  return {
+    ...(configResult || destination.config),
+    init: true, // Remember that the destination was initialized
+  };
+}
+
+/**
+ * Initialize a destination and flush its queued `on()` deliveries. Installing
+ * the initialized config and opening the flush happen in one synchronous
+ * step: no delivery can see the destination initialized while its older
+ * queued entries are not yet flushing, so nothing overtakes them.
+ */
+async function initAndFlush(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  init: NonNullable<Destination.Instance['init']>,
+  destId: string,
+): Promise<boolean> {
+  const config = await runDestinationInit(collector, destination, init, destId);
+  if (config === false) return false; // don't push if init is false
+  destination.config = config;
+
+  // Flush queued on() events now that destination is initialized. The
+  // queue stays live while the flush runs: a delivery that arrives in the
+  // meantime is appended behind the older entries (see
+  // `deliverStateToDestination`), so deliveries to this destination reach
+  // its handler strictly in order. `config.init` is already set, so a
+  // concurrent push would go straight out: while the flush carries a state
+  // entry the hold covers the whole flush and is released once at its end.
+  if (destination.queueOn?.length) {
+    // The flush runs inside a cascade (the command's own, when one is open):
+    // a handler that re-emits state reaches the same bound as on the live
+    // path instead of appending to this queue without end.
+    const exitCascade = enterCascade(collector);
+    beginInitFlush(destination);
+    try {
+      for (
+        let current = destination.queueOn?.shift();
+        current;
+        current = destination.queueOn?.shift()
+      ) {
+        await callDestinationOn(
+          collector,
+          destination,
+          destId,
+          current.type,
+          current.data,
+        );
+      }
+    } catch (err) {
+      // A FatalError stopped the flush. The state entries it never reached
+      // were marked when queued; they did not reach the handler, so they
+      // are lost and the destination stays held until they are delivered.
+      for (const { type } of destination.queueOn || []) {
+        if (isStateDelivery(type)) markStateLost(collector, destination, type);
+      }
+      destination.queueOn = [];
+      throw err;
+    } finally {
+      endInitFlush(collector, destination);
+      exitCascade();
+    }
+  }
+
+  collector.logger.scope(destination.type || 'unknown').debug('init done');
+  return true;
+}
+
+/**
+ * Inits in progress (init plus flush), per destination: a second caller (a
+ * runtime add and a state command overlapping) waits for the running one
+ * instead of starting another `init()`.
+ */
+const initsRunning = new WeakMap<Destination.Instance, Promise<boolean>>();
+
 export async function destinationInit<Destination extends Destination.Instance>(
   collector: Collector.Instance,
   destination: Destination,
@@ -1212,118 +1361,23 @@ export async function destinationInit<Destination extends Destination.Instance>(
         .debug('init blocked: consent gate not cleared');
       return false;
     }
-    // Create scoped logger for this destination: [type:id] or [unknown:id]
-    const destType = destination.type || 'unknown';
-    const destLogger = collector.logger.scope(destType);
-
-    const context: Destination.Context = {
+    // One init per destination, init and its queue flush as one unit: a
+    // concurrent caller waits until the destination is initialized and
+    // flushed instead of starting another init().
+    const running = initsRunning.get(destination);
+    if (running) return running;
+    const started = initAndFlush(
       collector,
-      logger: destLogger,
-      id: destId,
-      config: destination.config,
-      env: mergeEnvironments(destination.env, destination.config.env),
-      reportError: buildReportError(
-        collector,
-        'destination',
-        destId,
-        destLogger,
-        destination,
-      ),
-    };
-
-    destLogger.debug('init');
-
-    const initStarted = Date.now();
-    emitStep(
-      collector,
-      buildBaseState(collector, {
-        stepId: stepId('destination', destId),
-        stepType: 'destination',
-        phase: 'init',
-        eventId: '',
-        now: initStarted,
-      }),
+      destination,
+      destination.init,
+      destId,
     );
-
-    let configResult;
+    initsRunning.set(destination, started);
     try {
-      configResult = await useHooks(
-        destination.init,
-        'DestinationInit',
-        collector.hooks,
-        collector.logger,
-      )(context);
-    } catch (err) {
-      const initErrFinished = Date.now();
-      const errState = buildBaseState(collector, {
-        stepId: stepId('destination', destId),
-        stepType: 'destination',
-        phase: 'error',
-        eventId: '',
-        now: initErrFinished,
-      });
-      errState.durationMs = initErrFinished - initStarted;
-      errState.error =
-        err instanceof Error
-          ? { name: err.name, message: err.message }
-          : { message: String(err) };
-      emitStep(collector, errState);
-      throw err;
+      return await started;
+    } finally {
+      initsRunning.delete(destination);
     }
-
-    // Actively check for errors (when false)
-    if (configResult === false) return configResult; // don't push if init is false
-
-    // Update the destination config if it was returned
-    destination.config = {
-      ...(configResult || destination.config),
-      init: true, // Remember that the destination was initialized
-    };
-
-    // Flush queued on() events now that destination is initialized. The
-    // queue stays live while the flush runs: a delivery that arrives in the
-    // meantime is appended behind the older entries (see
-    // `deliverStateToDestination`), so deliveries to this destination reach
-    // its handler strictly in order. `config.init` is already set, so a
-    // concurrent push would go straight out: while the flush carries a state
-    // entry the hold covers the whole flush and is released once at its end.
-    if (destination.queueOn?.length) {
-      // The flush runs inside a cascade (the command's own, when one is open):
-      // a handler that re-emits state reaches the same bound as on the live
-      // path instead of appending to this queue without end.
-      const exitCascade = enterCascade(collector);
-      beginInitFlush(destination);
-      try {
-        for (
-          let current = destination.queueOn?.shift();
-          current;
-          current = destination.queueOn?.shift()
-        ) {
-          await callDestinationOn(
-            collector,
-            destination,
-            destId,
-            current.type,
-            current.data,
-          );
-        }
-      } catch (err) {
-        // A FatalError stopped the flush. The state entries it never reached
-        // were marked when queued; they did not reach the handler, so they
-        // are lost and the destination stays held until they are delivered.
-        for (const { type } of destination.queueOn || []) {
-          if (isStateDelivery(type))
-            markStateLost(collector, destination, type);
-        }
-        destination.queueOn = [];
-        throw err;
-      } finally {
-        endInitFlush(collector, destination);
-        exitCascade();
-      }
-    }
-
-    destLogger.debug('init done');
   }
 
   return true; // Destination is ready to push

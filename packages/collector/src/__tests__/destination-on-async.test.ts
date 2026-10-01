@@ -1,6 +1,7 @@
 import type { Destination, WalkerOS } from '@walkeros/core';
 import { createMockLogger, FatalError } from '@walkeros/core';
 import { startFlow } from '..';
+import { getStateHold } from '../on';
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -110,7 +111,7 @@ describe('async destination on() settles before the first push', () => {
     await elb('page view', {});
     await elb('walker consent', { marketing: true });
     expect(log).toEqual(['d:init', 'd:on:start']);
-    expect(collector.destinations.d.stateHold?.type).toBe('consent');
+    expect(getStateHold(collector.destinations.d)?.type).toBe('consent');
     // Held, not dropped: the event is back in the destination's own queue.
     expect(collector.destinations.d.queuePush).toHaveLength(1);
     const errorCall = findLoggerError(logger, 'on callback failed');
@@ -137,7 +138,7 @@ describe('async destination on() settles before the first push', () => {
     await elb('page view', {});
     await elb('walker consent', { marketing: true });
     expect(log).toEqual(['d:init', 'd:on:start']);
-    expect(collector.destinations.d.stateHold?.type).toBe('consent');
+    expect(getStateHold(collector.destinations.d)?.type).toBe('consent');
     const errorCall = findLoggerError(logger, 'on callback failed');
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
@@ -172,8 +173,8 @@ describe('async destination on() settles before the first push', () => {
     expect(log).toContain('e:on:end');
     expect(log).toContain('e:push:page view');
     expect(log).not.toContain('d:push:page view');
-    expect(collector.destinations.d.stateHold?.type).toBe('consent');
-    expect(collector.destinations.e.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.d)?.type).toBe('consent');
+    expect(getStateHold(collector.destinations.e)).toBeUndefined();
   });
 
   /**
@@ -213,8 +214,8 @@ describe('async destination on() settles before the first push', () => {
     await elb('walker consent', { marketing: true });
     expect(log).toContain('d:on:end');
     expect(log).toContain('e:on:end');
-    expect(collector.destinations.d.stateHold).toBeUndefined();
-    expect(collector.destinations.e.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.d)).toBeUndefined();
+    expect(getStateHold(collector.destinations.e)).toBeUndefined();
   });
 
   /**
@@ -333,7 +334,7 @@ describe('async destination on() settles before the first push', () => {
     // The failed delivery carried the marketing grant; the next command's
     // delta does not. The re-delivery carries the whole consent cell.
     await elb('walker consent', { functional: true });
-    expect(collector.destinations.d.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.d)).toBeUndefined();
     expect(log).toEqual([
       'init',
       'start:consent:{"marketing":true}',
@@ -364,7 +365,7 @@ describe('async destination on() settles before the first push', () => {
     await elb('walker consent', { functional: true });
     expect(log).toEqual([]);
     await elb('walker consent', { marketing: true });
-    expect(collector.destinations.d.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.d)).toBeUndefined();
     expect(log).toEqual([
       'init',
       'start:consent:{"functional":true}',
@@ -518,13 +519,13 @@ describe('the hold covers the whole state delivery window', () => {
       (err: unknown) => err,
     );
     expect(thrown).toBeInstanceOf(FatalError);
-    expect(collector.destinations.d.stateHold?.type).toBe('consent');
+    expect(getStateHold(collector.destinations.d)?.type).toBe('consent');
 
     await elb('page view', {});
     expect(log).not.toContain('push:page view');
 
     await elb('walker consent', { functional: true });
-    expect(collector.destinations.d.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.d)).toBeUndefined();
     expect(log).toEqual([
       'start:consent:{"marketing":true}',
       'start:consent:{"marketing":true,"functional":true}',
@@ -665,13 +666,13 @@ describe('the hold covers the whole state delivery window', () => {
       () => undefined,
     );
     expect(log).toEqual(['init', 'start:run']);
-    expect(collector.destinations.d.stateHold?.type).toBe('consent');
+    expect(getStateHold(collector.destinations.d)?.type).toBe('consent');
 
     await elb('page view', {});
     expect(log).not.toContain('push:page view');
 
     await elb('walker consent', { functional: true });
-    expect(collector.destinations.d.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.d)).toBeUndefined();
     expect(log).toEqual([
       'init',
       'start:run',
@@ -759,7 +760,7 @@ describe('a slow on() delays only its own destination', () => {
     log.length = 0;
     await collector.command('consent', { marketing: true });
     await later;
-    expect(collector.destinations.a.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.a)).toBeUndefined();
     expect(log.indexOf('b:push:page view')).toBeGreaterThan(-1);
     expect(log.indexOf('b:push:page view')).toBeLessThan(
       log.indexOf('a:on:end'),
@@ -816,7 +817,7 @@ describe('a slow on() delays only its own destination', () => {
     armed = true;
     await collector.command('run', { consent: { marketing: true } });
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    expect(collector.destinations.a.stateHold).toBeUndefined();
+    expect(getStateHold(collector.destinations.a)).toBeUndefined();
     expect(log.indexOf('b:push:page view')).toBeGreaterThan(-1);
     expect(log.indexOf('b:push:page view')).toBeLessThan(
       log.indexOf('a:on:end'),
@@ -824,6 +825,56 @@ describe('a slow on() delays only its own destination', () => {
     expect(log.indexOf('a:push:page view')).toBeGreaterThan(
       log.indexOf('a:on:end'),
     );
+  });
+});
+
+describe('no live delivery slips in between init and its flush', () => {
+  beforeEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('a consent command issued as soon as the destination reads initialized queues behind the older queued consent', async () => {
+    const log: string[] = [];
+    let probe: Promise<unknown> | undefined;
+    const code: Destination.Instance = {
+      type: 'probe',
+      config: {},
+      init: (context) => {
+        const { collector } = context;
+        // Watch every microtask from inside init(); the first tick in which
+        // the destination reads initialized, issue a revoke.
+        const watch = async () => {
+          for (let tick = 0; tick < 1000; tick++) {
+            await Promise.resolve();
+            if (collector.destinations.d?.config.init) {
+              probe = collector.command('consent', { marketing: false });
+              return;
+            }
+          }
+        };
+        void watch();
+        log.push('init');
+      },
+      push: (event: WalkerOS.Event) => {
+        log.push(`push:${event.name}`);
+      },
+      on: (type, context) => {
+        if (type !== 'consent') return;
+        log.push(`start:consent:${JSON.stringify(context.data)}`);
+      },
+    };
+    const { elb, collector } = await startFlow({
+      destinations: { d: { code, config: { consent: { marketing: true } } } },
+    });
+    await elb('page view', {});
+    await elb('walker consent', { marketing: true });
+    await probe;
+    const consents = log.filter((line) => line.startsWith('start:consent'));
+    expect(consents).toEqual([
+      'start:consent:{"marketing":true}',
+      'start:consent:{"marketing":false}',
+    ]);
+    expect(vendorConsent(log)).toEqual(collector.consent);
   });
 });
 

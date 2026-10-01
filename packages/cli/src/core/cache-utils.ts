@@ -8,6 +8,7 @@
 
 import { getHashServer } from '@walkeros/server-core';
 import semver from 'semver';
+import { canonicalJson } from './content-digest.js';
 
 const HASH_LENGTH = 12;
 
@@ -57,8 +58,7 @@ export async function getPackageCacheKey(
  * Handles whitespace and property order variations.
  */
 function normalizeJson(content: string): string {
-  const parsed = JSON.parse(content);
-  return JSON.stringify(parsed);
+  return canonicalJson(JSON.parse(content));
 }
 
 /**

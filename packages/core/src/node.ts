@@ -18,6 +18,7 @@ import { maskKnownValues, scrubSecrets } from './redactLine';
 
 export { scrubSecrets, redactLine } from './redactLine';
 export type { ScrubOptions } from './redactLine';
+export { scrubJson } from './scrubJson';
 export { toPrintable } from './toPrintable';
 import type { Config, Instance } from './types/logger';
 import { Level } from './types/logger';

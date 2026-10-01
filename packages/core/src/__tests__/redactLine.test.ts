@@ -470,6 +470,56 @@ describe('scrubSecrets known values', () => {
     },
   );
 
+  describe.each([['ab+cd/ef==gh'], ['user:pass word'], ['k3y = v4l:ue+1/2']])(
+    'masks the URL-encoded known value %j',
+    (secret) => {
+      const encoded = encodeURIComponent(secret);
+      const form = new URLSearchParams({ v: secret }).toString().slice(2);
+
+      it.each([
+        [
+          'a URL path segment',
+          `GET https://vendor.test/${encoded}/collect`,
+          'GET https://vendor.test/***/collect',
+        ],
+        [
+          'a query param without a credential name',
+          `GET https://vendor.test/collect?tid=${encoded}&v=2`,
+          'GET https://vendor.test/collect?tid=***&v=2',
+        ],
+        ['a form body', `body a=1&v=${form}&b=2`, 'body a=1&v=***&b=2'],
+      ])('in %s', (_label, line, masked) => {
+        expect(scrubSecrets(line, { known: [secret] })).toBe(masked);
+      });
+    },
+  );
+
+  it.each([['ab!cd(ef)~'], ['a/b:c+d=e'], ['a/b:c+d=e f']])(
+    'masks the known value %j in a URLSearchParams body and an encodeURI URL',
+    (secret) => {
+      const body = new URLSearchParams({ v: secret, w: '1' }).toString();
+      const url = encodeURI(`https://vendor.test/${secret}/collect`);
+
+      expect(scrubSecrets(`body ${body}`, { known: [secret] })).toBe(
+        'body v=***&w=1',
+      );
+      expect(scrubSecrets(`GET ${url}`, { known: [secret] })).toBe(
+        'GET https://vendor.test/***/collect',
+      );
+    },
+  );
+
+  it('masks a value URL encoding cannot encode as it is', () => {
+    const secret = 'abcdef\ud800';
+    expect(scrubSecrets(`x ${secret} y`, { known: [secret] })).toBe('x *** y');
+  });
+
+  it('keeps the length rule for an encoded short value', () => {
+    expect(scrubSecrets('x a%2Bb%2F y', { known: ['a+b/'] })).toBe(
+      'x a%2Bb%2F y',
+    );
+  });
+
   it('treats regex characters in a known value literally', () => {
     expect(scrubSecrets('a (x+y)*[z] b', { known: ['(x+y)*[z]'] })).toBe(
       'a *** b',

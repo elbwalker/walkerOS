@@ -141,6 +141,8 @@ import {
 } from '../../core/build-cache.js';
 import type { CodeCacheKeyInputs } from '../../core/build-cache.js';
 import { assertWindowCollector } from '../../config/window-collector.js';
+import { hashInstalledDir, releaseDigest } from '../../core/content-digest.js';
+import { VERSION } from '../../version.js';
 
 export interface BundleStats {
   totalSize: number;
@@ -220,6 +222,9 @@ export function generateCacheKeyContent(
     // version/toolchain hash, not this field.
     emittedFormat: resolveEmittedFormat(buildOptions),
     versionsHash,
+    // Generated code changes with the CLI, so a CLI upgrade never serves a
+    // build made by the previous version.
+    toolchain: VERSION,
   };
   return JSON.stringify(configForCache);
 }
@@ -235,11 +240,48 @@ function resolveEmittedFormat(buildOptions: BuildOptions): 'iife' | 'esm' {
   return buildOptions.platform === 'browser' ? 'iife' : 'esm';
 }
 
+/**
+ * Provenance a `bundle` run bakes onto the collector. Push and simulate pass
+ * none, so their events keep the runtime release.
+ */
+export interface BundleProvenance {
+  /** Keys this flow's entry in `event.source.release`. */
+  flowName: string;
+  /** Explicit release id (`--release`). Beats an authored one. */
+  release?: string;
+  /** Config input of the default release, from `loadBundleConfig`. */
+  configDigest: string;
+}
+
+/**
+ * The resolved top-level set as sorted `name@version` lines. A local package
+ * has no version, so it is named by the content of its installed copy: a
+ * rebuilt `path` package gives a new line.
+ */
+export async function resolvedVersionLines(
+  topLevel: Map<string, { version: string }>,
+  packagePaths: Map<string, string>,
+): Promise<string[]> {
+  const lines: string[] = [];
+  for (const [name, pkg] of [...topLevel.entries()].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    const installed = packagePaths.get(name);
+    lines.push(
+      pkg.version === 'local' && installed
+        ? `${name}@local:${await hashInstalledDir(installed)}`
+        : `${name}@${pkg.version}`,
+    );
+  }
+  return lines;
+}
+
 export async function bundleCore(
   flowSettings: Flow,
   buildOptions: BuildOptions,
   logger: Logger.Instance,
   showStats = false,
+  provenance?: BundleProvenance,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
 
@@ -381,10 +423,27 @@ export async function bundleCore(
     // produces a new hash, which produces a new cache key, which forces a
     // fresh trace + esbuild. This is the right invalidation signal because
     // pacote (not the user's package-lock.json) is the install layer.
-    const sortedVersions = [...resolutionResult.topLevel.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([name, p]) => `${name}@${p.version}`);
+    const sortedVersions = await resolvedVersionLines(
+      resolutionResult.topLevel,
+      packagePaths,
+    );
     const versionsHash = await getHashServer(sortedVersions.join('\n'), 12);
+
+    // Bake provenance before the L1 check and codegen, so the release sits
+    // in both the cache key and the artifact.
+    if (provenance) {
+      applyCollectorProvenance(
+        flowSettings,
+        provenance.flowName,
+        provenance.release,
+        () =>
+          releaseDigest({
+            configDigest: provenance.configDigest,
+            versions: sortedVersions,
+            toolchain: VERSION,
+          }),
+      );
+    }
     // Step packages externalized by esbuild. Use the packages the user (or
     // auto-add) actually declared, not pacote's full top-level set: peer
     // dependencies pacote installs (e.g. zod for schema validation) are
@@ -495,6 +554,7 @@ export async function bundleCore(
       // Keeping it here only over-keys the code cache, which is harmless.
       windowElb: buildOptions.windowElb,
       versionsHash,
+      toolchain: VERSION,
     };
 
     // Check if we have a cached compilation of this exact code entry
@@ -1497,23 +1557,20 @@ export function buildDataPayload(flowSettings: Flow): Record<string, unknown> {
  * Bake flow-config provenance onto the collector before codegen.
  *
  * The flow name keys this flow's entry in `event.source.release`; the release
- * value stamps that key. Both are set only when absent, so a flow (or an
- * upstream caller) that already authored `collector.name`/`collector.release`
- * keeps its own values. The release falls back to an explicit id, then to a
- * bundle-time timestamp so a standalone bundle still carries a distinguishable
- * release instead of the runtime `__VERSION__` default.
- *
- * `now` is injectable so tests assert a fixed value; production uses wall time.
+ * value stamps that key. An authored `collector.name` is kept. The release is
+ * the explicit id when given, then an authored `collector.release`, then
+ * `fallback()`, so a standalone bundle carries a release instead of the
+ * runtime `__VERSION__` default.
  */
 export function applyCollectorProvenance(
   flowSettings: Flow,
   flowName: string,
-  release?: string,
-  now: () => string = () => new Date().toISOString(),
+  release: string | undefined,
+  fallback: () => string,
 ): void {
   const collector = flowSettings.collector ?? {};
   collector.name ??= flowName;
-  collector.release ??= release ?? now();
+  collector.release = release ?? collector.release ?? fallback();
   flowSettings.collector = collector;
 }
 

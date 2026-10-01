@@ -2,10 +2,11 @@ import { z } from 'zod';
 import type { PushResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { mcpResult, mcpError } from '@walkeros/core';
+import { mcpError } from '@walkeros/core';
 import { PushOutputShape } from '../schemas/output.js';
 
 import type { ToolSpec } from '../tool-spec.js';
+import { knownSecretsOf, scrubbedError, scrubbedPushResult } from './egress.js';
 import {
   refusalHint,
   unavailableOperation,
@@ -60,6 +61,9 @@ async function flowPushHandlerBody(runtime: FlowRuntime, input: unknown) {
     const refusal = unavailableOperation('push');
     return mcpError(refusal, refusal.hint);
   }
+  // Push results can carry vendor requests and responses: they egress with
+  // the flow's secret values and credential patterns masked.
+  const known = await knownSecretsOf(runtime, configPath);
   try {
     const result: PushResult = await runtime.push(configPath, event, {
       flow,
@@ -67,20 +71,26 @@ async function flowPushHandlerBody(runtime: FlowRuntime, input: unknown) {
     });
 
     if (!result.success) {
-      return mcpError(
-        new Error(result.error || 'Push failed'),
-        'Check destination configuration and connectivity.',
+      return scrubbedError(
+        mcpError(
+          new Error(result.error || 'Push failed'),
+          'Check destination configuration and connectivity.',
+        ),
+        known,
       );
     }
 
-    return mcpResult(result);
+    return scrubbedPushResult(result, known);
   } catch (error) {
-    return mcpError(
-      error,
-      refusalHint(
+    return scrubbedError(
+      mcpError(
         error,
-        'Check configPath and event format. For web flows, use flow_simulate.',
+        refusalHint(
+          error,
+          'Check configPath and event format. For web flows, use flow_simulate.',
+        ),
       ),
+      known,
     );
   }
 }

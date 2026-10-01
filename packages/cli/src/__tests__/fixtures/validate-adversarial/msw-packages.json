@@ -14,6 +14,9 @@
             }
           }
         }
+      },
+      "exports": {
+        "destinationGtag": "Gtag"
       }
     },
     "1.0.0": {
@@ -69,6 +72,117 @@
         "settings": {
           "type": "object",
           "notAKeyword": true
+        }
+      }
+    }
+  },
+  "pkg-multi": {
+    "latest": {
+      "version": "1.0.0",
+      "type": "destination",
+      "platform": "server",
+      "exports": {
+        "destinationMain": "Main",
+        "destinationOther": "Other"
+      },
+      "schemas": {
+        "settings": {
+          "type": "object",
+          "required": ["projectId"],
+          "properties": {
+            "projectId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "otherSettings": {
+          "type": "object",
+          "required": ["topic"],
+          "properties": {
+            "topic": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "exportSchemas": {
+        "destinationMain": {
+          "settings": {
+            "type": "object",
+            "required": ["projectId"],
+            "properties": {
+              "projectId": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "destinationOther": {
+          "settings": {
+            "type": "object",
+            "required": ["topic"],
+            "properties": {
+              "topic": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "pkg-multi-legacy": {
+    "latest": {
+      "version": "1.0.0",
+      "type": "destination",
+      "platform": "server",
+      "exports": {
+        "destinationMain": "Main",
+        "destinationOther": "Other"
+      },
+      "schemas": {
+        "settings": {
+          "type": "object",
+          "required": ["projectId"],
+          "properties": {
+            "projectId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "otherSettings": {
+          "type": "object",
+          "required": ["topic"],
+          "properties": {
+            "topic": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "pkg-old": {
+    "latest": {
+      "version": "4.2.0",
+      "type": "destination",
+      "platform": "server",
+      "schemas": {
+        "settings": {
+          "type": "object",
+          "required": ["projectId"],
+          "properties": {
+            "projectId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       }
     }

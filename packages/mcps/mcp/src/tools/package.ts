@@ -180,6 +180,29 @@ export function createPackageGetToolSpec(): ToolSpec {
   };
 }
 
+/**
+ * Base config merged with the package settings as `config`; every other
+ * schema (mapping, setup, ga4, ...) kept as a sibling.
+ */
+function shapeSchemas(
+  type: string | undefined,
+  schemas: Record<string, unknown>,
+): Record<string, unknown> {
+  const shaped: Record<string, unknown> = {};
+
+  if (type) {
+    shaped.config = mergeConfigSchema(
+      type as 'source' | 'destination' | 'transformer' | 'store',
+      schemas as Record<string, Record<string, unknown>>,
+    );
+  }
+
+  for (const [key, value] of Object.entries(schemas)) {
+    if (key !== 'settings') shaped[key] = value;
+  }
+  return shaped;
+}
+
 async function packageGetHandlerBody(input: unknown) {
   const {
     package: packageName,
@@ -199,30 +222,23 @@ async function packageGetHandlerBody(input: unknown) {
       client: CLIENT_HEADER,
     });
 
-    // Build merged schemas: base config + package settings → schemas.config
-    const mergedSchemas: Record<string, unknown> = {};
-
-    if (info.type) {
-      mergedSchemas.config = mergeConfigSchema(
-        info.type as 'source' | 'destination' | 'transformer' | 'store',
-        info.schemas as Record<string, Record<string, unknown>>,
-      );
-    }
-
-    // Keep non-settings schemas as siblings (mapping, ga4, tagger, etc.)
-    for (const [key, value] of Object.entries(info.schemas)) {
-      if (key !== 'settings') {
-        mergedSchemas[key] = value;
-      }
-    }
-
     const result: Record<string, unknown> = {
       package: info.packageName,
       version: info.version,
       type: info.type,
       platform: normalizePlatform(info.platform),
-      schemas: mergedSchemas,
+      schemas: shapeSchemas(info.type, info.schemas),
     };
+
+    // Multi-export packages: schemas per export, each with its own config
+    if (info.exportSchemas) {
+      result.exportSchemas = Object.fromEntries(
+        Object.entries(info.exportSchemas).map(([name, schemas]) => [
+          name,
+          shapeSchemas(info.type, schemas),
+        ]),
+      );
+    }
 
     // Hints
     if (info.hints) {

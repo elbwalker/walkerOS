@@ -100,13 +100,6 @@ export interface Instance<T extends TypesGeneric = Types> {
   config: Config<T>;
   queuePush?: WalkerOS.Events;
   queueOn?: Array<{ type: On.Types; data?: unknown }>;
-  /**
-   * Set while a state delivery (consent, user, globals, custom) to this
-   * destination's `on` handler is running, and kept when it does not settle.
-   * While it is set the collector delivers no events here: they stay in
-   * `queuePush`. Cleared once every present state cell has reached the handler.
-   */
-  stateHold?: { type: On.Types; since: number };
   dlq?: DLQ;
   batches?: BatchRegistry<Mapping<T>>;
   type?: string;

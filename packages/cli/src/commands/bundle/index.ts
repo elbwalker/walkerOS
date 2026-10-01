@@ -30,7 +30,7 @@ import {
 } from '../../config/index.js';
 import { isUrl } from '../../config/utils.js';
 import type { BuildOptions } from '../../types/bundle.js';
-import { applyCollectorProvenance, bundleCore } from './bundler.js';
+import { bundleCore, type BundleProvenance } from './bundler.js';
 import type { BundleTarget } from './targets.js';
 import { resolveTarget } from './targets.js';
 import { uploadBundleToUrl, sanitizeUrl } from './upload.js';
@@ -46,7 +46,7 @@ export interface BundleCommandOptions {
   cache?: boolean;
   verbose?: boolean;
   silent?: boolean;
-  /** Config release id baked into config.collector.release (set-if-absent). */
+  /** Release id baked into config.collector.release. Beats an authored one. */
   release?: string;
 }
 
@@ -102,10 +102,17 @@ async function runBundleCoreWithArchive(
   flowSettings: Flow,
   buildOptions: BuildOptions,
   logger: Logger.Instance,
-  showStats = false,
+  showStats: boolean,
+  provenance: BundleProvenance,
 ): Promise<BundleStats | void> {
   if (!isArchiveOutput(buildOptions.output)) {
-    return bundleCore(flowSettings, buildOptions, logger, showStats);
+    return bundleCore(
+      flowSettings,
+      buildOptions,
+      logger,
+      showStats,
+      provenance,
+    );
   }
 
   if (buildOptions.platform !== 'node') {
@@ -126,6 +133,7 @@ async function runBundleCoreWithArchive(
       { ...buildOptions, output: path.join(tempDir, 'flow.mjs') },
       logger,
       showStats,
+      provenance,
     );
 
     // node_modules/ is only present when nft copied ≥1 traced file. A flow
@@ -226,16 +234,13 @@ export async function bundleCommand(
       buildOptions,
       flowName,
       isMultiFlow,
+      configDigest,
     } of configsToBundle) {
       try {
         // Override cache setting from CLI if provided
         if (options.cache !== undefined) {
           buildOptions.cache = options.cache;
         }
-
-        // Bake flow name + release into the collector before codegen so the
-        // deployed flow stamps real provenance on event.source.release.
-        applyCollectorProvenance(flowSettings, flowName, options.release);
 
         // Resolve output path
         const outputIsUrl = options.output ? isUrl(options.output) : false;
@@ -269,11 +274,15 @@ export async function bundleCommand(
 
         // Run bundler
         const shouldCollectStats = options.stats || options.json;
+        // The bundler bakes flow name + release into the collector before
+        // codegen, so the deployed flow stamps real provenance on
+        // event.source.release.
         const stats = await runBundleCoreWithArchive(
           flowSettings,
           buildOptions,
           logger,
-          shouldCollectStats,
+          shouldCollectStats === true,
+          { flowName, release: options.release, configDigest },
         );
 
         results.push({ flowName, success: true, stats });
@@ -420,8 +429,9 @@ export async function bundle(
     cache?: boolean;
     flowName?: string;
     /**
-     * Config release id baked into `config.collector.release` (set-if-absent),
-     * stamping this flow's entry in `event.source.release` at runtime.
+     * Release id baked into `config.collector.release`, stamping this flow's
+     * entry in `event.source.release` at runtime. Beats an authored release;
+     * omitted, the release is a content id of config, packages and CLI.
      */
     release?: string;
     /**
@@ -487,16 +497,13 @@ export async function bundle(
     withDev: preset.withDev,
     externalizeDev: preset.externalizeDev,
   };
-  const { flowSettings, buildOptions, flowName } = loadBundleConfig(rawConfig, {
-    configPath,
-    flowName: options.flowName,
-    buildOverrides: mergedOverrides,
-    buildEnv: options.buildEnv,
-  });
-
-  // Bake flow name + release into the collector so the deployed flow stamps
-  // real provenance on event.source.release instead of the runtime fallback.
-  applyCollectorProvenance(flowSettings, flowName, options.release);
+  const { flowSettings, buildOptions, flowName, configDigest } =
+    loadBundleConfig(rawConfig, {
+      configPath,
+      flowName: options.flowName,
+      buildOverrides: mergedOverrides,
+      buildEnv: options.buildEnv,
+    });
 
   // 3. Handle cache option
   if (options.cache !== undefined) {
@@ -507,10 +514,13 @@ export async function bundle(
   const logger = createCLILogger(options);
 
   // 5. Call core bundler (packs a .tar.gz/.tgz artifact when output requests it)
+  // The bundler bakes flow name + release into the collector so the deployed
+  // flow stamps real provenance on event.source.release.
   return await runBundleCoreWithArchive(
     flowSettings,
     buildOptions,
     logger,
     options.stats ?? false,
+    { flowName, release: options.release, configDigest },
   );
 }

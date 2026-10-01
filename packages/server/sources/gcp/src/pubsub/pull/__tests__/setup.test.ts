@@ -301,6 +301,71 @@ describe('Pub/Sub pull source setup', () => {
     );
     expect(warnCall).toBeDefined();
   });
+
+  // The SDK loads protos with longs as strings, so a real subscription
+  // reports its retention as { seconds: '604800', nanos: 0 }.
+  it.each([
+    [
+      'the SDK string form',
+      { seconds: '86400', nanos: 0 },
+      [
+        [
+          'setup.drift',
+          {
+            field: 'messageRetentionDuration.seconds',
+            declared: 604800,
+            actual: '86400',
+          },
+        ],
+      ],
+    ],
+    [
+      'a numeric form',
+      { seconds: 86400 },
+      [
+        [
+          'setup.drift',
+          {
+            field: 'messageRetentionDuration.seconds',
+            declared: 604800,
+            actual: 86400,
+          },
+        ],
+      ],
+    ],
+    [
+      'equal seconds in the SDK string form',
+      { seconds: '604800', nanos: 0 },
+      [],
+    ],
+  ])(
+    'reports retention drift only when the seconds differ, %s',
+    async (_form, messageRetentionDuration, expected) => {
+      const alreadyExists: Error & { code?: number } = new Error('already');
+      alreadyExists.code = 6;
+      __setCreateSubscriptionHarness({ error: alreadyExists });
+      __setSubscriptionHarness({ metadata: { messageRetentionDuration } });
+      const logger = createMockLogger();
+      const warnSpy = jest.spyOn(logger, 'warn');
+      const ctx: Source.Context<Types> = {
+        ...buildContext({
+          setup: { messageRetentionDuration: { seconds: 604800 } },
+        }),
+        logger,
+      };
+      const instance = await sourcePubSubPull(ctx);
+      if (!instance.setup) throw new Error('setup not defined');
+      await instance.setup({
+        id: 'pubsub',
+        config: instance.config,
+        env: pushEnv,
+        logger,
+      });
+      expect(
+        warnSpy.mock.calls.filter((call) => call[0] === 'setup.drift'),
+      ).toEqual(expected);
+    },
+  );
 });
 
 describe('Pub/Sub pull setup client guard', () => {

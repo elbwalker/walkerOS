@@ -37,7 +37,8 @@ export interface FlowRuntime {
   simulate?(input: string, opts: SimulateOptions): Promise<Simulation.Result>;
   /**
    * The values of the secrets a flow config references (`$secret.NAME`),
-   * masked wherever a simulation result egresses. Absent with `simulate`.
+   * masked wherever a simulation or push result egresses. Absent with
+   * `simulate` and `push`.
    */
   knownSecrets?(input: string): Promise<string[]>;
   /** Build and run a flow against real destinations. Absent where forbidden. */

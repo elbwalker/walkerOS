@@ -58,6 +58,8 @@ interface CataloguedVersion {
   type: string;
   platform: string;
   schemas: Record<string, unknown>;
+  exports?: Record<string, unknown>;
+  exportSchemas?: Record<string, unknown>;
 }
 
 const catalogue = readFixture('msw-packages');
@@ -79,6 +81,10 @@ function lookupPackage(
     type: String(hit.type),
     platform: String(hit.platform),
     schemas: hit.schemas,
+    ...(isRecord(hit.exports) ? { exports: hit.exports } : {}),
+    ...(isRecord(hit.exportSchemas)
+      ? { exportSchemas: hit.exportSchemas }
+      : {}),
   };
 }
 
@@ -93,8 +99,13 @@ const packageHandlers = [
     if (match[3] === 'package.json')
       return HttpResponse.json({ name: match[1], version: pkg.version });
     return HttpResponse.json({
-      $meta: { type: pkg.type, platform: pkg.platform },
+      $meta: {
+        type: pkg.type,
+        platform: pkg.platform,
+        ...(pkg.exports ? { exports: pkg.exports } : {}),
+      },
       schemas: pkg.schemas,
+      ...(pkg.exportSchemas ? { exportSchemas: pkg.exportSchemas } : {}),
     });
   }),
   // The app's unified package endpoint, should validate move to it.
@@ -114,6 +125,8 @@ const packageHandlers = [
       type: pkg.type,
       platform: [pkg.platform],
       schemas: pkg.schemas,
+      ...(pkg.exports ? { exports: pkg.exports } : {}),
+      ...(pkg.exportSchemas ? { exportSchemas: pkg.exportSchemas } : {}),
     });
   }),
 ];
@@ -764,17 +777,17 @@ describe('C1 default scope and C5 skips', () => {
     expect(result.details.scope).toMatchObject({ flows: ['a'] });
   });
 
-  it('N1: a step importing a named export is a skip, not checked against the default schema', async () => {
+  it('N1: a named export of a multi-export package without per-export schemas is a skip, not checked against the default schema', async () => {
     const result = await validate('flow', {
       version: 4,
       flows: {
         a: {
-          config: { platform: 'web' },
+          config: { platform: 'server' },
           destinations: {
-            ga4: {
-              package: 'pkg-x',
+            other: {
+              package: 'pkg-multi-legacy',
               import: 'destinationOther',
-              config: { settings: { id: 42 } },
+              config: { settings: { topic: 'events' } },
             },
           },
         },
@@ -783,14 +796,105 @@ describe('C1 default scope and C5 skips', () => {
     expect(result.warnings.filter((w) => w.code === 'ENTRY_SCHEMA')).toEqual(
       [],
     );
-    expect(skippedOf(result)).toContainEqual(
-      expect.objectContaining({
-        path: 'flows.a.destinations.ga4',
+    expect(skippedOf(result)).toEqual([
+      {
+        path: 'flows.a.destinations.other',
         check: 'flow:package-settings',
+        reason:
+          'pkg-multi-legacy@1.0.0 predates per-export settings schemas; the step imports "destinationOther"',
         code: 'NO_SETTINGS_SCHEMA',
-      }),
-    );
+      },
+    ]);
     expect(result.details.scope).toMatchObject({ flows: ['a'] });
+  });
+
+  it('N1: a named export of a package that does not publish its exports is a skip', async () => {
+    const result = await validate('flow', {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'server' },
+          destinations: {
+            other: {
+              package: 'pkg-old',
+              import: 'destinationOther',
+              config: { settings: { topic: 'events' } },
+            },
+          },
+        },
+      },
+    });
+    expect(result.warnings.filter((w) => w.code === 'ENTRY_SCHEMA')).toEqual(
+      [],
+    );
+    expect(skippedOf(result)).toEqual([
+      {
+        path: 'flows.a.destinations.other',
+        check: 'flow:package-settings',
+        reason:
+          'pkg-old@4.2.0 predates per-export settings schemas; the step imports "destinationOther"',
+        code: 'NO_SETTINGS_SCHEMA',
+      },
+    ]);
+  });
+
+  it('N1: a named export of a single-export package is checked against its settings schema', async () => {
+    const result = await validate('flow', {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'web' },
+          destinations: {
+            ga4: {
+              package: 'pkg-x',
+              import: 'destinationGtag',
+              config: { settings: { id: 42 } },
+            },
+          },
+        },
+      },
+    });
+    expect(result.warnings.map(({ path: at, code }) => ({ at, code }))).toEqual(
+      [
+        {
+          at: 'flows.a.destinations.ga4.config.settings.id',
+          code: 'ENTRY_SCHEMA',
+        },
+      ],
+    );
+    expect(skippedOf(result)).toEqual([]);
+  });
+
+  it('a named export of a multi-export package is checked against its own published schema', async () => {
+    const result = await validate('flow', {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'server' },
+          destinations: {
+            other: {
+              package: 'pkg-multi',
+              import: 'destinationOther',
+              config: { settings: { topic: 42 } },
+            },
+          },
+        },
+      },
+    });
+    expect(
+      result.warnings.map(({ path: at, code, keyword }) => ({
+        at,
+        code,
+        keyword,
+      })),
+    ).toEqual([
+      {
+        at: 'flows.a.destinations.other.config.settings.topic',
+        code: 'ENTRY_SCHEMA',
+        keyword: 'type',
+      },
+    ]);
+    expect(skippedOf(result)).toEqual([]);
   });
 
   it('N1: a settings schema Ajv cannot compile is a skip, never a crash', async () => {

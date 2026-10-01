@@ -16,6 +16,7 @@ import {
 } from './validators.js';
 import { getBuildDefaults, getDefaultOutput } from './build-defaults.js';
 import { isUrl, loadJsonConfig } from './utils.js';
+import { configDigest } from '../core/content-digest.js';
 import {
   assertWindowCollector,
   type WindowCollectorSource,
@@ -38,6 +39,11 @@ export interface LoadConfigResult {
   isMultiFlow: boolean;
   /** All available flow names */
   availableFlows: string[];
+  /**
+   * Digest of the deferred flow settings, the config input of the default
+   * release. Never carries an env or secret value.
+   */
+  configDigest: string;
 }
 
 /**
@@ -109,6 +115,7 @@ export function loadBundleConfig(
   // Resolve with deferred mode first (markers don't affect platform detection)
   let flowSettings = getFlowSettings(config, flowName, { deferred: true });
   const platform = getPlatform(flowSettings);
+  const flowConfigDigest = configDigest(flowSettings, flowName);
   if (!platform) {
     throw new Error(
       `Invalid configuration: flow "${flowName}" must have config.platform set to "web" or "server".`,
@@ -188,6 +195,7 @@ export function loadBundleConfig(
     flowName,
     isMultiFlow,
     availableFlows,
+    configDigest: flowConfigDigest,
   };
 }
 

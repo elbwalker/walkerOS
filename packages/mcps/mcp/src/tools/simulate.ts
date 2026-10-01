@@ -1,9 +1,7 @@
 import { z } from 'zod';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { isObject, mcpResult, mcpError } from '@walkeros/core';
-import { scrubSecrets, toPrintable } from '@walkeros/core/node';
-import { maskKnownNumbers } from '@walkeros/cli';
+import { mcpResult, mcpError } from '@walkeros/core';
 import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
 import { FLOW_SIMULATE_DESCRIPTION } from './simulate-description.js';
@@ -11,6 +9,7 @@ import { FLOW_SIMULATE_DESCRIPTION } from './simulate-description.js';
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { resolveConfigPath } from './resolve-config-path.js';
+import { knownSecretsOf, scrubbed, scrubbedError } from './egress.js';
 import {
   refusalHint,
   unavailableOperation,
@@ -33,55 +32,6 @@ const STEP_TYPES: readonly SimulateStepType[] = [
 
 function isStepType(value: string): value is SimulateStepType {
   return STEP_TYPES.some((t) => t === value);
-}
-
-/**
- * Simulate results carry recorded vendor calls and events whose values can
- * hold credentials. They egress like a log line: serialize, scrub (masking
- * the values of the secrets the flow references, `known`), then parse back
- * into the structured result. A number that prints a known secret is masked
- * before serializing, so the scrubbed text still parses.
- */
-function scrubbed(
-  result: Record<string, unknown>,
-  known: readonly string[],
-): Record<string, unknown> {
-  const text = scrubSecrets(
-    JSON.stringify(maskKnownNumbers(toPrintable(result), known)),
-    { known },
-  );
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    parsed = undefined;
-  }
-  if (!isObject(parsed))
-    throw new Error('Simulation result could not be redacted as JSON.');
-  return parsed;
-}
-
-/** The error response egresses the same way: its text and structured copy. */
-function scrubbedError(
-  response: ReturnType<typeof mcpError>,
-  known: readonly string[],
-): ReturnType<typeof mcpError> {
-  let structuredContent: Record<string, unknown>;
-  try {
-    structuredContent = scrubbed(response.structuredContent, known);
-  } catch {
-    structuredContent = {
-      error: 'Simulation failed; the error could not be redacted.',
-    };
-  }
-  return {
-    ...response,
-    content: response.content.map((part) => ({
-      ...part,
-      text: scrubSecrets(part.text, { known }),
-    })),
-    structuredContent,
-  };
 }
 
 const TITLE = 'Simulate Flow';
@@ -386,19 +336,6 @@ async function flowSimulateHandlerBody(
   } catch (error) {
     const hint = 'Run flow_validate for detailed error messages';
     return scrubbedError(mcpError(error, refusalHint(error, hint)), known);
-  }
-}
-
-/** The flow's secret values; none when the runtime cannot read the config. */
-async function knownSecretsOf(
-  runtime: FlowRuntime,
-  input: string,
-): Promise<string[]> {
-  if (!runtime.knownSecrets) return [];
-  try {
-    return await runtime.knownSecrets(input);
-  } catch {
-    return [];
   }
 }
 

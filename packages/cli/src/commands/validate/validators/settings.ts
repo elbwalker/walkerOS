@@ -13,6 +13,10 @@ import {
   REF_STORE,
   SECRET_MARKER_PREFIX,
 } from '@walkeros/core';
+import {
+  resolveExportName,
+  type ComponentKind,
+} from '../../../core/resolve-export-name.js';
 import { parsePackageSpec } from '../../../core/step-packages.js';
 import type { EntrySection } from '../scope.js';
 import type {
@@ -40,8 +44,10 @@ export interface SettingsTarget {
 export interface SettingsContext {
   /** Directory a local `path` package resolves against; unset: no disk reads. */
   configDir?: string;
-  /** Schemas fetched and compiled in this run, by package source. */
-  cache: Map<string, Promise<LoadedSchema>>;
+  /** Schemas fetched in this run, by package source. */
+  cache: Map<string, Promise<PackageSchema>>;
+  /** Settings validators compiled in this run, by package source and export. */
+  compiled: Map<string, CompiledSettings | undefined>;
 }
 
 export interface CheckedPackage {
@@ -57,20 +63,24 @@ export interface SettingsOutcome {
   checked?: CheckedPackage;
 }
 
-interface PackageSchema {
+export interface PackageSchema {
   version?: string;
+  /** The default export's settings schema. */
   settings: unknown;
+  /** Schemas per export, keyed by export name (multi-export packages). */
+  exportSchemas?: Record<string, unknown>;
+  /** Export names the package declares. */
+  exports?: string[];
 }
 
-/** A settings schema compiled once per package source and run. */
+export type SettingsSelection =
+  | { ok: true; settings: unknown }
+  | { ok: false; reason: string };
+
+/** A settings schema compiled once per package source, export and run. */
 type CompiledSettings =
   | { ok: true; validate: ValidateFunction }
   | { ok: false; message: string };
-
-interface LoadedSchema extends PackageSchema {
-  /** Unset when the package has no settings schema. */
-  compiled?: CompiledSettings;
-}
 
 interface PackageSource {
   name: string;
@@ -79,8 +89,51 @@ interface PackageSource {
 }
 
 export function createSettingsContext(configDir?: string): SettingsContext {
-  return { configDir, cache: new Map() };
+  return { configDir, cache: new Map(), compiled: new Map() };
 }
+
+/**
+ * The settings schema for the export a step imports, by the same rule
+ * simulate uses for dev examples: no export named takes `settings`; a
+ * per-export map takes that export's entry and never another export's; a
+ * package declaring at most one export takes `settings` for its only step
+ * export; a multi-export package without a map, or a package that does not
+ * publish its exports, cannot be checked.
+ */
+export function selectSettingsSchema(
+  pkg: PackageSchema,
+  packageLabel: string,
+  exportName: string | undefined,
+): SettingsSelection {
+  if (exportName === undefined) return { ok: true, settings: pkg.settings };
+  if (pkg.exportSchemas) {
+    const entry = Object.prototype.hasOwnProperty.call(
+      pkg.exportSchemas,
+      exportName,
+    )
+      ? pkg.exportSchemas[exportName]
+      : undefined;
+    if (!isObject(entry))
+      return {
+        ok: false,
+        reason: `${packageLabel} has no export "${exportName}"`,
+      };
+    return { ok: true, settings: entry.settings };
+  }
+  if (pkg.exports && pkg.exports.length < 2)
+    return { ok: true, settings: pkg.settings };
+  return {
+    ok: false,
+    reason: `${packageLabel} predates per-export settings schemas; the step imports "${exportName}"`,
+  };
+}
+
+const SECTION_KIND: Record<EntrySection, ComponentKind> = {
+  sources: 'source',
+  transformers: 'transformer',
+  destinations: 'destination',
+  stores: 'store',
+};
 
 /** Segments of an Ajv instance path (a JSON pointer). */
 function pointerSegments(pointer: string): string[] {
@@ -212,7 +265,10 @@ function readJson(file: string): unknown {
 }
 
 /** Schemas of a local package, read from its `walkerOS.json` on disk. */
-function readLocalSchema(source: PackageSource, configDir: string) {
+function readLocalSchema(
+  source: PackageSource,
+  configDir: string,
+): PackageSchema {
   const localPath = source.localPath ?? '';
   const root = path.isAbsolute(localPath)
     ? localPath
@@ -226,11 +282,16 @@ function readLocalSchema(source: PackageSource, configDir: string) {
   const pkgFile = path.join(root, 'package.json');
   const pkg = fs.existsSync(pkgFile) ? readJson(pkgFile) : undefined;
   const schemas = isObject(meta) ? meta.schemas : undefined;
+  const exportSchemas = isObject(meta) ? meta.exportSchemas : undefined;
+  const declared =
+    isObject(meta) && isObject(meta.$meta) ? meta.$meta.exports : undefined;
   const version =
     isObject(pkg) && typeof pkg.version === 'string' ? pkg.version : undefined;
   return {
     ...(version ? { version } : {}),
     settings: isObject(schemas) ? schemas.settings : undefined,
+    ...(isObject(exportSchemas) ? { exportSchemas } : {}),
+    ...(isObject(declared) ? { exports: Object.keys(declared) } : {}),
   };
 }
 
@@ -250,7 +311,12 @@ async function loadSchema(
     ...(source.version ? { version: source.version } : {}),
     client: CLIENT_HEADER,
   });
-  return { version: info.version, settings: info.schemas.settings };
+  return {
+    version: info.version,
+    settings: info.schemas.settings,
+    ...(info.exportSchemas ? { exportSchemas: info.exportSchemas } : {}),
+    ...(info.exports ? { exports: Object.keys(info.exports) } : {}),
+  };
 }
 
 /**
@@ -270,28 +336,36 @@ function compileSettings(settings: unknown): CompiledSettings | undefined {
   }
 }
 
-async function loadAndCompile(
-  source: PackageSource,
-  context: SettingsContext,
-): Promise<LoadedSchema> {
-  const schema = await loadSchema(source, context);
-  const compiled = compileSettings(schema.settings);
-  return compiled ? { ...schema, compiled } : schema;
+function sourceKey(source: PackageSource): string {
+  return source.localPath
+    ? `path:${source.localPath}`
+    : `${source.name}@${source.version ?? 'latest'}`;
 }
 
 function cachedSchema(
   source: PackageSource,
   context: SettingsContext,
-): Promise<LoadedSchema> {
-  const key = source.localPath
-    ? `path:${source.localPath}`
-    : `${source.name}@${source.version ?? 'latest'}`;
+): Promise<PackageSchema> {
+  const key = sourceKey(source);
   let pending = context.cache.get(key);
   if (!pending) {
-    pending = loadAndCompile(source, context);
+    pending = loadSchema(source, context);
     context.cache.set(key, pending);
   }
   return pending;
+}
+
+function cachedCompile(
+  source: PackageSource,
+  exportName: string | undefined,
+  settings: unknown,
+  context: SettingsContext,
+): CompiledSettings | undefined {
+  const key = `${sourceKey(source)}#${exportName ?? ''}`;
+  if (context.compiled.has(key)) return context.compiled.get(key);
+  const compiled = compileSettings(settings);
+  context.compiled.set(key, compiled);
+  return compiled;
 }
 
 /**
@@ -321,21 +395,8 @@ export async function checkStepSettings(
     return outcome;
   }
 
-  // A package publishes one `settings` schema, for its default export. A
-  // step that imports a named export (`import`) is configured by that
-  // export's settings, which the package does not map to a schema.
-  if (typeof target.entry.import === 'string') {
-    outcome.skipped.push({
-      path: at,
-      check,
-      reason: `The step imports the named export "${target.entry.import}"; the package settings schema describes its default export`,
-      code: 'NO_SETTINGS_SCHEMA',
-    });
-    return outcome;
-  }
-
   const source = packageSource(spec, rawFlow);
-  let schema: LoadedSchema;
+  let schema: PackageSchema;
   try {
     schema = await cachedSchema(source, context);
   } catch (error) {
@@ -353,7 +414,35 @@ export async function checkStepSettings(
     ...(schema.version ? { version: schema.version } : {}),
   };
 
-  if (!schema.compiled) {
+  // The export the step imports, resolved as the bundler resolves it.
+  const { exportName } = resolveExportName(
+    resolvedFlow,
+    SECTION_KIND[target.section],
+    target.key,
+  );
+  const version = schema.version ?? source.version;
+  const selection = selectSettingsSchema(
+    schema,
+    version ? `${source.name}@${version}` : source.name,
+    exportName,
+  );
+  if (!selection.ok) {
+    outcome.skipped.push({
+      path: at,
+      check,
+      reason: selection.reason,
+      code: 'NO_SETTINGS_SCHEMA',
+    });
+    return outcome;
+  }
+
+  const compiled = cachedCompile(
+    source,
+    exportName,
+    selection.settings,
+    context,
+  );
+  if (!compiled) {
     outcome.skipped.push({
       path: at,
       check,
@@ -362,16 +451,16 @@ export async function checkStepSettings(
     });
     return outcome;
   }
-  if (!schema.compiled.ok) {
+  if (!compiled.ok) {
     outcome.skipped.push({
       path: at,
       check,
-      reason: `The settings schema of ${source.name} cannot be compiled: ${schema.compiled.message}`,
+      reason: `The settings schema of ${source.name} cannot be compiled: ${compiled.message}`,
       code: 'SCHEMA_UNAVAILABLE',
     });
     return outcome;
   }
-  const validate = schema.compiled.validate;
+  const validate = compiled.validate;
 
   const step = stepOf(resolvedFlow, target.section, target.key);
   const config = isObject(step?.config) ? step.config : {};

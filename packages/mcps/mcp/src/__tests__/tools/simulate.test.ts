@@ -39,11 +39,6 @@ jest.mock('@walkeros/cli', () => ({
   simulateCollector: jest.fn(),
   loadJsonConfig: jest.fn(async () => ({ version: 4, flows: {} })),
   collectKnownSecrets: jest.fn(() => []),
-  // The real masker, from its own module (the cli entry does not load under
-  // this suite): it is pure, and the egress tests depend on it.
-  maskKnownNumbers: jest.requireActual(
-    '../../../../../cli/src/core/known-secrets',
-  ).maskKnownNumbers,
 }));
 
 jest.mock('@walkeros/core', () => ({

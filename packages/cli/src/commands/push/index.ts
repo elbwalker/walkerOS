@@ -30,7 +30,7 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import { tmpRunDir } from '../../core/tmp-names.js';
-import { scrubSecrets } from '../../core/redact-line.js';
+import { scrubJson, scrubSecrets } from '../../core/redact-line.js';
 import { toPrintable } from '../../core/to-printable.js';
 import { loadFlowConfig, loadJsonConfig } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
@@ -44,10 +44,7 @@ import { buildSimulationResult } from './simulation-result.js';
 import { prepareFlow } from './prepare.js';
 import { schemas } from '@walkeros/core/dev';
 import { runPushCommandWithSecrets } from './run.js';
-import {
-  collectKnownSecrets,
-  maskKnownNumbers,
-} from '../../core/known-secrets.js';
+import { collectKnownSecrets } from '../../core/known-secrets.js';
 import { legacyExportRefusal, selectDevExamples } from './dev-examples.js';
 import { resolveExportName } from '../../core/resolve-export-name.js';
 
@@ -221,10 +218,13 @@ async function pushCore(
     knownSecrets?: readonly string[];
   } = {},
 ): Promise<PushResult> {
+  // Known once the config is read; the logger reads the list per line.
+  let known: readonly string[] = options.knownSecrets ?? [];
   const logger = createCLILogger({
     silent: options.silent,
     verbose: options.verbose,
     stderr: options.json,
+    knownSecrets: () => known,
   });
   const startTime = Date.now();
   let tempDir: string | undefined;
@@ -263,6 +263,7 @@ async function pushCore(
       const knownSecrets =
         options.knownSecrets ??
         (isFlowJson(raw) ? collectKnownSecrets(raw) : []);
+      known = knownSecrets;
       result = await executeConfigPush(
         {
           config: inputPath,
@@ -341,16 +342,11 @@ export function renderPushOutput(
   options: { json?: boolean; knownSecrets?: readonly string[] } = {},
 ): string {
   const knownSecrets = options.knownSecrets ?? [];
-  return scrubSecrets(
-    options.json
-      ? JSON.stringify(
-          maskKnownNumbers(toPrintable(result), knownSecrets),
-          null,
-          2,
-        )
-      : formatPushResult(result, { knownSecrets }),
-    { known: knownSecrets },
-  );
+  return options.json
+    ? scrubJson(result, { known: knownSecrets, space: 2 })
+    : scrubSecrets(formatPushResult(result, { knownSecrets }), {
+        known: knownSecrets,
+      });
 }
 
 const MAX_CALL_ARGS_LENGTH = 300;

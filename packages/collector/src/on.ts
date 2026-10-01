@@ -497,6 +497,27 @@ export async function callDestinationOn(
 }
 
 /**
+ * A destination's state hold: set while a state delivery (consent, user,
+ * globals, custom) to its `on` handler is running, and kept when it does not
+ * settle. While it is set the collector delivers no events to it: they stay in
+ * its `queuePush`. Cleared once every present state cell has reached the
+ * handler. Collector-internal bookkeeping, keyed by the destination instance.
+ */
+export interface StateHold {
+  type: On.Types;
+  since: number;
+}
+
+const stateHolds = new WeakMap<Destination.Instance, StateHold>();
+
+/** The destination's current state hold, if it is held. */
+export function getStateHold(
+  destination: Destination.Instance,
+): StateHold | undefined {
+  return stateHolds.get(destination);
+}
+
+/**
  * State deliveries to a destination that have started and not yet ended. The
  * hold is never released while one is running.
  */
@@ -587,7 +608,7 @@ export function markStateLost(
   const lost = lostCells.get(destination);
   if (lost) lost.add(String(type));
   else lostCells.set(destination, new Set([String(type)]));
-  destination.stateHold = { type, since: Date.now() };
+  stateHolds.set(destination, { type, since: Date.now() });
 }
 
 /**
@@ -618,7 +639,7 @@ export function openStateDelivery(
   type: On.Types,
 ): void {
   stateInFlight.set(destination, (stateInFlight.get(destination) || 0) + 1);
-  destination.stateHold = { type, since: Date.now() };
+  stateHolds.set(destination, { type, since: Date.now() });
 }
 
 /**
@@ -703,7 +724,7 @@ function releaseHoldIfCurrent(
   collector: Collector.Instance,
   destination: Destination.Instance,
 ): void {
-  if (!destination.stateHold) return;
+  if (!stateHolds.has(destination)) return;
   if (stateInFlight.get(destination)) return;
   if (lostCells.get(destination)?.size) return;
   const owed = STATE_CELLS.some(
@@ -711,7 +732,7 @@ function releaseHoldIfCurrent(
       isStatePresent(collector, cell) &&
       shouldDeliver(collector, destination, cell),
   );
-  if (!owed) delete destination.stateHold;
+  if (!owed) stateHolds.delete(destination);
 }
 
 /**
