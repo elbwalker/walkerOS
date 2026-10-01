@@ -238,6 +238,8 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
     env: context.config.env,
     id: context.config.id,
     logger: context.config.logger,
+    // The declared byte mode; state and validation read it from here.
+    file: context.config.file,
     // `setup` from the incoming context.config is typed as `unknown` because
     // the Init context narrows only the settings/env/initSettings slots and
     // not the setup-options slot. The flow runtime never uses this field at

@@ -135,6 +135,8 @@ export const storeS3Init: Store.Init<Types> = async (context) => {
       env: context.config.env,
       id: context.config.id,
       logger: context.config.logger,
+      // The declared byte mode; state and validation read it from here.
+      file: context.config.file,
     },
 
     async get(key: string): Promise<Store.StoreValue | undefined> {

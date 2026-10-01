@@ -709,8 +709,10 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
     maps what is stored.
   - `state-store` at `/flows/server/transformers/loadUser/state/store`: store
     reads from a named store instead of the built-in cache.
+  - `state-mapping` at `/flows/server/transformers/loadUser/state/mapping`:
+    mapping picks fields from the stored row and merges them into the target.
   - `load-user` at `/flows/server/transformers/loadUser`: loadUser puts the
-    customer lifetime value on logged-in events.
+    customer lifetime value and segment on logged-in events.
   - `store-fs` at `/flows/server/stores/assets`: An fs store serves files from a
     folder.
   - `store-file` at `/flows/server/stores/assets/config/file`: file: true
@@ -733,7 +735,7 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
 - **`$store` and store `cache`:** `$store.assets` injects the fs store into
   `file`; the `customers` store memoizes customer reads for five minutes.
 - **Customers:** `customers` is an fs store over fake demo data
-  (`packages/cli/examples/customers`, one JSON value per customer id), outside
+  (`packages/cli/examples/customers`, one JSON record per customer id), outside
   root `include`, so no customer data ships in a bundle. `basePath` is relative
   to the working directory, so `CUSTOMERS_DIR` holds it as an absolute path (the
   setup block at the top exports it). In production a Sheets or GCS store takes
@@ -746,7 +748,8 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
   on every response itself.
 - The `file` example is proven over HTTP in the integration test; its simulation
   is still waiting.
-- **CLI:** a known customer gets its lifetime value (`user.ltv: 420`):
+- **CLI:** a known customer gets its lifetime value and segment
+  (`user.ltv: 420`, `user.segment: "loyal"`):
 
 ```bash
 walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"},"user":{"id":"cust-42"}}' --simulate transformer.loadUser

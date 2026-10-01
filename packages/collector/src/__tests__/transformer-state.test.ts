@@ -1,5 +1,6 @@
 import { startFlow } from '..';
-import type { Store, Transformer, WalkerOS } from '@walkeros/core';
+import { Level } from '@walkeros/core';
+import type { Logger, Store, Transformer, WalkerOS } from '@walkeros/core';
 
 /**
  * A before-chain step that lifts a site id into ingest, as a server source's
@@ -629,5 +630,155 @@ describe('Transformer state integration', () => {
     await elb({ name: 'page view', data: {} });
 
     expect(reached).toEqual(['enterprise']);
+  });
+});
+
+/**
+ * A Map-backed store shaped like the s3 and gcs stores: it builds a fresh
+ * instance config and carries only the declared `file` flag over.
+ */
+function makeByteShapedStore(entries: Record<string, Store.StoreValue>): {
+  code: Store.Init;
+} {
+  const data = new Map<string, Store.StoreValue>(Object.entries(entries));
+  const code: Store.Init = (context) => ({
+    type: 'bytes',
+    config: { file: context.config.file },
+    get: async (key: string) => data.get(key),
+    set: async (key: string, value: Store.StoreValue) => {
+      data.set(key, value);
+    },
+    delete: async (key: string) => {
+      data.delete(key);
+    },
+  });
+  return { code };
+}
+
+/** A Map-backed store whose instance config is always empty. */
+function makeCustomerStore(entries: Record<string, Store.StoreValue>): {
+  code: Store.Init;
+} {
+  const data = new Map<string, Store.StoreValue>(Object.entries(entries));
+  const code: Store.Init = () => ({
+    type: 'customers',
+    config: {},
+    get: async (key: string) => data.get(key),
+    set: async (key: string, value: Store.StoreValue) => {
+      data.set(key, value);
+    },
+    delete: async (key: string) => {
+      data.delete(key);
+    },
+  });
+  return { code };
+}
+
+describe('Transformer state mapping integration', () => {
+  function spyDestination(events: WalkerOS.Event[], before: string) {
+    return {
+      spy: {
+        before,
+        code: {
+          type: 'spy',
+          config: {},
+          push: async (event: WalkerOS.Event) => {
+            events.push(event);
+          },
+        },
+      },
+    };
+  }
+
+  it('state.mapping fills several user fields in one lookup', async () => {
+    const events: WalkerOS.Event[] = [];
+    const { code } = makeCustomerStore({
+      u1: { ltv: 1840, segment: 'loyal', email: 'x@y' },
+    });
+
+    const { elb } = await startFlow({
+      stores: { customers: { code } },
+      transformers: {
+        loadUser: {
+          state: {
+            mode: 'get',
+            store: 'customers',
+            key: 'event.user.id',
+            value: 'event.user',
+            mapping: { map: { ltv: 'ltv', segment: 'segment' } },
+          },
+        },
+      },
+      destinations: spyDestination(events, 'loadUser'),
+    });
+
+    await elb({ name: 'order complete', user: { id: 'u1' } });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].user).toMatchObject({
+      id: 'u1',
+      ltv: 1840,
+      segment: 'loyal',
+    });
+    expect(events[0].user).not.toHaveProperty('email');
+  });
+
+  it('a miss writes the declared default', async () => {
+    const events: WalkerOS.Event[] = [];
+    const { code } = makeCustomerStore({});
+
+    const { elb } = await startFlow({
+      stores: { customers: { code } },
+      transformers: {
+        loadUser: {
+          state: {
+            mode: 'get',
+            store: 'customers',
+            key: 'event.user.id',
+            value: 'event.user',
+            mapping: { map: { segment: { key: 'segment', value: 'unknown' } } },
+          },
+        },
+      },
+      destinations: spyDestination(events, 'loadUser'),
+    });
+
+    await elb({ name: 'order complete', user: { id: 'u2' } });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].user.segment).toBe('unknown');
+  });
+
+  it('a state get on an s3-shaped file store is skipped with a warning', async () => {
+    const events: WalkerOS.Event[] = [];
+    const warnings: string[] = [];
+    const handler: Logger.Handler = (level, message) => {
+      if (level === Level.WARN) warnings.push(message);
+    };
+    const { code } = makeByteShapedStore({ u1: 1840 });
+
+    const { elb } = await startFlow({
+      logger: { level: 'WARN', handler },
+      stores: { bytes: { code, config: { file: true } } },
+      transformers: {
+        loadUser: {
+          state: {
+            mode: 'get',
+            store: 'bytes',
+            key: 'event.user.id',
+            value: 'event.user.ltv',
+          },
+        },
+      },
+      destinations: spyDestination(events, 'loadUser'),
+    });
+
+    await elb({ name: 'order complete', user: { id: 'u1' } });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].user).not.toHaveProperty('ltv');
+    expect(warnings).toContain(
+      '[state] file stores are not supported by state, entry skipped',
+    );
   });
 });

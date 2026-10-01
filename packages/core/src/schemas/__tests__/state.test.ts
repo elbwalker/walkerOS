@@ -185,3 +185,71 @@ describe('state appears on the three step configs', () => {
     );
   });
 });
+
+describe('StateSchema mapping', () => {
+  it.each([
+    [
+      'get with a map',
+      {
+        mode: 'get',
+        store: 'customers',
+        key: 'event.user.id',
+        value: 'event.user',
+        mapping: { map: { ltv: 'ltv' } },
+      },
+    ],
+    [
+      'get with a string path',
+      {
+        mode: 'get',
+        key: 'event.user.id',
+        value: 'event.user.ltv',
+        mapping: 'ltv',
+      },
+    ],
+    [
+      'get with a fallback list',
+      {
+        mode: 'get',
+        key: 'event.user.id',
+        value: 'event.user.segment',
+        mapping: [{ key: 'segment' }, { value: 'unknown' }],
+      },
+    ],
+    [
+      'set with a map',
+      {
+        mode: 'set',
+        key: 'event.user.id',
+        value: 'event.data',
+        mapping: { map: { ltv: 'ltv' } },
+      },
+    ],
+  ])('accepts %s and keeps mapping', (_, input) => {
+    const result = StateSchema.safeParse(input);
+    expect(result.success).toBe(true);
+    // zod object schemas strip unknown keys, so success alone proves nothing
+    expect(result.success && result.data).toHaveProperty('mapping');
+  });
+
+  it('does not prefix-check mapping paths (they are relative to the read value)', () => {
+    const result = StateSchema.safeParse({
+      mode: 'get',
+      key: 'event.user.id',
+      value: 'event.user',
+      mapping: { map: { ltv: 'profile.ltv' } },
+    });
+    expect(result.success && result.data).toHaveProperty('mapping');
+  });
+
+  it('still requires a key-path value for get', () => {
+    expect(
+      StateSchema.safeParse({
+        mode: 'get',
+        key: 'event.user.id',
+        value: { map: { ltv: 'ltv' } },
+        mapping: 'ltv',
+      }).success,
+    ).toBe(false);
+  });
+});

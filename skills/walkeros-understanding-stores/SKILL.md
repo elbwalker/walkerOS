@@ -477,7 +477,10 @@ operator workflow.
   Transformer interface and env pattern
 - [walkeros-using-store-cache](../walkeros-using-store-cache/SKILL.md) -
   Store-level cache and the declarative `state` block for fetch/stash without
-  `$code:`
+  `$code:`, including `state.mapping` to pick and shape what a lookup returns
+  (paths relative to the value read, result merged into the target, declared
+  fallbacks applied on a miss). `state` never uses a `file: true` store. Full
+  reference: [Website: State](../../website/docs/collector/state.mdx)
 - [walkeros-using-cli](../walkeros-using-cli/SKILL.md) - Bundling flows with
   stores
 

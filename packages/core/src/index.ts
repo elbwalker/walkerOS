@@ -22,7 +22,12 @@ export * from './getMarketingParameters';
 export * from './invocations';
 export * from './is';
 export * from './logger';
-export * from './mapping';
+// `resolveMappingValue` stays package-internal.
+export {
+  getMappingEvent,
+  getMappingValue,
+  processEventMapping,
+} from './mapping';
 export * from './mergeMapping';
 export * from './mockEnv';
 export * from './mockContext';

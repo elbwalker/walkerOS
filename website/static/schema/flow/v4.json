@@ -320,6 +320,14 @@
               "$ref": "#/definitions/MappingValue"
             }
           ]
+        },
+        "mapping": {
+          "description": "Shapes the value read (get) or the payload (set). Paths are relative to that value. The result merges into the target.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/MappingValue"
+            }
+          ]
         }
       },
       "required": ["mode", "key"],

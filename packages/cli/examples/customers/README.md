@@ -2,10 +2,10 @@
 
 Fake demo customers for the `customers` store of `flow-complete.json`
 (`@walkeros/server-store-fs`, structured mode). One file per customer id; the
-content is the customer's lifetime value as JSON.
+content is the customer's record as JSON: lifetime value and segment.
 
-- `cust-42`: `420`
-- `cust-1001`: `75.5`
+- `cust-42`: `{"ltv":420,"segment":"loyal"}`
+- `cust-1001`: `{"ltv":75.5,"segment":"new"}`
 
 Not covered by root `include`, so no customer data ships in a bundle. `basePath`
 defaults to `./customers`, relative to the working directory: run
