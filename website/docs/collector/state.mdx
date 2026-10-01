@@ -105,7 +105,7 @@ With a stored row `{ "ltv": 1840, "segment": "loyal", "email": "x@y" }`, the eve
 | Mapping on a miss                              | Result                                        |
 | ---------------------------------------------- | --------------------------------------------- |
 | Fallback: `{ "key": "segment", "value": "unknown" }` | Writes `"unknown"`                        |
-| `condition`                                    | Receives `undefined`; returns false, nothing is written |
+| `condition`                                    | Receives `undefined`; a falsy return skips the rule (no fallback either), a truthy return continues |
 | `validate`                                     | Receives what the rule resolved: the fallback with a `key` plus `value`, `{}` after a `map`, otherwise `undefined`; if it rejects, the fallback (if any) applies |
 | `fn`                                           | Receives `undefined`; a non-empty return is written |
 | A plain path such as `"segment"`               | Resolves to nothing, nothing is written       |

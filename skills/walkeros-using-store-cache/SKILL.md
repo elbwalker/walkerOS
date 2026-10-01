@@ -370,8 +370,9 @@ the value read, and the result merges into the target:
 
 An object result merges into an object target, anything else replaces it; on a
 `set` the stored entry is read, merged and written back (not atomic). The
-mapping runs on a miss too, so only declared fallbacks are written; `fn`,
-`condition` and `validate` then receive `undefined`.
+mapping runs on a miss too, so only declared fallbacks are written; `fn` and
+`condition` then receive `undefined`, while `validate` receives the resolved
+value (a declared fallback, or `{}` after a `map`).
 
 Omit `store` to use the built-in `__cache` tier; state keys there are prefixed
 with `state:` so they never collide with cache entries. State is **fail-open**:
