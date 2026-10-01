@@ -10,7 +10,10 @@ import type {
 import { Const } from './constants';
 import {
   addDestination,
+  markHeldForDrain,
+  mergePushResults,
   pushToDestinations,
+  settleDestinationDeliveries,
   createPushResult,
 } from './destination';
 import {
@@ -23,7 +26,8 @@ import {
 } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { processConsent } from './consent';
-import { on, onApply, redeliverStateAtRun, enterCascade } from './on';
+import { on, onApplyDeferred, startRunRedelivery, enterCascade } from './on';
+import type { DestinationDelivery } from './on';
 import { reconcilePending } from './pending';
 import { destroyAllSteps } from './shutdown';
 import type { RunState } from './types/collector';
@@ -58,6 +62,8 @@ export async function commonHandleCommand(
   let result: Elb.PushResult | undefined;
   let onData: unknown;
   let shouldNotify = false;
+  // Destination `on()` deliveries this command started and did not wait for.
+  const deliveries: DestinationDelivery[] = [];
 
   // Open the bounded-recursion cascade tracker for the OUTERMOST top-level
   // command. Nested commands emitted by reacting state callbacks find it
@@ -163,7 +169,11 @@ export async function commonHandleCommand(
         break;
 
       case Const.Commands.Run:
-        result = await runCollector(collector, data as RunState);
+        result = await runCollectorDeferred(
+          collector,
+          data as RunState,
+          deliveries,
+        );
         shouldNotify = true;
         break;
 
@@ -197,8 +207,22 @@ export async function commonHandleCommand(
 
     // Single notification + flush point for all state-mutation commands
     if (shouldNotify) {
-      await onApply(collector, action as On.Types, undefined, onData);
-      const flushed = await pushToDestinations(collector);
+      const applied = await onApplyDeferred(
+        collector,
+        action as On.Types,
+        undefined,
+        onData,
+      );
+      deliveries.push(...applied.deliveries);
+      markHeldForDrain(applied.deliveries);
+      // Every destination is flushed now. One whose delivery is still running
+      // is held, so its events wait for that delivery alone; the settle below
+      // pushes them as soon as it is done, without delaying any other
+      // destination.
+      const flushed = mergePushResults(
+        await pushToDestinations(collector),
+        await settleDestinationDeliveries(collector, deliveries),
+      );
       // `run` is the only command that sets `result` before this point (from
       // runCollector). Overwriting it outright would discard that outcome, so a
       // pre-run event that failed on replay would be invisible: its original
@@ -411,6 +435,24 @@ export async function runCollector(
   collector: Collector.Instance,
   state?: RunState,
 ): Promise<Elb.PushResult> {
+  const deliveries: DestinationDelivery[] = [];
+  const result = await runCollectorDeferred(collector, state, deliveries);
+  return mergePushResults(
+    result,
+    await settleDestinationDeliveries(collector, deliveries),
+  );
+}
+
+/**
+ * `runCollector` without waiting for the destinations' run re-delivery: their
+ * deliveries are appended to `deliveries` for the caller to settle after its
+ * own flush, so one slow destination handler delays no other destination.
+ */
+export async function runCollectorDeferred(
+  collector: Collector.Instance,
+  state: RunState | undefined,
+  deliveries: DestinationDelivery[],
+): Promise<Elb.PushResult> {
   // Set the collector to allowed state
   collector.allowed = true;
 
@@ -479,7 +521,7 @@ export async function runCollector(
   // path (no require-decrement / queueOn flush). The subsequent `onApply(…,
   // 'run', …)` from commonHandleCommand is a lifecycle broadcast and does not
   // collide with these state re-deliveries.
-  await redeliverStateAtRun(collector);
+  const redelivered = await startRunRedelivery(collector);
 
   // Replay events held while the collector was dormant (FIFO, wall-clock
   // order). Splice first so replayed pushes (now allowed) can never
@@ -506,7 +548,11 @@ export async function runCollector(
   }
 
   // Process any queued events now that the collector is allowed
+  // Each destination's run re-delivery runs on its own: a destination still
+  // receiving it is held and its events wait for it; the others go out now.
+  markHeldForDrain(redelivered);
   const result = await pushToDestinations(collector);
+  deliveries.push(...redelivered);
 
   if (replayOk) return result;
 

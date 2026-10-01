@@ -31,6 +31,11 @@ import { reconcilePending } from './pending';
 import { createPushResult } from './destination';
 import { emitCollectorDrop } from './observerEmit';
 import { getCacheStore, getStateStore } from './cache';
+import {
+  DEFAULT_DESTINATION_TIMEOUT_MS,
+  DestinationTimeoutError,
+  withTimeout,
+} from './timeout';
 
 /**
  * Flush a source's queueOn buffer. Called when the source becomes "started"
@@ -41,7 +46,9 @@ import { getCacheStore, getStateStore } from './cache';
  * A throw inside `source.on` is treated as a pipeline failure: log via the
  * scoped 'source' logger and increment `status.failed`. The flush itself
  * is walkerOS-orchestrated startup; the throw represents the source's
- * inability to consume a buffered state-change event.
+ * inability to consume a buffered state-change event. A handler that does
+ * not settle within the default destination timeout is logged the same way
+ * but not counted, matching the live delivery path.
  *
  * State-delivery entries (consent/user/globals/custom) are gated through the
  * same per-source high-water mark as the direct `onApply` broadcast: while
@@ -67,18 +74,34 @@ export async function flushSourceQueueOn(
     if (isStateDelivery(type) && !shouldDeliver(collector, source, type))
       continue;
 
-    await tryCatchAsync(source.on, (err: unknown): undefined => {
-      if (err instanceof FatalError) throw err;
-      collector.status.failed++;
-      collector.logger.scope('source').error('source on flush failed', {
-        sourceId: id,
-        type,
-        ...errorMeta(err),
-      });
-      return undefined;
-    })(type, data);
+    // Bounded like a live delivery: sources carry no per-step timeout config
+    // and share the destination default.
+    const handler = source.on;
+    let timedOut = false;
+    await tryCatchAsync(
+      () =>
+        withTimeout(
+          Promise.resolve(handler(type, data)),
+          DEFAULT_DESTINATION_TIMEOUT_MS,
+          `Source "${id}" on(${type}) did not settle within ${DEFAULT_DESTINATION_TIMEOUT_MS}ms`,
+        ),
+      (err: unknown): undefined => {
+        if (err instanceof FatalError) throw err;
+        // A handler that did not settle in time is logged, as on the live
+        // delivery path, and is not a pipeline failure.
+        if (err instanceof DestinationTimeoutError) timedOut = true;
+        else collector.status.failed++;
+        collector.logger.scope('source').error('source on flush failed', {
+          sourceId: id,
+          type,
+          ...errorMeta(err),
+        });
+        return undefined;
+      },
+    )();
 
-    if (isStateDelivery(type)) setMark(collector, source, type);
+    // A timed-out delivery has not happened: the mark stays, the cell stays owed.
+    if (isStateDelivery(type) && !timedOut) setMark(collector, source, type);
   }
 }
 

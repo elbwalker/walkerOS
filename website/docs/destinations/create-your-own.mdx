@@ -116,6 +116,17 @@ management, or cleanup tasks.
 * **`ready`** - Called when the collector is ready to process events
 * **`run`** - Called when the collector starts or resumes processing
 
+The handler may be async. The collector awaits every call, lifecycle events
+such as `run` included, bounded by `config.timeout` (10 seconds by default).
+For `consent`, `user`, `globals` and `custom`, the destination receives the
+current state before its first push, and the collector waits for the handler to
+settle before it pushes events to the destination. If such a handler does not
+settle in that time, or rejects, the destination receives no events until a
+later delivery of the state settles; its events stay queued meanwhile and are
+discarded at the next `walker run`. A lifecycle handler that does not settle
+holds no events. Handlers of different destinations run independently, so a
+slow handler in one destination does not delay events to other destinations.
+
 ### Example: Consent-Aware Destination
 
 <CodeSnippet

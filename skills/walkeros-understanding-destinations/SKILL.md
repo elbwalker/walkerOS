@@ -311,7 +311,8 @@ Both can be combined:
 ```
 
 This means: don't initialize until consent fires, then only accept events with
-marketing consent.
+marketing consent. The state that satisfies `require` reaches `on()` before the
+destination's queued events are pushed.
 
 **Simulation impact:** `require` causes "destination not found" errors in
 `flow_simulate` because the destination stays pending. Remove `require`
@@ -392,6 +393,15 @@ on(type, context) {
 
 Both layers are needed for complete consent compliance. `config.consent`
 prevents data flow. `on('consent')` prevents vendor SDK side effects.
+
+`on('consent')` runs before the first push on every activation path (`require`,
+`walker destination` at runtime, state passed to `walker run`, state set before
+`run`) and is delivered exactly once per state change. It may be async: the
+collector awaits it, bounded by `config.timeout`. A handler that does not settle
+in that time, or rejects, holds that destination: its events stay queued until a
+later delivery of the state settles, and are discarded at the next `walker run`.
+Lifecycle handlers such as `on('run')` are awaited too, bounded by the same
+timeout, and never hold events.
 
 ## Response Delegation (env.respond)
 
