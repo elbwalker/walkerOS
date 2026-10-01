@@ -41,13 +41,20 @@ export const sourceSession: Source.Init<Types> = async (context) => {
     command,
   };
 
+  // A page load has one landing. Later runs (a single-page app calling
+  // `walker run` per route change) keep the per-run bookkeeping but pass
+  // isStart: false, so the landing never starts a session twice.
+  let detected = false;
+
   const runSessionStart = (): void => {
     sessionStart({
       ...settings,
+      ...(detected ? { isStart: false } : {}),
       window: env.window,
       document: env.document,
       collector: collectorInterface as Collector.Instance,
     });
+    detected = true;
   };
 
   // Session detection runs in init() (Pass 2 of initSources), not the factory
@@ -61,7 +68,8 @@ export const sourceSession: Source.Init<Types> = async (context) => {
   // protection. Pushing `session start` from init() would not lose it (the
   // collector holds pre-run events and replays them at run), but the replay
   // lands ahead of everything the run lifecycle itself emits. Registering an
-  // on('run') rule emits directly into the now-allowed pipeline instead.
+  // on('run') rule emits directly into the now-allowed pipeline instead. The
+  // rule fires on every run, but only the first one detects a start.
   const init = async (): Promise<void> => {
     if (settings.consent) {
       runSessionStart();

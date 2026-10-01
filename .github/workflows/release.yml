@@ -222,10 +222,13 @@ jobs:
             echo "Not in pre-release mode, skipping 'pre exit'"
           fi
           npx changeset version
+          node packages/cli/scripts/sync-example-pins.mjs
 
       - name: Version packages (pre-release)
         if: inputs.images_only == '' && inputs.release_type == 'pre-release (next)'
-        run: npx changeset version --snapshot next
+        run: |
+          npx changeset version --snapshot next
+          node packages/cli/scripts/sync-example-pins.mjs
 
       - name: Update lock file
         if: inputs.images_only == ''

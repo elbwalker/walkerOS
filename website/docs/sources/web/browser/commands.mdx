@@ -144,7 +144,8 @@ A run accepts a partial state parameter:
 
 Use `walker run` to trigger virtual pageviews when navigating between routes in
 Single Page Applications. Call it on each route change to fire a new `page view`
-event and re-scan the DOM:
+event and re-scan the DOM. Route changes do not start a new session: the session
+source detects a session start once per page load.
 
 <CodeSnippet
   code={`// React Router example

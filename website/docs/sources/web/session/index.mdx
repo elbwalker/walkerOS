@@ -217,6 +217,8 @@ When a new session is detected, the source pushes a `session start` event. In st
 
 A returning visitor starting their second session has `isStart: true` but `isNew: false`. `isNew` only appears in storage mode since window-only mode has no device memory.
 
+The landing (navigation type, referrer, marketing parameters) is evaluated once per page load, so a route change in a single-page app that calls `walker run` does not start a new session, even when the new URL carries campaign parameters. Storage mode still counts each run in `runs` and starts a new session after inactivity.
+
 **User IDs only with storage:** `user.session` and `user.device` are set only in storage mode, so they are present exactly when storage consent was given. In window mode the session ID would vanish on the next page load, so it is not a user ID and lives only in `data.id` of the `session start` event. Without storage consent, use a server-side key such as `user.hash` to group events.
 
 **Click ID parameters** are stored twice: `clickId` identifies which platform originated the click (e.g. `'gclid'`), and a separate field stores the actual value (e.g. `gclid: 'AW-123...'`). This makes it easy to filter by platform without inspecting the value.

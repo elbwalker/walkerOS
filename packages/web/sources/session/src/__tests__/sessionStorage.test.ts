@@ -131,6 +131,34 @@ describe('SessionStorage', () => {
     expect(newSession.id).toHaveLength(16);
   });
 
+  test('Active session with a consumed landing keeps counting runs', () => {
+    const start = Date.now();
+    const session = {
+      isStart: false,
+      storage: true,
+      id: 'sessionId',
+      start,
+      updated: start,
+      isNew: true,
+      count: 1,
+      runs: 1,
+    };
+
+    mockStorageRead
+      .mockReturnValue(JSON.stringify(session))
+      .mockReturnValueOnce(device);
+
+    // The URL still carries the UTMs that started this session
+    const newSession = sessionStorage({
+      url: 'https://www.walkeros.io/?utm_campaign=foo',
+      isStart: false,
+    });
+
+    expect(newSession).toStrictEqual(
+      expect.objectContaining({ id: 'sessionId', isStart: false, runs: 2 }),
+    );
+  });
+
   test('Storage Session Options', () => {
     sessionStorage({});
     expect(mockStorageRead).toHaveBeenCalledWith(
