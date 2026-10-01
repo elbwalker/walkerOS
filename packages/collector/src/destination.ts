@@ -193,7 +193,10 @@ export async function addDestination(
     });
   }
 
-  const baseConfig = dataConfig || { init: false };
+  // Code defaults sit under the caller's config, the same merge
+  // registerDestination applies, so a runtime destination keeps defaults such
+  // as a code-level `batch` and the require check below sees them too.
+  const baseConfig = { ...code.config, ...(dataConfig || { init: false }) };
   // Merge before, next, and cache into config if provided at root level
   let config = before ? { ...baseConfig, before } : { ...baseConfig };
   if (next) config = { ...config, next };

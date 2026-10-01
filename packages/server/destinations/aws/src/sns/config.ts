@@ -46,6 +46,10 @@ export async function getConfig(
     throw configError(
       `SNS: settings.region "${input.region}" differs from the region "${arn.region}" in settings.topicArn. Remove settings.region.`,
     );
+  if (arn && input.topicName && input.topicName !== arn.name)
+    throw configError(
+      `SNS: settings.topicName "${input.topicName}" differs from the name "${arn.name}" in settings.topicArn. Remove settings.topicName.`,
+    );
 
   const sdkRegion =
     typeof sdkConfig?.region === 'string' ? sdkConfig.region : undefined;

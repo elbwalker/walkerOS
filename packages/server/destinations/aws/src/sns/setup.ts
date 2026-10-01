@@ -6,7 +6,6 @@ import {
   GetTopicAttributesCommand,
   SubscribeCommand,
 } from '@aws-sdk/client-sns';
-import { GetCallerIdentityCommand } from '@aws-sdk/client-sts';
 import { resolveSetup } from '@walkeros/core';
 import {
   DEFAULT_REGION,
@@ -16,8 +15,9 @@ import {
   parseTopicArn,
 } from '../lib/client';
 import { parseCredentials } from '../lib/credentials';
-import type { ClientOptions } from './lib/sns';
-import { createSnsClient, createStsClient } from './lib/sns';
+import type { DeliveryTarget } from '../lib/errors';
+import type { CallerIdentity, ClientOptions } from './lib/sns';
+import { createSnsClient, createStsClient, getCallerIdentity } from './lib/sns';
 
 // Setup is wired to the destination's `setup` slot which uses the broader
 // `DestinationServer.Config<Types>` (settings is optional). We runtime-narrow
@@ -39,14 +39,14 @@ export interface SetupResult {
   subscriptionsCreated: number;
 }
 
-// Module-level account-ID cache so re-running setup in the same process is
-// a no-op for the STS GetCallerIdentity call. Keyed by region (in case
+// Module-level caller-identity cache so re-running setup in the same process
+// is a no-op for the STS GetCallerIdentity call. Keyed by region (in case
 // future versions support cross-region setup in one process).
-const accountIdCache: Map<string, string> = new Map();
+const identityCache: Map<string, CallerIdentity> = new Map();
 
-/** Test-only: clear the account-ID cache between test cases. */
+/** Test-only: clear the caller-identity cache between test cases. */
 export function __resetAccountIdCache(): void {
-  accountIdCache.clear();
+  identityCache.clear();
 }
 
 interface CreateTopicResponse {
@@ -82,30 +82,26 @@ function resolveTopicName(name: string, fifo: boolean): string {
   return name;
 }
 
-async function getAccountId(
+/**
+ * Account id and partition of the setup credentials, from STS once per region.
+ * The partition (aws, aws-cn, aws-us-gov) comes from the caller ARN, so the
+ * candidate topic ARN is right outside the standard partition too.
+ */
+async function getIdentity(
   env: Env | undefined,
   options: ClientOptions,
-): Promise<string> {
-  const cached = accountIdCache.get(options.region);
+  target: DeliveryTarget,
+): Promise<CallerIdentity> {
+  const cached = identityCache.get(options.region);
   if (cached) return cached;
   const stsClient = createStsClient(env, options);
-  const Command =
-    env?.AWS?.GetCallerIdentityCommand ?? GetCallerIdentityCommand;
   try {
-    const res: unknown = await stsClient.send(new Command({}));
-    if (
-      typeof res === 'object' &&
-      res !== null &&
-      'Account' in res &&
-      typeof res.Account === 'string'
-    ) {
-      accountIdCache.set(options.region, res.Account);
-      return res.Account;
-    }
+    const identity = await getCallerIdentity(stsClient, env, target);
+    identityCache.set(options.region, identity);
+    return identity;
   } finally {
     stsClient.destroy?.();
   }
-  throw new Error('STS GetCallerIdentity returned no Account');
 }
 
 function isCreateTopicResponse(v: unknown): v is CreateTopicResponse {
@@ -217,8 +213,13 @@ export async function setup(
     !settings.client && !isHandlerInstance(settings.config?.requestHandler);
 
   try {
-    const accountId = await getAccountId(env, options);
-    const candidateArn = `arn:aws:sns:${region}:${accountId}:${finalName}`;
+    const { accountId, partition } = await getIdentity(env, options, {
+      service: 'SNS',
+      resource: finalName,
+      region,
+      id: ctx.id,
+    });
+    const candidateArn = `arn:${partition}:sns:${region}:${accountId}:${finalName}`;
 
     let topicCreated = false;
     try {

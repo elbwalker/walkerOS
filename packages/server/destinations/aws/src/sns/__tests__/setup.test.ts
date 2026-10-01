@@ -160,6 +160,32 @@ describe('SNS setup', () => {
     expect(destroy).toHaveBeenCalledTimes(1);
   });
 
+  test('probes the topic in the caller partition', async () => {
+    class ChinaSTSClient {
+      async send(): Promise<unknown> {
+        return {
+          Account: '444444444444',
+          Arn: 'arn:aws-cn:iam::444444444444:user/walkeros',
+        };
+      }
+    }
+    await setup({
+      id: 'sns',
+      config: {
+        settings: { topicName: 'walkeros-events', region: 'cn-north-1' },
+        setup: true,
+      },
+      env: { AWS: { ...env.AWS, STSClient: ChinaSTSClient } },
+      logger: createMockLogger(),
+    });
+    const probe = __getMockCalls().find(
+      (c) => c.method === 'GetTopicAttributes',
+    );
+    expect(probe?.input).toEqual({
+      TopicArn: 'arn:aws-cn:sns:cn-north-1:444444444444:walkeros-events',
+    });
+  });
+
   test('a topicArn alone names the topic', async () => {
     __setStsHarness({ accountId: '111111111111' });
     await setup({

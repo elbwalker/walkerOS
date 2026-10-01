@@ -122,6 +122,13 @@ describe('SNS init', () => {
     });
   });
 
+  test('a topicName equal to the ARN name is accepted', async () => {
+    const config = await init({
+      settings: { topicArn: ARN, topicName: 'walkeros-events' },
+    });
+    expect(config.settings.topicName).toBe('walkeros-events');
+  });
+
   test('topicName alone passes init, region from AWS_REGION', async () => {
     process.env.AWS_REGION = 'ap-south-1';
     const config = await init({ settings: { topicName: 'walkeros-events' } });
@@ -134,6 +141,11 @@ describe('SNS init', () => {
       'a region against the ARN region',
       { topicArn: ARN, region: 'us-east-1' },
       'settings.region',
+    ],
+    [
+      'a name against the ARN name',
+      { topicArn: ARN, topicName: 'other-topic' },
+      'settings.topicName',
     ],
     [
       'an invalid ARN',
