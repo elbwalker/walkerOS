@@ -356,11 +356,29 @@ from ingest:
 A transformer runs its `get` before its own `next` route, so the route can match
 on `ingest.tenant`. A source picks its route before its state runs.
 
+To fill several fields from one lookup, add `mapping`. Its paths are relative to
+the value read, and the result merges into the target:
+
+```json
+"loadUser": {
+  "state": {
+    "mode": "get", "store": "customers", "key": "event.user.id", "value": "event.user",
+    "mapping": { "map": { "ltv": "ltv", "segment": { "key": "segment", "value": "unknown" } } }
+  }
+}
+```
+
+An object result merges into an object target, anything else replaces it; on a
+`set` the stored entry is read, merged and written back (not atomic). The
+mapping runs on a miss too, so only declared fallbacks are written; `fn`,
+`condition` and `validate` then receive `undefined`.
+
 Omit `store` to use the built-in `__cache` tier; state keys there are prefixed
 with `state:` so they never collide with cache entries. State is **fail-open**:
-a store error is logged and the event passes through unchanged. Use `state` for
-simple fetch/stash; reach for `$code:` only when the logic is genuinely
-non-declarative.
+a store error is logged and the event passes through unchanged. A `store` not
+declared in `flow.stores`, or one with `file: true`, is a validation error
+(`walkeros validate` and deploy preflight). Use `state` for simple fetch/stash;
+reach for `$code:` only when the logic is genuinely non-declarative.
 
 Full reference: [Website: State](../../website/docs/collector/state.mdx).
 

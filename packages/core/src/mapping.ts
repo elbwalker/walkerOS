@@ -99,6 +99,21 @@ export async function getMappingValue(
   const event = (context.event ??
     (isObject(value) ? value : {})) as WalkerOS.DeepPartialEvent;
 
+  return resolveMappingValue(value, data, { ...context, consent, event });
+}
+
+/**
+ * Like getMappingValue, but also runs for an undefined source and takes
+ * consent and event only from the context.
+ */
+export async function resolveMappingValue(
+  value: unknown,
+  data: Mapping.Data = {},
+  context: Partial<Mapping.Context> = {},
+): Promise<WalkerOS.Property | undefined> {
+  const consent = context.consent || context.collector?.consent;
+  const event = context.event ?? {};
+
   if (!context.collector) {
     // Internal sites (cache.ts, top-level callers) MUST pass a collector.
     // This guard catches plumbing bugs early instead of silent type-narrowing.
@@ -193,7 +208,7 @@ async function processMappingValue(
         const data =
           scope === 'this'
             ? [value]
-            : await getMappingValue(value, scope, cbContext);
+            : await resolveMappingValue(value, scope, cbContext);
 
         mappingValue = isArray(data)
           ? (
@@ -208,7 +223,11 @@ async function processMappingValue(
         mappingValue = await Object.entries(map).reduce(
           async (mappedObjPromise, [mapKey, mapValue]) => {
             const mappedObj = await mappedObjPromise;
-            const result = await getMappingValue(value, mapValue, cbContext);
+            const result = await resolveMappingValue(
+              value,
+              mapValue,
+              cbContext,
+            );
             if (isDefined(result)) mappedObj[mapKey] = result;
             return mappedObj;
           },

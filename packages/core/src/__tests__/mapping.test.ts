@@ -7,6 +7,7 @@ import {
   isObject,
   isString,
 } from '..';
+import { resolveMappingValue } from '../mapping';
 import { createMockCollector } from './helpers/mocks';
 
 describe('getMappingEvent', () => {
@@ -1114,5 +1115,93 @@ describe('processEventMapping', () => {
     const result = await processEventMapping(event, config, mockCollector);
 
     expect(result.data).toEqual({ value: 42 });
+  });
+});
+
+describe('resolveMappingValue', () => {
+  const collector = createMockCollector();
+
+  test('runs for an undefined source, so a fallback applies', async () => {
+    expect(
+      await resolveMappingValue(
+        undefined,
+        { key: 'segment', value: 'unknown' },
+        { collector },
+      ),
+    ).toBe('unknown');
+  });
+
+  test('a map entry fallback applies on an undefined source', async () => {
+    expect(
+      await resolveMappingValue(
+        undefined,
+        { map: { segment: { key: 'segment', value: 'unknown' }, ltv: 'ltv' } },
+        { collector },
+      ),
+    ).toEqual({ segment: 'unknown' });
+  });
+
+  test('fn receives the undefined source', async () => {
+    expect(
+      await resolveMappingValue(
+        undefined,
+        { fn: (value) => (value === undefined ? 'miss' : 'hit') },
+        { collector },
+      ),
+    ).toBe('miss');
+  });
+
+  test('condition false on an undefined source resolves nothing, not the fallback', async () => {
+    expect(
+      await resolveMappingValue(
+        undefined,
+        { condition: (value) => value !== undefined, value: 'unknown' },
+        { collector },
+      ),
+    ).toBeUndefined();
+  });
+
+  test('consent comes from the context, never from the value', async () => {
+    expect(
+      await resolveMappingValue(
+        { consent: { marketing: true }, segment: 'loyal' },
+        { key: 'segment', consent: { marketing: true } },
+        { collector, consent: { marketing: false } },
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe('getMappingValue keeps its guard and inference', () => {
+  const collector = createMockCollector();
+
+  test('an undefined source still resolves nothing, fallback included', async () => {
+    expect(
+      await getMappingValue(
+        undefined,
+        { key: 'segment', value: 'unknown' },
+        { collector },
+      ),
+    ).toBeUndefined();
+  });
+
+  test('loop items that are undefined stay filtered out', async () => {
+    expect(
+      await getMappingValue(
+        { items: [undefined, { id: 'a' }] },
+        { loop: ['items', { key: 'id', value: 'fallback' }] },
+        { collector },
+      ),
+    ).toEqual(['a']);
+  });
+
+  test('consent is still inferred from the value', async () => {
+    expect(
+      await getMappingValue(
+        { consent: { marketing: true }, segment: 'loyal' },
+        { key: 'segment', consent: { marketing: true } },
+        { collector },
+      ),
+    ).toBe('loyal');
   });
 });

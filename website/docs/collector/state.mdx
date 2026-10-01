@@ -27,6 +27,7 @@ Add `state` to any step. It accepts a single operation or an array of operations
 | `store`  | `string`        | Optional store id from `flow.stores`. Defaults to the in-memory cache.      |
 | `key`    | `Mapping.Value` | Resolves against `{ event, ingest }` to the **store key**.                  |
 | `value`  | `Mapping.Value` | `set`: the payload to store. `get`: where to write the fetched value.       |
+| `mapping` | `Mapping.Value` | Optional. Shapes the value read (`get`) or the payload (`set`). Merged into the target. |
 
 ## Paths name their side
 
@@ -58,7 +59,9 @@ When `store` is omitted, state uses the same built-in in-memory store as [cache]
 
 State keys on the default store are prefixed with `state:` so they cannot collide with cache entries that share the same store. Explicitly named stores use the key as-is.
 
-An explicitly named store that is not declared in `flow.stores` is a validation error; state never silently falls back to the default store for a named miss.
+An explicitly named store that is not declared in `flow.stores` is a validation error (`STATE_STORE_UNKNOWN`), reported by `walkeros validate` and by the deploy preflight. At runtime such an entry logs an error and is skipped; state never silently falls back to the default store for a named miss.
+
+Stores declared with `file: true` hold raw bytes and are not supported by `state`. Naming one is a validation error (`STATE_STORE_FILE`), and at runtime the entry is skipped with a warning. Handle byte stores in a transformer instead.
 
 ## Execution order
 
@@ -69,6 +72,51 @@ An explicitly named store that is not declared in `flow.stores` is a validation 
 - **Destination:** `get` → mapping-to-payload push → `set` (after a successful send). A failed push skips the `set`. For a batched destination, an event that is enqueued (not yet delivered) does not trigger `set`; the batched `set`-on-flush path is not yet wired.
 
 State is **fail-open**: if a store call or value resolution throws, the error is logged and the event passes through unchanged. The chain always continues. A key that does not resolve logs a warning and the event still passes through; a `get` that finds nothing in the store is silent.
+
+## Shape what you read or write
+
+`mapping` runs a full [mapping](../mapping/index.mdx) value over the value a `get` read from the store, or over the payload a `set` is about to write. One lookup can then fill several fields, with a default for each:
+
+```json
+"transformers": {
+  "loadUser": {
+    "state": {
+      "mode": "get",
+      "store": "customers",
+      "key": "event.user.id",
+      "value": "event.user",
+      "mapping": {
+        "map": {
+          "ltv": "ltv",
+          "segment": { "key": "segment", "value": "unknown" }
+        }
+      }
+    }
+  }
+}
+```
+
+With a stored row `{ "ltv": 1840, "segment": "loyal", "email": "x@y" }`, the event's `user` keeps its `id` and gains `ltv` and `segment`. The `email` column is never read onto the event.
+
+- **Paths are relative to the value read**, not to `{ event, ingest }`. Inside `mapping`, `segment` means the stored row's `segment`.
+- **Without `mapping` the whole value replaces the target, with `mapping` the result merges into it.** An object result merges into an object target and keeps the target's other keys. Anything else (a string, a number, an array, or a target that is not an object) replaces the target.
+- **On a miss, only what you declared is written.** The mapping runs even when the store has nothing under the key, so declared fallbacks still apply. An empty result writes nothing and stays silent.
+
+| Mapping on a miss                              | Result                                        |
+| ---------------------------------------------- | --------------------------------------------- |
+| Fallback: `{ "key": "segment", "value": "unknown" }` | Writes `"unknown"`                        |
+| `condition`                                    | Receives `undefined`; returns false, nothing is written |
+| `validate`                                     | Receives what the rule resolved: the fallback with a `key` plus `value`, `{}` after a `map`, otherwise `undefined`; if it rejects, the fallback (if any) applies |
+| `fn`                                           | Receives `undefined`; a non-empty return is written |
+| A plain path such as `"segment"`               | Resolves to nothing, nothing is written       |
+
+On a miss `fn` and `condition` receive `undefined`, so guard for it. An unguarded `v.segment` throws and logs an error on every miss.
+
+A few more rules:
+
+- **A `null` anywhere inside a picked object drops the whole object.** Picking `address` from `{ "address": { "street": "x", "zip": null } }` writes no `address`, while other picked fields still land. When the stored value contains `null` or other non-JSON values, the entry logs a warning.
+- **The event's consent gates a mapping, never a field in the stored value.** A `consent` key inside the stored row does not unlock a consent-gated field. Items of a `loop` are mapped like a new source, so a `consent` key on an item does gate that item.
+- **`set` with `mapping`** shapes the payload, then reads the stored entry, merges the result into it, and writes it back. This is not atomic: when two instances write the same key at once, the last writer wins. A stored value that is not an object is replaced, with a warning. A result that is not an object is written without a read.
 
 ## Examples
 
@@ -108,12 +156,15 @@ a shared store so the order finds the session saved on another instance.
 
 ### Read from a named store
 
-`loadUser` reads the customer's lifetime value from the `customers` store, only
-for logged-in events:
+`loadUser` reads the customer's record from the `customers` store, only for
+logged-in events. Its `mapping` picks `ltv` and `segment` from the stored row
+and merges them into `user`, so the `id` and `hash` already there stay:
 
 <FlowSlice feature="load-user" />
 
 <FlowSlice feature="state-store" />
+
+<FlowSlice feature="state-mapping" />
 
 <FlowExample feature="load-user" />
 

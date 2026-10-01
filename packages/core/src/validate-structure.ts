@@ -74,6 +74,64 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+const STATE_SECTIONS = ['sources', 'transformers', 'destinations'] as const;
+
+/**
+ * Every `state` entry (on the step or in its `config`) must name a store
+ * declared in `flow.stores`, and that store may not be a `file: true` byte
+ * store. An omitted store, `__cache` and `$` references are not checked.
+ */
+export function validateStateStores(
+  flow: Flow,
+  flowName: string,
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const stores = flow.stores || {};
+
+  const check = (entry: unknown, path: string) => {
+    if (!isObject(entry) || typeof entry.store !== 'string') return;
+    const id = entry.store;
+    if (id.startsWith('$') || id === '__cache') return;
+    const store = stores[id];
+    if (!store) {
+      errors.push({
+        path,
+        message: `State store "${id}" is not declared in flow.stores.`,
+        code: 'STATE_STORE_UNKNOWN',
+      });
+      return;
+    }
+    if (isObject(store.config) && store.config.file === true) {
+      errors.push({
+        path,
+        message: `State cannot use store "${id}": it sets file: true. Handle byte stores in a transformer.`,
+        code: 'STATE_STORE_FILE',
+      });
+    }
+  };
+
+  const scan = (state: unknown, path: string) => {
+    if (Array.isArray(state)) {
+      state.forEach((entry, index) => check(entry, `${path}.${index}`));
+    } else {
+      check(state, path);
+    }
+  };
+
+  for (const section of STATE_SECTIONS) {
+    const steps = getSection(flow, section);
+    if (!steps) continue;
+    for (const [name, step] of Object.entries(steps)) {
+      const base = `flows.${flowName}.${section}.${name}`;
+      if ('state' in step) scan(step.state, `${base}.state`);
+      if (isObject(step.config))
+        scan(step.config.state, `${base}.config.state`);
+    }
+  }
+
+  return errors;
+}
+
 /**
  * Pure structural validation of a flow config: the exact checks the bundler
  * runs at codegen time, BEFORE any esbuild compile or package/archive fetch.
@@ -87,7 +145,8 @@ function messageOf(error: unknown): string {
  *   property names),
  * - each source/destination/store reference specifies exactly one of
  *   package or code, and each transformer entry is a closed, valid shape,
- * - every `$store.` reference points at a defined store.
+ * - every `$store.` reference points at a defined store,
+ * - every `state` store is declared and is not a `file: true` store.
  *
  * Intended for fast deploy preflight: catch a bad flow config in well under a
  * second without spinning up a container or compiling anything.
@@ -182,6 +241,9 @@ export function validateFlowStructure(flowConfig: Flow.Json): ValidateResult {
         code: 'STORE_REFERENCE_NOT_FOUND',
       });
     }
+
+    // 4. Every `state` store must be declared and must not be a file store.
+    errors.push(...validateStateStores(flow, flowName));
   }
 
   return {

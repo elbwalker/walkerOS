@@ -253,6 +253,17 @@ describe('storeGcsInit', () => {
   });
 
   describe('file mode (file: true)', () => {
+    it.each([
+      [{ file: true }, true],
+      [{}, undefined],
+    ])(
+      'declared config %p reports file on the instance config',
+      async (config, expected) => {
+        const store = await createStore({}, config);
+        expect(store.config.file).toBe(expected);
+      },
+    );
+
     it('uploads bytes byte-exact with a real mime derived from the key', async () => {
       wireBackingStore();
 
