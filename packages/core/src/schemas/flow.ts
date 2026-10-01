@@ -21,6 +21,7 @@ import { z, toJsonSchema } from './validation';
 import { RouteSchema } from './matcher';
 import { EventCacheSchema, StoreCacheSchema } from './cache';
 import { StateSchema } from './state';
+import { checkWindowCollector } from '../windowCollector';
 
 // ========================================
 // Shared Type Schemas
@@ -41,11 +42,34 @@ export const VariablesSchema = z.record(z.string(), z.unknown()).meta({
     'Reusable values referenced via $var.name (with optional deep paths). Whole-string refs preserve native type; inline interpolation requires scalars.',
 });
 
+/** `$var` and `$env` references resolve before the build checks the name. */
+const windowCollectorReference = /\$(?:var|env)\./;
+
+/**
+ * `windowCollector`: a literal that passes `checkWindowCollector`, or a
+ * string with `$var` / `$env` references, whose RESOLVED value the build
+ * checks the same way.
+ */
+const WindowCollectorSchema = z.string().superRefine((value, ctx) => {
+  if (windowCollectorReference.test(value)) return;
+  const check = checkWindowCollector(value);
+  if (!check.ok)
+    ctx.addIssue({
+      code: 'custom',
+      message: `windowCollector ${JSON.stringify(value)} ${check.reason}`,
+    });
+});
+
 /**
  * Settings schema - free-form key-value bag inside Flow.Config.settings.
+ * Known keys are checked; every other key passes through.
  */
 export const SettingsSchema = z
-  .record(z.string(), z.unknown())
+  .looseObject({
+    windowCollector: WindowCollectorSchema.optional().describe(
+      'Web: global variable name of the collector instance (default: "walkerOS").',
+    ),
+  })
   .meta({
     id: 'FlowSettings',
     title: 'Flow.Settings',

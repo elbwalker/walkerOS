@@ -211,7 +211,8 @@ export namespace Flow {
     /**
      * Arbitrary key-value settings consumed by the platform runtime.
      *
-     * For web: typical keys include `windowCollector`.
+     * For web: `windowCollector` names the global the collector instance is
+     * assigned to (default `walkerOS`); it must be a JavaScript identifier.
      * For server: reserved for future server-specific options.
      *
      * The `windowElb` key is deprecated: the browser source is the single writer

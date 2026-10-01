@@ -50,6 +50,7 @@ export { getTraceUntil, setTraceUntil } from './traceState';
 export { emitStep } from './emitStep';
 export * from './batchedPoster';
 export * from './userAgent';
+export * from './windowCollector';
 export * from './wrapInlineCode';
 export { createTimer, type Timer } from './timer';
 export { getErrorMessage } from './getErrorMessage';
