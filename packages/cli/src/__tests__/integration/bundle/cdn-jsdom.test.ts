@@ -578,7 +578,8 @@ describe('observe wrap — jsdom', () => {
     dom.window.eval(script);
     await new Promise((r) => setTimeout(r, 100));
     const elb = Reflect.get(dom.window, 'elb');
-    if (typeof elb === 'function') await elb('page view', { title: 'Test' });
+    expect(typeof elb).toBe('function');
+    await elb('page view', { title: 'Test' });
     // The observe poster flushes its batch after 50 ms.
     await new Promise((r) => setTimeout(r, 200));
     dom.window.close();

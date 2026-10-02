@@ -16,7 +16,7 @@
  * Every @walkeros package is bundled from the monorepo's built dist
  * (`withLocalPackages`), so a regression fails here before it is published.
  */
-import { readFile, mkdtemp, rm } from 'fs/promises';
+import { readFile, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { gzipSync } from 'zlib';
@@ -35,6 +35,19 @@ const GZIP_BUDGET_BYTES = 34_000;
 
 /** Strings only the observe recorder (connect, poster, call capture) carries. */
 const RECORDER_MARKERS = ['elbObserve', '/ingest/', 'X-Walkeros-Binding'];
+
+/**
+ * One string per other build flag that only its guarded code carries: store
+ * setup, the state engine and runtime step validation.
+ */
+const FEATURE_MARKERS = [
+  'caches with namespace',
+  '[state] operation failed',
+  'OBSOLETE_CODE_STRING',
+];
+
+/** A build flag the bundler left unresolved. */
+const UNRESOLVED_FLAG = /__WALKEROS_(OBSERVE|STORES|STATE|VALIDATE)__/;
 
 const OBSERVE = { url: 'https://obs.example', binding: 'pb_x' };
 
@@ -86,9 +99,10 @@ describe('CDN bundle size budget', () => {
     );
   });
 
-  it('cdn target ships no observe recorder and no unresolved build flag', () => {
-    for (const marker of RECORDER_MARKERS) expect(cdn).not.toContain(marker);
-    expect(cdn).not.toContain('__WALKEROS_');
+  it('cdn target ships no unused feature and no unresolved build flag', () => {
+    for (const marker of [...RECORDER_MARKERS, ...FEATURE_MARKERS])
+      expect(cdn).not.toContain(marker);
+    expect(cdn).not.toMatch(UNRESOLVED_FLAG);
   });
 
   it('an observed flow keeps the recorder', async () => {
@@ -97,7 +111,8 @@ describe('CDN bundle size budget', () => {
       'utf8',
     );
     for (const marker of RECORDER_MARKERS) expect(text).toContain(marker);
-    expect(text).not.toContain('__WALKEROS_');
+    for (const marker of FEATURE_MARKERS) expect(text).not.toContain(marker);
+    expect(text).not.toMatch(UNRESOLVED_FLAG);
   }, 120000);
 
   it('cdn target contains no dev code markers', () => {
@@ -166,8 +181,31 @@ describe('CDN bundle size budget', () => {
         expect(plain).not.toContain(marker);
         expect(observed).toContain(marker);
       }
-      expect(plain).not.toContain('__WALKEROS_');
-      expect(observed).not.toContain('__WALKEROS_');
+      for (const marker of FEATURE_MARKERS) expect(plain).not.toContain(marker);
+      expect(plain).not.toMatch(UNRESOLVED_FLAG);
+      expect(observed).not.toMatch(UNRESOLVED_FLAG);
+    }, 120000);
+
+    it('an older skeleton without needs wraps with every feature', async () => {
+      // A skeleton from an older CLI has no needs marker, so the wrap turns
+      // every flag on. This is also the proof that each marker above is real:
+      // the same packages carry all of them when their flag is on.
+      const oldPath = join(tmpDir, 'old-skel.mjs');
+      await writeFile(
+        oldPath,
+        skeleton.replace(/\/\* walkeros:needs \{[^}]*\} \*\/\s*$/, ''),
+      );
+      const outputPath = join(tmpDir, 'old-wrap.js');
+      await wrapSkeleton({
+        skeletonPath: oldPath,
+        platform: 'browser',
+        outputPath,
+      });
+      const full = await readFile(outputPath, 'utf8');
+
+      for (const marker of [...RECORDER_MARKERS, ...FEATURE_MARKERS])
+        expect(full).toContain(marker);
+      expect(full).not.toMatch(UNRESOLVED_FLAG);
     }, 120000);
   });
 

@@ -134,6 +134,7 @@ put() {
 
 # 4. Upload (idempotent), then verify by reading back. The immutable copy goes
 #    first, so the slot never names bytes that have no pinned twin.
+SLOT_PUT=false
 for KEY in "${KEYS[@]}"; do
   CURRENT="$(origin_sha "$KEY")"
   if [[ "$CURRENT" == "$SHA" ]]; then
@@ -152,6 +153,7 @@ for KEY in "${KEYS[@]}"; do
     exit 1
   fi
   echo "Uploaded $KEY ($SIZE bytes, sha256 $SHA)"
+  if [[ "$KEY" == "$SLOT" ]]; then SLOT_PUT=true; fi
 done
 
 # 5. One public read: a new pinned key is an edge cache miss, so a 200 proves
@@ -165,9 +167,10 @@ if [[ -n "${SLOT_NOTE:-}" ]]; then
     "- $SIZE bytes, sha256 \`$SHA\`" \
     "- $SLOT_NOTE"
 else
-  summary "### walker.js on static.walkeros.io" \
-    "- $PUBLIC/$SLOT" \
-    "- $PUBLIC/$PINNED" \
-    "- $SIZE bytes, sha256 \`$SHA\`" \
-    "- The edge may serve the previous copy of the slot for up to 3 hours, browsers for 20 minutes; purge the URL in Bunny for an instant flip."
+  LINES=("### walker.js on static.walkeros.io" "- $PUBLIC/$SLOT" "- $PUBLIC/$PINNED" "- $SIZE bytes, sha256 \`$SHA\`")
+  # Only a slot written in this run can still be cached as the previous copy.
+  if [[ "$SLOT_PUT" == true ]]; then
+    LINES+=("- The edge may serve the previous copy of the slot for up to 3 hours, browsers for 20 minutes; purge the URL in Bunny for an instant flip.")
+  fi
+  summary "${LINES[@]}"
 fi
