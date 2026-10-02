@@ -1,30 +1,18 @@
 {
   "name": "@walkeros/walker.js",
-  "version": "4.6.1",
-  "description": "Ready-to-use walkerOS bundle with browser source, collector, and dataLayer support",
+  "version": "4.7.0",
+  "description": "Zero-config walkerOS browser file: data-elb attributes to dataLayer pushes for GTM.",
   "license": "MIT",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "browser": "./dist/walker.js",
-  "types": "./dist/index.d.ts",
+  "jsdelivr": "dist/walker.js",
+  "unpkg": "dist/walker.js",
+  "sideEffects": true,
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "browser": "./dist/walker.js",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "default": "./dist/walker.js"
-    },
-    "./es5": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.es5.js"
-    },
-    "./src/dev": "./src/dev.ts",
-    "./walkerOS.json": "./dist/walkerOS.json"
+    ".": "./dist/walker.js",
+    "./walker.js": "./dist/walker.js"
   },
   "files": [
-    "dist/**",
-    "src/dev.ts",
+    "dist/walker.js",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -34,18 +22,13 @@
     "dev": "jest --watchAll --colors",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.ts*\"",
-    "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage",
-    "preview": "npm run build && npx serve -l 3333 examples"
-  },
-  "dependencies": {
-    "@walkeros/core": "4.6.1",
-    "@walkeros/collector": "4.6.1",
-    "@walkeros/web-core": "4.6.1",
-    "@walkeros/web-source-browser": "4.6.1",
-    "@walkeros/web-source-datalayer": "4.6.1",
-    "@walkeros/web-source-session": "4.6.1"
+    "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage"
   },
   "devDependencies": {
+    "@walkeros/collector": "4.7.0",
+    "@walkeros/core": "4.7.0",
+    "@walkeros/web-source-browser": "4.7.0",
+    "@walkeros/web-source-session": "4.7.0",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "jest": "^30.2.0",

@@ -1,5 +1,48 @@
 # @walkeros/server-source-aws
 
+## 4.7.0
+
+### Minor Changes
+
+- 64b06de: Packages with several exports, such as the GCP and AWS sources and
+  destinations, now publish a settings schema per export. `walkeros validate`
+  and MCP `package_get` use the schema of the export a step imports. Pub/Sub,
+  BigQuery, SNS and SQS steps pinned to this release or later are checked
+  instead of skipped; older pins still report a skip.
+
+### Patch Changes
+
+- 74821ed: Simulate records every vendor call through one recorder, `observeEnv`
+  from `@walkeros/core`, and runs offline: BigQuery, Data Manager and the
+  Sheets, GCS and S3 stores reach the network through `env`. Client and `Env`
+  types of BigQuery, Firehose, PostHog, SQS and Pub/Sub are structural.
+  `@walkeros/cli` exports `resolveExportName` and `selectDevExamples` and drops
+  `findExample` and `compareOutput`.
+- 74821ed: Simulate starts only the simulated step, and a simulated transformer
+  continues through its `next`. Source simulations list the commands a source
+  issues as `elb` calls; `--page-url` sets the web page. Express flows need no
+  port. Packages with several exports use per-export examples and mocks, and a
+  destination without a mock env is refused instead of calling the vendor.
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

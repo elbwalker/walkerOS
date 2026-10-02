@@ -1,5 +1,43 @@
 # @walkeros/server-source-express
 
+## 4.7.0
+
+### Patch Changes
+
+- 74821ed: The express source passes non-JSON `text/plain` bodies, such as
+  batched gtag hits, to `ingest.body` instead of failing with 400.
+  `@walkeros/transformer-ga4` gives each decoded event its own stable id, caps
+  one request at `settings.maxEvents` (default 100), validates
+  `settings.mapping` rules, and its wiring hint sets `paths: ["/g/collect"]`.
+- 74821ed: Simulate starts only the simulated step, and a simulated transformer
+  continues through its `next`. Source simulations list the commands a source
+  issues as `elb` calls; `--page-url` sets the web page. Express flows need no
+  port. Packages with several exports use per-export examples and mocks, and a
+  destination without a mock env is refused instead of calling the vendor.
+- Updated dependencies [786a860]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [7e5e3de]
+- Updated dependencies [b9668bf]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/collector@4.7.0
+  - @walkeros/core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

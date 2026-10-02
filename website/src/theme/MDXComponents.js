@@ -16,6 +16,10 @@ import {
 // Import website-specific components
 import PackageLink from '@site/src/components/docs/package-link';
 import StepExample from '@site/src/components/snippets/StepExample';
+import {
+  WalkerjsSnippet,
+  WalkerjsUrl,
+} from '@site/src/components/snippets/walkerjs';
 
 export default {
   // Re-use the default mapping
@@ -35,4 +39,6 @@ export default {
   LiveCode,
   PropertyTable,
   StepExample,
+  WalkerjsSnippet,
+  WalkerjsUrl,
 };

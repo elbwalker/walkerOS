@@ -1,5 +1,91 @@
 # @walkeros/mcp
 
+## 4.7.0
+
+### Minor Changes
+
+- 64b06de: Packages with several exports, such as the GCP and AWS sources and
+  destinations, now publish a settings schema per export. `walkeros validate`
+  and MCP `package_get` use the schema of the export a step imports. Pub/Sub,
+  BigQuery, SNS and SQS steps pinned to this release or later are checked
+  instead of skipped; older pins still report a skip.
+- 74821ed: `walkeros push --simulate` prints each step's mapping and vendor
+  calls (`simulations` in `--json`) and reports init or push failures. New
+  flags: `--ingest`, `--consent` (MCP `state.consent`), `--command` for command
+  examples, `--simulate collector.default` and `--mock collector.next.<id>`. A
+  destination that sent nothing says why in `skipped`. `toPrintable` is
+  exported.
+- 74821ed: Simulate records every vendor call through one recorder, `observeEnv`
+  from `@walkeros/core`, and runs offline: BigQuery, Data Manager and the
+  Sheets, GCS and S3 stores reach the network through `env`. Client and `Env`
+  types of BigQuery, Firehose, PostHog, SQS and Pub/Sub are structural.
+  `@walkeros/cli` exports `resolveExportName` and `selectDevExamples` and drops
+  `findExample` and `compareOutput`.
+- 74821ed: Simulate starts only the simulated step, and a simulated transformer
+  continues through its `next`. Source simulations list the commands a source
+  issues as `elb` calls; `--page-url` sets the web page. Express flows need no
+  port. Packages with several exports use per-export examples and mocks, and a
+  destination without a mock env is refused instead of calling the vendor.
+- 74821ed: `walkeros validate` prints a `Scope:` line and returns
+  `details.scope` instead of `details.validatedFlow`, `details.skipped` for
+  checks that did not run and `details.deferred` for values known only at
+  runtime. Skips never read as passed. Every finding has a stable `code`.
+  `--strict` fails on warnings or skips (exit 2), and `validate()` and
+  `flow_validate` with `strict` return `valid: false`; `flow_validate` also
+  accepts `offline`.
+
+### Patch Changes
+
+- 74821ed: New `collector.next`: a transformer chain run once per event before
+  the destinations; a `stop` there drops it for all of them. Routes in every
+  chain field can drop an event with `{ stop: true }`, optionally gated by
+  `match`. A route `match` reads `{ ingest, event }` when the event reaches it.
+  New `getRouteGraph`; `getNextSteps(spec, root)` requires its root.
+- ef02916: `frame_manage` returns Tag Mode marks as a flat `tags` list plus the
+  frame's `note`. Tag `id`, `parentId` and `threadRef` come back literal when
+  they have the app's id shape, so an agent can rebuild the tag tree and pass a
+  tag id to `hub_manage` as `markId`. Other strings and non-identifier keys stay
+  wrapped.
+- 5a210e1: MCP tools validate their input against their input schema when called
+  directly through `createToolHandlers`, as they already were over the MCP
+  transport. Invalid input returns an error result naming each field instead of
+  running on.
+- 74821ed: Simulate and push output, CLI and flow logs, and the MCP
+  `flow_simulate` and `flow_push` results mask the values of secrets a flow
+  references, also inside JSON strings, numbers and URLs. `scrubSecrets` takes
+  `known`, the CLI logger `knownSecrets`, and `scrubJson` replaces
+  `maskKnownNumbers`. MCP `flow_push` and `flow_simulate` read their config
+  once; a config that cannot be read stops the run.
+- Updated dependencies [786a860]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [64b06de]
+- Updated dependencies [74821ed]
+- Updated dependencies [4b4937f]
+- Updated dependencies [5a210e1]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [b1e5aa5]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [050d776]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/cli@4.7.0
+  - @walkeros/core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

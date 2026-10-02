@@ -48,6 +48,7 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
   scope: document,
   pageview: false,
   capture: true,
+  history: false,
   elb: false,
   elbLayer: false,
 });

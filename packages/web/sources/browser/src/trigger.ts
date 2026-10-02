@@ -393,9 +393,74 @@ export function initScopeTrigger(context: Context) {
 
   if (bucket.scrollElements.length) scroll(context, scope, bucket);
 
-  // Watch [<prefix>observe] containers so tagged content injected later is
+  // With `history`, the document scope watches the whole document, so every
+  // route's tagged elements register as they render. Otherwise watch
+  // [<prefix>observe] containers so tagged content injected later is
   // auto-registered (and reaped on removal) without a manual `walker init`.
-  observeContainers(context, scope, bucket, selectorAction);
+  if (context.settings.history && scope === doc)
+    observeDocument(context, doc, bucket, selectorAction);
+  else observeContainers(context, scope, bucket, selectorAction);
+}
+
+// The `history` observer: one per document scope, child lists only. The
+// callback only records element nodes. One task later, a scheduling boundary
+// that puts a route's page view before its elements' load events, each
+// recorded node is judged by its final state: added and still connected
+// registers, removed and no longer connected is reaped. A moved node keeps its
+// registration and does not re-fire; a node added and removed within the task
+// never fires. Observes the document, never its body, which some routers
+// replace.
+function observeDocument(
+  context: Context,
+  doc: Document,
+  bucket: ScopeState,
+  selectorAction: string,
+) {
+  const win = doc.defaultView;
+  if (!win || !win.MutationObserver) return;
+
+  let added: Node[] = [];
+  let removed: Node[] = [];
+  let pending = false;
+
+  const flush = () => {
+    pending = false;
+    const addedNodes = added;
+    const removedNodes = removed;
+    added = [];
+    removed = [];
+    // Re-read the LIVE bucket, as the container observers do. Teardown
+    // clears it, so nothing runs after destroy.
+    const live = context.registry.scopes.get(doc);
+    if (!live) return;
+
+    removedNodes.forEach((node) => {
+      if (!node.isConnected) handleRemovedNode(context, node);
+    });
+    addedNodes.forEach((node) => {
+      if (node.isConnected)
+        handleAddedNode(context, node, selectorAction, live, doc);
+    });
+    if (live.scrollElements.length) scroll(context, doc, live);
+  };
+
+  const observer = new win.MutationObserver(
+    tryCatch((records: MutationRecord[]) => {
+      records.forEach((record) => {
+        record.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) added.push(node);
+        });
+        record.removedNodes.forEach((node) => {
+          if (node.nodeType === 1) removed.push(node);
+        });
+      });
+      if (pending || (!added.length && !removed.length)) return;
+      pending = true;
+      setTimeout(tryCatch(flush), 0);
+    }),
+  );
+  observer.observe(doc, { childList: true, subtree: true });
+  bucket.mutationObservers.push(observer);
 }
 
 // Attach a MutationObserver to each OUTERMOST [<prefix>observe] container per

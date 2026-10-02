@@ -16,6 +16,7 @@ import { translateToCoreCollector } from './translation';
 import { getPageViewData, getUser } from './walker';
 import { getConfig } from './config';
 import { mark, owner, release } from './ownership';
+import { watchHistory } from './history';
 
 export * as SourceBrowser from './types';
 
@@ -106,16 +107,30 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   let installedWindowElb: BrowserPush | undefined;
   let initialized = false;
 
+  // With `history`, the unsubscribe of the history watcher, and one URL per run
+  // it started, in order: a run that takes one is a history run.
+  let stopHistory: (() => void) | undefined;
+  const historyHrefs: string[] = [];
+  // The URL of the last page view, the referrer of the next one.
+  let previousHref: string | undefined;
+
   // Helper to send pageview event if enabled. Returns the dispatch promise so
   // the enqueued run-chain link resolves when the pageview actually completes.
-  const sendPageview = (s: Source.Settings<Types>) => {
+  // `href` is a history run's snapshotted URL; without it the live location
+  // applies.
+  const sendPageview = (s: Source.Settings<Types>, href?: string) => {
     if (!s.pageview) return;
     const [data, contextData] = getPageViewData(
       s.prefix || 'data-elb',
       s.scope as Scope,
+      href,
     );
+    // Every page view after the first refers to the previous one, without its
+    // fragment. The event's source.referrer stays the document's referrer.
+    if (previousHref) data.referrer = previousHref.split('#')[0];
+    previousHref = href || actualWindow?.location.href;
     return translateToCoreCollector(
-      translationContext,
+      { ...translationContext, href },
       'page view',
       data,
       'load',
@@ -212,7 +227,18 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
         // keeps it reachable after destroy, and a page that fires `walker run`
         // per route change keeps calling it.
         if (actualDocument && actualWindow && !registry.destroyed) {
-          processLoadTriggers(translationContext, settings);
+          // Installed on the first run, past any require gate, so a route
+          // change before the source started queues no run.
+          if (settings.history && !stopHistory)
+            stopHistory = watchHistory(actualWindow, (href) => {
+              historyHrefs.push(href);
+              elb('walker run').catch(() => {});
+            });
+
+          // A history run keeps what is registered and describes its own URL;
+          // the document observer picks up the route's elements as they render.
+          const href = historyHrefs.shift();
+          if (!href) processLoadTriggers(translationContext, settings);
           if (controller) {
             // Replay the recorded backlog, then set the user, then the pageview, on
             // one FIFO chain so the pageview (and every later event) carries the user.
@@ -220,13 +246,15 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
             // Fire-and-forget: the enqueue link is now rejectable, so swallow
             // its rejection here to avoid an unhandled-rejection warning.
             controller.enqueue(() => sendUser(settings)).catch(() => {});
-            controller.enqueue(() => sendPageview(settings)).catch(() => {});
+            controller
+              .enqueue(() => sendPageview(settings, href))
+              .catch(() => {});
           } else {
             // No controller: await the user command so collector.user is set before
             // the pageview's enrichment reads it. `sendUser` returns undefined when
             // no data-elbuser is present, so this is a no-op await in that case.
             await sendUser(settings);
-            sendPageview(settings);
+            sendPageview(settings, href);
           }
         }
         break;
@@ -262,6 +290,11 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
       // per-document observer(s). Reaches sub-scopes from `walker init <el>`,
       // not just the source's own document scope.
       destroyTriggers(translationContext);
+
+      // Hand the history methods back, where they are still ours.
+      stopHistory?.();
+      stopHistory = undefined;
+      historyHrefs.length = 0;
 
       // Restore the layer's native push and forget controller state.
       controller?.destroy();

@@ -1,5 +1,6 @@
-import type { Elb } from '@walkeros/core';
+import type { Elb, Flow } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
+import { sourceBrowser } from '../index';
 import { getConfig } from '../config';
 import { createRegistry, handleTrigger } from '../trigger';
 import { translateToCoreCollector } from '../translation';
@@ -29,6 +30,11 @@ describe('Step Examples', () => {
   it.each(supported)('%s', async (_name, example) => {
     const triggerInfo = example.trigger;
     const content = typeof example.in === 'string' ? example.in : '';
+
+    if (triggerInfo?.type === 'history') {
+      expect(await recordRouteChange(example)).toEqual(example.out);
+      return;
+    }
 
     // Seed URL / title / referrer for load-style examples
     if (triggerInfo?.type === 'load' || !triggerInfo?.type) {
@@ -104,6 +110,34 @@ describe('Step Examples', () => {
     expect(captured).toEqual(example.out);
   });
 });
+
+// A route change needs the live source, whose history watcher turns the push
+// into a run, so it plays through the package's createTrigger, recorded at the
+// collector's push like a CLI simulation. createTrigger waits one real task.
+async function recordRouteChange(
+  example: Flow.StepExample,
+): Promise<unknown[][]> {
+  jest.useRealTimers();
+  const calls: unknown[][] = [];
+  const { trigger, flow } = await examples.createTrigger({
+    sources: {
+      browser: {
+        code: sourceBrowser,
+        config: { settings: { history: true } },
+      },
+    },
+    hooks: {
+      prePush: (_params: unknown, event: unknown) => {
+        // The pipeline stamps an event id no example can carry.
+        if (isObject(event)) calls.push(['elb', { ...event, id: undefined }]);
+        return Promise.resolve({ ok: true });
+      },
+    },
+  });
+  await trigger(example.trigger?.type, example.trigger?.options)('');
+  await flow?.collector.command('shutdown');
+  return calls;
+}
 
 describe('legacy trigger', () => {
   it('runs on the package mock env', () => {

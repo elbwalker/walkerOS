@@ -1,5 +1,128 @@
 # @walkeros/website
 
+## 4.7.0
+
+### Patch Changes
+
+- Updated dependencies [3c7e15e]
+- Updated dependencies [786a860]
+- Updated dependencies [c9ea71f]
+- Updated dependencies [ef02916]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [27e68d0]
+- Updated dependencies [7e5e3de]
+- Updated dependencies [b9668bf]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [64b06de]
+- Updated dependencies [ef02916]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [4b4937f]
+- Updated dependencies [5a210e1]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [b1e5aa5]
+- Updated dependencies [74821ed]
+- Updated dependencies [ef02916]
+- Updated dependencies [74821ed]
+- Updated dependencies [8a32978]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [8c6aef4]
+- Updated dependencies [64b06de]
+- Updated dependencies [74821ed]
+- Updated dependencies [050d776]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/web-destination-api@4.7.0
+  - @walkeros/server-destination-aws@4.7.0
+  - @walkeros/cli@4.7.0
+  - @walkeros/collector@4.7.0
+  - @walkeros/web-source-browser@4.7.0
+  - @walkeros/core@4.7.0
+  - @walkeros/server-destination-clickhouse@4.7.0
+  - @walkeros/explorer@4.7.0
+  - @walkeros/web-source-cmp-cookiefirst@4.7.0
+  - @walkeros/web-source-datalayer@4.7.0
+  - @walkeros/server-destination-gcp@4.7.0
+  - @walkeros/server-source-gcp@4.7.0
+  - @walkeros/server-source-aws@4.7.0
+  - @walkeros/server-transformer-fingerprint@4.7.0
+  - @walkeros/server-source-express@4.7.0
+  - @walkeros/transformer-ga4@4.7.0
+  - @walkeros/transformer-validate@4.7.0
+  - @walkeros/server-destination-meta@4.7.0
+  - @walkeros/server-destination-piwikpro@4.7.0
+  - @walkeros/server-destination-bing@4.7.0
+  - @walkeros/server-destination-criteo@4.7.0
+  - @walkeros/server-destination-datamanager@4.7.0
+  - @walkeros/server-destination-pinterest@4.7.0
+  - @walkeros/server-destination-reddit@4.7.0
+  - @walkeros/server-destination-snapchat@4.7.0
+  - @walkeros/server-destination-tiktok@4.7.0
+  - @walkeros/server-destination-twitter@4.7.0
+  - @walkeros/web-source-session@4.7.0
+  - @walkeros/server-destination-amplitude@4.7.0
+  - @walkeros/server-destination-api@4.7.0
+  - @walkeros/server-destination-file@4.7.0
+  - @walkeros/server-destination-hubspot@4.7.0
+  - @walkeros/server-destination-kafka@4.7.0
+  - @walkeros/server-destination-mixpanel@4.7.0
+  - @walkeros/server-destination-posthog@4.7.0
+  - @walkeros/server-destination-redis@4.7.0
+  - @walkeros/server-destination-sqlite@4.7.0
+  - @walkeros/server-store-gcs@4.7.0
+  - @walkeros/server-store-s3@4.7.0
+  - @walkeros/server-store-sheets@4.7.0
+  - @walkeros/server-transformer-file@4.7.0
+  - @walkeros/web-destination-gtag@4.7.0
+  - @walkeros/web-destination-optimizely@4.7.0
+  - @walkeros/web-destination-segment@4.7.0
+  - @walkeros/web-destination-tiktok@4.7.0
+  - @walkeros/web-source-cmp-usercentrics@4.7.0
+  - @walkeros/web-destination-matomo@4.7.0
+  - @walkeros/web-destination-piwikpro@4.7.0
+  - @walkeros/server-destination-customerio@4.7.0
+  - @walkeros/server-destination-klaviyo@4.7.0
+  - @walkeros/server-destination-linkedin@4.7.0
+  - @walkeros/server-destination-mparticle@4.7.0
+  - @walkeros/server-destination-rudderstack@4.7.0
+  - @walkeros/server-destination-segment@4.7.0
+  - @walkeros/server-destination-slack@4.7.0
+  - @walkeros/server-source-fetch@4.7.0
+  - @walkeros/web-destination-amplitude@4.7.0
+  - @walkeros/web-destination-clarity@4.7.0
+  - @walkeros/web-destination-d8a@4.7.0
+  - @walkeros/web-destination-fullstory@4.7.0
+  - @walkeros/web-destination-heap@4.7.0
+  - @walkeros/web-destination-hotjar@4.7.0
+  - @walkeros/web-destination-linkedin@4.7.0
+  - @walkeros/web-destination-meta@4.7.0
+  - @walkeros/web-destination-mixpanel@4.7.0
+  - @walkeros/web-destination-piano@4.7.0
+  - @walkeros/web-destination-pinterest@4.7.0
+  - @walkeros/web-destination-plausible@4.7.0
+  - @walkeros/web-destination-posthog@4.7.0
+  - @walkeros/web-destination-snowplow@4.7.0
+  - @walkeros/web-source-cmp-cookiepro@4.7.0
+  - @walkeros/server-store-fs@4.7.0
+  - @walkeros/server-transformer-bot@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

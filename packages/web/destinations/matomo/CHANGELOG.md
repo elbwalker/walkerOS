@@ -1,5 +1,35 @@
 # @walkeros/web-destination-matomo
 
+## 4.7.0
+
+### Patch Changes
+
+- 74821ed: Piwik PRO and Matomo web destinations: a page view rule with a goal
+  still tracks the page view, unmapped events are skipped with a warning, and
+  `url` plus `appId`/`siteId` are required only with `loadScript`. Piwik PRO
+  adds custom dimensions and an `identified` setting for cookieless tracking;
+  Matomo dimensions no longer leak into later hits.
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/core@4.7.0
+  - @walkeros/web-core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

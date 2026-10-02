@@ -537,6 +537,7 @@ describe('parallel browser sources', () => {
       scope: document,
       pageview: true,
       capture: false,
+      history: true,
       elb: 'elb',
       elbLayer: 'elbLayer',
     };

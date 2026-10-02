@@ -1,5 +1,107 @@
 # @walkeros/core
 
+## 4.7.0
+
+### Minor Changes
+
+- 74821ed: Inside an array, a transformer's own `next` runs right after it, then
+  the array continues. `many` works in every chain field, each match becoming a
+  copy with a derived `event.id`. Unknown transformer ids warn and the chain
+  continues, and a throwing transformer counts in `status.failed`. `walkChain`
+  and `extractTransformerNextMap` are no longer exported.
+- 06b498a: `walkeros bundle --manifest <url|path>` builds every artifact a build
+  manifest lists and uploads each one with a result. Declare build values in
+  `config.bundle.env`; they must be literal strings and supply `$env` in web
+  bundles. Step packages, overrides and their dependencies must now come from
+  the npm registry: git, file and URL specs are rejected.
+- 74821ed: New `collector.next`: a transformer chain run once per event before
+  the destinations; a `stop` there drops it for all of them. Routes in every
+  chain field can drop an event with `{ stop: true }`, optionally gated by
+  `match`. A route `match` reads `{ ingest, event }` when the event reaches it.
+  New `getRouteGraph`; `getNextSteps(spec, root)` requires its root.
+- 64b06de: Packages with several exports, such as the GCP and AWS sources and
+  destinations, now publish a settings schema per export. `walkeros validate`
+  and MCP `package_get` use the schema of the export a step imports. Pub/Sub,
+  BigQuery, SNS and SQS steps pinned to this release or later are checked
+  instead of skipped; older pins still report a skip.
+- 4b4937f: `getFlowSettings` throws a typed `FlowCycleError` for `$flow` and
+  `$var` cycles, with `code` (`FLOW_CYCLE` or `VAR_CYCLE`) and the `chain` of
+  names; the message is unchanged. `validateFlowConfig` reference warnings now
+  carry the path of the value that holds the reference, and an unresolvable root
+  `contract` is an error at `contract`.
+- 74821ed: `anonymizeIP` now handles IPv6 (first 48 bits) and IPv4-mapped
+  addresses; `getHashServer` takes an optional HMAC `key`. The fingerprint
+  transformer works with just `{ salt }`: it hashes the anonymized IP, reduced
+  user agent and site, rotated daily. Hashes change once on upgrade;
+  `rotate: "none"` keeps them stable. A missing salt warns.
+- 74821ed: A flow's own log lines now go through the CLI logger: its debug lines
+  need `--verbose`, and they go to stderr with `--json`. Version numbers are no
+  longer masked as tokens, so `walkeros deploy` shows the image tag and
+  `bundle --stats` shows package versions. Paths under the system temp directory
+  print as `$TMPDIR/...`.
+- 74821ed: A mapping value runs exactly one producer, in the order `loop`,
+  `map`, `set`, `key`, `fn`, so a `fn` next to a `key` is ignored. A `loop` over
+  a non-list yields the `value` fallback. A mapping or `policy` entry that
+  resolves to nothing removes the field. The validate transformer never throws
+  and `pass` mode keeps such events.
+- 06b498a: `walkeros run` is removed. Build with `walkeros bundle`, then start
+  the artifact with `runneros start dist/flow.mjs` from the new
+  `@walkeros/runner` package, which the `walkeros/flow` image now runs. The CLI
+  no longer depends on `express`, `cors` or `p-limit`. New `@walkeros/core/node`
+  entry with the Node-only logger, redaction and temp-path helpers.
+- 74821ed: Simulate and push output, CLI and flow logs, and the MCP
+  `flow_simulate` and `flow_push` results mask the values of secrets a flow
+  references, also inside JSON strings, numbers and URLs. `scrubSecrets` takes
+  `known`, the CLI logger `knownSecrets`, and `scrubJson` replaces
+  `maskKnownNumbers`. MCP `flow_push` and `flow_simulate` read their config
+  once; a config that cannot be read stops the run.
+- 74821ed: `walkeros push --simulate` prints each step's mapping and vendor
+  calls (`simulations` in `--json`) and reports init or push failures. New
+  flags: `--ingest`, `--consent` (MCP `state.consent`), `--command` for command
+  examples, `--simulate collector.default` and `--mock collector.next.<id>`. A
+  destination that sent nothing says why in `skipped`. `toPrintable` is
+  exported.
+- 74821ed: Simulate records every vendor call through one recorder, `observeEnv`
+  from `@walkeros/core`, and runs offline: BigQuery, Data Manager and the
+  Sheets, GCS and S3 stores reach the network through `env`. Client and `Env`
+  types of BigQuery, Firehose, PostHog, SQS and Pub/Sub are structural.
+  `@walkeros/cli` exports `resolveExportName` and `selectDevExamples` and drops
+  `findExample` and `compareOutput`.
+- 74821ed: `state` paths resolve against `{ event, ingest }` and need an
+  `event.` or `ingest.` prefix; a `get` can write into `ingest`, and an
+  unresolvable key warns. Every step field now survives bundling: transformers
+  with only `state` or `mapping`, and code steps with `cache` or `state`, were
+  silently dropped before. `buildCacheContext` is renamed `createMappingRoot`.
+- e860006: `state` gains `mapping` to shape what a lookup returns or a write
+  stores, merged into the target. An undeclared `state.store`, or a `file: true`
+  store, is now a validation error in `walkeros validate` and deploy preflight;
+  at runtime the entry logs an error or is skipped with a warning. The s3 and
+  gcs stores report their `file` mode.
+- 74821ed: An unknown `$var` or `$store` now fails `walkeros validate`, as it
+  fails the bundle. References resolve per flow, and `description` text is never
+  read as a reference. A dangling contract `extend`, an unknown `$contract` on a
+  validate step, or a contract cycle is an error. Contracts bind only on
+  validate steps. Malformed references and unknown or shadowed routes warn.
+- 4f89234: Web builds now assign the collector to the global named in
+  `config.settings.windowCollector`, default `walkerOS`. Before,
+  `walkeros bundle` ignored the setting. It accepts a name or a `$var`/`$env`
+  reference; the resolved name must be a valid, non-reserved JavaScript
+  identifier, or the build and `walkeros validate` report an error.
+
+### Patch Changes
+
+- 74821ed: Simulate starts only the simulated step, and a simulated transformer
+  continues through its `next`. Source simulations list the commands a source
+  issues as `elb` calls; `--page-url` sets the web page. Express flows need no
+  port. Packages with several exports use per-export examples and mocks, and a
+  destination without a mock env is refused instead of calling the vendor.
+- 74821ed: `walkeros validate` reports a missing or non-JSON input as exit 3,
+  like `--path`, `--flow` or `--offline` with a non-flow `-t`. Unknown keys on
+  destinations and stores warn (`UNKNOWN_KEY`), as does
+  `@walkeros/store-memory`. `--path` ignores `uri` and email formats. The Flow
+  JSON Schema adds `config.observe` and drops step-level `validate`; the
+  Usercentrics schema lists `apiVersion` and `v3EventName`.
+
 ## 4.6.1
 
 ## 4.6.0

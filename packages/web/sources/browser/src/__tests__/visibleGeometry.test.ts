@@ -185,6 +185,7 @@ const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
     scope: document,
     pageview: false,
     capture: true,
+    history: false,
     elb: false,
     elbLayer: false,
   },

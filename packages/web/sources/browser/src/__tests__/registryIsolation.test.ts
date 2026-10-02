@@ -47,6 +47,7 @@ const makeContext = (scope: InitScope, elb: Elb.Fn): Context => {
       scope,
       pageview: false,
       capture: true,
+      history: false,
       elb: false,
       elbLayer: false,
     },

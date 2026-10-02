@@ -59,7 +59,7 @@ export function translateToCoreCollector(
       const scopeDoc = ((settings.scope as Element).ownerDocument ||
         settings.scope) as Document;
       const scopeWin = scopeDoc.defaultView!;
-      event.source = getBrowserSource(scopeWin, scopeDoc);
+      event.source = getBrowserSource(scopeWin, scopeDoc, context.href);
     }
 
     // Add globals if not already present
@@ -118,7 +118,9 @@ export function translateToCoreCollector(
 
   // Special handling for page events
   if (entity === 'page' && scopeWin) {
-    eventData.id = eventData.id || scopeWin.location.pathname;
+    eventData.id =
+      eventData.id ||
+      (context.href ? new URL(context.href) : scopeWin.location).pathname;
   }
 
   // Collect globals from the source root scope
@@ -137,7 +139,9 @@ export function translateToCoreCollector(
     custom,
     trigger: isString(options) ? options : '',
     source:
-      scopeWin && scopeDoc ? getBrowserSource(scopeWin, scopeDoc) : undefined,
+      scopeWin && scopeDoc
+        ? getBrowserSource(scopeWin, scopeDoc, context.href)
+        : undefined,
   };
 
   return push(event);
@@ -146,11 +150,15 @@ export function translateToCoreCollector(
 /**
  * Create source information for browser events
  */
-function getBrowserSource(win: Window, doc: Document): WalkerOS.Source {
+function getBrowserSource(
+  win: Window,
+  doc: Document,
+  href?: string,
+): WalkerOS.Source {
   return {
     type: 'browser',
     platform: 'web',
-    url: win.location.href,
+    url: href || win.location.href,
     referrer: doc.referrer,
   };
 }

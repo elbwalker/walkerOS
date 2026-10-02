@@ -1,5 +1,33 @@
 # @walkeros/server-source-fetch
 
+## 4.7.0
+
+### Patch Changes
+
+- Updated dependencies [786a860]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [7e5e3de]
+- Updated dependencies [b9668bf]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/collector@4.7.0
+  - @walkeros/core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes
