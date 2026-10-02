@@ -31,10 +31,10 @@ import {
 import { withFlowContext } from '../../../commands/push/flow-context.js';
 import { createCLILogger } from '../../../core/cli-logger.js';
 import { toPrintable } from '../../../core/to-printable.js';
+import { injectLocalPaths } from '../../helpers/local-packages.js';
 
 const examplesDir = path.resolve(__dirname, '../../../../examples');
 const configPath = path.join(examplesDir, 'flow-complete.json');
-const packagesDir = path.resolve(__dirname, '../../../../..');
 
 /**
  * The fingerprint rotates daily (UTC windows from `new Date()`), so the suite
@@ -134,57 +134,9 @@ interface Case {
   example: Flow.StepExample;
 }
 
-function readPackageName(dir: string): string | undefined {
-  const file = path.join(dir, 'package.json');
-  if (!fs.existsSync(file)) return undefined;
-  const pkg: unknown = fs.readJSONSync(file);
-  return isObject(pkg) && typeof pkg.name === 'string' ? pkg.name : undefined;
-}
-
-/** Every @walkeros package directory of the monorepo, by package name. */
-function findPackageDirs(
-  dir: string,
-  depth = 0,
-  found = new Map<string, string>(),
-): Map<string, string> {
-  const name = readPackageName(dir);
-  if (name?.startsWith('@walkeros/')) found.set(name, dir);
-  if (depth >= 4) return found;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    if (['node_modules', 'dist', 'src', 'coverage'].includes(entry.name))
-      continue;
-    if (entry.name.startsWith('.')) continue;
-    findPackageDirs(path.join(dir, entry.name), depth + 1, found);
-  }
-  return found;
-}
-
-/**
- * Points every package of a flow, and its @walkeros dependencies, at the
- * monorepo.
- */
-function injectLocalPaths(flow: Flow, dirs: Map<string, string>): void {
-  const packages = flow.config?.bundle?.packages;
-  if (!packages) return;
-  const add = (name: string): void => {
-    const dir = dirs.get(name);
-    if (!dir) return;
-    if (packages[name]?.path) return;
-    packages[name] = { ...packages[name], path: dir };
-    const pkg: unknown = fs.readJSONSync(path.join(dir, 'package.json'));
-    const deps =
-      isObject(pkg) && isObject(pkg.dependencies) ? pkg.dependencies : {};
-    for (const dep of Object.keys(deps))
-      if (dep.startsWith('@walkeros/')) add(dep);
-  };
-  for (const name of Object.keys(packages)) add(name);
-}
-
 function loadTestConfig(): Flow.Json {
   const config = validateFlowConfig(fs.readJSONSync(configPath));
-  const dirs = findPackageDirs(packagesDir);
-  for (const flow of Object.values(config.flows)) injectLocalPaths(flow, dirs);
+  for (const flow of Object.values(config.flows)) injectLocalPaths(flow);
   return config;
 }
 

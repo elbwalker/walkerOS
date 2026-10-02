@@ -1,9 +1,9 @@
 import { readFile, mkdtemp, rm } from 'fs/promises';
-import { existsSync } from 'fs';
 import { tmpdir } from 'os';
-import { join, resolve } from 'path';
+import { join } from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { bundle } from '../../../commands/bundle/index.js';
+import { localPackage } from '../../helpers/local-packages.js';
 
 /**
  * A real web flow, bundled by the CLI from the local package dists and run in
@@ -11,9 +11,6 @@ import { bundle } from '../../../commands/bundle/index.js';
  * is held by require: ["consent"], and the CookieFirst CMP reports the user's
  * choice afterwards. The Consent Mode update must precede the page_view event.
  */
-const PACKAGES = resolve(__dirname, '../../../../..');
-const local = (rel: string) => ({ path: join(PACKAGES, rel) });
-
 const CONSENT_FLOW = {
   version: 4,
   flows: {
@@ -22,17 +19,21 @@ const CONSENT_FLOW = {
         platform: 'web',
         bundle: {
           packages: {
-            '@walkeros/core': local('core'),
-            '@walkeros/web-core': local('web/core'),
+            '@walkeros/core': localPackage('@walkeros/core'),
+            '@walkeros/web-core': localPackage('@walkeros/web-core'),
             '@walkeros/collector': {
-              ...local('collector'),
+              ...localPackage('@walkeros/collector'),
               imports: ['startFlow'],
             },
-            '@walkeros/web-source-browser': local('web/sources/browser'),
-            '@walkeros/web-source-cmp-cookiefirst': local(
-              'web/sources/cmps/cookiefirst',
+            '@walkeros/web-source-browser': localPackage(
+              '@walkeros/web-source-browser',
             ),
-            '@walkeros/web-destination-gtag': local('web/destinations/gtag'),
+            '@walkeros/web-source-cmp-cookiefirst': localPackage(
+              '@walkeros/web-source-cmp-cookiefirst',
+            ),
+            '@walkeros/web-destination-gtag': localPackage(
+              '@walkeros/web-destination-gtag',
+            ),
           },
         },
       },
@@ -67,7 +68,6 @@ describe('bundled web flow: consent update precedes the first gtag event', () =>
   let script: string;
 
   beforeAll(async () => {
-    expect(existsSync(join(PACKAGES, 'collector/package.json'))).toBe(true);
     tmpDir = await mkdtemp(join(tmpdir(), 'walkeros-consent-order-'));
     const out = join(tmpDir, 'walker.js');
     await bundle(CONSENT_FLOW, {

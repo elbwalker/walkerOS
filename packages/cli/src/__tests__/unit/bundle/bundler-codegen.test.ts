@@ -25,7 +25,7 @@ import {
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
 import { createMockLogger } from '../../helpers/mock-logger.js';
-import path from 'path';
+import { localPackageDir } from '../../helpers/local-packages.js';
 import type { Flow } from '@walkeros/core';
 import type { BuildOptions } from '../../../types/bundle.js';
 
@@ -394,10 +394,7 @@ describe('Implicit Collector', () => {
 describe('lazy /dev registry', () => {
   // Resolve the real @walkeros/web-source-browser package so its package.json
   // ./dev export is read by the codegen (it genuinely exposes ./dev).
-  const browserPkgPath = path.resolve(
-    __dirname,
-    '../../../../../web/sources/browser',
-  );
+  const browserPkgPath = localPackageDir('@walkeros/web-source-browser');
 
   const flowSettings: Flow = {
     config: {
@@ -1580,11 +1577,8 @@ describe('applyCollectorProvenance', () => {
 describe('declared package exports', () => {
   // The real gcp destination declares two exports in `walkerOS.exports`;
   // the demo destination declares none.
-  const gcpPath = path.resolve(
-    __dirname,
-    '../../../../../server/destinations/gcp',
-  );
-  const demoPath = path.resolve(__dirname, '../../../../../destinations/demo');
+  const gcpPath = localPackageDir('@walkeros/server-destination-gcp');
+  const demoPath = localPackageDir('@walkeros/destination-demo');
 
   const flowSettings: Flow = {
     config: { platform: 'server' },

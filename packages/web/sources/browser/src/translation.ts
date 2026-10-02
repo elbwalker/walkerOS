@@ -8,6 +8,7 @@ import type {
 } from './types/elb';
 import type { Context, Settings, InitScope, Scope } from './types';
 import { getEntities, getGlobals } from './walker';
+import { isDomScope } from './scope';
 
 /**
  * Translation layer that converts flexible browser source inputs
@@ -152,31 +153,6 @@ function getBrowserSource(win: Window, doc: Document): WalkerOS.Source {
     url: win.location.href,
     referrer: doc.referrer,
   };
-}
-
-/**
- * Local type guard: narrows `unknown` to `Element | Document`. Prefers the
- * native `instanceof` check (works in browsers and JSDOM) and falls back to
- * the WhatWG DOM `nodeType` property for realms where the global Element or
- * Document constructors are not in scope (cross-frame, certain test
- * runners). Returns an accurate `Element | Document` union so callers do
- * not need casts.
- */
-function isDomScope(value: unknown): value is InitScope {
-  if (!value || typeof value !== 'object') return false;
-  if (typeof Element !== 'undefined' && value instanceof Element) return true;
-  if (typeof Document !== 'undefined' && value instanceof Document) return true;
-  if (typeof ShadowRoot !== 'undefined' && value instanceof ShadowRoot)
-    return true;
-  if ('nodeType' in value) {
-    const nodeType = value.nodeType;
-    // 1 = ELEMENT_NODE, 9 = DOCUMENT_NODE, 11 = DOCUMENT_FRAGMENT_NODE (the
-    // node type of a ShadowRoot) per the WhatWG DOM standard. Accepting 11
-    // lets `walker init` target a retained closed shadow root, which discovery
-    // can never reach from the document.
-    return nodeType === 1 || nodeType === 9 || nodeType === 11;
-  }
-  return false;
 }
 
 /**

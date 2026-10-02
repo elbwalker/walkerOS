@@ -1,5 +1,5 @@
 import { isBoolean, isObject, isString } from '@walkeros/core';
-import type { InitScope } from './types/scope';
+import { isDomScope } from './scope';
 import type { InitSettings, Settings } from './types';
 
 /**
@@ -23,14 +23,6 @@ export function getConfig(
   };
 }
 
-function isInitScope(value: unknown): value is InitScope {
-  return (
-    (typeof Element !== 'undefined' && value instanceof Element) ||
-    (typeof Document !== 'undefined' && value instanceof Document) ||
-    (typeof ShadowRoot !== 'undefined' && value instanceof ShadowRoot)
-  );
-}
-
 /**
  * Settings read back from a source instance, whose registry entry carries
  * them untyped: each field of its type is kept, any other takes its default.
@@ -46,6 +38,6 @@ export function settingsFrom(value: unknown): Settings {
   if (isString(value.elb) || value.elb === false) init.elb = value.elb;
   if (isString(value.elbLayer) || isBoolean(value.elbLayer))
     init.elbLayer = value.elbLayer;
-  if (isInitScope(value.scope)) init.scope = value.scope;
+  if (isDomScope(value.scope)) init.scope = value.scope;
   return getConfig(init);
 }
