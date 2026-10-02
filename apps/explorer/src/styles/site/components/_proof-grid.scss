@@ -1,0 +1,42 @@
+// ProofGrid - claim paired with its witness, one card each.
+//
+// A claim carries its evidence in the same screen, so the claim and the
+// witness are one unit and never separated.
+
+.elb-oa-proofs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 22px 0 0;
+}
+
+@media (max-width: 820px) {
+  .elb-oa-proofs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.elb-oa-proof {
+  background: var(--oa-surface);
+  border: 1px solid var(--oa-rule);
+  border-radius: var(--oa-r);
+  box-shadow: var(--oa-shadow-sm);
+  padding: 20px;
+  min-width: 0;
+
+  &__claim {
+    display: block;
+    font-family: var(--oa-sans);
+    font-size: 16.5px;
+    font-weight: 600;
+    color: var(--oa-ink);
+    margin: 0 0 7px;
+  }
+
+  &__witness {
+    font-family: var(--oa-sans);
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--oa-ink-2);
+  }
+}

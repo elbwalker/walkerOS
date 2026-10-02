@@ -14,12 +14,12 @@ builds on: your tracking is code you can see, prove, and take with you.
 
 Send one event and watch it arrive. The [quickstart](/docs/getting-started/quickstart/)
 prints your first event from Node in under five minutes. Or run the
-[Docker demo](/docs/getting-started/quickstart/docker) and POST an event to
+[Docker quickstart](/docs/getting-started/quickstart/docker) and POST an event to
 `/collect`: it appears in the runner log of a container on your machine.
 
 ## 2. Read your tracking as code
 
-Every pipeline is one `flow.json`: sources, transformers, destinations, and
+A bundled pipeline is one `flow.json`: sources, transformers, destinations, and
 mapping as plain JSON you can diff in a pull request and roll back in git. Open
 any [example](/docs/getting-started/examples/bot-detection) and read the whole
 setup in one block. No UI state, nothing hidden.
@@ -33,15 +33,16 @@ a machine-checked artifact, not a demo.
 
 ## 4. Break it on purpose
 
-Define a [contract](/docs/getting-started/flow/contract), then violate it and
-watch validation fail loudly with the exact path and message, at design time,
-before anything ships. See [validate](/docs/getting-started/flow/validate).
+Define a [contract](/docs/getting-started/flow/contract), give a step example
+an event that violates it, and watch `walkeros validate --strict` fail with the
+exact path and message, at design time, before anything ships. See
+[validate](/docs/getting-started/flow/validate).
 Compare that with a tag manager silently dropping fields in production.
 
 ## 5. Prove you can leave
 
-Bundle the same `flow.json` and run it anywhere: Docker, Node, your own
-infrastructure. [Deploy](/docs/getting-started/deploy) shows all three paths.
+Bundle the same `flow.json` and run it on your own infrastructure, in Docker or
+directly in Node. [Deploy](/docs/getting-started/deploy) shows each path.
 Your events land in destinations you configured, so there is nothing to export
 and nothing to migrate away from.
 

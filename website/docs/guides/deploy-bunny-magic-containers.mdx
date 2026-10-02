@@ -29,7 +29,7 @@ The key file will be baked into your Docker image. Keep the image in a **private
 
 ## 2. Bundle the Flow
 
-Install the CLI and bundle the flow:
+Install the CLI and bundle the flow into `dist/`:
 
 ```bash
 npm install -g @walkeros/cli
@@ -38,24 +38,15 @@ npm install -g @walkeros/cli
 walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json -o dist/
 ```
 
-This creates the artifact directory `dist/` (`flow.mjs`, `package.json` and the traced `node_modules/`).
-
-:::note Environment variables are read at runtime
-This is a server flow, so its `$env.NAME` references (`$env.GCP_PROJECT_ID`,
-`$env.BQ_DATASET:walkerOS`, `$env.BQ_TABLE:events`, `$env.BQ_LOCATION:EU`) are
-not baked into the bundle. The built flow reads them from the container's
-environment when it starts, falling back to the default after the colon.
-Only web flows bake `$env` values in, from `config.bundle.env`. You set the
-values in the Dockerfile below.
-:::
+This creates `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The flow reads `GCP_PROJECT_ID` (required), `BQ_DATASET`, `BQ_TABLE`, and `BQ_LOCATION` (optional, defaults `walkerOS`, `events`, `EU`) from the environment when the container starts, so nothing is baked in at bundle time. Only web flows bake `$env` values in, from `config.bundle.env`.
 
 :::tip[Quick Local Test]
-Test your flow before building Docker using `push --simulate` with a local credentials path:
+Test your flow before building Docker using `push --simulate`. The BigQuery call is mocked, so no credentials are needed:
 
 ```bash
 export GCP_PROJECT_ID="your-project-id"
 walkeros push https://www.walkeros.io/flows/gcp-bigquery.json \
-  -e '{"name": "test", "data": {}}' --simulate destination.bigquery
+  -e '{"name": "page view", "data": {}}' --simulate destination.bigquery
 ```
 :::
 
@@ -66,18 +57,15 @@ Create a `Dockerfile`:
 ```dockerfile
 FROM walkeros/flow:<version>
 
-# Copy the whole artifact directory: flow.mjs needs its node_modules/
+# Copy the pre-built flow bundle (flow.mjs, package.json, node_modules/)
 COPY dist/ /app/flow/
 
 # Copy service account credentials
 COPY sa-bigquery.json /app/sa-bigquery.json
 
-# Read by the flow at runtime (see the note above)
+# Configure runtime
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/sa-bigquery.json
 ENV GCP_PROJECT_ID=your-project-id
-ENV BQ_DATASET=walkerOS
-ENV BQ_TABLE=events
-ENV BQ_LOCATION=EU
 ```
 
 Replace `<version>` with the `walkeros/flow` version matching your CLI, see

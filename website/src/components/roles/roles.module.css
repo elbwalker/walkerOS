@@ -1,0 +1,86 @@
+/* Role page additions. Page, hero, section, FAQ and persona card styles
+   come from the home page module; tokens from @walkeros/explorer/site.css. */
+
+.fit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.fit > div {
+  min-width: 0;
+  background: var(--oa-surface);
+  border: 1px solid var(--oa-rule);
+  border-radius: var(--oa-r);
+  padding: 22px 24px;
+  box-shadow: var(--oa-shadow-sm);
+}
+.fit h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.fit ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--oa-ink-2);
+  font-size: 16px;
+}
+.fit li + li {
+  margin-top: 6px;
+}
+.first {
+  max-width: 62ch;
+  color: var(--oa-ink-2);
+  margin: 26px 0 0;
+}
+@media (max-width: 900px) {
+  .fit {
+    grid-template-columns: 1fr;
+  }
+}
+
+.limits {
+  padding: 20px 0 66px;
+}
+
+.next {
+  padding-block: 20px 80px;
+  border-top: 1px solid var(--oa-rule);
+}
+.links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.links a {
+  min-width: 0;
+  background: var(--oa-surface);
+  border: 1px solid var(--oa-rule);
+  border-radius: var(--oa-r);
+  padding: 18px 18px 20px;
+  color: var(--oa-ink);
+  text-decoration: none;
+  box-shadow: var(--oa-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.links a strong {
+  font-size: 17px;
+  font-weight: 600;
+}
+.links a small {
+  font-size: 15px;
+  color: var(--oa-ink-3);
+}
+.links a:hover strong {
+  color: var(--oa-signal-ink);
+}
+.others {
+  margin-top: 56px;
+}
+@media (max-width: 900px) {
+  .links {
+    grid-template-columns: 1fr;
+  }
+}

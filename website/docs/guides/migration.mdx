@@ -41,9 +41,9 @@ packages.
 <CodeSnippet
   code={`{
   "dependencies": {
-    "@walkeros/collector": "^0.0.7",
-    "@walkeros/web-source-browser": "^0.0.7",
-    "@walkeros/web-destination-gtag": "^0.0.7"
+    "@walkeros/collector": "^4.6.0",
+    "@walkeros/web-source-browser": "^4.6.0",
+    "@walkeros/web-destination-gtag": "^4.6.0"
   }
 }`}
   language="json"
@@ -141,7 +141,7 @@ sources: {
 browser: {
 code: sourceBrowser,
 config: {
-  settings: { scope: document.body, session: true },
+  settings: { scope: document.body },
 },
 },
 },
@@ -161,10 +161,10 @@ config: {
 
 **Benefits:**
 
-* Single configuration describing entire tracking setup
-* Full type safety with proper config linking
-* No manual destination registration needed
-* Clean separation between code and configuration
+* One configuration describes the entire tracking setup
+* Full type safety, with configs linked to their packages
+* No manual destination registration
+* Code and configuration stay separate
 
 ## Migration checklist
 
@@ -208,7 +208,8 @@ more precise entity targeting:
 
 #### Option 1: keep current behavior (recommended for migration)
 
-Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
+Replace `data-elbaction` with `data-elbactions` to keep the same behavior for
+the `click` and `submit` triggers:
 
 <CodeSnippet
   code={`<!-- Before (@elbwalker) -->
@@ -227,9 +228,19 @@ Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
   language="html"
 />
 
+:::note
+
+`data-elbactions` only fires for the `click` and `submit` triggers. All other
+triggers, such as `load`, `visible`, `impression`, `hover`, `scroll`, `wait`,
+and `pulse`, fire only from `data-elbaction`, which applies to the nearest
+entity. For those triggers the @elbwalker all-entities behavior is not
+available.
+
+:::
+
 #### Option 2: use new behavior (recommended for new projects)
 
-Use `data-elbaction` for more precise, performance-optimized tracking:
+Use `data-elbaction` for more precise tracking that fires fewer events:
 
 <CodeSnippet
   code={`<!-- @walkeros - New behavior -->
@@ -249,7 +260,7 @@ Use `data-elbaction` for more precise, performance-optimized tracking:
 * Performance is critical (fewer events)
 * Implementing new features
 
-**Use `data-elbactions` (all entities) when:**
+**Use `data-elbactions` (all entities, `click` and `submit` only) when:**
 
 * Migrating from @elbwalker and need same behavior
 * You need context from parent entities

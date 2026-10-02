@@ -56,18 +56,19 @@ configuration options.
 
 ## consent
 
-Manage consent states for the collector. Names can be defined arbitrarily, but
-common groups are functional, analytics, and marketing. Values are booleans, and
-once a value is set to `true` it's treated as consent being granted.
+Set consent states on the collector. Names are free-form; common groups are
+functional, analytics, and marketing. Values are booleans, and `true` means
+consent is granted. A command only updates the keys it contains.
 
 <CodeSnippet
   code={`elb('walker consent', { marketing: true, analytics: true });`}
   language="javascript"
 />
 
-Setting a consent state to `false` will immediately stop a destination from
-processing any events. Previously pushed events during the run are shared with
-existing destinations once consent is granted.
+When none of the keys in a destination's `config.consent` is granted, the
+destination stops receiving events. Its events wait in a queue instead, and
+once consent is granted during the same run, the queued events are delivered
+in order.
 
 :::info
 
@@ -136,14 +137,14 @@ elb('walker run');
 
 ### consent
 
-Every time the `consent` changes, the rules-matching function(s) will be called
-with `consent` as the first argument and `context` (carrying `collector` and
-`logger`) as the second.
+A consent handler is called with `consent` as the first argument and `context`
+(carrying `collector` and `logger`) as the second. `rules` is an object keyed
+by consent name.
 
 <CodeSnippet
   code={`function onConsent(consent, context) {
 console.log('consent with', { consent, instance: context.collector });
-if (consent.marketing) context.collector.push('walker user', readFromStorage());
+if (consent.marketing) elb('walker user', readFromStorage());
 }
 
 elb('walker on', {
@@ -153,14 +154,20 @@ rules: { marketing: onConsent },
   language="javascript"
 />
 
-The `onConsent` function will only be called when the `marketing` consent
-changes:
+`onConsent` runs whenever a `walker consent` command contains `marketing`,
+whether the value is `true` or `false` and whether it changed. It receives only
+the values of that command, so check the value inside the handler:
 
 <CodeSnippet
   code={`elb('walker consent', { functional: true }); // Won't trigger the onConsent function
-elb('walker consent', { marketing: true }); // Will trigger the onConsent function`}
+elb('walker consent', { marketing: true }); // Will trigger the onConsent function
+elb('walker consent', { marketing: false }); // Will also trigger the onConsent function`}
   language="javascript"
 />
+
+When registered, and when the collector starts, the handler receives the full
+consent state and runs if `marketing` is set. No handler is called before the
+collector runs.
 
 ## user
 

@@ -8,7 +8,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Usercentrics
 
-Integrates [Usercentrics](https://usercentrics.com/) consent management with walkerOS using the official Usercentrics events and consent getters, mapping category or service consent state to walkerOS consent groups.
+Integrates [Usercentrics](https://usercentrics.com/) consent management with walkerOS using the official Usercentrics events and consent getters, mapping category consent state to walkerOS consent groups.
 
 We recommend the source package below over a hand-written event listener: it handles version detection, returning-visitor restore, and explicit-consent gating for you.
 
@@ -40,19 +40,6 @@ await startFlow({
 });
 ```
 
-<Configuration type="source" data={data} />
-
-| Setting        | Type                     | Default             | Description                                                  |
-| -------------- | ------------------------ | ------------------- | ----------------------------------------------------------- |
-| `apiVersion`   | `'auto' \| 'v2' \| 'v3'` | `'auto'`            | Which Usercentrics API to target (auto-detects by default)  |
-| `categoryMap`  | `Record<string, string>` | `{}`                | Maps Usercentrics categories to walkerOS consent groups     |
-| `explicitOnly` | `boolean`                | `true`              | Only publish when the user has actively decided             |
-| `v3EventName`  | `string`                 | `'UC_UI_CMP_EVENT'` | V3 event name, override only for a custom admin event       |
-
-There is no configurable data-layer event setting: the source listens to the
-always-emitted official Usercentrics events, so no `eventName` configuration or
-Usercentrics admin window-event setup is required.
-
 ### V2 vs V3 support
 
 The source supports both Usercentrics V2 (`window.UC_UI`) and V3
@@ -68,6 +55,11 @@ at init:
 - When both APIs are available, V3 is preferred.
 
 Set `apiVersion: 'v2'` or `'v3'` to force a specific integration.
+
+`v3EventName` replaces `UC_UI_CMP_EVENT` for the V3 adapter; it does not add a
+second event. The source processes only events on that name whose
+`detail.type` is `ACCEPT_ALL`, `DENY_ALL` or `SAVE`, so leave it at its
+default.
 
 ### Custom mapping example
 
@@ -90,6 +82,15 @@ await startFlow({
   },
 });
 ```
+
+Categories missing from `categoryMap` are reported under their Usercentrics
+slug (the default map is empty). A category is `true` only when the user
+accepted all of it: V3 state `ALL_ACCEPTED`, or in V2 every service in that
+category. When several categories map to the same group, the group is `true`
+only if all of them are, so with the map above `functional` requires both
+`essential` and `functional`.
+
+<Configuration type="source" data={data} />
 
 ## How it works
 
@@ -123,8 +124,7 @@ A returning visitor's prior choice is applied on page load, either from the
 static getter read (CMP already initialized) or on `UC_UI_INITIALIZED` (CMP loads
 later). First-visit defaults stay suppressed under the default
 `explicitOnly: true`. Set `explicitOnly: false` to publish any snapshot,
-including implicit defaults. Ensure the consent source has no `require`
-constraints so it initializes immediately.
+including implicit defaults.
 
 ## Reference
 

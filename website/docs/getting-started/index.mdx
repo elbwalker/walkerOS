@@ -9,9 +9,9 @@ sidebar_position: 1
 
 walkerOS is an **open-source event data collection platform** you run as code. Capture events from anywhere, transform them with mapping, and route them to any destination, all with built-in consent management.
 
-No fragile UI configs. No vendor lock-in. Just tracking you can version, test, and trust.
+There are no fragile UI configs and no vendor lock-in, so you can version, test, and trust your tracking.
 
-It's built for analytics engineers, data leads, and developers who own analytics on a custom-built app and want to replace a duct-taped GA4 and server-side tag manager stack with a pipeline they actually control.
+It's built for analytics engineers, data leads, and developers who own analytics on a custom-built app and want to replace a duct-taped GA4 and server-side tag manager stack with a pipeline they control.
 
 <FlowMap
   sources={{
@@ -37,9 +37,9 @@ Build and simulate a flow locally with the walkerOS MCP, no account needed: [Wit
 
 ## Why walkerOS?
 
-- **Open-Source:** MIT licensed, free forever, no restrictions
+- **Open-Source:** MIT licensed and free, with no restrictions
 - **Self-hostable:** Run it on your own infrastructure
-- **Config-as-Code:** Version control, PRs, deploy with confidence
+- **Config-as-Code:** Every change goes through version control and PRs
 - **Composable:** Mix sources, destinations, and mappings freely
 - **Developer-first:** TypeScript and declarative tagging, with an optional hosted app and MCP/AI-assisted management
 
@@ -79,7 +79,7 @@ A "flow" connects sources to destinations through a collector. You can have one 
   ]}
 />
 
-One transformation language works everywhere. This is what makes walkerOS truly composable.
+The same transformation language works at every stage, which is what makes walkerOS composable.
 
 [Learn more about mapping →](/docs/mapping)
 
@@ -102,7 +102,7 @@ One transformation language works everywhere. This is what makes walkerOS truly 
 
 ## Two ways to use walkerOS
 
-Both modes use the same architecture. You choose at deploy time, after your first event, see [operating modes](/docs/getting-started/modes/).
+Both modes use the same architecture. You pick one at deploy time, after your first event (see [operating modes](/docs/getting-started/modes/)).
 
 ### Integrated mode
 
@@ -141,7 +141,7 @@ The collector is a **separate artifact** you configure with JSON.
   language="json"
 />
 
-Then: `walkeros bundle flow.json` → standalone file.
+Then `walkeros bundle flow.json` builds a standalone file.
 
 **Best for:** Config-as-code, Docker deployments, separate tracking scripts.
 

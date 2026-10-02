@@ -64,10 +64,10 @@ Never use hardcoded values. Import from theme:
 @use '../../theme/variables' as *;
 
 .elb-button {
-  background: var(--elb-color-primary);
-  padding: var(--elb-spacing-sm) var(--elb-spacing-md);
-  border-radius: var(--elb-radius-md);
-  font-size: var(--elb-font-size-base);
+  background: var(--color-button-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-button);
+  font-size: var(--font-size-base);
 }
 ```
 
@@ -150,8 +150,8 @@ export const Small: Story = {
 
 .elb-spinner {
   display: inline-block;
-  border: 2px solid var(--elb-color-border);
-  border-top-color: var(--elb-color-primary);
+  border: 2px solid var(--border-box);
+  border-top-color: var(--color-button-primary);
   border-radius: 50%;
   animation: elb-spin 0.6s linear infinite;
 
@@ -194,49 +194,60 @@ export { Spinner } from './components/atoms/spinner';
 export type { SpinnerProps } from './components/atoms/spinner';
 ```
 
-## Common CSS Variables
+## CSS Variables
 
-### Colors
+Two scales live in this package. They cannot collide: they use different
+selectors and different names.
 
-```scss
---elb-color-primary        // Brand blue
---elb-color-success        // Green for success states
---elb-color-warning        // Yellow/orange for warnings
---elb-color-error          // Red for errors
---elb-color-text           // Main text color
---elb-color-text-muted     // Secondary text
---elb-color-bg             // Background
---elb-color-bg-secondary   // Subtle backgrounds
---elb-color-border         // Default borders
-```
+### Tool scale (explorer components)
 
-### Spacing
+Scoped under `.elb-explorer`, never `:root`. Dark is
+`[data-theme='dark'] .elb-explorer`. Names are **unprefixed**:
 
 ```scss
---elb-spacing-xs: 0.25rem // 4px
-  --elb-spacing-sm: 0.5rem // 8px
-  --elb-spacing-md: 1rem // 16px
-  --elb-spacing-lg: 1.5rem // 24px
-  --elb-spacing-xl: 2rem; // 32px
+--color-text          // primary text
+--color-text-muted    // secondary text
+--bg-box              // main container background
+--bg-header           // header background
+--bg-input            // input field background
+--border-box          // container border
+--border-input-focus  // input border when focused
+--color-button-primary
+--radius-box
+--spacing-md
+--font-size-base      // 14px, tool scale
 ```
 
-### Typography
+Full reference: [STYLE.md](STYLE.md). Sizes are tool scale: type 11-16px, radii
+3-6px, sized for code boxes and dropdowns rather than pages.
+
+### Site scale (Open Air page components)
+
+Written to `:root`, prefixed `--oa-`, imported separately:
 
 ```scss
---elb-font-size-xs: 0.75rem // 12px
-  --elb-font-size-sm: 0.875rem // 14px
-  --elb-font-size-base: 1rem // 16px
-  --elb-font-size-lg: 1.125rem // 18px
-  --elb-font-size-xl: 1.25rem; // 20px
+--oa-ground      --oa-surface     --oa-surface-2
+--oa-ink         --oa-ink-2       --oa-ink-3
+--oa-rule        --oa-flag
+--oa-signal      --oa-signal-ink  --oa-signal-soft  --oa-glow  --oa-on-signal
+--oa-shadow-sm   --oa-shadow-lg
+--oa-sans        --oa-mono
+--oa-r  --oa-r-lg  --oa-r-xl  --oa-r-pill
 ```
 
-### Borders & Shadows
-
-```scss
---elb-radius-sm: 0.25rem --elb-radius-md: 0.5rem --elb-radius-lg: 0.75rem
-  --elb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05) --elb-shadow-md: 0 4px 6px
-  rgba(0, 0, 0, 0.1);
+```tsx
+import { SectionHead, LimitsBlock } from '@walkeros/explorer/site';
+import '@walkeros/explorer/site.css'; // tokens + site components
+import '@walkeros/explorer/tokens.css'; // tokens only
 ```
+
+The prefix is not decoration: these land on the consumer's `:root`, and Tailwind
+v4 defines `--shadow-sm` and `--shadow-lg` in `@theme default`, so an unprefixed
+token would silently corrupt every `shadow-sm` utility in the consuming site.
+
+**The rule people get wrong:** text on `--oa-signal` is always `--oa-on-signal`.
+White on the brand blue is 2.4:1 and fails. On light grounds the blue appears as
+text only via `--oa-signal-ink`.
 
 ## Checklist
 

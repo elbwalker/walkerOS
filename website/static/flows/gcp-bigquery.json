@@ -3,23 +3,15 @@
   "flows": {
     "server": {
       "config": {
-        "platform": "server",
-        "bundle": {
-          "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/server-source-express": {},
-            "@walkeros/server-destination-gcp": {}
-          }
-        }
+        "platform": "server"
       },
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
           "config": {
             "settings": {
-              "path": "/collect",
-              "port": 8080,
-              "status": true
+              "paths": ["/collect"],
+              "port": 8080
             }
           }
         }
@@ -27,6 +19,7 @@
       "destinations": {
         "bigquery": {
           "package": "@walkeros/server-destination-gcp",
+          "import": "destinationBigQuery",
           "config": {
             "settings": {
               "projectId": "$env.GCP_PROJECT_ID",

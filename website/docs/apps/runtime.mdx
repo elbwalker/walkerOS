@@ -282,12 +282,21 @@ requests:
       "stores": {
         "files": {
           "package": "@walkeros/server-store-fs",
-          "config": { "settings": { "basePath": "./public" } }
+          "config": { "settings": { "basePath": "./public" }, "file": true }
         }
       },
       "sources": {
         "http": {
           "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": { "paths": ["/collect", "/static/*path"] },
+            "ingest": {
+              "map": {
+                "method": { "key": "method" },
+                "path": { "key": "path" }
+              }
+            }
+          },
           "next": [
             {
               "match": { "key": "ingest.method", "operator": "eq", "value": "GET" },
@@ -308,6 +317,12 @@ requests:
 }`}
   language="json"
 />
+
+The source only fills `ingest.method` and `ingest.path` when `config.ingest`
+maps them, so without that block the `match` never passes and the `file`
+transformer never runs. `paths` must cover the served files: the express source
+registers only `/collect` by default, and `/static/*path` is Express 5 wildcard
+syntax. `file: true` makes the fs store return the files byte-exact.
 
 `walkeros bundle` copies `public/` into `dist/public/`, and the canonical
 Dockerfile's `COPY` of the whole `dist/` directory carries it into the image.
@@ -337,6 +352,8 @@ such files next to the artifact.
   Without a writable cache directory, recent errors are not persisted across
   restarts, and the flow still runs.
 - **Architecture.** The image is `linux/amd64` only.
+- **Signals.** The image runs under tini and shuts the flow down gracefully on
+  SIGTERM.
 - **In-memory default store.** A `state` operation that names no `store` uses
   the collector's in-memory `__cache` store, which lives inside one process.
   Anything relying on it across events (state, deduplication, a rate limiter

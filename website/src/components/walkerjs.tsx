@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { Collector, Elb } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { sourceBrowser } from '@walkeros/web-source-browser';
+import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
 
 declare global {
   interface Window {
@@ -70,21 +70,6 @@ export const DataCollection = () => {
   return null;
 };
 
-// Simple tagger that returns spread-friendly attribute objects
-export const tagger = (() => {
-  const prefix = 'data-alst';
-
-  return {
-    entity: (name: string) => ({ [prefix]: name }),
-    action: (value: string) => ({ [`${prefix}-action`]: value }),
-    property: (key: string, value: string) => ({
-      [`${prefix}-property`]: `${key}:${value}`,
-    }),
-    context: (key: string, value: string) => ({
-      [`${prefix}-context`]: `${key}:${value}`,
-    }),
-    globals: (key: string, value: string) => ({
-      [`${prefix}-globals`]: `${key}:${value}`,
-    }),
-  };
-})();
+// Attribute tagger for the hosted analytics bundle, which reads the data-alst
+// prefix. Always call .get() to produce the spreadable attribute object.
+export const tagger = createTagger({ prefix: 'data-alst' });

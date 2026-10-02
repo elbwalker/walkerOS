@@ -5,7 +5,7 @@ import { tagger } from '@site/src/components/walkerjs';
 export default function BlogLayoutWrapper(props) {
   return (
     <>
-      <span {...tagger.globals('pagegroup', 'blog')}>
+      <span {...tagger().globals('pagegroup', 'blog').get()}>
         <BlogLayout {...props} />
       </span>
     </>

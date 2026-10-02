@@ -51,7 +51,7 @@ The collector is a **separate artifact** you configure with JSON and build with 
   language="json"
 />
 
-Then: `walkeros bundle flow.json` → outputs standalone file.
+Then `walkeros bundle flow.json -o ./dist/walker.js` builds a standalone script.
 
 **Best for:**
 - Config-as-code workflows (Git, PRs, CI/CD)
@@ -65,7 +65,7 @@ Then: `walkeros bundle flow.json` → outputs standalone file.
 
 ## Same core, different packaging
 
-Both modes use identical:
+Both modes share the same building blocks:
 - **Sources** - Browser, DataLayer, HTTP, custom
 - **Collector** - Event processing, consent, enrichment
 - **Destinations** - GA4, APIs, BigQuery, custom

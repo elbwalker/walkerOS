@@ -95,7 +95,7 @@ The pull source is event-driven: `init()` opens the streaming subscription and f
 import { sourcePubSubPush } from '@walkeros/server-source-gcp';
 import { startFlow } from '@walkeros/collector';
 
-const { sources } = await startFlow({
+const { collector } = await startFlow({
   sources: {
     pubsub: {
       code: sourcePubSubPush,
@@ -109,7 +109,7 @@ const { sources } = await startFlow({
 
 const app = express();
 app.use(express.json());
-app.post('/pubsub-push', sources.pubsub.push);
+app.post('/pubsub-push', collector.sources.pubsub.push);
 app.listen(8080);`}
   language="typescript"
 />

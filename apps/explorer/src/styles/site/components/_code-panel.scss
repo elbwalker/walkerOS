@@ -1,0 +1,52 @@
+// CodePanel - entity/action pairs plus a static code block.
+//
+// Deliberately not backed by the Monaco or shiki atoms: importing those would
+// pull the tool module graph into the ./site entry, which is the one thing the
+// separate entry point exists to prevent.
+
+.elb-oa-pairs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+}
+
+.elb-oa-pair {
+  display: flex;
+  font-family: var(--oa-mono);
+  font-size: 14px;
+  border: 1px solid var(--oa-rule);
+  border-radius: 8px;
+  overflow: hidden;
+
+  &__entity {
+    padding: 8px 12px;
+    background: var(--oa-surface-2);
+    color: var(--oa-ink);
+  }
+
+  &__action {
+    padding: 8px 12px;
+    color: var(--oa-signal-ink);
+  }
+}
+
+.elb-oa-code {
+  font-family: var(--oa-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--oa-ink);
+  background: var(--oa-surface-2);
+  border-radius: 8px;
+  padding: 18px;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.elb-oa-caption {
+  font-family: var(--oa-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--oa-ink-3);
+  margin: 12px 0 0;
+}

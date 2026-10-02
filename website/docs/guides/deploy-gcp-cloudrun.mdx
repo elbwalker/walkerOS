@@ -31,40 +31,58 @@ gcloud services enable run.googleapis.com
 
 ## 2. Bundle the Flow
 
-Install the CLI and bundle the flow:
+The example flow at `https://www.walkeros.io/flows/gcp-bigquery.json` receives events with the Express source on `/collect` and writes them to BigQuery:
+
+```json
+{
+  "version": 4,
+  "flows": {
+    "server": {
+      "config": { "platform": "server" },
+      "sources": {
+        "express": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": { "paths": ["/collect"], "port": 8080 }
+          }
+        }
+      },
+      "destinations": {
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "import": "destinationBigQuery",
+          "config": {
+            "settings": {
+              "projectId": "$env.GCP_PROJECT_ID",
+              "datasetId": "$env.BQ_DATASET:walkerOS",
+              "tableId": "$env.BQ_TABLE:events",
+              "location": "$env.BQ_LOCATION:EU"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Install the CLI and bundle the flow into `dist/`:
 
 ```bash
 npm install -g @walkeros/cli
 
-# Bundle the flow
 walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json -o dist/
 ```
 
-This creates the artifact directory `dist/`: `flow.mjs`, `package.json` and
-the traced `node_modules/`. Add a `dist/Dockerfile` that copies the whole
-directory into the runtime image:
+This creates `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The CLI adds the packages named in `package` to the bundle, so the flow needs no separate package list.
 
-```dockerfile
-FROM walkeros/flow:<version>
-COPY . /app/flow/
-```
-
-Replace `<version>` with the `walkeros/flow` version matching your CLI, see
-[image tags](/docs/apps/runtime#image-tags). The image starts
-`/app/flow/flow.mjs` on port 8080 by default. To bundle inside Docker instead,
-use the [canonical two-stage Dockerfile](/docs/apps/runtime#canonical-dockerfile).
-
-:::note Environment variables are read at runtime
-This is a server flow, so its `$env.NAME` references are not baked into the
-bundle: the built flow reads them from the container's environment when it
-starts. Required: `GCP_PROJECT_ID`. Optional with defaults: `BQ_DATASET`
-(walkerOS), `BQ_TABLE` (events), `BQ_LOCATION` (EU). Only web flows bake
-`$env` values in, from `config.bundle.env`.
+:::note Environment variables
+In a server flow, `$env.NAME` is read from the environment when the container starts, not at bundle time. Required: `GCP_PROJECT_ID`. Optional with defaults: `BQ_DATASET` (walkerOS), `BQ_TABLE` (events), `BQ_LOCATION` (EU). Only web flows bake `$env` values in, from `config.bundle.env`. See [Reference Syntax](/docs/guides/reference-syntax#env--environment-variables).
 :::
 
 ## 3. Test Locally with Docker
 
-Before deploying, verify everything works locally:
+Before deploying, verify everything works locally. Replace `<version>` with the `walkeros/flow` version matching your CLI, see [image tags](/docs/apps/runtime#image-tags):
 
 ```bash
 # Run locally (uses key file for auth)
@@ -106,9 +124,16 @@ bq query --use_legacy_sql=false \
 
 ## 4. Deploy to Cloud Run
 
-Cloud Run builds the image from `dist/Dockerfile`. It uses Workload Identity, so no credentials file is needed in the image.
+Create `dist/Dockerfile` so Cloud Run builds an image from the runtime image plus the whole `dist/` directory. The runtime image starts `/app/flow/flow.mjs` on port 8080 by default:
 
-Deploy with the service account attached:
+```dockerfile
+FROM walkeros/flow:<version>
+COPY . /app/flow/
+```
+
+To bundle inside Docker instead, use the [canonical two-stage Dockerfile](/docs/apps/runtime#canonical-dockerfile). Cloud Run uses Workload Identity, so no credentials file is needed in the image.
+
+Deploy with the service account attached and the project ID set as an environment variable:
 
 ```bash
 cd dist

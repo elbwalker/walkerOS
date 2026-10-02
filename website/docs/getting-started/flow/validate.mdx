@@ -10,7 +10,7 @@ A [contract](/docs/getting-started/flow/contract) is the canonical definition of
 
 ## Where event shapes live
 
-Event shapes live in the top-level `contract` block of flow.json (a sibling of `flows`), keyed by entity then action as JSON Schema, with `extend` inheritance and `*` wildcards. Reference any contract from a step with `$contract.<name>`.
+Event shapes live in the top-level `contract` block of flow.json (a sibling of `flows`). Each named contract holds JSON Schemas under `events`, keyed by entity then action, with `extend` inheritance and `*` wildcards. Reference any contract from a step with `$contract.<name>`.
 
 ```json
 {
@@ -25,7 +25,7 @@ See [Contract](/docs/getting-started/flow/contract) for the full shape, inherita
 
 ## Enforce at runtime
 
-Add a `@walkeros/transformer-validate` step and point its `contract` setting at the contract. The transformer reads the `{ ingest, event }` context and validates the canonical event.
+Add a `@walkeros/transformer-validate` step, point its `contract` setting at the contract, and reference the step from a destination's `before`, so it validates the full event after the collector. A `$contract` reference picks its per-event rules by the event's `entity` and `action`. The collector derives both from `name`, so in a source's `next` chain (before the collector) per-event rules only match when the source already sets `entity` and `action`.
 
 <CodeSnippet
   code={`{
@@ -35,6 +35,7 @@ Add a `@walkeros/transformer-validate` step and point its `contract` setting at 
   },
   "flows": {
     "default": {
+      "config": { "platform": "web" },
       "transformers": {
         "validate": {
           "package": "@walkeros/transformer-validate",
@@ -43,8 +44,14 @@ Add a `@walkeros/transformer-validate` step and point its `contract` setting at 
             "format": true,
             "mode": "strict",
             "output": { "isValid": "source.valid", "errors": "validation" }
-          } },
-          "next": "ga4"
+          } }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": { "settings": { "ga4": { "measurementId": "G-DEMO123456" } } },
+          "before": "validate"
         }
       }
     }
@@ -58,15 +65,15 @@ Add a `@walkeros/transformer-validate` step and point its `contract` setting at 
 | Field | Type | Description |
 |-------|------|-------------|
 | `contract?` | `Array<$contract ref \| JSON Schema>` | Constraints. A `$contract.<name>` ref selects per `entity.action`; an inline schema applies to the whole event. All entries must pass (AND). |
-| `format?` | `boolean` | Also validate the canonical `WalkerOS.Event` structure. All fields are optional, so this checks shape and field types, not presence. |
+| `format?` | `boolean` | Also validate the canonical `WalkerOS.Event` structure. All fields are optional, so this checks shape and field types, not presence. A top-level key that is not part of the event model fails the check. |
 | `mode?` | `'strict' \| 'pass'` | `strict` drops invalid events (stops the chain); `pass` (default) annotates and continues so a downstream route can act. |
 | `output?` | `{ isValid?, errors? }` | Split targets. `isValid` (default `source.valid`) writes the boolean verdict onto the event; `errors` (default `validation`) writes the issue list onto the ingest context. Empty string skips a write. |
 
-The verdict travels with the event as analytics-grade data (`event.source.valid`). The issue list (`{ path, message }` entries) stays off the event, on the observer-visible ingest context, so it survives even a strict-mode drop.
+The verdict travels with the event as analytics-grade data (`event.source.valid`). The issue list (`{ path, message, level }` entries) stays off the event, on the observer-visible ingest context, so it survives even a strict-mode drop.
 
 ## Filter unwanted events
 
-Filtering is the same mechanism, not a separate setting. Author an inline schema that rejects the unwanted events and run `mode: "strict"`. For example, drop GTM lifecycle noise (`gtm.js`, `gtm.dom`) by rejecting any `name` matching `^gtm\.`:
+Filtering is the same mechanism, not a separate setting. Author an inline schema that rejects the unwanted events and run `mode: "strict"`. For example, drop GTM lifecycle noise (`gtm.js`, `gtm.dom`) by rejecting any `name` matching `^gtm\.`. Reference this step from the source's `next`, so it runs before the collector:
 
 <CodeSnippet
   code={`"validate": {
@@ -93,14 +100,15 @@ Contracts are easiest to trust after watching one fail. Take the contract above 
 
 <CodeSnippet
   code={`Validation Results:
-  ⚠ transformer.validate.examples.missingCurrency.out: Example out disagrees with the validate step: the event breaks the contract (#: Property "data" does not match schema.; #/data: Instance does not have required property "currency".), so with mode "strict" the step drops it (["return", false]).
+  ⚠ flows.default.transformers.validate.examples.missingCurrency.out: Example out disagrees with the validate step: the event breaks the contract (#: Property "data" does not match schema.; #/data: Instance does not have required property "currency".), so with mode "strict" the step drops it (["return", false]).
     → Make the example out show what the validate step does with its settings.
+  ✓ All checks passed
 
-Summary: 0 error(s), 1 warning(s)`}
+Summary: 0 error(s), 1 warning(s), 0 skipped`}
   language="bash"
 />
 
-A disagreement is a warning by default; add `--strict` to turn it into an error (exit code 1) and fail CI before a broken example ships. Fix it by making the example `out` show the drop (`[["return", false]]`), or by completing the `in` event.
+A disagreement is a warning by default; add `--strict` to turn it into an error (exit code 1; any other warning under `--strict` exits with code 2) and fail CI before a broken example ships. Fix it by making the example `out` show the drop (`[["return", false]]`), or by completing the `in` event.
 
 ## Next steps
 

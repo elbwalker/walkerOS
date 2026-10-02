@@ -17,12 +17,12 @@ This web flow sends one event stream to four analytics tools at once, with no pe
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/web-source-browser": {},
-            "@walkeros/web-destination-gtag": {},
-            "@walkeros/web-destination-amplitude": {},
-            "@walkeros/web-destination-mixpanel": {},
-            "@walkeros/web-destination-posthog": {}
+            "@walkeros/collector": { "version": "^4" },
+            "@walkeros/web-source-browser": { "version": "^4" },
+            "@walkeros/web-destination-gtag": { "version": "^4" },
+            "@walkeros/web-destination-amplitude": { "version": "^4" },
+            "@walkeros/web-destination-mixpanel": { "version": "^4" },
+            "@walkeros/web-destination-posthog": { "version": "^4" }
           }
         }
       },
@@ -35,7 +35,7 @@ This web flow sends one event stream to four analytics tools at once, with no pe
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
-          "config": { "settings": { "ga4": { "measurementId": "G-XXXXXX-1" } } }
+          "config": { "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } } }
         },
         "amplitude": {
           "package": "@walkeros/web-destination-amplitude",
@@ -79,7 +79,7 @@ You should see:
 The collector fans the same event out to all four destinations, and each one forwards it in its own native call (from the packages' examples):
 
 <CodeSnippet
-  code={`gtag('event', 'order_complete', { send_to: 'G-XXXXXX-1' })
+  code={`gtag('event', 'order_complete', { send_to: 'G-XXXXXXXXXX' })
 amplitude.track('order complete', {})
 mixpanel.track('order complete', {})
 posthog.capture('order complete', {})`}

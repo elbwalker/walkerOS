@@ -1,0 +1,19 @@
+// Entry point: Open Air tokens plus site component styles.
+//
+// Consumers building marketing or communication pages import this instead of
+// tokens.css:
+//   @import '@walkeros/explorer/site.css';
+//
+// Compiles to dist/site.css. The tool bundle (../index.scss → dist/styles.css)
+// is a separate artifact and must stay byte-identical when this file changes.
+
+@use './variables';
+
+// Components
+@use './components/badge';
+@use './components/button';
+@use './components/section-head';
+@use './components/split';
+@use './components/code-panel';
+@use './components/proof-grid';
+@use './components/limits';
