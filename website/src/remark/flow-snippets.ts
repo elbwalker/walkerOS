@@ -374,7 +374,7 @@ function exampleNode(entry: FeatureEntry, flow: unknown): JsxElement {
 
   // One language per CodeView, in StepExample's DOM order: Event, [Mapping],
   // Out. Out is a call list (javascript) when it is an array, as
-  // website/src/components/snippets/StepExample.tsx formats it.
+  // @walkeros/explorer's StepExample formats it.
   const langs = [
     'json',
     ...(found.mapping !== undefined ? ['json'] : []),

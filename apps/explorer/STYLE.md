@@ -231,14 +231,17 @@ Used for code highlighting and data attribute visualization.
 ## Grid System
 
 Explorer uses a sophisticated Grid component with three height modes for
-responsive layouts.
+responsive layouts. By default all boxes sit in one row that scrolls
+horizontally; `columns` sets the boxes per row and wraps the rest to a new row.
+Pass the number of boxes you render, since unused columns stay empty (LiveCode
+passes 2 when it has no config box). Narrow containers stack the boxes.
 
 ### Height Modes
 
 **1. Equal Heights** - All boxes in same row share the tallest content height
 
 ```tsx
-<Grid columns={3} heightMode="equal">
+<Grid columns={3} rowHeight="equal">
   <CodeBox code={event} />
   <CodeBox code={mapping} />
   <CodeBox code={output} />
@@ -248,7 +251,7 @@ responsive layouts.
 **2. Auto Heights** - Each box sized independently to content
 
 ```tsx
-<Grid columns={3} heightMode="auto">
+<Grid columns={3} rowHeight="auto">
   <CodeBox code={shortEvent} />
   <CodeBox code={longMapping} />
   <CodeBox code={mediumOutput} />
@@ -259,7 +262,7 @@ responsive layouts.
 differ
 
 ```tsx
-<Grid columns={3} heightMode="synced">
+<Grid columns={3} rowHeight="synced">
   <CodeBox code={event} />
   <CodeBox code={mapping} />
   <CodeBox code={output} />
@@ -288,8 +291,8 @@ The Grid height synchronization required sophisticated coordination because:
   measurement
 - [GridHeightContext.tsx](./src/contexts/GridHeightContext.tsx) -
   Cross-component coordination
-- [box.tsx](./src/components/molecules/box.tsx) - Total height calculation
-- [grid.tsx](./src/components/organisms/grid.tsx) - Row height orchestration
+- [box.tsx](./src/components/atoms/box.tsx) - Total height calculation
+- [grid.tsx](./src/components/atoms/grid.tsx) - Row height orchestration
 
 **Common Pitfalls:**
 
@@ -303,7 +306,7 @@ The Grid height synchronization required sophisticated coordination because:
 
 ```tsx
 // Grid context - Don't use autoHeight (maintains equal row heights)
-<Grid columns={3} heightMode="synced">
+<Grid columns={2} rowHeight="synced">
   <CodeBox code={event} label="Event" />
   <CodeBox code={mapping} label="Mapping" />
 </Grid>

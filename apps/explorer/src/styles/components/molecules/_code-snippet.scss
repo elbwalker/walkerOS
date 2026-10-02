@@ -1,10 +1,27 @@
 @use '../../theme/tokens' as *;
 
 // CodeSnippet renders the static Shiki path (CodeView without a header) with
-// prominent styling for read-only code snippets: a slightly larger font and a
-// minimal min-height.
+// prominent styling for read-only code snippets: a slightly larger font, and a
+// box that sizes to its code up to a cap, scrolling inside past it.
 .elb-code-snippet {
-  min-height: var(--height-snippet-min);
+  // Static code has an intrinsic height, unlike Monaco, so the snippet drops
+  // the Box default fixed height. The compound selector (0,2,0) outranks
+  // `.elb-explorer-box` in _box.scss, which loads later; a Grid parent still
+  // wins with its own (0,2,0) rule there.
+  &.elb-explorer-box {
+    height: auto;
+    min-height: var(--height-snippet-min);
+    max-height: var(--height-snippet-max);
+  }
+
+  // Content-based flex basis down the static chain, so the sizing does not
+  // depend on how an auto-height container resolves the default `flex: 1`.
+  > .elb-explorer-content,
+  .elb-code-static,
+  .elb-code-static pre {
+    flex: 0 1 auto;
+    min-height: 0;
+  }
 
   // Snippets read a touch larger than the default code view. The nested
   // selector (0,2,0) outranks `.elb-code-static` (0,1,0) in _code-static.scss,

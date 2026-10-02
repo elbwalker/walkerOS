@@ -26,7 +26,11 @@ on:
         default: guarded
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # A merged PR's `closed` run has the base branch as its ref; keying PR runs
+  # by their number keeps it out of the production deploy's group, so it
+  # cannot cancel that deploy. Push and dispatch deploys still share a group.
+  group:
+    ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:

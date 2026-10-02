@@ -12,10 +12,10 @@ import {
   FlowMap,
   LiveCode,
   PropertyTable,
+  StepExample,
 } from '@walkeros/explorer';
 // Import website-specific components
 import PackageLink from '@site/src/components/docs/package-link';
-import StepExample from '@site/src/components/snippets/StepExample';
 import {
   WalkerjsSnippet,
   WalkerjsUrl,

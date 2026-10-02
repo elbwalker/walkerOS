@@ -12,6 +12,10 @@ import {
 
 export interface GridProps {
   children: React.ReactNode;
+  /**
+   * Boxes per row; further boxes wrap to a new row. Pass the number of boxes
+   * you render, since unused columns stay empty. Omit for one row of all boxes.
+   */
   columns?: number;
   minBoxWidth?: number | string;
   gap?: number | string;
@@ -25,8 +29,9 @@ export interface GridProps {
  * Grid - Horizontal scrolling layout component for arranging boxes
  *
  * Provides consistent grid layout for box components with horizontal
- * scrolling when content exceeds available space. Boxes maintain minimum
- * width and never wrap to new rows.
+ * scrolling when content exceeds available space. Boxes keep a minimum width.
+ * By default all boxes share one row; `columns` sets the boxes per row and
+ * wraps the rest. Narrow containers stack the boxes.
  *
  * @example
  * // 5 boxes with default 350px minimum width
@@ -125,7 +130,7 @@ export function Grid({
   );
 
   const classNames = ['elb-explorer-grid'];
-  const gridStyle: React.CSSProperties = {};
+  const gridStyle: React.CSSProperties & Record<`--${string}`, string> = {};
 
   // Row height modifiers
   if (rowHeight === 'auto') {
@@ -136,10 +141,15 @@ export function Grid({
     classNames.push('elb-explorer-grid--row-synced');
   } else if (typeof rowHeight === 'number') {
     // Apply custom row height via CSS variable
-    (gridStyle as Record<string, string>)['--grid-row-min-height'] =
-      `${rowHeight}px`;
-    (gridStyle as Record<string, string>)['--grid-row-max-height'] =
-      `${rowHeight}px`;
+    gridStyle['--grid-row-min-height'] = `${rowHeight}px`;
+    gridStyle['--grid-row-max-height'] = `${rowHeight}px`;
+  }
+
+  // `columns` boxes per row, the rest wrap. Set from the prop, not by counting
+  // React children: a Fragment or a wrapper component counts as one child.
+  if (columns !== undefined && columns >= 1) {
+    classNames.push('elb-explorer-grid--columns');
+    gridStyle['--grid-columns'] = String(Math.floor(columns));
   }
 
   // Add custom className
@@ -154,13 +164,13 @@ export function Grid({
 
   // Apply custom minimum box width if provided
   if (minBoxWidth !== undefined) {
-    (gridStyle as Record<string, string>)['--grid-min-box-width'] =
+    gridStyle['--grid-min-box-width'] =
       typeof minBoxWidth === 'number' ? `${minBoxWidth}px` : minBoxWidth;
   }
 
   if (maxRowHeight !== undefined) {
     // Warn about dangerous configuration that can cause infinite growth
-    (gridStyle as Record<string, string>)['--grid-row-max-height'] =
+    gridStyle['--grid-row-max-height'] =
       maxRowHeight === 'none'
         ? 'none'
         : typeof maxRowHeight === 'number'

@@ -152,6 +152,10 @@ export function CodeView({
     content: <CodeStatic code={tab.code} language={tab.language ?? language} />,
   }));
 
+  // Box shows actions only in a header or tab bar, so without either they
+  // float over the code's top-right corner instead.
+  const floatingActions = !showHeader && !tabs ? actions : undefined;
+
   return (
     <Box
       header={boxHeader}
@@ -168,6 +172,9 @@ export function CodeView({
       className={className}
     >
       {!tabs && <CodeStatic code={code ?? ''} language={currentLanguage} />}
+      {floatingActions && (
+        <div className="elb-code-view-actions">{floatingActions}</div>
+      )}
     </Box>
   );
 }
