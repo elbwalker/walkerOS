@@ -1,5 +1,46 @@
 # @walkeros/web-source-datalayer
 
+## 4.7.0
+
+### Minor Changes
+
+- 74821ed: Decoded GA4 events and dataLayer events now carry `source.url` and
+  `source.referrer`, so conversion APIs such as Meta and Piwik PRO send them;
+  Piwik PRO now also sends GA4 events it skipped. Fingerprint hashes of these
+  events change once. GA4 `timestamp` is the receive time, and
+  `globals.language`/`globals.screen` moved to
+  `user.language`/`user.screenSize`.
+
+### Patch Changes
+
+- ef02916: Removed the `MappingSchema` export and the `settings.command` rule
+  option; the `Mapping` type is now an empty interface. The runtime never read
+  `command`, so a consent rule only renames the push to `walker consent` and the
+  consent fields stay in `data`, as the updated example shows.
+- Updated dependencies [786a860]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [7e5e3de]
+- Updated dependencies [b9668bf]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/collector@4.7.0
+  - @walkeros/core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

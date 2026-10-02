@@ -1,5 +1,73 @@
 # @walkeros/collector
 
+## 4.7.0
+
+### Minor Changes
+
+- 74821ed: Inside an array, a transformer's own `next` runs right after it, then
+  the array continues. `many` works in every chain field, each match becoming a
+  copy with a derived `event.id`. Unknown transformer ids warn and the chain
+  continues, and a throwing transformer counts in `status.failed`. `walkChain`
+  and `extractTransformerNextMap` are no longer exported.
+- b9668bf: A destination's `on()` handler now receives the current state before
+  any event is sent to it, including with `require`, `walker destination` at
+  runtime, and state passed to `walker run`. Handlers are awaited up to
+  `config.timeout`; a destination whose handler does not respond receives no
+  events until it does. The exported `callDestinationOn` now returns a promise.
+- 74821ed: New `collector.next`: a transformer chain run once per event before
+  the destinations; a `stop` there drops it for all of them. Routes in every
+  chain field can drop an event with `{ stop: true }`, optionally gated by
+  `match`. A route `match` reads `{ ingest, event }` when the event reaches it.
+  New `getRouteGraph`; `getNextSteps(spec, root)` requires its root.
+- 74821ed: `state` paths resolve against `{ event, ingest }` and need an
+  `event.` or `ingest.` prefix; a `get` can write into `ingest`, and an
+  unresolvable key warns. Every step field now survives bundling: transformers
+  with only `state` or `mapping`, and code steps with `cache` or `state`, were
+  silently dropped before. `buildCacheContext` is renamed `createMappingRoot`.
+
+### Patch Changes
+
+- 786a860: AWS destinations now deliver in bundled flows without extra setup.
+  Firehose batches by default, ends records with a newline (`newline: false`
+  turns it off), sends mapped `data` and accepts `config.credentials`. Rejected
+  records now count as failed. SNS works with `topicArn` alone and no longer
+  creates topics at start. `walkeros setup` resolves `$secret` values; partial
+  batch failures log their causes.
+- 7e5e3de: A destination added at runtime now keeps the defaults its code ships,
+  such as a default `batch`, just like a destination configured at startup.
+  Values you pass in the destination config still win over those defaults, and a
+  `require` set in the code's defaults now gates the destination as well.
+- 74821ed: Simulate records every vendor call through one recorder, `observeEnv`
+  from `@walkeros/core`, and runs offline: BigQuery, Data Manager and the
+  Sheets, GCS and S3 stores reach the network through `env`. Client and `Env`
+  types of BigQuery, Firehose, PostHog, SQS and Pub/Sub are structural.
+  `@walkeros/cli` exports `resolveExportName` and `selectDevExamples` and drops
+  `findExample` and `compareOutput`.
+- e860006: `state` gains `mapping` to shape what a lookup returns or a write
+  stores, merged into the target. An undeclared `state.store`, or a `file: true`
+  store, is now a validation error in `walkeros validate` and deploy preflight;
+  at runtime the entry logs an error or is skipped with a warning. The s3 and
+  gcs stores report their `file` mode.
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

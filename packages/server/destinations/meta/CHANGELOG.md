@@ -1,5 +1,44 @@
 # @walkeros/server-destination-meta
 
+## 4.7.0
+
+### Minor Changes
+
+- 74821ed: New `ip` and `userAgent` settings on the Meta, Pinterest, Snapchat,
+  TikTok, Reddit, X (Twitter), Bing, Criteo and Google Data Manager server
+  destinations. Requests now send the client IP and user agent in each vendor's
+  field by default, read from `ingest.ip`/`ingest.userAgent` or
+  `user.ip`/`user.userAgent`. A mapped value still wins; set either setting to
+  `false` to opt out.
+
+### Patch Changes
+
+- ef02916: Customer information is normalized per Meta's rules before hashing,
+  so differently cased or padded emails hash the same. The earlier `user_data`
+  hint sent `email` and `phone` unhashed: rename them to `em` and `ph`. Unknown
+  `settings.user_data` keys fail validation, unknown mapped keys are dropped
+  with a warning, and a `url` without trailing slash works.
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/core@4.7.0
+  - @walkeros/server-core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

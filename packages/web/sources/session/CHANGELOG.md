@@ -1,5 +1,52 @@
 # @walkeros/web-source-session
 
+## 4.7.0
+
+### Minor Changes
+
+- 64b06de: `session start` now carries `source.type: "session"` with the page
+  `url` and `referrer`, like browser and dataLayer events, so destinations see
+  the landing URL with its campaign parameters. Before, it arrived as a
+  collector event without page context.
+- 74821ed: `user.session` is set only in storage mode, like `user.device`; the
+  window session id stays in the `session start` event's `data.id`. A
+  consent-gated session start now runs through the source's `next` and `before`
+  chains and mapping, and a custom `cb` gets `{ push, command }`. A missing
+  Navigation Timing entry no longer throws.
+
+### Patch Changes
+
+- 8c6aef4: Single-page apps that call `walker run` on route changes no longer
+  start a new session on every route change. Session detection now runs once per
+  page load; storage mode still counts each run. Repeated consent updates no
+  longer restart the session either. Also stops a configured `domains` list from
+  growing on every run.
+- 74821ed: Simulate starts only the simulated step, and a simulated transformer
+  continues through its `next`. Source simulations list the commands a source
+  issues as `elb` calls; `--page-url` sets the web page. Express flows need no
+  port. Packages with several exports use per-export examples and mocks, and a
+  destination without a mock env is refused instead of calling the vendor.
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/core@4.7.0
+  - @walkeros/web-core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

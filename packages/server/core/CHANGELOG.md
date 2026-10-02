@@ -1,5 +1,37 @@
 # @walkeros/server-core
 
+## 4.7.0
+
+### Minor Changes
+
+- 74821ed: `anonymizeIP` now handles IPv6 (first 48 bits) and IPv4-mapped
+  addresses; `getHashServer` takes an optional HMAC `key`. The fingerprint
+  transformer works with just `{ salt }`: it hashes the anonymized IP, reduced
+  user agent and site, rotated daily. Hashes change once on upgrade;
+  `rotate: "none"` keeps them stable. A missing salt warns.
+
+### Patch Changes
+
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

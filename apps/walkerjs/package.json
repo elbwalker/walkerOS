@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/walker.js",
-  "version": "4.6.1",
+  "version": "4.7.0",
   "description": "Zero-config walkerOS browser file: data-elb attributes to dataLayer pushes for GTM.",
   "license": "MIT",
   "browser": "./dist/walker.js",
@@ -25,10 +25,10 @@
     "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage"
   },
   "devDependencies": {
-    "@walkeros/collector": "4.6.1",
-    "@walkeros/core": "4.6.1",
-    "@walkeros/web-source-browser": "4.6.1",
-    "@walkeros/web-source-session": "4.6.1",
+    "@walkeros/collector": "4.7.0",
+    "@walkeros/core": "4.7.0",
+    "@walkeros/web-source-browser": "4.7.0",
+    "@walkeros/web-source-session": "4.7.0",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "jest": "^30.2.0",
