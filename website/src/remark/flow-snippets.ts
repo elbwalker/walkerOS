@@ -49,10 +49,6 @@ interface File {
 
 type Component = 'FlowSlice' | 'FlowExample';
 
-/** Past this many lines a slice gets a fixed, scrolling height. */
-const TALL = 30;
-const TALL_HEIGHT = '480px';
-
 // Nodes this plugin emits. Local shapes rather than `mdast` and
 // `mdast-util-mdx-jsx` types, which are transitive dependencies only.
 
@@ -329,14 +325,12 @@ function sliceNode(
       ],
     };
 
-  const code = renderSlice(value, depth);
+  // No height: CodeView sizes a slice to its code and scrolls past its cap.
   const attributes = [
     attribute('label', entry.pointer),
-    attribute('code', code),
+    attribute('code', renderSlice(value, depth)),
     attribute('language', 'json'),
   ];
-  if (code.split('\n').length > TALL)
-    attributes.push(attribute('height', TALL_HEIGHT));
 
   return {
     type: 'mdxJsxFlowElement',
