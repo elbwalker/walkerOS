@@ -47,8 +47,7 @@ Create `flow.json`:
           "package": "@walkeros/web-source-browser",
           "config": {
             "settings": {
-              "pageview": true,
-              "session": true
+              "pageview": true
             }
           }
         }
@@ -82,7 +81,7 @@ Create `flow.json`:
         "http": {
           "package": "@walkeros/server-source-express",
           "config": {
-            "settings": { "path": "/collect", "port": 8080 }
+            "settings": { "paths": ["/collect"], "port": 8080 }
           }
         }
       },
@@ -195,7 +194,7 @@ Add destinations to your `flow.json`:
   language="json"
 />
 
-Rebuild: `walkeros bundle flow.json`
+Rebuild: `walkeros bundle flow.json -o ./dist/walker.js`
 
 ---
 
@@ -261,8 +260,10 @@ Use variables for environment-specific values:
   },
   "flows": {
     "default": {
+      "config": { "platform": "web" },
       "destinations": {
         "ga4": {
+          "package": "@walkeros/web-destination-gtag",
           "config": {
             "settings": { "ga4": { "measurementId": "$var.GA_ID" } }
           }
@@ -274,7 +275,7 @@ Use variables for environment-specific values:
   language="json"
 />
 
-Environment variables (`$env.NAME:default`) are resolved at build time. Config variables (`$var.name`) reference values from the `variables` section.
+Environment variables (`$env.NAME:default`) are resolved at build time for web bundles, which bake the value into `walker.js`. Server bundles read them from the environment at runtime and fall back to the default. Config variables (`$var.name`) reference values from the `variables` section.
 
 ### Multiple flows
 
@@ -396,7 +397,7 @@ the flow's `config` and rebuild once:
   language="json"
 />
 
-Rebuild: `walkeros bundle flow.json`
+Rebuild: `walkeros bundle flow.json -o ./dist/walker.js`
 
 Both values are public and safe to commit; set both, a partial pair warns at
 build time and wires nothing. The bundle never contains a credential: the

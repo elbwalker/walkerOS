@@ -56,10 +56,10 @@ Then open your dev URL with a session credential appended:
 />
 
 On load, the runtime checks that the credential's binding matches the one in
-your config, persists the credential in the browser, removes the parameter
+your config, persists the credential in `localStorage`, removes the parameter
 from the address bar, and starts posting flow records to the observer. Later
-page loads reuse the stored credential, so one activation covers a whole
-browsing session.
+page loads reuse the stored credential, so one activation lasts until the
+Observe session ends.
 
 Without a credential, the same page does zero observation work: nothing is
 parsed, stored, or sent. When the Observe session ends, the observer rejects
@@ -223,7 +223,7 @@ Every FlowState record carries correlation fields so a single observer can stitc
 Correlation crosses the wire via the W3C `traceparent` header:
 
 - **Emit.** The web `api` destination adds `traceparent: 00-<traceId>-<eventId>-01` to each non-batched send when the event carries both ids. A `traceparent` you configure yourself always wins (matched case-insensitively). Batched sends carry no `traceparent`, since one batch may aggregate distinct upstream traces.
-- **Adopt.** Any server source with a request header bag (for example an Express or fetch handler) reads a valid inbound `traceparent` and threads its trace and parent span into the ingest context, so the receiving flow's records share the caller's `traceId` and link back via `parentEventId`. An absent or malformed header is ignored. The AWS and GCP handlers do not yet adopt inbound request identity.
+- **Adopt.** Any server source with a request header bag (for example an Express or fetch handler) reads a valid inbound `traceparent` and threads its trace and parent span into the ingest context, so the receiving flow's records share the caller's `traceId` and link back via `parentEventId`. An absent or malformed header is ignored.
 
 ### Journey status
 

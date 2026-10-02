@@ -57,8 +57,10 @@ walks the value.
   },
   "flows": {
     "web": {
+      "config": { "platform": "web" },
       "destinations": {
         "gtag": {
+          "package": "@walkeros/web-destination-gtag",
           "config": {
             "settings": {
               "ga4": { "measurementId": "$var.measurementId" }
@@ -73,10 +75,11 @@ walks the value.
           }
         },
         "api": {
+          "package": "@walkeros/web-destination-api",
           "config": {
             "settings": {
-              "endpoint": "$var.api.url",
-              "version": "$var.api.version"
+              "url": "$var.api.url",
+              "headers": { "X-Api-Version": "$var.api.version" }
             }
           }
         }
@@ -177,11 +180,15 @@ See [Contract](/docs/getting-started/flow/contract) for the full structure.
   },
   "flows": {
     "web": {
-      "destinations": {
-        "ga4": {
-          "validate": {
-            "events": "$contract.default.events",
-            "schema": "$contract.default.schema"
+      "config": { "platform": "web" },
+      "transformers": {
+        "validate": {
+          "package": "@walkeros/transformer-validate",
+          "config": {
+            "settings": {
+              "contract": ["$contract.default"],
+              "mode": "strict"
+            }
           }
         }
       }
@@ -189,6 +196,10 @@ See [Contract](/docs/getting-started/flow/contract) for the full structure.
   }
 }
 ```
+
+A deep path such as `$contract.default.schema` injects only that part of the
+resolved entry, here the full-event JSON Schema, which the validate transformer
+also accepts as a `contract` entry.
 
 ## `$store.` — store wiring
 
@@ -199,13 +210,18 @@ Inject a store instance declared under `stores`. Wired through a component's
 {
   "flows": {
     "server": {
+      "config": { "platform": "server" },
       "stores": {
-        "cache": { "package": "@walkeros/server-store-fs" }
+        "assets": {
+          "package": "@walkeros/server-store-fs",
+          "config": { "settings": { "basePath": "./public" }, "file": true }
+        }
       },
-      "sources": {
-        "http": {
-          "package": "@walkeros/server-source-http",
-          "env": { "store": "$store.cache" }
+      "transformers": {
+        "file": {
+          "package": "@walkeros/server-transformer-file",
+          "config": { "settings": { "prefix": "/static" } },
+          "env": { "store": "$store.assets" }
         }
       }
     }
@@ -226,12 +242,15 @@ and never written into customer databases alongside the flow.
 ```json
 {
   "flows": {
-    "web": {
+    "server": {
+      "config": { "platform": "server" },
       "destinations": {
         "api": {
+          "package": "@walkeros/server-destination-api",
           "config": {
             "settings": {
-              "headers": { "Authorization": "Bearer $secret.API_TOKEN" }
+              "url": "https://api.example.com/events",
+              "headers": { "Authorization": "$secret.API_AUTHORIZATION" }
             }
           }
         }
@@ -243,6 +262,11 @@ and never written into customer databases alongside the flow.
 
 Secret names are uppercase: `[A-Z0-9_]+`. The `.` is the separator, secrets
 have no internal structure.
+
+A `$secret.` reference must be the entire string value. Inside a longer string
+it is not resolved and stays literal text. When a header needs a prefix,
+store the complete value in the secret, for example `Bearer abc123` for
+`API_AUTHORIZATION` above.
 
 <FlowSlice feature="ref-secret" />
 
@@ -316,8 +340,9 @@ resolve:
   ship as literal text. Use the reference as the entire value, or compose the
   string with `$var` or `$env`.
 
-`$code:` values and values under `title`, `description` and `$comment` are not
-checked.
+`$code:` values, `$comment` values, the root `contract` block, a step's
+`config.settings.contract`, and the `title` and `description` of the config, a
+flow, a step or a step example are not checked.
 
 ## What else to read
 

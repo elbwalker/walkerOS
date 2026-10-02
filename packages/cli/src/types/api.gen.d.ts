@@ -284,7 +284,73 @@ export interface paths {
     };
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Set own display name
+     * @description Set or clear the display name of the authenticated account, trimmed and at most 80 characters; null clears it. It is what the person’s comments read as on a frame share, where an address is never shown. Requires a signed-in session: a bearer token is refused with 401 `SESSION_REQUIRED`.
+     */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @example Ayla */
+            displayName: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description The stored display name */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['UpdateAccountResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description No live account of a person answers to the session (`NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
     trace?: never;
   };
   '/api/account/export': {
@@ -7613,7 +7679,7 @@ export interface paths {
     };
     /**
      * List the frames of a page, or of the whole project
-     * @description A frame is a named rectangle with marks inside it, the spatial unit of a measurement plan. Naming a `pageKey` returns that page’s frames at any depth, marks and all, newest updated first: the walk starts at the page’s top-level frames and descends containment, so a child is reachable through its parent rather than by carrying a page of its own. Naming no page returns every live frame of the project WITHOUT its marks, which is what makes that read cheap enough to answer "what does this project have": the marks are the bulk of a frame and a listing never renders them. That lean read asks nothing about containment, so a frame whose parent cannot be resolved still appears. `include=marks` asks that project-wide read for the marks anyway, for a surface that spans pages and cannot fetch a page at a time; it is a second, heavier read of the same rows, taken after the lean list has already painted, and omitting it returns exactly the lean rows. It says nothing to the page read, which carries marks either way. Requires member role.
+     * @description A frame is a named rectangle with marks inside it, the spatial unit of a measurement plan. Naming a `pageKey` returns that page’s frames at any depth, marks and all, newest updated first: the walk starts at the page’s top-level frames and descends containment, so a child is reachable through its parent rather than by carrying a page of its own. Naming no page returns every live frame of the project WITHOUT its marks, which is what makes that read cheap enough to answer "what does this project have": the marks are the bulk of a frame and a listing never renders them. That lean read asks nothing about containment, so a frame whose parent cannot be resolved still appears. `include=marks` asks that project-wide read for the marks anyway, for a surface that spans pages and cannot fetch a page at a time; it is a second, heavier read of the same rows, taken after the lean list has already painted, and omitting it returns exactly the lean rows. It says nothing to the page read, which carries marks either way. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
      */
     get: {
       parameters: {
@@ -7704,7 +7770,7 @@ export interface paths {
     };
     /**
      * Read one frame
-     * @description One frame with its marks. A frame of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted frame is gone to every read. Requires member role.
+     * @description One frame with its marks. A frame of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted frame is gone to every read. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
      */
     get: {
       parameters: {
@@ -7870,11 +7936,13 @@ export interface paths {
     post?: never;
     /**
      * Delete one frame
-     * @description Soft-delete the frame and, transitively, every variation of what this delete removes. Children are not variations and survive: each live frame under a removed one is re-parented to its nearest live ancestor in the same transaction, and one left with no live ancestor becomes top-level and inherits the page it hung under, so nothing is left unreachable. Those re-parents are server writes that bump their own versions, so a client still holding a pre-delete version meets a conflict carrying the new parent. A frame this project does not hold answers 404: a delete that removed nothing is not a delete that succeeded. Requires member role.
+     * @description Soft-delete the frame and, transitively, every variation of what this delete removes. Children are not variations and survive: each live frame under a removed one is re-parented to its nearest live ancestor in the same transaction and placed where it was, each placement read through the home placement (the first placement) of every removed frame it climbs out of, so it keeps its spot on the page. One left with no live ancestor becomes top-level and inherits the page it hung under, so nothing is left unreachable. Those moves are server writes that bump their own versions, and the answer carries the moved frames as stored now; a client still holding a pre-delete version meets a conflict carrying the new parent. A frame this project does not hold answers 404: a delete that removed nothing is not a delete that succeeded. `baseVersion` names the version the caller last saw: a frame that has moved past it answers 409 `FRAME_VERSION_CONFLICT` with the version that holds now, and nothing is deleted, so an undo cannot take marks someone else just added. The version is checked under the delete’s own lock. Requires member role.
      */
     delete: {
       parameters: {
-        query?: never;
+        query?: {
+          baseVersion?: number | null;
+        };
         header?: never;
         path: {
           projectId: string;
@@ -7885,14 +7953,16 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description The frame is deleted */
-        204: {
+        /** @description The frame is deleted; the frames the delete moved, as stored now */
+        200: {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            'application/json': components['schemas']['DeleteFrameResponse'];
+          };
         };
-        /** @description The path segment does not address a frame */
+        /** @description The path segment does not address a frame, or `baseVersion` is not a version */
         400: {
           headers: {
             [name: string]: unknown;
@@ -7926,6 +7996,15 @@ export interface paths {
           };
           content: {
             'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The frame has moved past `baseVersion`; nothing was deleted */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FrameDeleteConflictResponse'];
           };
         };
         /** @description Rate limited */
@@ -8066,7 +8145,7 @@ export interface paths {
     };
     /**
      * Read one stored capture
-     * @description The bytes of one frame screenshot, for the app canvas. The extension keeps its own capture locally and never reads assets back. Same-origin and session-authenticated: the response carries `Cross-Origin-Resource-Policy: same-origin`, so no other site can embed a tenant capture off the reader’s session. The bytes are immutable by construction, since the object key is their own content hash, which is why they are cacheable for a year, and `private` keeps a shared cache from serving one tenant’s capture to the next request for the same URL. An asset another project holds answers 404, never 403. Requires member role.
+     * @description The bytes of one frame screenshot, for the app canvas. The extension keeps its own capture locally and never reads assets back. Same-origin and session-authenticated: the response carries `Cross-Origin-Resource-Policy: same-origin`, so no other site can embed a tenant capture off the reader’s session. The bytes are immutable by construction, since the object key is their own content hash, which is why they are cacheable for a year, and `private` keeps a shared cache from serving one tenant’s capture to the next request for the same URL. An asset another project holds answers 404, never 403. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
      */
     get: {
       parameters: {
@@ -8154,7 +8233,7 @@ export interface paths {
     };
     /**
      * List the canvases of the project
-     * @description A canvas is a named, freely arranged board over a project’s frames, the surface on which a plan is laid out across pages rather than within one. This returns every live canvas by name WITHOUT its document: the document is the bulk of a canvas and a listing renders none of it, so opening a board is the single-canvas read. Requires member role.
+     * @description A canvas is a named, freely arranged board over a project’s frames, the surface on which a plan is laid out across pages rather than within one. This returns every live canvas by name WITHOUT its document: the document is the bulk of a canvas and a listing renders none of it, so opening a board is the single-canvas read. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
      */
     get: {
       parameters: {
@@ -8318,7 +8397,7 @@ export interface paths {
     };
     /**
      * Read one canvas
-     * @description One canvas with its whole document: the nodes with their positions, the edges, and the node keys the board suppresses. A canvas of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted canvas is gone to every read. Requires member role.
+     * @description One canvas with its whole document: the nodes with their positions, the edges, and the node keys the board suppresses. A canvas of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted canvas is gone to every read. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
      */
     get: {
       parameters: {
@@ -8479,6 +8558,1774 @@ export interface paths {
         };
       };
     };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/shares': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List the shares of the project
+     * @description Every live share of the project, most recently changed first, with what the canvas badges a shared frame with: the link setting, the number of invited addresses and the open threads on the shared frame and every frame nested in it. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The project’s shares */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListProjectSharesResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/frames/{frameId}/share': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read the share of one frame
+     * @description The frame’s share as members manage it: the invited addresses with their roles, the link setting and, while anyone with the link can open the frame, `linkUrl`: the canonical address with the link key in its fragment. `share` is null while the frame is not shared. `coveredBy` lists the shares of the frame’s ancestors, nearest first, each of which already includes it. The response is never cached. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The frame’s share, or null */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FrameShareResponse'];
+          };
+        };
+        /** @description The path segment does not address a frame */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description This project does not hold the frame (`FRAME_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    /**
+     * Set who the link of a frame reaches
+     * @description Set the general access of a frame’s share: `restricted` (invited people and project members) or `anyone` with the link, and the role the link confers, `viewer` or `commenter`; a link never edits. The first write creates the share at `baseVersion` 0. Turning the link on mints a fresh key and turning it off destroys the key, so a revoked link never comes back to life. A write against a version someone else has moved past answers 409 `SHARE_VERSION_CONFLICT` carrying the share as it stands. A frame with more than 256 frames nested in it, or nested deeper than 32 levels, is 422 `SHARE_TOO_LARGE`. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            baseVersion: number;
+            /**
+             * @example restricted
+             * @enum {string}
+             */
+            linkAccess: 'restricted' | 'anyone';
+            /**
+             * @example viewer
+             * @enum {string}
+             */
+            linkRole: 'viewer' | 'commenter';
+          };
+        };
+      };
+      responses: {
+        /** @description The share after the write */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FrameShareWriteResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description This project does not hold the frame (`FRAME_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description A stale base version, carrying the share as it stands */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FrameShareConflictResponse'];
+          };
+        };
+        /** @description The frame holds more than one share serves (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    /**
+     * Stop sharing a frame
+     * @description Delete the frame’s share with its link and every invited address; the next request through the share is refused. Deleting a share that does not exist also answers 204. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The frame is not shared */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description The path segment does not address a frame */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/frames/{frameId}/share/link/reset': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Replace the link key of a frame’s share
+     * @description Mint a new link key. The current link stops working for everyone holding it on their next request; invited people and project members keep their access. A frame that is not shared is 404 `SHARE_NOT_FOUND`, and a share whose link is off is 409 `SHARE_LINK_OFF`. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The share with its new link */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FrameShareWriteResponse'];
+          };
+        };
+        /** @description The path segment does not address a frame */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The frame is not shared (`SHARE_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The link is off (`SHARE_LINK_OFF`) */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/frames/{frameId}/share/grants': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Invite addresses to a frame’s share
+     * @description Grant up to 20 addresses one role on the frame’s share, creating a restricted share with the first grant it adds; an invite that adds nobody to a frame that is not shared creates nothing and answers `share: null`. Grants are bound to the address: whoever signs in as it holds the role, with no token and no accept step. Every address gets its own outcome in request order: `added`, `GRANT_EXISTS`, `ALREADY_MEMBER` (project membership already confers the role), `GRANT_LIMIT` (50 per share) or `INVALID_EMAIL`. Each added address is emailed once after the grants are stored; the email carries the canonical address and no credential, and `emailFailed` marks an address whose email did not go out, which still holds its access. Limited to 20 invites per hour per member. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            emails: string[];
+            /**
+             * @example commenter
+             * @enum {string}
+             */
+            role: 'viewer' | 'commenter' | 'editor';
+          };
+        };
+      };
+      responses: {
+        /** @description The share and the outcome of every address */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['AddShareGrantsResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description This project does not hold the frame (`FRAME_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The frame holds more than one share serves (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/frames/{frameId}/share/grants/{grantId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Remove one invited address
+     * @description Remove a grant; the person’s access through it ends on their next request. Removing a grant that does not exist also answers 204. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+          /** @description Grant ID (shg_...) */
+          grantId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The grant is gone */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description A path segment does not address a frame or a grant */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    /**
+     * Change the role of one invited address
+     * @description Change the role a grant confers; it takes effect on that person’s next request and sends no email. A grant the frame’s share does not hold is 404 `GRANT_NOT_FOUND`. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
+     */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+          /** @description Grant ID (shg_...) */
+          grantId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @example commenter
+             * @enum {string}
+             */
+            role: 'viewer' | 'commenter' | 'editor';
+          };
+        };
+      };
+      responses: {
+        /** @description The share after the change */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FrameShareWriteResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The share holds no such grant (`GRANT_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    trace?: never;
+  };
+  '/api/projects/{projectId}/knowledge/{threadId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Remove a thread opened through a share
+     * @description Moderation: delete a thread that was opened through a frame share, with its messages. A thread opened anywhere else answers 404 `THREAD_NOT_FOUND`, as an unknown one does. The removal is audited. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          /** @description Thread ID (thr_...) */
+          threadId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The thread is gone */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description The path segment does not address a thread */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description No share thread with this id (`THREAD_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/shares/{shareId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read a shared frame
+     * @description The shared frame as its reader may see it: every frame of the shared subtree, root first and breadth first, the bases its variations need to paint, and the reader’s role and label. People are display labels, never an address or an id, and frames carry no page address, flow or DOM anchor. Never cached, never indexed. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
+          'X-Share-Key'?: string;
+        };
+        path: {
+          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
+          shareId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The shared frame */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ShareArtifact'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/shares/{shareId}/assets/{assetId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read a screenshot of a shared frame
+     * @description One capture of a frame inside the share; a capture of any frame around it answers 404 `ASSET_NOT_FOUND` like an unknown id. An `<img>` cannot send a header, so the share’s cookie carries the link key here. The entity tag is the bytes’ own hash and a matching `If-None-Match` answers 304. `Cache-Control: private, max-age=3600` and `Cross-Origin-Resource-Policy: same-origin`. A share serves at most 3000 screenshots in 10 minutes. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
+          'X-Share-Key'?: string;
+        };
+        path: {
+          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
+          shareId: string;
+          /** @description Asset ID (fas_...) */
+          assetId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The image bytes */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'image/png': string;
+          };
+        };
+        /** @description The reader’s copy is current */
+        304: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no capture of a frame in the share has this id (`ASSET_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/shares/{shareId}/knowledge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List the notes on a shared frame
+     * @description The notes on the frames of the share, most recently active first, with their messages unless `includeMessages=false`. What a reader sees follows the role the share confers: a viewer reads descriptions only; a commenter or editor reads the threads too, anonymous holders of a commenter link included. `frameId` narrows to one frame of the share (a frame outside it is 404 `FRAME_NOT_FOUND`), `markId` to one mark within it. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
+     */
+    get: {
+      parameters: {
+        query?: {
+          frameId?: string;
+          markId?: string;
+          includeMessages?: 'true' | 'false';
+          limit?: number;
+        };
+        header?: {
+          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
+          'X-Share-Key'?: string;
+        };
+        path: {
+          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
+          shareId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The notes the reader may see */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListShareKnowledgeResponse'];
+          };
+        };
+        /** @description Invalid query, or a mark filter with no frame */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); `frameId` names no frame of the share (`FRAME_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Comment on a shared frame
+     * @description Open a thread on a frame of the share (`page`) or on one of its marks (`tag`), optionally pinned to a point given in the frame’s own fractions, with its first message. The thread is bound to no flow and carries no DOM anchor. A replay of a known `clientThreadId` hands back the thread it wrote; one held by a thread the reader cannot see is 409 `CLIENT_THREAD_ID_TAKEN`. Writing needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the commenter or editor role (403 `FORBIDDEN` below it). The body may be at most 32 KiB (413 `PAYLOAD_TOO_LARGE`). Comments are limited to 10 per minute per person and 120 per hour per share. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
+          'X-Share-Key'?: string;
+        };
+        path: {
+          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
+          shareId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @example ct_7f3a91 */
+            clientThreadId: string;
+            /**
+             * @example tag
+             * @enum {string}
+             */
+            anchorType: 'tag' | 'page';
+            /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+            frameId: string;
+            markId?: string;
+            anchorLabel?: string;
+            spatial?: {
+              at: {
+                x: number;
+                y: number;
+              };
+            };
+            text: string;
+            /** @example ct_7f3a91 */
+            clientMessageId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The thread, with its first message */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ShareThread'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The role does not allow commenting (`FORBIDDEN`) */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); the frame is not in the share (`FRAME_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The client thread id is taken (`CLIENT_THREAD_ID_TAKEN`) */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The body is past 32 KiB */
+        413: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/shares/{shareId}/knowledge/{threadId}/messages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reply on a thread of a shared frame
+     * @description Append a message in the reader’s own name and get the whole thread back. A thread outside the share answers 404 `KNOWLEDGE_NOT_FOUND` like an unknown one; a repeat of a `clientMessageId` already on the thread appends nothing. Writing needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the commenter or editor role (403 `FORBIDDEN` below it). The body may be at most 32 KiB (413 `PAYLOAD_TOO_LARGE`). Comments are limited to 10 per minute per person and 120 per hour per share. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
+          'X-Share-Key'?: string;
+        };
+        path: {
+          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
+          shareId: string;
+          /** @description Thread ID (thr_...) */
+          threadId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            text: string;
+            /** @example ct_7f3a91 */
+            clientMessageId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The thread, with the new message */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ShareThread'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The role does not allow commenting (`FORBIDDEN`) */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no thread of the share has this id (`KNOWLEDGE_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The body is past 32 KiB */
+        413: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/shares/{shareId}/knowledge/{threadId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Resolve or reopen a thread of a shared frame
+     * @description Set a thread’s status. An editor may change any thread of the share, anyone else only a thread they opened (403 `FORBIDDEN` otherwise); either way it takes a signed-in session (401 `SIGN_IN_REQUIRED`). A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
+     */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
+          'X-Share-Key'?: string;
+        };
+        path: {
+          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
+          shareId: string;
+          /** @description Thread ID (thr_...) */
+          threadId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @example open
+             * @enum {string}
+             */
+            status: 'open' | 'resolved';
+          };
+        };
+      };
+      responses: {
+        /** @description The thread after the change */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ShareThread'];
+          };
+        };
+        /** @description Invalid body */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Neither an editor nor the thread’s author (`FORBIDDEN`) */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no thread of the share has this id (`KNOWLEDGE_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    trace?: never;
+  };
+  '/api/shares/{shareId}/frames/{frameId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Write a frame of a shared frame
+     * @description Replace one frame of the share, or create a frame inside it at `baseVersion` 0. The frame takes exactly the fields the share serves for editing: name, parent, placements, size, marks and base. A source, flow or origin is refused, and every field the share withholds stays as stored, so a write never drops what its editor could not see. Every shared tag field must have its type, and a variance nests its alternative shapes at most 16 levels deep (400 `INVALID_FRAME`). A tag id or a placement id names one entry: a repeat is 400 `VALIDATION_ERROR`. The shared frame keeps its parent, placement, size and base; a frame below it stays inside the share and extends nothing or a frame the share serves. A replay of the write that produced the stored version answers that version. A write against a version someone else has moved past answers 409 `FRAME_VERSION_CONFLICT` with that version and no marks: read the share again to load theirs, or write again at that version to keep yours. A name another live frame already holds is 409 `FRAME_NAME_EXISTS`, carrying nothing else. Writing needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the editor role (403 `FORBIDDEN` below it), both settled before the body is read. The body may be at most 1 MiB (413 `PAYLOAD_TOO_LARGE`). Frame writes are limited to 60 per minute per person. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
+          'X-Share-Key'?: string;
+        };
+        path: {
+          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
+          shareId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            frame: {
+              name: string;
+              /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+              parentId: string | null;
+              placements?: {
+                id: string;
+                rect: components['schemas']['PlanRect'];
+              }[];
+              size?: components['schemas']['PlanSize'];
+              marks: {
+                tags: {
+                  id: string;
+                  /** @enum {string} */
+                  kind?:
+                    | 'entity'
+                    | 'property'
+                    | 'action'
+                    | 'context'
+                    | 'globals'
+                    | 'user'
+                    | 'consent'
+                    | 'link'
+                    | 'note';
+                  name?: string;
+                  value?: string | null;
+                  parentId?: string;
+                  entity?: string;
+                  /** @enum {string} */
+                  scope?: '-' | '_';
+                  rect?: components['schemas']['PlanRect'];
+                  at?: {
+                    x: number;
+                    y: number;
+                  };
+                  description?: string;
+                  observe?: boolean;
+                  variance?: components['schemas']['ShareVariance'];
+                  /** @enum {string} */
+                  origin?: 'drawn' | 'generated' | 'observed';
+                  cleared?: (
+                    | 'value'
+                    | 'parentId'
+                    | 'entity'
+                    | 'scope'
+                    | 'rect'
+                    | 'at'
+                    | 'description'
+                    | 'observe'
+                    | 'variance'
+                    | 'origin'
+                    | 'anchor'
+                  )[];
+                }[];
+                note?: {
+                  description: string;
+                };
+              };
+              /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+              extends: string | null;
+            };
+            baseVersion: number;
+            clientWriteId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The stored version */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PutSharedFrameResponse'];
+          };
+        };
+        /** @description Invalid body, a repeated tag or placement id among them (`VALIDATION_ERROR`); a mark field without its type or nested too deep; or a frame the share cannot hold: a moved shared frame, a parent or base outside the share, a frame inside it without placements and size, or an id another frame holds (`INVALID_FRAME`) */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The role does not allow editing (`FORBIDDEN`) */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no frame of the share has this id, which includes a base the share only paints with and a new frame written at a version other than 0 (`FRAME_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description A stale base version, carrying the version that holds now, or a name another live frame already holds */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json':
+              | components['schemas']['SharedFrameConflictResponse']
+              | components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The body is past 1 MiB */
+        413: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The share holds more frames than one share serves, or the write would take it there (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    post?: never;
+    /**
+     * Delete a frame of a shared frame
+     * @description Delete one frame of the share, with every variation the delete takes along. The frames it held stay: each moves to the nearest frame the delete keeps and is placed where it was, its placements read through the home placement (the first placement) of every removed frame it climbs out of. The answer carries those frames, each with its parent, its placements and the version the move gave it, and no marks. The shared frame itself is never deleted here, and neither is a frame whose delete would take it along (403 `FORBIDDEN`). A frame that a frame outside the share varies answers 409 `FRAME_HAS_EXTERNAL_VARIATIONS`, since the delete would take that frame along too. `baseVersion` names the version the editor last saw: a frame that has moved past it answers 409 `FRAME_VERSION_CONFLICT` with the version that holds now, and nothing is deleted; read the share again to see it. Deleting needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the editor role (403 `FORBIDDEN` below it), both settled before a malformed `baseVersion` is answered. Frame writes and deletes share a limit of 60 per minute per person. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
+     */
+    delete: {
+      parameters: {
+        query?: {
+          baseVersion?: number | null;
+        };
+        header?: {
+          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
+          'X-Share-Key'?: string;
+        };
+        path: {
+          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
+          shareId: string;
+          /** @description Frame ID (frm_...) */
+          frameId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The frame is deleted; the frames the delete moved, as stored now */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeleteSharedFrameResponse'];
+          };
+        };
+        /** @description `baseVersion` is not a version (`VALIDATION_ERROR`) */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The role does not allow editing, or the frame is the shared frame or its delete would take the shared frame along (`FORBIDDEN`) */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no frame of the share has this id, which includes a base the share only paints with (`FRAME_NOT_FOUND`) */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description A stale base version, carrying the version that holds now, or a frame outside the share varies this frame (`FRAME_HAS_EXTERNAL_VARIATIONS`) */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json':
+              | components['schemas']['SharedFrameConflictResponse']
+              | components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/shares/shared-with-me': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List the frames shared with me
+     * @description The frame shares the signed-in person’s address holds a grant on, newest first: the share, the frame’s name, the role, who invited them and when. Names no project. Requires a signed-in session: a bearer token is refused with 401 `SESSION_REQUIRED`.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description The shares the person was invited to */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['SharedWithMeResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Rate limited */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -12084,6 +13931,17 @@ export interface components {
       };
       head: components['schemas']['Frame'];
     };
+    DeleteFrameResponse: {
+      relocated: components['schemas']['Frame'][];
+    };
+    FrameDeleteConflictResponse: {
+      error: {
+        /** @enum {string} */
+        code: 'FRAME_VERSION_CONFLICT';
+        message: string;
+      };
+      version: number;
+    };
     CanvasDocument: {
       /** @enum {number} */
       v: 1;
@@ -12166,6 +14024,461 @@ export interface components {
         message: string;
       };
       head: components['schemas']['Canvas'];
+    };
+    FrameShare: {
+      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
+      id: string;
+      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+      frameId: string;
+      frameName: string;
+      /** @example https://app.walkeros.io/s/shr_v1stgxr8z5jdhi6bmyt7k */
+      url: string;
+      /**
+       * @example restricted
+       * @enum {string}
+       */
+      linkAccess: 'restricted' | 'anyone';
+      /**
+       * @example viewer
+       * @enum {string}
+       */
+      linkRole: 'viewer' | 'commenter';
+      linkUrl: string | null;
+      version: number;
+      grants: components['schemas']['FrameShareGrant'][];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
+    FrameShareGrant: {
+      id: string;
+      email: string;
+      /**
+       * @example commenter
+       * @enum {string}
+       */
+      role: 'viewer' | 'commenter' | 'editor';
+      invitedBy: string | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
+    FrameShareResponse: {
+      share: components['schemas']['FrameShare'] | null;
+      coveredBy: components['schemas']['CoveringShare'][];
+    };
+    CoveringShare: {
+      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
+      shareId: string;
+      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+      frameId: string;
+      frameName: string;
+    };
+    FrameShareWriteResponse: {
+      share: components['schemas']['FrameShare'];
+    };
+    FrameShareConflictResponse: {
+      error: {
+        /** @enum {string} */
+        code: 'SHARE_VERSION_CONFLICT';
+        message: string;
+      };
+      share: components['schemas']['FrameShare'] | null;
+    };
+    AddShareGrantsResponse: {
+      share: components['schemas']['FrameShare'] | null;
+      results: components['schemas']['ShareGrantResult'][];
+    };
+    ShareGrantResult: {
+      email: string;
+      /** @enum {string} */
+      outcome:
+        | 'added'
+        | 'GRANT_EXISTS'
+        | 'ALREADY_MEMBER'
+        | 'GRANT_LIMIT'
+        | 'INVALID_EMAIL';
+      emailFailed?: boolean;
+    };
+    ListProjectSharesResponse: {
+      shares: components['schemas']['ShareSummary'][];
+    };
+    ShareSummary: {
+      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
+      id: string;
+      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
+      frameId: string;
+      url: string;
+      /**
+       * @example restricted
+       * @enum {string}
+       */
+      linkAccess: 'restricted' | 'anyone';
+      /**
+       * @example viewer
+       * @enum {string}
+       */
+      linkRole: 'viewer' | 'commenter';
+      grantCount: number;
+      openThreadCount: number;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
+    UpdateAccountResponse: {
+      displayName: string | null;
+    };
+    ShareArtifact: {
+      share: components['schemas']['ShareInfo'];
+      frames: components['schemas']['ShareFrame'][];
+      bases: components['schemas']['ShareBase'][];
+    };
+    ShareInfo: {
+      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
+      id: string;
+      rootFrameId: string;
+      /**
+       * @example commenter
+       * @enum {string}
+       */
+      role: 'viewer' | 'commenter' | 'editor';
+      signedIn: boolean;
+      viewerLabel: string | null;
+      sharedBy: string | null;
+      project: {
+        id: string;
+        name: string;
+      } | null;
+      /**
+       * @example viewer
+       * @enum {string|null}
+       */
+      linkRole: 'viewer' | 'commenter' | null;
+      canManage: boolean;
+      viewerNamed: boolean;
+      /** @default true */
+      keyAccepted: boolean | null;
+    };
+    ShareFrame: {
+      id: string;
+      name: string;
+      parentId: string | null;
+      placements: {
+        id: string;
+        rect: {
+          x: number;
+          y: number;
+          w: number;
+          h: number;
+        };
+      }[];
+      size: {
+        width: number;
+        height: number;
+      };
+      marks: components['schemas']['ShareMarks'];
+      extends: string | null;
+      source:
+        | {
+            /** @enum {string} */
+            kind: 'page';
+            key: string;
+          }
+        | {
+            /** @enum {string} */
+            kind: 'figma';
+          }
+        | {
+            /** @enum {string} */
+            kind: 'image';
+          }
+        | null;
+      screenshot: components['schemas']['ShareFrameScreenshot'] | null;
+      version: number;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
+    ShareMarks: {
+      tags: components['schemas']['ShareTag'][];
+      note?: {
+        description: string;
+      };
+    };
+    ShareTag: {
+      id: string;
+      /** @enum {string} */
+      kind?:
+        | 'entity'
+        | 'property'
+        | 'action'
+        | 'context'
+        | 'globals'
+        | 'user'
+        | 'consent'
+        | 'link'
+        | 'note';
+      name?: string;
+      value?: string | null;
+      parentId?: string;
+      entity?: string;
+      /** @enum {string} */
+      scope?: '-' | '_';
+      rect?: components['schemas']['PlanRect'];
+      at?: {
+        x: number;
+        y: number;
+      };
+      description?: string;
+      observe?: boolean;
+      variance?: components['schemas']['ShareVariance'];
+      /** @enum {string} */
+      origin?: 'drawn' | 'generated' | 'observed';
+      anchor?: components['schemas']['ShareTagAnchor'];
+      cleared?: (
+        | 'value'
+        | 'parentId'
+        | 'entity'
+        | 'scope'
+        | 'rect'
+        | 'at'
+        | 'description'
+        | 'observe'
+        | 'variance'
+        | 'origin'
+        | 'anchor'
+      )[];
+    };
+    ShareVariance: {
+      count?: {
+        min: number;
+        max?: number;
+      };
+      when?: {
+        minWidth?: number;
+        maxWidth?: number;
+        path?: string;
+        flag?: string;
+      };
+      oneOf?: components['schemas']['ShareSemNode'][];
+    };
+    ShareSemNode: {
+      entity: string;
+      contexts: {
+        [key: string]: string | null;
+      };
+      data: {
+        [key: string]: string | null;
+      };
+      actions: string[];
+      children: components['schemas']['ShareSemNode'][];
+      variance?: components['schemas']['ShareVariance'];
+      own?: {
+        entity: string;
+        key: string;
+        value: string | null;
+        /** @enum {string} */
+        scope?: '-' | '_';
+        spelled?: string;
+      }[];
+      observe?: boolean;
+      link?: {
+        name: string;
+        value: string;
+      }[];
+      /** @enum {boolean} */
+      implicit?: true;
+      reachAll?: string[];
+    };
+    ShareTagAnchor: {
+      css: string;
+      text?: string;
+      fingerprint?: {
+        tag: string;
+      };
+    };
+    ShareFrameScreenshot: {
+      assetId: string;
+      capturedAt: string;
+      size: {
+        width: number;
+        height: number;
+      };
+      dpr: number;
+      capturedRect: {
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+      };
+    };
+    ShareBase: {
+      id: string;
+      name: string;
+      extends: string | null;
+      marks: components['schemas']['ShareMarks'];
+    };
+    ListShareKnowledgeResponse: {
+      entries: components['schemas']['ShareKnowledgeEntry'][];
+      hasMoreEntries: boolean;
+    };
+    ShareKnowledgeEntry:
+      | components['schemas']['ShareThread']
+      | components['schemas']['ShareDescription'];
+    ShareThread: {
+      id: string;
+      /**
+       * @example tag
+       * @enum {string}
+       */
+      anchorType: 'tag' | 'page';
+      anchorKey: string;
+      anchorLabel: string;
+      frameId: string | null;
+      markId: string | null;
+      spatial: {
+        at: {
+          x: number;
+          y: number;
+        };
+      } | null;
+      author: components['schemas']['ShareAuthor'];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'thread';
+      /**
+       * @example open
+       * @enum {string}
+       */
+      status: 'open' | 'resolved';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      messageCount: number;
+      removable: boolean;
+      messages?: components['schemas']['ShareMessage'][];
+      hasMoreMessages?: boolean;
+    };
+    ShareAuthor: {
+      label: string;
+      /** @enum {string} */
+      badge: 'member' | 'guest';
+      isYou: boolean;
+    };
+    ShareMessage: {
+      id: string;
+      text: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      author: components['schemas']['ShareAuthor'];
+      clientMessageId: string | null;
+    };
+    ShareDescription: {
+      id: string;
+      /**
+       * @example tag
+       * @enum {string}
+       */
+      anchorType: 'tag' | 'page';
+      anchorKey: string;
+      anchorLabel: string;
+      frameId: string | null;
+      markId: string | null;
+      spatial: {
+        at: {
+          x: number;
+          y: number;
+        };
+      } | null;
+      author: components['schemas']['ShareAuthor'];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'description';
+      body: string;
+    };
+    PutSharedFrameResponse: {
+      version: number;
+    };
+    SharedFrameConflictResponse: {
+      error: {
+        /** @enum {string} */
+        code: 'FRAME_VERSION_CONFLICT';
+        message: string;
+      };
+      version: number;
+    };
+    DeleteSharedFrameResponse: {
+      relocated: components['schemas']['ShareRelocatedFrame'][];
+    };
+    ShareRelocatedFrame: {
+      id: string;
+      parentId: string | null;
+      placements: {
+        id: string;
+        rect: {
+          x: number;
+          y: number;
+          w: number;
+          h: number;
+        };
+      }[];
+      version: number;
+    };
+    SharedWithMeResponse: {
+      shares: components['schemas']['SharedWithMeEntry'][];
+    };
+    SharedWithMeEntry: {
+      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
+      shareId: string;
+      frameName: string;
+      /**
+       * @example commenter
+       * @enum {string}
+       */
+      role: 'viewer' | 'commenter' | 'editor';
+      sharedBy: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      sharedAt: string;
     };
     SummarizeReleaseResponse: {
       /** @enum {string} */

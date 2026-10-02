@@ -140,10 +140,10 @@ A walker push can carry these top-level keys: `event`, `_clear`, `name`,
 `nested`, `trigger`, `id`, `timestamp`, `timing` and `source`. With `_clear`,
 each key a push carries replaces whatever your site pushed under the same name.
 
-`user`, `globals` and `consent` are left out of the push while they are empty,
-for example `user` until you set one, so a `user` your site pushed stays intact.
-Every other key is in every push, `data`, `context` and `custom` even when
-empty, so `_clear` wipes the previous event's values from GTM's data model.
+`user` and `consent` are left out of the push while they are empty, for example
+`user` until you set one, so a `user` your site pushed stays intact. Every other
+key is in every push, `data`, `context`, `custom` and `globals` even when empty,
+so `_clear` wipes the previous event's values from GTM's data model.
 
 Names that often appear in hand-written dataLayer specs are `data`, `context`,
 `custom`, `id`, `source`, `user` and `consent`. Keep your own values under other

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "4.7.0",
+    "version": "4.7.1",
     "description": "API for managing walkerOS flows, projects, and real-time event observation.",
     "contact": {
       "name": "elbwalker",
@@ -27,6 +27,10 @@
     {
       "name": "Projects",
       "description": "Project management and membership"
+    },
+    {
+      "name": "Shares",
+      "description": "Frame shares: managing who may open a frame, and reading it through its share"
     },
     {
       "name": "Flows",
@@ -3541,6 +3545,40 @@
         },
         "required": ["error", "head"]
       },
+      "DeleteFrameResponse": {
+        "type": "object",
+        "properties": {
+          "relocated": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Frame"
+            }
+          }
+        },
+        "required": ["relocated"]
+      },
+      "FrameDeleteConflictResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["FRAME_VERSION_CONFLICT"]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"]
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": ["error", "version"]
+      },
       "CanvasDocument": {
         "type": "object",
         "properties": {
@@ -3787,6 +3825,1216 @@
           }
         },
         "required": ["error", "head"]
+      },
+      "FrameShare": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^shr_[a-z0-9]{21}$",
+            "example": "shr_v1stgxr8z5jdhi6bmyt7k"
+          },
+          "frameId": {
+            "type": "string",
+            "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+            "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+          },
+          "frameName": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://app.walkeros.io/s/shr_v1stgxr8z5jdhi6bmyt7k"
+          },
+          "linkAccess": {
+            "type": "string",
+            "enum": ["restricted", "anyone"],
+            "example": "restricted"
+          },
+          "linkRole": {
+            "type": "string",
+            "enum": ["viewer", "commenter"],
+            "example": "viewer"
+          },
+          "linkUrl": {
+            "type": ["string", "null"]
+          },
+          "version": {
+            "type": "integer"
+          },
+          "grants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FrameShareGrant"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "frameId",
+          "frameName",
+          "url",
+          "linkAccess",
+          "linkRole",
+          "linkUrl",
+          "version",
+          "grants",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "FrameShareGrant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^shg_[a-z0-9]{21}$"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["viewer", "commenter", "editor"],
+            "example": "commenter"
+          },
+          "invitedBy": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "invitedBy",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "FrameShareResponse": {
+        "type": "object",
+        "properties": {
+          "share": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameShare"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coveredBy": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoveringShare"
+            }
+          }
+        },
+        "required": ["share", "coveredBy"]
+      },
+      "CoveringShare": {
+        "type": "object",
+        "properties": {
+          "shareId": {
+            "type": "string",
+            "pattern": "^shr_[a-z0-9]{21}$",
+            "example": "shr_v1stgxr8z5jdhi6bmyt7k"
+          },
+          "frameId": {
+            "type": "string",
+            "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+            "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+          },
+          "frameName": {
+            "type": "string"
+          }
+        },
+        "required": ["shareId", "frameId", "frameName"]
+      },
+      "FrameShareWriteResponse": {
+        "type": "object",
+        "properties": {
+          "share": {
+            "$ref": "#/components/schemas/FrameShare"
+          }
+        },
+        "required": ["share"]
+      },
+      "FrameShareConflictResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["SHARE_VERSION_CONFLICT"]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"]
+          },
+          "share": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameShare"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["error", "share"]
+      },
+      "AddShareGrantsResponse": {
+        "type": "object",
+        "properties": {
+          "share": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameShare"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareGrantResult"
+            }
+          }
+        },
+        "required": ["share", "results"]
+      },
+      "ShareGrantResult": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "added",
+              "GRANT_EXISTS",
+              "ALREADY_MEMBER",
+              "GRANT_LIMIT",
+              "INVALID_EMAIL"
+            ]
+          },
+          "emailFailed": {
+            "type": "boolean"
+          }
+        },
+        "required": ["email", "outcome"]
+      },
+      "ListProjectSharesResponse": {
+        "type": "object",
+        "properties": {
+          "shares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareSummary"
+            }
+          }
+        },
+        "required": ["shares"]
+      },
+      "ShareSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^shr_[a-z0-9]{21}$",
+            "example": "shr_v1stgxr8z5jdhi6bmyt7k"
+          },
+          "frameId": {
+            "type": "string",
+            "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+            "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+          },
+          "url": {
+            "type": "string"
+          },
+          "linkAccess": {
+            "type": "string",
+            "enum": ["restricted", "anyone"],
+            "example": "restricted"
+          },
+          "linkRole": {
+            "type": "string",
+            "enum": ["viewer", "commenter"],
+            "example": "viewer"
+          },
+          "grantCount": {
+            "type": "integer"
+          },
+          "openThreadCount": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "frameId",
+          "url",
+          "linkAccess",
+          "linkRole",
+          "grantCount",
+          "openThreadCount",
+          "updatedAt"
+        ]
+      },
+      "UpdateAccountResponse": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["displayName"]
+      },
+      "ShareArtifact": {
+        "type": "object",
+        "properties": {
+          "share": {
+            "$ref": "#/components/schemas/ShareInfo"
+          },
+          "frames": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareFrame"
+            }
+          },
+          "bases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareBase"
+            }
+          }
+        },
+        "required": ["share", "frames", "bases"]
+      },
+      "ShareInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^shr_[a-z0-9]{21}$",
+            "example": "shr_v1stgxr8z5jdhi6bmyt7k"
+          },
+          "rootFrameId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["viewer", "commenter", "editor"],
+            "example": "commenter"
+          },
+          "signedIn": {
+            "type": "boolean"
+          },
+          "viewerLabel": {
+            "type": ["string", "null"]
+          },
+          "sharedBy": {
+            "type": ["string", "null"]
+          },
+          "project": {
+            "type": ["object", "null"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "name"]
+          },
+          "linkRole": {
+            "type": ["string", "null"],
+            "enum": ["viewer", "commenter", null],
+            "example": "viewer"
+          },
+          "canManage": {
+            "type": "boolean"
+          },
+          "viewerNamed": {
+            "type": "boolean"
+          },
+          "keyAccepted": {
+            "type": ["boolean", "null"],
+            "default": true
+          }
+        },
+        "required": [
+          "id",
+          "rootFrameId",
+          "role",
+          "signedIn",
+          "viewerLabel",
+          "sharedBy",
+          "project",
+          "linkRole",
+          "canManage",
+          "viewerNamed"
+        ]
+      },
+      "ShareFrame": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": ["string", "null"]
+          },
+          "placements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "rect": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "w": {
+                      "type": "number"
+                    },
+                    "h": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["x", "y", "w", "h"]
+                }
+              },
+              "required": ["id", "rect"]
+            }
+          },
+          "size": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number",
+                "minimum": 0
+              },
+              "height": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": ["width", "height"]
+          },
+          "marks": {
+            "$ref": "#/components/schemas/ShareMarks"
+          },
+          "extends": {
+            "type": ["string", "null"]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["page"]
+                  },
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind", "key"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["figma"]
+                  }
+                },
+                "required": ["kind"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["image"]
+                  }
+                },
+                "required": ["kind"]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "screenshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShareFrameScreenshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "parentId",
+          "placements",
+          "size",
+          "marks",
+          "extends",
+          "source",
+          "screenshot",
+          "version",
+          "updatedAt"
+        ]
+      },
+      "ShareMarks": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareTag"
+            }
+          },
+          "note": {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": ["description"]
+          }
+        },
+        "required": ["tags"]
+      },
+      "ShareTag": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "entity",
+              "property",
+              "action",
+              "context",
+              "globals",
+              "user",
+              "consent",
+              "link",
+              "note"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": ["string", "null"]
+          },
+          "parentId": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["-", "_"]
+          },
+          "rect": {
+            "$ref": "#/components/schemas/PlanRect"
+          },
+          "at": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": ["x", "y"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "observe": {
+            "type": "boolean"
+          },
+          "variance": {
+            "$ref": "#/components/schemas/ShareVariance"
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["drawn", "generated", "observed"]
+          },
+          "anchor": {
+            "$ref": "#/components/schemas/ShareTagAnchor"
+          },
+          "cleared": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "value",
+                "parentId",
+                "entity",
+                "scope",
+                "rect",
+                "at",
+                "description",
+                "observe",
+                "variance",
+                "origin",
+                "anchor"
+              ]
+            }
+          }
+        },
+        "required": ["id"]
+      },
+      "ShareVariance": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "object",
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              }
+            },
+            "required": ["min"]
+          },
+          "when": {
+            "type": "object",
+            "properties": {
+              "minWidth": {
+                "type": "number"
+              },
+              "maxWidth": {
+                "type": "number"
+              },
+              "path": {
+                "type": "string"
+              },
+              "flag": {
+                "type": "string"
+              }
+            }
+          },
+          "oneOf": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareSemNode"
+            }
+          }
+        }
+      },
+      "ShareSemNode": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "contexts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "null"]
+            }
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "null"]
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareSemNode"
+            }
+          },
+          "variance": {
+            "$ref": "#/components/schemas/ShareVariance"
+          },
+          "own": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "entity": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": ["string", "null"]
+                },
+                "scope": {
+                  "type": "string",
+                  "enum": ["-", "_"]
+                },
+                "spelled": {
+                  "type": "string"
+                }
+              },
+              "required": ["entity", "key", "value"]
+            }
+          },
+          "observe": {
+            "type": "boolean"
+          },
+          "link": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": ["name", "value"]
+            }
+          },
+          "implicit": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "reachAll": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["entity", "contexts", "data", "actions", "children"]
+      },
+      "ShareTagAnchor": {
+        "type": "object",
+        "properties": {
+          "css": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "type": "object",
+            "properties": {
+              "tag": {
+                "type": "string"
+              }
+            },
+            "required": ["tag"]
+          }
+        },
+        "required": ["css"]
+      },
+      "ShareFrameScreenshot": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "capturedAt": {
+            "type": "string"
+          },
+          "size": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number",
+                "minimum": 0
+              },
+              "height": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": ["width", "height"]
+          },
+          "dpr": {
+            "type": "number"
+          },
+          "capturedRect": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "w": {
+                "type": "number"
+              },
+              "h": {
+                "type": "number"
+              }
+            },
+            "required": ["x", "y", "w", "h"]
+          }
+        },
+        "required": ["assetId", "capturedAt", "size", "dpr", "capturedRect"]
+      },
+      "ShareBase": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "extends": {
+            "type": ["string", "null"]
+          },
+          "marks": {
+            "$ref": "#/components/schemas/ShareMarks"
+          }
+        },
+        "required": ["id", "name", "extends", "marks"]
+      },
+      "ListShareKnowledgeResponse": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareKnowledgeEntry"
+            }
+          },
+          "hasMoreEntries": {
+            "type": "boolean"
+          }
+        },
+        "required": ["entries", "hasMoreEntries"]
+      },
+      "ShareKnowledgeEntry": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ShareThread"
+          },
+          {
+            "$ref": "#/components/schemas/ShareDescription"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "thread": "#/components/schemas/ShareThread",
+            "description": "#/components/schemas/ShareDescription"
+          }
+        }
+      },
+      "ShareThread": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "anchorType": {
+            "type": "string",
+            "enum": ["tag", "page"],
+            "example": "tag"
+          },
+          "anchorKey": {
+            "type": "string"
+          },
+          "anchorLabel": {
+            "type": "string"
+          },
+          "frameId": {
+            "type": ["string", "null"]
+          },
+          "markId": {
+            "type": ["string", "null"]
+          },
+          "spatial": {
+            "type": ["object", "null"],
+            "properties": {
+              "at": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                },
+                "required": ["x", "y"]
+              }
+            },
+            "required": ["at"]
+          },
+          "author": {
+            "$ref": "#/components/schemas/ShareAuthor"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["thread"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "resolved"],
+            "example": "open"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "messageCount": {
+            "type": "integer"
+          },
+          "removable": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareMessage"
+            }
+          },
+          "hasMoreMessages": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "anchorType",
+          "anchorKey",
+          "anchorLabel",
+          "frameId",
+          "markId",
+          "spatial",
+          "author",
+          "updatedAt",
+          "kind",
+          "status",
+          "createdAt",
+          "messageCount",
+          "removable"
+        ]
+      },
+      "ShareAuthor": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "badge": {
+            "type": "string",
+            "enum": ["member", "guest"]
+          },
+          "isYou": {
+            "type": "boolean"
+          }
+        },
+        "required": ["label", "badge", "isYou"]
+      },
+      "ShareMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "author": {
+            "$ref": "#/components/schemas/ShareAuthor"
+          },
+          "clientMessageId": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["id", "text", "createdAt", "author", "clientMessageId"]
+      },
+      "ShareDescription": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "anchorType": {
+            "type": "string",
+            "enum": ["tag", "page"],
+            "example": "tag"
+          },
+          "anchorKey": {
+            "type": "string"
+          },
+          "anchorLabel": {
+            "type": "string"
+          },
+          "frameId": {
+            "type": ["string", "null"]
+          },
+          "markId": {
+            "type": ["string", "null"]
+          },
+          "spatial": {
+            "type": ["object", "null"],
+            "properties": {
+              "at": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                },
+                "required": ["x", "y"]
+              }
+            },
+            "required": ["at"]
+          },
+          "author": {
+            "$ref": "#/components/schemas/ShareAuthor"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["description"]
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "anchorType",
+          "anchorKey",
+          "anchorLabel",
+          "frameId",
+          "markId",
+          "spatial",
+          "author",
+          "updatedAt",
+          "kind",
+          "body"
+        ]
+      },
+      "PutSharedFrameResponse": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": ["version"]
+      },
+      "SharedFrameConflictResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["FRAME_VERSION_CONFLICT"]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"]
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": ["error", "version"]
+      },
+      "DeleteSharedFrameResponse": {
+        "type": "object",
+        "properties": {
+          "relocated": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareRelocatedFrame"
+            }
+          }
+        },
+        "required": ["relocated"]
+      },
+      "ShareRelocatedFrame": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": ["string", "null"]
+          },
+          "placements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "rect": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "w": {
+                      "type": "number"
+                    },
+                    "h": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["x", "y", "w", "h"]
+                }
+              },
+              "required": ["id", "rect"]
+            }
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": ["id", "parentId", "placements", "version"]
+      },
+      "SharedWithMeResponse": {
+        "type": "object",
+        "properties": {
+          "shares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SharedWithMeEntry"
+            }
+          }
+        },
+        "required": ["shares"]
+      },
+      "SharedWithMeEntry": {
+        "type": "object",
+        "properties": {
+          "shareId": {
+            "type": "string",
+            "pattern": "^shr_[a-z0-9]{21}$",
+            "example": "shr_v1stgxr8z5jdhi6bmyt7k"
+          },
+          "frameName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["viewer", "commenter", "editor"],
+            "example": "commenter"
+          },
+          "sharedBy": {
+            "type": "string"
+          },
+          "sharedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": ["shareId", "frameName", "role", "sharedBy", "sharedAt"]
       },
       "SummarizeReleaseResponse": {
         "type": "object",
@@ -7957,6 +9205,81 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeleteAccountBlocked"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Account"],
+        "summary": "Set own display name",
+        "description": "Set or clear the display name of the authenticated account, trimmed and at most 80 characters; null clears it. It is what the person’s comments read as on a frame share, where an address is never shown. Requires a signed-in session: a bearer token is refused with 401 `SESSION_REQUIRED`.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": ["string", "null"],
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "example": "Ayla"
+                  }
+                },
+                "required": ["displayName"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The stored display name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live account of a person answers to the session (`NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -16368,7 +17691,7 @@
       "get": {
         "tags": ["Projects"],
         "summary": "List the frames of a page, or of the whole project",
-        "description": "A frame is a named rectangle with marks inside it, the spatial unit of a measurement plan. Naming a `pageKey` returns that page’s frames at any depth, marks and all, newest updated first: the walk starts at the page’s top-level frames and descends containment, so a child is reachable through its parent rather than by carrying a page of its own. Naming no page returns every live frame of the project WITHOUT its marks, which is what makes that read cheap enough to answer \"what does this project have\": the marks are the bulk of a frame and a listing never renders them. That lean read asks nothing about containment, so a frame whose parent cannot be resolved still appears. `include=marks` asks that project-wide read for the marks anyway, for a surface that spans pages and cannot fetch a page at a time; it is a second, heavier read of the same rows, taken after the lean list has already painted, and omitting it returns exactly the lean rows. It says nothing to the page read, which carries marks either way. Requires member role.",
+        "description": "A frame is a named rectangle with marks inside it, the spatial unit of a measurement plan. Naming a `pageKey` returns that page’s frames at any depth, marks and all, newest updated first: the walk starts at the page’s top-level frames and descends containment, so a child is reachable through its parent rather than by carrying a page of its own. Naming no page returns every live frame of the project WITHOUT its marks, which is what makes that read cheap enough to answer \"what does this project have\": the marks are the bulk of a frame and a listing never renders them. That lean read asks nothing about containment, so a frame whose parent cannot be resolved still appears. `include=marks` asks that project-wide read for the marks anyway, for a surface that spans pages and cannot fetch a page at a time; it is a second, heavier read of the same rows, taken after the lean list has already painted, and omitting it returns exactly the lean rows. It says nothing to the page read, which carries marks either way. Requires viewer role: project viewers and deployers read the board, and every write stays with members.",
         "parameters": [
           {
             "schema": {
@@ -16475,7 +17798,7 @@
       "get": {
         "tags": ["Projects"],
         "summary": "Read one frame",
-        "description": "One frame with its marks. A frame of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted frame is gone to every read. Requires member role.",
+        "description": "One frame with its marks. A frame of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted frame is gone to every read. Requires viewer role: project viewers and deployers read the board, and every write stays with members.",
         "parameters": [
           {
             "schema": {
@@ -16695,7 +18018,7 @@
       "delete": {
         "tags": ["Projects"],
         "summary": "Delete one frame",
-        "description": "Soft-delete the frame and, transitively, every variation of what this delete removes. Children are not variations and survive: each live frame under a removed one is re-parented to its nearest live ancestor in the same transaction, and one left with no live ancestor becomes top-level and inherits the page it hung under, so nothing is left unreachable. Those re-parents are server writes that bump their own versions, so a client still holding a pre-delete version meets a conflict carrying the new parent. A frame this project does not hold answers 404: a delete that removed nothing is not a delete that succeeded. Requires member role.",
+        "description": "Soft-delete the frame and, transitively, every variation of what this delete removes. Children are not variations and survive: each live frame under a removed one is re-parented to its nearest live ancestor in the same transaction and placed where it was, each placement read through the home placement (the first placement) of every removed frame it climbs out of, so it keeps its spot on the page. One left with no live ancestor becomes top-level and inherits the page it hung under, so nothing is left unreachable. Those moves are server writes that bump their own versions, and the answer carries the moved frames as stored now; a client still holding a pre-delete version meets a conflict carrying the new parent. A frame this project does not hold answers 404: a delete that removed nothing is not a delete that succeeded. `baseVersion` names the version the caller last saw: a frame that has moved past it answers 409 `FRAME_VERSION_CONFLICT` with the version that holds now, and nothing is deleted, so an undo cannot take marks someone else just added. The version is checked under the delete’s own lock. Requires member role.",
         "parameters": [
           {
             "schema": {
@@ -16717,14 +18040,30 @@
             "description": "Frame ID (frm_...)",
             "name": "frameId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": ["integer", "null"],
+              "minimum": 0
+            },
+            "required": false,
+            "name": "baseVersion",
+            "in": "query"
           }
         ],
         "responses": {
-          "204": {
-            "description": "The frame is deleted"
+          "200": {
+            "description": "The frame is deleted; the frames the delete moved, as stored now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteFrameResponse"
+                }
+              }
+            }
           },
           "400": {
-            "description": "The path segment does not address a frame",
+            "description": "The path segment does not address a frame, or `baseVersion` is not a version",
             "content": {
               "application/json": {
                 "schema": {
@@ -16759,6 +18098,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The frame has moved past `baseVersion`; nothing was deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrameDeleteConflictResponse"
                 }
               }
             }
@@ -16911,7 +18260,7 @@
       "get": {
         "tags": ["Projects"],
         "summary": "Read one stored capture",
-        "description": "The bytes of one frame screenshot, for the app canvas. The extension keeps its own capture locally and never reads assets back. Same-origin and session-authenticated: the response carries `Cross-Origin-Resource-Policy: same-origin`, so no other site can embed a tenant capture off the reader’s session. The bytes are immutable by construction, since the object key is their own content hash, which is why they are cacheable for a year, and `private` keeps a shared cache from serving one tenant’s capture to the next request for the same URL. An asset another project holds answers 404, never 403. Requires member role.",
+        "description": "The bytes of one frame screenshot, for the app canvas. The extension keeps its own capture locally and never reads assets back. Same-origin and session-authenticated: the response carries `Cross-Origin-Resource-Policy: same-origin`, so no other site can embed a tenant capture off the reader’s session. The bytes are immutable by construction, since the object key is their own content hash, which is why they are cacheable for a year, and `private` keeps a shared cache from serving one tenant’s capture to the next request for the same URL. An asset another project holds answers 404, never 403. Requires viewer role: project viewers and deployers read the board, and every write stays with members.",
         "parameters": [
           {
             "schema": {
@@ -17004,7 +18353,7 @@
       "get": {
         "tags": ["Projects"],
         "summary": "List the canvases of the project",
-        "description": "A canvas is a named, freely arranged board over a project’s frames, the surface on which a plan is laid out across pages rather than within one. This returns every live canvas by name WITHOUT its document: the document is the bulk of a canvas and a listing renders none of it, so opening a board is the single-canvas read. Requires member role.",
+        "description": "A canvas is a named, freely arranged board over a project’s frames, the surface on which a plan is laid out across pages rather than within one. This returns every live canvas by name WITHOUT its document: the document is the bulk of a canvas and a listing renders none of it, so opening a board is the single-canvas read. Requires viewer role: project viewers and deployers read the board, and every write stays with members.",
         "parameters": [
           {
             "schema": {
@@ -17186,7 +18535,7 @@
       "get": {
         "tags": ["Projects"],
         "summary": "Read one canvas",
-        "description": "One canvas with its whole document: the nodes with their positions, the edges, and the node keys the board suppresses. A canvas of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted canvas is gone to every read. Requires member role.",
+        "description": "One canvas with its whole document: the nodes with their positions, the edges, and the node keys the board suppresses. A canvas of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted canvas is gone to every read. Requires viewer role: project viewers and deployers read the board, and every write stays with members.",
         "parameters": [
           {
             "schema": {
@@ -17382,6 +18731,2181 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CanvasConflictResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/shares": {
+      "get": {
+        "tags": ["Shares"],
+        "summary": "List the shares of the project",
+        "description": "Every live share of the project, most recently changed first, with what the canvas badges a shared frame with: the link setting, the number of invited addresses and the open threads on the shared frame and every frame nested in it. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The project’s shares",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListProjectSharesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/frames/{frameId}/share": {
+      "get": {
+        "tags": ["Shares"],
+        "summary": "Read the share of one frame",
+        "description": "The frame’s share as members manage it: the invited addresses with their roles, the link setting and, while anyone with the link can open the frame, `linkUrl`: the canonical address with the link key in its fragment. `share` is null while the frame is not shared. `coveredBy` lists the shares of the frame’s ancestors, nearest first, each of which already includes it. The response is never cached. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The frame’s share, or null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrameShareResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The path segment does not address a frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This project does not hold the frame (`FRAME_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Shares"],
+        "summary": "Set who the link of a frame reaches",
+        "description": "Set the general access of a frame’s share: `restricted` (invited people and project members) or `anyone` with the link, and the role the link confers, `viewer` or `commenter`; a link never edits. The first write creates the share at `baseVersion` 0. Turning the link on mints a fresh key and turning it off destroys the key, so a revoked link never comes back to life. A write against a version someone else has moved past answers 409 `SHARE_VERSION_CONFLICT` carrying the share as it stands. A frame with more than 256 frames nested in it, or nested deeper than 32 levels, is 422 `SHARE_TOO_LARGE`. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "baseVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "linkAccess": {
+                    "type": "string",
+                    "enum": ["restricted", "anyone"],
+                    "example": "restricted"
+                  },
+                  "linkRole": {
+                    "type": "string",
+                    "enum": ["viewer", "commenter"],
+                    "example": "viewer"
+                  }
+                },
+                "required": ["baseVersion", "linkAccess", "linkRole"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The share after the write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrameShareWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This project does not hold the frame (`FRAME_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A stale base version, carrying the share as it stands",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrameShareConflictResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The frame holds more than one share serves (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Shares"],
+        "summary": "Stop sharing a frame",
+        "description": "Delete the frame’s share with its link and every invited address; the next request through the share is refused. Deleting a share that does not exist also answers 204. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The frame is not shared"
+          },
+          "400": {
+            "description": "The path segment does not address a frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/frames/{frameId}/share/link/reset": {
+      "post": {
+        "tags": ["Shares"],
+        "summary": "Replace the link key of a frame’s share",
+        "description": "Mint a new link key. The current link stops working for everyone holding it on their next request; invited people and project members keep their access. A frame that is not shared is 404 `SHARE_NOT_FOUND`, and a share whose link is off is 409 `SHARE_LINK_OFF`. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The share with its new link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrameShareWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The path segment does not address a frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The frame is not shared (`SHARE_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The link is off (`SHARE_LINK_OFF`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/frames/{frameId}/share/grants": {
+      "post": {
+        "tags": ["Shares"],
+        "summary": "Invite addresses to a frame’s share",
+        "description": "Grant up to 20 addresses one role on the frame’s share, creating a restricted share with the first grant it adds; an invite that adds nobody to a frame that is not shared creates nothing and answers `share: null`. Grants are bound to the address: whoever signs in as it holds the role, with no token and no accept step. Every address gets its own outcome in request order: `added`, `GRANT_EXISTS`, `ALREADY_MEMBER` (project membership already confers the role), `GRANT_LIMIT` (50 per share) or `INVALID_EMAIL`. Each added address is emailed once after the grants are stored; the email carries the canonical address and no credential, and `emailFailed` marks an address whose email did not go out, which still holds its access. Limited to 20 invites per hour per member. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emails": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 255
+                    },
+                    "minItems": 1,
+                    "maxItems": 20
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": ["viewer", "commenter", "editor"],
+                    "example": "commenter"
+                  }
+                },
+                "required": ["emails", "role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The share and the outcome of every address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddShareGrantsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This project does not hold the frame (`FRAME_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The frame holds more than one share serves (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/frames/{frameId}/share/grants/{grantId}": {
+      "patch": {
+        "tags": ["Shares"],
+        "summary": "Change the role of one invited address",
+        "description": "Change the role a grant confers; it takes effect on that person’s next request and sends no email. A grant the frame’s share does not hold is 404 `GRANT_NOT_FOUND`. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shg_[a-z0-9]{21}$",
+              "description": "Grant ID (shg_...)"
+            },
+            "required": true,
+            "description": "Grant ID (shg_...)",
+            "name": "grantId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": ["viewer", "commenter", "editor"],
+                    "example": "commenter"
+                  }
+                },
+                "required": ["role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The share after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrameShareWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The share holds no such grant (`GRANT_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Shares"],
+        "summary": "Remove one invited address",
+        "description": "Remove a grant; the person’s access through it ends on their next request. Removing a grant that does not exist also answers 204. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shg_[a-z0-9]{21}$",
+              "description": "Grant ID (shg_...)"
+            },
+            "required": true,
+            "description": "Grant ID (shg_...)",
+            "name": "grantId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The grant is gone"
+          },
+          "400": {
+            "description": "A path segment does not address a frame or a grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/knowledge/{threadId}": {
+      "delete": {
+        "tags": ["Shares"],
+        "summary": "Remove a thread opened through a share",
+        "description": "Moderation: delete a thread that was opened through a frame share, with its messages. A thread opened anywhere else answers 404 `THREAD_NOT_FOUND`, as an unknown one does. The removal is audited. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^thr_[a-z0-9]+$",
+              "example": "thr_a1b2c3d4",
+              "description": "Thread ID (thr_...)"
+            },
+            "required": true,
+            "description": "Thread ID (thr_...)",
+            "name": "threadId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The thread is gone"
+          },
+          "400": {
+            "description": "The path segment does not address a thread",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No share thread with this id (`THREAD_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shares/{shareId}": {
+      "get": {
+        "tags": ["Shares"],
+        "summary": "Read a shared frame",
+        "description": "The shared frame as its reader may see it: every frame of the shared subtree, root first and breadth first, the bases its variations need to paint, and the reader’s role and label. People are display labels, never an address or an id, and frames carry no page address, flow or DOM anchor. Never cached, never indexed. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shr_[a-z0-9]{21}$",
+              "description": "Share ID (shr_...). It names the share and grants nothing by itself."
+            },
+            "required": true,
+            "description": "Share ID (shr_...). It names the share and grants nothing by itself.",
+            "name": "shareId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load."
+            },
+            "required": false,
+            "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load.",
+            "name": "X-Share-Key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The shared frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareArtifact"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The share holds more frames than one share serves (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shares/{shareId}/assets/{assetId}": {
+      "get": {
+        "tags": ["Shares"],
+        "summary": "Read a screenshot of a shared frame",
+        "description": "One capture of a frame inside the share; a capture of any frame around it answers 404 `ASSET_NOT_FOUND` like an unknown id. An `<img>` cannot send a header, so the share’s cookie carries the link key here. The entity tag is the bytes’ own hash and a matching `If-None-Match` answers 304. `Cache-Control: private, max-age=3600` and `Cross-Origin-Resource-Policy: same-origin`. A share serves at most 3000 screenshots in 10 minutes. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shr_[a-z0-9]{21}$",
+              "description": "Share ID (shr_...). It names the share and grants nothing by itself."
+            },
+            "required": true,
+            "description": "Share ID (shr_...). It names the share and grants nothing by itself.",
+            "name": "shareId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^fas_[A-Za-z0-9_-]{21}$",
+              "description": "Asset ID (fas_...)"
+            },
+            "required": true,
+            "description": "Asset ID (fas_...)",
+            "name": "assetId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load."
+            },
+            "required": false,
+            "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load.",
+            "name": "X-Share-Key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image bytes",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The reader’s copy is current"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no capture of a frame in the share has this id (`ASSET_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The share holds more frames than one share serves (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shares/{shareId}/knowledge": {
+      "get": {
+        "tags": ["Shares"],
+        "summary": "List the notes on a shared frame",
+        "description": "The notes on the frames of the share, most recently active first, with their messages unless `includeMessages=false`. What a reader sees follows the role the share confers: a viewer reads descriptions only; a commenter or editor reads the threads too, anonymous holders of a commenter link included. `frameId` narrows to one frame of the share (a frame outside it is 404 `FRAME_NOT_FOUND`), `markId` to one mark within it. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shr_[a-z0-9]{21}$",
+              "description": "Share ID (shr_...). It names the share and grants nothing by itself."
+            },
+            "required": true,
+            "description": "Share ID (shr_...). It names the share and grants nothing by itself.",
+            "name": "shareId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$"
+            },
+            "required": false,
+            "name": "frameId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "mark_add_to_cart"
+            },
+            "required": false,
+            "name": "markId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "required": false,
+            "name": "includeMessages",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "example": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load."
+            },
+            "required": false,
+            "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load.",
+            "name": "X-Share-Key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The notes the reader may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListShareKnowledgeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query, or a mark filter with no frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); `frameId` names no frame of the share (`FRAME_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The share holds more frames than one share serves (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Shares"],
+        "summary": "Comment on a shared frame",
+        "description": "Open a thread on a frame of the share (`page`) or on one of its marks (`tag`), optionally pinned to a point given in the frame’s own fractions, with its first message. The thread is bound to no flow and carries no DOM anchor. A replay of a known `clientThreadId` hands back the thread it wrote; one held by a thread the reader cannot see is 409 `CLIENT_THREAD_ID_TAKEN`. Writing needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the commenter or editor role (403 `FORBIDDEN` below it). The body may be at most 32 KiB (413 `PAYLOAD_TOO_LARGE`). Comments are limited to 10 per minute per person and 120 per hour per share. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shr_[a-z0-9]{21}$",
+              "description": "Share ID (shr_...). It names the share and grants nothing by itself."
+            },
+            "required": true,
+            "description": "Share ID (shr_...). It names the share and grants nothing by itself.",
+            "name": "shareId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load."
+            },
+            "required": false,
+            "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load.",
+            "name": "X-Share-Key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clientThreadId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "example": "ct_7f3a91"
+                  },
+                  "anchorType": {
+                    "type": "string",
+                    "enum": ["tag", "page"],
+                    "example": "tag"
+                  },
+                  "frameId": {
+                    "type": "string",
+                    "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+                    "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+                  },
+                  "markId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "anchorLabel": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "spatial": {
+                    "type": "object",
+                    "properties": {
+                      "at": {
+                        "type": "object",
+                        "properties": {
+                          "x": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          "y": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          }
+                        },
+                        "required": ["x", "y"]
+                      }
+                    },
+                    "required": ["at"]
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "clientMessageId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "example": "ct_7f3a91"
+                  }
+                },
+                "required": [
+                  "clientThreadId",
+                  "anchorType",
+                  "frameId",
+                  "text",
+                  "clientMessageId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The thread, with its first message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareThread"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The role does not allow commenting (`FORBIDDEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); the frame is not in the share (`FRAME_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The client thread id is taken (`CLIENT_THREAD_ID_TAKEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is past 32 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The share holds more frames than one share serves (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shares/{shareId}/knowledge/{threadId}/messages": {
+      "post": {
+        "tags": ["Shares"],
+        "summary": "Reply on a thread of a shared frame",
+        "description": "Append a message in the reader’s own name and get the whole thread back. A thread outside the share answers 404 `KNOWLEDGE_NOT_FOUND` like an unknown one; a repeat of a `clientMessageId` already on the thread appends nothing. Writing needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the commenter or editor role (403 `FORBIDDEN` below it). The body may be at most 32 KiB (413 `PAYLOAD_TOO_LARGE`). Comments are limited to 10 per minute per person and 120 per hour per share. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shr_[a-z0-9]{21}$",
+              "description": "Share ID (shr_...). It names the share and grants nothing by itself."
+            },
+            "required": true,
+            "description": "Share ID (shr_...). It names the share and grants nothing by itself.",
+            "name": "shareId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^thr_[a-z0-9]+$",
+              "example": "thr_a1b2c3d4",
+              "description": "Thread ID (thr_...)"
+            },
+            "required": true,
+            "description": "Thread ID (thr_...)",
+            "name": "threadId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load."
+            },
+            "required": false,
+            "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load.",
+            "name": "X-Share-Key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "clientMessageId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "example": "ct_7f3a91"
+                  }
+                },
+                "required": ["text", "clientMessageId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The thread, with the new message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareThread"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The role does not allow commenting (`FORBIDDEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no thread of the share has this id (`KNOWLEDGE_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is past 32 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The share holds more frames than one share serves (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shares/{shareId}/knowledge/{threadId}": {
+      "patch": {
+        "tags": ["Shares"],
+        "summary": "Resolve or reopen a thread of a shared frame",
+        "description": "Set a thread’s status. An editor may change any thread of the share, anyone else only a thread they opened (403 `FORBIDDEN` otherwise); either way it takes a signed-in session (401 `SIGN_IN_REQUIRED`). A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shr_[a-z0-9]{21}$",
+              "description": "Share ID (shr_...). It names the share and grants nothing by itself."
+            },
+            "required": true,
+            "description": "Share ID (shr_...). It names the share and grants nothing by itself.",
+            "name": "shareId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^thr_[a-z0-9]+$",
+              "example": "thr_a1b2c3d4",
+              "description": "Thread ID (thr_...)"
+            },
+            "required": true,
+            "description": "Thread ID (thr_...)",
+            "name": "threadId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load."
+            },
+            "required": false,
+            "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load.",
+            "name": "X-Share-Key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["open", "resolved"],
+                    "example": "open"
+                  }
+                },
+                "required": ["status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The thread after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareThread"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither an editor nor the thread’s author (`FORBIDDEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no thread of the share has this id (`KNOWLEDGE_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The share holds more frames than one share serves (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shares/{shareId}/frames/{frameId}": {
+      "put": {
+        "tags": ["Shares"],
+        "summary": "Write a frame of a shared frame",
+        "description": "Replace one frame of the share, or create a frame inside it at `baseVersion` 0. The frame takes exactly the fields the share serves for editing: name, parent, placements, size, marks and base. A source, flow or origin is refused, and every field the share withholds stays as stored, so a write never drops what its editor could not see. Every shared tag field must have its type, and a variance nests its alternative shapes at most 16 levels deep (400 `INVALID_FRAME`). A tag id or a placement id names one entry: a repeat is 400 `VALIDATION_ERROR`. The shared frame keeps its parent, placement, size and base; a frame below it stays inside the share and extends nothing or a frame the share serves. A replay of the write that produced the stored version answers that version. A write against a version someone else has moved past answers 409 `FRAME_VERSION_CONFLICT` with that version and no marks: read the share again to load theirs, or write again at that version to keep yours. A name another live frame already holds is 409 `FRAME_NAME_EXISTS`, carrying nothing else. Writing needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the editor role (403 `FORBIDDEN` below it), both settled before the body is read. The body may be at most 1 MiB (413 `PAYLOAD_TOO_LARGE`). Frame writes are limited to 60 per minute per person. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shr_[a-z0-9]{21}$",
+              "description": "Share ID (shr_...). It names the share and grants nothing by itself."
+            },
+            "required": true,
+            "description": "Share ID (shr_...). It names the share and grants nothing by itself.",
+            "name": "shareId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load."
+            },
+            "required": false,
+            "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load.",
+            "name": "X-Share-Key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "frame": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "parentId": {
+                        "type": ["string", "null"],
+                        "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+                        "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+                      },
+                      "placements": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^pl_[A-Za-z0-9_-]{21}$"
+                            },
+                            "rect": {
+                              "$ref": "#/components/schemas/PlanRect"
+                            }
+                          },
+                          "required": ["id", "rect"]
+                        },
+                        "minItems": 1
+                      },
+                      "size": {
+                        "$ref": "#/components/schemas/PlanSize"
+                      },
+                      "marks": {
+                        "type": "object",
+                        "properties": {
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "entity",
+                                    "property",
+                                    "action",
+                                    "context",
+                                    "globals",
+                                    "user",
+                                    "consent",
+                                    "link",
+                                    "note"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "type": ["string", "null"]
+                                },
+                                "parentId": {
+                                  "type": "string"
+                                },
+                                "entity": {
+                                  "type": "string"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": ["-", "_"]
+                                },
+                                "rect": {
+                                  "$ref": "#/components/schemas/PlanRect"
+                                },
+                                "at": {
+                                  "type": "object",
+                                  "properties": {
+                                    "x": {
+                                      "type": "number"
+                                    },
+                                    "y": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": ["x", "y"]
+                                },
+                                "description": {
+                                  "type": "string"
+                                },
+                                "observe": {
+                                  "type": "boolean"
+                                },
+                                "variance": {
+                                  "$ref": "#/components/schemas/ShareVariance"
+                                },
+                                "origin": {
+                                  "type": "string",
+                                  "enum": ["drawn", "generated", "observed"]
+                                },
+                                "cleared": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "value",
+                                      "parentId",
+                                      "entity",
+                                      "scope",
+                                      "rect",
+                                      "at",
+                                      "description",
+                                      "observe",
+                                      "variance",
+                                      "origin",
+                                      "anchor"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": ["id"]
+                            }
+                          },
+                          "note": {
+                            "type": "object",
+                            "properties": {
+                              "description": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["description"]
+                          }
+                        },
+                        "required": ["tags"]
+                      },
+                      "extends": {
+                        "type": ["string", "null"],
+                        "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+                        "example": "frm_V1StGXR8Z5jdHi6BmyT7K"
+                      }
+                    },
+                    "required": ["name", "parentId", "marks", "extends"],
+                    "additionalProperties": false
+                  },
+                  "baseVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "clientWriteId": {
+                    "type": "string",
+                    "pattern": "^cw_[A-Za-z0-9_-]{21}$"
+                  }
+                },
+                "required": ["frame", "baseVersion", "clientWriteId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The stored version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PutSharedFrameResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, a repeated tag or placement id among them (`VALIDATION_ERROR`); a mark field without its type or nested too deep; or a frame the share cannot hold: a moved shared frame, a parent or base outside the share, a frame inside it without placements and size, or an id another frame holds (`INVALID_FRAME`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The role does not allow editing (`FORBIDDEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no frame of the share has this id, which includes a base the share only paints with and a new frame written at a version other than 0 (`FRAME_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A stale base version, carrying the version that holds now, or a name another live frame already holds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SharedFrameConflictResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is past 1 MiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The share holds more frames than one share serves, or the write would take it there (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Shares"],
+        "summary": "Delete a frame of a shared frame",
+        "description": "Delete one frame of the share, with every variation the delete takes along. The frames it held stay: each moves to the nearest frame the delete keeps and is placed where it was, its placements read through the home placement (the first placement) of every removed frame it climbs out of. The answer carries those frames, each with its parent, its placements and the version the move gave it, and no marks. The shared frame itself is never deleted here, and neither is a frame whose delete would take it along (403 `FORBIDDEN`). A frame that a frame outside the share varies answers 409 `FRAME_HAS_EXTERNAL_VARIATIONS`, since the delete would take that frame along too. `baseVersion` names the version the editor last saw: a frame that has moved past it answers 409 `FRAME_VERSION_CONFLICT` with the version that holds now, and nothing is deleted; read the share again to see it. Deleting needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the editor role (403 `FORBIDDEN` below it), both settled before a malformed `baseVersion` is answered. Frame writes and deletes share a limit of 60 per minute per person. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^shr_[a-z0-9]{21}$",
+              "description": "Share ID (shr_...). It names the share and grants nothing by itself."
+            },
+            "required": true,
+            "description": "Share ID (shr_...). It names the share and grants nothing by itself.",
+            "name": "shareId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9_-]{21}$",
+              "description": "Frame ID (frm_...)"
+            },
+            "required": true,
+            "description": "Frame ID (frm_...)",
+            "name": "frameId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": ["integer", "null"],
+              "minimum": 0
+            },
+            "required": false,
+            "name": "baseVersion",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load."
+            },
+            "required": false,
+            "description": "The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load.",
+            "name": "X-Share-Key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The frame is deleted; the frames the delete moved, as stored now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteSharedFrameResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`baseVersion` is not a version (`VALIDATION_ERROR`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The role does not allow editing, or the frame is the shared frame or its delete would take the shared frame along (`FORBIDDEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no frame of the share has this id, which includes a base the share only paints with (`FRAME_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A stale base version, carrying the version that holds now, or a frame outside the share varies this frame (`FRAME_HAS_EXTERNAL_VARIATIONS`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SharedFrameConflictResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The share holds more frames than one share serves (`SHARE_TOO_LARGE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shares/shared-with-me": {
+      "get": {
+        "tags": ["Shares"],
+        "summary": "List the frames shared with me",
+        "description": "The frame shares the signed-in person’s address holds a grant on, newest first: the share, the frame’s name, the role, who invited them and when. Names no project. Requires a signed-in session: a bearer token is refused with 401 `SESSION_REQUIRED`.",
+        "responses": {
+          "200": {
+            "description": "The shares the person was invited to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedWithMeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

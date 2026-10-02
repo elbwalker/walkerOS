@@ -21,7 +21,7 @@ Follow the [GCP BigQuery setup](/docs/destinations/server/gcp#gcp-setup) to:
 
 - Create a BigQuery dataset
 - Create a service account with write permissions
-- [Download a service account key](/docs/destinations/server/gcp#service-account-key) (`sa-bigquery.json`)
+- [Download a service account key](/docs/destinations/server/gcp#authentication) (`sa-bigquery.json`)
 
 :::caution
 The key file will be baked into your Docker image. Keep the image in a **private** registry only.
@@ -50,12 +50,12 @@ values in the Dockerfile below.
 :::
 
 :::tip[Quick Local Test]
-Test your flow before building Docker using `push --simulate` with a local credentials path:
+Test your flow before building Docker using `push --simulate`. The BigQuery call is mocked, so no credentials are needed:
 
 ```bash
 export GCP_PROJECT_ID="your-project-id"
 walkeros push https://www.walkeros.io/flows/gcp-bigquery.json \
-  -e '{"name": "test", "data": {}}' --simulate destination.bigquery
+  -e '{"name": "page view", "data": {}}' --simulate destination.bigquery
 ```
 :::
 

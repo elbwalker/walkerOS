@@ -1,4 +1,10 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import http from 'http';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
+import { createCLILogger } from '../../../core/cli-logger.js';
+import { withFlowContext } from '../flow-context';
 import type { NetworkCall } from '../types';
 
 describe('JSDOM network polyfills', () => {
@@ -139,6 +145,105 @@ describe('withFlowContext network polyfills integration', () => {
   });
 });
 
+describe('withFlowContext: a vendor SDK reaching page globals at import', () => {
+  let dir: string;
+  let server: http.Server;
+  let origin: string;
+  let received: number;
+
+  beforeEach(async () => {
+    dir = mkdtempSync(join(tmpdir(), 'walkeros-page-globals-'));
+    received = 0;
+    server = http.createServer((_req, res) => {
+      received++;
+      res.end();
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, '127.0.0.1', resolve),
+    );
+    const address = server.address();
+    if (!address || typeof address === 'string')
+      throw new Error('server has no port');
+    origin = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterEach(async () => {
+    await new Promise((resolve) => server.close(resolve));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('imports the bundle, records its XHR without sending it, then restores', async () => {
+    const bundlePath = join(dir, 'bundle.mjs');
+    // Module top level as mixpanel-browser and posthog-js have it.
+    writeFileSync(
+      bundlePath,
+      `
+const useXhr = 'withCredentials' in new XMLHttpRequest();
+const href = location.href;
+if (typeof self === 'undefined') globalThis.self = globalThis;
+
+export function wireConfig() {
+  return {};
+}
+
+export async function startFlow() {
+  const xhr = new XMLHttpRequest();
+  await new Promise((resolve, reject) => {
+    xhr.onload = resolve;
+    xhr.onerror = reject;
+    xhr.open('POST', '${origin}/collect');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send('{"event":"page view"}');
+  });
+  return { useXhr, href, status: xhr.status, page: self === window };
+}
+`,
+      'utf-8',
+    );
+    const names = ['XMLHttpRequest', 'location', 'self'];
+    const before = names.map((name) =>
+      Object.getOwnPropertyDescriptor(globalThis, name),
+    );
+    const networkCalls: NetworkCall[] = [];
+    let flow: unknown;
+
+    const result = await withFlowContext(
+      {
+        esmPath: bundlePath,
+        platform: 'web',
+        logger: createCLILogger({ silent: true }),
+        networkCalls,
+      },
+      async (mod) => {
+        flow = await mod.startFlow({});
+        return { success: true, duration: 0 };
+      },
+    );
+
+    expect(result).toEqual({ success: true, duration: 0 });
+    expect(flow).toEqual({
+      useXhr: true,
+      href: 'http://localhost/',
+      status: 200,
+      page: true,
+    });
+    expect(networkCalls).toEqual([
+      {
+        type: 'xhr',
+        url: `${origin}/collect`,
+        method: 'POST',
+        body: '{"event":"page view"}',
+        headers: { 'Content-Type': 'application/json' },
+        timestamp: expect.any(Number),
+      },
+    ]);
+    expect(received).toBe(0);
+    expect(
+      names.map((name) => Object.getOwnPropertyDescriptor(globalThis, name)),
+    ).toEqual(before);
+  });
+});
+
 describe('exposeDomGlobals', () => {
   const names = [
     'CustomEvent',
@@ -150,6 +255,9 @@ describe('exposeDomGlobals', () => {
     'HTMLElement',
     'Document',
     'ShadowRoot',
+    'XMLHttpRequest',
+    'location',
+    'self',
   ];
   let dom: JSDOM;
 

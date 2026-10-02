@@ -33,25 +33,29 @@ Serves static files from a [store](/docs/stores) backend. Reads the file by `ing
 import { transformerFile } from '@walkeros/server-transformer-file';
 import { storeFsInit } from '@walkeros/server-store-fs';
 
+// Reference this same object in stores and in env: the collector swaps it
+// for the initialized store instance at startup.
+const files = {
+  code: storeFsInit,
+  config: { settings: { basePath: './public' }, file: true },
+};
+
 await startFlow({
-  stores: {
-    files: {
-      code: storeFsInit,
-      config: { settings: { basePath: './public' } },
-    },
-  },
+  stores: { files },
   transformers: {
     file: {
       code: transformerFile,
       config: {
         settings: { prefix: '/static' },
       },
-      env: { store: '$store.files' },
+      env: { store: files },
     },
   },
 });`}
   language="typescript"
 />
+
+The `'$store.files'` string only works in a bundled `flow.json`, where the CLI resolves it. In `startFlow` it stays a string and the transformer fails.
 
   </TabItem>
   <TabItem value="bundled" label="Bundled">
@@ -62,7 +66,7 @@ Add to your `flow.json`:
   code={`"stores": {
   "files": {
     "package": "@walkeros/server-store-fs",
-    "config": { "settings": { "basePath": "./public" } }
+    "config": { "settings": { "basePath": "./public" }, "file": true }
   }
 },
 "transformers": {
@@ -105,6 +109,15 @@ Use native cache on the file transformer to serve cached files from memory, avoi
   code={`"sources": {
   "http": {
     "package": "@walkeros/server-source-express",
+    "config": {
+      "settings": { "paths": ["/collect", "/static/*path"] },
+      "ingest": {
+        "map": {
+          "method": { "key": "method" },
+          "path": { "key": "path" }
+        }
+      }
+    },
     "next": [
       {
         "match": { "key": "ingest.method", "operator": "eq", "value": "GET" },
@@ -120,7 +133,7 @@ Use native cache on the file transformer to serve cached files from memory, avoi
     "env": { "store": "$store.files" },
     "cache": {
       "rules": [
-        { "match": "*", "key": ["ingest.method", "ingest.path"], "ttl": 300 }
+        { "key": ["ingest.method", "ingest.path"], "ttl": 300 }
       ]
     }
   }

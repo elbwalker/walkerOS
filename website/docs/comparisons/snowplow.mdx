@@ -112,7 +112,7 @@ import { destinationSnowplow } from '@walkeros/web-destination-snowplow';
 const { elb } = await startFlow({
   destinations: {
     snowplow: {
-      destination: destinationSnowplow,
+      code: destinationSnowplow,
       config: {
         settings: {
           collectorUrl: 'https://collector.yourdomain.com',

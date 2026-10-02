@@ -48,15 +48,20 @@ destinations as well as new ones.
 ### Destinations
 
 With each event, the consent states get checked. Every event will be added to an
-ordered queue if consent isn't granted yet and the destination's queue isn't
-disabled. The queue resets with each `walker run` command. And will be
+ordered queue if consent isn't granted yet. `config.queue` does not switch off
+this consent queue. The queue resets with each `walker run` command. And will be
 (re-)processed with each `walker consent` update. The key must match the key
 used in each `destination.config.consent`.
 
 :::note
 
-The queued events properties `consent`, `globals`, and `user` will be
-**updated** to the current state before being processed.
+Before a queued event is processed:
+
+- `consent` is replaced with the current collector state. Once the event
+  passes, it carries only the granted keys.
+- `user` is merged with the collector's user data. Values already on the event
+  take precedence.
+- `globals` keeps the values the event was captured with.
 
 :::
 
@@ -87,15 +92,18 @@ have to be set to `false`:
 
 ## on consent
 
-To start walker.js only after a consent choice, use the `on consent` command:
+To run code when consent changes, use the `on consent` command. `rules` is an
+object with one handler per consent key:
 
 <CodeSnippet
-  code={`// Wait for functional consent to run
+  code={`// Run code when functional consent changes
 elb('walker on', {
 type: 'consent',
 rules: {
-functional: () => {
-elb('walker run');
+functional: (consent) => {
+if (consent.functional) {
+// functional consent was granted
+}
 },
 },
 });
@@ -105,13 +113,27 @@ elb('walker consent', { functional: true });`}
   language="javascript"
 />
 
+No handler is called before the collector runs. After that, a handler runs when
+its key is set at registration or when the collector starts, and each time its
+key is part of a `walker consent` command, for a denial as well as a grant. A
+bare function as `rules` has no key and is never called.
+
+Do not start walker.js from a consent handler. walker.js starts on load, so a
+second `walker run` sends another `page view` and fires every `load` element
+again. walker.js leaves consent to your tags, for example in GTM with Consent
+Mode. In your own bundle built with `run: false`, call `elb('walker run')` once,
+from your CMP's first consent callback, instead, since an `on consent` handler is not called
+before the collector runs. Any later `walker run` clears the destination
+queues, so events still waiting for consent are lost.
+
 Another example of how to use the `on consent` command might be to update
 [Googles consent mode v2](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic):
 
 <CodeSnippet
   code={`elb('walker on', {
 type: 'consent',
-rules: (consent, context) => {
+rules: {
+marketing: (consent, context) => {
 // Check if marketing consent is granted
 if (consent.marketing) {
 gtag('consent', 'update', {
@@ -121,6 +143,7 @@ ad_storage: 'granted',
 analytics_storage: 'granted',
 });
 }
+},
 },
 });`}
   language="javascript"

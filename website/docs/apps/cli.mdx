@@ -141,7 +141,7 @@ The collector is added automatically. To pin a specific version (recommended for
 
 <CodeSnippet
   code={`"packages": {
-  "@walkeros/collector": { "version": "1.0.0" },
+  "@walkeros/collector": { "version": "4.7.0" },
   "@walkeros/web-source-browser": {},
   "@walkeros/destination-demo": {}
 }`}
@@ -286,7 +286,7 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
         "http": {
           "package": "@walkeros/server-source-express",
           "config": {
-            "settings": { "path": "/collect", "port": 8080 }
+            "settings": { "paths": ["/collect"], "port": 8080 }
           }
         }
       },
@@ -358,7 +358,7 @@ Create `server-collect.json`:
           "package": "@walkeros/server-source-express",
           "config": {
             "settings": {
-              "path": "/collect",
+              "paths": ["/collect"],
               "port": 8080,
               "cors": true
             }
@@ -593,13 +593,13 @@ Create `api-flow.json` with a destination that makes real HTTP calls:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/web-destination-api": {}
+            "@walkeros/server-destination-api": { "version": "^4" }
           }
         }
       },
       "destinations": {
         "api": {
-          "package": "@walkeros/web-destination-api",
+          "package": "@walkeros/server-destination-api",
           "config": {
             "settings": {
               "url": "https://your-endpoint.com/events",
@@ -827,7 +827,7 @@ Three settings decide whether a destination receives an event. They are easy to 
 | Setting | Where | What it does | In a simulation |
 |---|---|---|---|
 | `require: ["consent"]` | Destination `config` | The destination stays pending (not initialized, events queued) until the collector has any consent state | Starts once `--consent` is passed. Without it: `pending: waits for consent (require)` |
-| `consent: { marketing: true }` | Destination `config` | Each event is checked against the collector's consent plus the event's own consent; a denied event is skipped (or queued with `queue: true`) | Grant it with `--consent` or in the event's `consent`. Otherwise: `skipped: consent (...)` |
+| `consent: { marketing: true }` | Destination `config` | Each event is checked against the collector's consent plus the event's own consent; a denied event is skipped and held in the destination's queue until the consent is granted | Grant it with `--consent` or in the event's `consent`. Otherwise: `skipped: consent (...)` |
 | `consent` on the event | The event (`-e`) | Consent of this one event, counted on top of the collector's consent | Part of the event you pass |
 | `consent` in a source's settings | Source `config.settings` (for example the session source) | The source waits for that consent before it emits | A consent-gated source starts from `--consent`. Without it, it emits nothing |
 
@@ -1185,7 +1185,7 @@ The `--type` option accepts four validation types. Default is `flow`:
 | Type | What it validates |
 |------|-------------------|
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
-| `flow` (default) | Flow.Json config: schema, references, routes, the root `contract`, the bundle preflight and resolver, each step's settings against its package schema, cross-step example compatibility, and the examples of `@walkeros/transformer-validate` steps against their linked contracts |
+| `flow` (default) | Flow.Json config: schema, references, routes, the root `contract`, the bundle preflight and resolver, each step's settings against its package schema, cross-step example compatibility, and the examples of `@walkeros/transformer-validate` steps against their linked contracts, plus a `PACKAGE_VERSION_MISSING` warning for each `config.bundle.packages` entry without a `version` or `path` |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
 | `contract` | Contract structure: named entries with optional `extend`, `tagging`, `description`, `events`, and `schema` fields. On a flow file it validates the file's `contract` section (`NO_CONTRACT_SECTION` if there is none) |
 
@@ -2184,7 +2184,7 @@ Create `server-collect.json`:
         "http": {
           "package": "@walkeros/server-source-express",
           "config": {
-            "settings": { "path": "/collect", "port": 8080, "cors": true }
+            "settings": { "paths": ["/collect"], "port": 8080, "cors": true }
           }
         }
       },

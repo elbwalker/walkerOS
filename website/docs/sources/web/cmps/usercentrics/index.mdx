@@ -8,7 +8,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 # Usercentrics
 
-Integrates [Usercentrics](https://usercentrics.com/) consent management with walkerOS using the official Usercentrics events and consent getters, mapping category or service consent state to walkerOS consent groups.
+Integrates [Usercentrics](https://usercentrics.com/) consent management with walkerOS using the official Usercentrics events and consent getters, mapping category consent state to walkerOS consent groups.
 
 We recommend the source package below over a hand-written event listener: it handles version detection, returning-visitor restore, and explicit-consent gating for you.
 
@@ -47,7 +47,7 @@ await startFlow({
 | `apiVersion`   | `'auto' \| 'v2' \| 'v3'` | `'auto'`            | Which Usercentrics API to target (auto-detects by default)  |
 | `categoryMap`  | `Record<string, string>` | `{}`                | Maps Usercentrics categories to walkerOS consent groups     |
 | `explicitOnly` | `boolean`                | `true`              | Only publish when the user has actively decided             |
-| `v3EventName`  | `string`                 | `'UC_UI_CMP_EVENT'` | V3 event name, override only for a custom admin event       |
+| `v3EventName`  | `string`                 | `'UC_UI_CMP_EVENT'` | V3 event name, replaces `UC_UI_CMP_EVENT`; only `ACCEPT_ALL`, `DENY_ALL` and `SAVE` events are processed |
 
 There is no configurable data-layer event setting: the source listens to the
 always-emitted official Usercentrics events, so no `eventName` configuration or
@@ -123,8 +123,7 @@ A returning visitor's prior choice is applied on page load, either from the
 static getter read (CMP already initialized) or on `UC_UI_INITIALIZED` (CMP loads
 later). First-visit defaults stay suppressed under the default
 `explicitOnly: true`. Set `explicitOnly: false` to publish any snapshot,
-including implicit defaults. Ensure the consent source has no `require`
-constraints so it initializes immediately.
+including implicit defaults.
 
 ## Reference
 

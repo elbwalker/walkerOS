@@ -801,3 +801,23 @@ jobs:
             done
             echo "- moving tags: ${MOVED:-none}"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # walker.js on https://static.walkeros.io/, from the published tarball:
+      # the moving vN.M slot and the immutable vN.M.P copy, stable versions
+      # only. Last on purpose: a missing secret, a wrong zone password or a
+      # storage outage turns the run red here without costing the GitHub
+      # Release or the images. An images_only re-dispatch of the same version
+      # retries it: the image steps find their tags, skip the build, and the
+      # run reaches this step.
+      - name: Upload walker.js to static.walkeros.io (stable only)
+        if: >-
+          (inputs.images_only == '' && inputs.release_type == 'stable release') ||
+          (inputs.images_only != '' && !contains(inputs.images_only, '-'))
+        env:
+          BUNNY_STATIC_STORAGE_PASSWORD: ${{ secrets.BUNNY_STATIC_STORAGE_PASSWORD }}
+          BUNNY_STATIC_STORAGE_ZONE: ${{ vars.BUNNY_STATIC_STORAGE_ZONE }}
+          # Dispatch text stays in env, never spliced into the script body.
+          IMAGES_ONLY: ${{ inputs.images_only }}
+        run: |
+          VERSION="${IMAGES_ONLY:-$(node -p "require('./apps/walkerjs/package.json').version")}"
+          bash scripts/cdn-upload.sh "$VERSION"

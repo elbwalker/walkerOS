@@ -1,6 +1,11 @@
 import path from 'path';
 import { pathToFileURL } from 'url';
-import { JSDOM, VirtualConsole } from 'jsdom';
+import {
+  JSDOM,
+  VirtualConsole,
+  requestInterceptor,
+  type ResourcesOptions,
+} from 'jsdom';
 import type { Logger } from '@walkeros/core';
 import type { NetworkCall, PushResult } from './types.js';
 import { getErrorMessage } from '../../core/utils.js';
@@ -13,7 +18,7 @@ export interface FlowContextOptions {
   logger: Logger.Instance;
   snapshotCode?: string;
   timeout?: number;
-  /** When provided, fetch/sendBeacon are polyfilled and calls recorded here */
+  /** When provided, fetch, sendBeacon and XHR are stubbed, recording here */
   networkCalls?: NetworkCall[];
   /** Enable timer interception + async drain after callback completes */
   asyncDrain?: { timeout?: number };
@@ -30,6 +35,12 @@ export interface FlowContextOptions {
   drainPump?: boolean;
   /** Web only: the URL of the simulated page. Defaults to `http://localhost`. */
   pageUrl?: string;
+  /**
+   * Web only, for simulate runs: the page answers every resource request (a
+   * vendor loader's `<script src>`, an iframe, a stylesheet) locally instead
+   * of fetching it. A real push loads resources as a browser would.
+   */
+  offline?: boolean;
 }
 
 /**
@@ -37,6 +48,9 @@ export interface FlowContextOptions {
  * `new CustomEvent`, a session source's `localStorage`, an `instanceof
  * Element` check). Exposed for the run, so events are created in the page's
  * own realm and its nodes pass type checks as in a browser, and restored after.
+ * Vendor SDKs read some at import, before any step runs: mixpanel-browser
+ * probes `new XMLHttpRequest()`, posthog-js reads `location` and adopts
+ * `self`. `XMLHttpRequest` is the recording one of `applyNetworkPolyfills`.
  */
 const DOM_GLOBALS = [
   'CustomEvent',
@@ -48,6 +62,9 @@ const DOM_GLOBALS = [
   'HTMLElement',
   'Document',
   'ShadowRoot',
+  'XMLHttpRequest',
+  'location',
+  'self',
 ] as const;
 
 /**
@@ -154,6 +171,7 @@ export async function withFlowContext<T>(
     asyncDrain,
     drainPump,
     pageUrl,
+    offline,
   } = options;
   const startTime = Date.now();
   const g = global as unknown as Record<string, unknown>;
@@ -169,7 +187,7 @@ export async function withFlowContext<T>(
     dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
       url: pageUrl ?? 'http://localhost',
       runScripts: 'dangerously',
-      resources: 'usable',
+      resources: offline ? offlineResources() : 'usable',
       virtualConsole,
     });
     savedWindow = g.window;
@@ -301,8 +319,8 @@ export async function withFlowContext<T>(
 }
 
 /**
- * Install no-op fetch and sendBeacon polyfills on the JSDOM window.
- * Both record calls to the provided capture array.
+ * Install no-op fetch, sendBeacon and XMLHttpRequest polyfills on the JSDOM
+ * window. All record calls to the provided capture array.
  * Also overrides global.fetch so ESM bundle code (which resolves fetch
  * from Node's global scope, not window) gets the polyfill too.
  */
@@ -358,6 +376,118 @@ export function applyNetworkPolyfills(
     const body = data !== undefined && data !== null ? String(data) : null;
     networkCalls.push({ type: 'beacon', url, body, timestamp: Date.now() });
     return true;
+  };
+
+  // JSDOM's own XMLHttpRequest sends for real, a synchronous one from a
+  // worker process. The stand-in is not the full interface, so it is
+  // defined rather than assigned.
+  Object.defineProperty(dom.window, 'XMLHttpRequest', {
+    value: createRecordingXhr(dom, networkCalls),
+    configurable: true,
+    writable: true,
+  });
+}
+
+type XhrHandler = ((event: Event) => void) | null;
+
+/**
+ * An XMLHttpRequest whose `send` records the call and completes it with an
+ * empty 200, like the fetch polyfill. It never opens a connection.
+ */
+function createRecordingXhr(dom: JSDOM, networkCalls: NetworkCall[]) {
+  const PageEvent = dom.window.Event;
+  return class XMLHttpRequest extends dom.window.EventTarget {
+    static readonly UNSENT = 0;
+    static readonly OPENED = 1;
+    static readonly HEADERS_RECEIVED = 2;
+    static readonly LOADING = 3;
+    static readonly DONE = 4;
+    readonly UNSENT = 0;
+    readonly OPENED = 1;
+    readonly HEADERS_RECEIVED = 2;
+    readonly LOADING = 3;
+    readonly DONE = 4;
+    readyState = 0;
+    status = 0;
+    statusText = '';
+    responseType = '';
+    response = '';
+    responseText = '';
+    responseURL = '';
+    timeout = 0;
+    withCredentials = false;
+    onreadystatechange: XhrHandler = null;
+    onload: XhrHandler = null;
+    onloadend: XhrHandler = null;
+    #method = 'GET';
+    #url = '';
+    #async = true;
+    #headers: Record<string, string> = {};
+
+    open(method: string, url: string | URL, async = true): void {
+      this.#method = method.toUpperCase();
+      this.#url = String(url);
+      this.#async = async;
+      this.#headers = {};
+      this.readyState = 1;
+    }
+
+    setRequestHeader(name: string, value: string): void {
+      this.#headers[name] = value;
+    }
+
+    getResponseHeader(): string | null {
+      return null;
+    }
+
+    getAllResponseHeaders(): string {
+      return '';
+    }
+
+    overrideMimeType(): void {}
+
+    abort(): void {}
+
+    send(body?: unknown): void {
+      networkCalls.push({
+        type: 'xhr',
+        url: this.#url,
+        method: this.#method,
+        body: body !== undefined && body !== null ? String(body) : null,
+        headers: { ...this.#headers },
+        timestamp: Date.now(),
+      });
+      if (this.#async) queueMicrotask(() => this.#complete());
+      else this.#complete();
+    }
+
+    #complete(): void {
+      this.readyState = 4;
+      this.status = 200;
+      this.statusText = 'OK';
+      this.responseURL = this.#url;
+      const handlers = {
+        readystatechange: this.onreadystatechange,
+        load: this.onload,
+        loadend: this.onloadend,
+      };
+      for (const [type, handler] of Object.entries(handlers)) {
+        const event = new PageEvent(type);
+        this.dispatchEvent(event);
+        handler?.call(this, event);
+      }
+    }
+  };
+}
+
+/**
+ * Resource loading of a simulated page: every request (a vendor loader's
+ * script, an iframe, a stylesheet) is answered with an empty 200 before any
+ * dispatcher runs, so none leaves the process.
+ */
+function offlineResources(): ResourcesOptions {
+  return {
+    interceptors: [requestInterceptor(() => new Response('', { status: 200 }))],
   };
 }
 

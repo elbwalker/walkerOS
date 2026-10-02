@@ -26,14 +26,13 @@ describe('walkerOS Web Basic Example', () => {
 
     // Create complete collector setup - demonstrates exact startFlow usage
     const { elb } = await startFlow({
-      // Browser source for DOM events, sessions, pageviews
+      // Browser source for DOM events and pageviews
       sources: {
         browser: {
           code: sourceBrowser,
           config: {
             settings: {
               pageview: false, // Disabled for test reliability
-              session: false, // Disabled for test simplicity
               elb: 'elb', // Makes window.elb available globally
               prefix: 'data-elb',
             },

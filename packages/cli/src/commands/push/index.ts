@@ -999,6 +999,7 @@ export async function simulateSource(
         logger,
         snapshotCode,
         networkCalls,
+        offline: true,
         pageUrl,
       },
       async (module) => {
@@ -1060,6 +1061,8 @@ export async function simulateSource(
             }
           : undefined;
         flowConfig.sources = source ? { [options.sourceId]: source } : {};
+        // No destination starts: the captured events stop at the collector.
+        if (flowConfig.destinations) flowConfig.destinations = {};
 
         // The walker commands the source issues are its effects: recorded
         // from its own env, on this run's copy of the definition.
@@ -1308,6 +1311,7 @@ export async function simulateTransformer(
         logger,
         snapshotCode,
         networkCalls,
+        offline: true,
       },
       async (module) => {
         const flowConfig = module.wireConfig(
@@ -1543,6 +1547,7 @@ export async function simulateCollector(
         logger,
         snapshotCode,
         networkCalls,
+        offline: true,
       },
       async (module) => {
         const flowConfig = module.wireConfig(
@@ -1765,6 +1770,7 @@ export async function simulateDestination(
         logger,
         snapshotCode,
         networkCalls,
+        offline: true,
       },
       async (module) => {
         const flowConfig = module.wireConfig(
