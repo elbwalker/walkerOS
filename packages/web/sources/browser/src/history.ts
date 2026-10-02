@@ -12,8 +12,11 @@ export function watchHistory(
   const originalReplace: HistoryMethod = history.replaceState;
   let path = win.location.pathname;
   let search = win.location.search;
+  // A wrapper installed over ours keeps calling it after unsubscribe.
+  let active = true;
 
   const check = (isReplace: boolean) => {
+    if (!active) return;
     const { pathname, search: nextSearch, href } = win.location;
     const changed = pathname !== path || (!isReplace && nextSearch !== search);
     // Compare against the URL right before this change, counted or not.
@@ -38,6 +41,7 @@ export function watchHistory(
   win.addEventListener('popstate', pop, { capture: true });
 
   return () => {
+    active = false;
     // Another script may have wrapped ours since: leave its wrapper in place.
     if (history.pushState === push) history.pushState = originalPush;
     if (history.replaceState === replace)

@@ -242,6 +242,19 @@ describe('route changes', () => {
     await flushChain();
     expect(pageViews()).toEqual([]);
   });
+
+  it('starts no run through a wrapper left in place after destroy', async () => {
+    const collector = await start();
+    const ours = window.history.pushState;
+    window.history.pushState = function (...args) {
+      ours.apply(window.history, args);
+    };
+    await collector.command('shutdown');
+    const rounds = collector.round;
+    window.history.pushState({}, '', '/after');
+    await flushChain();
+    expect(collector.round).toBe(rounds);
+  });
 });
 
 describe('tagged elements across route changes', () => {

@@ -22,6 +22,17 @@ an output that pushes every event to `window.dataLayer`. It reads no
 configuration. Place it below your GTM snippet
 ([details](/docs/guides/gtm#where-to-place-the-tag)).
 
+:::note[Coming from the configurable walker.js]
+
+Version 4.7 removed configuration: `elbConfig`, `data-elbconfig`,
+`createWalkerjs` and their destinations no longer apply, and tracking starts on
+load. A script tag that loads `@walkeros/walker.js@latest` gets this file from
+4.7 on. To keep a configured setup, pin the exact version,
+`https://cdn.jsdelivr.net/npm/@walkeros/walker.js@4.6.1/dist/walker.js`, or
+build the setup in the [walkerOS app](https://app.walkeros.io).
+
+:::
+
 ## Tag your HTML
 
 <CodeSnippet
