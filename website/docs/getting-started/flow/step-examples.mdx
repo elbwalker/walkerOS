@@ -80,7 +80,7 @@ Each example has a human-readable name and two fields:
 | `mapping` | object | The mapping rule applied to this event (destinations only) |
 | `out` | array | The effects the step produces, in order. Each entry is a tuple `[callable, ...args]`: a vendor call such as `["gtag", ...]` for a destination, `["elb", event]` for a source, `["return", value]` for a transformer. `[]` means no observable effect |
 | `out: [["return", false]]` | array | The transformer rejects or filters this event |
-| `trigger` | object | Sources only: how the example fires (`type`, such as `click` or `POST`, and `options`) |
+| `trigger` | object | Sources only: how the example fires the source (`type`, such as `load`, `click` or `POST`, and `options`). This is simulation and test input, not the event's `trigger` field, which is a string |
 | `command` | string | Route `in` through a walker command instead of pushing it as an event (`config`, `consent`, `user`, `run`) |
 | `title`, `description` | string | Labels shown in docs and MCP output |
 | `public` | boolean | `false` hides a test-only example from docs, UI and default MCP output (default `true`) |
@@ -141,19 +141,16 @@ Here is a complete flow config with examples on a source, transformer, and desti
         "browser": {
           "package": "@walkeros/web-source-browser",
           "examples": {
-            "cta click": {
-              "trigger": { "type": "click", "options": "button" },
-              "in": "<button data-elb='cta' data-elb-cta='label:Sign Up' data-elbaction='click:click'>Sign Up</button>",
+            "page view": {
+              "trigger": { "type": "load", "options": { "url": "https://example.com/", "title": "Home" } },
+              "in": "",
               "out": [["elb", {
-                "name": "cta click",
-                "entity": "cta",
-                "action": "click",
-                "data": { "label": "Sign Up" },
+                "name": "page view",
+                "data": { "domain": "example.com", "title": "Home", "referrer": "", "id": "/" },
                 "context": {},
                 "globals": {},
-                "nested": [],
-                "source": { "type": "browser", "platform": "web", "url": "https://example.com/", "referrer": "" },
-                "trigger": "click"
+                "trigger": "load",
+                "source": { "type": "browser", "platform": "web", "url": "https://example.com/", "referrer": "" }
               }]]
             }
           }
@@ -183,6 +180,7 @@ Here is a complete flow config with examples on a source, transformer, and desti
           "config": {
             "settings": { "ga4": { "measurementId": "G-DEMO123456" } }
           },
+          "before": "validate",
           "examples": {
             "page view": {
               "in": { "name": "page view", "data": { "title": "Home" } },
@@ -200,6 +198,8 @@ Here is a complete flow config with examples on a source, transformer, and desti
 }`}
   language="json"
 />
+
+The `ga4` destination runs `validate` in its `before` chain, so [cross-step validation](#cross-step-validation) checks the transformer's `out` against the destination's `in`.
 
 Examples are stripped by the bundler at build time. They never appear in your production bundle.
 
@@ -255,8 +255,9 @@ import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const flow = JSON.parse(readFileSync('flow.json', 'utf-8'));
 const ga4 = flow.flows.default.destinations.ga4;
+const examples: Record<string, { in: { name: string }; mapping?: unknown; out: unknown[][] }> = ga4.examples;
 
-it.each(Object.entries(ga4.examples))('ga4 destination: %s', async (name, example) => {
+it.each(Object.entries(examples))('ga4 destination: %s', async (name, example) => {
   // Record every gtag() call instead of loading the real gtag.js
   const calls: unknown[][] = [];
   const env = { window: { dataLayer: [], gtag: (...args: unknown[]) => calls.push(['gtag', ...args]) } };

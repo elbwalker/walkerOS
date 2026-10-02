@@ -532,7 +532,7 @@ Flows in the same file can reference each other's `config` block via `$flow.<nam
 
 <FlowSlice feature="ref-flow" />
 
-Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to the server flow's `config.url` at build time. Validate resolves the reference the same way the bundle does: an unknown flow or a missing key is an error in both. An empty `config.url` fails the schema check in both; an empty value under `settings` resolves to an empty string.
+Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to the server flow's `config.url` at build time. Validate resolves the reference the same way the bundle does: an unknown flow or a missing key is an error in both. An empty `config.url` fails the schema check in `bundle` and in `validate` without `--flow`; `validate --flow web` does not check the server flow and passes. An empty value under `settings` resolves to an empty string.
 
 ## Dynamic patterns
 
@@ -611,8 +611,9 @@ The `$code:` prefix is stripped during bundling, outputting raw JavaScript:
   language="typescript"
 />
 
-A `fn` receives the whole event and returns the value, so it reads the field
-itself. A `fn` next to a `key` never runs: each value has one producer.
+A `fn` receives the value being mapped (here the whole event, inside a `loop`
+the item) and returns the result, so it reads the field itself. A `fn` next to a
+`key` never runs: each value has one producer.
 
 **Use cases:**
 - **`fn:` callbacks** - Transform values in mapping

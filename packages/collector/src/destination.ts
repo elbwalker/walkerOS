@@ -29,12 +29,11 @@ import {
   stepId,
   tryCatchAsync,
   useHooks,
-  compileState,
-  applyState,
 } from '@walkeros/core';
-import { buildBaseState, journeyFields } from './observerEmit';
+import { journeyFields, stepError, stepState } from './observerEmit';
+import { compileStepState, runStepState, warnStateOff } from './state';
 import { wrapEnv } from './wrapEnv';
-import { sanitizeCalls } from './sanitizeArgs';
+import { attachCalls } from './sanitizeArgs';
 import {
   beginInitFlush,
   callDestinationOn,
@@ -50,8 +49,13 @@ import {
 import type { DestinationDelivery } from './on';
 import { resolveDestinationTimeout, withTimeout } from './timeout';
 import { runTransformerChain, extractChainProperty } from './transformer';
-import { getCacheStore, getStateStore } from './cache';
-import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
+import { getCacheStore } from './cache';
+import {
+  pushBounded,
+  resetOverflowFlag,
+  seededQueueMax,
+  warnOverflowOnce,
+} from './buffers';
 import {
   DEFAULT_DLQ_MAX,
   bumpDropped,
@@ -174,6 +178,8 @@ export async function addDestination(
       id = getId(5, 'abcdefghijklmnopqrstuvwxyz');
     } while (collector.destinations[id] || collector.pending.destinations[id]);
   }
+
+  warnStateOff(collector, stepId('destination', id), config.state);
 
   // Honor `require`: a runtime destination with a require gate must wait for the
   // collector's current state to satisfy it, exactly like a startup destination
@@ -367,12 +373,7 @@ async function deliverToDestinations(
 
   // Add event to the collector queue (bounded; FIFO drop-oldest on overflow)
   if (event) {
-    const queueMax = collector.config.queueMax;
-    if (queueMax === undefined) {
-      throw new Error(
-        'Collector.Config.queueMax is undefined; defaults must be seeded by collector()',
-      );
-    }
+    const queueMax = seededQueueMax(collector.config.queueMax);
     const result = pushBounded(collector.queue, event, { max: queueMax });
     if (result.dropped > 0) {
       const droppedCount = bumpDropped(
@@ -641,14 +642,15 @@ async function deliverToDestinations(
             return false; // Remove from destination queue
           }
 
-          const skipState = buildBaseState(collector, {
-            stepId: stepId('destination', id),
-            stepType: 'destination',
-            phase: 'skip',
-            eventId: typeof queuedEvent.id === 'string' ? queuedEvent.id : '',
-            now: Date.now(),
-            ...journeyFields(queuedEvent, destIngest, collector),
-          });
+          const skipState = stepState(
+            collector,
+            stepId('destination', id),
+            'destination',
+            'skip',
+            typeof queuedEvent.id === 'string' ? queuedEvent.id : '',
+            Date.now(),
+            journeyFields(queuedEvent, destIngest, collector),
+          );
           skipState.skipReason = 'consent';
           if (consent) skipState.consent = { ...consent };
           if (destination.config.consent) {
@@ -782,9 +784,7 @@ async function deliverToDestinations(
       // Compile declarative state entries once per batch. `get` runs before
       // the mapping-to-payload push (so it can shape the pushed event); `set`
       // runs after a successful send.
-      const dStateEntries = destination.config?.state
-        ? compileState(destination.config.state)
-        : undefined;
+      const dStateEntries = compileStepState(destination.config?.state);
       const dStateGet = dStateEntries?.filter((entry) => entry.mode === 'get');
       const dStateSet = dStateEntries?.filter((entry) => entry.mode === 'set');
 
@@ -840,14 +840,15 @@ async function deliverToDestinations(
             if (chainResult.copies.length === 0) {
               // Dropped or stopped: THIS destination skips the event; other
               // destinations are unaffected.
-              const skipState = buildBaseState(collector, {
-                stepId: stepId('destination', id),
-                stepType: 'destination',
-                phase: 'skip',
-                eventId: typeof event.id === 'string' ? event.id : '',
-                now: Date.now(),
-                ...journeyFields(event, destIngest, collector),
-              });
+              const skipState = stepState(
+                collector,
+                stepId('destination', id),
+                'destination',
+                'skip',
+                typeof event.id === 'string' ? event.id : '',
+                Date.now(),
+                journeyFields(event, destIngest, collector),
+              );
               skipState.skipReason = 'dropped';
               skipState.meta = {
                 by: chainResult.droppedBy ?? 'route',
@@ -906,11 +907,10 @@ async function deliverToDestinations(
 
             // state[get]: enrich the event before the mapping-to-payload push.
             if (dStateGet && dStateGet.length > 0 && processedEvent) {
-              processedEvent = await applyState(
-                dStateGet,
-                (storeId) => getStateStore(storeId, collector),
-                processedEvent,
+              processedEvent = await runStepState(
                 collector,
+                dStateGet,
+                processedEvent,
                 childIngest,
               );
             }
@@ -1004,11 +1004,10 @@ async function deliverToDestinations(
               dStateSet.length > 0 &&
               processedEvent
             ) {
-              processedEvent = await applyState(
-                dStateSet,
-                (storeId) => getStateStore(storeId, collector),
-                processedEvent,
+              processedEvent = await runStepState(
                 collector,
+                dStateSet,
+                processedEvent,
                 childIngest,
               );
             }
@@ -1224,13 +1223,14 @@ async function runDestinationInit(
   const initStarted = Date.now();
   emitStep(
     collector,
-    buildBaseState(collector, {
-      stepId: stepId('destination', destId),
-      stepType: 'destination',
-      phase: 'init',
-      eventId: '',
-      now: initStarted,
-    }),
+    stepState(
+      collector,
+      stepId('destination', destId),
+      'destination',
+      'init',
+      '',
+      initStarted,
+    ),
   );
 
   let configResult;
@@ -1243,18 +1243,16 @@ async function runDestinationInit(
     )(context);
   } catch (err) {
     const initErrFinished = Date.now();
-    const errState = buildBaseState(collector, {
-      stepId: stepId('destination', destId),
-      stepType: 'destination',
-      phase: 'error',
-      eventId: '',
-      now: initErrFinished,
-    });
+    const errState = stepState(
+      collector,
+      stepId('destination', destId),
+      'destination',
+      'error',
+      '',
+      initErrFinished,
+    );
     errState.durationMs = initErrFinished - initStarted;
-    errState.error =
-      err instanceof Error
-        ? { name: err.name, message: err.message }
-        : { message: String(err) };
+    errState.error = stepError(err);
     emitStep(collector, errState);
     throw err;
   }
@@ -1709,26 +1707,22 @@ export async function destinationPush<Destination extends Destination.Instance>(
         snapshot.entries.forEach((entry, index) => {
           const failed = batchThrew || failedRows.has(index);
           const journey = journeyFields(entry.event, entry.ingest, collector);
-          const state = buildBaseState(collector, {
-            stepId: stepId('destination', destId),
-            stepType: 'destination',
-            phase: failed ? 'error' : 'flush',
-            eventId: typeof entry.event.id === 'string' ? entry.event.id : '',
-            now: settledAt,
-            traceId: journey.traceId,
-            sourceId: journey.sourceId,
-            parentEventId: journey.parentEventId,
-          });
+          const state = stepState(
+            collector,
+            stepId('destination', destId),
+            'destination',
+            failed ? 'error' : 'flush',
+            typeof entry.event.id === 'string' ? entry.event.id : '',
+            settledAt,
+            journey,
+          );
           state.batch = { size: snapshot.entries.length, index };
           // Every frame carries the transport latency, so a batched delivery
           // is as measurable as the non-batched `out` path.
           state.durationMs = settledAt - flushStarted;
           if (failed) {
             const err = batchThrew ? batchError : failedRows.get(index);
-            state.error =
-              err instanceof Error
-                ? { name: err.name, message: err.message }
-                : { message: String(err) };
+            state.error = stepError(err);
           }
           emitStep(collector, state);
         });
@@ -1792,16 +1786,15 @@ export async function destinationPush<Destination extends Destination.Instance>(
       typeof processed.event.id === 'string' ? processed.event.id : '';
     const batchJourney = journeyFields(event, ingest, collector);
     const enqueuedAt = Date.now();
-    const batchInState = buildBaseState(collector, {
-      stepId: stepId('destination', destId),
-      stepType: 'destination',
-      phase: 'in',
-      eventId: batchEventId,
-      now: enqueuedAt,
-      traceId: batchJourney.traceId,
-      sourceId: batchJourney.sourceId,
-      parentEventId: batchJourney.parentEventId,
-    });
+    const batchInState = stepState(
+      collector,
+      stepId('destination', destId),
+      'destination',
+      'in',
+      batchEventId,
+      enqueuedAt,
+      batchJourney,
+    );
     if (processed.mappingKey) batchInState.mappingKey = processed.mappingKey;
     if (processed.event.consent) {
       batchInState.consent = { ...processed.event.consent };
@@ -1809,16 +1802,15 @@ export async function destinationPush<Destination extends Destination.Instance>(
     batchInState.inEvent = processed.event;
     emitStep(collector, batchInState);
 
-    const batchOutState = buildBaseState(collector, {
-      stepId: stepId('destination', destId),
-      stepType: 'destination',
-      phase: 'out',
-      eventId: batchEventId,
-      now: enqueuedAt,
-      traceId: batchJourney.traceId,
-      sourceId: batchJourney.sourceId,
-      parentEventId: batchJourney.parentEventId,
-    });
+    const batchOutState = stepState(
+      collector,
+      stepId('destination', destId),
+      'destination',
+      'out',
+      batchEventId,
+      enqueuedAt,
+      batchJourney,
+    );
     if (processed.mappingKey) batchOutState.mappingKey = processed.mappingKey;
     batchOutState.outEvent = processed.event;
     batchOutState.batch = {
@@ -1846,8 +1838,11 @@ export async function destinationPush<Destination extends Destination.Instance>(
     // observable callables do we wrap the merged env with recording proxies
     // for this push. wrapEnv deep-clones the env per push, so this must never
     // run on the default path; prod stays zero-cost beyond the guard check.
+    // Build flag (see @walkeros/core build-flags): a lean bundle folds the
+    // capture out, and `attachCalls` below with it.
     let recordedCalls: Simulation.Call[] | undefined;
     if (
+      (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__) &&
       collector.observeLevel?.() === 'trace' &&
       Array.isArray(destination.calls) &&
       destination.calls.length > 0
@@ -1877,22 +1872,17 @@ export async function destinationPush<Destination extends Destination.Instance>(
     // observers see the work this destination did for this event.
     const eventIdValue =
       typeof processed.event.id === 'string' ? processed.event.id : '';
-    const { traceId, sourceId, parentEventId } = journeyFields(
-      event,
-      ingest,
-      collector,
-    );
+    const journey = journeyFields(event, ingest, collector);
     const pushStarted = Date.now();
-    const inState = buildBaseState(collector, {
-      stepId: stepId('destination', destId),
-      stepType: 'destination',
-      phase: 'in',
-      eventId: eventIdValue,
-      now: pushStarted,
-      traceId,
-      sourceId,
-      parentEventId,
-    });
+    const inState = stepState(
+      collector,
+      stepId('destination', destId),
+      'destination',
+      'in',
+      eventIdValue,
+      pushStarted,
+      journey,
+    );
     if (processed.mappingKey) inState.mappingKey = processed.mappingKey;
     if (processed.event.consent) {
       inState.consent = { ...processed.event.consent };
@@ -1920,24 +1910,19 @@ export async function destinationPush<Destination extends Destination.Instance>(
       );
 
       const pushFinished = Date.now();
-      const outState = buildBaseState(collector, {
-        stepId: stepId('destination', destId),
-        stepType: 'destination',
-        phase: 'out',
-        eventId: eventIdValue,
-        now: pushFinished,
-        traceId,
-        sourceId,
-        parentEventId,
-      });
+      const outState = stepState(
+        collector,
+        stepId('destination', destId),
+        'destination',
+        'out',
+        eventIdValue,
+        pushFinished,
+        journey,
+      );
       outState.durationMs = pushFinished - pushStarted;
       outState.outEvent = processed.event;
-      // Attach the vendor calls recorded during this push, sanitized to a
-      // JSON-safe projection. Only when trace capture ran and something was
-      // recorded.
-      if (recordedCalls && recordedCalls.length > 0) {
-        outState.calls = sanitizeCalls(recordedCalls);
-      }
+      // Attach the vendor calls recorded during this push.
+      attachCalls(outState, recordedCalls);
       if (isDefined(response)) {
         outState.meta = { ...outState.meta, response };
       }
@@ -1949,26 +1934,20 @@ export async function destinationPush<Destination extends Destination.Instance>(
       return response;
     } catch (err) {
       const pushFinished = Date.now();
-      const errState = buildBaseState(collector, {
-        stepId: stepId('destination', destId),
-        stepType: 'destination',
-        phase: 'error',
-        eventId: eventIdValue,
-        now: pushFinished,
-        traceId,
-        sourceId,
-        parentEventId,
-      });
+      const errState = stepState(
+        collector,
+        stepId('destination', destId),
+        'destination',
+        'error',
+        eventIdValue,
+        pushFinished,
+        journey,
+      );
       errState.durationMs = pushFinished - pushStarted;
-      errState.error =
-        err instanceof Error
-          ? { name: err.name, message: err.message }
-          : { message: String(err) };
-      // Surface the vendor calls recorded before the failure, sanitized to a
-      // JSON-safe projection, so a mid-push error doesn't discard them.
-      if (recordedCalls && recordedCalls.length > 0) {
-        errState.calls = sanitizeCalls(recordedCalls);
-      }
+      errState.error = stepError(err);
+      // Surface the vendor calls recorded before the failure, so a mid-push
+      // error doesn't discard them.
+      attachCalls(errState, recordedCalls);
       if (processed.mappingKey) errState.mappingKey = processed.mappingKey;
       emitStep(collector, errState);
       throw err;
@@ -2030,6 +2009,11 @@ export async function initDestinations(
   const result: Collector.Destinations = {};
 
   for (const [id, def] of Object.entries(destinations)) {
+    warnStateOff(
+      collector,
+      stepId('destination', id),
+      def.config?.state ?? def.code.config?.state ?? def.state,
+    );
     if (def.config?.require?.length) {
       collector.pending.destinations[id] = def;
       continue;

@@ -59,7 +59,7 @@ This web flow sends one event stream to four analytics tools at once, with no pe
 
 ## Run it
 
-Save the config as `flow.json` and push an order event through the built flow with all four destinations mocked, one `--simulate` per destination. Nothing is sent to any vendor:
+Save the config as `flow.json` and push an order event with all four destinations mocked, one `--simulate` per destination. Each simulation runs its destination on its own, so this compares how each vendor receives the event; it is not a fan-out check of one running flow. This needs `@walkeros/cli` 4.7.1 or later. Nothing is sent to any vendor:
 
 <CodeSnippet
   code={`npx walkeros push flow.json -e '{"name":"order complete"}' \\
@@ -68,7 +68,7 @@ Save the config as `flow.json` and push an order event through the built flow wi
   language="bash"
 />
 
-You should see:
+You should see, besides an `Output:` line naming the built bundle before each `Simulating` line:
 
 <CodeSnippet
   code={`Simulating destination: ga4

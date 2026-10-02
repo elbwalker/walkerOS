@@ -379,8 +379,10 @@ export function applyNetworkPolyfills(
   };
 
   // JSDOM's own XMLHttpRequest sends for real, a synchronous one from a
-  // worker process. The stand-in is not the full interface, so it is
-  // defined rather than assigned.
+  // worker process. Like fetch and sendBeacon above, the stand-in records
+  // instead, on a real web push too: the page's requests are reported, never
+  // sent. The stand-in is not the full interface, so it is defined rather
+  // than assigned.
   Object.defineProperty(dom.window, 'XMLHttpRequest', {
     value: createRecordingXhr(dom, networkCalls),
     configurable: true,
@@ -392,7 +394,8 @@ type XhrHandler = ((event: Event) => void) | null;
 
 /**
  * An XMLHttpRequest whose `send` records the call and completes it with an
- * empty 200, like the fetch polyfill. It never opens a connection.
+ * empty 200, like the fetch polyfill. It never opens a connection. `abort`
+ * after `send` ends the request with abort instead, as the spec's does.
  */
 function createRecordingXhr(dom: JSDOM, networkCalls: NetworkCall[]) {
   const PageEvent = dom.window.Event;
@@ -418,17 +421,20 @@ function createRecordingXhr(dom: JSDOM, networkCalls: NetworkCall[]) {
     withCredentials = false;
     onreadystatechange: XhrHandler = null;
     onload: XhrHandler = null;
+    onabort: XhrHandler = null;
     onloadend: XhrHandler = null;
     #method = 'GET';
     #url = '';
     #async = true;
     #headers: Record<string, string> = {};
+    #pending = false;
 
     open(method: string, url: string | URL, async = true): void {
       this.#method = method.toUpperCase();
       this.#url = String(url);
       this.#async = async;
       this.#headers = {};
+      this.#pending = false;
       this.readyState = 1;
     }
 
@@ -446,7 +452,17 @@ function createRecordingXhr(dom: JSDOM, networkCalls: NetworkCall[]) {
 
     overrideMimeType(): void {}
 
-    abort(): void {}
+    abort(): void {
+      const pending = this.#pending;
+      this.#pending = false;
+      if (!pending && this.readyState !== 4) return;
+      // Ends as a network error, then back to UNSENT: with events only while
+      // the request is pending, silently once it is done.
+      this.status = 0;
+      this.statusText = '';
+      if (pending) this.#finish('abort', this.onabort);
+      this.readyState = 0;
+    }
 
     send(body?: unknown): void {
       networkCalls.push({
@@ -457,21 +473,28 @@ function createRecordingXhr(dom: JSDOM, networkCalls: NetworkCall[]) {
         headers: { ...this.#headers },
         timestamp: Date.now(),
       });
+      this.#pending = true;
       if (this.#async) queueMicrotask(() => this.#complete());
       else this.#complete();
     }
 
     #complete(): void {
-      this.readyState = 4;
+      if (!this.#pending) return;
+      this.#pending = false;
       this.status = 200;
       this.statusText = 'OK';
       this.responseURL = this.#url;
-      const handlers = {
-        readystatechange: this.onreadystatechange,
-        load: this.onload,
-        loadend: this.onloadend,
-      };
-      for (const [type, handler] of Object.entries(handlers)) {
+      this.#finish('load', this.onload);
+    }
+
+    #finish(outcome: 'load' | 'abort', onOutcome: XhrHandler): void {
+      this.readyState = 4;
+      const handlers: Array<[string, XhrHandler]> = [
+        ['readystatechange', this.onreadystatechange],
+        [outcome, onOutcome],
+        ['loadend', this.onloadend],
+      ];
+      for (const [type, handler] of handlers) {
         const event = new PageEvent(type);
         this.dispatchEvent(event);
         handler?.call(this, event);

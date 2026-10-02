@@ -1,3 +1,4 @@
+export type { BuildFlag } from './build-flags';
 export * as Cache from './cache';
 export * as Collector from './collector';
 // Direct re-export so consumers can call `stepId('collector')` without

@@ -230,11 +230,11 @@ the `click` and `submit` triggers:
 
 :::note
 
-`data-elbactions` only fires for the `click` and `submit` triggers. All other
-triggers, such as `load`, `visible`, `impression`, `hover`, `scroll`, `wait`,
-and `pulse`, fire only from `data-elbaction`, which applies to the nearest
-entity. For those triggers the @elbwalker all-entities behavior is not
-available.
+`data-elbactions` on its own fires only for the `click` and `submit` triggers.
+All other triggers, such as `load`, `visible`, `impression`, `hover`, `scroll`,
+`wait`, and `pulse`, start only from an element with `data-elbaction`, which
+applies to the nearest entity; a matching `data-elbactions` entry on that same
+element takes precedence and applies to all entities.
 
 :::
 
@@ -260,7 +260,7 @@ Use `data-elbaction` for more precise, performance-optimized tracking:
 * Performance is critical (fewer events)
 * Implementing new features
 
-**Use `data-elbactions` (all entities, `click` and `submit` only) when:**
+**Use `data-elbactions` (all entities; on its own, `click` and `submit` only) when:**
 
 * Migrating from @elbwalker and need same behavior
 * You need context from parent entities

@@ -137,8 +137,7 @@ function withFlowId(post: EmitFn, flowId: string | undefined): EmitFn {
 }
 
 /**
- * Install the advisory observation channel configured on `initConfig`:
- * caller-supplied `observers` land in the advisory Set verbatim, and an
+ * Install the advisory observation channel configured on `initConfig`: an
  * `observe` connect config attaches a telemetry poster for its arm. Runs
  * after the collector instance exists and before `command('run')`, so
  * run-phase records are captured. Everything installed here is advisory:
@@ -149,12 +148,6 @@ function installObserve(
   instance: Collector.Instance,
   initConfig: Collector.InitConfig,
 ): void {
-  if (initConfig.observers) {
-    for (const observer of initConfig.observers) {
-      instance.observers.add(observer);
-    }
-  }
-
   const observe = initConfig.observe;
   if (!observe) return;
 
@@ -260,9 +253,21 @@ export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
   initConfig = initConfig || {};
   const instance = await collector(initConfig);
 
+  // Caller-supplied observers land in the advisory Set verbatim.
+  if (initConfig.observers) {
+    for (const observer of initConfig.observers) {
+      instance.observers.add(observer);
+    }
+  }
+
   // Attach the advisory observation channel before source init and the run
-  // command, so source-init and run-phase records are captured.
-  installObserve(instance, initConfig);
+  // command, so source-init and run-phase records are captured. Build flag
+  // (see @walkeros/core build-flags): a lean bundle folds the poster out.
+  if (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__) {
+    installObserve(instance, initConfig);
+  } else if (initConfig.observe) {
+    instance.logger.warn('observe: not in this build, config ignored');
+  }
 
   // Initialize sources; the collector's elb adapter is already available
   await initSources(instance, initConfig.sources || {});

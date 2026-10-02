@@ -170,7 +170,7 @@ Extract request metadata and forward it through the pipeline.
 | `path` | Pathname, no query string |
 | `query.*` | Query parameter, repeated keys joined with `,` |
 | `url` | Absolute request URL, or `''` when there is no `host` header |
-| `body` | Parsed body |
+| `body` | Request body, parsed as JSON when it parses, otherwise the raw string |
 | `raw` | The Functions Framework request itself |
 
 ## Pub/Sub

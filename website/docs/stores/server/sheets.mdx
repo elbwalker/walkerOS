@@ -196,4 +196,4 @@ Each value is JSON-stringified into one cell (the `value` column). Reads JSON-pa
 - **Single-cell value shape.** Multi-column structured rows are out of scope, ship a richer schema in a later phase if customers ask.
 - **No drift detection on header content.** If an operator manually edits row 1, the next `walkeros setup store.<id>` overwrites it without warning.
 - **No transactional updates.** `set` is two HTTP calls (read index, write cell). Concurrent writers can interleave.
-- **Not a supported cache backing.** The Sheets store is a key-value state store, not a supported cache backing. Its cells hold structured JSON only and a binary value is rejected. Cache structured or binary HTTP responses in a filesystem, S3, GCS, or in-memory store instead.
+- **Not a cache tier.** The Sheets store is a key-value state store. It cannot be a cache tier (a `cache.store` target); a cache can still wrap it. Its cells hold structured JSON only and a binary value is rejected. Cache structured or binary HTTP responses in a filesystem, S3, GCS, or in-memory store instead.

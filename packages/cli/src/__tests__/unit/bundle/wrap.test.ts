@@ -197,6 +197,93 @@ export const __configData = { test: true };
   });
 });
 
+/**
+ * The browser wrap defines every build flag (see @walkeros/core build-flags)
+ * from the needs the skeleton carries, so a flag-guarded feature the flow does
+ * not use folds out of the wrapped bundle.
+ */
+describe('wrapSkeleton build flags', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'wrap-flags-test-'));
+  });
+
+  afterEach(async () => {
+    await fs.remove(tmpDir).catch(() => {});
+  });
+
+  /** A skeleton whose config data reads each flag, plus an optional marker. */
+  async function flagSkeleton(marker = ''): Promise<string> {
+    const skeletonPath = path.join(tmpDir, 'skeleton.mjs');
+    await fs.writeFile(
+      skeletonPath,
+      `
+export function wireConfig(d) { return d; }
+export function startFlow(c) { return Promise.resolve({ collector: c, elb() {} }); }
+export const __configData = {
+  observe: __WALKEROS_OBSERVE__,
+  stores: __WALKEROS_STORES__,
+  state: __WALKEROS_STATE__,
+  validate: __WALKEROS_VALIDATE__,
+};
+${marker}`,
+    );
+    return skeletonPath;
+  }
+
+  async function wrapText(
+    options: Partial<Parameters<typeof wrapSkeleton>[0]> & {
+      skeletonPath: string;
+    },
+  ): Promise<string> {
+    const outputPath = path.join(tmpDir, 'walker.js');
+    await wrapSkeleton({
+      platform: 'browser',
+      outputPath,
+      minify: false,
+      ...options,
+    });
+    return fs.readFile(outputPath, 'utf-8');
+  }
+
+  const LEAN =
+    '/* walkeros:needs {"observe":false,"stores":false,"state":true} */';
+
+  it('defines every flag from the skeleton needs', async () => {
+    const output = await wrapText({ skeletonPath: await flagSkeleton(LEAN) });
+    expect(output).toContain('observe: false');
+    expect(output).toContain('stores: false');
+    expect(output).toContain('state: true');
+    expect(output).toContain('validate: false');
+    expect(output).not.toContain('__WALKEROS_');
+  });
+
+  it('a baked observe turns observe on', async () => {
+    const output = await wrapText({
+      skeletonPath: await flagSkeleton(LEAN),
+      observe: { url: 'https://observer.example.com', binding: 'pb_a' },
+    });
+    expect(output).toContain('observe: true');
+  });
+
+  it('an older skeleton without needs wraps with every flag on', async () => {
+    const output = await wrapText({ skeletonPath: await flagSkeleton() });
+    expect(output).toContain('observe: true');
+    expect(output).toContain('stores: true');
+    expect(output).toContain('state: true');
+    expect(output).toContain('validate: true');
+  });
+
+  it('a node wrap defines no flags', async () => {
+    const output = await wrapText({
+      skeletonPath: await flagSkeleton(LEAN),
+      platform: 'node',
+    });
+    expect(output).toContain('__WALKEROS_OBSERVE__');
+  });
+});
+
 describe('extractDevExternals', () => {
   it('returns the unique `<pkg>/dev` specifiers from a two-entry registry', () => {
     const skeleton = `

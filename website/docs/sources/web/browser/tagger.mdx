@@ -214,6 +214,15 @@ const attributes = tagger('product')
   language="typescript"
 />
 
+:::warning
+
+The browser source does not read these escapes back yet. A value with `:`
+arrives with a backslash, and a value with `;` or `'` is split into extra
+properties. For such values write the attribute by hand: `:` needs no escaping,
+a value with `;` goes in single quotes, and a `'` is not supported.
+
+:::
+
 ## Available methods (API reference)
 
 ##### `tagger(scope?: string)`
@@ -281,8 +290,8 @@ tagger().action({ load: 'view', click: 'select', impression: 'view' });`}
 ##### `actions(trigger: string, action?: string)` | `actions(object: Record<string, string>)`
 
 Adds action mappings that apply to the nearest entity and every entity above
-it. Creates a `data-elbactions` attribute, which works for the `click` and
-`submit` triggers only. Use `action()` for every other trigger.
+it. Creates a `data-elbactions` attribute, which on its own works for the
+`click` and `submit` triggers only. Use `action()` for every other trigger.
 
 <CodeSnippet
   code={`// Single action

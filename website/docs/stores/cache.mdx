@@ -18,7 +18,7 @@ Store-level cache is different from the [event-level Cache](../collector/cache.m
 
 Stores hold one canonical value type: structured data (`StoreValue`), with binary (`Uint8Array`) as a first-class leaf. A shared core serialization codec round-trips that value to and from each backing, so any store can hold structured HTTP responses, events, push results, and binary bodies. JSON-shaped data (strings, numbers, booleans, `null`, arrays, objects) and `Uint8Array` survive a round-trip exactly; a `Date` becomes a string and an `Error` loses its fields.
 
-The cache layer owns TTL, not the store. The store persists values; the cache wraps a store and manages expiry. An expired entry is treated as a miss and re-fetched from the backing. The supported cache backends are the filesystem, S3, GCS, and the in-memory tier. The Sheets store is not a supported cache backing.
+The cache layer owns TTL, not the store. The store persists values; the cache wraps a store and manages expiry. An expired entry is treated as a miss and re-fetched from the backing. The supported cache backends are the filesystem, S3, GCS, and the in-memory tier. The Sheets store cannot be a cache tier (a `cache.store` target); a cache can still wrap it.
 
 A store's byte-native [`file` mode](./index.mdx) (`config.file: true`) is for serving raw assets byte-exact, not for caching. The cache wraps structured stores; a store in `file` mode and a `cache` on the same store is flagged by `flow_validate`.
 

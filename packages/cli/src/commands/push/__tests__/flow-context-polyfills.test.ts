@@ -118,6 +118,69 @@ describe('JSDOM network polyfills', () => {
     });
   });
 
+  describe('XMLHttpRequest polyfill', () => {
+    it('completes a request aborted after send with abort, not load', async () => {
+      const { applyNetworkPolyfills } = await import('../flow-context');
+      applyNetworkPolyfills(dom, networkCalls);
+
+      const xhr = new dom.window.XMLHttpRequest();
+      const events: string[] = [];
+      for (const type of ['readystatechange', 'load', 'abort', 'loadend'])
+        xhr.addEventListener(type, () =>
+          events.push(`${type} ${xhr.readyState} ${xhr.status}`),
+        );
+      xhr.onabort = () => events.push('onabort');
+      xhr.open('POST', 'https://api.example.com/events');
+      xhr.send('{"event":"page view"}');
+      xhr.abort();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(events).toEqual([
+        'readystatechange 4 0',
+        'abort 4 0',
+        'onabort',
+        'loadend 4 0',
+      ]);
+      expect(xhr.readyState).toBe(xhr.UNSENT);
+      expect(networkCalls).toHaveLength(1);
+    });
+
+    it('drops the completion of a request reopened before it completes', async () => {
+      const { applyNetworkPolyfills } = await import('../flow-context');
+      applyNetworkPolyfills(dom, networkCalls);
+
+      const xhr = new dom.window.XMLHttpRequest();
+      const events: string[] = [];
+      for (const type of ['readystatechange', 'load', 'loadend'])
+        xhr.addEventListener(type, () => events.push(type));
+      xhr.open('POST', 'https://api.example.com/events');
+      xhr.send('{"event":"page view"}');
+      xhr.open('GET', 'https://api.example.com/other');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(events).toEqual([]);
+      expect(xhr.readyState).toBe(xhr.OPENED);
+    });
+
+    it('resets a completed request to UNSENT on abort, without events', async () => {
+      const { applyNetworkPolyfills } = await import('../flow-context');
+      applyNetworkPolyfills(dom, networkCalls);
+
+      const xhr = new dom.window.XMLHttpRequest();
+      xhr.open('POST', 'https://api.example.com/events');
+      xhr.send('{"event":"page view"}');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const events: string[] = [];
+      for (const type of ['readystatechange', 'abort', 'loadend'])
+        xhr.addEventListener(type, () => events.push(type));
+      xhr.abort();
+
+      expect(events).toEqual([]);
+      expect(xhr.readyState).toBe(xhr.UNSENT);
+      expect(xhr.status).toBe(0);
+    });
+  });
+
   describe('cleanup', () => {
     it('should not leave polyfills on global after cleanup', async () => {
       const { applyNetworkPolyfills, cleanupNetworkPolyfills } =

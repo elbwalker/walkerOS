@@ -1,6 +1,6 @@
 import type { Elb, Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 
-/** Captured network call from polyfilled fetch/sendBeacon/XHR during simulation */
+/** A network call a web run (push or simulate) recorded instead of sending (fetch, sendBeacon, XHR) */
 export interface NetworkCall {
   type: 'fetch' | 'beacon' | 'xhr';
   url: string;
@@ -61,7 +61,7 @@ export interface PushCommandOptions {
 export interface PushResult {
   success: boolean;
   elbResult?: Elb.PushResult;
-  /** Network calls captured during web simulation (fetch, sendBeacon, XHR) */
+  /** Network calls a web run (push or simulate) recorded instead of sending (fetch, sendBeacon, XHR) */
   networkCalls?: NetworkCall[];
   duration: number;
   error?: string;

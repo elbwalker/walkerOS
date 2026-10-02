@@ -251,7 +251,7 @@ User config applies per event name; other events keep their defaults. A rule wit
 }
 ```
 
-`id`, `total`, `tax`, `shipping`, and `coupon` stay as the default defines them. A `null` value in `extend` clears an inherited field, for example `"extend": { "name": null }`.
+`id`, `total`, `tax`, `shipping`, and `coupon` stay as the default defines them. A `null` value in `extend` clears an inherited field, for example `"extend": { "data": { "map": { "tax": null } } }`.
 
 ### Replace a default rule
 
