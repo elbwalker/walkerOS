@@ -14,7 +14,11 @@ import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
 import { bumpDropped, errorMeta } from './report-error';
 import { createEvent, enrichEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
-import { buildBaseState, journeyFields } from './observerEmit';
+import {
+  buildBaseState,
+  emitCollectorDrop,
+  journeyFields,
+} from './observerEmit';
 import { runTransformerChain } from './transformer';
 
 function filterDestinations(
@@ -117,7 +121,7 @@ export function createPush<T extends Collector.Instance>(
               : undefined;
 
           // Create mutable Ingest — accumulates context through the pipeline
-          const pipelineIngest: Ingest =
+          let pipelineIngest: Ingest =
             (ingest as Ingest | undefined) ?? createIngest(id || 'unknown');
 
           // Apply source mapping if provided in options
@@ -149,28 +153,34 @@ export function createPush<T extends Collector.Instance>(
             partialEvent = processed.event;
           }
 
-          // Run pre-collector transformer chain if provided in options
-          if (
-            preChain?.length &&
-            collector.transformers &&
-            Object.keys(collector.transformers).length > 0
-          ) {
+          // Run the pre-collector chain (the source's `next` route). It
+          // resolves hop by hop with `{ ingest, event }`, after the source's
+          // mapping and state.
+          if (preChain !== undefined) {
+            const chainPath = id ? `source.${id}.next` : undefined;
             const chainResult = await runTransformerChain(
               collector,
-              collector.transformers,
+              collector.transformers || {},
               preChain,
               partialEvent,
               pipelineIngest,
               respond,
-              id ? `source.${id}.next` : undefined,
+              chainPath,
             );
 
-            // Chain was stopped - event dropped
-            if (chainResult.event === null) {
+            // Dropped or stopped: the event never reaches the collector.
+            if (chainResult.copies.length === 0) {
               collector.logger.debug(
                 `Event dropped by transformer chain${
                   chainResult.droppedBy ? ` (${chainResult.droppedBy})` : ''
                 }`,
+              );
+              emitCollectorDrop(
+                collector,
+                partialEvent,
+                pipelineIngest,
+                chainResult.droppedBy,
+                chainPath ?? 'collector.push.preChain',
               );
               return createPushResult({ ok: true, dropped: true });
             }
@@ -188,40 +198,22 @@ export function createPush<T extends Collector.Instance>(
             // Update respond if the chain produced a wrapped one
             if (chainResult.respond) respond = chainResult.respond;
 
-            // The id the chain ran under, and therefore the id the records
-            // emitted before it carry. A fork that spreads its input copies
-            // this id onto every child; a rebuilt single result drops it.
-            // Both are corrected below. The invariant this establishes is
-            // narrow and deliberate: no child keeps the CHAIN INPUT's id. It
-            // is NOT "no two children share an id". Children spreading an id
-            // a transformer assigned mid-chain still collapse, because that id
-            // was chosen rather than inherited and is indistinguishable here.
-            const chainEventId =
-              typeof partialEvent.id === 'string' ? partialEvent.id : '';
-
-            // Handle fan-out: array means multiple events from a single input
-            if (Array.isArray(chainResult.event)) {
-              // Process each forked event through the rest of the pipeline
+            // Every finished copy goes on with its own ingest. The runner
+            // owns identity: a single copy keeps the chain input's id, a fork
+            // copy carries its derived id.
+            if (chainResult.copies.length > 1) {
+              // Process each forked copy through the rest of the pipeline
               const forkResults = await Promise.all(
-                chainResult.event.map(async (forkEvent) => {
-                  // A child that inherited the chain input's id is a distinct
-                  // event and gets its own span. A child carrying an id the
-                  // transformer chose keeps it; one with no id is minted by
-                  // `createEvent` below.
-                  const forked =
-                    chainEventId !== '' && forkEvent.id === chainEventId
-                      ? { ...forkEvent, id: getSpanId() }
-                      : forkEvent;
-                  const enriched = prepareEvent(forked);
-                  const full = createEvent(collector, enriched, pipelineIngest);
+                chainResult.copies.map(async (copy) => {
+                  const full = createEvent(
+                    collector,
+                    prepareEvent(copy.event),
+                    copy.ingest,
+                  );
                   return pushToDestinations(
                     collector,
                     full,
-                    {
-                      id,
-                      ingest: pipelineIngest,
-                      respond,
-                    },
+                    { id, ingest: copy.ingest, respond },
                     filteredDests,
                   );
                 }),
@@ -236,7 +228,7 @@ export function createPush<T extends Collector.Instance>(
                   };
                 }
                 const sourceStatus = collector.status.sources[id];
-                sourceStatus.count += chainResult.event.length;
+                sourceStatus.count += chainResult.copies.length;
                 sourceStatus.lastAt = Date.now();
                 sourceStatus.duration += Date.now() - pushStart;
               }
@@ -244,18 +236,8 @@ export function createPush<T extends Collector.Instance>(
               return forkResults[0] ?? createPushResult({ ok: true });
             }
 
-            // One result is the same logical event the chain received, so it
-            // keeps that id even when the transformer rebuilt the event from
-            // scratch. Without this the wrap's in/out pair and everything the
-            // rebuilt event goes on to emit land in two different journeys.
-            partialEvent =
-              chainEventId !== '' &&
-              !(
-                typeof chainResult.event.id === 'string' &&
-                chainResult.event.id !== ''
-              )
-                ? { ...chainResult.event, id: chainEventId }
-                : chainResult.event;
+            partialEvent = chainResult.copies[0].event;
+            pipelineIngest = chainResult.copies[0].ingest;
           }
 
           // Enrich into a full event (timing, source info, defaults)

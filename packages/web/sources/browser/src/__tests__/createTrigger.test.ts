@@ -5,12 +5,12 @@ import { sourceBrowser } from '../index';
 describe('Browser createTrigger', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
-    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+    Reflect.set(window, 'elbLayer', undefined);
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
-    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+    Reflect.set(window, 'elbLayer', undefined);
   });
 
   it('should be typed as Trigger.CreateFn', () => {

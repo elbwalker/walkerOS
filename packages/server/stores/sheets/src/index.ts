@@ -2,6 +2,7 @@ export { storeSheetsInit } from './store';
 export { setup, DEFAULT_SETUP } from './setup';
 export type { SetupResult, SheetsStoreConfig } from './setup';
 export type {
+  Env,
   ServiceAccountCredentials,
   Setup,
   SheetsStoreSettings,

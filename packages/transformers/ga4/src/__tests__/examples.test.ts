@@ -3,6 +3,7 @@ import {
   createIngest,
   createMockContext,
   createMockLogger,
+  isObject,
 } from '@walkeros/core';
 import { transformerGa4 } from '../transformer';
 import type { GA4Request, GA4Settings } from '../types';
@@ -22,6 +23,8 @@ type GA4Types = Transformer.Types<GA4Settings>;
  *   - single mapped event:  `[['return', event]]`
  *   - fan-out (N events):   `[['return', e1], ['return', e2], ...]`
  *   - dropped:              `[['return', false]]`
+ *
+ * `timestamp` is the receive time, so both sides are compared without it.
  */
 
 function isGA4Request(input: unknown): input is GA4Request {
@@ -49,6 +52,20 @@ function effectsFromResult(result: PushResult): Flow.StepEffect[] {
   return [];
 }
 
+function withoutTimestamp(effects: readonly unknown[]): unknown[] {
+  return effects.map((effect) =>
+    Array.isArray(effect)
+      ? effect.map((part) =>
+          isObject(part)
+            ? Object.fromEntries(
+                Object.entries(part).filter(([key]) => key !== 'timestamp'),
+              )
+            : part,
+        )
+      : effect,
+  );
+}
+
 const emptyEvent: WalkerOS.DeepPartialEvent = {};
 
 describe('Step Examples', () => {
@@ -71,6 +88,8 @@ describe('Step Examples', () => {
     const instance = await transformerGa4(ctx);
     const result = await instance.push(emptyEvent, ctx);
     const actual = effectsFromResult(result);
-    expect(actual).toEqual(example.out);
+    expect(withoutTimestamp(actual)).toEqual(
+      withoutTimestamp(Array.isArray(example.out) ? example.out : []),
+    );
   });
 });

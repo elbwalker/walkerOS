@@ -1,6 +1,8 @@
 import type { WalkerOS } from '@walkeros/core';
 import { createMockContext, createMockLogger } from '@walkeros/core';
 import { destinationDemo } from '../index';
+import { expectSimulationResolves } from '@walkeros/core/dev';
+import { examples } from '../dev';
 
 describe('Demo Destination', () => {
   test('initializes and logs init message', () => {
@@ -220,3 +222,6 @@ describe('Demo Destination', () => {
     expect(logCall).not.toContain('missing');
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

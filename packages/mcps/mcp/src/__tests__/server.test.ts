@@ -45,6 +45,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createWalkerOSMcpServer } from '../server.js';
 import type { ToolClient } from '../tool-client.js';
+import { record } from './support/tool-result.js';
 
 function stubClient(): ToolClient {
   const notImpl = async () => {
@@ -117,10 +118,8 @@ describe('createWalkerOSMcpServer', () => {
       client: stubClient(),
       version: '0.0.0',
     });
-    const registered = Object.keys(
-      (server as unknown as { _registeredTools: Record<string, unknown> })
-        ._registeredTools,
-    ).sort();
+    const tools: unknown = Reflect.get(server, '_registeredTools');
+    const registered = Object.keys(record(tools)).sort();
     expect(registered).toEqual(
       [
         'auth',

@@ -1,4 +1,9 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
+
+const InputSchema = z.union([
+  schemas.MappingSchemas.ValueSchema,
+  z.literal(false),
+]);
 
 export const SettingsSchema = z.object({
   accessToken: z
@@ -33,6 +38,12 @@ export const SettingsSchema = z.object({
       'When true, Microsoft continues to ingest events despite validation errors',
     )
     .optional(),
+  ip: InputSchema.describe(
+    'Client IP, sent as userData.clientIpAddress. Resolves against { ingest, event }. Default: ["ingest.ip", "event.user.ip"]. false switches it off. A mapped userData.clientIpAddress wins.',
+  ).optional(),
+  userAgent: InputSchema.describe(
+    'Client user agent, sent as userData.clientUserAgent. Resolves against { ingest, event }. Default: ["ingest.userAgent", "event.user.userAgent"]. false switches it off. A mapped userData.clientUserAgent wins.',
+  ).optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

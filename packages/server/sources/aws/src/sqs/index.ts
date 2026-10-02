@@ -3,11 +3,11 @@ import {
   GetQueueAttributesCommand,
   GetQueueUrlCommand,
   ReceiveMessageCommand,
-  SQSClient,
 } from '@aws-sdk/client-sqs';
 import type { Collector, Logger, Source, WalkerOS } from '@walkeros/core';
 import type {
   Settings,
+  SqsClient,
   SyntheticMessage,
   SyntheticPushResult,
   Types,
@@ -90,17 +90,12 @@ function isQueueDoesNotExist(err: unknown): boolean {
   );
 }
 
-interface ClientWithDestroy {
-  destroy?: () => void;
-}
-
-function tryDestroyClient(client: SQSClient, logger: Logger.Instance): void {
+function tryDestroyClient(client: SqsClient, logger: Logger.Instance): void {
   // SQSClient implements destroy() in modern SDK versions; older versions
   // do not. Wrap defensively.
-  const candidate: ClientWithDestroy = client;
-  if (typeof candidate.destroy !== 'function') return;
+  if (typeof client.destroy !== 'function') return;
   try {
-    candidate.destroy();
+    client.destroy();
   } catch (err) {
     logger.debug('SQS client destroy failed (non-fatal)', {
       error: err instanceof Error ? err.message : String(err),

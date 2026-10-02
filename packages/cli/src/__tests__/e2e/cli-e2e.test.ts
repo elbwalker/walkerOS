@@ -315,7 +315,6 @@ describeIfBuilt('CLI E2E', () => {
         expect(result.stdout).toContain('Usage');
         expect(result.stdout).toContain('bundle');
         expect(result.stdout).toContain('push');
-        expect(result.stdout).toContain('run');
       },
       CLI_TEST_TIMEOUT,
     );

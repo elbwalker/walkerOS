@@ -145,3 +145,152 @@ describe('loadBundleConfig deferred env by platform', () => {
     delete process.env.WEB_KEY;
   });
 });
+
+describe('loadBundleConfig web $env build environment', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv, SHELL_ID: 'from-shell', KEK: 'secret' };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  function webConfig(bundleEnv?: Record<string, string>) {
+    return {
+      version: 4,
+      flows: {
+        web: {
+          config: {
+            platform: 'web',
+            ...(bundleEnv ? { bundle: { env: bundleEnv } } : {}),
+          },
+          destinations: {
+            d: {
+              package: '@walkeros/web-destination-gtag',
+              config: {
+                declared: '$env.GA4_ID:unset',
+                shell: '$env.SHELL_ID:unset',
+                kek: '$env.KEK:unset',
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  it('local default layers config.bundle.env over process.env', () => {
+    const result = loadBundleConfig(
+      webConfig({ GA4_ID: 'G-DECLARED', SHELL_ID: 'from-config' }),
+      { configPath: './test.json' },
+    );
+    expect(result.flowSettings.destinations?.d.config).toEqual({
+      declared: 'G-DECLARED',
+      shell: 'from-config',
+      kek: 'secret',
+    });
+  });
+
+  it('hosted build ({} base) resolves against config.bundle.env alone', () => {
+    const result = loadBundleConfig(webConfig({ GA4_ID: 'G-DECLARED' }), {
+      configPath: './test.json',
+      buildEnv: {},
+    });
+    expect(result.flowSettings.destinations?.d.config).toEqual({
+      declared: 'G-DECLARED',
+      shell: 'unset',
+      kek: 'unset',
+    });
+  });
+
+  it('declared values win over an explicit base', () => {
+    const result = loadBundleConfig(webConfig({ GA4_ID: 'G-DECLARED' }), {
+      configPath: './test.json',
+      buildEnv: { GA4_ID: 'G-BASE', SHELL_ID: 'from-base' },
+    });
+    expect(result.flowSettings.destinations?.d.config).toEqual({
+      declared: 'G-DECLARED',
+      shell: 'from-base',
+      kek: 'unset',
+    });
+  });
+
+  it('server flows keep $env deferred to runtime regardless of bundle.env', () => {
+    const result = loadBundleConfig(
+      {
+        version: 4,
+        flows: {
+          server: {
+            config: { platform: 'server', bundle: { env: { KEY: 'x' } } },
+            destinations: {
+              d: {
+                package: '@walkeros/server-destination-api',
+                config: { key: '$env.KEY' },
+              },
+            },
+          },
+        },
+      },
+      { configPath: './test.json', buildEnv: {} },
+    );
+    expect(result.flowSettings.destinations?.d.config).toEqual({
+      key: '__WALKEROS_ENV:KEY',
+    });
+  });
+});
+
+describe('loadBundleConfig local paths (plain walkeros bundle)', () => {
+  it('keeps bundle.packages path and local step packages for laptop builds', () => {
+    const result = loadBundleConfig(
+      {
+        version: 4,
+        flows: {
+          s: {
+            config: {
+              platform: 'server',
+              bundle: { packages: { '@walkeros/x': { path: '../x' } } },
+            },
+            destinations: { d: { package: './my-dest' } },
+          },
+        },
+      },
+      { configPath: './test.json' },
+    );
+    expect(result.buildOptions.packages['@walkeros/x']).toEqual({
+      path: '../x',
+    });
+    expect(result.flowSettings.destinations?.d.package).toBe('./my-dest');
+  });
+});
+
+describe('loadBundleConfig config.bundle.env must be literal', () => {
+  it.each([
+    '$env.KEK',
+    '$var.id',
+    '$secret.TOKEN',
+    '$flow.other.url',
+    '$contract.web',
+    '$code:() => 1',
+    '__WALKEROS_ENV:KEK',
+    'G-$var.id',
+  ])('refuses %s, naming the key only', (value) => {
+    expect(() =>
+      loadBundleConfig(
+        {
+          version: 4,
+          variables: { id: 'x' },
+          flows: {
+            web: {
+              config: { platform: 'web', bundle: { env: { GA4_ID: value } } },
+            },
+          },
+        },
+        { configPath: './test.json', buildEnv: {} },
+      ),
+    ).toThrow(
+      'config.bundle.env values must be literal strings; references are not allowed in: GA4_ID',
+    );
+  });
+});

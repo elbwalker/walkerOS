@@ -72,6 +72,9 @@ export interface Context {
   // source scoped to an element reads that subtree only. Optional: contexts
   // built by hand fall back to settings.scope.
   root?: InitScope;
+  // The URL a history run's page view describes, snapshotted at the route
+  // change. Unset, events read the live location.
+  href?: string;
   // Every mutable trigger container this source owns. Required: an optional
   // field with a module-level fallback would put the containers back in module
   // scope, which is the state parallel sources must not share.

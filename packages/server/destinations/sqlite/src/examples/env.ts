@@ -14,7 +14,10 @@ type CloseFn = () => Promise<void>;
 const asyncExecute: ExecuteFn = () => Promise.resolve();
 const asyncClose: CloseFn = () => Promise.resolve();
 const asyncPrepare: PrepareFn = () => () => Promise.resolve();
-const asyncQuery: QueryFn = () => Promise.resolve([]);
+// The only query at init is the table probe (`name = ?`): answer that the
+// asked-for table exists, so a simulated init reaches the prepared insert.
+const asyncQuery: QueryFn = (_sql, args) =>
+  Promise.resolve(typeof args?.[0] === 'string' ? [{ name: args[0] }] : []);
 
 const mockClient: SqliteClient = {
   execute: asyncExecute,
@@ -31,6 +34,12 @@ export const push: Env = {
 
 /**
  * Simulation tracking paths. Specifies which function calls to record when
- * running step examples through the collector.
+ * running step examples through the collector. The client comes from the
+ * async `SqliteDriver` factory, so the paths continue on its resolved value.
+ * `prepare` records the INSERT statement; the row values go to the prepared
+ * statement it returns, an anonymous function no path segment can name.
  */
-export const simulation = ['call:client.prepare', 'call:client.execute'];
+export const simulation = [
+  'call:SqliteDriver.prepare',
+  'call:SqliteDriver.execute',
+];

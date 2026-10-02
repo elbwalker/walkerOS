@@ -51,8 +51,13 @@ The returned instance must implement:
 | `{ event }` | Continue chain with modified event |
 | `void` | Continue chain, event unchanged |
 | `false` | Stop chain, event dropped |
-| `{ event, next }` | Redirect to a different chain (fan-out) |
+| `{ event, next }` | Route this event through `next` instead of the transformer's own `next`, then the chain continues |
 | `{ event, respond }` | Continue chain with wrapped respond function |
+| `Result[]` | Fork: with two or more results, each becomes its own copy of the event with its own `event.id` and finishes the rest of the path on its own |
+
+A `{ next }` in a result uses the same route grammar as the config fields,
+including `one`, `many`, and `stop`. It is resolved against `{ ingest, event }`
+right after this transformer ran.
 
 ## Minimal example
 
@@ -308,6 +313,8 @@ Use `buildDev()` from the shared tsup config to auto-generate `walkerOS.json`:
 
 This file contains your package's JSON Schemas and examples, enabling MCP tools and the CLI to validate configurations without installing your package.
 
+`buildDev()` fails the build when the package publishes no `schemas.settings`. A package with two or more `walkerOS.exports` also exports `exportExamples` and `exportSchemas` from `src/dev.ts`, each listing exactly those exports, the default included, with `settings` in every `exportSchemas` entry; a package with fewer exports sets neither.
+
 ### Optional: Hints
 
 Packages can export a `hints` record from `src/dev.ts` to provide lightweight, actionable context beyond schemas and examples, such as validation behavior, enrichment patterns, or troubleshooting tips. Hints are serialized into `walkerOS.json` and surfaced via MCP tools. See the `walkeros-create-transformer` skill for details.
@@ -317,6 +324,7 @@ Packages can export a `hints` record from `src/dev.ts` to provide lightweight, a
 - [ ] `walkerOS` field in package.json
 - [ ] Keywords include `walkeros` and `walkeros-transformer`
 - [ ] `buildDev()` in tsup.config.ts
+- [ ] `schemas.settings` exported from `src/dev.ts` (per export for multi-export packages)
 - [ ] `dist/walkerOS.json` generated on build
 - [ ] `npm run test` passes
 - [ ] `npm run lint` passes

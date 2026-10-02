@@ -102,7 +102,7 @@ Unlike the AWS SDK, `s3mini` has no implicit credential chain: `accessKeyId` and
 
 ## File serving pattern
 
-The primary use case is serving static files via the file transformer. This is the recommended pattern for managed deployments (Mode D) where files live in a bucket rather than needing to be baked into a Docker image. Set `file: true` so the store persists and returns bytes byte-exact:
+The primary use case is serving static files via the file transformer. This is the recommended pattern for managed deployments where files live in a bucket rather than needing to be baked into a Docker image. Set `file: true` so the store persists and returns bytes byte-exact:
 
 <CodeSnippet
   code={`{

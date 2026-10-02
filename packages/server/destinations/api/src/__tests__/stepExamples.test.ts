@@ -2,6 +2,7 @@ import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
 import { examples } from '../dev';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type Captured = [callable: string, ...args: unknown[]];
 
@@ -25,7 +26,7 @@ describe('Step Examples', () => {
     const event = example.in as WalkerOS.Event;
     const mapping = example.mapping;
 
-    const testEnv = clone(examples.env.standard);
+    const testEnv = clone(examples.env.push);
     testEnv.sendServer = mockSendServer;
 
     const dest = jest.requireActual('../').default;
@@ -59,3 +60,6 @@ describe('Step Examples', () => {
     expect(captured).toEqual(example.out);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

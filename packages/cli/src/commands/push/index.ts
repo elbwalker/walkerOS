@@ -1,20 +1,17 @@
 import path from 'path';
 import fs from 'fs-extra';
-import {
-  createIngest,
-  getPlatform,
-  getNextSteps,
-  createMappingRoot,
-  stepId,
-} from '@walkeros/core';
+import { createIngest, getPlatform, stepId } from '@walkeros/core';
 import {
   enrichEvent,
   transformerInit,
-  transformerPush,
+  runCollectorNext,
   runTransformerChain,
   wrapEnv,
 } from '@walkeros/collector';
-import { createCLILogger } from '../../core/cli-logger.js';
+import {
+  createCLILogger,
+  createCLILoggerConfig,
+} from '../../core/cli-logger.js';
 import {
   getErrorMessage,
   detectInput,
@@ -23,14 +20,18 @@ import {
 } from '../../core/index.js';
 
 import type {
+  Collector,
   Flow,
   FlowState,
   Ingest,
   Logger,
   Simulation,
+  Source,
   WalkerOS,
 } from '@walkeros/core';
-import { getTmpPath } from '../../core/tmp.js';
+import { tmpRunDir } from '../../core/tmp-names.js';
+import { scrubJson, scrubSecrets } from '../../core/redact-line.js';
+import { toPrintable } from '../../core/to-printable.js';
 import { loadFlowConfig, loadJsonConfig } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
 import { bundleCore } from '../bundle/bundler.js';
@@ -42,7 +43,10 @@ import { withFlowContext } from './flow-context.js';
 import { buildSimulationResult } from './simulation-result.js';
 import { prepareFlow } from './prepare.js';
 import { schemas } from '@walkeros/core/dev';
-import { runPushCommand } from './run.js';
+import { runPushCommandWithSecrets } from './run.js';
+import { collectKnownSecrets } from '../../core/known-secrets.js';
+import { legacyExportRefusal, selectDevExamples } from './dev-examples.js';
+import { resolveExportName } from '../../core/resolve-export-name.js';
 
 /**
  * Narrow runtime check used by the CLI output formatter to read fields off
@@ -51,6 +55,11 @@ import { runPushCommand } from './run.js';
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
+}
+
+/** A flow config (`Flow.Json`): an object with a `flows` object. */
+export function isFlowJson(value: unknown): value is Flow.Json {
+  return isRecord(value) && isRecord(value.flows);
 }
 
 function isString(value: unknown): value is string {
@@ -94,14 +103,17 @@ function isCallable(value: unknown): value is CreateTrigger {
 }
 
 /**
- * Narrow the awaited `/dev` module of a source package down to its
- * `examples.createTrigger`, validating each hop with `in`/`typeof` instead of
- * a cast. Returns `undefined` if any hop is missing or the wrong shape.
+ * Narrow the awaited `/dev` module of a source package down to the
+ * `createTrigger` of the step's export (see `selectDevExamples`), validating
+ * each hop with `in`/`typeof` instead of a cast. Returns `undefined` if any
+ * hop is missing or the wrong shape.
  */
-function getCreateTrigger(devModule: unknown): CreateTrigger | undefined {
-  if (!isRecord(devModule) || !('examples' in devModule)) return undefined;
-  const examples = devModule.examples;
-  if (!isRecord(examples) || !('createTrigger' in examples)) return undefined;
+function getCreateTrigger(
+  devModule: unknown,
+  exportName: string | undefined,
+): CreateTrigger | undefined {
+  const examples = selectDevExamples(devModule, exportName);
+  if (!examples || !('createTrigger' in examples)) return undefined;
   const createTrigger = examples.createTrigger;
   return isCallable(createTrigger) ? createTrigger : undefined;
 }
@@ -117,14 +129,17 @@ interface DevEnv {
 }
 
 /**
- * Narrow the awaited `/dev` module of a destination package down to its
- * `examples.env`, validating each hop with `in`/`typeof` instead of a cast.
- * Returns `undefined` if any hop is missing or the wrong shape.
+ * Narrow the awaited `/dev` module of a package down to the `examples.env` of
+ * the step's export (see `selectDevExamples`), validating each hop with
+ * `in`/`typeof` instead of a cast. Returns `undefined` if any hop is missing
+ * or the wrong shape.
  */
-function getDevEnv(devModule: unknown): DevEnv | undefined {
-  if (!isRecord(devModule) || !('examples' in devModule)) return undefined;
-  const examples = devModule.examples;
-  if (!isRecord(examples) || !('env' in examples)) return undefined;
+function getDevEnv(
+  devModule: unknown,
+  exportName: string | undefined,
+): DevEnv | undefined {
+  const examples = selectDevExamples(devModule, exportName);
+  if (!examples || !('env' in examples)) return undefined;
   const env = examples.env;
   if (!isRecord(env)) return undefined;
   const result: DevEnv = {};
@@ -134,66 +149,55 @@ function getDevEnv(devModule: unknown): DevEnv | undefined {
   return result;
 }
 
+/**
+ * Injects each flow store's dev-examples mock env (`examples.env.push` of
+ * the store's export, resolved like steps) before `startFlow`, so a store
+ * that reaches the network at start (Sheets existence check, token
+ * exchange) runs against its mock in every simulation. The store definition
+ * object is mutated in place: `$store.<id>` env references resolve by
+ * identity. A store whose package ships no mock env (fs, memory: local
+ * only) runs as configured; its id is returned for a debug line.
+ */
+export async function applyStoreMockEnvs(
+  flowConfig: { stores?: unknown },
+  flowSettings: Flow,
+  devExports: Record<string, () => Promise<unknown>> | undefined,
+): Promise<string[]> {
+  const unmocked: string[] = [];
+  const stores = flowConfig.stores;
+  if (!isRecord(stores)) return unmocked;
+
+  for (const [storeId, storeDef] of Object.entries(stores)) {
+    const packageName = flowSettings.stores?.[storeId]?.package;
+    const loadDev = packageName ? devExports?.[packageName] : undefined;
+    const devModule =
+      typeof loadDev === 'function' ? await loadDev() : undefined;
+    const { exportName } = resolveExportName(flowSettings, 'store', storeId);
+    const push = getDevEnv(devModule, exportName)?.push;
+
+    if (!push || !isRecord(storeDef)) {
+      unmocked.push(storeId);
+      continue;
+    }
+
+    // `context.env` (the def's top-level `env`) is read first by the store
+    // packages, so the mock replaces it and always wins over a configured
+    // env. Assigned by reference: a mock's getters stay live.
+    storeDef.env = push;
+  }
+
+  return unmocked;
+}
+
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(isString);
 }
 
-/**
- * Walk a transformer chain via static `.next` links starting at `startId`.
- * Mirrors the collector's internal `walkChain` for the case where the
- * simulator already knows the entry-point id and the underlying chain is
- * static. Conditional `.next` shapes terminate the walk at this hop.
- */
-function walkStaticChain(
-  startId: string,
-  transformers: import('@walkeros/core').Transformer.Transformers,
-): string[] {
-  const chain: string[] = [];
-  const visited = new Set<string>();
-  let current: string | undefined = startId;
-
-  while (current && transformers[current]) {
-    if (visited.has(current)) break;
-    visited.add(current);
-    chain.push(current);
-
-    const next: import('@walkeros/core').Transformer.Route | undefined =
-      transformers[current].config?.next;
-    if (typeof next === 'string') {
-      current = next;
-      continue;
-    }
-    if (Array.isArray(next) && next.every(isString)) {
-      chain.push(...next);
-      break;
-    }
-    // Conditional / undefined → terminate walk.
-    break;
-  }
-
-  return chain;
-}
-
-/**
- * Resolve a before chain config to an ordered array of transformer IDs.
- * Uses `getNextSteps` for the entry points and follows static `.next`
- * links via `walkStaticChain`.
- */
-function resolveBeforeChain(
-  before: import('@walkeros/core').Transformer.Route | undefined,
-  transformers: import('@walkeros/core').Transformer.Transformers,
-  ingest?: import('@walkeros/core').Ingest,
-  event?: WalkerOS.DeepPartialEvent,
-): string[] {
-  if (!before) return [];
-  // Explicit string[] chain — use as-is.
-  if (Array.isArray(before) && before.every(isString)) {
-    return before;
-  }
-  const ids = getNextSteps(before, createMappingRoot(ingest, event));
-  if (ids.length === 0) return [];
-  if (ids.length === 1) return walkStaticChain(ids[0], transformers);
-  return ids;
+/** How the running flow logs: `json` routes its logs to stderr. */
+interface FlowLogOptions {
+  json?: boolean;
+  silent?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -210,22 +214,32 @@ async function pushCore(
     platform?: string;
     mock?: string[];
     snapshot?: string;
+    raw?: unknown;
+    knownSecrets?: readonly string[];
   } = {},
 ): Promise<PushResult> {
+  // Known once the config is read; the logger reads the list per line.
+  let known: readonly string[] = options.knownSecrets ?? [];
   const logger = createCLILogger({
     silent: options.silent,
     verbose: options.verbose,
+    stderr: options.json,
+    knownSecrets: () => known,
   });
   const startTime = Date.now();
   let tempDir: string | undefined;
 
   try {
-    // Detect input type
+    // Detect input type. A `raw` config was already read by the caller: it
+    // is a config, and this run reads the input no more.
     logger.debug('Detecting input type');
-    const detected = await detectInput(
-      inputPath,
-      options.platform as Platform | undefined,
-    );
+    const detected =
+      options.raw !== undefined
+        ? { type: 'config' as const }
+        : await detectInput(
+            inputPath,
+            options.platform as Platform | undefined,
+          );
 
     let result: PushResult;
 
@@ -239,10 +253,23 @@ async function pushCore(
     }
 
     if (detected.type === 'config') {
+      // The config as read once: the one `raw`, else the detected content.
+      const raw: unknown =
+        options.raw !== undefined
+          ? options.raw
+          : 'content' in detected
+            ? JSON.parse(detected.content)
+            : undefined;
+      const knownSecrets =
+        options.knownSecrets ??
+        (isFlowJson(raw) ? collectKnownSecrets(raw) : []);
+      known = knownSecrets;
       result = await executeConfigPush(
         {
           config: inputPath,
           flow: options.flow,
+          json: options.json,
+          silent: options.silent,
           verbose: options.verbose,
           mock: options.mock,
         } as PushCommandOptions,
@@ -251,6 +278,7 @@ async function pushCore(
         (dir) => {
           tempDir = dir;
         },
+        { raw, knownSecrets },
         snapshotCode,
       );
     } else {
@@ -264,6 +292,7 @@ async function pushCore(
         },
         undefined,
         snapshotCode,
+        options,
       );
     }
 
@@ -289,41 +318,141 @@ async function pushCore(
  * `runPushCommand` directly to avoid `process.exit` killing Jest workers.
  */
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
-  const result = await runPushCommand(options);
-  const duration = result.duration;
-
-  // Format result
-  let output: string;
-  if (options.json) {
-    output = JSON.stringify({ ...result, duration }, null, 2);
-  } else {
-    const lines: string[] = [];
-    // Reflect the actual outcome. `success: true` only when no destination
-    // recorded a failure during init/push/destroy (see executeDestinationPush).
-    lines.push(`success: ${result.success}`);
-    if (result.success) {
-      const elbResult = isRecord(result.elbResult)
-        ? result.elbResult
-        : undefined;
-      if (elbResult) {
-        if (typeof elbResult.id === 'string')
-          lines.push(`  Event ID: ${elbResult.id}`);
-        if (typeof elbResult.entity === 'string')
-          lines.push(`  Entity: ${elbResult.entity}`);
-        if (typeof elbResult.action === 'string')
-          lines.push(`  Action: ${elbResult.action}`);
-      }
-    } else if (result.error) {
-      lines.push(`  Error: ${result.error}`);
-    }
-    lines.push(`  Duration: ${duration}ms`);
-    output = lines.join('\n');
-  }
+  const { result, knownSecrets } = await runPushCommandWithSecrets(options);
+  const output = renderPushOutput(result, {
+    json: options.json,
+    knownSecrets,
+  });
 
   // Write to file or stdout
   await writeResult(output + '\n', { output: options.output });
 
   process.exit(result.success ? 0 : 1);
+}
+
+/**
+ * The `walkeros push` output (`--json` or text). Simulate output carries the
+ * recorded vendor calls, whose arguments can hold credentials. It egresses
+ * like a log line: serialize, then scrub, masking the values of the secrets
+ * the flow references (`knownSecrets`) whatever their shape. A number that
+ * prints a known secret is masked before serializing, so `--json` stays JSON.
+ */
+export function renderPushOutput(
+  result: PushResult,
+  options: { json?: boolean; knownSecrets?: readonly string[] } = {},
+): string {
+  const knownSecrets = options.knownSecrets ?? [];
+  return options.json
+    ? scrubJson(result, { known: knownSecrets, space: 2 })
+    : scrubSecrets(formatPushResult(result, { knownSecrets }), {
+        known: knownSecrets,
+      });
+}
+
+const MAX_CALL_ARGS_LENGTH = 300;
+
+/** Compact JSON of one printable value; `undefined` has no JSON form. */
+function compactJson(value: unknown): string {
+  return JSON.stringify(toPrintable(value)) ?? 'undefined';
+}
+
+/**
+ * One call's arguments as compact JSON, cut at 300 chars. Scrubbed before the
+ * cut so a secret straddling the cut cannot lose the context that marks it.
+ */
+function formatCallArgs(
+  args: unknown[],
+  knownSecrets: readonly string[],
+): string {
+  const text = scrubSecrets(args.map(compactJson).join(','), {
+    known: knownSecrets,
+  });
+  return text.length > MAX_CALL_ARGS_LENGTH
+    ? `${text.slice(0, MAX_CALL_ARGS_LENGTH - 3)}...`
+    : text;
+}
+
+/** `granted functional, marketing` style list of the granted keys. */
+function grantedKeys(consent: WalkerOS.Consent | undefined): string {
+  const keys = Object.entries(consent ?? {})
+    .filter(([, granted]) => granted)
+    .map(([key]) => key);
+  return keys.length > 0 ? keys.join(', ') : 'none';
+}
+
+/** One line saying why a simulated destination sent nothing. */
+function formatSkipped(skipped: Simulation.Skipped): string {
+  if (skipped.reason === 'pending') {
+    const waits = skipped.require?.length ? skipped.require.join(', ') : '';
+    return `    pending: waits for ${waits || 'its require'} (require)`;
+  }
+  return `    skipped: consent (requires ${grantedKeys(skipped.required)}; granted ${grantedKeys(skipped.granted)})`;
+}
+
+function formatSimulation(
+  simulation: Simulation.Result,
+  knownSecrets: readonly string[],
+): string[] {
+  const lines = [`  ${simulation.step}.${simulation.name}`];
+  if (simulation.error) {
+    lines.push(`    error: ${simulation.error.message}`);
+    return lines;
+  }
+  if (simulation.step === 'destination') {
+    // No key with calls: the destination has no rule for the event and
+    // pushed it as is. No key and no calls: it was skipped before mapping.
+    const unmapped =
+      simulation.calls.length > 0 ? 'none' : 'none (skipped before mapping)';
+    lines.push(`    mapping: ${simulation.mappingKey ?? unmapped}`);
+    if (simulation.skipped) lines.push(formatSkipped(simulation.skipped));
+    for (const call of simulation.calls)
+      lines.push(
+        `    call ${call.fn}(${formatCallArgs(call.args, knownSecrets)})`,
+      );
+    if (simulation.calls.length === 0) lines.push('    no calls');
+    return lines;
+  }
+  for (const call of simulation.calls)
+    lines.push(
+      `    call ${call.fn}(${formatCallArgs(call.args, knownSecrets)})`,
+    );
+  for (const event of simulation.events)
+    lines.push(`    event ${formatCallArgs([event], knownSecrets)}`);
+  if (simulation.events.length === 0) lines.push('    no events');
+  return lines;
+}
+
+/**
+ * Text output of `walkeros push`: the outcome, the push result or one block
+ * per simulated step (its mapping, why nothing was sent, recorded calls), the
+ * error, the duration. Call arguments are scrubbed here (before their cut),
+ * masking `knownSecrets`; `pushCommand` scrubs the whole text at egress.
+ */
+export function formatPushResult(
+  result: PushResult,
+  options: { knownSecrets?: readonly string[] } = {},
+): string {
+  const knownSecrets = options.knownSecrets ?? [];
+  const lines: string[] = [];
+  // Reflect the actual outcome. `success: true` only when no destination
+  // recorded a failure during init/push/destroy (see executeDestinationPush).
+  lines.push(`success: ${result.success}`);
+  if (result.success) {
+    const elbResult = isRecord(result.elbResult) ? result.elbResult : undefined;
+    if (elbResult) {
+      if (typeof elbResult.id === 'string')
+        lines.push(`  Event ID: ${elbResult.id}`);
+      if (typeof elbResult.entity === 'string')
+        lines.push(`  Entity: ${elbResult.entity}`);
+      if (typeof elbResult.action === 'string')
+        lines.push(`  Action: ${elbResult.action}`);
+    }
+  }
+  for (const simulation of result.simulations ?? [])
+    lines.push(...formatSimulation(simulation, knownSecrets));
+  if (!result.success && result.error) lines.push(`  Error: ${result.error}`);
+  lines.push(`  Duration: ${result.duration}ms`);
+  return lines.join('\n');
 }
 
 /**
@@ -356,6 +485,16 @@ export async function push(
     platform?: Platform;
     mock?: string[];
     snapshot?: string;
+    /**
+     * The config at `configOrPath`, already read by the caller: used as is,
+     * the path is not read again (it still anchors relative paths).
+     */
+    raw?: unknown;
+    /**
+     * Values masked in the flow's logs. Defaults to the values of the
+     * secrets the config references (see `collectKnownSecrets`).
+     */
+    knownSecrets?: readonly string[];
   } = {},
 ): Promise<PushResult> {
   if (typeof configOrPath !== 'string') {
@@ -384,6 +523,8 @@ export async function push(
     platform: options.platform,
     mock: options.mock,
     snapshot: options.snapshot,
+    raw: options.raw,
+    knownSecrets: options.knownSecrets,
   });
 }
 
@@ -395,6 +536,7 @@ async function executeConfigPush(
   validatedEvent: Record<string, unknown>,
   logger: Logger.Instance,
   setTempDir: (dir: string) => void,
+  loaded: { raw: unknown; knownSecrets: readonly string[] },
   snapshotCode?: string,
 ): Promise<PushResult> {
   // Load config
@@ -402,6 +544,7 @@ async function executeConfigPush(
   const { flowSettings, buildOptions } = await loadFlowConfig(options.config!, {
     flowName: options.flow,
     logger,
+    raw: loaded.raw,
   });
 
   const platform = getPlatform(flowSettings);
@@ -411,12 +554,8 @@ async function executeConfigPush(
 
   // Bundle to temp file (env loading moved to __devExports in the bundle)
   logger.debug('Bundling flow configuration');
-  const tempDir = getTmpPath(
-    undefined,
-    `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-  );
+  const tempDir = await tmpRunDir('push');
   setTempDir(tempDir);
-  await fs.ensureDir(tempDir);
   const tempPath = path.join(tempDir, 'flow.mjs');
 
   const pushBuildOptions = {
@@ -443,6 +582,8 @@ async function executeConfigPush(
     overrides,
     snapshotCode,
     platform === 'server' ? 60000 : undefined,
+    options,
+    loaded.knownSecrets,
   );
 }
 
@@ -457,14 +598,11 @@ async function executeBundlePush(
   setTempDir: (dir: string) => void,
   overrides: PushOverrides = {},
   snapshotCode?: string,
+  flowLogs: FlowLogOptions = {},
 ): Promise<PushResult> {
   // Write bundle to temp file
-  const tempDir = getTmpPath(
-    undefined,
-    `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-  );
+  const tempDir = await tmpRunDir('push');
   setTempDir(tempDir);
-  await fs.ensureDir(tempDir);
   const tempPath = path.join(tempDir, 'flow.mjs');
   await fs.writeFile(tempPath, bundleContent, 'utf8');
 
@@ -482,6 +620,7 @@ async function executeBundlePush(
     overrides,
     snapshotCode,
     platform === 'server' ? 60000 : undefined,
+    flowLogs,
   );
 }
 
@@ -508,6 +647,8 @@ async function executeDestinationPush(
   overrides?: PushOverrides,
   snapshotCode?: string,
   timeout?: number,
+  flowLogs: FlowLogOptions = {},
+  knownSecrets?: readonly string[],
 ): Promise<PushResult> {
   const startTime = Date.now();
   const networkCalls: NetworkCall[] = [];
@@ -535,6 +676,7 @@ async function executeDestinationPush(
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       applyOverrides(config, overrides || {});
+      routeFlowLogs(config, flowLogs, knownSecrets);
 
       const result = await module.startFlow(config);
       if (!result?.collector?.push)
@@ -619,6 +761,30 @@ function buildFailureSummary(failedIds: string[], collector: unknown): string {
 }
 
 /**
+ * Routes the running flow's own logs (collector, steps) through the CLI
+ * handler. In `--json` mode stdout carries only the result, so they go to
+ * stderr like the CLI's. A simulation and a real push of a flow config always
+ * route them, passing the values of the secrets the flow references
+ * (`knownSecrets`) so every line is masked; a prebuilt bundle without
+ * `--json` keeps the flow's own logger. The flow's configured level still
+ * gates what reaches the handler.
+ */
+function routeFlowLogs(
+  flowConfig: { logger?: Logger.Config },
+  options: FlowLogOptions,
+  knownSecrets?: readonly string[],
+): void {
+  if (!options.json && knownSecrets === undefined) return;
+  const { handler } = createCLILoggerConfig({
+    silent: options.silent,
+    verbose: options.verbose,
+    stderr: options.json,
+    knownSecrets,
+  });
+  flowConfig.logger = { ...flowConfig.logger, handler };
+}
+
+/**
  * Shared data-injection seam for all simulate functions.
  */
 export interface SimulateDataOptions {
@@ -641,12 +807,104 @@ export interface SimulateDataOptions {
 }
 
 export interface SimulateSourceOptions extends SimulateDataOptions {
+  /** Log to stderr so stdout carries only the result (`push --json`). */
+  json?: boolean;
   sourceId: string;
   bundlePath?: string;
   flow?: string;
   silent?: boolean;
   verbose?: boolean;
   snapshot?: string;
+  /**
+   * Web sources only: the absolute URL of the simulated page. Defaults to the
+   * input trigger's `options.url` when it is a string, else
+   * `http://localhost`.
+   */
+  pageUrl?: string;
+  /**
+   * The collector's starting consent, handed to `startFlow` as its state
+   * (e.g. the consent a gated source such as the session source waits for).
+   * Never recorded as a call: only the source's own commands are.
+   */
+  consent?: WalkerOS.Consent;
+}
+
+export const PAGE_URL_SCOPE_ERROR =
+  '--page-url sets the page of a simulated web source; for request context use --ingest.';
+
+const DEFAULT_PAGE_URL = 'http://localhost';
+
+/**
+ * The page a simulated web source runs on: an explicit `pageUrl`, else the
+ * trigger's `options.url` when it is a string, else `http://localhost`.
+ */
+function resolvePageUrl(input: unknown, pageUrl: string | undefined): string {
+  const url = pageUrl ?? triggerUrl(input) ?? DEFAULT_PAGE_URL;
+  let parsed: URL | undefined;
+  try {
+    parsed = new URL(url);
+  } catch {
+    parsed = undefined;
+  }
+  // http(s) only: an opaque origin (file:, about:, data:) has no storage.
+  if (parsed?.protocol !== 'http:' && parsed?.protocol !== 'https:')
+    throw new Error(
+      `--page-url must be an absolute http(s) URL, e.g. https://www.example.com/ (got "${url}")`,
+    );
+  return parsed.href;
+}
+
+function triggerUrl(input: unknown): string | undefined {
+  if (!isRecord(input) || !isRecord(input.trigger)) return undefined;
+  const { options } = input.trigger;
+  return isRecord(options) && isString(options.url) ? options.url : undefined;
+}
+
+/** A source definition's `code`, narrowed off the untyped wired config. */
+function isSourceInit(value: unknown): value is Source.Init {
+  return typeof value === 'function';
+}
+
+/** Commands a source uses to wire itself up, not effects it emits. */
+const WIRING_COMMANDS = new Set(['on', 'hook', 'destination']);
+
+/**
+ * Wraps a source's `code` so the walker commands the source itself issues are
+ * recorded in its call shape (`elb`, first argument verbatim): every
+ * `env.command(name, data)` and every `env.elb('walker <name>', data)`, except
+ * the wiring commands. The env is patched in place before `code` runs, so the
+ * collector's own env object (and every scope derived from it) stays the one
+ * the source sees. Commands the collector issues itself (`startFlow`'s starting
+ * state, the simulator's shutdown) never pass through the source's env.
+ */
+function recordSourceCommands(
+  code: Source.Init,
+  calls: Simulation.Call[],
+): Source.Init {
+  const record = (first: unknown, data: unknown, name: string): void => {
+    if (WIRING_COMMANDS.has(name)) return;
+    calls.push({ fn: 'elb', args: [first, data], ts: Date.now() });
+  };
+  return (context) => {
+    const { env } = context;
+    env.command = new Proxy(env.command, {
+      apply(target, thisArg, args: unknown[]) {
+        const [name, data] = args;
+        if (typeof name === 'string') record(name, data, name);
+        return Reflect.apply(target, thisArg, args);
+      },
+    });
+    env.elb = new Proxy(env.elb, {
+      apply(target, thisArg, args: unknown[]) {
+        const [first, data] = args;
+        // The elb protocol: a `walker ` string is a command (see createElb).
+        if (typeof first === 'string' && first.startsWith('walker '))
+          record(first, data, first.slice('walker '.length));
+        return Reflect.apply(target, thisArg, args);
+      },
+    });
+    return code(context);
+  };
 }
 
 /**
@@ -683,6 +941,7 @@ export async function simulateSource(
         simulate: ['source.' + options.sourceId],
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       }
     : {
         mode: 'build' as const,
@@ -691,14 +950,19 @@ export async function simulateSource(
         simulate: ['source.' + options.sourceId],
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       };
 
   const prepared = await prepareFlow(prepareInput);
+  // Values of the secrets the flow references: masked in every log line.
+  const knownSecrets = collectKnownSecrets(config);
 
   try {
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
+      stderr: options.json,
+      knownSecrets,
     });
 
     // Resolve source package name (needed for __devExports lookup inside context)
@@ -721,6 +985,13 @@ export async function simulateSource(
 
     const networkCalls: NetworkCall[] = [];
 
+    if (options.pageUrl !== undefined && prepared.platform !== 'web')
+      throw new Error(PAGE_URL_SCOPE_ERROR);
+    const pageUrl =
+      prepared.platform === 'web'
+        ? resolvePageUrl(input, options.pageUrl)
+        : undefined;
+
     return await withFlowContext<Simulation.Result>(
       {
         esmPath: prepared.bundlePath,
@@ -728,6 +999,7 @@ export async function simulateSource(
         logger,
         snapshotCode,
         networkCalls,
+        pageUrl,
       },
       async (module) => {
         // Look up createTrigger from the lazy __devExports registry: await the
@@ -735,10 +1007,23 @@ export async function simulateSource(
         const loadDev = module.__devExports?.[sourceConfig!.package!];
         const devModule =
           typeof loadDev === 'function' ? await loadDev() : undefined;
-        const createTrigger = getCreateTrigger(devModule);
+        const { exportName } = resolveExportName(
+          prepared.flowSettings,
+          'source',
+          options.sourceId,
+        );
+        const legacyRefusal = legacyExportRefusal(
+          devModule,
+          module.__packageExports,
+          sourceConfig!.package!,
+          exportName,
+        );
+        if (legacyRefusal) throw new Error(legacyRefusal);
+        const createTrigger = getCreateTrigger(devModule, exportName);
         if (!createTrigger) {
           throw new Error(
-            `Source package "${sourceConfig!.package}" has no createTrigger in /dev export`,
+            `Source package "${sourceConfig!.package}" has no createTrigger in /dev export` +
+              (exportName ? ` for export ${exportName}` : ''),
           );
         }
 
@@ -746,6 +1031,59 @@ export async function simulateSource(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
+        routeFlowLogs(flowConfig, options, knownSecrets);
+        const unmockedStores = await applyStoreMockEnvs(
+          flowConfig,
+          prepared.flowSettings,
+          module.__devExports,
+        );
+        if (unmockedStores.length > 0)
+          logger.debug(
+            `Stores without a mock env run as configured: ${unmockedStores.join(', ')}`,
+          );
+
+        // Only the simulated source starts: another source (the browser
+        // source's page view, a CMP) would add events of its own.
+        const wiredSources: unknown = flowConfig.sources;
+        const wiredSource = isRecord(wiredSources)
+          ? wiredSources[options.sourceId]
+          : undefined;
+        // A copy, so what this run writes to it (env, config) stays here.
+        const source: Record<string, unknown> | undefined = isRecord(
+          wiredSource,
+        )
+          ? {
+              ...wiredSource,
+              ...(isRecord(wiredSource.config)
+                ? { config: { ...wiredSource.config } }
+                : {}),
+            }
+          : undefined;
+        flowConfig.sources = source ? { [options.sourceId]: source } : {};
+
+        // The walker commands the source issues are its effects: recorded
+        // from its own env, on this run's copy of the definition.
+        const commandCalls: Simulation.Call[] = [];
+        if (source && isSourceInit(source.code))
+          source.code = recordSourceCommands(source.code, commandCalls);
+
+        // A source whose package declares simulation calls runs on its mock
+        // env (e.g. a queue client), and those calls are recorded like a
+        // destination's. Other sources keep the simulated world (the JSDOM
+        // page for web sources).
+        let trackedCalls: Simulation.Call[] = [];
+        const devEnv = getDevEnv(devModule, exportName);
+        if (source && devEnv?.push && devEnv.simulation?.length) {
+          const { wrappedEnv, calls } = wrapEnv({
+            ...devEnv.push,
+            simulation: devEnv.simulation,
+          });
+          source.env = {
+            ...(isRecord(source.env) ? source.env : {}),
+            ...wrappedEnv,
+          };
+          trackedCalls = calls;
+        }
 
         // Capture events at the collector.push boundary via prePush hook.
         // Hook is wired by startFlow (inside createTrigger) before events fire.
@@ -764,6 +1102,8 @@ export async function simulateSource(
             return { ok: true }; // Stop propagation — don't call fn
           },
         };
+
+        if (options.consent) flowConfig.consent = options.consent;
 
         const instance = await createTrigger(flowConfig, {
           sourceId: options.sourceId,
@@ -790,6 +1130,12 @@ export async function simulateSource(
           name: options.sourceId,
           startTime,
           captured,
+          // One timeline: the source's commands and its mock-env calls.
+          usage: {
+            [options.sourceId]: [...commandCalls, ...trackedCalls].sort(
+              (a, b) => a.ts - b.ts,
+            ),
+          },
         });
       },
       (error) =>
@@ -812,7 +1158,49 @@ export async function simulateSource(
   }
 }
 
+/**
+ * Runs a transformer the way the runtime does: through the one chain runner
+ * (`runTransformerChain`), starting at the transformer. Its `before` chain
+ * (via `runTransformerBefore` inside the runner), its push and its route all
+ * run, resolved hop by hop with `{ ingest, event }`. Returns every finished
+ * copy; empty when the event was dropped or stopped.
+ */
+export async function runTransformerSimulation(
+  collector: Collector.Instance,
+  transformerId: string,
+  event: WalkerOS.DeepPartialEvent,
+  ingest: Ingest,
+): Promise<WalkerOS.DeepPartialEvent[]> {
+  const result = await runTransformerChain(
+    collector,
+    collector.transformers,
+    transformerId,
+    event,
+    ingest,
+    undefined,
+    `transformer.${transformerId}`,
+  );
+  return result.copies.map((copy) => copy.event);
+}
+
+/**
+ * The ingest a simulated step starts from: the caller's keys, deep-cloned so
+ * no nested object is shared between runs, under a fresh runtime `_meta`
+ * (a caller-supplied `_meta` never wins).
+ */
+function simulateIngest(
+  stepName: string,
+  ingest: Omit<Ingest, '_meta'> | undefined,
+): Ingest {
+  return {
+    ...(ingest ? structuredClone(ingest) : {}),
+    _meta: createIngest(stepName)._meta,
+  };
+}
+
 export interface SimulateTransformerOptions extends SimulateDataOptions {
+  /** Log to stderr so stdout carries only the result (`push --json`). */
+  json?: boolean;
   transformerId: string;
   bundlePath?: string;
   flow?: string;
@@ -826,6 +1214,8 @@ export interface SimulateTransformerOptions extends SimulateDataOptions {
    * present; provide only the keys the step reads.
    */
   ingest?: Omit<Ingest, '_meta'>;
+  /** The collector's starting consent, handed to `startFlow` as its state. */
+  consent?: WalkerOS.Consent;
 }
 
 /**
@@ -833,10 +1223,11 @@ export interface SimulateTransformerOptions extends SimulateDataOptions {
  *
  * Takes a DeepPartialEvent, validates it with Zod, loads the flow config,
  * bundles it, starts the flow to get initialized transformers, then runs
- * the event through the target transformer (with optional before chain).
+ * the event from the target transformer on, exactly as the runtime does
+ * (`runTransformerSimulation`).
  *
- * Captured array: first entry = input event, subsequent entries = output event(s).
- * If the transformer drops the event (returns false), output event is null.
+ * Captured array: one entry per finished copy. When the event was dropped
+ * or stopped, a single `null` entry.
  */
 export async function simulateTransformer(
   configOrPath: string | Flow.Json,
@@ -874,6 +1265,7 @@ export async function simulateTransformer(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       }
     : {
         mode: 'build' as const,
@@ -883,14 +1275,19 @@ export async function simulateTransformer(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       };
 
   const prepared = await prepareFlow(prepareInput);
+  // Values of the secrets the flow references: masked in every log line.
+  const knownSecrets = collectKnownSecrets(config);
 
   try {
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
+      stderr: options.json,
+      knownSecrets,
     });
 
     // Load snapshot code if provided
@@ -917,10 +1314,21 @@ export async function simulateTransformer(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
+        routeFlowLogs(flowConfig, options, knownSecrets);
+        const unmockedStores = await applyStoreMockEnvs(
+          flowConfig,
+          prepared.flowSettings,
+          module.__devExports,
+        );
+        if (unmockedStores.length > 0)
+          logger.debug(
+            `Stores without a mock env run as configured: ${unmockedStores.join(', ')}`,
+          );
 
         // Don't initialize sources or destinations during transformer simulation.
         if (flowConfig.sources) flowConfig.sources = {};
         if (flowConfig.destinations) flowConfig.destinations = {};
+        if (options.consent) flowConfig.consent = options.consent;
 
         const result = await module.startFlow(flowConfig);
         if (!result?.collector)
@@ -948,10 +1356,7 @@ export async function simulateTransformer(
         }
 
         const inputEvent = event;
-        const ingest = {
-          ...createIngest(options.transformerId),
-          ...options.ingest,
-        };
+        const ingest = simulateIngest(options.transformerId, options.ingest);
         // Output events only: each entry is a transformer output, or `null`
         // when the event was dropped. `buildSimulationResult` drops null
         // entries so a drop yields `events: []` and a passthrough yields
@@ -963,67 +1368,19 @@ export async function simulateTransformer(
 
         logger.info(`Simulating transformer: ${options.transformerId}`);
 
-        // Run before chain if configured (mandatory preparation)
-        let processedEvent: WalkerOS.DeepPartialEvent = inputEvent;
-        const before = transformer.config.before;
-        if (before && collector.transformers) {
-          const beforeChainIds = resolveBeforeChain(
-            before,
-            collector.transformers,
-            ingest,
-            processedEvent,
-          );
-          if (beforeChainIds.length > 0) {
-            const beforeResult = await runTransformerChain(
-              collector,
-              collector.transformers,
-              beforeChainIds,
-              processedEvent,
-              ingest,
-              undefined,
-              `transformer.${options.transformerId}.before`,
-            );
-            if (beforeResult === null) {
-              captured.push({ event: null, timestamp: Date.now() });
-              await collector.command('shutdown');
-              return buildSimulationResult({
-                step: 'transformer',
-                name: options.transformerId,
-                startTime,
-                captured,
-              });
-            }
-            processedEvent = (
-              Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
-            ) as WalkerOS.DeepPartialEvent;
-          }
-        }
-
-        const pushResult = await transformerPush(
+        // The runtime path: the one chain runner, starting at the
+        // transformer (its before chain, its push, its route).
+        const outputs = await runTransformerSimulation(
           collector,
-          transformer,
           options.transformerId,
-          processedEvent,
+          inputEvent,
           ingest,
         );
-
-        if (pushResult === false) {
+        if (outputs.length === 0) {
           captured.push({ event: null, timestamp: Date.now() });
-        } else if (Array.isArray(pushResult)) {
-          for (const r of pushResult) {
-            captured.push({
-              event: r.event || processedEvent,
-              timestamp: Date.now(),
-            });
-          }
-        } else if (
-          pushResult &&
-          typeof pushResult === 'object' &&
-          pushResult.event
-        ) {
-          captured.push({ event: pushResult.event, timestamp: Date.now() });
-        } else {
-          captured.push({ event: processedEvent, timestamp: Date.now() });
+        }
+        for (const output of outputs) {
+          captured.push({ event: output, timestamp: Date.now() });
         }
 
         await collector.command('shutdown');
@@ -1055,10 +1412,31 @@ export async function simulateTransformer(
   }
 }
 
+/**
+ * Runs the collector step the way the runtime does: the runtime's own
+ * enrichment (`enrichEvent`), then the collector's own chain
+ * (`collector.next`) through `runCollectorNext`, the function
+ * `pushToDestinations` calls. Returns every finished copy (one without a
+ * fork, one per surviving fork); empty when the chain dropped the event.
+ */
+export async function runCollectorSimulation(
+  collector: Collector.Instance,
+  event: WalkerOS.DeepPartialEvent,
+  ingest: Ingest = createIngest('collector'),
+): Promise<WalkerOS.Event[]> {
+  const enriched = enrichEvent(collector, event);
+  const result = await runCollectorNext(collector, enriched, { ingest });
+  return result.copies.map((copy) => copy.event);
+}
+
 export interface SimulateCollectorOptions extends SimulateDataOptions {
+  /** Log to stderr so stdout carries only the result (`push --json`). */
+  json?: boolean;
   collectorName: string;
   bundlePath?: string;
   flow?: string;
+  /** `collector.next.TRANSFORMER=VALUE` mocks for the collector's chain. */
+  mock?: string[];
   silent?: boolean;
   verbose?: boolean;
   snapshot?: string;
@@ -1068,15 +1446,23 @@ export interface SimulateCollectorOptions extends SimulateDataOptions {
     globals?: WalkerOS.Properties;
     timing?: number; // sets collector.timing, the base from which prepareEvent computes the relative event.timing
   };
+  /**
+   * Pipeline context the collector's chain (`collector.next`) reads via
+   * `ctx.ingest`. Merged onto a fresh ingest so `_meta` is always the
+   * runtime's.
+   */
+  ingest?: Omit<Ingest, '_meta'>;
 }
 
 /**
- * Self-contained collector enrichment simulation.
+ * Self-contained collector simulation.
  *
  * Takes a post-next `DeepPartialEvent` and an optional collector-state
- * snapshot, then returns the fully enriched event the runtime produces between
- * the pre-collector `next` chain and the post-collector `before` chain. Reuses
- * the runtime's own enrichment (`enrichEvent`); it does not reimplement it.
+ * snapshot, then returns what the runtime hands to the destination fan-out:
+ * the enriched event after the collector's own chain (`collector.next`), one
+ * entry per finished copy, or a single `null` entry when the chain dropped
+ * the event. Runs `runCollectorSimulation`; it does not reimplement the
+ * enrichment or the chain.
  */
 export async function simulateCollector(
   configOrPath: string | Flow.Json,
@@ -1111,24 +1497,32 @@ export async function simulateCollector(
         config,
         flow: options.flow,
         simulate: ['collector.' + options.collectorName],
+        mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       }
     : {
         mode: 'build' as const,
         config,
         flow: options.flow,
         simulate: ['collector.' + options.collectorName],
+        mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       };
 
   const prepared = await prepareFlow(prepareInput);
+  // Values of the secrets the flow references: masked in every log line.
+  const knownSecrets = collectKnownSecrets(config);
 
   try {
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
+      stderr: options.json,
+      knownSecrets,
     });
 
     // Load snapshot code if provided
@@ -1155,8 +1549,18 @@ export async function simulateCollector(
           options.data ?? module.__configData ?? undefined,
         );
         applyOverrides(flowConfig, prepared.overrides);
+        routeFlowLogs(flowConfig, options, knownSecrets);
+        const unmockedStores = await applyStoreMockEnvs(
+          flowConfig,
+          prepared.flowSettings,
+          module.__devExports,
+        );
+        if (unmockedStores.length > 0)
+          logger.debug(
+            `Stores without a mock env run as configured: ${unmockedStores.join(', ')}`,
+          );
 
-        // Don't initialize sources or destinations during collector enrichment.
+        // Don't initialize sources or destinations during collector simulation.
         if (flowConfig.sources) flowConfig.sources = {};
         if (flowConfig.destinations) flowConfig.destinations = {};
 
@@ -1179,12 +1583,21 @@ export async function simulateCollector(
             collector.timing = options.state.timing;
         }
 
-        const enriched = enrichEvent(collector, event);
-
+        const outputs = await runCollectorSimulation(
+          collector,
+          event,
+          simulateIngest('collector', options.ingest),
+        );
         const captured: Array<{
           event: WalkerOS.DeepPartialEvent | null;
           timestamp: number;
-        }> = [{ event: enriched, timestamp: Date.now() }];
+        }> =
+          outputs.length > 0
+            ? outputs.map((output) => ({
+                event: output,
+                timestamp: Date.now(),
+              }))
+            : [{ event: null, timestamp: Date.now() }];
 
         await collector.command('shutdown');
 
@@ -1216,6 +1629,8 @@ export async function simulateCollector(
 }
 
 export interface SimulateDestinationOptions extends SimulateDataOptions {
+  /** Log to stderr so stdout carries only the result (`push --json`). */
+  json?: boolean;
   destinationId: string;
   bundlePath?: string;
   flow?: string;
@@ -1223,27 +1638,66 @@ export interface SimulateDestinationOptions extends SimulateDataOptions {
   silent?: boolean;
   verbose?: boolean;
   snapshot?: string;
+  /**
+   * Pipeline context the destination's `before` chain and push read via
+   * `ctx.ingest` (e.g. `userAgent` for a conversion API). Merged onto a
+   * fresh ingest so `_meta` is always the runtime's.
+   */
+  ingest?: Omit<Ingest, '_meta'>;
+  /**
+   * The collector's starting consent: handed to `startFlow` as its initial
+   * state, which applies it pre-run as a consent command that only the target
+   * (the one registered destination) hears. A `require: ["consent"]`
+   * destination starts, the consent gate sees it, and a Consent Mode target
+   * records its consent update. The event's own consent still applies.
+   */
+  consent?: WalkerOS.Consent;
+  /**
+   * Run `collector.command(command, event)` instead of pushing the event: a
+   * step example with `command` (e.g. `consent`), whose `in` is the command's
+   * data. With `consent`, the starting state applies first, then the command.
+   */
+  command?: Flow.StepCommand;
+}
+
+/** A consent record: an object of booleans. */
+function isConsentRecord(value: unknown): value is WalkerOS.Consent {
+  return (
+    isRecord(value) &&
+    Object.values(value).every((granted) => typeof granted === 'boolean')
+  );
+}
+
+/** The `require` entries of a pending destination definition. */
+function pendingRequire(definition: unknown): string[] {
+  if (!isRecord(definition) || !isRecord(definition.config)) return [];
+  const { require } = definition.config;
+  return isStringArray(require) ? require : [];
 }
 
 /**
  * Self-contained destination simulation.
  *
  * Takes a DeepPartialEvent, validates it with Zod, loads the flow config,
- * bundles it, starts the flow, then pushes via collector.push with an include
- * filter so only the target destination receives the event. This gives full
- * pipeline support — consent checks, event mapping, createEvent enrichment,
- * before chains — without manual wiring.
+ * bundles it, then starts the flow with ONLY the target destination (no
+ * other destination initializes against its real env) and `consent` as the
+ * collector's starting state. It pushes the event through the full pipeline
+ * (consent checks, event mapping, createEvent enrichment, before chains), or
+ * runs `command` with the event as its data. When nothing was sent, the
+ * result's `skipped` says why, from the collector's own records.
  */
 export async function simulateDestination(
   configOrPath: string | Flow.Json,
-  event: WalkerOS.DeepPartialEvent,
+  event: WalkerOS.DeepPartialEvent | Record<string, unknown>,
   options: SimulateDestinationOptions,
 ): Promise<Simulation.Result> {
   const startTime = Date.now();
 
-  // Validate event with Zod
-  const parsed = schemas.PartialEventSchema.safeParse(event);
-  if (!parsed.success) {
+  // Validate event with Zod. A command's data is not an event.
+  const parsed = options.command
+    ? undefined
+    : schemas.PartialEventSchema.safeParse(event);
+  if (parsed && !parsed.success) {
     return buildSimulationResult({
       step: 'destination',
       name: options.destinationId,
@@ -1270,6 +1724,7 @@ export async function simulateDestination(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       }
     : {
         mode: 'build' as const,
@@ -1279,14 +1734,19 @@ export async function simulateDestination(
         mock: options.mock,
         silent: options.silent,
         verbose: options.verbose,
+        json: options.json,
       };
 
   const prepared = await prepareFlow(prepareInput);
+  // Values of the secrets the flow references: masked in every log line.
+  const knownSecrets = collectKnownSecrets(config);
 
   try {
     const logger = createCLILogger({
       silent: options.silent,
       verbose: options.verbose,
+      stderr: options.json,
+      knownSecrets,
     });
 
     let snapshotCode: string | undefined;
@@ -1310,7 +1770,46 @@ export async function simulateDestination(
         const flowConfig = module.wireConfig(
           options.data ?? module.__configData ?? undefined,
         );
+
+        // Only the target starts: no source, and no other destination, whose
+        // init would run against its real env (a vendor script, an SDK
+        // client). A missing target fails here, naming the flow's
+        // destinations. The target's config is a copy, so what this run
+        // writes to it (env, require, overrides) stays in this run.
+        const wiredDestinations: unknown = flowConfig.destinations;
+        const wiredTarget = isRecord(wiredDestinations)
+          ? wiredDestinations[options.destinationId]
+          : undefined;
+        if (!isRecord(wiredTarget)) {
+          const available = isRecord(wiredDestinations)
+            ? Object.keys(wiredDestinations).join(', ')
+            : '';
+          throw new Error(
+            `Destination "${options.destinationId}" not found in collector. ` +
+              `Available: ${available || 'none'}`,
+          );
+        }
+        const target: Record<string, unknown> = {
+          ...wiredTarget,
+          config: isRecord(wiredTarget.config) ? { ...wiredTarget.config } : {},
+        };
+        flowConfig.destinations = { [options.destinationId]: target };
+        if (flowConfig.sources) flowConfig.sources = {};
+        // The starting consent is initial collector state: startFlow applies
+        // it pre-run as a consent command, heard only by the target.
+        if (options.consent) flowConfig.consent = options.consent;
+
         applyOverrides(flowConfig, prepared.overrides);
+        routeFlowLogs(flowConfig, options, knownSecrets);
+        const unmockedStores = await applyStoreMockEnvs(
+          flowConfig,
+          prepared.flowSettings,
+          module.__devExports,
+        );
+        if (unmockedStores.length > 0)
+          logger.debug(
+            `Stores without a mock env run as configured: ${unmockedStores.join(', ')}`,
+          );
 
         // Read env from bundled __devExports
         const destPkg = (prepared.flowSettings.destinations ?? {})[
@@ -1327,32 +1826,43 @@ export async function simulateDestination(
           const loadDev = module.__devExports?.[destPkg.package];
           const devModule =
             typeof loadDev === 'function' ? await loadDev() : undefined;
-          const devEnv = getDevEnv(devModule);
+          const { exportName } = resolveExportName(
+            prepared.flowSettings,
+            'destination',
+            options.destinationId,
+          );
+          const legacyRefusal = legacyExportRefusal(
+            devModule,
+            module.__packageExports,
+            destPkg.package,
+            exportName,
+          );
+          if (legacyRefusal) throw new Error(legacyRefusal);
+          const devEnv = getDevEnv(devModule, exportName);
 
-          if (devEnv?.push) {
-            const destinations = flowConfig.destinations as Record<
-              string,
-              { config?: { env?: Record<string, unknown> } }
-            >;
-            const destConfig = destinations[options.destinationId]?.config;
-            if (destConfig) {
-              destConfig.env = devEnv.push;
-            }
+          // Without a mock env the destination would run against its real
+          // vendor client. Refuse before startFlow so init never runs.
+          if (!devEnv?.push) {
+            throw new Error(
+              `No mock env for ${destPkg.package} export ${exportName ?? 'default'}: simulate would call the real vendor. Add examples.env.push to the package's dev examples.`,
+            );
+          }
 
-            if (devEnv.simulation?.length) {
-              const combined = {
-                ...devEnv.push,
-                simulation: devEnv.simulation,
-              };
-              const { wrappedEnv, calls } = wrapEnv(combined);
-              if (destConfig) destConfig.env = wrappedEnv;
-              trackedCalls = calls;
-            }
+          const destConfig = target.config;
+          if (isRecord(destConfig)) {
+            destConfig.env = devEnv.push;
+          }
+
+          if (devEnv.simulation?.length) {
+            const combined = {
+              ...devEnv.push,
+              simulation: devEnv.simulation,
+            };
+            const { wrappedEnv, calls } = wrapEnv(combined);
+            if (isRecord(destConfig)) destConfig.env = wrappedEnv;
+            trackedCalls = calls;
           }
         }
-
-        // Don't initialize sources — unnecessary overhead
-        if (flowConfig.sources) flowConfig.sources = {};
 
         const result = await module.startFlow(flowConfig);
         if (!result?.collector)
@@ -1383,9 +1893,27 @@ export async function simulateDestination(
         // The in, out, and error phases can all carry the key, so capture on
         // presence rather than pinning a phase: a throwing destination still
         // reports which rule matched.
+        // A failed init or push of the target is recorded as its error
+        // phase; the result carries it so the simulation reports failure.
+        let stepError: string | undefined;
+        // The consent gate's own record of a skipped event: what the
+        // destination requires and the collector consent at that hop.
+        let consentSkip:
+          | { required?: WalkerOS.Consent; consent?: WalkerOS.Consent }
+          | undefined;
+        let delivered = false;
         const captureMappingKey = (state: FlowState): void => {
-          if (state.stepId === targetStepId && state.mappingKey) {
-            mappingKey = state.mappingKey;
+          if (state.stepId !== targetStepId) return;
+          if (state.mappingKey) mappingKey = state.mappingKey;
+          if (state.phase === 'error' && state.error && stepError === undefined)
+            stepError = state.error.message;
+          if (state.phase === 'out') delivered = true;
+          if (state.phase === 'skip' && state.skipReason === 'consent') {
+            const required = state.meta?.required;
+            consentSkip = {
+              ...(isConsentRecord(required) ? { required } : {}),
+              ...(state.consent ? { consent: state.consent } : {}),
+            };
           }
         };
         // Guarded: a prebuilt bundle may carry a collector without an
@@ -1394,11 +1922,35 @@ export async function simulateDestination(
           collector.observers.add(captureMappingKey);
         }
 
-        // Full pipeline: consent, mapping, enrichment, before chains
-        // include filter ensures only the target destination receives the event
-        await collector.push(event, {
-          include: [options.destinationId],
-        });
+        if (options.command) {
+          // A command example: its calls (e.g. gtag consent update) are the
+          // output, recorded as they happen.
+          await collector.command(options.command, event);
+        } else {
+          // Full pipeline: consent, mapping, enrichment, before chains.
+          await collector.push(event, {
+            include: [options.destinationId],
+            ingest: simulateIngest(options.destinationId, options.ingest),
+          });
+        }
+
+        // Why nothing was sent: still waiting for its require, or skipped
+        // at the consent gate (queued with `queue: true`).
+        const pending = collector.pending.destinations[options.destinationId];
+        let skipped: Simulation.Skipped | undefined;
+        if (pending) {
+          skipped = { reason: 'pending', require: pendingRequire(pending) };
+        } else if (consentSkip && !delivered) {
+          const eventConsent =
+            'consent' in event && isConsentRecord(event.consent)
+              ? event.consent
+              : {};
+          skipped = {
+            reason: 'consent',
+            ...(consentSkip.required ? { required: consentSkip.required } : {}),
+            granted: { ...consentSkip.consent, ...eventConsent },
+          };
+        }
 
         await collector.command('shutdown');
 
@@ -1410,6 +1962,8 @@ export async function simulateDestination(
             ? { [options.destinationId]: trackedCalls }
             : undefined,
           mappingKey,
+          skipped,
+          ...(stepError !== undefined ? { error: stepError } : {}),
         });
       },
       (error) =>

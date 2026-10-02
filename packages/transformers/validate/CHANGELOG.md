@@ -1,5 +1,34 @@
 # @walkeros/transformer-validate
 
+## 4.7.0
+
+### Patch Changes
+
+- 74821ed: A mapping value runs exactly one producer, in the order `loop`,
+  `map`, `set`, `key`, `fn`, so a `fn` next to a `key` is ignored. A `loop` over
+  a non-list yields the `value` fallback. A mapping or `policy` entry that
+  resolves to nothing removes the field. The validate transformer never throws
+  and `pass` mode keeps such events.
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

@@ -193,35 +193,57 @@ walkeros push flow.json -e event.json --mock destination.ga4='{"status":"ok"}'
 **Programmatic usage:**
 
 ```typescript
-import { push } from '@walkeros/cli';
+import { simulateDestination, simulateSource } from '@walkeros/cli';
 
-// Simulate a destination
-const result = await push(
+// Simulate a destination: returns one Simulation.Result
+const dest = await simulateDestination(
   'flow.json',
-  { entity: 'page', action: 'view' },
-  {
-    simulate: ['destination.ga4'],
-  },
+  { name: 'page view' },
+  { destinationId: 'ga4', ingest: { userAgent: 'Mozilla/5.0' } },
 );
-// result.usage = API call tracking data from wrapEnv
+// dest.calls = recorded vendor calls ({ fn, args, ts })
+// dest.mappingKey = matched rule, e.g. "page view"
 
-// Simulate a source
-const result = await push('flow.json', undefined, {
-  simulate: ['source.browser'],
-});
-// result.captured = events captured from source env.push
+// Simulate a source: input is { content, trigger? }
+const src = await simulateSource(
+  'flow.json',
+  { content: { name: 'page view' } },
+  { sourceId: 'browser' },
+);
+// src.events = events captured from source env.push
 ```
+
+`simulateTransformer` and `simulateCollector` follow the same shape. The CLI
+`push --simulate` path collects these results into `PushResult.simulations` and
+prints them with `formatPushResult`; programmatic `push()` does not simulate.
 
 **Key points:**
 
-- `--simulate destination.X` sets `config.mock = {}` on the target and
-  `config.disabled = true` on all other destinations
-- `--simulate source.X` wraps `env.push` with a capture function and disables
-  all destinations
+- `--simulate destination.X` starts only the target destination (no source, no
+  other destination); the flow's transformers still start
+- `--simulate source.X` starts only that source and captures its events at the
+  collector boundary; they reach no destination. A source package declaring
+  `examples.env.simulation` (SQS, Pub/Sub pull) runs on its mock client, calls
+  recorded
+- Simulate options: `--consent` (starting collector consent), `--command`
+  (destination runs a collector command instead of a push), `--page-url` (web
+  source page), `--ingest` (request context). Programmatic:
+  `simulateDestination(config, event, { destinationId, consent, command })`,
+  `simulateSource(config, input, { sourceId, pageUrl })`
 - Destination `/dev` env.push is auto-loaded to provide mock globals (fake
-  `window.gtag`, etc.)
-- Returns `PushResult` with `result`, `captured` (source), and `usage`
-  (destination)
+  `window.gtag`, a mock SDK client, a mock `sendServer`), resolved per export
+  (`exportExamples`). Without one, simulate refuses a package destination before
+  the flow starts instead of calling the real vendor (an inline `code` step has
+  no package and runs as given). A flow store's mock env is injected when its
+  package ships one; a store without one runs for real.
+- Returns `PushResult` with `simulations` (one `Simulation.Result` per simulated
+  step: `events`, `calls`, `mappingKey?`, `skipped?`, `error?`; `skipped` says
+  why a destination sent nothing: `pending` on its `require`, or a `consent`
+  skip)
+- Trace-mode limit: simulate injects the mock env before `init`, so a client
+  built in `init` is recorded. Runtime trace mode wraps the env per push only
+  (`collector/src/destination.ts`), so calls through a client built in `init`
+  are not recorded there.
 - The `mockEnv()` and env pattern examples above remain correct for unit testing
   individual step functions directly
 
@@ -281,6 +303,21 @@ expect(calls).toContainEqual({
   args: ['event', 'purchase', expect.objectContaining({ value: 99.99 })],
 });
 ```
+
+### Rules for a package's env
+
+- **`init` keeps an injected dependency.** Every external dependency (SDK
+  client, constructor or module, `fetch`, `sendServer`, auth client) is reached
+  through `env`, and `init` creates one only when none is injected:
+  `env?.x ?? (await createX(...))`. Overwriting an injected client means tests
+  and simulate hit the real vendor.
+- **Every mock env key is read.** Each key a package's `examples.env.push`
+  declares must be read as `env.<key>` somewhere in the package's `src`;
+  otherwise the mock is dead and the real module runs (jest may pass only
+  through `__mocks__`).
+- **`simulation` names the request call** and is pinned with
+  `expectSimulationResolves(examples.env)` from `@walkeros/core/dev` (see
+  [using-step-examples](../walkeros-using-step-examples/SKILL.md)).
 
 ### dev.ts Structure
 

@@ -1,5 +1,7 @@
 import type { Store } from '@walkeros/core';
 
+export * as env from './env';
+
 /** AWS S3 bucket for serving static files byte-exact (file mode) */
 export const awsAssets: Store.Config = {
   settings: {

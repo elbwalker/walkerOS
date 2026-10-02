@@ -246,15 +246,14 @@ export async function completeDeviceLogin(
     // The window bounds the request too, not just how many are started: a
     // stalled response would otherwise run past the deadline on the HTTP
     // client's own clock.
-    const poll = await pollDeviceToken(
-      appUrl,
-      deviceCode,
-      fetchFn,
-      AbortSignal.timeout(Math.max(1, deadline - Date.now())),
-    );
+    const signal = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
+    const poll = await pollDeviceToken(appUrl, deviceCode, fetchFn, signal);
 
     if (poll.status === 'pending') {
       waiting = 'pending';
+      // An aborted request means the window is spent, even when its timer
+      // fired a moment before Date.now() reached the deadline.
+      if (signal.aborted) break;
       continue;
     }
     if (poll.status === 'slow_down') {

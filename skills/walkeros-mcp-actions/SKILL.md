@@ -82,13 +82,19 @@ authorized session.
 
 const flow = await readFile('flow.json', 'utf8');
 
-// 1. Validate first; bail with one line if the config is broken.
+// 1. Validate first; bail with one line if the config is broken. Branch on
+//    `code`, never on `message`. `strict: true` turns warnings and skipped
+//    checks (`details.skipped`) into failures: `valid` is false, as CLI --strict.
 const v = await mcp.call('walkeros:flow_validate', {
   type: 'flow',
   input: flow,
+  strict: true,
 });
-if (!v.structuredContent.valid) {
-  return `invalid flow: ${v.structuredContent.errors.length} error(s)`;
+const { valid, errors, warnings, details } = v.structuredContent;
+if (!valid) {
+  const codes = [...errors, ...warnings].map((issue) => issue.code);
+  const skipped = (details.skipped ?? []).map((skip) => skip.code);
+  return `invalid flow: ${[...codes, ...skipped].join(', ')}`;
 }
 
 // 2. Simulate one event through the flow; output is verbose (every destination).

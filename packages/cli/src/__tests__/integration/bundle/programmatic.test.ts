@@ -53,6 +53,11 @@ describe('Programmatic Bundle API', () => {
       expect.any(Object), // buildOptions
       expect.any(Object), // logger
       false, // showStats
+      {
+        flowName: 'default',
+        release: undefined,
+        configDigest: expect.any(String),
+      },
     );
   });
 
@@ -82,6 +87,11 @@ describe('Programmatic Bundle API', () => {
       expect.any(Object),
       expect.any(Object),
       true,
+      {
+        flowName: 'default',
+        release: undefined,
+        configDigest: expect.any(String),
+      },
     );
   });
 
@@ -98,6 +108,11 @@ describe('Programmatic Bundle API', () => {
       expect.objectContaining({ cache: false }),
       expect.any(Object),
       false,
+      {
+        flowName: 'default',
+        release: undefined,
+        configDigest: expect.any(String),
+      },
     );
   });
 

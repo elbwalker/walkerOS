@@ -10,6 +10,7 @@ import path from 'path';
 import { getHashServer } from '@walkeros/server-core';
 import { getFlowSettingsCacheKey } from './cache-utils.js';
 import { getTmpPath } from './tmp.js';
+import { writeCacheFile } from './atomic-cache.js';
 import type { MinifyOptions } from '../types/bundle.js';
 
 /**
@@ -32,6 +33,8 @@ export interface CodeCacheKeyInputs {
   windowCollector?: string;
   windowElb?: string;
   versionsHash: string;
+  /** CLI version: stage-1 codegen changes with it. */
+  toolchain: string;
 }
 
 function serializeKeyInputs(inputs: CodeCacheKeyInputs): string {
@@ -46,6 +49,7 @@ function serializeKeyInputs(inputs: CodeCacheKeyInputs): string {
     windowCollector: inputs.windowCollector ?? null,
     windowElb: inputs.windowElb ?? null,
     versionsHash: inputs.versionsHash,
+    toolchain: inputs.toolchain,
   });
 }
 
@@ -94,8 +98,7 @@ export async function cacheBuild(
   tmpDir?: string,
 ): Promise<void> {
   const cachePath = await getBuildCachePath(configContent, tmpDir);
-  await fs.ensureDir(path.dirname(cachePath));
-  await fs.writeFile(cachePath, buildOutput, 'utf-8');
+  await writeCacheFile(cachePath, buildOutput);
 }
 
 /**
@@ -147,8 +150,7 @@ export async function cacheCode(
   inputs: CodeCacheKeyInputs,
 ): Promise<void> {
   const cachePath = await getCodeCachePath(codeContent, tmpDir, inputs);
-  await fs.ensureDir(path.dirname(cachePath));
-  await fs.writeFile(cachePath, codeOutput, 'utf-8');
+  await writeCacheFile(cachePath, codeOutput);
 }
 
 export async function getCachedCode(
@@ -180,8 +182,7 @@ export async function ensureCodeOnDisk(
   const cachePath = path.join(cacheDir, `${cacheKey}.mjs`);
 
   if (!(await fs.pathExists(cachePath))) {
-    await fs.ensureDir(path.dirname(cachePath));
-    await fs.writeFile(cachePath, compiledCode, 'utf-8');
+    await writeCacheFile(cachePath, compiledCode);
   }
 
   return cachePath;

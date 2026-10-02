@@ -181,7 +181,7 @@ With `storage: true`, sessions persist across page loads:
 
 ## Session start event
 
-When a new session is detected, the source pushes a `session start` event and sets the user's session and device IDs on the collector:
+When a new session is detected, the source pushes a `session start` event. It carries `source.type: 'session'` with the page `url` and `referrer`, so destinations see the landing URL with its campaign parameters. In storage mode the source also sets `user.session` and `user.device` on the collector, so every event of the session carries them:
 
 <CodeSnippet
   code={`{
@@ -196,13 +196,19 @@ When a new session is detected, the source pushes a `session start` event and se
     runs: 1,                 // Page views in this session
     start: 1704067200,       // Session start timestamp
     referrer: 'google.com',  // Hostname only (not full URL)
-    marketing: {
-      source: 'google',
-      medium: 'cpc',
-      campaign: 'winter-sale',
-      clickId: 'gclid',      // Which click ID platform (if present)
-      gclid: 'AW-123...',    // The actual click ID value
-    }
+    marketing: true,         // Set when marketing parameters are present
+    source: 'google',        // utm_source
+    medium: 'cpc',           // utm_medium
+    campaign: 'winter-sale', // utm_campaign
+    clickId: 'gclid',        // Which click ID parameter matched (if present)
+    platform: 'google',      // Ad platform of that click ID
+    gclid: 'AW-123...',      // The actual click ID value
+  },
+  source: {
+    type: 'session',
+    platform: 'web',
+    url: 'https://example.com/?utm_source=google&utm_medium=cpc',
+    referrer: 'https://www.google.com/',
   }
 }`}
   language="typescript"
@@ -216,6 +222,10 @@ When a new session is detected, the source pushes a `session start` event and se
 | `isNew: true` | This is the device's very first session ever (storage mode only) |
 
 A returning visitor starting their second session has `isStart: true` but `isNew: false`. `isNew` only appears in storage mode since window-only mode has no device memory.
+
+The landing (navigation type, referrer, marketing parameters) is evaluated once per page load, so a route change in a single-page app that calls `walker run` does not start a new session, even when the new URL carries campaign parameters. Storage mode still counts each run in `runs` and starts a new session after inactivity.
+
+**User IDs only with storage:** `user.session` and `user.device` are set only in storage mode, so they are present exactly when storage consent was given. In window mode the session ID would vanish on the next page load, so it is not a user ID and lives only in `data.id` of the `session start` event. Without storage consent, use a server-side key such as `user.hash` to group events.
 
 **Click ID parameters** are stored twice: `clickId` identifies which platform originated the click (e.g. `'gclid'`), and a separate field stores the actual value (e.g. `gclid: 'AW-123...'`). This makes it easy to filter by platform without inspecting the value.
 
@@ -267,7 +277,7 @@ With `pulse: true`, the source updates the session's last-seen timestamp on each
 
 ## Custom session callback
 
-The `cb` setting lets you hook into session detection. It receives the detected session data, the collector instance, and the default callback:
+The `cb` setting lets you hook into session detection. It receives the detected session data, the source's collector interface, and the default callback. The interface carries only `push` (the source's pipeline) and `command`, with or without a consent gate, so collector state such as `consent` or `user` is not readable there:
 
 <CodeSnippet
   code={`session: {

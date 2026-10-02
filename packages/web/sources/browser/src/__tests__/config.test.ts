@@ -1,6 +1,6 @@
 import { startFlow } from '@walkeros/collector';
 import type { WalkerOS } from '@walkeros/core';
-import { getConfig } from '../config';
+import { getConfig, settingsFrom } from '../config';
 import { SettingsSchema } from '../schemas';
 import {
   createBrowserSource,
@@ -122,5 +122,58 @@ describe('window footprint', () => {
     await flushChain();
 
     expect(events.map((event) => event.name)).toEqual(['product add']);
+  });
+});
+
+describe('settingsFrom', () => {
+  test('keeps the fields of resolved settings', () => {
+    const resolved = getConfig(
+      { prefix: 'data-x', pageview: false, history: true },
+      document,
+    );
+    expect(settingsFrom(resolved)).toEqual(resolved);
+  });
+
+  test('takes the default for a field of the wrong type', () => {
+    expect(settingsFrom({ prefix: 1, pageview: 'no', scope: 'body' })).toEqual(
+      getConfig(),
+    );
+  });
+});
+
+// A node from another realm (an iframe) is not an instance of this page's
+// Element or Document constructors, the same as a simulated page's nodes
+// under Node. Its scope still has to survive.
+describe('settingsFrom with a scope from another realm', () => {
+  const frameDocument = (): Document => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    const doc = frame.contentDocument;
+    if (!doc) throw new Error('iframe has no document');
+    return doc;
+  };
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  test('keeps an iframe document', () => {
+    const doc = frameDocument();
+    expect(doc instanceof Document).toBe(false);
+    expect(settingsFrom({ scope: doc }).scope).toBe(doc);
+  });
+
+  test('keeps an iframe element', () => {
+    const element = frameDocument().createElement('div');
+    expect(element instanceof Element).toBe(false);
+    expect(settingsFrom({ scope: element }).scope).toBe(element);
+  });
+
+  test('drops an object that is not a node', () => {
+    expect(settingsFrom({ scope: {} }).scope).toBeUndefined();
+  });
+
+  test('drops a node that cannot be a scope, such as a text node', () => {
+    expect(settingsFrom({ scope: { nodeType: 3 } }).scope).toBeUndefined();
   });
 });

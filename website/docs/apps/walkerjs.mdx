@@ -1,46 +1,64 @@
 ---
 title: walker.js
-description: Ready-to-use walkerOS bundle for instant web tracking
+description: One script tag that turns data-elb attributes into dataLayer pushes for Google Tag Manager
 sidebar_position: 1
 package: '@walkeros/walker.js'
 ---
 
-import data from '@walkeros/walker.js/walkerOS.json';
+import productView from '../../../apps/walkerjs/src/__tests__/fixtures/push.product-view.json';
 
 # walker.js
 
-Walker.js is a pre-built walkerOS application that combines both the
-[browser](/docs/sources/web/browser/) and
-[dataLayer](/docs/sources/web/dataLayer/) sources with the
-[collector](/docs/collector/) and a default `dataLayer` destination into a
-pre-build package. It's designed for users who want instant web tracking without
-complex setup or configuration.
+<PackageLink github="apps/walkerjs" npm="@walkeros/walker.js" />
 
-## Installation
+Paste one script tag, tag your HTML with `data-elb`, and every interaction
+arrives in your `dataLayer` as a rich event, ready for Google Tag Manager.
 
-### Option 1: npm package
+<WalkerjsSnippet />
+
+walker.js is a ready-made file: the [browser source](/docs/sources/web/browser/),
+[session detection](/docs/sources/web/session) without cookies or storage, and
+an output that pushes every event to `window.dataLayer`. It reads no
+configuration. Place it below your GTM snippet
+([details](/docs/guides/gtm#where-to-place-the-tag)).
+
+:::note[Coming from the configurable walker.js]
+
+Version 4.7 removed configuration: `elbConfig`, `data-elbconfig`,
+`createWalkerjs` and their destinations no longer apply, and tracking starts on
+load. A script tag that loads `@walkeros/walker.js@latest` gets this file from
+4.7 on. To keep a configured setup, pin the exact version,
+`https://cdn.jsdelivr.net/npm/@walkeros/walker.js@4.6.1/dist/walker.js`, or
+build the setup in the [walkerOS app](https://app.walkeros.io).
+
+:::
+
+## Tag your HTML
 
 <CodeSnippet
-  code={`npm install @walkeros/walker.js`}
-  language="bash"
-/>
-
-### Option 2: CDN
-
-<CodeSnippet
-  code={`<script
-  async
-  data-elbconfig="elbConfig"
-  src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"
-></script>`}
+  code={`<body data-elbglobals="pagetype:product">
+  <div
+    data-elb="product"
+    data-elb-product="name:Cotton Tee;price:25"
+    data-elbaction="load:view"
+  >
+    <button data-elbaction="click:add">Add to cart</button>
+  </div>
+</body>`}
   language="html"
 />
 
-## Basic setup
+The page load sends `product view`, the button sends `product add`, both with
+`data: { name: 'Cotton Tee', price: 25 }` and `globals: { pagetype: 'product' }`.
+[HTML attributes](/docs/sources/web/browser/tagging/html-attributes) covers the
+other triggers (`visible`, `impression`, `submit`, `hover`), context, nested
+entities and `data-elbuser`.
 
-### 1. Add event queueing (recommended)
+## Events without an element
 
-Add this script before walker.js loads to queue events during initialization:
+Use `elb()` for events no element describes, such as a confirmed order. Add
+this stub before the script tag, so calls made before walker.js has loaded are
+queued:
 
 <CodeSnippet
   code={`<script>
@@ -51,410 +69,130 @@ Add this script before walker.js loads to queue events during initialization:
   language="html"
 />
 
-### 2. Include walker.js
-
 <CodeSnippet
-  code={`<script async data-elbconfig="elbConfig" src="./walker.js"></script>`}
-  language="html"
-/>
-
-### 3. Configure destinations
-
-<CodeSnippet
-  code={`<script>
-  window.elbConfig = {
-    collector: {
-      destinations: {
-        console: {
-          push: (event) => console.log('Event:', event),
-        },
-        api: {
-          push: async (event) => {
-            await fetch('/api/events', {
-              method: 'POST',
-              body: JSON.stringify(event),
-            });
-          },
-        },
-      },
-    },
-  };
-</script>`}
-  language="html"
-/>
-
-## Configuration options
-
-Walker.js supports multiple configuration approaches with different priorities:
-
-1. **Script tag `data-elbconfig`** (highest priority)
-2. **`window.elbConfig`** (default fallback)
-3. **Manual initialization** (when `run: false`)
-
-### Settings
-
-<PropertyTable schema={data.schemas.settings} />
-
-#### Browser source settings
-
-<PropertyTable schema={data.schemas.browserConfig} />
-
-#### DataLayer settings
-
-<PropertyTable schema={data.schemas.dataLayerConfig} />
-
-#### Collector settings
-
-<PropertyTable schema={data.schemas.collectorConfig} />
-
-### Full configuration object
-
-<CodeSnippet
-  code={`window.elbConfig = {
-  // Global settings
-  elb: 'elb', // Global function name (default: 'elb')
-  name: 'walkerjs', // Global instance name
-  run: true, // Auto-initialize (default: true)
-
-  // Browser source settings
-  browser: {
-    scope: document.body, // Tracking scope
-    pageview: true, // Enable automatic page views
-  },
-
-  // Session source (default: true)
-  session: true, // or session source settings, e.g. { storage: true }
-
-  // DataLayer integration
-  dataLayer: true, // Enable dataLayer
-  // or detailed config:
-  // dataLayer: {
-  //   name: 'dataLayer', // DataLayer variable name
-  //   prefix: 'dataLayer', // Event prefix
-  // },
-
-  // Collector configuration
-  collector: {
-    consent: { functional: true }, // Default consent state
-    destinations: {
-      // Your destinations here
-      console: {
-        push: (event) => console.log('Event:', event),
-      },
-    },
-  },
-};`}
+  code={`elb('walker user', { id: 'us3r' });
+elb('walker globals', { currency: 'EUR' });
+elb('order complete', { id: '0rd3r1d', total: 50 });`}
   language="javascript"
 />
 
-### Inline configuration
+Queued calls are delivered in order and before the `page view`, so a
+`walker user` queued first applies to the events after it. User and globals
+stay set for the rest of the page load. See
+[commands](/docs/sources/web/browser/commands).
 
-Configure directly in the script tag using simple key:value pairs:
+## Single-page apps
 
-<CodeSnippet
-  code={`<script
-  async
-  data-elbconfig="elb:track;run:true;instance:myWalker"
-  src="./walker.js"
-></script>`}
-  language="html"
-/>
+Route changes are tracked automatically. A `pushState` to a new path or query,
+a `replaceState` to a new path, and back or forward each send a `page view`
+with the new URL and the previous page's URL as `data.referrer`. Hash-only
+changes do not count, and route changes never start a new session. Tagged
+elements the new route renders fire after its `page view`; elements that stay
+on screen across routes fire once per page load.
 
-### Named configuration object
+If your site or a GTM History Change tag calls `elb('walker run')` on route
+changes, remove that call: otherwise every navigation sends two page views and
+fires the page's `load` elements again. Router details, remounting and what is not
+covered: [browser source, single-page apps](/docs/sources/web/browser/#single-page-apps).
 
-Use a custom configuration object name:
+## What lands in the dataLayer
 
-<CodeSnippet
-  code={`<script>
-  window.trackingConfig = {
-    elb: 'track',
-    collector: {
-      destinations: {
-        // Your destinations
-      },
-    },
-  };
-</script>
-<script async data-elbconfig="trackingConfig" src="./walker.js"></script>`}
-  language="html"
-/>
+Every walkerOS event is one push: the full event plus `event` (its name, with
+the space) and `_clear: true`. The `product view` from the example above, with
+the values that change on every push shown as placeholders:
 
-## Usage
+<CodeSnippet code={JSON.stringify(productView, null, 2)} language="json" />
 
-### Automatic DOM tracking
+| Key | Holds |
+| --- | --- |
+| `event` | The event name, such as `product view`, for GTM Custom Event triggers |
+| `_clear` | Tells GTM to replace each key of this push instead of merging it with the previous value |
+| `name`, `entity`, `action` | The event name and its two parts |
+| `data` | The entity's properties, or the object passed to `elb()` |
+| `globals` | Page-wide properties from `data-elbglobals` and `walker globals` |
+| `context` | `[value, order]` pairs from `data-elbcontext` around the element |
+| `nested` | Entities inside the tagged element |
+| `user` | Set by `walker user` or `data-elbuser` |
+| `consent`, `custom` | Set by `walker consent` and extra `elb()` arguments; not GTM Consent Mode |
+| `trigger` | What fired the event: `load`, `click`, `visible` and so on |
+| `id`, `timestamp`, `timing` | Event id, time in milliseconds, seconds since the page or route started |
+| `source` | Where the event came from, with the page `url` and `referrer` |
 
-Walker.js automatically tracks events based on HTML data attributes:
+`user`, `globals` and `consent` are left out of the push while they are empty,
+for example `user` until you set one, so a `user` your site pushed stays intact.
+Every other key is in every push, `data`, `context` and `custom` even when
+empty, so `_clear` wipes the previous event's values from GTM's data model.
 
-<CodeSnippet
-  code={`<!-- Product tracking -->
-<div data-elb="product" data-elb-product="id:123;name:Blue T-Shirt;price:29.99">
-  <button data-elbaction="click:add">Add to Cart</button>
-</div>
+Two events need no tagging:
 
-<!-- Global properties -->
-<div data-elbglobals="pagetype:product_detail"></div>
+- `page view` on every page load and route change: `data.id` is the path, plus
+  `title`, `domain`, `referrer`, and `search` or `hash` when the URL has one.
+- `session start` when a visit lands with a fresh navigation from another site,
+  from a campaign link (UTM parameters or a click id), or directly. Reloads,
+  back and forward, internal links and route changes start none. Nothing
+  carries over between page loads, so it marks an entry, not a session to
+  compare with GA4.
 
-<!-- Context information -->
-<div data-elbcontext="section:recommendations"></div>`}
-  language="html"
-/>
+On a page load, `session start` comes before the `page view`, and so do the
+page's tagged `load` elements and queued `elb()` calls.
 
-For detailed information on data attributes, see the
-[Browser Source documentation](/docs/sources/web/browser/tagging/html-attributes).
+## Use it in GTM
 
-### Manual event tracking
+Create a Custom Event trigger with an event name such as `product view`, and
+read values with Data Layer Variables (version 2) such as `data.price`.
+[Use walkerOS events in GTM](/docs/guides/gtm) covers triggers, variables, GA4
+event names and ecommerce items.
 
-Use the global `elb` function for manual tracking:
+## Privacy
 
-<CodeSnippet
-  code={`// Simple event
-elb('button click', {
-label: 'interesting',
-});`}
-  language="javascript"
-/>
+walker.js sets no cookies, writes no localStorage or sessionStorage, and makes
+no requests of its own: events only go to `window.dataLayer` on the page. The
+file contains the session source's storage code, which never runs in this
+setup. Consent is enforced where data leaves the page, by your GTM tags, for
+example with Consent Mode.
 
-### DataLayer integration
+## Self-host it
 
-Walker.js can integrate with existing dataLayer implementations:
+Download <WalkerjsUrl /> and serve it from your own domain: no third-party
+request, and you decide when to update. That URL always serves the newest patch
+of its release line, so it changes without notice and carries no Subresource
+Integrity hash. To pin one release, use <WalkerjsUrl pinned />, which never
+changes once published. The npm package `@walkeros/walker.js` ships the same
+file as `dist/walker.js`.
 
-<CodeSnippet
-  code={`// Enable dataLayer integration
-window.elbConfig = {
-dataLayer: true, // Uses window.dataLayer by default
-};
+## walker.js or your own bundle
 
-// Existing dataLayer events will be processed
-dataLayer.push({
-event: 'purchase',
-ecommerce: {
-transaction_id: '12345',
-value: 25.42,
-},
-});`}
-  language="javascript"
-/>
+Use walker.js (the ready-made file) or a bundle you built, never both on one
+page. Both attach the same DOM triggers, so every click would be counted twice.
 
-## Advanced features
+## Need more?
 
-### Async loading and event queueing
+walker.js is fixed on purpose: no destinations besides the dataLayer, no
+mapping, no consent rules, no settings. Your own bundle has all of them and
+reads the same `data-elb` attributes, so your tagging carries over:
 
-Walker.js handles async loading gracefully with automatic event queueing:
+- Build and host it in the [walkerOS app](https://app.walkeros.io).
+- Or write a [flow file](/docs/getting-started/flow/) and build it with the
+  [CLI](/docs/apps/cli).
 
-<CodeSnippet
-  code={`<script>
-  // 1. Define elb function to queue events
-  function elb() {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
-
-  // 2. Track events immediately (even before walker.js loads)
-  elb('product view', { id: '123', name: 'Blue T-Shirt' });
-</script>
-
-<!-- 3. Walker.js processes queued events when it loads -->
-<script async data-elbconfig="elbConfig" src="./walker.js"></script>`}
-  language="html"
-/>
-
-### Build variants
-
-Walker.js provides multiple build formats for different environments:
-
-* `walker.js` - Standard IIFE bundle for browsers
-* `index.es5.js` - GTM-compatible ES2015 build
-* `index.mjs` - ES modules for modern bundlers
-* `index.js` - CommonJS for Node.js environments
-
-### Programmatic usage
-
-Use walker.js programmatically in applications:
-
-<CodeSnippet
-  code={`import { createWalkerjs } from '@walkeros/walker.js';
-
-const { collector, elb } = await createWalkerjs({
-collector: {
-destinations: {
-console: { push: console.log },
-},
-},
-browser: {
-pageview: true,
-},
-session: true,
-});`}
-  language="javascript"
-/>
-
-## Destination configuration
-
-Configure multiple destinations for your events:
-
-<CodeSnippet
-  code={`window.elbConfig = {
-collector: {
-destinations: {
-// Console logging for development
-console: {
-  push: (event) => console.log('Walker.js Event:', event),
-},
-
-// Custom API endpoint
-api: {
-  push: async (event) => {
-    await fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(event),
-    });
-  },
-},
-},
-},
-};`}
-  language="javascript"
-/>
-
-For comprehensive destination options, see the
-[Destinations documentation](/docs/destinations/).
-
-## Growing beyond walker.js
-
-Walker.js is a **convenience bundle** that combines Browser Source, DataLayer Source, and Collector into a single file. It's perfect for getting started, but you may outgrow it.
-
-### When to stay with walker.js
-
-- ✅ Simple tracking needs (pageviews, clicks, forms)
-- ✅ Static sites or traditional server-rendered pages
-- ✅ Quick proof-of-concept or MVP
-- ✅ Teams who prefer minimal setup
-
-### When to upgrade
-
-Consider moving to full [Integrated](/docs/getting-started/modes/integrated) or [Bundled](/docs/getting-started/modes/bundled) mode when you need:
-
-| Need | Solution |
-|------|----------|
-| Server-side tracking | Bundled mode with Docker |
-| Custom sources (HTTP, AWS, GCP) | Both modes support server sources |
-| Multiple flows per page | Full Collector configuration |
-| TypeScript integration | Integrated mode |
-| CI/CD versioned configs | Bundled mode |
-| Event mapping/transformation | Both modes with mapping config |
-
-### Migration path
-
-Walker.js configuration maps directly to full modes:
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated">
-
-```typescript
-// walker.js equivalent in Integrated mode
-import { startFlow } from '@walkeros/collector';
-import { sourceBrowser } from '@walkeros/web-source-browser';
-import { sourceSession } from '@walkeros/web-source-session';
-
-const { elb } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: { settings: { pageview: true } },
-    },
-    session: {
-      code: sourceSession,
-    },
-  },
-  destinations: {
-    // Your destinations here
-  },
-  run: true,
-});
-```
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-```json
-// walker.js equivalent in Bundled mode (flow.json)
-{
-  "version": 4,
-  "flows": {
-    "default": {
-      "config": { "platform": "web" },
-      "sources": {
-        "browser": {
-          "package": "@walkeros/web-source-browser",
-          "config": { "settings": { "pageview": true } }
-        },
-        "session": {
-          "package": "@walkeros/web-source-session"
-        }
-      },
-      "destinations": {
-        // Your destinations here
-      },
-      "collector": { "run": true }
-    }
-  }
-}
-```
-
-  </TabItem>
-</Tabs>
-
-The mental model is the same (sources, collector, destinations), just with more control.
+Optionally, Tag Mode in the app lets you propose tags on the live page without
+editing HTML.
 
 ## Troubleshooting
 
-### Common issues
+walker.js writes nothing to the console except errors. If events do not show
+up:
 
-**Events not firing:** Check that walker.js loaded and configuration is valid.
+- Type `dataLayer` in the browser console: walkerOS pushes carry `_clear: true`
+  and an `event` such as `page view`.
+- Open GTM Preview: each walkerOS event appears by name in the timeline.
+- Check the Network tab that `walker.js` loaded. Ad blockers can block it, one
+  more reason to self-host.
+- An element needs `data-elbaction` with a trigger to send events; `data-elb`
+  alone only names the entity.
 
-**Missing events:** Ensure event queueing function is added before walker.js.
+## Next steps
 
-**Configuration not applied:** Verify `data-elbconfig` points to the correct
-object name.
-
-## API reference
-
-### Factory function
-
-<CodeSnippet code={`createWalkerjs(config?: Config): Promise<Instance>`} language="typescript" />
-
-Creates a new walker.js instance with the provided configuration.
-
-### Instance properties
-
-* `collector` - The walkerOS collector instance
-* `elb` - Browser push function for event tracking
-
-### Utility functions
-
-<CodeSnippet
-  code={`import { getAllEvents, getEvents, getGlobals } from '@walkeros/walker.js';
-
-// Get all trackable events on the page
-const events = getAllEvents();
-
-// Get events for a specific element and trigger
-const button = document.querySelector('button');
-const clickEvents = getEvents(button, 'click');
-
-// Get global properties from the page
-const globals = getGlobals();`}
-  language="javascript"
-/>
-
-## Related documentation
-
-* **[Browser Source](/docs/sources/web/browser/)** - Detailed DOM tracking
-  capabilities
-* **[Collector](/docs/collector/)** - Event processing and routing
-* **[Destinations](/docs/destinations/)** - Available destination options
-* **[DataLayer Source](/docs/sources/web/dataLayer/)** - DataLayer integration
-  details
-
-Walker.js combines all these components into a single, easy-to-use package
-perfect for getting started with walkerOS quickly.
+- [Use walkerOS events in GTM](/docs/guides/gtm)
+- [HTML attributes](/docs/sources/web/browser/tagging/html-attributes)
+- [Browser source commands](/docs/sources/web/browser/commands)

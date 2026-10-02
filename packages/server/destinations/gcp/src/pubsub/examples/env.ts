@@ -1,12 +1,39 @@
+import type {
+  Env,
+  PubSubPublisher,
+  PublishMessage,
+  TopicPublisher,
+} from '../types';
+
 /**
- * Example environment metadata for GCP Pub/Sub destination.
+ * Example environment for the GCP Pub/Sub destination.
  *
- * Tests substitute the real SDK via `jest.mock('@google-cloud/pubsub')`,
- * which is the recommended pattern: imports of `@google-cloud/pubsub` get
- * replaced module-wide, no env-injection plumbing required at the call site.
- *
- * The `simulation` list documents which globals the destination touches
- * during a simulated run, used by the simulator to know what to stub.
+ * `push` is the mock env simulate injects: `PubSub` builds a client whose
+ * topics answer `publishMessage` locally, so nothing reaches GCP. Unit tests
+ * still substitute the SDK module-wide via `jest.mock('@google-cloud/pubsub')`.
  */
 
-export const simulation = ['PubSub'];
+class MockTopic implements TopicPublisher {
+  constructor(public name: string) {}
+  publishMessage(_message: PublishMessage): Promise<string> {
+    return Promise.resolve('mock-message-id');
+  }
+  resumePublishing(_orderingKey: string): void {}
+}
+
+class MockPubSub implements PubSubPublisher {
+  constructor(public options?: object) {}
+  topic(name: string): TopicPublisher {
+    return new MockTopic(name);
+  }
+  close(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+export const push: Env = {
+  PubSub: MockPubSub,
+};
+
+/** The publish carries the request; `args[0]` is the message. */
+export const simulation = ['call:PubSub.topic.publishMessage'];

@@ -207,6 +207,43 @@ describe('completeDeviceLogin', () => {
     expect(existsSync(getConfigPath())).toBe(false);
   });
 
+  it('stops at the abort even when the clock is still short of the deadline', async () => {
+    // The request's timer and Date.now() are separate clocks: the timer can
+    // fire a millisecond before Date.now() reaches the deadline, which leaves
+    // room for one more interval. Pinning the clock 1 ms short of the
+    // deadline after the first read makes that race deterministic; the
+    // attempt cap only bounds the loop if the abort were ignored.
+    const timeoutMs = 100;
+    const start = 1_700_000_000_000;
+    const now = jest
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(start)
+      .mockReturnValue(start + timeoutMs - 1);
+    const seen: Array<AbortSignal | null | undefined> = [];
+    const stalling: typeof fetch = (_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        seen.push(init?.signal);
+        init?.signal?.addEventListener('abort', () =>
+          reject(init.signal?.reason),
+        );
+      });
+
+    try {
+      const result = await completeDeviceLogin(DEVICE_CODE, {
+        url: APP_URL,
+        fetch: stalling,
+        intervalMs: 1,
+        timeoutMs,
+        maxPollAttempts: 3,
+      });
+
+      expect(result).toEqual({ status: 'pending' });
+      expect(seen).toHaveLength(1);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it('lets a real transport failure through rather than reporting it as pending', async () => {
     // The control for the abort case: both end the poll without a response, so
     // the abort branch must key on the signal and not on "the request threw".

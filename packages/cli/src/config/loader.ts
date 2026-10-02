@@ -16,6 +16,11 @@ import {
 } from './validators.js';
 import { getBuildDefaults, getDefaultOutput } from './build-defaults.js';
 import { isUrl, loadJsonConfig } from './utils.js';
+import { configDigest } from '../core/content-digest.js';
+import {
+  assertWindowCollector,
+  type WindowCollectorSource,
+} from './window-collector.js';
 
 /** Default folder for includes if it exists */
 const DEFAULT_INCLUDE_FOLDER = './shared';
@@ -34,6 +39,11 @@ export interface LoadConfigResult {
   isMultiFlow: boolean;
   /** All available flow names */
   availableFlows: string[];
+  /**
+   * Digest of the deferred flow settings, the config input of the default
+   * release. Never carries an env or secret value.
+   */
+  configDigest: string;
 }
 
 /**
@@ -46,6 +56,14 @@ export interface LoadConfigOptions {
   flowName?: string;
   /** CLI build overrides (future: --output, --minify, etc.) */
   buildOverrides?: Partial<BuildOptions>;
+  /**
+   * Base environment for web `$env` resolution, layered BENEATH the flow's
+   * declared `config.bundle.env`. Omitted, it is the shell's `process.env`
+   * (local builds). Pass `{}` for a hermetic build that resolves against the
+   * declared values alone. Server flows are unaffected: their `$env` is read
+   * at runtime.
+   */
+  buildEnv?: Record<string, string | undefined>;
   /** Logger for warnings */
   logger?: {
     warn: (message: string) => void;
@@ -92,18 +110,25 @@ export function loadBundleConfig(
   // Determine which flow to use
   const flowName = resolveFlow(config, options.flowName, availableFlows);
 
+  assertLiteralBuildEnv(config, flowName);
+
   // Resolve with deferred mode first (markers don't affect platform detection)
   let flowSettings = getFlowSettings(config, flowName, { deferred: true });
   const platform = getPlatform(flowSettings);
+  const flowConfigDigest = configDigest(flowSettings, flowName);
   if (!platform) {
     throw new Error(
       `Invalid configuration: flow "${flowName}" must have config.platform set to "web" or "server".`,
     );
   }
 
-  // For web: re-resolve without deferred to bake values at build time
+  // For web: re-resolve without deferred to bake values at build time. The
+  // values come from an explicit map, never from an ambient read, so a build
+  // inside a process holding its own secrets cannot inline them.
   if (platform === 'web') {
-    flowSettings = getFlowSettings(config, flowName);
+    flowSettings = getFlowSettings(config, flowName, {
+      env: resolveBuildEnv(flowSettings.config?.bundle?.env, options.buildEnv),
+    });
   }
 
   // Auto-inject validator transformers for any step-level `validate?:`
@@ -140,9 +165,13 @@ export function loadBundleConfig(
     }
   }
 
-  // Merge build options: defaults + CLI overrides
+  // Merge build options: defaults + flow settings + CLI overrides
   const buildOptions: BuildOptions = {
     ...buildDefaults,
+    ...settingsToBuildOptions(platform, flowSettings.config?.settings, {
+      path: `flows.${flowName}.config.settings.windowCollector`,
+      written: config.flows[flowName]?.config?.settings?.windowCollector,
+    }),
     packages,
     overrides,
     traceInclude,
@@ -166,7 +195,62 @@ export function loadBundleConfig(
     flowName,
     isMultiFlow,
     availableFlows,
+    configDigest: flowConfigDigest,
   };
+}
+
+/**
+ * The build options a flow's `config.settings` controls. Each key is mapped
+ * explicitly, so an unknown settings key never reaches generated code.
+ *
+ * - `windowCollector` (web): the global the collector instance is assigned
+ *   to. It is interpolated into the generated entry, so the resolved value
+ *   must be a JavaScript identifier.
+ */
+export function settingsToBuildOptions(
+  platform: 'web' | 'server',
+  settings: Flow.Settings | undefined,
+  source: WindowCollectorSource = {},
+): Pick<BuildOptions, 'windowCollector'> {
+  if (platform !== 'web' || settings?.windowCollector === undefined) return {};
+  return {
+    windowCollector: assertWindowCollector(settings.windowCollector, source),
+  };
+}
+
+/** Any reference or marker the resolver would act on inside a string. */
+const REFERENCE_PATTERN =
+  /\$(?:env|var|secret|flow|contract)\.|\$code:|__WALKEROS_(?:ENV|SECRET):/;
+
+/**
+ * `config.bundle.env` values are the declared build values themselves, so
+ * each must be a literal string. A reference there would be resolved (or
+ * turned into a runtime marker) instead of declared, so it is refused. The
+ * message names keys only, never values.
+ */
+function assertLiteralBuildEnv(config: Flow.Json, flowName: string): void {
+  const declared = config.flows[flowName]?.config?.bundle?.env;
+  if (!declared) return;
+  const refs = Object.entries(declared)
+    .filter(([, value]) => REFERENCE_PATTERN.test(value))
+    .map(([key]) => key);
+  if (refs.length > 0) {
+    throw new Error(
+      `config.bundle.env values must be literal strings; references are not allowed in: ${refs.join(', ')}`,
+    );
+  }
+}
+
+/**
+ * The map web `$env` references resolve against: the base environment
+ * (`process.env` unless the caller passes one) with the flow's declared
+ * `config.bundle.env` on top.
+ */
+export function resolveBuildEnv(
+  declared: Record<string, string> | undefined,
+  base: Record<string, string | undefined> = process.env,
+): Record<string, string | undefined> {
+  return { ...base, ...(declared ?? {}) };
 }
 
 /**
@@ -271,10 +355,18 @@ export function getAvailableFlows(rawConfig: unknown): string[] {
  */
 export async function loadFlowConfig(
   configPath: string,
-  options?: Omit<LoadConfigOptions, 'configPath'>,
+  options?: Omit<LoadConfigOptions, 'configPath'> & {
+    /**
+     * The config at `configPath`, already read by the caller: it is used
+     * instead of reading the path again (`configPath` still anchors
+     * relative paths).
+     */
+    raw?: unknown;
+  },
 ): Promise<LoadConfigResult> {
-  const rawConfig = await loadJsonConfig(configPath);
-  return loadBundleConfig(rawConfig, { configPath, ...options });
+  const { raw, ...rest } = options ?? {};
+  const rawConfig = raw !== undefined ? raw : await loadJsonConfig(configPath);
+  return loadBundleConfig(rawConfig, { configPath, ...rest });
 }
 
 /**

@@ -1,5 +1,43 @@
 # @walkeros/transformer-ga4
 
+## 4.7.0
+
+### Minor Changes
+
+- 74821ed: The express source passes non-JSON `text/plain` bodies, such as
+  batched gtag hits, to `ingest.body` instead of failing with 400.
+  `@walkeros/transformer-ga4` gives each decoded event its own stable id, caps
+  one request at `settings.maxEvents` (default 100), validates
+  `settings.mapping` rules, and its wiring hint sets `paths: ["/g/collect"]`.
+- 74821ed: Decoded GA4 events and dataLayer events now carry `source.url` and
+  `source.referrer`, so conversion APIs such as Meta and Piwik PRO send them;
+  Piwik PRO now also sends GA4 events it skipped. Fingerprint hashes of these
+  events change once. GA4 `timestamp` is the receive time, and
+  `globals.language`/`globals.screen` moved to
+  `user.language`/`user.screenSize`.
+
+### Patch Changes
+
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

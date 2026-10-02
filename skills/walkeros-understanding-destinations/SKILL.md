@@ -88,6 +88,28 @@ destination that reaches its vendor through `getEnv(env)` is automatically
 observable; one that reaches a global directly, bypassing `env`, is not. This is
 one more reason to route every external call through `env`.
 
+Rules that keep the seam intact:
+
+- **`init` keeps an injected env.** A client built in `init` (SDK client, auth
+  client, writer) is taken from `env` when present and created only otherwise
+  (`env?.BigQuery ?? BigQuery`). Every key the mock env declares must be read as
+  `env.<key>` in `src`.
+- **`simulation` names the request call** (`sendServer`,
+  `call:PubSub.topic.publishMessage`, `call:JSONWriter.appendRows`), not a
+  constructor. The one recorder is `observeEnv` in `@walkeros/core`; it
+  navigates constructors, factories and Promises, and records only the leaf.
+- **Trace-mode limit.** CLI and MCP simulate inject the mock env before `init`,
+  so a client built in `init` is recorded. Runtime trace mode wraps the env per
+  push only, so calls through a client built in `init` are not recorded there.
+- **Client IP and user agent.** Server conversion-API destinations (Meta,
+  TikTok, Snapchat, Pinterest, Bing, Reddit, Criteo, X, Data Manager, Piwik PRO)
+  expose `ip` and `userAgent` settings (`Mapping.Value | false`), defaulting to
+  `['ingest.ip', 'event.user.ip']` and
+  `['ingest.userAgent', 'event.user.userAgent']`, resolved with
+  `getMappingValue(createMappingRoot(ingest, event), setting, { collector })`.
+  `false` disables, an explicit mapped vendor field wins, each package carries
+  its own few lines (no shared helper).
+
 ## Destination Config
 
 ```typescript
@@ -115,9 +137,9 @@ evictions) and `?.dlq` (DLQ evictions). Build the key with `stepId()` from
 `@walkeros/core`. Point-in-time sizes stay on
 `collector.status.destinations[id].queuePushSize` / `dlqSize`.
 
-Nothing drains either buffer back into the pipeline. An event that reaches the
-DLQ is gone once it is evicted, which is what makes the delivery rules below
-worth getting right.
+`queuePush` drains back into the destination once consent allows delivery. The
+DLQ is never replayed: an event that reaches it is gone once it is evicted,
+which is what makes the delivery rules below worth getting right.
 
 ## Delivery timeout
 
@@ -198,15 +220,29 @@ records neither: a total outage passes the breaker unseen and it never opens.
 For a whole-batch sink there are two answers and no third one, resolve `void` or
 throw.
 
-Retry belongs to the destination, everything around it to the collector.
-Batching, the delivery timeout, the DLQ and the breaker are the collector's, and
-per-item retry is the destination SDK's responsibility (BigQuery, Kafka, HubSpot
-each have their own backoff semantics). A destination that adds a retry of its
-own therefore owns two obligations: keeping the attempts and their delays inside
-`config.timeout`, and making a repeat safe, through an idempotency key or a
-deduplication token computed once and reused across attempts. Without the
-second, a retry of a delivery the vendor had already accepted duplicates data.
-Counters (`count`, `out`) are bumped only after a successful flush.
+Batching, the delivery timeout, the DLQ and the breaker are the collector's;
+per-call retry is the vendor SDK's (BigQuery, Kafka, HubSpot and the AWS SDK
+each have their own backoff semantics). Where a destination relies on that SDK
+retry, it keeps the attempts and their delays inside `config.timeout`, and makes
+a repeat safe through an idempotency key or a deduplication token computed once
+and reused across attempts. Without that, a retry of a delivery the vendor had
+already accepted duplicates data. Counters (`count`, `out`) are bumped only
+after a successful flush.
+
+**Three rules every destination follows.** First, no retry loops, backoff or DLQ
+code of its own: each request is sent once through the vendor SDK, whose
+built-in retry stays at its defaults, because a standard retry belongs in the
+collector, not in each package. Second, `init` is offline: it validates the
+config and builds clients, but makes no network call, loads no credentials and
+creates no remote resources; authentication and lookups happen on the first
+delivery, and provisioning belongs to `setup`. Third, every failure, thrown or
+reported in a `BatchOutcome`, is an `Error` that names the cause (and, for a
+configuration error, the fix) and carries `code` (the vendor error name or a
+package code), `status` (the HTTP status when the vendor answered) and
+`retryable`. Take `retryable` from the vendor SDK's own public classifier where
+one exists, else from documented codes or statuses, and keep the SDK error
+reachable as `cause`. `@walkeros/server-destination-aws` is the reference
+implementation.
 
 Operators also see `status.destinations[id].inFlightBatch`: the number of events
 buffered but not yet delivered.
@@ -246,8 +282,10 @@ Two separate mechanisms control when destinations receive events:
 | `consent` | Filter events        | Per-event         | Events without matching consent are silently skipped or queued                         |
 
 **Require** gates the destination _lifecycle_. A destination with
-`require: ["consent"]` does not exist in the collector until a
-`"walker consent"` event fires. Until then, events are queued internally.
+`require: ["consent"]` does not exist in the collector until consent state is
+present: a `"walker consent"` event, or starting consent (`startFlow`'s
+`consent`, which `walkeros push --simulate` sets with `--consent`). Until then,
+events are queued internally.
 
 **Consent** gates _individual event delivery_. A destination with
 `consent: { marketing: true }` only receives events where the collector's
@@ -273,7 +311,8 @@ Both can be combined:
 ```
 
 This means: don't initialize until consent fires, then only accept events with
-marketing consent.
+marketing consent. The state that satisfies `require` reaches `on()` before the
+destination's queued events are pushed.
 
 **Simulation impact:** `require` causes "destination not found" errors in
 `flow_simulate` because the destination stays pending. Remove `require`
@@ -313,8 +352,9 @@ Use as starting point: `packages/web/destinations/plausible/`
 
 ## Transformer Wiring
 
-Destinations can wire to post-collector transformer chains via the `before`
-property:
+Destinations can wire to their own transformer chain via the `before` property.
+It runs for this destination only, after the collector chain (`collector.next`,
+shared by every destination); a `stop` in it skips only this destination:
 
 ```typescript
 destinations: {
@@ -353,6 +393,18 @@ on(type, context) {
 
 Both layers are needed for complete consent compliance. `config.consent`
 prevents data flow. `on('consent')` prevents vendor SDK side effects.
+
+`on('consent')` runs before the first push on every activation path (`require`,
+`walker destination` at runtime, state passed to `walker run`, state set before
+`run`) and is delivered exactly once per state change. It may be async: the
+collector awaits it, bounded by `config.timeout`. A handler that does not settle
+in that time, or rejects, holds that destination: its events stay queued until a
+later delivery of the state settles, and are discarded at the next `walker run`.
+Lifecycle handlers such as `on('run')` are awaited too, bounded by the same
+timeout, and never hold events. An async state handler must settle: until it
+settles or reaches `config.timeout`, that destination receives no events. `elb`
+commands and `startFlow` resolve only after the destinations' `on()` handlers
+for that command have settled or timed out.
 
 ## Response Delegation (env.respond)
 

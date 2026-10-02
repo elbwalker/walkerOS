@@ -52,6 +52,13 @@ The collector already logs thrown pipeline failures at error, so sources do
 not duplicate that. Nothing a scanner can trigger should reach `error`.
 
 
+## In the complete example
+
+The server collector of [`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json), the tested example flow, takes its log level
+from a flow variable:
+
+<FlowSlice feature="collector-logger" />
+
 ## Using the logger
 
 The logger is automatically available in destination and source contexts:

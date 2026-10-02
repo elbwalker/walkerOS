@@ -173,6 +173,9 @@ export interface Config<T extends TypesGeneric = Types> {
   /**
    * Per-destination delivery timeout in ms (default 10000); a delivery that
    * does not settle within this window is routed to the DLQ like a thrown push.
+   * Also bounds an `on()` handler: a state handler that does not settle within
+   * the window is logged, and the destination is held (its events stay queued)
+   * until a later state delivery to it settles.
    */
   timeout?: number;
   /** Return this value instead of calling push(). Uses !== undefined check to support falsy values. */

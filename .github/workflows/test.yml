@@ -31,11 +31,8 @@ permissions:
 jobs:
   build_and_test:
     name: Build and test
-    timeout-minutes: 15
+    timeout-minutes: 20
     runs-on: ubuntu-latest
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -58,6 +55,18 @@ jobs:
       - name: Install dependencies
         if: steps.node_modules_cache.outputs.cache-hit != 'true'
         run: npm ci
+      # Turbo's local cache, carried between runs by GitHub's cache (replaces the
+      # Vercel remote cache). Each run saves under its own SHA and restores the
+      # newest prior entry, so PR runs start warm from main. Restore and save are
+      # separate steps so a failed or cancelled run still saves what it built.
+      - name: Restore turbo cache
+        id: turbo_cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
       # Drift gate: the committed CLI api.gen.d.ts (and spec.json) must equal a
       # fresh, prettier-formatted generate:types run. Prevents stale/unformatted
       # generated API types from being committed (the recurring eternal-diff).
@@ -88,3 +97,9 @@ jobs:
             packages/*/coverage/
             packages/*/.tmp/
           retention-days: 7
+      - name: Save turbo cache
+        if: always() && steps.turbo_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}

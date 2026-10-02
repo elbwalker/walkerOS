@@ -15,7 +15,12 @@ import {
   sourceJsonSchema,
   destinationJsonSchema,
 } from '../schemas/flow';
-import { getFlowSettings, getPlatform, packageNameToVariable } from '../flow';
+import {
+  FlowCycleError,
+  getFlowSettings,
+  getPlatform,
+  packageNameToVariable,
+} from '../flow';
 import type { Flow } from '../types';
 
 describe('Flow Schemas', () => {
@@ -1084,6 +1089,54 @@ describe('Flow Schemas', () => {
       expect(parsed.config?.settings?.windowCollector).toBe('customCollector');
     });
 
+    test.each([
+      'walkerOS',
+      'walkerCollector',
+      '_w$1',
+      '$var.collector',
+      '$env.COLLECTOR_GLOBAL:walkerOS',
+      'walker_$env.BRAND',
+    ])('settings.windowCollector accepts %s', (windowCollector) => {
+      const result = FlowSchema.safeParse({
+        config: { platform: 'web', settings: { windowCollector } },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test.each([
+      'walker-os',
+      '1walker',
+      "x'];alert(1);//",
+      '$secret.GLOBAL',
+      '',
+      42,
+    ])('settings.windowCollector rejects %p', (windowCollector) => {
+      const result = FlowSchema.safeParse({
+        config: { platform: 'web', settings: { windowCollector } },
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual([
+        'config',
+        'settings',
+        'windowCollector',
+      ]);
+    });
+
+    test.each(['elb', 'elbLayer', 'location', '__proto__', 'window', 'top'])(
+      'settings.windowCollector rejects the reserved global %s',
+      (windowCollector) => {
+        const result = FlowSchema.safeParse({
+          config: { platform: 'web', settings: { windowCollector } },
+        });
+        expect(result.success).toBe(false);
+        expect(result.error?.issues[0]?.path).toEqual([
+          'config',
+          'settings',
+          'windowCollector',
+        ]);
+      },
+    );
+
     test('config with server platform accepts free-form settings', () => {
       const flow = {
         config: { platform: 'server', settings: { extra: 'value' } },
@@ -1493,6 +1546,54 @@ describe('Pattern Resolution', () => {
       expect(config.destinations?.test.config).toEqual({
         value: 'from-env',
       });
+    });
+
+    test('an explicit env map is the only source, never process.env', () => {
+      process.env.AMBIENT_SECRET = 'leaked';
+      const setup: Flow.Json = {
+        version: 4,
+        flows: {
+          default: {
+            config: { platform: 'web' },
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  id: '$env.GA4_ID',
+                  fallback: '$env.AMBIENT_SECRET:none',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup, undefined, {
+        env: { GA4_ID: 'G-DECLARED' },
+      });
+      expect(config.destinations?.test.config).toEqual({
+        id: 'G-DECLARED',
+        fallback: 'none',
+      });
+      expect(() =>
+        getFlowSettings(
+          {
+            version: 4,
+            flows: {
+              default: {
+                config: { platform: 'web' },
+                destinations: {
+                  test: {
+                    package: '@walkeros/test',
+                    config: { value: '$env.AMBIENT_SECRET' },
+                  },
+                },
+              },
+            },
+          },
+          undefined,
+          { env: {} },
+        ),
+      ).toThrow('Environment variable "AMBIENT_SECRET" not found');
     });
   });
 
@@ -2943,5 +3044,66 @@ describe('getFlowSettings resolves $env inside config.credentials', () => {
         private_key: 'private-key-value',
       },
     });
+  });
+});
+
+describe('reference cycles throw a typed FlowCycleError', () => {
+  function thrown(run: () => unknown): unknown {
+    try {
+      run();
+    } catch (error) {
+      return error;
+    }
+    return undefined;
+  }
+
+  it('a $flow cycle between two flows has code FLOW_CYCLE and its chain', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'web', settings: { x: '$flow.b.settings.y' } },
+        },
+        b: {
+          config: { platform: 'server', settings: { y: '$flow.a.settings.x' } },
+        },
+      },
+    };
+    const error = thrown(() => getFlowSettings(config, 'a'));
+    expect(error).toBeInstanceOf(FlowCycleError);
+    expect(error).toMatchObject({ code: 'FLOW_CYCLE', chain: ['a', 'b', 'a'] });
+  });
+
+  it('a step reading its own flow config is a FLOW_CYCLE', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'server', url: 'https://a.test' },
+          destinations: {
+            api: { package: 'x', config: { settings: { url: '$flow.a.url' } } },
+          },
+        },
+      },
+    };
+    expect(thrown(() => getFlowSettings(config, 'a'))).toMatchObject({
+      code: 'FLOW_CYCLE',
+    });
+  });
+
+  it.each([
+    ['whole value', '$var.a'],
+    ['inline', 'x-$var.a'],
+  ])('a $var cycle (%s) has code VAR_CYCLE', (_label, value) => {
+    const config: Flow.Json = {
+      version: 4,
+      variables: { a: '$var.b', b: '$var.a' },
+      flows: {
+        default: { config: { platform: 'web', settings: { x: value } } },
+      },
+    };
+    const error = thrown(() => getFlowSettings(config));
+    expect(error).toBeInstanceOf(FlowCycleError);
+    expect(error).toMatchObject({ code: 'VAR_CYCLE' });
   });
 });

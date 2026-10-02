@@ -6,14 +6,20 @@ import { wrapUserData } from '../user-data.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { fieldsOf, isRecord, stringField } from './narrow.js';
+import { parseToolInput } from './parse-input.js';
 import {
   validateActionInput,
   assertParam,
   PROJECT_MANAGE_REQUIREMENTS,
 } from '../action-requirements.js';
 
-function wrapProjectName<T extends { name?: string }>(p: T): T {
-  return p.name !== undefined ? { ...p, name: wrapUserData(p.name) } : p;
+/** A project record with its display name wrapped as user data. */
+function wrapProjectName(project: unknown): unknown {
+  const name = stringField(project, 'name');
+  return isRecord(project) && name !== undefined
+    ? { ...project, name: wrapUserData(name) }
+    : project;
 }
 
 const TITLE = 'Project Management';
@@ -68,13 +74,9 @@ export function createProjectManageToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function projectManageHandlerBody(client: ToolClient, input: unknown) {
-  const { action, projectId, name, cursor, limit } = (input ?? {}) as {
-    action?: 'list' | 'get' | 'create' | 'update' | 'delete' | 'set_default';
-    projectId?: string;
-    name?: string;
-    cursor?: string;
-    limit?: number;
-  };
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { action, projectId, name, cursor, limit } = parsed.data;
   const validationError = validateActionInput(
     'project_manage',
     action ?? '',
@@ -85,12 +87,13 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
   try {
     switch (action) {
       case 'list': {
-        const projects = (await client.listProjects({ cursor, limit })) as
-          | unknown[]
-          | { projects?: unknown[] };
+        const projects = await client.listProjects({ cursor, limit });
+        const listed = isRecord(projects) ? projects.projects : undefined;
         const items = Array.isArray(projects)
           ? projects
-          : projects?.projects || [];
+          : Array.isArray(listed)
+            ? listed
+            : [];
         if (items.length === 0) {
           return mcpResult(
             { projects: [] },
@@ -102,22 +105,21 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
             },
           );
         }
-        const typedItems = items as Array<{ name?: string }>;
         const safe = Array.isArray(projects)
-          ? typedItems.map(wrapProjectName)
-          : { ...projects, projects: typedItems.map(wrapProjectName) };
+          ? items.map(wrapProjectName)
+          : { ...fieldsOf(projects), projects: items.map(wrapProjectName) };
         return mcpResult(safe);
       }
 
       case 'get': {
         const project = await client.getProject({ projectId });
-        return mcpResult(wrapProjectName(project as { name?: string }));
+        return mcpResult(wrapProjectName(project));
       }
 
       case 'create': {
         assertParam(name, 'name', 'create');
         const created = await client.createProject({ name });
-        return mcpResult(wrapProjectName(created as { name?: string }), {
+        return mcpResult(wrapProjectName(created), {
           next: [
             'Use project_manage with action "set_default" to make this your active project',
           ],
@@ -127,7 +129,7 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
       case 'update': {
         assertParam(name, 'name', 'update');
         const updated = await client.updateProject({ projectId, name });
-        return mcpResult(wrapProjectName(updated as { name?: string }));
+        return mcpResult(wrapProjectName(updated));
       }
 
       case 'delete': {
@@ -171,8 +173,6 @@ export function registerProjectManageTool(
       inputSchema: spec.inputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => projectManageHandlerBody(client, args),
   );
 }

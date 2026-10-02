@@ -249,7 +249,7 @@ the event before enrichment and therefore before the base globals are merged.
 State commands (`consent`, `user`, `globals`, `custom`) set values on the
 collector. The collector records every state change immediately, even when it
 arrives before `run`. Side-effecting delivery to subscribers (the `on`
-callbacks above, and source `on` handlers) happens at or after `run`: when the
+callbacks above, source `on` handlers, and destination `on` handlers) happens at or after `run`: when the
 collector starts, it delivers the current state once to every subscriber that
 has not yet seen it.
 
@@ -265,6 +265,23 @@ This gives three practical guarantees:
 * **`require` is a timing hint, not a correctness dependency.** A source's
   `require` only delays when its first `on` delivery lands. A dependent source
   reacts to state correctly whether or not it declares `require`.
+* **Before the first push.** A destination's `on` handler receives the current
+  state before any event is delivered to it. The collector waits for an async
+  handler to finish, up to the destination's `config.timeout`, before it
+  delivers events. If the handler does not finish in that time, or fails, the
+  destination's events stay in its queue instead of going out without the
+  state, until a later delivery of the state finishes. Those held events are
+  discarded at the next `walker run`. Lifecycle handlers such as `on('run')`
+  are awaited too, bounded by the same timeout; one that does not finish holds
+  no events. Handlers of different destinations run independently, so a slow
+  handler in one destination does not delay events to other destinations.
+* **Commands wait for handlers.** An async destination `on` handler must
+  settle: until it settles or reaches `config.timeout`, that destination
+  receives no events. `elb` commands and `startFlow` resolve only after the
+  destinations' `on` handlers for that command have settled or timed out; a
+  command sent while a handler is still busy with an earlier state update
+  resolves at once, and its update is applied right after the running one,
+  while that destination's events wait for it.
 
 This means sources don't need their own deduplication for state deliveries: the
 collector enforces exactly-once.

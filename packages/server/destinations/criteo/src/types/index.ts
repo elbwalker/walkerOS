@@ -19,6 +19,18 @@ export interface Settings {
   url?: string;
   /** Mapping for identity fields (mapped_user_id, email, retailer_visitor_id) */
   user_data?: WalkerOSMapping.Map;
+  /**
+   * Client IP, sent as ip. Resolves against { ingest, event }.
+   * `false` switches it off.
+   * @default ['ingest.ip', 'event.user.ip']
+   */
+  ip?: WalkerOSMapping.Value | false;
+  /**
+   * Client user agent, sent as useragent. Resolves against
+   * { ingest, event }. `false` switches it off.
+   * @default ['ingest.userAgent', 'event.user.userAgent']
+   */
+  userAgent?: WalkerOSMapping.Value | false;
 }
 
 export type InitSettings = Partial<Settings>;

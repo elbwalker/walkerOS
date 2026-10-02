@@ -6,7 +6,8 @@ import {
   destroyVisibilityTracking,
   unobserveElement,
 } from '../triggerVisible';
-import { createRegistry } from '../trigger';
+import { isVisible } from '@walkeros/web-core';
+import { createRegistry, handleTrigger } from '../trigger';
 import { resetSim, setBox, scrollTo, resizeElement } from './ioSimulator';
 
 // Test utilities for scope-based visibility tracking
@@ -24,6 +25,7 @@ const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
     scope: document,
     pageview: false,
     capture: true,
+    history: false,
     elb: false,
     elbLayer: false,
   },
@@ -50,10 +52,6 @@ jest.mock('../trigger', () => ({
   handleTrigger: jest.fn(),
   Triggers: { Impression: 'impression', Visible: 'visible' },
 }));
-
-// Get references to mocked functions
-const { isVisible } = require('@walkeros/web-core');
-const { handleTrigger } = require('../trigger');
 
 // A real IntersectionObserver subclass, installed over the simulator's, that
 // records constructor options and observe/unobserve/disconnect calls while
@@ -114,8 +112,8 @@ describe('triggerVisible', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     resetSim({ width: 1000, height: 450 });
-    (isVisible as jest.Mock).mockReturnValue(true);
-    (handleTrigger as jest.Mock).mockResolvedValue([]);
+    jest.mocked(isVisible).mockReturnValue(true);
+    jest.mocked(handleTrigger).mockResolvedValue([]);
 
     mockElb = jest.fn().mockResolvedValue({
       ok: true,
@@ -314,6 +312,7 @@ describe('triggerVisible', () => {
         scope,
         pageview: false,
         capture: true,
+        history: false,
         elb: false,
         elbLayer: false,
       },
@@ -366,7 +365,7 @@ describe('triggerVisible', () => {
     document.body.appendChild(element);
     setBox(element, { top: 1000, left: 0, width: 300, height: 200 });
 
-    (isVisible as jest.Mock).mockReturnValue(false);
+    jest.mocked(isVisible).mockReturnValue(false);
     triggerVisible(createTestContext(mockElb), element, { multiple: true });
 
     // Element top at 300 => 150px of 200px showing => ratio 0.75 => eligible.
@@ -377,7 +376,7 @@ describe('triggerVisible', () => {
 
     // Now it is genuinely visible. Move to a different threshold band so an entry
     // is delivered (ratio 0.75 -> 0.5), while STAYING eligible throughout.
-    (isVisible as jest.Mock).mockReturnValue(true);
+    jest.mocked(isVisible).mockReturnValue(true);
     scrollTo(650); // element top 350 => 100px showing => ratio 0.5 => still eligible
 
     jest.advanceTimersByTime(1500);
@@ -479,7 +478,7 @@ describe('triggerVisible', () => {
     document.body.appendChild(element);
     setBox(element, { top: 0, left: 0, width: 300, height: 200 }); // eligible from the start
 
-    (isVisible as jest.Mock).mockReturnValue(false); // covered by an overlay
+    jest.mocked(isVisible).mockReturnValue(false); // covered by an overlay
     triggerVisible(createTestContext(mockElb), element);
 
     // The dwell expires while occluded: re-arm, don't fire, don't strand.
@@ -488,7 +487,7 @@ describe('triggerVisible', () => {
     expect(handleTrigger).not.toHaveBeenCalled();
 
     // The overlay goes away. No geometry change, no observer entry.
-    (isVisible as jest.Mock).mockReturnValue(true);
+    jest.mocked(isVisible).mockReturnValue(true);
 
     jest.advanceTimersByTime(1000);
     await drainMicrotasks();
@@ -524,7 +523,7 @@ describe('triggerVisible', () => {
     setBox(element, { top: 1000, left: 0, width: 300, height: 200 });
 
     let release: (() => void) | undefined;
-    (handleTrigger as jest.Mock).mockImplementation(
+    jest.mocked(handleTrigger).mockImplementation(
       () =>
         new Promise<unknown[]>((resolve) => {
           release = () => resolve([]);
@@ -582,7 +581,7 @@ describe('triggerVisible', () => {
     setBox(element, { top: 1000, left: 0, width: 300, height: 200 });
 
     let release: (() => void) | undefined;
-    (handleTrigger as jest.Mock).mockImplementation(
+    jest.mocked(handleTrigger).mockImplementation(
       () =>
         new Promise<unknown[]>((resolve) => {
           release = () => resolve([]);
@@ -650,7 +649,7 @@ describe('triggerVisible', () => {
 
     jest.advanceTimersByTime(1000);
     await drainMicrotasks();
-    (handleTrigger as jest.Mock).mockClear();
+    jest.mocked(handleTrigger).mockClear();
 
     scrollTo(2000); // leave
     scrollTo(0); // re-enter

@@ -2,10 +2,13 @@ import { z } from 'zod';
 import type { PushResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { mcpResult, mcpError } from '@walkeros/core';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { mcpError } from '@walkeros/core';
 import { PushOutputShape } from '../schemas/output.js';
 
 import type { ToolSpec } from '../tool-spec.js';
+import { parseToolInput } from './parse-input.js';
+import { readRun, scrubbedError, scrubbedPushResult } from './egress.js';
 import {
   refusalHint,
   unavailableOperation,
@@ -47,40 +50,54 @@ export function createFlowPushToolSpec(runtime: FlowRuntime): ToolSpec {
   };
 }
 
-async function flowPushHandlerBody(runtime: FlowRuntime, input: unknown) {
-  const { configPath, event, flow, platform } = (input ?? {}) as {
-    configPath: string;
-    event: Record<string, unknown>;
-    flow?: string;
-    platform?: 'web' | 'server';
-  };
+async function flowPushHandlerBody(
+  runtime: FlowRuntime,
+  input: unknown,
+): Promise<CallToolResult> {
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { configPath, event, flow, platform } = parsed.data;
   // Push compiles the config, imports it, and makes real outbound calls. A
   // runtime that must not do that in its process provides no `push`.
   if (!runtime.push) {
     const refusal = unavailableOperation('push');
     return mcpError(refusal, refusal.hint);
   }
+  // Push results can carry vendor requests and responses: they egress with
+  // the flow's secret values and credential patterns masked. The config is
+  // read once, so the push runs on exactly the config whose secrets mask the
+  // result; a config that cannot be read stops the push.
+  let known: string[] = [];
   try {
+    const run = await readRun(runtime, configPath);
+    known = run.knownSecrets;
     const result: PushResult = await runtime.push(configPath, event, {
       flow,
       platform,
+      config: run.config,
     });
 
     if (!result.success) {
-      return mcpError(
-        new Error(result.error || 'Push failed'),
-        'Check destination configuration and connectivity.',
+      return scrubbedError(
+        mcpError(
+          new Error(result.error || 'Push failed'),
+          'Check destination configuration and connectivity.',
+        ),
+        known,
       );
     }
 
-    return mcpResult(result);
+    return scrubbedPushResult(result, known);
   } catch (error) {
-    return mcpError(
-      error,
-      refusalHint(
+    return scrubbedError(
+      mcpError(
         error,
-        'Check configPath and event format. For web flows, use flow_simulate.',
+        refusalHint(
+          error,
+          'Check configPath and event format. For web flows, use flow_simulate.',
+        ),
       ),
+      known,
     );
   }
 }
@@ -97,8 +114,6 @@ export function registerFlowPushTool(server: McpServer, runtime: FlowRuntime) {
       outputSchema: PushOutputShape,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => flowPushHandlerBody(runtime, args),
   );
 }

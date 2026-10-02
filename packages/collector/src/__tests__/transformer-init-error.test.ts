@@ -76,7 +76,7 @@ describe('transformer init throws (Category A)', () => {
     );
 
     // Chain stops on init failure: event becomes null, downstream dropped.
-    expect(result.event).toBeNull();
+    expect(result.copies).toEqual([]);
 
     // Pipeline failure counts.
     expect(collector.status.failed).toBe(1);

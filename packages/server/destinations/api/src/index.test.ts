@@ -17,7 +17,7 @@ describe('Destination API', () => {
   const url = 'https://api.example.com/';
 
   // Create test environment using clone and modify sendServer function
-  const testEnv = clone(examples.env.standard);
+  const testEnv = clone(examples.env.push);
   testEnv.sendServer = mockSendServer;
 
   const mockLogger = createMockLogger();

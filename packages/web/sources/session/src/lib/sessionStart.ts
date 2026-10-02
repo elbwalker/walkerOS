@@ -60,10 +60,17 @@ function onConsentFn(
   config: SessionConfig,
   cb?: SessionCallback | false,
 ): On.ConsentFn {
-  const func: On.ConsentFn = (consent, context) => {
-    const collector = context.collector;
+  // A page load has one landing per mode. Once a mode has detected, later
+  // consent changes in that mode pass isStart: false, while a first switch
+  // from window to storage still detects with the landing's marketing data.
+  const detected = { window: false, storage: false };
 
-    let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
+  const func: On.ConsentFn = (consent, context) => {
+    // The source's own collector interface (its pipeline) when it has one,
+    // as on the ungated path; the rule's collector otherwise.
+    const collector = config.collector ?? context.collector;
+
+    let storage = false; // Window by default
 
     if (config.consent) {
       const consentKeys = (
@@ -72,10 +79,15 @@ function onConsentFn(
 
       if (getGrantedConsent(consentKeys, consent))
         // Use storage if consent is granted
-        sessionFn = () => sessionStorage(config);
+        storage = true;
     }
 
-    callFuncAndCb(sessionFn(), collector, cb);
+    const mode = storage ? 'storage' : 'window';
+    const modeConfig = detected[mode] ? { ...config, isStart: false } : config;
+    detected[mode] = true;
+
+    const sessionFn: SessionFunction = storage ? sessionStorage : sessionWindow;
+    callFuncAndCb(sessionFn(modeConfig), collector, cb);
   };
 
   return func;
@@ -87,10 +99,8 @@ const defaultCb: SessionCallback = (
 ): Collector.SessionData => {
   const user: WalkerOS.User = {};
 
-  // User.session is the session ID
-  if (session.id) user.session = session.id;
-
-  // Set device ID only in storage mode
+  // User ids only in storage mode; a window session id lives in session start data.id
+  if (session.storage && session.id) user.session = session.id;
   if (session.storage && session.device) user.device = session.device;
 
   // Set user IDs and broadcast session data

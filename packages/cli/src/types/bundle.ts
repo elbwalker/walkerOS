@@ -118,8 +118,9 @@ export interface BuildOptions extends CLIBuildOptions {
   minifyOptions?: MinifyOptions;
 
   /**
-   * Window property name for collector (web platform only).
-   * @default "collector"
+   * Window property name for collector (web platform only). Set from the
+   * flow's `config.settings.windowCollector`.
+   * @default "walkerOS"
    */
   windowCollector?: string;
 

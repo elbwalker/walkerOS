@@ -121,7 +121,9 @@ state arrived before or after `run`).
 
 This mirrors the destination model: `Destination.Instance.init` handles one-time
 bootstrap, `Destination.Config.init` is the collector-managed "init has run"
-flag, and `Destination.Config.require` gates event delivery the same way. See
+flag, and `Destination.Config.require` gates event delivery the same way.
+Destinations receive the same exactly-once state delivery through their `on()`
+handler, and receive the current state before their first push. See
 [walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md).
 
 ### Pre-run events are held and replayed by the collector

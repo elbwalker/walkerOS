@@ -18,9 +18,10 @@
  */
 
 import { z, toJsonSchema } from './validation';
-import { RouteSchema, RouteWithoutManySchema } from './matcher';
+import { RouteSchema } from './matcher';
 import { EventCacheSchema, StoreCacheSchema } from './cache';
 import { StateSchema } from './state';
+import { checkWindowCollector } from '../windowCollector';
 
 // ========================================
 // Shared Type Schemas
@@ -41,11 +42,34 @@ export const VariablesSchema = z.record(z.string(), z.unknown()).meta({
     'Reusable values referenced via $var.name (with optional deep paths). Whole-string refs preserve native type; inline interpolation requires scalars.',
 });
 
+/** `$var` and `$env` references resolve before the build checks the name. */
+const windowCollectorReference = /\$(?:var|env)\./;
+
+/**
+ * `windowCollector`: a literal that passes `checkWindowCollector`, or a
+ * string with `$var` / `$env` references, whose RESOLVED value the build
+ * checks the same way.
+ */
+const WindowCollectorSchema = z.string().superRefine((value, ctx) => {
+  if (windowCollectorReference.test(value)) return;
+  const check = checkWindowCollector(value);
+  if (!check.ok)
+    ctx.addIssue({
+      code: 'custom',
+      message: `windowCollector ${JSON.stringify(value)} ${check.reason}`,
+    });
+});
+
 /**
  * Settings schema - free-form key-value bag inside Flow.Config.settings.
+ * Known keys are checked; every other key passes through.
  */
 export const SettingsSchema = z
-  .record(z.string(), z.unknown())
+  .looseObject({
+    windowCollector: WindowCollectorSchema.optional().describe(
+      'Web: global variable name of the collector instance (default: "walkerOS").',
+    ),
+  })
   .meta({
     id: 'FlowSettings',
     title: 'Flow.Settings',
@@ -100,14 +124,21 @@ export const BundleSchema = z
       .describe(
         'Extra paths or globs the bundler must include in the trace output (server flows only)',
       ),
+    env: z
+      .record(z.string(), z.string())
+      .optional()
+      .describe(
+        'Declared build-time values for web $env references (inlined into public bundles, never secrets)',
+      ),
   })
   .strict()
   .meta({
     id: 'FlowBundle',
     title: 'Flow.Bundle',
-    description: 'Bundle configuration (packages + overrides + traceInclude).',
+    description:
+      'Bundle configuration (packages + overrides + traceInclude + env).',
   })
-  .describe('Bundle configuration (packages + overrides + traceInclude)');
+  .describe('Bundle configuration (packages + overrides + traceInclude + env)');
 
 // ========================================
 // Inline Code Schema
@@ -356,7 +387,7 @@ export const SourceSchema = z
       'Source-level variables (highest priority in cascade)',
     ),
     next: RouteSchema.optional().describe(
-      'Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.',
+      'Pre-collector transformer chain. String, string[], or Route[] for conditional routing on ingest and event data.',
     ),
     before: RouteSchema.optional().describe(
       'Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.',
@@ -519,11 +550,11 @@ export const DestinationSchema = z
     variables: VariablesSchema.optional().describe(
       'Destination-level variables (highest priority in cascade)',
     ),
-    before: RouteWithoutManySchema.optional().describe(
-      'Post-collector transformer chain. String, string[], or Route[] for conditional routing. `many` is not valid here — use multiple destinations for post-collector fan-out.',
+    before: RouteSchema.optional().describe(
+      'Transformer chain run for this destination only, before it receives the event. String, string[], or a Route for conditional routing.',
     ),
-    next: RouteWithoutManySchema.optional().describe(
-      'Post-push transformer chain. Push response available at context.ingest._response. `many` is not valid here — use multiple destinations for post-collector fan-out.',
+    next: RouteSchema.optional().describe(
+      'Post-push transformer chain. Push response available at context.ingest._response.',
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
@@ -816,7 +847,11 @@ export const FlowSchema = z
         'Store configurations (key-value storage) keyed by unique identifier',
       ),
     collector: z
-      .unknown()
+      .looseObject({
+        next: RouteSchema.optional().describe(
+          'Collector chain: runs once per completed event before the destination fan-out. A stop drops the event for every destination.',
+        ),
+      })
       .meta({
         id: 'FlowCollector',
         title: 'Collector.InitConfig',

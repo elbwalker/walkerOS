@@ -1,6 +1,6 @@
-import { GoogleAuth, type OAuth2Client } from 'google-auth-library';
+import { GoogleAuth } from 'google-auth-library';
 import type { Logger, ServiceAccount } from '@walkeros/core';
-import type { Config } from './types';
+import type { AuthClient, Config } from './types';
 
 const DEFAULT_SCOPES = ['https://www.googleapis.com/auth/datamanager'];
 
@@ -77,13 +77,13 @@ function parseCredentials(credentials: Credential): ServiceAccount {
  *
  * @param config - Validated config with auth options
  * @param logger - Logger instance for deprecation warnings
- * @returns OAuth2Client for token retrieval
+ * @returns Auth client for token retrieval
  * @throws AuthError if authentication fails
  */
 export async function createAuthClient(
   config: Partial<Config>,
   logger: Logger.Instance,
-): Promise<OAuth2Client> {
+): Promise<AuthClient> {
   const { keyFilename, scopes = DEFAULT_SCOPES } = config.settings || {};
   const credentials = resolveCredentials(config, logger);
 
@@ -99,7 +99,7 @@ export async function createAuthClient(
         credentials: parsedCredentials,
         scopes,
       });
-      return (await auth.getClient()) as OAuth2Client;
+      return await auth.getClient();
     }
 
     if (keyFilename) {
@@ -107,11 +107,11 @@ export async function createAuthClient(
         keyFilename,
         scopes,
       });
-      return (await auth.getClient()) as OAuth2Client;
+      return await auth.getClient();
     }
 
     const auth = new GoogleAuth({ scopes });
-    return (await auth.getClient()) as OAuth2Client;
+    return await auth.getClient();
   } catch (error) {
     throw new AuthError(
       'Failed to create auth client. Check credentials configuration or ensure GOOGLE_APPLICATION_CREDENTIALS is set.',
@@ -128,9 +128,7 @@ export async function createAuthClient(
  * @returns Fresh access token
  * @throws AuthError if token retrieval fails
  */
-export async function getAccessToken(
-  authClient: OAuth2Client,
-): Promise<string> {
+export async function getAccessToken(authClient: AuthClient): Promise<string> {
   try {
     const tokenResponse = await authClient.getAccessToken();
 

@@ -38,6 +38,7 @@ const createTestSettings = (
   scope,
   pageview: false,
   capture: true,
+  history: false,
   elb: false,
   elbLayer: false,
 });

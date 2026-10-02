@@ -88,33 +88,35 @@ function mapOneEvent(
     }
   }
 
-  // Hit-level merge: user / globals / source.
+  // Hit-level merge: user / source. Browser language (ul) and screen
+  // resolution (sr) describe the visitor, so they go to user; globals stays
+  // free for site-level facts such as the site's own language.
   evaluated.user = {
     ...(hitParams.uid !== undefined ? { id: hitParams.uid } : {}),
     ...(hitParams.cid !== undefined ? { device: hitParams.cid } : {}),
     ...(hitParams.sid !== undefined ? { session: hitParams.sid } : {}),
-  };
-  evaluated.globals = {
     ...(hitParams.ul !== undefined ? { language: hitParams.ul } : {}),
-    ...(hitParams.sr !== undefined ? { screen: hitParams.sr } : {}),
+    ...(hitParams.sr !== undefined ? { screenSize: hitParams.sr } : {}),
   };
-  // source.type marks the GA4 decoder; the raw page load id (_p) and hit
-  // sequence (_s) stay available for analysts next to the derived event id.
+  // source.type marks the GA4 decoder; url and referrer carry the page
+  // context (dl, dr) as sent; the raw page load id (_p) and hit sequence (_s)
+  // stay available for analysts next to the derived event id.
   evaluated.source = {
     type: 'ga4',
+    ...(hitParams.dl !== undefined ? { url: hitParams.dl } : {}),
+    ...(hitParams.dr !== undefined ? { referrer: hitParams.dr } : {}),
     ...(hitParams.p !== undefined ? { platform: hitParams.p } : {}),
     ...(hitParams._p !== undefined ? { pageLoadId: hitParams._p } : {}),
     ...(hitParams._s !== undefined ? { hitSequence: hitParams._s } : {}),
   };
 
   // Consent from gcs string, id derived from the hit (see getEventId),
-  // timestamp from sid (epoch seconds → ms; falls back to wall-clock now),
-  // timing from event._et (ms; 0 if absent), trigger hard-coded to "ga4" for v1.
+  // timestamp is the receive time (sid is the session start, not the event
+  // time), timing from event._et (ms; 0 if absent), trigger hard-coded to
+  // "ga4" for v1.
   evaluated.consent = parseConsent(hitParams);
   evaluated.id = getEventId(hitParams, index);
-  const sidNum = hitParams.sid ? Number(hitParams.sid) : NaN;
-  evaluated.timestamp =
-    !Number.isNaN(sidNum) && sidNum > 0 ? sidNum * 1000 : Date.now();
+  evaluated.timestamp = Date.now();
   evaluated.timing = event.params._et ?? 0;
   evaluated.trigger = 'ga4';
 

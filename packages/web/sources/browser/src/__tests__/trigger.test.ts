@@ -23,6 +23,7 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
   scope: document,
   pageview: false,
   capture: true,
+  history: false,
   elb: false,
   elbLayer: false,
 });
@@ -149,13 +150,16 @@ describe('Trigger System', () => {
 
     const element = document.getElementById('test')!;
 
-    const testSettings = {
+    // capture is required on resolved Settings; handleTrigger never reads it.
+    const testSettings: Settings = {
       prefix: 'data-elb',
       scope: document,
       pageview: false,
+      capture: true,
+      history: false,
       elb: false,
       elbLayer: false,
-    } as Settings;
+    };
 
     await handleTrigger(
       { elb: mockElb, push: mockElb, settings: testSettings, registry },
@@ -238,7 +242,9 @@ describe('Trigger System', () => {
       initScopeTrigger(context);
 
       // Get the interval callback
-      const intervalCallback = (setInterval as jest.Mock).mock.calls[0][0];
+      const intervalCallback = jest.mocked(setInterval).mock.calls[0][0];
+      if (typeof intervalCallback !== 'function')
+        throw new Error('setInterval was not called with a callback');
 
       // Test when document is hidden
       Object.defineProperty(document, 'hidden', {

@@ -1,5 +1,12 @@
 import type { DestinationServer } from '@walkeros/server-core';
-import type { Env, Setup, SetupSchemaField, Types } from './types';
+import type {
+  Env,
+  QueryTable,
+  Setup,
+  SetupSchemaField,
+  TableMetadataShape,
+  Types,
+} from './types';
 import type { LifecycleContext, Logger } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
 
@@ -42,17 +49,7 @@ export interface SetupResult {
   tableCreated: boolean;
 }
 
-interface TableMetadataShape {
-  timePartitioning?: unknown;
-  clustering?: unknown;
-  schema?: unknown;
-}
-
-interface DriftableTable {
-  // Matches both real BigQuery Table.getMetadata() (returns [Metadata, ApiResponse])
-  // and the test mock (returns [Metadata]). Only index 0 is consumed.
-  getMetadata(): Promise<TableMetadataShape[]>;
-}
+type DriftableTable = Pick<QueryTable, 'getMetadata'>;
 
 interface PartitioningMeta {
   type?: string;

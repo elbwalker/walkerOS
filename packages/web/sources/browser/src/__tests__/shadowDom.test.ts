@@ -48,6 +48,7 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
   scope: document,
   pageview: false,
   capture: true,
+  history: false,
   elb: false,
   elbLayer: false,
 });
@@ -434,18 +435,17 @@ describe('Shadow DOM', () => {
       left: number;
       width: number;
       height: number;
-    }): DOMRectReadOnly =>
-      ({
-        x: r.left,
-        y: r.top,
-        top: r.top,
-        left: r.left,
-        width: r.width,
-        height: r.height,
-        right: r.left + r.width,
-        bottom: r.top + r.height,
-        toJSON: () => r,
-      }) as DOMRectReadOnly;
+    }): DOMRectReadOnly => ({
+      x: r.left,
+      y: r.top,
+      top: r.top,
+      left: r.left,
+      width: r.width,
+      height: r.height,
+      right: r.left + r.width,
+      bottom: r.top + r.height,
+      toJSON: () => r,
+    });
 
     // Drive an intersection for an element across every captured observer; only
     // the observer that registered the element's config fires a trigger. Fully
@@ -468,7 +468,7 @@ describe('Shadow DOM', () => {
             width: window.innerWidth,
             height: window.innerHeight,
           }),
-        } as IntersectionObserverEntry;
+        };
         observer.callback([entry], observer);
       });
 

@@ -58,21 +58,23 @@ collection:
 
 **Key settings:**
 
-| Setting | Required    | Purpose                                                                                          |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------ |
-| `port`  | Yes         | HTTP server port. Set to `8080` — the runtime overrides this from `PORT` env var at deploy time. |
-| `cors`  | Recommended | Enable CORS for cross-origin event collection                                                    |
+| Setting | Required    | Purpose                                                                                                                               |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `port`  | Yes         | HTTP server port. Set to `8080`. Under `runneros` the runtime owns the port (`PORT`, default 8080) and routes requests to the source. |
+| `cors`  | Recommended | Enable CORS for cross-origin event collection                                                                                         |
 
 > **Note:** Health check endpoints (`/health`, `/ready`) are provided by the
-> runner, not by sources. No source-level health configuration is needed.
+> runtime (`runneros`), not by sources. No source-level health configuration is
+> needed.
 
 ## 2. Test Locally
 
 ```bash
-# Bundle and run locally
-walkeros run flow.json --port 3000
+# Bundle, then start the artifact with the runtime
+walkeros bundle flow.json -o dist/
+npx --package=@walkeros/runner runneros start dist/flow.mjs --port 3000
 
-# In another terminal — health check (provided by the runner)
+# In another terminal, health check (provided by the runtime)
 curl http://localhost:3000/health
 # → {"status":"ok"}
 

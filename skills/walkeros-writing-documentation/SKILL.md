@@ -159,6 +159,11 @@ Before publishing ANY code example:
 - [ ] **Events canonical?** Use patterns from `eventGenerator.ts`
 - [ ] **Example compiles?** TypeScript check passes
 - [ ] **Imports correct?** Package names match actual packages
+- [ ] **Env vars, CLI flags, container modes exist?** Each one is grepped in
+      source before it is documented (e.g.
+      `grep -rn "process.env.PORT" packages/runner/src`,
+      `grep -n -- "--port" packages/runner/src/bin.ts`). A name that only
+      appears in other docs is not evidence
 
 ### Red Flags
 
@@ -168,6 +173,7 @@ Before publishing ANY code example:
 | Import path doesn't match package.json | Wrong package reference             |
 | Event name with underscore             | Wrong format (should be space)      |
 | No imports shown                       | Context missing, harder to validate |
+| Env var or flag with no source grep    | Likely fiction copied from old docs |
 
 ---
 

@@ -40,6 +40,65 @@ export const pageView: Flow.StepExample = {
   ],
 };
 
+export const routeChange: Flow.StepExample = {
+  title: 'Route change',
+  description:
+    'With history enabled, a single-page app route change sends a page view for the new URL, with the previous page as its referrer.',
+  trigger: {
+    type: 'history',
+    options: { url: 'https://example.com/docs', path: '/pricing' },
+  },
+  in: '',
+  out: [
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: {
+          domain: 'example.com',
+          title: '',
+          referrer: '',
+          id: '/docs',
+        },
+        context: {},
+        globals: {},
+        nested: undefined,
+        custom: undefined,
+        trigger: 'load',
+        source: {
+          type: 'browser',
+          platform: 'web',
+          url: 'https://example.com/docs',
+          referrer: '',
+        },
+      },
+    ],
+    [
+      'elb',
+      {
+        name: 'page view',
+        data: {
+          domain: 'example.com',
+          title: '',
+          referrer: 'https://example.com/docs',
+          id: '/pricing',
+        },
+        context: {},
+        globals: {},
+        nested: undefined,
+        custom: undefined,
+        trigger: 'load',
+        source: {
+          type: 'browser',
+          platform: 'web',
+          url: 'https://example.com/pricing',
+          referrer: '',
+        },
+      },
+    ],
+  ],
+};
+
 export const clickEvent: Flow.StepExample = {
   title: 'Click event',
   description:

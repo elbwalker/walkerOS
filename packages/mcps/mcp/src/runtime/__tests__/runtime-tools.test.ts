@@ -4,6 +4,8 @@
 // the cli root does not pull chalk (ESM only) into jest.
 jest.mock('@walkeros/cli', () => ({
   loadJsonConfig: jest.fn(),
+  loadConfig: jest.fn(),
+  collectKnownSecrets: jest.fn(() => []),
   validate: jest.fn(),
   bundle: jest.fn(),
   push: jest.fn(),
@@ -17,7 +19,20 @@ jest.mock('@walkeros/cli/dev', () => {
   const { z } = require('zod');
   const stringField = z.string().optional();
   const shape = new Proxy({}, { get: () => stringField });
-  return { schemas: new Proxy({}, { get: () => shape }) };
+  // flow_validate parses its input with the real schema.
+  const { ValidateInputSchema } =
+    jest.requireActual<typeof import('@walkeros/cli/dev')>(
+      '@walkeros/cli/dev',
+    ).schemas;
+  return {
+    schemas: new Proxy(
+      {},
+      {
+        get: (_target, key) =>
+          key === 'ValidateInputSchema' ? ValidateInputSchema : shape,
+      },
+    ),
+  };
 });
 
 import * as cli from '@walkeros/cli';
@@ -31,6 +46,7 @@ import { createHostedRuntime } from '../hosted.js';
 import { createLocalRuntime } from '../local.js';
 import type { FlowRuntime } from '../types.js';
 import { stubClient } from '../../__tests__/support/stub-client.js';
+import { isErrorResult } from '../../__tests__/support/tool-result.js';
 
 const client = stubClient();
 const hosted = createHostedRuntime(client);
@@ -51,7 +67,7 @@ function isRefusal(res: unknown): boolean {
   return (
     !!res &&
     typeof res === 'object' &&
-    (res as { isError?: boolean }).isError === true &&
+    isErrorResult(res) &&
     /hosted/i.test(JSON.stringify(res))
   );
 }
@@ -190,7 +206,7 @@ describe('read tools under the hosted runtime', () => {
       type: 'flow',
       input: 'flow_missing',
     });
-    expect((res as { isError?: boolean }).isError).toBe(true);
+    expect(isErrorResult(res)).toBe(true);
     expect(JSON.stringify(res)).toMatch(/Flow not found/);
     expect(mocked.validate).not.toHaveBeenCalled();
   });
@@ -203,7 +219,7 @@ describe('read tools under the hosted runtime', () => {
       type: 'flow',
       input: './missing.json',
     });
-    expect((res as { isError?: boolean }).isError).toBe(true);
+    expect(isErrorResult(res)).toBe(true);
     expect(JSON.stringify(res)).toMatch(/Configuration file not found/);
     expect(mocked.validate).not.toHaveBeenCalled();
   });

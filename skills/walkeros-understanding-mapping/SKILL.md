@@ -542,14 +542,15 @@ chain so no downstream step (transformer or destination) sees it.
 
 ## Where Mapping Lives
 
-| Location                                   | Purpose                                   |
-| ------------------------------------------ | ----------------------------------------- |
-| Source config                              | Transform raw input → walkerOS events     |
-| Transformer step config                    | Mutate walkerOS events in-flight          |
-| Destination config                         | Transform walkerOS events → vendor format |
-| `packages/core/src/mapping.ts`             | Core mapping functions                    |
-| `packages/core/src/types/mapping.ts`       | Type definitions                          |
-| `packages/cli/examples/flow-complete.json` | Comprehensive example (53 features)       |
+| Location                                   | Purpose                                                        |
+| ------------------------------------------ | -------------------------------------------------------------- |
+| Source config                              | Transform raw input → walkerOS events                          |
+| Transformer step config                    | Mutate walkerOS events in-flight                               |
+| Destination config                         | Transform walkerOS events → vendor format                      |
+| `state.mapping`                            | Shape a store read or write (paths relative to the value read) |
+| `packages/core/src/mapping.ts`             | Core mapping functions                                         |
+| `packages/core/src/types/mapping.ts`       | Type definitions                                               |
+| `packages/cli/examples/flow-complete.json` | Tested example, features by id                                 |
 
 ---
 
@@ -581,6 +582,8 @@ chain so no downstream step (transformer or destination) sees it.
 **Examples:**
 
 - [packages/cli/examples/flow-complete.json](../../packages/cli/examples/flow-complete.json) -
-  Comprehensive example
+  Tested example; mapping features by id (for example `ga4-purchase`,
+  `value-loop`, `rule-policy`) are listed in
+  [complete-examples.md](complete-examples.md#live-reference)
 - [packages/cli/examples/flow-complete.md](../../packages/cli/examples/flow-complete.md) -
-  Feature inventory
+  Guide, chapters `mapping` and `consent-privacy`

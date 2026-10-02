@@ -1,0 +1,14 @@
+{
+  "version": 4,
+  "flows": {
+    "a": {
+      "config": { "platform": "web" },
+      "destinations": {
+        "ga4": {
+          "package": "./local-pkg",
+          "config": { "settings": { "id": "bad" } }
+        }
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@ import type { StepExample } from '../examples/step';
 import { startFlow } from '@walkeros/collector';
 import { destinationPiwikPro } from '..';
 import { examples } from '../dev';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type Captured = [callable: string, ...args: unknown[]];
 
@@ -48,3 +49,6 @@ describe('Step Examples', () => {
     },
   );
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

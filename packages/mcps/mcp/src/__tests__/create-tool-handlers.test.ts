@@ -21,6 +21,7 @@ jest.mock('@walkeros/cli', () => ({
 
 import { createToolHandlers } from '../index.js';
 import { stubClient } from './support/stub-client.js';
+import { isErrorResult } from './support/tool-result.js';
 
 describe('createToolHandlers', () => {
   it('returns specs for all 19 tools keyed by name', () => {
@@ -69,7 +70,7 @@ describe('createToolHandlers', () => {
       step: 'destination.x',
       event: { name: 'order complete' },
     });
-    expect((res as { isError?: boolean }).isError).toBe(true);
+    expect(isErrorResult(res)).toBe(true);
     expect(JSON.stringify(res)).toMatch(/hosted/i);
   });
 });

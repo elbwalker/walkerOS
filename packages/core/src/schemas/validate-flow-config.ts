@@ -1,8 +1,17 @@
-import { JsonSchema } from './flow';
+import { ContractSchema, JsonSchema } from './flow';
 import type { ValidationIssue, ValidationResult } from './validate';
 import type { IntelliSenseContext, PackageInfo } from './intellisense';
-import type { Flow } from '../types';
+import type { Flow, Transformer } from '../types';
+import { getRouteGraph } from '../chain';
+import { RouteSchema } from './matcher';
 import { resolveContracts } from '../contract';
+import {
+  REF_CODE_PREFIX,
+  REF_CONTRACT,
+  REF_FLOW,
+  REF_SECRET,
+  REF_STORE,
+} from '../references';
 
 /**
  * Validate a Flow.Config JSON string.
@@ -67,6 +76,7 @@ export function validateFlowConfig(
   }
 
   // Structural checks over the parsed object (store file/cache contract).
+  checkContractResolution(json, parsed, errors);
   checkStoreContract(json, parsed, warnings);
   checkResolutionRoots(json, parsed, errors);
 
@@ -76,6 +86,32 @@ export function validateFlowConfig(
     warnings,
     context,
   };
+}
+
+/**
+ * The root contract must resolve as every flow's resolver resolves it
+ * (extend chains, wildcards): an unknown `extend` or a cycle fails the
+ * bundle, so it is an error at `contract`, never a silently empty context.
+ */
+function checkContractResolution(
+  text: string,
+  parsed: unknown,
+  errors: ValidationIssue[],
+): void {
+  if (!isObject(parsed)) return;
+  // A contract the schema rejects is already reported by the schema errors.
+  const shape = ContractSchema.safeParse(parsed.contract);
+  if (parsed.contract === undefined || !shape.success) return;
+  try {
+    resolveContracts(shape.data);
+  } catch (error) {
+    errors.push({
+      message: `Contract does not resolve: ${error instanceof Error ? error.message : String(error)}`,
+      severity: 'error',
+      path: 'contract',
+      ...positionForKey(text, 'contract'),
+    });
+  }
 }
 
 // --- Context Extraction ---
@@ -204,8 +240,13 @@ const FLOW_INLINE_REGEX =
 const COLON_TYPO_REGEX = /\$(var|store|flow|secret):([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
 // Inline variant of REF_SECRET for scanning anywhere in JSON text.
-// Source-of-truth REF_SECRET in references.ts is anchored (^...$).
-const SECRET_INLINE_REGEX = /\$secret\.([A-Z0-9_]+)/g;
+// Source-of-truth REF_SECRET in references.ts is anchored (^...$) and
+// uppercase only; the scan also finds lowercase names so a secret that would
+// never resolve is still reported (a web flow must not carry it either way).
+const SECRET_INLINE_REGEX = /\$secret\.([A-Za-z0-9_]+)/g;
+
+// Inline $var.NAME scan; the name is the first path segment.
+const VAR_INLINE_REGEX = /\$var\.(\w+)/g;
 
 function checkReferences(
   text: string,
@@ -217,12 +258,291 @@ function checkReferences(
   // Each check is independent. Order is irrelevant, issues are aggregated.
   // Run colon-typo scan first so the user sees the targeted suggestion
   // before any cascading "unknown" warnings from the per-type checks.
-  checkColonTypos(text, context, warnings);
-  checkVarReferences(text, context, warnings);
-  checkStoreReferences(text, context, warnings);
-  checkEnvReferences(text, context, warnings);
-  checkFlowReferences(text, context, warnings);
+  // The scans walk the parsed structure, never the raw text, so prose
+  // (isProsePath) is skipped and each flow sees only its own variables and
+  // stores, as the resolver does.
+  const strings = referenceStrings(text, parsed);
+  checkColonTypos(text, strings, warnings);
+  checkVarReferences(text, parsed, strings, context, warnings);
+  checkStoreReferences(text, parsed, strings, context, warnings);
+  checkEnvReferences(text, strings, warnings);
+  checkFlowReferences(text, strings, context, warnings);
   checkSecretReferences(text, parsed, context, errors, warnings);
+  checkWholeValueReferences(text, parsed, warnings);
+}
+
+/** A string value that can carry references, with its place in the text. */
+interface ReferenceString {
+  path: string[];
+  /** The value as written between its quotes (escapes kept). */
+  raw: string;
+  /** Offset of the first character after the opening quote. */
+  offset: number;
+}
+
+/**
+ * Every non-prose string value of the config with its text offset. Values
+ * whose position cannot be found in the text are skipped.
+ */
+function referenceStrings(text: string, parsed: unknown): ReferenceString[] {
+  const tokens = locateStringValues(text);
+  const strings: ReferenceString[] = [];
+  walkStringValues(parsed, [], (_value, path) => {
+    if (isProsePath(path)) return;
+    const token = tokens.get(pathKey(path));
+    if (!token) return;
+    strings.push({
+      path,
+      raw: text.slice(token.start + 1, token.end - 1),
+      offset: token.start + 1,
+    });
+  });
+  return strings;
+}
+
+/** Each match of a global `regex` inside the reference strings. */
+function forEachMatch(
+  strings: ReferenceString[],
+  regex: RegExp,
+  visit: (match: RegExpExecArray, at: ReferenceString, offset: number) => void,
+): void {
+  for (const at of strings) {
+    regex.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(at.raw)) !== null) {
+      visit(match, at, at.offset + match.index);
+    }
+  }
+}
+
+function pathKey(path: readonly string[]): string {
+  return JSON.stringify(path);
+}
+
+interface Frame {
+  kind: 'object' | 'array';
+  key?: string;
+  index: number;
+  expectKey: boolean;
+}
+
+/**
+ * Start and end offsets (quotes included) of every string VALUE in a JSON
+ * text, keyed by its path. The text is valid JSON (it parsed), so a flat
+ * scan that tracks the container stack is enough.
+ */
+function locateStringValues(
+  text: string,
+): Map<string, { start: number; end: number }> {
+  const found = new Map<string, { start: number; end: number }>();
+  const stack: Frame[] = [];
+  const currentPath = (): string[] =>
+    stack.map((frame) =>
+      frame.kind === 'array' ? String(frame.index) : (frame.key ?? ''),
+    );
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    const top = stack.length > 0 ? stack[stack.length - 1] : undefined;
+    if (ch === '{' || ch === '[') {
+      stack.push({
+        kind: ch === '{' ? 'object' : 'array',
+        index: 0,
+        expectKey: ch === '{',
+      });
+      i++;
+    } else if (ch === '}' || ch === ']') {
+      stack.pop();
+      i++;
+    } else if (ch === ',') {
+      if (top?.kind === 'array') top.index++;
+      else if (top) top.expectKey = true;
+      i++;
+    } else if (ch === ':') {
+      if (top) top.expectKey = false;
+      i++;
+    } else if (ch === '"') {
+      const start = i;
+      i++;
+      while (i < text.length && text[i] !== '"') i += text[i] === '\\' ? 2 : 1;
+      i++;
+      if (top?.kind === 'object' && top.expectKey) {
+        const key: unknown = JSON.parse(text.slice(start, i));
+        top.key = typeof key === 'string' ? key : '';
+      } else {
+        found.set(pathKey(currentPath()), { start, end: i });
+      }
+    } else {
+      i++;
+    }
+  }
+  return found;
+}
+
+/**
+ * Variables a value at `path` resolves against, as the resolver cascades
+ * them: root, then the flow, then the step. Outside a flow every variable
+ * of the file counts (the merged IntelliSense context).
+ */
+function variablesAt(
+  parsed: unknown,
+  path: readonly string[],
+  context: Partial<IntelliSenseContext>,
+): Record<string, unknown> {
+  if (path[0] !== 'flows' || !isObject(parsed) || !isObject(parsed.flows))
+    return context.variables ?? {};
+  const variables: Record<string, unknown> = {};
+  mergeVars(variables, parsed.variables);
+  const flow = parsed.flows[path[1]];
+  if (!isObject(flow)) return variables;
+  mergeVars(variables, flow.variables);
+  const section = flow[path[2]];
+  if (STEP_SECTIONS.includes(path[2]) && isObject(section)) {
+    const step = section[path[3]];
+    if (isObject(step)) mergeVars(variables, step.variables);
+  }
+  return variables;
+}
+
+/** Stores a value at `path` can reference: its own flow's, else all. */
+function storesAt(
+  parsed: unknown,
+  path: readonly string[],
+  context: Partial<IntelliSenseContext>,
+): string[] {
+  if (path[0] !== 'flows' || !isObject(parsed) || !isObject(parsed.flows))
+    return context.stepNames?.stores ?? [];
+  const flow = parsed.flows[path[1]];
+  return isObject(flow) && isObject(flow.stores)
+    ? Object.keys(flow.stores)
+    : [];
+}
+
+// References that resolve only when they are the entire string value.
+// `$var.` and `$env.` resolve inline and are not listed here.
+const WHOLE_VALUE_REFERENCES: ReadonlyArray<{
+  prefix: string;
+  regex: RegExp;
+  grammar: string;
+}> = [
+  {
+    prefix: '$flow.',
+    regex: REF_FLOW,
+    grammar: 'a flow name, then an optional dot path of letters, digits and _',
+  },
+  {
+    prefix: '$store.',
+    regex: REF_STORE,
+    grammar: 'one store id of letters, digits and _, no path',
+  },
+  {
+    prefix: '$secret.',
+    regex: REF_SECRET,
+    grammar: 'uppercase letters, digits and _',
+  },
+  {
+    prefix: '$contract.',
+    regex: REF_CONTRACT,
+    grammar: 'a contract name, then an optional dot path',
+  },
+];
+
+const PROSE_KEYS = ['title', 'description'];
+const STEP_SECTIONS = ['sources', 'transformers', 'destinations', 'stores'];
+
+/**
+ * Prose describes references, it never resolves them. `path` runs from the
+ * config root. Prose is: a `$comment` anywhere; anything under the root
+ * `contract` or a step's `config.settings.contract` (JSON Schema carries
+ * `description` at any depth); a `title` or
+ * `description` on the config root, a flow, a step or a step example. The
+ * same keys inside `settings` or `mapping` are data and stay checked.
+ */
+function isProsePath(path: readonly string[]): boolean {
+  const key = path[path.length - 1];
+  if (key === '$comment') return true;
+  if (path[0] === 'contract') return true;
+  // A step's inline JSON Schema (`config.settings.contract`, the validate
+  // transformer) is prose like the root contract.
+  if (
+    path[0] === 'flows' &&
+    STEP_SECTIONS.includes(path[2]) &&
+    path[4] === 'config' &&
+    path[5] === 'settings' &&
+    path[6] === 'contract'
+  )
+    return true;
+  if (!PROSE_KEYS.includes(key)) return false;
+  // Config root: `title`.
+  if (path.length === 1) return true;
+  if (path[0] !== 'flows') return false;
+  // Flow: `flows.<name>.title`.
+  if (path.length === 3) return true;
+  if (!STEP_SECTIONS.includes(path[2])) return false;
+  // Step: `flows.<name>.<section>.<step>.title`.
+  if (path.length === 5) return true;
+  // Example: `flows.<name>.<section>.<step>.examples.<example>.title`.
+  return path.length === 7 && path[4] === 'examples';
+}
+
+/**
+ * Warn on whole-value references that would not resolve: used inside a
+ * larger string (they ship as literal text) or malformed (the value starts
+ * with the prefix but fails the anchored grammar). Walks parsed string
+ * values; `$code:` payloads are code, not references, and are skipped.
+ */
+function checkWholeValueReferences(
+  text: string,
+  parsed: unknown,
+  warnings: ValidationIssue[],
+): void {
+  walkStringValues(parsed, [], (value, path) => {
+    if (value.startsWith(REF_CODE_PREFIX)) return;
+    if (isProsePath(path)) return;
+    for (const { prefix, regex, grammar } of WHOLE_VALUE_REFERENCES) {
+      if (!value.includes(prefix)) continue;
+      const name = prefix.slice(0, -1);
+      let message: string;
+      if (value.startsWith(prefix)) {
+        if (regex.test(value)) continue;
+        message = `"${value}" does not match the ${name}.NAME grammar (${grammar}); it would not resolve. To build a longer string, compose with $var or $env.`;
+      } else {
+        message = `"${value}" uses ${prefix} inline. ${prefix} references resolve only as the whole value; it would ship as literal text. Use the reference as the entire value, or compose strings with $var or $env.`;
+      }
+      const encoded = JSON.stringify(value);
+      const idx = text.indexOf(encoded);
+      warnings.push({
+        message,
+        severity: 'warning',
+        path: path.join('.'),
+        ...(idx === -1
+          ? { line: 1, column: 1 }
+          : offsetToPosition(text, idx, encoded.length)),
+      });
+    }
+  });
+}
+
+function walkStringValues(
+  value: unknown,
+  path: string[],
+  visit: (value: string, path: string[]) => void,
+): void {
+  if (typeof value === 'string') {
+    visit(value, path);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) =>
+      walkStringValues(item, [...path, String(index)], visit),
+    );
+    return;
+  }
+  if (isObject(value)) {
+    for (const [key, child] of Object.entries(value)) {
+      walkStringValues(child, [...path, key], visit);
+    }
+  }
 }
 
 // Packages that persist raw bytes (byte-native), the only stores where
@@ -353,7 +673,7 @@ function checkSecretReferences(
   // project's registered set. This is what makes a valid multi-flow config (a
   // web flow forwarding to a server flow that holds the secret) pass instead of
   // having the server flow's secret wrongly flagged as a web violation.
-  for (const flow of Object.values(parsed.flows)) {
+  for (const [flowName, flow] of Object.entries(parsed.flows)) {
     if (!isObject(flow)) continue;
     const cfg = flow.config;
     const platform =
@@ -361,132 +681,127 @@ function checkSecretReferences(
         ? cfg.platform
         : undefined;
 
-    const flowText = JSON.stringify(flow);
-    SECRET_INLINE_REGEX.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = SECRET_INLINE_REGEX.exec(flowText)) !== null) {
-      const full = match[0];
-      const name = match[1];
-      // Best-effort position against the original text (first occurrence of the
-      // ref), mirroring positionForKey's indexOf approach; flowText offsets do
-      // not map to the original document.
-      const idx = text.indexOf(full);
-      const pos =
-        idx === -1
-          ? { line: 1, column: 1 }
-          : offsetToPosition(text, idx, full.length);
+    // Scan string values; prose is skipped by the same rule as
+    // checkWholeValueReferences, so the walk starts at the flow's root path.
+    walkStringValues(flow, ['flows', flowName], (value, path) => {
+      if (isProsePath(path)) return;
+      SECRET_INLINE_REGEX.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = SECRET_INLINE_REGEX.exec(value)) !== null) {
+        const full = match[0];
+        const name = match[1];
+        // Best-effort position against the original text (first occurrence of
+        // the ref), mirroring positionForKey's indexOf approach; value offsets
+        // do not map to the original document.
+        const idx = text.indexOf(full);
+        const pos =
+          idx === -1
+            ? { line: 1, column: 1 }
+            : offsetToPosition(text, idx, full.length);
 
-      if (platform === 'web') {
-        errors.push({
-          message: `Secret "$secret.${name}" cannot be used in a web flow — secrets are never sent to the browser; use a server flow.`,
-          severity: 'error',
-          path: full,
-          ...pos,
-        });
-        continue;
-      }
+        if (platform === 'web') {
+          errors.push({
+            message: `Secret "$secret.${name}" cannot be used in a web flow: secrets are never sent to the browser; use a server flow.`,
+            severity: 'error',
+            path: full,
+            ...pos,
+          });
+          continue;
+        }
 
-      if (known && !known.includes(name)) {
-        warnings.push({
-          message: `Unknown secret "$secret.${name}"; not in the project's registered secrets.`,
-          severity: 'warning',
-          path: full,
-          ...pos,
-        });
+        if (known && !known.includes(name)) {
+          warnings.push({
+            message: `Unknown secret "$secret.${name}"; not in the project's registered secrets.`,
+            severity: 'warning',
+            path: full,
+            ...pos,
+          });
+        }
       }
-    }
+    });
   }
 }
 
 function checkColonTypos(
   text: string,
-  _context: Partial<IntelliSenseContext>,
+  strings: ReferenceString[],
   issues: ValidationIssue[],
 ): void {
-  COLON_TYPO_REGEX.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = COLON_TYPO_REGEX.exec(text)) !== null) {
+  forEachMatch(strings, COLON_TYPO_REGEX, (match, at, offset) => {
     const full = match[0];
     const prefix = match[1];
     const name = match[2];
-    const pos = offsetToPosition(text, match.index, full.length);
     issues.push({
       message: `Malformed reference "${full}", use a dot, not a colon: "$${prefix}.${name}".`,
       severity: 'warning',
-      path: full,
-      ...pos,
+      path: at.path.join('.'),
+      ...offsetToPosition(text, offset, full.length),
     });
-  }
+  });
 }
 
 function checkStoreReferences(
   text: string,
+  parsed: unknown,
+  strings: ReferenceString[],
   context: Partial<IntelliSenseContext>,
   issues: ValidationIssue[],
 ): void {
-  const stores = context.stepNames?.stores ?? [];
-  STORE_INLINE_REGEX.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = STORE_INLINE_REGEX.exec(text)) !== null) {
-    if (!stores.includes(match[1])) {
-      const pos = offsetToPosition(text, match.index, match[0].length);
-      issues.push({
-        message: `Unknown store "$store.${match[1]}". Defined: ${stores.join(', ') || 'none'}`,
-        severity: 'warning',
-        path: `$store.${match[1]}`,
-        ...pos,
-      });
-    }
-  }
+  forEachMatch(strings, STORE_INLINE_REGEX, (match, at, offset) => {
+    const stores = storesAt(parsed, at.path, context);
+    if (stores.includes(match[1])) return;
+    issues.push({
+      message: `Unknown store "$store.${match[1]}". Defined: ${stores.join(', ') || 'none'}`,
+      severity: 'warning',
+      path: at.path.join('.'),
+      ...offsetToPosition(text, offset, match[0].length),
+    });
+  });
 }
 
 function checkFlowReferences(
   text: string,
+  strings: ReferenceString[],
   context: Partial<IntelliSenseContext>,
   issues: ValidationIssue[],
 ): void {
   const flowNames = context.flowNames ?? [];
   if (flowNames.length === 0) return;
 
-  FLOW_INLINE_REGEX.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = FLOW_INLINE_REGEX.exec(text)) !== null) {
+  forEachMatch(strings, FLOW_INLINE_REGEX, (match, at, offset) => {
     const full = match[0];
     const name = match[1];
-    if (!flowNames.includes(name)) {
-      const pos = offsetToPosition(text, match.index, full.length);
-      issues.push({
-        message: `Unknown flow "$flow.${name}". Defined: ${flowNames.join(', ')}`,
-        severity: 'warning',
-        path: full,
-        ...pos,
-      });
-    }
-  }
+    if (flowNames.includes(name)) return;
+    issues.push({
+      message: `Unknown flow "$flow.${name}". Defined: ${flowNames.join(', ')}`,
+      severity: 'warning',
+      path: at.path.join('.'),
+      ...offsetToPosition(text, offset, full.length),
+    });
+  });
 }
 
 function checkEnvReferences(
   text: string,
-  _context: Partial<IntelliSenseContext>,
+  strings: ReferenceString[],
   issues: ValidationIssue[],
 ): void {
-  ENV_LOOSE_REGEX.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = ENV_LOOSE_REGEX.exec(text)) !== null) {
+  forEachMatch(strings, ENV_LOOSE_REGEX, (match, at, offset) => {
     const full = match[0];
     const name = match[1];
     const eqDefault = match[2];
-    const pos = offsetToPosition(text, match.index, full.length);
+    const pos = offsetToPosition(text, offset, full.length);
+    const path = at.path.join('.');
 
     // Case A: $env.NAME=default (= instead of :)
     if (eqDefault) {
       issues.push({
         message: `Malformed $env reference "${full}". Use ":" for default values, not "=" (e.g., "$env.${name}:fallback").`,
         severity: 'warning',
-        path: full,
+        path,
         ...pos,
       });
-      continue;
+      return;
     }
 
     // Case B: lowercase / mixed-case name (convention warning).
@@ -494,32 +809,30 @@ function checkEnvReferences(
       issues.push({
         message: `$env.${name} should use UPPER_SNAKE_CASE by convention (e.g., $env.${name.toUpperCase()}).`,
         severity: 'warning',
-        path: full,
+        path,
         ...pos,
       });
     }
-  }
+  });
 }
 
 function checkVarReferences(
   text: string,
+  parsed: unknown,
+  strings: ReferenceString[],
   context: Partial<IntelliSenseContext>,
   issues: ValidationIssue[],
 ): void {
-  if (!context.variables) return;
-  const regex = /\$var\.(\w+)/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(text)) !== null) {
-    if (!(match[1] in context.variables)) {
-      const pos = offsetToPosition(text, match.index, match[0].length);
-      issues.push({
-        message: `Unknown variable "$var.${match[1]}". Defined: ${Object.keys(context.variables).join(', ') || 'none'}`,
-        severity: 'warning',
-        path: `$var.${match[1]}`,
-        ...pos,
-      });
-    }
-  }
+  forEachMatch(strings, VAR_INLINE_REGEX, (match, at, offset) => {
+    const variables = variablesAt(parsed, at.path, context);
+    if (match[1] in variables) return;
+    issues.push({
+      message: `Unknown variable "$var.${match[1]}". Defined: ${Object.keys(variables).join(', ') || 'none'}`,
+      severity: 'warning',
+      path: at.path.join('.'),
+      ...offsetToPosition(text, offset, match[0].length),
+    });
+  });
 }
 
 // --- Position Utilities ---
@@ -609,8 +922,8 @@ const STEP_KINDS = ['sources', 'transformers', 'destinations'] as const;
  * Flags paths that can never resolve, by walking each step with the root its
  * values resolve against. Mapping `data` and `policy` resolve against the
  * event, so an `ingest.` path there is a silent miss. Cache keys and route
- * matchers resolve against `{ event, ingest }`, so a path needs one of those
- * prefixes. State paths are checked by StateSchema.
+ * matchers (every chain field, `collector.next` included) resolve against
+ * `{ event, ingest }`, so a path needs one of those prefixes. State paths are checked by StateSchema.
  */
 function checkResolutionRoots(
   text: string,
@@ -659,13 +972,19 @@ function checkResolutionRoots(
       for (const [id, step] of Object.entries(steps)) {
         if (!isObject(step)) continue;
         const at: Path = ['flows', flowName, kind, id];
-        walkRoute(step.before, [...at, 'before'], rootPath);
-        walkRoute(step.next, [...at, 'next'], rootPath);
+        walkRouteMatchers(step.before, [...at, 'before'], rootPath);
+        walkRouteMatchers(step.next, [...at, 'next'], rootPath);
         walkCache(step.cache, [...at, 'cache'], rootPath, updatePath);
         if (kind !== 'transformers' && isObject(step.config))
           walkEventMapping(step.config, [...at, 'config'], eventRoot);
       }
     }
+    if (isObject(flow.collector))
+      walkRouteMatchers(
+        flow.collector.next,
+        ['flows', flowName, 'collector', 'next'],
+        rootPath,
+      );
   }
 }
 
@@ -751,16 +1070,28 @@ function walkCache(
   });
 }
 
-function walkRoute(route: unknown, at: Path, check: PathCheck): void {
-  if (Array.isArray(route)) {
-    route.forEach((item, i) => walkRoute(item, [...at, i], check));
-    return;
+function isRoute(value: unknown): value is Transformer.Route {
+  return RouteSchema.safeParse(value).success;
+}
+
+/**
+ * Checks every matcher of a route, read through `getRouteGraph` (the one
+ * enumerator over the compiled route form): each branch's own decision and
+ * the enclosing ones it lists in `via`, each once. A value that is not a
+ * valid route is left to the schema errors.
+ */
+function walkRouteMatchers(route: unknown, at: Path, check: PathCheck): void {
+  if (route === undefined || !isRoute(route)) return;
+  const seen = new Set<string>();
+  for (const node of getRouteGraph(route)) {
+    for (const decision of [...(node.via ?? []), node]) {
+      if (!decision.match) continue;
+      const key = decision.path.join('.');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      walkMatch(decision.match, [...at, ...decision.path, 'match'], check);
+    }
   }
-  if (!isObject(route)) return;
-  walkMatch(route.match, [...at, 'match'], check);
-  walkRoute(route.next, [...at, 'next'], check);
-  walkRoute(route.one, [...at, 'one'], check);
-  walkRoute(route.many, [...at, 'many'], check);
 }
 
 function walkMatch(expr: unknown, at: Path, check: PathCheck): void {
@@ -836,9 +1167,9 @@ function extractContractEntities(
   if (!isObject(contract)) return;
 
   // Resolve extend chains + wildcards with annotations preserved, so property
-  // descriptions survive for IntelliSense. Resolution can throw on malformed
-  // contracts (circular extend, unknown ref); the surrounding context
-  // extraction is best-effort, so fall back to the raw shape on failure.
+  // descriptions survive for IntelliSense. Resolution throws on malformed
+  // contracts (circular extend, unknown ref): that is reported by
+  // checkContractResolution, and the context then carries no entities.
   let resolved: Record<string, Flow.ContractRule>;
   try {
     resolved = resolveContracts(contract as Flow.Contract, {

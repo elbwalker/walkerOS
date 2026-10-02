@@ -68,7 +68,7 @@
       "outputLogs": "errors-only"
     },
     "test:integration": {
-      "dependsOn": ["build"],
+      "dependsOn": ["build", "^build"],
       "outputs": [],
       "outputLogs": "errors-only"
     },

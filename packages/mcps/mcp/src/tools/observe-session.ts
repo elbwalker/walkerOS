@@ -9,6 +9,8 @@ import type {
   ObserveLevel,
 } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { isRecord, stringField } from './narrow.js';
+import { parseToolInput } from './parse-input.js';
 
 const TITLE = 'Observe Session';
 /**
@@ -115,18 +117,18 @@ interface SettingsEntry {
 
 /**
  * Read the settings summaries off a flow response. `getFlow` is typed
- * `Promise<unknown>` on the client, so narrow structurally instead of casting:
+ * `Promise<unknown>` on the client, so it is read structurally:
  * anything that is not a well-formed settings entry is simply not a candidate.
  */
 function readSettings(flow: unknown): SettingsEntry[] {
-  if (!flow || typeof flow !== 'object') return [];
-  const settings = (flow as { settings?: unknown }).settings;
+  if (!isRecord(flow)) return [];
+  const settings = flow.settings;
   if (!Array.isArray(settings)) return [];
   const entries: SettingsEntry[] = [];
   for (const entry of settings) {
-    if (!entry || typeof entry !== 'object') continue;
-    const { name, platform } = entry as { name?: unknown; platform?: unknown };
-    if (typeof name !== 'string') continue;
+    const name = stringField(entry, 'name');
+    const platform = stringField(entry, 'platform');
+    if (name === undefined) continue;
     if (platform !== 'web' && platform !== 'server') continue;
     entries.push({ name, platform });
   }
@@ -318,6 +320,8 @@ export function createObserveSessionToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function observeSessionHandlerBody(client: ToolClient, input: unknown) {
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
   const {
     action,
     flowId,
@@ -327,16 +331,7 @@ async function observeSessionHandlerBody(client: ToolClient, input: unknown) {
     origins,
     level,
     replace,
-  } = (input ?? {}) as {
-    action?: 'start' | 'status' | 'stop';
-    flowId?: string;
-    projectId?: string;
-    sessionId?: string;
-    arms?: ArmsInput;
-    origins?: string[];
-    level?: ObserveLevel;
-    replace?: boolean;
-  };
+  } = parsed.data;
 
   if (!flowId) {
     return mcpError(new Error('flowId is required for observe_session.'));
@@ -460,8 +455,6 @@ export function registerObserveSessionTool(
       inputSchema: spec.inputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => observeSessionHandlerBody(client, args),
   );
 }

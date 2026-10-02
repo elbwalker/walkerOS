@@ -6,13 +6,14 @@ import type {
   UserData,
   Env,
 } from './types';
-import { getMappingValue, isObject } from '@walkeros/core';
+import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
+import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashUserData } from './hash';
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, env, logger },
+  { config, rule, data, ingest, collector, env, logger },
 ) {
   const {
     accessToken,
@@ -22,6 +23,8 @@ export const push: PushFn = async function (
     url = 'https://business-api.tiktok.com/open_api/v1.3/event/track/',
     user_data,
     partner_name,
+    ip,
+    userAgent,
   } = config.settings as import('./types').Settings;
 
   const eventData = isObject(data) ? data : {};
@@ -59,6 +62,18 @@ export const push: PushFn = async function (
 
   // Build context
   const context: EventContext = {};
+
+  // Client IP and user agent auto-fill
+  const root = createMappingRoot(ingest, event);
+  const clientIp = await resolveClient(ip, DEFAULT_IP, root, collector);
+  const clientUserAgent = await resolveClient(
+    userAgent,
+    DEFAULT_USER_AGENT,
+    root,
+    collector,
+  );
+  if (clientIp !== undefined) context.ip = clientIp;
+  if (clientUserAgent !== undefined) context.user_agent = clientUserAgent;
 
   // Add user data if non-empty
   if (Object.keys(hashedUserData).length > 0) {
@@ -112,3 +127,21 @@ export const push: PushFn = async function (
     logger.throw(`TikTok API error: ${JSON.stringify(result)}`);
   }
 };
+
+const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
+const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [
+  'ingest.userAgent',
+  'event.user.userAgent',
+];
+
+/** A client IP or user agent setting resolved to a non-empty string. */
+async function resolveClient(
+  setting: WalkerOSMapping.Value | false | undefined,
+  fallback: WalkerOSMapping.Value,
+  root: WalkerOSMapping.Root,
+  collector: Collector.Instance,
+): Promise<string | undefined> {
+  if (setting === false) return undefined;
+  const value = await getMappingValue(root, setting ?? fallback, { collector });
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}

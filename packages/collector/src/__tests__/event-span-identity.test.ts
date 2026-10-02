@@ -1,5 +1,5 @@
 import type { Collector, FlowState, WalkerOS } from '@walkeros/core';
-import { Source, Transformer } from '@walkeros/core';
+import { deriveSpanId, Source, Transformer } from '@walkeros/core';
 import { startFlow, createPushResult } from '..';
 
 const SPAN_HEX = /^[0-9a-f]{16}$/;
@@ -407,13 +407,12 @@ describe('event span identity', () => {
     });
   });
 
-  // `many` dispatches each branch as its own `collector.push` over the SAME
-  // event, so every branch's chain runs under one id. Branches that rebuild the
-  // event therefore all re-stamp that one id: N branches deliver under ONE id,
-  // not N. That is a consequence of the continuity rule and it is intended,
-  // `many` is one event fanned across pipelines rather than N events. Pinned
-  // here because it is live behavior that nothing else covers.
-  test('`many` branches that rebuild the event all deliver under the chain input id', async () => {
+  // `many` forks the event: every branch is its own copy that finishes the
+  // rest of the path under its own span id, derived from the chain input id
+  // and the branch position (deterministic, never colliding on `event.id`).
+  // A branch that rebuilds the event keeps its copy's id (continuity rule,
+  // applied per copy).
+  test('`many` branches that rebuild the event deliver under their own derived ids', async () => {
     const captured: FlowState[] = [];
     const delivered: WalkerOS.Event[] = [];
     const rebuild: Transformer.Instance['push'] = async () => ({
@@ -481,13 +480,16 @@ describe('event span identity', () => {
     const [inputId] = [...inputIds];
     expect(inputId).toMatch(SPAN_HEX);
 
-    // Both rebuilt branches deliver under that same id, not under two fresh
-    // ones. Set size AND identity are asserted, so dropping the continuity
-    // rule (which would mint one id per branch) fails this.
+    // Both rebuilt branches deliver under their fork ids, derived from the
+    // input id. Set size AND identity are asserted, so a random mint (or a
+    // lost continuity rule) fails this.
+    const forkIds = new Set([
+      deriveSpanId(inputId, 0),
+      deriveSpanId(inputId, 1),
+    ]);
+    expect(forkIds.size).toBe(2);
     expect(delivered).toHaveLength(2);
-    expect(new Set(delivered.map((event) => event.id))).toEqual(
-      new Set([inputId]),
-    );
+    expect(new Set(delivered.map((event) => event.id))).toEqual(forkIds);
     expect(
       new Set(
         captured
@@ -497,6 +499,6 @@ describe('event span identity', () => {
           )
           .map((state) => state.eventId),
       ),
-    ).toEqual(new Set([inputId]));
+    ).toEqual(forkIds);
   });
 });

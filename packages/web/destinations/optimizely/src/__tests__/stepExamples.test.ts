@@ -7,6 +7,7 @@ import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { OptimizelyStepExample } from '../examples/step';
 import type { Env, OptimizelyUserContext, Settings } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 
@@ -92,3 +93,6 @@ describe('optimizely destination -- step examples', () => {
     },
   );
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

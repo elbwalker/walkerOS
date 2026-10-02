@@ -2,6 +2,12 @@ import { defineConfig } from 'tsup';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
 import { pathToFileURL } from 'url';
+import { assertNoPublishedCredentials } from './credentialGuard.mjs';
+import {
+  assertExportMaps,
+  assertStepSettings,
+  publishedExports,
+} from './exportMaps.mjs';
 
 const baseConfig = {
   entry: ['src/index.ts'],
@@ -16,7 +22,10 @@ const getVersion = () => {
     const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
     return pkg.version || '0.0.0';
   } catch (error) {
-    console.warn('Could not read package.json for version injection:', error.message);
+    console.warn(
+      'Could not read package.json for version injection:',
+      error.message,
+    );
     return '0.0.0';
   }
 };
@@ -140,7 +149,9 @@ const buildDev = (customConfig = {}) => {
       // Check the built module exists
       const devMjsPath = resolve(cwd, 'dist/dev.mjs');
       if (!existsSync(devMjsPath)) {
-        console.warn('[buildDev] dist/dev.mjs not found, skipping walkerOS.json generation');
+        console.warn(
+          '[buildDev] dist/dev.mjs not found, skipping walkerOS.json generation',
+        );
         return;
       }
 
@@ -173,7 +184,8 @@ const buildDev = (customConfig = {}) => {
           : [walkerOS.platform];
       }
       if (walkerOS.renderer) meta.renderer = walkerOS.renderer;
-      if (walkerOS.exports) meta.exports = walkerOS.exports;
+      const exports = publishedExports(walkerOS);
+      if (exports) meta.exports = exports;
 
       // Docs URL (manual, from walkerOS.docs in package.json)
       if (walkerOS.docs) meta.docs = walkerOS.docs;
@@ -181,7 +193,9 @@ const buildDev = (customConfig = {}) => {
       // Source URL (auto-derived from repository.directory)
       const repo = pkg.repository;
       if (repo?.directory) {
-        const repoUrl = (repo.url || '').replace(/^git\+/, '').replace(/\.git$/, '');
+        const repoUrl = (repo.url || '')
+          .replace(/^git\+/, '')
+          .replace(/\.git$/, '');
         if (repoUrl) meta.source = `${repoUrl}/tree/main/${repo.directory}/src`;
       }
 
@@ -191,9 +205,38 @@ const buildDev = (customConfig = {}) => {
         : undefined;
 
       const output = { $meta: meta, schemas, examples };
+
+      // Multi-export packages ship examples per export, keyed by export name
+      if (devModule.exportExamples) {
+        const exportExamples = toSerializable(devModule.exportExamples);
+        if (exportExamples && Object.keys(exportExamples).length > 0)
+          output.exportExamples = exportExamples;
+      }
+
+      // Multi-export packages ship schemas per export, same shape as schemas
+      if (devModule.exportSchemas) {
+        const exportSchemas = toSerializable(devModule.exportSchemas);
+        if (exportSchemas && Object.keys(exportSchemas).length > 0)
+          output.exportSchemas = exportSchemas;
+      }
+
       if (hints && Object.keys(hints).length > 0) {
         output.hints = hints;
       }
+
+      // Published metadata must never carry a real credential: fail the build
+      assertNoPublishedCredentials(pkg.name, {
+        examples: output.examples,
+        exportExamples: output.exportExamples,
+        hints: output.hints,
+      });
+
+      // Per-export maps match walkerOS.exports; step packages ship settings
+      assertExportMaps(pkg.name, walkerOS.exports, {
+        exportExamples: output.exportExamples,
+        exportSchemas: output.exportSchemas,
+      });
+      assertStepSettings(pkg.name, walkerOS.type, schemas);
 
       // Validate
       if (Object.keys(schemas).length === 0) {

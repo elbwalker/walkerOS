@@ -233,8 +233,8 @@ import { storeS3Init } from '@walkeros/server-store-s3';
 | `region`          | `string` | No       | `"auto"` | AWS region (SigV4 signing) |
 | `prefix`          | `string` | No       | —        | Key prefix for scoping     |
 
-**Primary use case:** Serving static files in managed deployments (Mode D) where
-files live in a bucket rather than being baked into a Docker image.
+**Primary use case:** Serving static files in managed deployments where files
+live in a bucket rather than being baked into a Docker image.
 
 ### `@walkeros/server-store-gcs` (Google Cloud Storage)
 
@@ -477,7 +477,10 @@ operator workflow.
   Transformer interface and env pattern
 - [walkeros-using-store-cache](../walkeros-using-store-cache/SKILL.md) -
   Store-level cache and the declarative `state` block for fetch/stash without
-  `$code:`
+  `$code:`, including `state.mapping` to pick and shape what a lookup returns
+  (paths relative to the value read, result merged into the target, declared
+  fallbacks applied on a miss). `state` never uses a `file: true` store. Full
+  reference: [Website: State](../../website/docs/collector/state.mdx)
 - [walkeros-using-cli](../walkeros-using-cli/SKILL.md) - Bundling flows with
   stores
 

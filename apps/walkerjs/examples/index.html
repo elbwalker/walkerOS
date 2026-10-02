@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>walker.js example</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem;
+      }
+      section {
+        border: 1px solid #ccc;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+      pre {
+        background: #f5f5f5;
+        padding: 1rem;
+        font-size: 12px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <section
+      data-elb="product"
+      data-elb-product="id:tee-1;name:Cotton Tee;price:25"
+      data-elbaction="load:view"
+    >
+      <h2>Cotton Tee</h2>
+      <button data-elbaction="click:add">Add to cart</button>
+    </section>
+
+    <button onclick="elb('order complete', { total: 42 })">Checkout</button>
+
+    <h2>dataLayer pushes</h2>
+    <pre id="pushes"></pre>
+
+    <!-- Page code, not walker.js: renders every dataLayer push. -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      var push = window.dataLayer.push;
+      window.dataLayer.push = function () {
+        for (var i = 0; i < arguments.length; i++) {
+          document.getElementById('pushes').textContent =
+            JSON.stringify(arguments[i], null, 2) +
+            '\n\n' +
+            document.getElementById('pushes').textContent;
+        }
+        return push.apply(window.dataLayer, arguments);
+      };
+    </script>
+
+    <script async src="../dist/walker.js"></script>
+  </body>
+</html>

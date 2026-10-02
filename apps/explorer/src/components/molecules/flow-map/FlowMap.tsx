@@ -315,6 +315,10 @@ export type FlowMarkerPosition =
   | `post-${string}`
   | `post-${string}-left`
   | `post-${string}-right`
+  // Collector chain (collector.next) positions: chain-{name}
+  | `chain-${string}`
+  | `chain-${string}-left`
+  | `chain-${string}-right`
   // Context stages
   | 'stage-before'
   | 'stage-before-right'
@@ -334,6 +338,9 @@ export type FlowMarkerPosition =
   // Post-transformer chain arrows: collector-post, post-{name}-next
   | 'collector-post'
   | `post-${string}-next`
+  // Collector chain arrows: collector-chain, chain-{name}-next
+  | 'collector-chain'
+  | `chain-${string}-next`
   // Destination arrows: post-destination-{name}
   | `post-destination-${string}`
   // Context stage arrows
@@ -404,6 +411,13 @@ export interface FlowMapProps {
   preTransformers?: Record<string, FlowTransformerConfig>;
   /** Optional: customize collector stage */
   collector?: FlowStageConfig;
+  /**
+   * Collector-level chain (`collector.next`): runs once per event after the
+   * collector and before the destination fan-out. Drawn inside the collector
+   * group, distinct from per-destination `before` (postTransformers). Chain
+   * via `next`; the head is the entry no other entry points to.
+   */
+  collectorTransformers?: Record<string, FlowTransformerConfig>;
   /** Post-transformers between collector and destinations. */
   postTransformers?: Record<string, FlowTransformerConfig>;
   /** Destinations with named keys. Each destination can specify `before` to receive from a post-transformer. */
@@ -437,6 +451,7 @@ const EDGE_ARROW_LENGTH = 25; // Space for incoming/outgoing arrows
 const TITLE_HEIGHT = 30;
 const ARROW_SIZE = 8;
 const ARROW_OFFSET = 6; // Vertical offset for parallel return arrows
+const COLLECTOR_GROUP_PADDING = 6; // Outline around collector + collector.next
 
 // Resolved transformer with its name
 interface ResolvedTransformer {
@@ -572,6 +587,8 @@ function getMarkerPosition(
 ): { x: number; y: number } | null {
   const sourcePos = stages.source;
   const collectorPos = stages.collector;
+  // The fan-out starts after the collector chain when there is one
+  const fanOutPos = stages.fanOut ?? collectorPos;
   const destPos = stages.destination;
   const beforePos = stages.before;
   const afterPos = stages.after;
@@ -653,7 +670,11 @@ function getMarkerPosition(
     case 'source-collector':
       return getArrowMarker(sourcePos);
     case 'collector-destination':
-      return getArrowMarker(collectorPos);
+      return getArrowMarker(fanOutPos);
+
+    // Collector to first collector-chain transformer arrow
+    case 'collector-chain':
+      return stages.fanOut ? getArrowMarker(collectorPos) : null;
 
     // Arrow between destination and after
     case 'destination-after':
@@ -669,7 +690,7 @@ function getMarkerPosition(
 
     // Collector to post-transformer arrow
     case 'collector-post':
-      return getArrowMarker(collectorPos);
+      return getArrowMarker(fanOutPos);
 
     default: {
       // Handle named source markers: source-{name}, source-{name}-left, source-{name}-right
@@ -712,6 +733,23 @@ function getMarkerPosition(
         return getBoxMarker(pos, variant);
       }
 
+      // Handle collector-chain markers: chain-{name}, chain-{name}-left, chain-{name}-right
+      const chainMatch = position.match(/^chain-([^-]+)(-left|-right)?$/);
+      if (chainMatch) {
+        const name = chainMatch[1];
+        const variant = chainMatch[2];
+        const pos = stages[`chain-${name}`];
+        return getBoxMarker(pos, variant);
+      }
+
+      // Handle collector-chain arrow: chain-{name}-next
+      const chainNextMatch = position.match(/^chain-([^-]+)-next$/);
+      if (chainNextMatch) {
+        const name = chainNextMatch[1];
+        const pos = stages[`chain-${name}`];
+        return getArrowMarker(pos);
+      }
+
       // Handle source to pre-transformer arrow: source-{name}-pre
       const sourcePreMatch = position.match(/^source-([^-]+)-pre$/);
       if (sourcePreMatch) {
@@ -752,7 +790,7 @@ function getMarkerPosition(
         const postKeys = Object.keys(stages).filter((k) =>
           k.startsWith('post-'),
         );
-        if (postKeys.length === 0) return getArrowMarker(collectorPos);
+        if (postKeys.length === 0) return getArrowMarker(fanOutPos);
         const lastPostPos = stages[postKeys[postKeys.length - 1]];
         return getArrowMarker(lastPostPos);
       }
@@ -767,6 +805,7 @@ export function FlowMap({
   sources,
   preTransformers,
   collector,
+  collectorTransformers,
   postTransformers,
   destinations,
   stageAfter,
@@ -787,6 +826,12 @@ export function FlowMap({
   const preTransformerList = collectReachableTransformers(
     preTransformers,
     sourceNextValues,
+  );
+
+  // Collector chain (collector.next): every entry is reachable, head first
+  const collectorChainList = collectReachableTransformers(
+    collectorTransformers,
+    Object.keys(collectorTransformers ?? {}),
   );
 
   // Collect post-transformers reachable from destinations (via 'before')
@@ -824,6 +869,7 @@ export function FlowMap({
     sourceEntries.some(([, s]) => s.description) ||
     preTransformerList.some((p) => p.config.description) ||
     collector?.description ||
+    collectorChainList.some((p) => p.config.description) ||
     postTransformerList.some((p) => p.config.description) ||
     destinationEntries.some(([, d]) => d.description) ||
     stageAfter?.description ||
@@ -833,6 +879,7 @@ export function FlowMap({
     sourceEntries.some(([, s]) => s.link !== false) ||
     preTransformerList.some((p) => p.config.link !== false) ||
     collector?.link !== false ||
+    collectorChainList.some((p) => p.config.link !== false) ||
     postTransformerList.some((p) => p.config.link !== false) ||
     destinationEntries.some(([, d]) => d.link !== false) ||
     stageAfter?.link !== false ||
@@ -858,7 +905,9 @@ export function FlowMap({
   const isStageMarker = (pos: string): boolean => {
     if (stageMarkerPositions.includes(pos)) return true;
     // Check patterns: source-{name}, destination-{name}, pre-{name}, post-{name}
-    return /^(source|destination|pre|post)-[^-]+(-left|-right)?$/.test(pos);
+    return /^(source|destination|pre|post|chain)-[^-]+(-left|-right)?$/.test(
+      pos,
+    );
   };
   const hasTopMarkers =
     markers?.some((m) => isStageMarker(m.position)) ?? false;
@@ -897,6 +946,7 @@ export function FlowMap({
     1 + // sources column
     preTransformerList.length +
     1 + // collector
+    collectorChainList.length +
     postTransformerList.length +
     1 + // destinations column
     (hasAnyAfterStage ? 1 : 0);
@@ -1031,6 +1081,26 @@ export function FlowMap({
     height: boxHeight,
   };
   currentX += STAGE_WIDTH + STAGE_GAP;
+
+  // Collector chain positions (collector.next): in line with the collector,
+  // before the fan-out. `fanOut` is the last box the fan-out starts from.
+  const collectorChainPositions: Array<{ name: string; pos: StagePosition }> =
+    [];
+  collectorChainList.forEach(({ name }) => {
+    const pos: StagePosition = {
+      x: currentX,
+      y: stages.collector.y,
+      width: STAGE_WIDTH,
+      height: boxHeight,
+    };
+    collectorChainPositions.push({ name, pos });
+    stages[`chain-${name}`] = pos;
+    currentX += STAGE_WIDTH + STAGE_GAP;
+  });
+  if (collectorChainPositions.length > 0) {
+    stages.fanOut =
+      collectorChainPositions[collectorChainPositions.length - 1].pos;
+  }
 
   // Post-transformer positions
   // Strategy: position at destination Y if only ONE destination connects, otherwise center
@@ -1197,6 +1267,15 @@ export function FlowMap({
       defaultLabel: 'Collector',
       defaultLink: '/docs/collectors' as string | undefined,
     },
+    // Collector chain (collector.next)
+    ...collectorChainList.map(({ name, config }) => ({
+      key: `chain-${name}`,
+      config,
+      fillVar: '--flow-transformer-fill',
+      strokeVar: '--flow-transformer-stroke',
+      defaultLabel: name.charAt(0).toUpperCase() + name.slice(1),
+      defaultLink: '/docs/transformers' as string | undefined,
+    })),
     // Post-transformers
     ...postTransformerList.map(({ name, config }) => ({
       key: `post-${name}`,
@@ -1259,10 +1338,37 @@ export function FlowMap({
           </text>
         )}
 
+        {/* Collector group: collector plus its collector.next chain, set apart
+            from the per-destination `before` chains by a dashed outline */}
+        {collectorChainPositions.length > 0 &&
+          (() => {
+            const first = stages.collector;
+            const last =
+              collectorChainPositions[collectorChainPositions.length - 1].pos;
+            const pad = COLLECTOR_GROUP_PADDING;
+            return (
+              <rect
+                className="elb-flow-map__collector-chain"
+                x={first.x - pad}
+                y={first.y - pad}
+                width={last.x + last.width - first.x + pad * 2}
+                height={boxHeight + pad * 2}
+                rx={10}
+                fill="none"
+                stroke="var(--flow-collector-stroke, #7dd3fc)"
+                strokeWidth={1}
+                strokeDasharray="4 4"
+              />
+            );
+          })()}
+
         {/* Arrows (rendered first so boxes appear on top) */}
         {(() => {
           const collectorPos = stages.collector;
           const collectorCenterY = collectorPos.y + boxHeight / 2;
+          // Where the destination fan-out starts: the collector, or the last
+          // collector-chain transformer when collector.next is drawn
+          const fanOutPos = stages.fanOut ?? collectorPos;
 
           // Helper to spread connection points vertically on an edge
           const getSpreadY = (
@@ -1299,8 +1405,8 @@ export function FlowMap({
             if (destConfig.before && postTransformers?.[destConfig.before]) {
               return stages[`post-${destConfig.before}`];
             }
-            // No 'before' specified - connect directly from collector
-            return collectorPos;
+            // No 'before' specified - connect directly from the fan-out
+            return fanOutPos;
           };
 
           return (
@@ -1513,7 +1619,40 @@ export function FlowMap({
                   );
                 })}
 
-              {/* Collector -> first PostTransformer arrow (if post-transformers exist) */}
+              {/* Collector -> collector chain arrows (collector.next) */}
+              {collectorChainPositions.map(({ name, pos }, index) => {
+                const fromPos =
+                  index === 0
+                    ? collectorPos
+                    : collectorChainPositions[index - 1].pos;
+                const y = collectorCenterY;
+                const offset = withReturn ? ARROW_OFFSET : 0;
+
+                return (
+                  <React.Fragment key={`chain-${name}-in`}>
+                    <RoughArrow
+                      fromX={fromPos.x + STAGE_WIDTH}
+                      fromY={y - offset}
+                      toX={pos.x}
+                      toY={y - offset}
+                      stroke="var(--flow-edge-stroke, #9ca3af)"
+                      centerY={centerY}
+                    />
+                    {withReturn && (
+                      <RoughArrow
+                        fromX={pos.x}
+                        fromY={y + offset}
+                        toX={fromPos.x + STAGE_WIDTH}
+                        toY={y + offset}
+                        stroke="var(--flow-edge-stroke, #9ca3af)"
+                        centerY={centerY}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+
+              {/* Fan-out -> first PostTransformer arrow (if post-transformers exist) */}
               {postTransformerList.length > 0 &&
                 (() => {
                   const firstPostPos =
@@ -1525,7 +1664,7 @@ export function FlowMap({
                   return (
                     <>
                       <RoughArrow
-                        fromX={collectorPos.x + STAGE_WIDTH}
+                        fromX={fanOutPos.x + STAGE_WIDTH}
                         fromY={fromY - offset}
                         toX={firstPostPos.x}
                         toY={toY - offset}
@@ -1536,7 +1675,7 @@ export function FlowMap({
                         <RoughArrow
                           fromX={firstPostPos.x}
                           fromY={toY + offset}
-                          toX={collectorPos.x + STAGE_WIDTH}
+                          toX={fanOutPos.x + STAGE_WIDTH}
                           toY={fromY + offset}
                           stroke="var(--flow-edge-stroke, #9ca3af)"
                           centerY={centerY}

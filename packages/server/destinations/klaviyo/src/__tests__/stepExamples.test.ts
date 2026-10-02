@@ -26,6 +26,7 @@ import type {
   KlaviyoProfilesApiMock,
   Settings,
 } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [callable: string, ...args: unknown[]];
 
@@ -97,3 +98,6 @@ describe('klaviyo server destination -- step examples', () => {
     expect(collected()).toEqual(example.out);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

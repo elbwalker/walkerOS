@@ -77,22 +77,22 @@ walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json -o dist/
 This creates `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The CLI adds the packages named in `package` to the bundle, so the flow needs no separate package list.
 
 :::note Environment variables
-In a server flow, `$env.NAME` is read from the environment when the container starts, not at bundle time. Required: `GCP_PROJECT_ID`. Optional with defaults: `BQ_DATASET` (walkerOS), `BQ_TABLE` (events), `BQ_LOCATION` (EU). See [Reference Syntax](/docs/guides/reference-syntax#env--environment-variables).
+In a server flow, `$env.NAME` is read from the environment when the container starts, not at bundle time. Required: `GCP_PROJECT_ID`. Optional with defaults: `BQ_DATASET` (walkerOS), `BQ_TABLE` (events), `BQ_LOCATION` (EU). Only web flows bake `$env` values in, from `config.bundle.env`. See [Reference Syntax](/docs/guides/reference-syntax#env--environment-variables).
 :::
 
 ## 3. Test Locally with Docker
 
-Before deploying, verify everything works locally:
+Before deploying, verify everything works locally. Replace `<version>` with the `walkeros/flow` version matching your CLI, see [image tags](/docs/apps/runtime#image-tags):
 
 ```bash
 # Run locally (uses key file for auth)
 docker run --rm \
   -p 8080:8080 \
-  -v $(pwd)/dist:/app/flow:ro \
+  -v "$(pwd)/dist:/app/flow:ro" \
   -v $(pwd)/sa-bigquery.json:/app/sa-bigquery.json:ro \
   -e GOOGLE_APPLICATION_CREDENTIALS=/app/sa-bigquery.json \
   -e GCP_PROJECT_ID=your-project-id \
-  walkeros/flow:latest
+  walkeros/flow:<version>
 ```
 
 In another terminal, send a test event:
@@ -124,14 +124,14 @@ bq query --use_legacy_sql=false \
 
 ## 4. Deploy to Cloud Run
 
-Create `dist/Dockerfile` so Cloud Run builds an image from the runtime image plus your bundle. The runtime image expects the bundle at `/app/flow/flow.mjs`:
+Create `dist/Dockerfile` so Cloud Run builds an image from the runtime image plus the whole `dist/` directory. The runtime image starts `/app/flow/flow.mjs` on port 8080 by default:
 
 ```dockerfile
-FROM walkeros/flow:latest
+FROM walkeros/flow:<version>
 COPY . /app/flow/
 ```
 
-Cloud Run uses Workload Identity, so no credentials file is needed in the image.
+To bundle inside Docker instead, use the [canonical two-stage Dockerfile](/docs/apps/runtime#canonical-dockerfile). Cloud Run uses Workload Identity, so no credentials file is needed in the image.
 
 Deploy with the service account attached and the project ID set as an environment variable:
 

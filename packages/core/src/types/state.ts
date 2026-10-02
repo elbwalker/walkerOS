@@ -21,4 +21,11 @@ export interface State {
    * validation requires it for get/set.
    */
   value?: Mapping.Value;
+  /**
+   * Shapes the value read (get) or the resolved payload (set) with a full
+   * mapping value. Paths are relative to that value, not to { event, ingest }.
+   * The result merges into the target: get into the `value` path, set into
+   * the stored entry. Runs on a miss too, so declared fallbacks apply.
+   */
+  mapping?: Mapping.Value;
 }

@@ -82,6 +82,10 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+## Client IP and user agent
+
+The destination sends the client IP as `context.ip` and the user agent as `context.user_agent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
+
 ## Hashing
 
 The destination automatically SHA-256 hashes `email`, `phone_number`, and `external_id` before sending to TikTok. Pass raw values and the hashing is handled for you. If your data is already hashed or you want to skip hashing for specific fields, use the `doNotHash` setting:

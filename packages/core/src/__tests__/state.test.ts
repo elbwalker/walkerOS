@@ -737,3 +737,439 @@ function createStructuredStore(): Store.Instance {
     },
   };
 }
+
+describe('applyState get with mapping', () => {
+  const nonJsonWarning =
+    '[state] stored value has null or non-JSON values, mapping drops them';
+
+  async function getWith(
+    stored: Store.StoreValue | undefined,
+    entry: Partial<Pick<State, 'value' | 'mapping'>>,
+    event: WalkerOS.DeepPartialEvent = {
+      name: 'order complete',
+      user: { id: 'u1', hash: 'h1' },
+    },
+    ingest: Record<string, unknown> = {},
+  ) {
+    const store = createMockStore();
+    if (stored !== undefined) store.set('u1', stored);
+    const collector = createMockCollector({ stores: { customers: store } });
+    const out = await applyState(
+      [
+        {
+          mode: 'get',
+          store: 'customers',
+          key: 'event.user.id',
+          value: 'event.user',
+          ...entry,
+        },
+      ],
+      makeGetStore({ customers: store }),
+      event,
+      collector,
+      ingest,
+    );
+    return { out, collector, ingest };
+  }
+
+  test('picks several fields and keeps the rest of the target', async () => {
+    const { out } = await getWith(
+      { ltv: 1840, segment: 'loyal', email: 'x@y' },
+      { mapping: { map: { ltv: 'ltv', segment: 'segment' } } },
+    );
+    expect(out.user).toEqual({
+      id: 'u1',
+      hash: 'h1',
+      ltv: 1840,
+      segment: 'loyal',
+    });
+  });
+
+  test('a miss writes declared fallbacks only, silently', async () => {
+    const { out, collector } = await getWith(undefined, {
+      mapping: {
+        map: { segment: { key: 'segment', value: 'unknown' }, ltv: 'ltv' },
+      },
+    });
+    expect(out.user).toEqual({ id: 'u1', hash: 'h1', segment: 'unknown' });
+    expect(collector.logger.warn).not.toHaveBeenCalled();
+  });
+
+  test('a miss without fallbacks leaves the event unchanged, silently', async () => {
+    const event = { name: 'order complete', user: { id: 'u1', hash: 'h1' } };
+    const { out, collector } = await getWith(
+      undefined,
+      { mapping: { map: { ltv: 'ltv' } } },
+      event,
+    );
+    expect(out).toEqual(event);
+    expect(collector.logger.warn).not.toHaveBeenCalled();
+  });
+
+  test('condition false skips on a miss', async () => {
+    const event = { name: 'order complete', user: { id: 'u1', hash: 'h1' } };
+    const { out } = await getWith(
+      undefined,
+      {
+        mapping: {
+          condition: (v) => v !== undefined,
+          map: { segment: { key: 'segment', value: 'unknown' } },
+        },
+      },
+      event,
+    );
+    expect(out).toEqual(event);
+  });
+
+  test.each([
+    ['set', { set: ['ltv', 'segment'] }],
+    ['loop', { loop: ['this', { key: 'ltv' }] }],
+  ] satisfies Array<[string, State['mapping']]>)(
+    '%s producers on a miss write nothing',
+    async (_, mapping) => {
+      const event = { name: 'order complete', user: { id: 'u1', hash: 'h1' } };
+      const { out } = await getWith(undefined, { mapping }, event);
+      expect(out).toEqual(event);
+    },
+  );
+
+  test('validate rejects bad data and the fallback applies', async () => {
+    const { out } = await getWith(
+      { ltv: 'bad' },
+      {
+        value: 'event.user.ltv',
+        mapping: {
+          key: 'ltv',
+          validate: (v) => typeof v === 'number',
+          value: 0,
+        },
+      },
+    );
+    expect(out.user?.ltv).toBe(0);
+  });
+
+  test('a null leaf is dropped, the other fields land, with a non-JSON warning', async () => {
+    const { out, collector } = await getWith(
+      { ltv: 1840, segment: null },
+      { mapping: { map: { ltv: 'ltv', segment: 'segment' } } },
+    );
+    expect(out.user).toEqual({ id: 'u1', hash: 'h1', ltv: 1840 });
+    expect(collector.logger.warn).toHaveBeenCalledWith(nonJsonWarning, {
+      store: 'customers',
+    });
+  });
+
+  test('a picked object with a null inside is dropped whole', async () => {
+    const { out } = await getWith(
+      { ltv: 1, address: { street: 'x', zip: null } },
+      { mapping: { map: { ltv: 'ltv', address: 'address' } } },
+    );
+    expect(out.user).toEqual({ id: 'u1', hash: 'h1', ltv: 1 });
+  });
+
+  test('a stored consent field does not gate, the event consent does', async () => {
+    const { out } = await getWith(
+      { consent: { marketing: true }, segment: 'x' },
+      {
+        mapping: {
+          map: { segment: { key: 'segment', consent: { marketing: true } } },
+        },
+      },
+      {
+        name: 'order complete',
+        user: { id: 'u1', hash: 'h1' },
+        consent: { marketing: false },
+      },
+    );
+    expect(out.user).not.toHaveProperty('segment');
+  });
+
+  test('a consent key on a loop item gates that item, not the event consent', async () => {
+    const { out } = await getWith(
+      { orders: [{ consent: { marketing: true }, id: 'a' }] },
+      {
+        value: 'event.user.orders',
+        mapping: {
+          loop: ['orders', { key: 'id', consent: { marketing: true } }],
+        },
+      },
+      {
+        name: 'order complete',
+        user: { id: 'u1', hash: 'h1' },
+        consent: { marketing: false },
+      },
+    );
+    expect(out.user?.orders).toEqual(['a']);
+  });
+
+  test('fn receives the real event', async () => {
+    const { out } = await getWith(
+      { ltv: 1 },
+      {
+        value: 'event.user.owner',
+        mapping: { fn: (_v, ctx) => ctx.event.user?.id },
+      },
+    );
+    expect(out.user?.owner).toBe('u1');
+  });
+
+  test('a FatalError from the mapping rethrows', async () => {
+    await expect(
+      getWith(
+        { ltv: 1 },
+        {
+          mapping: {
+            fn: () => {
+              throw new FatalError('stop');
+            },
+          },
+        },
+      ),
+    ).rejects.toThrow('stop');
+  });
+
+  test('a primitive target is replaced by an object result', async () => {
+    const { out } = await getWith(
+      { ltv: 1 },
+      { value: 'event.data.profile', mapping: { map: { ltv: 'ltv' } } },
+      {
+        name: 'order complete',
+        user: { id: 'u1' },
+        data: { profile: 'legacy' },
+      },
+    );
+    expect(out.data?.profile).toEqual({ ltv: 1 });
+  });
+
+  test('a stored primitive with a path mapping writes nothing, silently', async () => {
+    const event = { name: 'order complete', user: { id: 'u1', hash: 'h1' } };
+    const { out, collector } = await getWith(
+      1840,
+      { mapping: { map: { ltv: 'ltv' } } },
+      event,
+    );
+    expect(out).toEqual(event);
+    expect(collector.logger.warn).not.toHaveBeenCalled();
+  });
+
+  test('an object source with nothing picked is silent', async () => {
+    const event = { name: 'order complete', user: { id: 'u1', hash: 'h1' } };
+    const { out, collector } = await getWith(
+      { other: 1 },
+      { mapping: { map: { ltv: 'ltv' } } },
+      event,
+    );
+    expect(out).toEqual(event);
+    expect(collector.logger.warn).not.toHaveBeenCalled();
+  });
+
+  test('fn receives a stored primitive', async () => {
+    const { out } = await getWith(1840, {
+      value: 'event.user.ltv',
+      mapping: {
+        fn: (v) => (typeof v === 'number' ? Math.round(v / 100) : undefined),
+      },
+    });
+    expect(out.user?.ltv).toBe(18);
+  });
+
+  test('an ingest target merges in place', async () => {
+    const ingest: Record<string, unknown> = { customer: { id: 'u1' } };
+    const event = { name: 'order complete', user: { id: 'u1', hash: 'h1' } };
+    const result = await getWith(
+      { ltv: 5 },
+      { value: 'ingest.customer', mapping: { map: { ltv: 'ltv' } } },
+      event,
+      ingest,
+    );
+    expect(result.ingest).toBe(ingest);
+    expect(ingest.customer).toEqual({ id: 'u1', ltv: 5 });
+    expect(result.out).toEqual(event);
+  });
+
+  test('the input event is not mutated', async () => {
+    const event = { name: 'order complete', user: { id: 'u1', hash: 'h1' } };
+    const before = JSON.parse(JSON.stringify(event));
+    await getWith(
+      { ltv: 1840, segment: 'loyal' },
+      { mapping: { map: { ltv: 'ltv', segment: 'segment' } } },
+      event,
+    );
+    expect(event).toEqual(before);
+  });
+
+  test('without mapping a row containing null is still written raw', async () => {
+    const { out, collector } = await getWith(
+      { ltv: 1840, segment: null },
+      { value: 'event.data.customer' },
+    );
+    expect(out.data?.customer).toEqual({ ltv: 1840, segment: null });
+    expect(collector.logger.warn).not.toHaveBeenCalled();
+  });
+});
+
+describe('applyState set with mapping', () => {
+  async function setWith(
+    stored: Store.StoreValue | undefined,
+    entry: Partial<Pick<State, 'value' | 'mapping'>>,
+    event: WalkerOS.DeepPartialEvent = {
+      name: 'order complete',
+      user: { id: 'u1' },
+      data: { ltv: 1840, segment: 'loyal', email: 'x@y' },
+    },
+  ) {
+    const store = createMockStore();
+    if (stored !== undefined) store.set('u1', stored);
+    const collector = createMockCollector({ stores: { customers: store } });
+    const getSpy = jest.spyOn(store, 'get');
+    const out = await applyState(
+      [
+        {
+          mode: 'set',
+          store: 'customers',
+          key: 'event.user.id',
+          value: 'event.data',
+          ...entry,
+        },
+      ],
+      makeGetStore({ customers: store }),
+      event,
+      collector,
+      {},
+    );
+    return { out, collector, store, getSpy };
+  }
+
+  test('merges the shaped payload into the stored entry', async () => {
+    const { store } = await setWith(
+      { ltv: 1, tier: 'gold' },
+      { mapping: { map: { ltv: 'ltv', segment: 'segment' } } },
+    );
+    expect(await store.get('u1')).toEqual({
+      ltv: 1840,
+      tier: 'gold',
+      segment: 'loyal',
+    });
+  });
+
+  test('writes plainly when nothing is stored', async () => {
+    const { store } = await setWith(undefined, {
+      mapping: { map: { ltv: 'ltv', segment: 'segment' } },
+    });
+    expect(await store.get('u1')).toEqual({ ltv: 1840, segment: 'loyal' });
+  });
+
+  test('replaces a stored primitive and warns', async () => {
+    const { store, collector } = await setWith('legacy', {
+      mapping: { map: { ltv: 'ltv', segment: 'segment' } },
+    });
+    expect(await store.get('u1')).toEqual({ ltv: 1840, segment: 'loyal' });
+    expect(collector.logger.warn).toHaveBeenCalledWith(
+      '[state] stored value is not an object, replaced',
+      { store: 'customers' },
+    );
+  });
+
+  test('arrays replace, they do not concatenate', async () => {
+    const { store } = await setWith(
+      { tags: ['a'] },
+      { mapping: { map: { tags: 'tags' } } },
+      { name: 'order complete', user: { id: 'u1' }, data: { tags: ['b'] } },
+    );
+    expect(await store.get('u1')).toEqual({ tags: ['b'] });
+  });
+
+  test('a primitive result is written without reading first', async () => {
+    const { store, getSpy } = await setWith(undefined, {
+      value: 'event.data.ltv',
+      mapping: { fn: (v) => (typeof v === 'number' ? v * 2 : undefined) },
+    });
+    expect(getSpy).not.toHaveBeenCalled();
+    expect(store._data.get('u1')).toBe(3680);
+  });
+
+  test('an object payload with nothing picked writes nothing, silently', async () => {
+    const { store, collector } = await setWith(
+      { ltv: 1 },
+      { mapping: { map: { missing: 'nope' } } },
+    );
+    expect(store._data.get('u1')).toEqual({ ltv: 1 });
+    expect(collector.logger.warn).not.toHaveBeenCalled();
+  });
+
+  test('a primitive payload with a path mapping writes nothing, silently', async () => {
+    const { store, collector } = await setWith(undefined, {
+      value: 'event.data.ltv',
+      mapping: { map: { ltv: 'ltv' } },
+    });
+    expect(store._data.size).toBe(0);
+    expect(collector.logger.warn).not.toHaveBeenCalled();
+  });
+
+  test('a fallback applies when the payload is undefined', async () => {
+    const { store } = await setWith(undefined, {
+      value: 'event.data.absent',
+      mapping: { map: { segment: { key: 'segment', value: 'unknown' } } },
+    });
+    expect(store._data.get('u1')).toEqual({ segment: 'unknown' });
+  });
+
+  test('without mapping set is unchanged', async () => {
+    const { store } = await setWith(undefined, { value: 'event.data.ltv' });
+    expect(store._data.get('u1')).toBe(1840);
+  });
+});
+
+describe('applyState store guards', () => {
+  test('an unknown store logs an error and passes the event through', async () => {
+    const collector = createMockCollector();
+    const event = buildEvent();
+    const out = await applyState(
+      [
+        {
+          mode: 'get',
+          store: 'nope',
+          key: 'event.user.session',
+          value: 'event.data.gclid',
+        },
+      ],
+      () => undefined,
+      event,
+      collector,
+      {},
+    );
+    expect(out).toEqual(event);
+    expect(collector.logger.error).toHaveBeenCalledWith(
+      '[state] unknown store',
+      expect.objectContaining({ store: 'nope' }),
+    );
+  });
+
+  test.each(['get', 'set'] as const)(
+    'a file store is skipped with a warning (%s)',
+    async (mode) => {
+      const store = { ...createMockStore(), config: { file: true } };
+      const buffer = Buffer.from('x');
+      store.set('u1', buffer);
+      const collector = createMockCollector({ stores: { files: store } });
+      const event = {
+        name: 'order complete',
+        user: { id: 'u1' },
+        data: { ltv: 1 },
+      };
+      const out = await applyState(
+        [{ mode, store: 'files', key: 'event.user.id', value: 'event.data' }],
+        makeGetStore({ files: store }),
+        event,
+        collector,
+        {},
+      );
+      expect(out).toEqual(event);
+      expect(store._data.get('u1')).toBe(buffer);
+      expect(collector.logger.warn).toHaveBeenCalledWith(
+        '[state] file stores are not supported by state, entry skipped',
+        { mode, store: 'files' },
+      );
+    },
+  );
+});

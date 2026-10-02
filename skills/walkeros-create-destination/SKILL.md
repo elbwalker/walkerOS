@@ -541,14 +541,6 @@ Guidelines:
 - [ ] Build generates `dist/walkerOS.json`
 - [ ] Keywords include `walkerOS` and `walkerOS-destination`
 
-### Runtime-only npm dependencies
-
-If your package wraps a third-party npm dep that **cannot be ESM-bundled** (uses
-`__dirname`, ships a `.node` binary, etc.), declare it under
-`walkerOS.bundle.external` in your `package.json`. See
-[walkeros-using-cli → Bundle externals](../walkeros-using-cli/SKILL.md#bundle-externals-per-package-walkerosbundleexternal)
-for the complete contract.
-
 ---
 
 ## Phase 7: Implement
@@ -590,7 +582,16 @@ Use these templates as your starting point:
    keeps config agnostic and reuses the mapping engine.
 7. **Consent two-layer**: `config.consent` gates walkerOS event delivery.
    `on('consent')` controls vendor SDK internals (opt-out, pause capture, etc.).
-   Both needed for complete consent compliance.
+   Both needed for complete consent compliance. `on()` may be async: the
+   collector awaits it, bounded by `config.timeout`, and delivers the current
+   state before the destination's first push. A state handler that does not
+   settle in that time, or rejects, holds the destination's events in its queue
+   until a later delivery settles; held events are discarded at the next
+   `walker run`. Lifecycle handlers such as `on('run')` are awaited too, bounded
+   by the same timeout, and never hold events. An async state handler must
+   settle: until it settles or reaches `config.timeout`, that destination
+   receives no events. `elb` commands and `startFlow` resolve only after the
+   destinations' `on()` handlers for that command have settled or timed out.
    - For step-example tests, use `command: 'consent'` on `Flow.StepExample` to
      invoke the `on('consent')` handler. Do not push consent data as an event.
 
@@ -814,11 +815,23 @@ requirements (build, test, lint, no `any`):
 
 - [ ] Uses `getEnv<Env>(env)` pattern (never direct `window`/`document` access,
       never `as Window`/`as Document`/`as unknown` casts in src or tests)
-- [ ] `dev.ts` exports `schemas` and `examples`
+- [ ] `dev.ts` exports `schemas` (with `settings`; `z.object({})` when the step
+      has none) and `examples`
+- [ ] Multi-export package (two or more `walkerOS.exports`): `exportExamples`
+      and `exportSchemas` in `dev.ts` list exactly those exports, the default
+      included, and every `exportSchemas` entry has `settings`; the build fails
+      otherwise (see
+      [using-step-examples](../walkeros-using-step-examples/SKILL.md))
 - [ ] Examples match type signatures
 - [ ] Tests use examples for assertions (not hardcoded values)
 - [ ] `walkerOS.json` generated at build time
 - [ ] `walkerOS` field in package.json
+- [ ] Works with no `env`: one test runs the published default export from a
+      pure JSON config (no injected `env`, no mocked SDK) against a local fake
+      endpoint on `127.0.0.1`, with the real vendor SDK and dummy credentials,
+      and asserts what the fake received. Mocked-env tests cannot catch a
+      missing `env?.X ?? X` fallback, which turns a bundled flow into a silent
+      no-op
 
 ---
 

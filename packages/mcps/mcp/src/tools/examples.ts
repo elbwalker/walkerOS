@@ -1,11 +1,14 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
-import type { Flow } from '@walkeros/core';
+import type { Flow, WalkerOSPackage } from '@walkeros/core';
+import { resolveExportName, selectDevExamples } from '@walkeros/cli';
 import { ExamplesListOutputShape } from '../schemas/output.js';
 import { getPackageBaseUrl, CLIENT_HEADER } from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
+import { parseToolInput } from './parse-input.js';
+import { isFlowJson, stepExamplesOf, type StepExampleView } from './narrow.js';
 import {
   HINT_OUT_OF_PROCESS,
   refusalHint,
@@ -70,15 +73,14 @@ export function createFlowExamplesToolSpec(runtime: FlowRuntime): ToolSpec {
 }
 
 async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
-  const { configPath, flow, step, full, includeHidden } = (input ?? {}) as {
-    configPath: string;
-    flow?: string;
-    step?: string;
-    full?: boolean;
-    includeHidden?: boolean;
-  };
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { configPath, flow, step, full, includeHidden } = parsed.data;
   try {
-    const rawConfig = (await runtime.load(configPath)) as Flow.Json;
+    const rawConfig = await runtime.load(configPath);
+    if (!isFlowJson(rawConfig)) {
+      throw new Error('Config is not a flow config: it has no flows object.');
+    }
 
     // Resolve flow name
     const flowNames = Object.keys(rawConfig.flows || {});
@@ -118,7 +120,7 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
     const examples: ExampleItem[] = [];
 
     const toItems = (
-      stepExamples: Flow.StepExamples,
+      stepExamples: Record<string, StepExampleView>,
       type: string,
       name: string,
       source: 'inline' | 'package',
@@ -152,22 +154,18 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
       return items;
     };
 
-    // Pull a referenced package's shipped step examples via the same path
+    // Pull a referenced package's shipped examples via the same path
     // package_get uses. A failed fetch must not break the whole tool: the
     // step is skipped and inline examples from other steps still return.
     const baseUrl = getPackageBaseUrl();
-    const loadPackageExamples = async (
+    const loadPackage = async (
       packageName: string,
-    ): Promise<Flow.StepExamples | undefined> => {
+    ): Promise<WalkerOSPackage | undefined> => {
       try {
-        const info = await fetchPackage(packageName, {
+        return await fetchPackage(packageName, {
           baseUrl,
           client: CLIENT_HEADER,
         });
-        const stepExamples = (info.examples as { step?: unknown } | undefined)
-          ?.step;
-        if (stepExamples && typeof stepExamples === 'object')
-          return stepExamples as Flow.StepExamples;
       } catch {
         // Swallow: graceful fallback skip for this package.
       }
@@ -178,27 +176,42 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
     // many packages cannot fan out into an unbounded number of fetches.
     const packageLookups = new Map<
       string,
-      Promise<Flow.StepExamples | undefined>
+      Promise<WalkerOSPackage | undefined>
     >();
     let skippedPackages = false;
-    const examplesForPackage = (
+    const skippedExamples: string[] = [];
+    const packageFor = (
       packageName: string,
-    ): Promise<Flow.StepExamples | undefined> => {
+    ): Promise<WalkerOSPackage | undefined> => {
       const existing = packageLookups.get(packageName);
       if (existing) return existing;
       if (packageLookups.size >= MAX_PACKAGE_LOOKUPS) {
         skippedPackages = true;
         return Promise.resolve(undefined);
       }
-      const lookup = loadPackageExamples(packageName);
+      const lookup = loadPackage(packageName);
       packageLookups.set(packageName, lookup);
       return lookup;
     };
 
+    // The step examples of the step's own export: a multi-export package
+    // ships `exportExamples` keyed by export name, the same rule simulate
+    // uses (an export missing from the map has no examples).
+    const stepExamplesFor = (
+      info: WalkerOSPackage,
+      exportName: string | undefined,
+    ): ReturnType<typeof stepExamplesOf> => {
+      const selected = selectDevExamples(
+        { examples: info.examples, exportExamples: info.exportExamples },
+        exportName,
+      );
+      return stepExamplesOf(selected?.step);
+    };
+
     const stepTypes = [
-      { key: 'sources' as const, type: 'source' },
-      { key: 'transformers' as const, type: 'transformer' },
-      { key: 'destinations' as const, type: 'destination' },
+      { key: 'sources' as const, type: 'source' as const },
+      { key: 'transformers' as const, type: 'transformer' as const },
+      { key: 'destinations' as const, type: 'destination' as const },
     ];
 
     for (const { key, type } of stepTypes) {
@@ -209,18 +222,23 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
 
         // Inline examples take precedence over package-shipped ones.
         if (ref.examples) {
-          examples.push(
-            ...toItems(ref.examples as Flow.StepExamples, type, name, 'inline'),
-          );
+          examples.push(...toItems(ref.examples, type, name, 'inline'));
           continue;
         }
 
         // No inline examples: fall back to the referenced package's shipped
         // examples (only for refs that actually name a package).
         if (!ref.package) continue;
-        const packageExamples = await examplesForPackage(ref.package);
-        if (packageExamples)
-          examples.push(...toItems(packageExamples, type, name, 'package'));
+        const info = await packageFor(ref.package);
+        if (!info) continue;
+        const { exportName } = resolveExportName(flowSettings, type, name);
+        const packageExamples = stepExamplesFor(info, exportName);
+        if (!packageExamples) continue;
+        examples.push(
+          ...toItems(packageExamples.examples, type, name, 'package'),
+        );
+        for (const exampleName of packageExamples.skipped)
+          skippedExamples.push(`${type}.${name}.${exampleName}`);
       }
     }
 
@@ -234,6 +252,11 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
     if (examples.length === 0) {
       warnings.push(
         'No examples found. Add examples to step entries, or reference a package that ships examples (see package_get).',
+      );
+    }
+    if (skippedExamples.length > 0) {
+      warnings.push(
+        `Skipped ${skippedExamples.length} package example(s) that do not match the step example schema: ${skippedExamples.join(', ')}.`,
       );
     }
     if (skippedPackages) {
@@ -273,8 +296,6 @@ export function registerFlowExamplesTool(
       outputSchema: ExamplesListOutputShape,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => flowExamplesHandlerBody(runtime, args),
   );
 }

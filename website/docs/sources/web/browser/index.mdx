@@ -103,6 +103,93 @@ elb('product view', { id: 'P123' }); // Also tracks events`}
 
 See [Commands](/docs/sources/web/browser/commands) for complete API documentation.
 
+## Single-page apps
+
+With `history: true` the source follows route changes by itself.
+[walker.js](/docs/apps/walkerjs) has it on; in your own bundle, set it on the
+browser source:
+
+<CodeSnippet
+  code={`"browser": {
+  "package": "@walkeros/web-source-browser",
+  "config": {
+    "settings": { "history": true }
+  }
+}`}
+  language="json"
+/>
+
+**What counts as a route change.** A `pushState` or a back or forward
+navigation that changes the path or the query, and a `replaceState` that
+changes the path. A `replaceState` that only rewrites the query (filters, search
+boxes) and hash-only changes do not count. Each comparison is against the URL
+right before that change.
+
+**What a route change sends.** A new run starts at once: a `page view` for the
+URL at the moment of the change, with the previous page view's URL (without its
+fragment) as `data.referrer`. `source.referrer` stays the document's referrer,
+for attribution. Route changes never start a new session. Every page view after
+the first carries the previous URL this way, also when you call
+`elb('walker run')` yourself, so a URL redaction rule for personal data in
+query strings must cover `data.referrer` too.
+
+**Tagged elements.** A route change does not re-scan the page. The source
+watches the document and registers tagged elements whenever they are added, one
+task after they appear, so a route's `load` events follow its `page view`. On
+the first page load the page's `load` elements fire before the `page view`.
+
+**Migrating.** Remove every route-change `elb('walker run')` call and every GTM
+History Change tag that calls it. With `history` on, they make every navigation
+send two page views and fire the page's `load` elements again.
+
+**Reused route components.** The source watches added and removed elements, not
+attribute changes. A router that reuses a component when only a parameter
+changes patches its attributes in place, so its tagged elements do not fire
+again. Remount the component per route: React `key={id}`, Vue
+`<RouterView :key="route.fullPath">`, Svelte `{#key}`, Next.js `template.tsx`.
+Values read with `#innerText` on a reused element do not fire again either.
+
+**Elements that stay across routes** fire `load` and `impression` once per page
+load, and their `scroll`, `wait` and `pulse` triggers are not re-armed. A promo
+in a persistent layout counts one impression per page load. For per-route
+counts, tag elements inside the route's content, or use `visible`.
+
+**Page title, page attributes and globals** are read when the run reaches the
+`page view`. Routers that render or set the title later (React Router,
+Next.js Pages Router, TanStack Router, Vue with unhead, Nuxt) report the
+previous route's values. When you need exact values, keep `history: false` and
+call `elb('walker run')` from the router's post-render hook:
+
+| Router | Hook |
+| --- | --- |
+| React Router | `useLayoutEffect` on `location.key` |
+| TanStack Router | `onRendered` |
+| Vue Router | `afterEach` plus `nextTick` (title: unhead `dom:rendered`) |
+| Nuxt | `page:finish` (title: unhead `dom:rendered`) |
+| Angular | `NavigationEnd` plus `afterNextRender` |
+| SvelteKit | `afterNavigate` |
+| Astro | `astro:page-load` |
+| Next.js App Router | no reliable hook |
+
+**Consent.** A destination that waits for consent holds the events from before
+the visitor's answer, and every run clears that buffer. A route change is a run,
+so when the visitor navigates before answering the banner, the landing page view
+is lost, and so is its `session start` unless the session source itself waits
+for consent. A multi-page site loses the same when the visitor follows a link.
+
+**One per page.** Run one browser source with `history` on a page.
+
+**Not covered:** hash routers, same-origin iframes, HTML-over-the-wire routers
+(Turbo, htmx, Livewire), tagged content rendered later inside shadow roots, and
+`data-elbobserve` containers inside shadow roots while `history` is on. Next.js
+16 `cacheComponents` reveals cached routes on revisit without adding elements,
+so those revisits send a `page view` but no `load` events; use `visible`
+instead.
+
+With `history: false` (the default) route changes are not followed,
+`data-elbobserve` containers work as before, and `elb('walker run')` re-scans
+the page.
+
 ## Multiple sources on one page
 
 Any number of browser sources can run on one page. Each keeps its own triggers,
@@ -230,10 +317,6 @@ torn down. A shared scope root means both sources see the same containers.
   ownership mark, so a source injected later reads that layer as free and adopts
   it. This only matters when both use the same layer name, which is what the
   contract above tells parallel flows not to do.
-* **Integrations that assign `window[elb]` themselves.** The `walker.js` bundle
-  assigns the name after the source has installed its writer, which leaves a
-  value in the slot that belongs to no source, so a second source reads the name
-  as free and installs over it.
 * **The same script included twice.** Each copy scans the same markup into its
   own pipeline, so every event is collected twice. That is a page
   misconfiguration rather than something the source can resolve, and it is

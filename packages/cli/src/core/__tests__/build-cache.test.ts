@@ -25,6 +25,7 @@ describe('code cache', () => {
     windowCollector: undefined,
     windowElb: undefined,
     versionsHash: 'test',
+    toolchain: '4.7.0',
   };
 
   afterAll(async () => {
@@ -63,6 +64,15 @@ describe('code cache', () => {
   it('produces different paths for different content', async () => {
     const path1 = await getCodeCachePath('content-a', tmpDir, inputs);
     const path2 = await getCodeCachePath('content-b', tmpDir, inputs);
+    expect(path1).not.toBe(path2);
+  });
+
+  it('produces different paths for a different CLI version', async () => {
+    const path1 = await getCodeCachePath('same-content', tmpDir, inputs);
+    const path2 = await getCodeCachePath('same-content', tmpDir, {
+      ...inputs,
+      toolchain: '4.7.1',
+    });
     expect(path1).not.toBe(path2);
   });
 

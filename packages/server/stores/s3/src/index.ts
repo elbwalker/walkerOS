@@ -8,6 +8,7 @@ export { storeS3Init } from './store';
 export { setup, DEFAULT_SETUP } from './setup';
 export type { SetupResult, S3StoreConfig } from './setup';
 export type {
+  Env,
   S3StoreSettings,
   S3StoreInitSettings,
   S3StoreSetup,

@@ -94,11 +94,15 @@ export const storeS3Init: Store.Init<Types> = async (context) => {
   // through the shared core codec, stored as application/json.
   const fileMode = context.config.file === true;
 
+  // An injected fetch (tests, simulate) carries every S3 request; s3mini
+  // uses the global fetch when none is given.
+  const injectedFetch = context.env?.fetch ?? context.config.env?.fetch;
   const client = new S3mini({
     endpoint: buildEndpoint(settings.endpoint, settings.bucket),
     accessKeyId: settings.accessKeyId,
     secretAccessKey: settings.secretAccessKey,
     region: settings.region || 'auto',
+    ...(injectedFetch ? { fetch: injectedFetch } : {}),
   });
 
   function resolveKey(key: string): string | undefined {
@@ -131,6 +135,8 @@ export const storeS3Init: Store.Init<Types> = async (context) => {
       env: context.config.env,
       id: context.config.id,
       logger: context.config.logger,
+      // The declared byte mode; state and validation read it from here.
+      file: context.config.file,
     },
 
     async get(key: string): Promise<Store.StoreValue | undefined> {

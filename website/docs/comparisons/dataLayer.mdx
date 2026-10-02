@@ -24,12 +24,12 @@ Manager, but every event needs manual work.
 
 ### Keep using dataLayer.push if
 
-- You have an existing GTM setup you don't want to change
 - Your tracking is minimal and rarely changes
 - Your team prefers JavaScript over HTML attributes
 
 ### Switch to walkerOS tagging if
 
+- You want to keep GTM without writing pushes by hand
 - You want tracking integrated into your components
 - You're tired of manual event management
 - You need automatic consent handling
@@ -88,9 +88,11 @@ on its own.
 
 ## Can they work together?
 
-Yes. The [GTM destination](/docs/destinations/web/gtag/gtm) sends walkerOS
-events into the dataLayer for your existing GTM tags, so you can adopt walkerOS
-tagging while your current GTM setup keeps working.
+Yes. Keeping GTM no longer means hand-written pushes:
+[walker.js](/docs/apps/walkerjs) is one script tag that turns `data-elb`
+attributes into dataLayer pushes for your existing GTM tags, see
+[Use walkerOS events in GTM](/docs/guides/gtm). For pushes shaped by a flow you
+build yourself, use the [GTM destination](/docs/destinations/web/gtag/gtm).
 
 ## Getting started
 

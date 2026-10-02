@@ -33,7 +33,9 @@ describe('wrapEnv hardening', () => {
 
     const wrappedApi = asRecord(wrappedEnv.api);
     // The cycle is preserved as a cycle in the clone's own graph.
-    expect(wrappedApi.self).toBe(wrappedApi);
+    const clonedApi = asRecord(wrappedApi.self);
+    expect(clonedApi.self).toBe(clonedApi);
+    expect(clonedApi).not.toBe(api);
     expect(wrappedApi).not.toBe(api);
 
     call(wrappedApi.track, 'a', 1);
@@ -86,11 +88,11 @@ describe('wrapEnv hardening', () => {
     expect(deepFn).toHaveBeenCalledWith('x');
   });
 
-  it('routes paths whose parent lies beyond the clone cap to unresolved', () => {
-    // A 9-segment path navigates 8 levels to its parent — exactly where the
-    // clone cap reuses ORIGINAL references. Wrapping there would permanently
-    // mutate the caller's env, so the path must go to unresolved instead.
-    const original = (..._args: unknown[]): void => {};
+  it('records a path whose parent lies beyond the clone cap without mutating it', () => {
+    // A 9-segment path navigates 8 levels to its parent, exactly where the
+    // clone cap reuses ORIGINAL references. The recorder is a Proxy view, so
+    // it records there without installing anything on the caller's objects.
+    const original = jest.fn();
     const leaf: Record<string, unknown> = { fn: original };
     let node: Record<string, unknown> = leaf;
     for (const key of ['h', 'g', 'f', 'e', 'd', 'c', 'b']) {
@@ -103,18 +105,15 @@ describe('wrapEnv hardening', () => {
       simulation: ['a.b.c.d.e.f.g.h.fn'],
     });
 
-    expect(unresolved).toEqual(['a.b.c.d.e.f.g.h.fn']);
-    // The original env leaf keeps its identity: nothing was installed on it.
-    expect(leaf.fn).toBe(original);
-
-    // Navigating the wrapped env reaches the SAME original parent (clone-cap
-    // reuse) — and its fn is still the untouched original.
+    expect(unresolved).toEqual([]);
     let cursor: unknown = wrappedEnv;
     for (const key of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
       cursor = asRecord(cursor)[key];
     }
-    expect(cursor).toBe(leaf);
     call(asRecord(cursor).fn, 'x');
-    expect(calls).toHaveLength(0);
+    expect(calls.map((c) => c.fn)).toEqual(['a.b.c.d.e.f.g.h.fn']);
+    expect(original).toHaveBeenCalledWith('x');
+    // The original env leaf keeps its identity: nothing was installed on it.
+    expect(leaf.fn).toBe(original);
   });
 });

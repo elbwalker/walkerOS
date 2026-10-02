@@ -1,12 +1,10 @@
 import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import {
-  walkChain,
   runTransformerChain,
   transformerInit,
   transformerPush,
   initTransformers as initTransformersFunc,
-  extractTransformerNextMap,
   extractChainProperty,
 } from '../transformer';
 import { createCacheStore } from '../cache-store';
@@ -69,82 +67,6 @@ describe('Transformer', () => {
     };
   }
 
-  describe('walkChain', () => {
-    test('returns empty array for undefined startId', () => {
-      const result = walkChain(undefined, {});
-      expect(result).toEqual([]);
-    });
-
-    test('returns empty array for empty transformers', () => {
-      const result = walkChain('a', {});
-      expect(result).toEqual([]);
-    });
-
-    test('walks single transformer', () => {
-      const transformers = { a: {} };
-      const result = walkChain('a', transformers);
-      expect(result).toEqual(['a']);
-    });
-
-    test('walks chain of transformers', () => {
-      const transformers = {
-        a: { next: 'b' },
-        b: { next: 'c' },
-        c: {},
-      };
-      const result = walkChain('a', transformers);
-      expect(result).toEqual(['a', 'b', 'c']);
-    });
-
-    test('detects circular reference and stops', () => {
-      const transformers = {
-        a: { next: 'b' },
-        b: { next: 'a' }, // Circular!
-      };
-      const result = walkChain('a', transformers);
-      expect(result).toEqual(['a', 'b']);
-    });
-
-    test('stops at missing transformer', () => {
-      const transformers = {
-        a: { next: 'missing' },
-      };
-      const result = walkChain('a', transformers);
-      expect(result).toEqual(['a']);
-    });
-
-    test('returns array directly when provided', () => {
-      const chain = walkChain(['a', 'b', 'c'], {});
-      expect(chain).toEqual(['a', 'b', 'c']);
-    });
-
-    test('ignores transformer.next when array provided at start', () => {
-      const chain = walkChain(['a'], { a: { next: 'b' }, b: {} });
-      expect(chain).toEqual(['a']);
-    });
-
-    test('still walks chain for string input', () => {
-      const chain = walkChain('a', { a: { next: 'b' }, b: {} });
-      expect(chain).toEqual(['a', 'b']);
-    });
-
-    test('appends array next and stops when encountered during walk', () => {
-      const chain = walkChain('a', {
-        a: { next: 'b' },
-        b: { next: ['c', 'd'] },
-        c: { next: 'e' },
-        d: {},
-        e: {},
-      });
-      expect(chain).toEqual(['a', 'b', 'c', 'd']);
-    });
-
-    test('handles empty array at start', () => {
-      const chain = walkChain([], { a: { next: 'b' } });
-      expect(chain).toEqual([]);
-    });
-  });
-
   describe('runTransformerChain', () => {
     test('returns original event for empty chain', async () => {
       const collector = createMockCollector();
@@ -152,7 +74,7 @@ describe('Transformer', () => {
 
       const result = await runTransformerChain(collector, {}, [], event);
 
-      expect(result.event).toEqual(event);
+      expect(result.copies[0].event).toEqual(event);
     });
 
     test('passes event through transformer that returns void', async () => {
@@ -172,7 +94,7 @@ describe('Transformer', () => {
       );
 
       expect(mockPush).toHaveBeenCalledWith(event, expect.any(Object));
-      expect(result.event).toEqual(event);
+      expect(result.copies[0].event).toEqual(event);
     });
 
     test('uses modified event from transformer', async () => {
@@ -192,7 +114,7 @@ describe('Transformer', () => {
         event,
       );
 
-      expect(result.event).toEqual(modifiedEvent);
+      expect(result.copies[0].event).toEqual(modifiedEvent);
     });
 
     test('stops chain when transformer returns false', async () => {
@@ -213,7 +135,7 @@ describe('Transformer', () => {
         event,
       );
 
-      expect(result.event).toBeNull();
+      expect(result.copies).toEqual([]);
       expect(mockPush1).toHaveBeenCalled();
       expect(mockPush2).not.toHaveBeenCalled();
     });
@@ -236,7 +158,7 @@ describe('Transformer', () => {
         event,
       );
 
-      expect(result.event).toBeNull();
+      expect(result.copies).toEqual([]);
       expect(mockPush1).toHaveBeenCalled();
       expect(mockPush2).not.toHaveBeenCalled();
     });
@@ -267,7 +189,7 @@ describe('Transformer', () => {
       );
 
       expect(callOrder).toEqual(['first', 'second']);
-      expect(result.event).toEqual({
+      expect(result.copies[0].event).toEqual({
         name: 'page view',
         data: { first: true, second: true },
       });
@@ -290,10 +212,10 @@ describe('Transformer', () => {
       );
 
       expect(mockPush).toHaveBeenCalled();
-      expect(result.event).toEqual(event);
+      expect(result.copies[0].event).toEqual(event);
     });
 
-    it('transformer.before: many on transformer.before spawns parallel before-chains', async () => {
+    it('transformer.before: many forks, each fork runs the member', async () => {
       const collector = createMockCollector();
       const seen: string[] = [];
       const audit = createMockTransformer({
@@ -317,11 +239,19 @@ describe('Transformer', () => {
       });
       const transformers = { audit, log, inner };
       collector.transformers = transformers;
-      await runTransformerChain(collector, transformers, ['inner'], {});
-      expect(seen.sort()).toEqual(['audit', 'inner', 'log']);
+      const result = await runTransformerChain(
+        collector,
+        transformers,
+        ['inner'],
+        { id: 'parent' },
+      );
+      // R7: each before-chain fork finishes the rest of the path, the member
+      // included, as its own copy with its own id.
+      expect(seen.sort()).toEqual(['audit', 'inner', 'inner', 'log']);
+      expect(result.copies.length).toBe(2);
     });
 
-    it('result.next: many terminates main chain and fans out to N subchains', async () => {
+    it('result.next: many forks, each fork finishes the rest of the array', async () => {
       const collector = createMockCollector();
       // Strong assertions per Tasks 3.1 / 3.2 discipline:
       // 1. tail never sees the head event (main chain terminates).
@@ -360,11 +290,15 @@ describe('Transformer', () => {
       // Both branches must run.
       expect(trailX).toHaveLength(1);
       expect(trailY).toHaveLength(1);
-      // Main chain must terminate — `tail` must NOT have received the head event.
-      expect(trailTail).toHaveLength(0);
-      // Fan-out semantic: y sees the parent event, NOT x's mutation. Under
-      // the old sequential walk (walkChain(['x','y'])) this would fail
-      // because y would receive { name: 'h', data: { touchedBy: 'x' } }.
+      // R7: the result route is inserted after `head`, then the array
+      // continues, so `tail` runs once per fork, each with that fork's event.
+      expect(trailTail).toHaveLength(2);
+      expect(trailTail.map((e) => e.data)).toEqual(
+        expect.arrayContaining([{ touchedBy: 'x' }, undefined]),
+      );
+      // Fan-out semantic: y sees the parent event, NOT x's mutation. A
+      // sequential run of x then y would hand y
+      // { name: 'h', data: { touchedBy: 'x' } }.
       expect(trailY[0]).toEqual({ name: 'h' });
       expect(trailX[0]).toEqual({ name: 'h' });
     });
@@ -781,51 +715,6 @@ describe('Transformer', () => {
       );
 
       expect(result).toBe(false);
-    });
-  });
-
-  describe('extractTransformerNextMap', () => {
-    test('extracts next from transformer instances', () => {
-      const transformers: Transformer.Transformers = {
-        a: createMockTransformer({ config: { next: 'b' } }),
-        b: createMockTransformer({ config: { next: 'c' } }),
-        c: createMockTransformer({ config: {} }),
-      };
-
-      const result = extractTransformerNextMap(transformers);
-
-      expect(result).toEqual({
-        a: { next: 'b' },
-        b: { next: 'c' },
-        c: {},
-      });
-    });
-
-    test('handles array next values', () => {
-      const transformers: Transformer.Transformers = {
-        a: createMockTransformer({ config: { next: ['b', 'c'] } }),
-      };
-
-      const result = extractTransformerNextMap(transformers);
-
-      expect(result).toEqual({
-        a: { next: ['b', 'c'] },
-      });
-    });
-
-    test('handles empty transformers', () => {
-      const result = extractTransformerNextMap({});
-      expect(result).toEqual({});
-    });
-
-    test('handles transformers without next', () => {
-      const transformers: Transformer.Transformers = {
-        a: createMockTransformer({ config: {} }),
-      };
-
-      const result = extractTransformerNextMap(transformers);
-
-      expect(result).toEqual({ a: {} });
     });
   });
 

@@ -67,9 +67,9 @@ export const push: Env = {
 /** Simulation tracking paths for CLI --simulate. */
 export const simulation = [
   'call:optimizely.createInstance',
-  'call:optimizely.client.onReady',
-  'call:optimizely.client.createUserContext',
-  'call:optimizely.userContext.trackEvent',
-  'call:optimizely.userContext.setAttribute',
-  'call:optimizely.client.close',
+  'call:optimizely.createInstance.onReady',
+  'call:optimizely.createInstance.createUserContext',
+  'call:optimizely.createInstance.createUserContext.trackEvent',
+  'call:optimizely.createInstance.createUserContext.setAttribute',
+  'call:optimizely.createInstance.close',
 ];

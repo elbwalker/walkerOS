@@ -83,7 +83,13 @@ export interface FlowState {
   /** For phase === 'flush', the batch size + entry index. */
   batch?: FlowStateBatch;
   /** Discriminator when phase === 'skip'. */
-  skipReason?: 'consent' | 'cache_hit' | 'sampled_out' | 'disabled' | 'unknown';
+  skipReason?:
+    | 'consent'
+    | 'cache_hit'
+    | 'sampled_out'
+    | 'disabled'
+    | 'dropped'
+    | 'unknown';
   /** Free-form metadata: store key/value, cached: true, etc. */
   meta?: Record<string, unknown>;
 }

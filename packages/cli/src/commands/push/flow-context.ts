@@ -28,6 +28,57 @@ export interface FlowContextOptions {
    * (real `walkeros push`).
    */
   drainPump?: boolean;
+  /** Web only: the URL of the simulated page. Defaults to `http://localhost`. */
+  pageUrl?: string;
+}
+
+/**
+ * JSDOM window members a web step reaches as bare globals (a CMP trigger's
+ * `new CustomEvent`, a session source's `localStorage`, an `instanceof
+ * Element` check). Exposed for the run, so events are created in the page's
+ * own realm and its nodes pass type checks as in a browser, and restored after.
+ */
+const DOM_GLOBALS = [
+  'CustomEvent',
+  'Event',
+  'localStorage',
+  'sessionStorage',
+  'Node',
+  'Element',
+  'HTMLElement',
+  'Document',
+  'ShadowRoot',
+] as const;
+
+/**
+ * Defines each DOM global from the JSDOM window and returns a restore that
+ * puts every previous property descriptor back (deleting the ones that were
+ * absent). Descriptors, not values: reading Node's own `localStorage` getter
+ * would run it.
+ */
+export function exposeDomGlobals(domWindow: object): () => void {
+  const saved = DOM_GLOBALS.map(
+    (name) =>
+      [name, Object.getOwnPropertyDescriptor(globalThis, name)] as const,
+  );
+  // Read every value before defining any: a getter that throws (JSDOM's
+  // storage on an opaque origin) leaves the globals untouched.
+  const values = DOM_GLOBALS.map(
+    (name) => [name, Reflect.get(domWindow, name)] as const,
+  );
+  for (const [name, value] of values) {
+    Object.defineProperty(globalThis, name, {
+      value,
+      configurable: true,
+      writable: true,
+    });
+  }
+  return () => {
+    for (const [name, descriptor] of saved) {
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else Reflect.deleteProperty(globalThis, name);
+    }
+  };
 }
 
 /**
@@ -48,6 +99,11 @@ export interface FlowModule {
    * bytes. Read sites must call and await the thunk, then narrow the result.
    */
   __devExports?: Record<string, () => Promise<unknown>>;
+  /**
+   * Export names each package declares in `walkerOS.exports`, read at build
+   * time from the copy that was bundled. Absent in bundles built before it.
+   */
+  __packageExports?: Record<string, string[]>;
 }
 
 /**
@@ -97,6 +153,7 @@ export async function withFlowContext<T>(
     networkCalls,
     asyncDrain,
     drainPump,
+    pageUrl,
   } = options;
   const startTime = Date.now();
   const g = global as unknown as Record<string, unknown>;
@@ -104,12 +161,13 @@ export async function withFlowContext<T>(
   let savedFetch: typeof fetch | undefined;
   let dom: JSDOM | undefined;
   let timerControl: TimerControl | undefined;
+  let restoreDomGlobals: (() => void) | undefined;
 
   // JSDOM setup for web platform
   if (platform === 'web') {
     const virtualConsole = new VirtualConsole();
     dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-      url: 'http://localhost',
+      url: pageUrl ?? 'http://localhost',
       runScripts: 'dangerously',
       resources: 'usable',
       virtualConsole,
@@ -145,6 +203,10 @@ export async function withFlowContext<T>(
   }
 
   try {
+    // Inside the try, so a failure here still restores window, document
+    // and navigator in the finally.
+    if (dom) restoreDomGlobals = exposeDomGlobals(dom.window);
+
     // Eval snapshot before importing bundle
     if (snapshotCode) {
       if (platform === 'web' && dom) {
@@ -183,6 +245,7 @@ export async function withFlowContext<T>(
       startFlow,
       __configData: module.__configData,
       __devExports: module.__devExports,
+      __packageExports: module.__packageExports,
     };
 
     // Execute step-specific logic
@@ -218,6 +281,7 @@ export async function withFlowContext<T>(
     if (savedFetch !== undefined) {
       cleanupNetworkPolyfills(savedFetch);
     }
+    if (restoreDomGlobals) restoreDomGlobals();
     if (platform === 'web') {
       if (savedWindow !== undefined) g.window = savedWindow;
       else delete g.window;

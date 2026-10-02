@@ -1,6 +1,6 @@
 import type { Collector } from '@walkeros/core';
 import { registerDestination } from './destination';
-import { isRequireSatisfied } from './on';
+import { catchUpDestinationState, isRequireSatisfied } from './on';
 import { flushSourceQueueOn, isSourceStarted } from './source';
 
 /**
@@ -24,6 +24,10 @@ import { flushSourceQueueOn, isSourceStarted } from './source';
  *    but `flushSourceQueueOn` defers state deliveries (no `on` call, no
  *    `setMark`) until allowed. An activated destination only seeds `queuePush`;
  *    its `init()`/send stay behind the `!allowed` gate in `pushToDestinations`.
+ *  - An activated destination also catches up on the present state cells
+ *    through the gated delivery, so its `on` handler sees the state that
+ *    activated it before its queue drains; while `!allowed` that catch-up is
+ *    inert and the run barrier delivers instead.
  *
  * Worklist is scoped to not-yet-active steps only (`pending.destinations` plus
  * unstarted sources); the live `collector.destinations`/started sources are
@@ -67,5 +71,6 @@ export async function reconcilePending(
       instance.queuePush = [...collector.queue];
     }
     collector.destinations[id] = instance;
+    await catchUpDestinationState(collector, instance, id);
   }
 }

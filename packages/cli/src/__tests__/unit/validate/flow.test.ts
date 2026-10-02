@@ -28,6 +28,73 @@ describe('validateFlow', () => {
     expect(result.errors).toHaveLength(0);
   });
 
+  it.each([
+    ['walker-os', false],
+    ['walkerOS', true],
+  ])('windowCollector %s is valid: %s', (windowCollector, valid) => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: { config: { platform: 'web', settings: { windowCollector } } },
+      },
+    });
+
+    expect(result.valid).toBe(valid);
+    const finding = {
+      path: 'flows.default.config.settings.windowCollector',
+      code: 'SCHEMA_VALIDATION',
+    };
+    if (valid) {
+      expect(result.errors).toHaveLength(0);
+    } else {
+      expect(result.errors).toContainEqual(expect.objectContaining(finding));
+    }
+  });
+
+  it('reports a $var windowCollector that resolves to no identifier', () => {
+    const result = validateFlow({
+      version: 4,
+      variables: { collectorName: 'walker-os' },
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { windowCollector: '$var.collectorName' },
+          },
+        },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.default.config.settings.windowCollector',
+        code: 'SCHEMA_VALIDATION',
+        message: expect.stringContaining('resolved to "walker-os"'),
+      }),
+    );
+  });
+
+  it('leaves a $env windowCollector to the build', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: {
+            platform: 'web',
+            settings: { windowCollector: '$env.COLLECTOR_GLOBAL' },
+          },
+        },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.details.deferred).toContainEqual({
+      path: 'flows.default.config.settings.windowCollector',
+      reference: '$env.COLLECTOR_GLOBAL',
+    });
+  });
+
   it('fails when version is missing', () => {
     const result = validateFlow({
       flows: {
@@ -96,7 +163,7 @@ describe('validateFlow', () => {
     );
 
     expect(result.valid).toBe(true);
-    expect(result.details.validatedFlow).toBe('production');
+    expect(result.details.scope).toMatchObject({ flows: ['production'] });
   });
 
   it('fails when specified flow does not exist', () => {
@@ -137,7 +204,7 @@ describe('validateFlow', () => {
     }
   });
 
-  it('warns for dangling $var. references', () => {
+  it('errors for dangling $var. references (the bundle fails to resolve them)', () => {
     const result = validateFlow({
       version: 4,
       variables: { gaId: 'G-XXX' },
@@ -154,13 +221,19 @@ describe('validateFlow', () => {
       },
     });
 
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.default',
+        code: 'UNRESOLVED_REFERENCE',
+      }),
+    );
     expect(
       result.warnings.some((w) => w.message.includes('$var.nonExistent')),
     ).toBe(true);
   });
 
-  it('warns for dangling $store. references', () => {
+  it('errors for dangling $store. references (the bundle preflight rejects them)', () => {
     const result = validateFlow({
       version: 4,
       flows: {
@@ -177,7 +250,13 @@ describe('validateFlow', () => {
       },
     });
 
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.default',
+        code: 'STORE_REFERENCE_NOT_FOUND',
+      }),
+    );
     expect(
       result.warnings.some((w) => w.message.includes('$store.bogus')),
     ).toBe(true);
@@ -216,7 +295,10 @@ describe('validateFlow', () => {
         default: {
           config: { platform: 'server' },
           destinations: {
-            api: { config: { settings: { url: '$env.API_URL=fallback' } } },
+            api: {
+              package: '@walkeros/server-destination-api',
+              config: { settings: { url: '$env.API_URL=fallback' } },
+            },
           },
         },
       },
@@ -228,7 +310,7 @@ describe('validateFlow', () => {
     ).toBe(true);
   });
 
-  it('warns for unknown $flow. references', () => {
+  it('errors for unknown $flow. references (the bundle fails to resolve them), and still warns', () => {
     const result = validateFlow({
       version: 4,
       flows: {
@@ -242,13 +324,19 @@ describe('validateFlow', () => {
       },
     });
 
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.web',
+        code: 'UNRESOLVED_REFERENCE',
+      }),
+    );
     expect(result.warnings.some((w) => /\$flow\.serverr/.test(w.message))).toBe(
       true,
     );
   });
 
-  it('warns (not errors) for unresolved $flow.X.url references in soft mode', () => {
+  it('errors for a $flow.X.url whose target has no url, as the bundle does', () => {
     const result = validateFlow({
       version: 4,
       flows: {
@@ -256,20 +344,25 @@ describe('validateFlow', () => {
         web: {
           config: { platform: 'web' },
           destinations: {
-            api: { config: { settings: { url: '$flow.server.url' } } },
+            api: {
+              package: '@walkeros/web-destination-api',
+              config: { settings: { url: '$flow.server.url' } },
+            },
           },
         },
       },
     });
 
-    // Without --strict the validator stays valid; warnings are surfaced.
-    expect(result.valid).toBe(true);
-    expect(
-      result.warnings.some((w) => /\$flow\.server\.url/.test(w.message)),
-    ).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.web',
+        code: 'UNRESOLVED_REFERENCE',
+      }),
+    );
   });
 
-  it('errors on cyclic $flow references even in soft mode', () => {
+  it('errors on cyclic $flow references', () => {
     const result = validateFlow({
       version: 4,
       flows: {
@@ -287,6 +380,43 @@ describe('validateFlow', () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.code === 'FLOW_CYCLE')).toBe(true);
+  });
+
+  it('a step reading its own flow config is a FLOW_CYCLE, as the resolver throws', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'server', url: 'https://a.test' },
+          destinations: {
+            api: {
+              package: '@walkeros/server-destination-api',
+              config: { settings: { url: '$flow.a.url' } },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ path: 'flows.a', code: 'FLOW_CYCLE' }),
+    );
+  });
+
+  it('a $var cycle is VAR_CYCLE', () => {
+    const result = validateFlow({
+      version: 4,
+      variables: { a: '$var.b', b: '$var.a' },
+      flows: {
+        default: {
+          config: { platform: 'web', settings: { x: '$var.a' } },
+        },
+      },
+    });
+
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ path: 'flows.default', code: 'VAR_CYCLE' }),
+    );
   });
 
   it('does not warn for valid $var. references', () => {
@@ -693,8 +823,8 @@ describe('validateFlow', () => {
     });
   });
 
-  describe('contract compliance (example vs resolved contract)', () => {
-    const contractRequiringTotal = {
+  describe('contract binding through validate steps', () => {
+    const contracts = {
       default: {
         events: {
           order: {
@@ -711,166 +841,329 @@ describe('validateFlow', () => {
           },
         },
       },
-    };
-
-    it('warns when a destination example violates the contract (non-strict)', () => {
-      const result = validateFlow({
-        version: 4,
-        contract: contractRequiringTotal,
-        flows: {
-          default: {
-            config: { platform: 'web' },
-            destinations: {
-              api: {
-                package: '@walkeros/web-destination-api',
-                examples: {
-                  order: {
-                    in: {
-                      name: 'order complete',
-                      entity: 'order',
-                      action: 'complete',
-                      data: { id: 'A1' }, // missing required `total`
-                    },
-                    out: ['event', 'purchase'],
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      // Non-strict: violation is a warning, validation stays valid.
-      expect(result.valid).toBe(true);
-      expect(result.warnings).toContainEqual(
-        expect.objectContaining({
-          path: 'destination.api.examples.order.in',
-          message: expect.stringContaining('violates contract'),
-        }),
-      );
-    });
-
-    it('errors when a destination example violates the contract (strict)', () => {
-      const result = validateFlow(
-        {
-          version: 4,
-          contract: contractRequiringTotal,
-          flows: {
-            default: {
-              config: { platform: 'web' },
-              destinations: {
-                api: {
-                  package: '@walkeros/web-destination-api',
-                  examples: {
-                    order: {
-                      in: {
-                        name: 'order complete',
-                        entity: 'order',
-                        action: 'complete',
-                        data: { id: 'A1' },
-                      },
-                      out: ['event', 'purchase'],
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        { strict: true },
-      );
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.objectContaining({
-          path: 'destination.api.examples.order.in',
-          code: 'CONTRACT_VIOLATION',
-        }),
-      );
-    });
-
-    it('does not flag a compliant example', () => {
-      const result = validateFlow({
-        version: 4,
-        contract: contractRequiringTotal,
-        flows: {
-          default: {
-            config: { platform: 'web' },
-            destinations: {
-              api: {
-                package: '@walkeros/web-destination-api',
-                examples: {
-                  order: {
-                    in: {
-                      name: 'order complete',
-                      entity: 'order',
-                      action: 'complete',
-                      data: { total: 9.99 },
-                    },
-                    out: ['event', 'purchase'],
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      expect(result.valid).toBe(true);
-      expect(
-        result.warnings.some((w) => w.path.includes('destination.api')),
-      ).toBe(false);
-      expect(result.errors.some((e) => e.code === 'CONTRACT_VIOLATION')).toBe(
-        false,
-      );
-    });
-
-    const uncoveredEventFlow = {
-      version: 4,
-      contract: contractRequiringTotal,
-      flows: {
-        default: {
-          config: { platform: 'web' },
-          destinations: {
-            api: {
-              package: '@walkeros/web-destination-api',
-              examples: {
-                page: {
-                  in: {
-                    name: 'page view',
-                    entity: 'page',
-                    action: 'view',
-                    data: { title: 'Home' },
-                  },
-                  out: ['event', 'page_view'],
-                },
-              },
-            },
+      server: {
+        extend: 'default',
+        schema: {
+          type: 'object',
+          required: ['user'],
+          properties: {
+            user: { type: 'object', required: ['hash'] },
           },
         },
       },
-    } as const;
+    };
 
-    it('produces no diagnostic when an example matches no contract entry', () => {
-      const result = validateFlow(uncoveredEventFlow);
+    const withHash = {
+      name: 'order complete',
+      entity: 'order',
+      action: 'complete',
+      data: { total: 9.99 },
+      user: { hash: 'h1' },
+      source: { type: 'express' },
+    };
+    const withoutHash = {
+      name: 'order complete',
+      entity: 'order',
+      action: 'complete',
+      data: { total: 9.99 },
+      user: {},
+      source: { type: 'express' },
+    };
+    const markValid = (
+      event: typeof withHash | typeof withoutHash,
+      valid: boolean,
+    ) => ({ ...event, source: { ...event.source, valid } });
 
-      expect(result.valid).toBe(true);
-      expect(
-        result.warnings.some((w) => w.path.includes('destination.api')),
-      ).toBe(false);
-      expect(result.errors.some((e) => e.code === 'CONTRACT_VIOLATION')).toBe(
-        false,
+    const metaWithoutHash = {
+      package: '@walkeros/server-destination-meta',
+      examples: {
+        order: { in: withoutHash, out: [['sendServer', 'x']] },
+      },
+    };
+
+    function config(opts: {
+      webExampleWithoutHash?: boolean;
+      metaExampleWithoutHash?: boolean;
+      noValidateStep?: boolean;
+      mode?: 'strict' | 'pass';
+      validateExample?: { in: unknown; out: unknown };
+      contractSetting?: unknown;
+    }) {
+      const contractSetting: unknown = opts.contractSetting ?? [
+        '$contract.server',
+      ];
+      const validate = {
+        package: '@walkeros/transformer-validate',
+        config: {
+          settings: {
+            contract: contractSetting,
+            ...(opts.mode ? { mode: opts.mode } : {}),
+          },
+        },
+        ...(opts.validateExample
+          ? { examples: { example: opts.validateExample } }
+          : {}),
+      };
+      return {
+        version: 4,
+        contract: contracts,
+        flows: {
+          web: {
+            config: { platform: 'web' },
+            destinations: opts.webExampleWithoutHash
+              ? {
+                  api: {
+                    package: '@walkeros/web-destination-api',
+                    examples: {
+                      order: { in: withoutHash, out: [['sendWeb', 'x']] },
+                    },
+                  },
+                }
+              : {},
+          },
+          server: {
+            config: { platform: 'server' },
+            transformers: opts.noValidateStep ? {} : { validate },
+            destinations: opts.metaExampleWithoutHash
+              ? { meta: metaWithoutHash }
+              : {},
+          },
+        },
+      };
+    }
+
+    const violations = (result: ReturnType<typeof validateFlow>) =>
+      result.errors.filter((e) => e.code === 'CONTRACT_VIOLATION');
+
+    it('never checks a step that is not a validate step', () => {
+      const result = validateFlow(
+        config({ webExampleWithoutHash: true, metaExampleWithoutHash: true }),
+        { strict: true },
+      );
+      expect(violations(result)).toEqual([]);
+    });
+
+    it('accepts a validate example whose out shows the failure its contract produces', () => {
+      const result = validateFlow(
+        config({
+          validateExample: {
+            in: withoutHash,
+            out: [['return', { event: markValid(withoutHash, false) }]],
+          },
+        }),
+        { strict: true },
+      );
+      expect(violations(result)).toEqual([]);
+    });
+
+    it('accepts a strict-mode drop for an event that breaks the contract', () => {
+      const result = validateFlow(
+        config({
+          mode: 'strict',
+          validateExample: { in: withoutHash, out: [['return', false]] },
+        }),
+        { strict: true },
+      );
+      expect(violations(result)).toEqual([]);
+    });
+
+    it('accepts a validate example whose out passes a valid event on', () => {
+      const result = validateFlow(
+        config({
+          validateExample: {
+            in: withHash,
+            out: [['return', { event: withHash }]],
+          },
+        }),
+        { strict: true },
+      );
+      expect(violations(result)).toEqual([]);
+    });
+
+    it('flags a validate example whose out claims the wrong verdict', () => {
+      const result = validateFlow(
+        config({
+          validateExample: {
+            in: withoutHash,
+            out: [['return', { event: withoutHash }]],
+          },
+        }),
+        { strict: true },
+      );
+      expect(result.errors.map((e) => e.path)).toContain(
+        'flows.server.transformers.validate.examples.example.out',
       );
     });
 
-    it('does not fail --strict on an uncovered event type', () => {
-      const result = validateFlow(uncoveredEventFlow, { strict: true });
+    const wrongVerdicts: Array<
+      [string, 'strict' | 'pass', typeof withHash | typeof withoutHash, unknown]
+    > = [
+      ['a drop of a valid event', 'strict', withHash, [['return', false]]],
+      [
+        'valid false on a valid event',
+        'pass',
+        withHash,
+        [['return', { event: markValid(withHash, false) }]],
+      ],
+      [
+        'a strict-mode pass of an invalid event',
+        'strict',
+        withoutHash,
+        [['return', { event: markValid(withoutHash, false) }]],
+      ],
+    ];
 
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+    it.each(wrongVerdicts)('flags %s', (_label, mode, input, out) => {
+      const result = validateFlow(
+        config({ mode, validateExample: { in: input, out } }),
+        { strict: true },
+      );
+      expect(violations(result).map((e) => e.path)).toEqual([
+        'flows.server.transformers.validate.examples.example.out',
+      ]);
+    });
+
+    it('reports a wrong verdict as a warning without --strict', () => {
+      const result = validateFlow(
+        config({
+          validateExample: {
+            in: withoutHash,
+            out: [['return', { event: withoutHash }]],
+          },
+        }),
+      );
+      expect(violations(result)).toEqual([]);
+      expect(result.warnings.map((w) => w.path)).toContain(
+        'flows.server.transformers.validate.examples.example.out',
+      );
+    });
+
+    it('skips a validate step whose contract setting is not a list', () => {
+      const result = validateFlow(
+        config({
+          contractSetting: '$contract.server',
+          validateExample: {
+            in: withoutHash,
+            out: [['return', { event: markValid(withoutHash, false) }]],
+          },
+        }),
+        { strict: true },
+      );
+      expect(violations(result)).toEqual([]);
+    });
+
+    it('checks nothing in a config without validate steps, even with a contract block', () => {
+      const result = validateFlow(
+        config({ noValidateStep: true, metaExampleWithoutHash: true }),
+        { strict: true },
+      );
+      expect(violations(result)).toEqual([]);
+    });
+
+    it('keeps the contract block as the IntelliSense reference', () => {
+      const result = validateFlow(
+        config({ noValidateStep: true, metaExampleWithoutHash: true }),
+        { strict: true },
+      );
+      expect(result.details.context).toEqual(
+        expect.objectContaining({
+          contract: expect.arrayContaining([
+            expect.objectContaining({ entity: 'order' }),
+          ]),
+        }),
+      );
+    });
+  });
+
+  describe('StepOut compare', () => {
+    const event = {
+      name: 'page view',
+      entity: 'page',
+      action: 'view',
+      data: { id: '/' },
+    };
+
+    function chain(opts: { out: unknown; nextIn: unknown }) {
+      return {
+        version: 4,
+        flows: {
+          default: {
+            config: { platform: 'server' },
+            sources: {
+              x: {
+                package: '@walkeros/server-source-express',
+                next: 't',
+                examples: { a: { in: { path: '/' }, out: opts.out } },
+              },
+            },
+            transformers: {
+              t: {
+                package: '@walkeros/transformer-enricher',
+                examples: { b: { in: opts.nextIn, out: [['return', event]] } },
+              },
+            },
+          },
+        },
+      };
+    }
+
+    it.each([
+      ['source elb StepOut', [['elb', event]]],
+      ['transformer return {event}', [['return', { event }]]],
+      ['transformer return bare event', [['return', event]]],
+      ['transformer return fan-out', [['return', [{ event }, { event }]]]],
+      [
+        'an effect list with a non-event head first',
+        [
+          ['response', { status: 200 }],
+          ['elb', event],
+        ],
+      ],
+      ['bare event (back compat)', event],
+    ])('accepts %s against a matching in', (_label, out) => {
+      const result = validateFlow(chain({ out, nextIn: event }), {
+        strict: true,
+      });
       expect(
-        result.warnings.some((w) => w.path.includes('destination.api')),
+        result.errors.filter((e) => e.code === 'INCOMPATIBLE_EXAMPLES'),
+      ).toEqual([]);
+      expect(
+        result.warnings.some((w) =>
+          w.message.includes('missing out or in examples'),
+        ),
       ).toBe(false);
+    });
+
+    it.each([
+      ['return false', [['return', false]]],
+      ['response only', [['response', { status: 200 }]]],
+      ['message.ack only', [['message.ack']]],
+      ['an empty effect list', []],
+    ])('treats %s as no comparable out (warning, not error)', (_label, out) => {
+      const result = validateFlow(chain({ out, nextIn: event }), {
+        strict: false,
+      });
+      expect(
+        result.errors.filter((e) => e.code === 'INCOMPATIBLE_EXAMPLES'),
+      ).toEqual([]);
+      expect(
+        result.warnings.some((w) =>
+          w.message.includes('missing out or in examples'),
+        ),
+      ).toBe(true);
+    });
+
+    it('still rejects a StepOut whose event does not match the next in', () => {
+      const result = validateFlow(
+        chain({
+          out: [['return', { event: { foo: 1, bar: 2 } }]],
+          nextIn: event,
+        }),
+        { strict: true },
+      );
+      expect(
+        result.errors.some((e) => e.code === 'INCOMPATIBLE_EXAMPLES'),
+      ).toBe(true);
     });
   });
 });

@@ -4,14 +4,21 @@ import type {
   WalkerOS,
   Destination,
   Source,
+  Logger,
 } from '@walkeros/core';
 import { isArray, FatalError } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
-import { mergeEnvironments } from './destination';
+import { mergeEnvironments, pushToDestinations } from './destination';
 import { buildReportError, errorMeta } from './report-error';
 import { reconcilePending } from './pending';
 import { flushSourceQueueOn, isSourceStarted } from './source';
+import {
+  DEFAULT_DESTINATION_TIMEOUT_MS,
+  DestinationTimeoutError,
+  resolveDestinationTimeout,
+  withTimeout,
+} from './timeout';
 
 /**
  * Type guard: is `value` a genuine collector instance? A real collector ALWAYS
@@ -201,7 +208,9 @@ function getMark(
  * the construction baseline, so it still delivers once at the run barrier.
  */
 function cellVersionOf(collector: Collector.Instance, type: On.Types): number {
-  return collector.cellVersion[String(type)] ?? 0;
+  // Read before every destination state delivery, including from callers
+  // that hand in a partial collector without version state.
+  return collector.cellVersion?.[String(type)] ?? 0;
 }
 
 /**
@@ -255,10 +264,10 @@ const MAX_DELIVERY_REVISIONS = 8;
 
 /**
  * Open the cascade-tracking structure for the OUTERMOST top-level state command
- * and return a teardown that clears it. Nested commands emitted by reacting
- * callbacks find `collector.cascade` already set and reuse it (teardown is a
- * no-op for them), so the counters are scoped to the originating command and
- * reset when it returns. Re-entrancy is detected by the presence of
+ * (or an init flush) and return a teardown. Nested commands emitted by
+ * reacting callbacks find `collector.cascade` already set and join it, so the
+ * counters are scoped to the originating command; the cascade is cleared when
+ * its last holder leaves. Re-entrancy is detected by the presence of
  * `collector.cascade`.
  *
  * Assumes top-level state commands run serially on a given collector;
@@ -267,12 +276,33 @@ const MAX_DELIVERY_REVISIONS = 8;
  * state commands).
  */
 export function enterCascade(collector: Collector.Instance): () => void {
-  if (collector.cascade) return () => undefined;
-  collector.cascade = { counts: new WeakMap() };
+  const open = collector.cascade;
+  // A cascade this function did not open is left to whoever set it.
+  if (open && !cascadeHolders.has(open)) return () => undefined;
+
+  const cascade = open || { counts: new WeakMap() };
+  collector.cascade = cascade;
+  cascadeHolders.set(cascade, (cascadeHolders.get(cascade) || 0) + 1);
+
+  // Reference-counted: the cascade stays open until its last holder leaves,
+  // so a command that opened it and finishes first does not end it under an
+  // init flush or a nested command still running in it.
+  let left = false;
   return () => {
-    collector.cascade = undefined;
+    if (left) return;
+    left = true;
+    const holders = (cascadeHolders.get(cascade) || 1) - 1;
+    if (holders > 0) {
+      cascadeHolders.set(cascade, holders);
+      return;
+    }
+    cascadeHolders.delete(cascade);
+    if (collector.cascade === cascade) collector.cascade = undefined;
   };
 }
+
+/** Open holders per cascade opened by `enterCascade`. */
+const cascadeHolders = new WeakMap<Collector.Cascade, number>();
 
 /**
  * Check-and-increment the per-`(subscriber, cell-type)` delivery count for the
@@ -365,17 +395,68 @@ export async function on(
 }
 
 /**
- * Calls a destination's on() handler with proper context.
- * Used by both onApply() for immediate calls and destinationInit() for flushing queued events.
+ * Calls a destination's on() handler with proper context and waits for it to
+ * settle. Used by onApply() for live deliveries and by destinationInit() for
+ * flushing queued deliveries; both await it, so a handler's side effect (a
+ * vendor consent update, an SDK opt-out) lands before the destination's next
+ * push. The wait is bounded by the destination's `config.timeout`, the same
+ * window as a push.
+ *
+ * Returns whether the handler settled. A state delivery holds the destination
+ * while it runs, and keeps holding it when it does not settle:
+ * `pushToDestinations` then keeps its events in `queuePush` rather than
+ * sending them to a vendor whose consent state was not set. The hold clears
+ * once no state delivery to the destination is in flight and every present
+ * state cell has reached the handler.
+ *
+ * One state handler call runs per destination at a time, so the state the
+ * vendor applies last is always the newest. A state delivery that arrives
+ * while a call runs does not call the handler: its cell stays owed, and the
+ * current cells are delivered right after the running call ends. A call that
+ * timed out stays in flight until its handler settles; its late settle marks
+ * nothing, and the current cells, then the held events, follow from there.
+ * Deferring rather than waiting keeps a handler that issues a state command
+ * itself from waiting on its own call.
+ *
+ * A state delivery carries the command's delta when the destination has
+ * received every earlier change of that cell, and the whole cell otherwise
+ * (after a failed delivery, or when its mark trails by more than one change),
+ * so a settled delivery never marks content it did not carry.
  */
-export function callDestinationOn(
+export async function callDestinationOn(
   collector: Collector.Instance,
   destination: Destination.Instance,
   destId: string,
   type: On.Types,
   data: unknown,
-) {
-  if (!destination.on) return;
+): Promise<boolean> {
+  const handler = destination.on;
+  if (!handler) return true;
+
+  // Only a state cell (consent, user, globals, custom) has a push that depends
+  // on it; a lifecycle delivery neither holds nor marks. The version is the
+  // one this delivery carries, captured before anything can change the cell.
+  const gated = isStateDelivery(type);
+
+  // A handler call to this destination is still running: a second call
+  // could settle first and be overwritten by the older state. The cell stays
+  // owed instead. A call that settles in time delivers the current state
+  // right after it; one that timed out does so when it finally settles.
+  if (
+    gated &&
+    (overdueDeliveries.get(destination) || stateCalls.has(destination))
+  ) {
+    markStateLost(collector, destination, type);
+    if (!overdueDeliveries.get(destination))
+      deferredDuringCall.add(destination);
+    return false;
+  }
+
+  const version = gated ? cellVersionOf(collector, type) : 0;
+  const payload =
+    gated && owesMoreThanDelta(collector, destination, type, version)
+      ? resolveDeliveryData(collector, type)
+      : data;
 
   const destType = destination.type || 'unknown';
   const destLogger = collector.logger.scope(destType).scope('on').scope(type);
@@ -385,7 +466,7 @@ export function callDestinationOn(
     logger: destLogger,
     id: destId,
     config: destination.config,
-    data: data as Destination.Data,
+    data: payload as Destination.Data,
     env: mergeEnvironments(destination.env, destination.config.env),
     reportError: buildReportError(
       collector,
@@ -396,9 +477,398 @@ export function callDestinationOn(
     ),
   };
 
-  tryCatch(destination.on, (err) =>
-    logOnCallbackError(collector, 'destination', err, { destId, type }),
-  )(type, context);
+  // The hold goes up before the handler runs, so an event pushed by another
+  // caller while the handler is still running is parked rather than
+  // overtaking it: pushes are not serialized with state commands.
+  if (gated) {
+    openStateDelivery(destination, type);
+    setInFlightVersion(destination, type, version);
+    stateCalls.add(destination);
+  }
+
+  const timeoutMs = resolveDestinationTimeout(destination.config.timeout);
+  // The handler's own promise, kept for a delivery that times out.
+  let running: Promise<unknown> = Promise.resolve();
+  let settled = true;
+  let timedOut = false;
+  let threw = true;
+  try {
+    await tryCatchAsync(
+      () => {
+        running = Promise.resolve(handler(type, context));
+        return withTimeout(
+          running,
+          timeoutMs,
+          `Destination "${destId}" on(${type}) did not settle within ${timeoutMs}ms`,
+        );
+      },
+      (err) => {
+        settled = false;
+        if (err instanceof DestinationTimeoutError) timedOut = true;
+        logOnCallbackError(collector, 'destination', err, { destId, type });
+      },
+    )();
+    threw = false;
+  } finally {
+    // Also runs when a FatalError propagates: the delivery counts as failed
+    // and the window closes, so a later settled delivery can release the hold.
+    // No follow-up runs then, so nothing stays deferred.
+    if (gated) {
+      stateCalls.delete(destination);
+      if (threw) deferredDuringCall.delete(destination);
+      const lost = lostCells.get(destination);
+      if (settled) {
+        advanceMark(collector, destination, type, version);
+        lost?.delete(String(type));
+      } else {
+        markStateLost(collector, destination, type);
+      }
+      if (timedOut) {
+        awaitOverdueDelivery(
+          collector,
+          destination,
+          destId,
+          type,
+          version,
+          running,
+          destLogger,
+        );
+      } else {
+        clearInFlightVersion(destination, type, version);
+        closeStateDelivery(collector, destination);
+      }
+    }
+  }
+
+  // State that arrived while the handler ran follows now, as current cells.
+  if (gated && !timedOut && deferredDuringCall.delete(destination))
+    await catchUpDestinationState(collector, destination, destId);
+
+  return settled;
+}
+
+/**
+ * Timed-out state deliveries to a destination whose handler has not settled
+ * yet. While one runs, no other state delivery to the destination starts.
+ */
+const overdueDeliveries = new WeakMap<Destination.Instance, number>();
+
+/**
+ * Destinations whose state handler call is running. Only one runs at a time:
+ * a state delivery that arrives meanwhile is deferred.
+ */
+const stateCalls = new WeakSet<Destination.Instance>();
+
+/**
+ * Destinations with a state delivery deferred behind a running call. When
+ * that call ends in time, the destination catches up on the current state.
+ */
+const deferredDuringCall = new WeakSet<Destination.Instance>();
+
+/**
+ * Keep a timed-out state delivery in flight until its handler settles, then
+ * close its window. The cell was recorded as lost at the timeout and stays
+ * owed, whatever the late outcome, so the hold is released only by a later
+ * delivery that carries the current cell and settles in time. That delivery
+ * starts from the settle itself, followed by the held events. A handler that
+ * never settles keeps the destination held.
+ */
+function awaitOverdueDelivery(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  destId: string,
+  type: On.Types,
+  version: number,
+  running: Promise<unknown>,
+  logger: Logger.Instance,
+): void {
+  overdueDeliveries.set(
+    destination,
+    (overdueDeliveries.get(destination) || 0) + 1,
+  );
+  const settle = () => {
+    const count = (overdueDeliveries.get(destination) || 0) - 1;
+    if (count > 0) overdueDeliveries.set(destination, count);
+    else overdueDeliveries.delete(destination);
+    const lost = lostCells.get(destination);
+    if (lost) lost.add(String(type));
+    else lostCells.set(destination, new Set([String(type)]));
+    clearInFlightVersion(destination, type, version);
+    closeStateDelivery(collector, destination);
+    logger.debug('late settle after timeout');
+    deferredDuringCall.delete(destination);
+    if (collector.allowed && collector.destinations[destId] === destination)
+      recoverDestinationState(collector, destination, destId, logger);
+  };
+  running.then(settle, settle);
+}
+
+/**
+ * Deliver the state a destination still owes, then push the events held for
+ * it, without waiting for its next push.
+ */
+function recoverDestinationState(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  destId: string,
+  logger: Logger.Instance,
+): void {
+  tryCatchAsync(
+    async () => {
+      await catchUpDestinationState(collector, destination, destId);
+      if (!getStateHold(destination) && destination.queuePush?.length)
+        await pushToDestinations(
+          collector,
+          undefined,
+          {},
+          {
+            [destId]: destination,
+          },
+        );
+    },
+    (err) => {
+      logger.error('state recovery failed', errorMeta(err));
+    },
+  )();
+}
+
+/**
+ * A destination's state hold: set while a state delivery (consent, user,
+ * globals, custom) to its `on` handler is running, and kept when it does not
+ * settle. While it is set the collector delivers no events to it: they stay in
+ * its `queuePush`. Cleared once every present state cell has reached the
+ * handler. Collector-internal bookkeeping, keyed by the destination instance.
+ */
+export interface StateHold {
+  type: On.Types;
+  since: number;
+}
+
+const stateHolds = new WeakMap<Destination.Instance, StateHold>();
+
+/** The destination's current state hold, if it is held. */
+export function getStateHold(
+  destination: Destination.Instance,
+): StateHold | undefined {
+  return stateHolds.get(destination);
+}
+
+/**
+ * State deliveries to a destination that have started and not yet ended. The
+ * hold is never released while one is running.
+ */
+const stateInFlight = new WeakMap<Destination.Instance, number>();
+
+/**
+ * Per destination and cell, the newest version a running delivery carries. A
+ * second delivery of a version that is already on its way is not started.
+ */
+const inFlightVersions = new WeakMap<
+  Destination.Instance,
+  Record<string, number>
+>();
+
+function setInFlightVersion(
+  destination: Destination.Instance,
+  type: On.Types,
+  version: number,
+): void {
+  let versions = inFlightVersions.get(destination);
+  if (!versions) {
+    versions = {};
+    inFlightVersions.set(destination, versions);
+  }
+  const key = String(type);
+  const current = versions[key];
+  if (current === undefined || current < version) versions[key] = version;
+}
+
+function clearInFlightVersion(
+  destination: Destination.Instance,
+  type: On.Types,
+  version: number,
+): void {
+  const versions = inFlightVersions.get(destination);
+  if (versions && versions[String(type)] === version)
+    delete versions[String(type)];
+}
+
+/**
+ * Cells whose last delivery to a destination did not settle. The next
+ * delivery of such a cell carries the whole cell, and the hold stays until it
+ * settles.
+ */
+const lostCells = new WeakMap<Destination.Instance, Set<string>>();
+
+/**
+ * Destinations whose init flush is running. `held` records whether the flush
+ * opened a state delivery window, closed once when the flush ends.
+ */
+const initFlushes = new WeakMap<Destination.Instance, { held: boolean }>();
+
+/**
+ * Start a destination's init flush. While it runs, new deliveries to the
+ * destination are queued behind the flush's entries. When the queue carries a
+ * state entry the hold covers the whole flush, lifecycle entries before it
+ * included, so no push slips in between two entries.
+ */
+export function beginInitFlush(destination: Destination.Instance): void {
+  const first = destination.queueOn?.find(({ type }) => isStateDelivery(type));
+  if (first) openStateDelivery(destination, first.type);
+  initFlushes.set(destination, { held: !!first });
+}
+
+/** End a destination's init flush, releasing its window if it opened one. */
+export function endInitFlush(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+): void {
+  const flush = initFlushes.get(destination);
+  initFlushes.delete(destination);
+  if (flush?.held) closeStateDelivery(collector, destination);
+}
+
+/**
+ * Record that a state cell did not reach a destination's handler: the mark is
+ * taken back, the next delivery of the cell carries all of it, and the
+ * destination is held, dated now, until that delivery settles. Used for a
+ * delivery that failed, one the init flush never reached, and one the cascade
+ * bound suppressed.
+ */
+export function markStateLost(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  type: On.Types,
+): void {
+  clearMark(collector, destination, type);
+  const lost = lostCells.get(destination);
+  if (lost) lost.add(String(type));
+  else lostCells.set(destination, new Set([String(type)]));
+  stateHolds.set(destination, { type, since: Date.now() });
+}
+
+/**
+ * Whether a destination is owed state: a cell whose delivery was lost, or a
+ * present cell it has not received at its current version. False while the
+ * collector is not allowed (nothing is deliverable yet).
+ */
+export function owesDestinationState(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+): boolean {
+  if (lostCells.get(destination)?.size) return true;
+  return STATE_CELLS.some(
+    (cell) =>
+      isStatePresent(collector, cell) &&
+      shouldDeliver(collector, destination, cell),
+  );
+}
+
+/**
+ * Start a state delivery window on a destination: raise the hold and count
+ * the window as in flight. Every call is paired with `closeStateDelivery`.
+ * Used per delivery by `callDestinationOn`, and around the whole init flush by
+ * `destinationInit`, so no push slips in between two queued entries.
+ */
+export function openStateDelivery(
+  destination: Destination.Instance,
+  type: On.Types,
+): void {
+  stateInFlight.set(destination, (stateInFlight.get(destination) || 0) + 1);
+  stateHolds.set(destination, { type, since: Date.now() });
+}
+
+/**
+ * End a state delivery window, then release the hold if nothing else is in
+ * flight and nothing is owed.
+ */
+export function closeStateDelivery(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+): void {
+  const count = (stateInFlight.get(destination) || 0) - 1;
+  if (count > 0) stateInFlight.set(destination, count);
+  else stateInFlight.delete(destination);
+  releaseHoldIfCurrent(collector, destination);
+}
+
+/**
+ * Whether a delivery of `type` at `version` would leave a gap if it carried
+ * only the command's delta: the cell's last delivery failed, the destination
+ * has no mark for the cell (it never received it, so earlier content may be
+ * missing), or its mark trails by more than one change. Every activation path
+ * marks the present cells first, so in the init flush (entries marked when
+ * queued) and on the live path the delta is what gets delivered.
+ */
+function owesMoreThanDelta(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  type: On.Types,
+  version: number,
+): boolean {
+  if (lostCells.get(destination)?.has(String(type))) return true;
+  const mark = collector.delivery?.get(destination)?.[String(type)];
+  return mark === undefined || mark < version - 1;
+}
+
+/**
+ * Advance a subscriber's mark for a cell to the version a delivery carried.
+ * Marks only move forward: a slower delivery of an older version that settles
+ * after a newer one does not take the mark back.
+ */
+function advanceMark(
+  collector: Collector.Instance,
+  subscriber: object,
+  type: On.Types,
+  version: number,
+): void {
+  let marks = collector.delivery.get(subscriber);
+  if (!marks) {
+    marks = {};
+    collector.delivery.set(subscriber, marks);
+  }
+  const key = String(type);
+  const current = marks[key];
+  if (current === undefined || current < version) marks[key] = version;
+}
+
+/**
+ * Take a delivery mark back, so the cell reads as owed again. The mirror of
+ * `setMark`: a delivery that was committed (called, or queued for the init
+ * flush) but did not settle has not happened, and the subscriber must be
+ * offered it again.
+ */
+export function clearMark(
+  collector: Collector.Instance,
+  subscriber: object,
+  type: On.Types,
+): void {
+  // Reached on every failed state delivery, including from callers that
+  // hand in a partial collector without delivery marks.
+  const marks = collector.delivery?.get(subscriber);
+  if (marks) delete marks[String(type)];
+}
+
+/**
+ * Clear a destination's hold only when no state delivery to it is in flight,
+ * no delivery of a cell is outstanding after a failure, and every present
+ * state cell has reached its `on` handler. A settled delivery of one cell
+ * says nothing about another: a `user` delivery must not open the gate while
+ * `consent` is still owed.
+ */
+function releaseHoldIfCurrent(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+): void {
+  if (!stateHolds.has(destination)) return;
+  if (stateInFlight.get(destination)) return;
+  if (lostCells.get(destination)?.size) return;
+  const owed = STATE_CELLS.some(
+    (cell) =>
+      isStatePresent(collector, cell) &&
+      shouldDeliver(collector, destination, cell),
+  );
+  if (!owed) stateHolds.delete(destination);
 }
 
 /**
@@ -536,13 +1006,230 @@ async function deliverStateToSource(
   if (isStateDelivery(type) && !cascadeAllow(collector, source, type))
     return false;
 
-  const result = await tryCatchAsync(source.on, (err) =>
-    logOnCallbackError(collector, 'source', err, { sourceId, type }),
-  )(type, contextData);
+  // One state handler call runs per source at a time, as for destinations: a
+  // state delivery that arrives meanwhile leaves its cell owed, and the
+  // current cells follow once the running call ends.
+  const gated = isStateDelivery(type);
+  if (gated && sourceStateCalls.has(source)) {
+    deferredSourceCalls.add(source);
+    return false;
+  }
+  const version = gated ? cellVersionOf(collector, type) : 0;
+  if (gated) sourceStateCalls.add(source);
 
-  if (isStateDelivery(type)) setMark(collector, source, type);
+  // Sources carry no per-step timeout config and share the destination
+  // default, so one hung source handler cannot stall the delivery pass.
+  const handler = source.on;
+  let running: Promise<unknown> = Promise.resolve();
+  let timedOut = false;
+  let result: unknown;
+  try {
+    result = await tryCatchAsync(
+      () => {
+        running = Promise.resolve(handler(type, contextData));
+        return withTimeout(
+          running,
+          DEFAULT_DESTINATION_TIMEOUT_MS,
+          `Source "${sourceId}" on(${type}) did not settle within ${DEFAULT_DESTINATION_TIMEOUT_MS}ms`,
+        );
+      },
+      (err) => {
+        if (err instanceof DestinationTimeoutError) timedOut = true;
+        logOnCallbackError(collector, 'source', err, { sourceId, type });
+      },
+    )();
+  } finally {
+    // A timed-out call stays running until its handler settles.
+    if (gated && !timedOut) sourceStateCalls.delete(source);
+  }
+
+  if (gated) {
+    if (timedOut) {
+      // A timed-out delivery has not happened: the mark stays, the cell stays
+      // owed, and the current cells follow the late settle.
+      const settle = () => {
+        sourceStateCalls.delete(source);
+        deferredSourceCalls.delete(source);
+        if (collector.allowed && collector.sources[sourceId] === source)
+          tryCatchAsync(
+            () => catchUpSourceState(collector, source, sourceId),
+            (err) => {
+              collector.logger
+                .scope('on')
+                .error('state recovery failed', errorMeta(err));
+            },
+          )();
+      };
+      running.then(settle, settle);
+    } else {
+      advanceMark(collector, source, type, version);
+      if (deferredSourceCalls.delete(source))
+        await catchUpSourceState(collector, source, sourceId);
+    }
+  }
 
   return result === false;
+}
+
+/** Sources whose state handler call is running. */
+const sourceStateCalls = new WeakSet<Source.Instance>();
+
+/** Sources with a state delivery deferred behind a running call. */
+const deferredSourceCalls = new WeakSet<Source.Instance>();
+
+/** Deliver every state cell a started source still owes. */
+async function catchUpSourceState(
+  collector: Collector.Instance,
+  source: Source.Instance,
+  sourceId: string,
+): Promise<void> {
+  // Opened or joined here, as for destinations, so the bound applies. Every
+  // owed cell is delivered, one with no content included: a deferred update
+  // reaches the source as it would have without the running call.
+  const exitCascade = enterCascade(collector);
+  try {
+    for (const type of STATE_CELLS) {
+      await deliverStateToSource(
+        collector,
+        source,
+        sourceId,
+        type,
+        resolveDeliveryData(collector, type),
+      );
+    }
+  } finally {
+    exitCascade();
+  }
+}
+
+/**
+ * Deliver one state or lifecycle event to a registered destination's `on`
+ * handler. State deliveries (consent/user/globals/custom) carry the same
+ * per-subscriber exactly-once + `allowed` gate as sources and `on` rules,
+ * keyed by the destination instance: while `!allowed` the delivery is deferred
+ * (not queued, mark not advanced) and the run barrier delivers it; once
+ * allowed, each cell change reaches the destination exactly once. Lifecycle
+ * deliveries (ready/run/session/config/arbitrary) are unconditional.
+ *
+ * A delivery is committed either by calling `on()` now (initialized
+ * destination, marked by `callDestinationOn` when it settles) or by appending
+ * to `queueOn`, which `destinationInit` flushes before the destination's first
+ * push. The queue branch marks the cell itself: a cell already waiting in
+ * `queueOn` is not owed, so the run barrier, which fires on every navigation,
+ * does not append it again. A queued entry whose flush fails takes its mark
+ * back in `callDestinationOn`, and the next delivery carries the whole cell.
+ */
+export async function deliverStateToDestination(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  destId: string,
+  type: On.Types,
+  data: unknown,
+): Promise<void> {
+  if (!destination.on) return;
+
+  const gated = isStateDelivery(type);
+  if (gated && !shouldDeliver(collector, destination, type)) return;
+  // The current version of the cell is already on its way to the handler.
+  const inFlight = inFlightVersions.get(destination)?.[String(type)];
+  if (
+    gated &&
+    inFlight !== undefined &&
+    inFlight >= cellVersionOf(collector, type)
+  )
+    return;
+  // Bounded recursion guard: a destination `on` handler that re-emits state
+  // could cascade cyclically. Past the bound the delivery is skipped (logged
+  // once). An initialized destination records the cell as lost, so it is held
+  // until a later delivery of it settles. An uninitialized one runs no handler
+  // here, so nothing can recurse: the whole cell is queued for its init flush
+  // instead of this delta, replacing a trailing entry of the same cell.
+  if (gated && !cascadeAllow(collector, destination, type)) {
+    if (destination.config.init) {
+      markStateLost(collector, destination, type);
+      return;
+    }
+    const queue = (destination.queueOn = destination.queueOn || []);
+    const entry = { type, data: resolveDeliveryData(collector, type) };
+    const last = queue[queue.length - 1];
+    if (last && last.type === type) queue[queue.length - 1] = entry;
+    else queue.push(entry);
+    setMark(collector, destination, type);
+    lostCells.get(destination)?.delete(String(type));
+    return;
+  }
+
+  // Uninitialized, or its init flush is still running: the delivery joins
+  // the queue behind the older entries, so it never overtakes them.
+  const flush = initFlushes.get(destination);
+  if (!destination.config.init || flush) {
+    destination.queueOn = destination.queueOn || [];
+    destination.queueOn.push({ type, data });
+    if (gated) {
+      setMark(collector, destination, type);
+      // A state entry joining a running flush holds the destination for the
+      // rest of the flush.
+      if (flush && !flush.held) {
+        openStateDelivery(destination, type);
+        flush.held = true;
+      }
+    }
+    return;
+  }
+
+  await callDestinationOn(collector, destination, destId, type, data);
+}
+
+/**
+ * Registration catch-up for a destination that just became active: a pending
+ * `require` gate satisfied, or a runtime `walker destination`. Delivers every
+ * present state cell as a snapshot through the same gate as a live broadcast,
+ * so the destination's `on` handler sees the state that activated it before
+ * its queued events are pushed, and holds a mark for every present cell
+ * before any later delta reaches it. While `!allowed` this is inert and the
+ * run barrier delivers instead. Also the retry of a held destination: only the
+ * cells it still owes pass the gate.
+ */
+export async function catchUpDestinationState(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  destId: string,
+): Promise<void> {
+  if (!destination.on) return;
+  // Opened or joined here, so a catch-up outside a command (a push's retry, a
+  // late settle) still counts a handler that re-emits state against the bound.
+  const exitCascade = enterCascade(collector);
+  try {
+    for (const type of STATE_CELLS) {
+      // A cell with no content is not owed, unless its delivery was lost
+      // (failed, or deferred behind a running call): that one still holds the
+      // destination until it arrives.
+      if (
+        !isStatePresent(collector, type) &&
+        !lostCells.get(destination)?.has(String(type))
+      )
+        continue;
+      await deliverStateToDestination(
+        collector,
+        destination,
+        destId,
+        type,
+        resolveDeliveryData(collector, type),
+      );
+    }
+  } finally {
+    exitCascade();
+  }
+}
+
+/**
+ * Whether a state delivery to the destination is running right now (a live
+ * delivery or an init flush). A held destination is not retried while one is.
+ */
+export function isStateDeliveryInFlight(
+  destination: Destination.Instance,
+): boolean {
+  return (stateInFlight.get(destination) || 0) > 0;
 }
 
 /**
@@ -552,8 +1239,10 @@ async function deliverStateToSource(
  * subscribers (mark < stateVersion) exactly once, so reactions deferred while
  * `!allowed` now emit into the open, consent-gated pipeline.
  *
- * Narrow path: it fires `collector.on` rules/fns via `fireCallbacks` and the
- * gated `source.on` loop via `deliverStateToSource`. It deliberately skips the
+ * Narrow path: it fires `collector.on` rules/fns via `fireCallbacks`, the
+ * gated `source.on` handlers via `deliverStateToSource`, and the gated
+ * destination `on` handlers via `deliverStateToDestination` (queued for an
+ * uninitialized destination's init flush). It deliberately skips the
  * `require`-decrement and `queueOn`-flush machinery in `onApply` (those are
  * live-command concerns). Exactly-once is free from the `shouldDeliver` gate:
  * already-delivered subscribers (mark == stateVersion) are skipped.
@@ -561,13 +1250,47 @@ async function deliverStateToSource(
 export async function redeliverStateAtRun(
   collector: Collector.Instance,
 ): Promise<void> {
+  const deliveries = await startRunRedelivery(collector);
+  await Promise.all(deliveries.map(({ done }) => done));
+}
+
+/**
+ * The run barrier without waiting for destinations. Rules and started sources
+ * are re-delivered per cell and awaited (sources bounded); each destination
+ * gets its own sequence of owed cells, started here and returned, so one slow
+ * destination handler delays no other destination's run flush. A destination
+ * is held from the start of its first delivery until nothing is owed.
+ */
+export async function startRunRedelivery(
+  collector: Collector.Instance,
+): Promise<DestinationDelivery[]> {
   // Fail closed against a FOREIGN/non-collector caller (see fireCallbacks and
   // isCollectorInstance). This dereferences the collector's state cells, so
-  // guard at the top, no state mutated, neutral void return. A real collector
+  // guard at the top, no state mutated, neutral result. A real collector
   // always has `.logger`, so this only ever catches a foreign caller.
   if (!isCollectorInstance(collector)) {
     warnForeignDispatch();
-    return;
+    return [];
+  }
+
+  // Each registered destination receives every owed cell, in cell order, as
+  // a snapshot of the cell when its turn comes.
+  const deliveries: DestinationDelivery[] = [];
+  for (const [destId, destination] of Object.entries(collector.destinations)) {
+    if (!destination.on) continue;
+    const sequence = async () => {
+      for (const type of STATE_CELLS) {
+        if (!isStatePresent(collector, type)) continue;
+        await deliverStateToDestination(
+          collector,
+          destination,
+          destId,
+          type,
+          resolveDeliveryData(collector, type),
+        );
+      }
+    };
+    deliveries.push(startDelivery(destId, destination, sequence()));
   }
 
   for (const type of STATE_CELLS) {
@@ -579,18 +1302,18 @@ export async function redeliverStateAtRun(
     // the same per-subscriber gate, so owed rules fire once and advance.
     fireCallbacks(collector, type, collector.on[type] || []);
 
-    // Re-deliver to started sources' on handlers via the gated helper.
-    for (const [sourceId, source] of Object.entries(collector.sources)) {
-      if (!isSourceStarted(source)) continue;
-      await deliverStateToSource(
-        collector,
-        source,
-        sourceId,
-        type,
-        contextData,
-      );
-    }
+    // Re-deliver to started sources through the gated helper, concurrently:
+    // one slow source handler does not cost the others their own timeout.
+    await Promise.all(
+      Object.entries(collector.sources)
+        .filter(([, source]) => isSourceStarted(source))
+        .map(([sourceId, source]) =>
+          deliverStateToSource(collector, source, sourceId, type, contextData),
+        ),
+    );
   }
+
+  return deliveries;
 }
 
 /**
@@ -607,6 +1330,56 @@ export async function onApply(
   options?: Array<On.Subscription>,
   config?: unknown,
 ): Promise<boolean> {
+  const { ok, deliveries } = await onApplyDeferred(
+    collector,
+    type,
+    options,
+    config,
+  );
+  await Promise.all(deliveries.map(({ done }) => done));
+  return ok;
+}
+
+/**
+ * A destination's `on()` delivery that a command started and did not wait
+ * for. `drain` is set by the caller just before its flush when the
+ * destination was held then: its events were parked, and once `done` settles
+ * they are pushed for that destination alone.
+ */
+export interface DestinationDelivery {
+  id: string;
+  destination: Destination.Instance;
+  done: Promise<void>;
+  drain?: boolean;
+}
+
+/**
+ * Start a destination delivery without waiting for it. A rejection (a
+ * FatalError) stays on `done` for the caller that settles it; the handler
+ * attached here only keeps it from surfacing as unhandled in between.
+ */
+function startDelivery(
+  id: string,
+  destination: Destination.Instance,
+  done: Promise<void>,
+): DestinationDelivery {
+  done.catch(() => undefined);
+  return { id, destination, done };
+}
+
+/**
+ * `onApply` without waiting for destination deliveries. Sources are awaited
+ * (bounded); every destination's `on()` delivery is started and returned, so
+ * the caller can flush every destination at once: a destination whose
+ * delivery is still running is held, its events wait for its own delivery,
+ * and no other destination waits for it.
+ */
+export async function onApplyDeferred(
+  collector: Collector.Instance,
+  type: On.Types,
+  options?: Array<On.Subscription>,
+  config?: unknown,
+): Promise<{ ok: boolean; deliveries: DestinationDelivery[] }> {
   // Fail closed against a FOREIGN/non-collector caller (see fireCallbacks and
   // isCollectorInstance). `onApply` dereferences `collector.seenEvents`
   // immediately, so it would throw before reaching the dispatch; guard at the
@@ -614,7 +1387,7 @@ export async function onApply(
   // collector always has `.logger`, so this only ever catches a foreign caller.
   if (!isCollectorInstance(collector)) {
     warnForeignDispatch();
-    return true;
+    return { ok: true, deliveries: [] };
   }
 
   // Record every broadcast type so a `require:[<arbitrary>]` gate stays
@@ -633,11 +1406,12 @@ export async function onApply(
   // Calculate context data once for source/destination broadcast.
   const contextData = resolveDeliveryData(collector, type, config);
 
-  let vetoed = false;
-  // Per-source require decrement + gated on() delivery.
-  // Sources are not "started" until config.init === true AND config.require is empty.
-  // Unstarted sources have their on() events queued in instance.queueOn
-  // and replayed once they start.
+  // Synchronous bookkeeping first, in subscriber order: the per-source require
+  // decrement, queueOn buffering for unstarted sources and uninitialized
+  // destinations, and the list of handlers that receive this delivery now.
+  // Sources are not "started" until config.init === true AND config.require
+  // is empty; their queued on() events are replayed once they start.
+  const sourceDeliveries: Array<Promise<boolean>> = [];
   for (const [sourceId, source] of Object.entries(collector.sources)) {
     if (source.config.require?.length) {
       const idx = source.config.require.indexOf(type);
@@ -647,31 +1421,46 @@ export async function onApply(
     if (!source.on) continue;
 
     if (isSourceStarted(source)) {
-      const sourceVetoed = await deliverStateToSource(
-        collector,
-        source,
-        sourceId,
-        type,
-        contextData,
+      sourceDeliveries.push(
+        deliverStateToSource(collector, source, sourceId, type, contextData),
       );
-      if (sourceVetoed) vetoed = true;
     } else {
       source.queueOn = source.queueOn || [];
       source.queueOn.push({ type, data: contextData });
     }
   }
 
-  Object.entries(collector.destinations).forEach(([destId, destination]) => {
-    if (destination.on) {
-      // Queue if destination not yet initialized
-      if (!destination.config.init) {
-        destination.queueOn = destination.queueOn || [];
-        destination.queueOn.push({ type, data: contextData });
-        return;
-      }
-      callDestinationOn(collector, destination, destId, type, contextData);
-    }
-  });
+  // Destinations: state deliveries are gated (exactly-once, deferred while
+  // not allowed); an uninitialized destination's delivery is queued for its
+  // init flush, synchronously, inside deliverStateToDestination.
+  const deliveries: DestinationDelivery[] = [];
+  for (const [destId, destination] of Object.entries(collector.destinations)) {
+    if (!destination.on) continue;
+    deliveries.push(
+      startDelivery(
+        destId,
+        destination,
+        deliverStateToDestination(
+          collector,
+          destination,
+          destId,
+          type,
+          contextData,
+        ),
+      ),
+    );
+  }
+
+  // Source handlers run concurrently, each bounded by the default timeout.
+  // Destination deliveries are not awaited here: each is held while it runs
+  // and the caller settles them after its flush. With no source handler to
+  // wait for there is no await, which keeps the synchronous ordering the
+  // bounded-recursion cascade relies on.
+  let vetoed = false;
+  if (sourceDeliveries.length) {
+    const sourceVetoes = await Promise.all(sourceDeliveries);
+    vetoed = sourceVetoes.some(Boolean);
+  }
 
   // Sources whose require was just emptied AND init has run: flush their
   // queueOn now (the require-completing event was queued in the gated
@@ -703,7 +1492,7 @@ export async function onApply(
 
   fireCallbacks(collector, type, onConfig, config);
 
-  return !vetoed;
+  return { ok: !vetoed, deliveries };
 }
 
 function onConsent(

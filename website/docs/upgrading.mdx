@@ -18,17 +18,13 @@ Every request from an official walkerOS client carries three headers:
 | Header | Example |
 |---|---|
 | `User-Agent` | `walkeros-cli/1.4.0 (node/18.19.0; linux)` |
-| `X-WalkerOS-Client` | `cli`, `mcp`, or `runner` |
+| `X-WalkerOS-Client` | `cli` or `mcp` |
 | `X-WalkerOS-Client-Version` | `1.4.0` |
 
 The server uses these to:
 
 - Route tailored upgrade instructions per client type.
 - Decide whether the caller meets the minimum version for the endpoint.
-- Distinguish interactive CLI sessions from long-lived flow runners.
-
-Set the env var `WALKEROS_CLIENT_TYPE=runner` to override the default client
-type to `runner`. The official runner Docker image does this automatically.
 
 ## The 426 response
 
@@ -58,9 +54,9 @@ can relay the instruction.
 - **MCP server** (`@walkeros/mcp`): update the pinned version in your MCP
   client config, or bump `@walkeros/mcp` in your project and restart the
   client.
-- **Runner image**: pull the latest `walkeros/flow` (or your self-hosted
-  tag) and redeploy. The image ships with a current `@walkeros/cli` and
-  sets `WALKEROS_CLIENT_TYPE=runner`.
+- **Runtime image**: rebuild on a newer `walkeros/flow` version and
+  redeploy. Each image tag is the version of the `@walkeros/runner` it
+  contains; keep it in step with the `@walkeros/cli` that builds your flows.
 
 After upgrading, re-run the failing command. If the `426` persists, your
 client is still below the minimum version. Double-check the installed

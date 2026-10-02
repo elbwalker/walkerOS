@@ -47,7 +47,7 @@ The request URL, method, and body format described on this page are gtag.js beha
 
 The transformer reads `ctx.ingest.url` (required) and `ctx.ingest.body` (optional) from the source it sits in front of. gtag.js can send several events in one POST body, so the source must keep a body that is not JSON as `ingest.body`. These server sources do, so pick by runtime:
 
-- `@walkeros/server-source-express`, the source `walkeros run` and the `walkeros/flow` Docker image serve. A `text/plain` body that is valid JSON is parsed, and any other `text/plain` body reaches the transformer as the raw string.
+- `@walkeros/server-source-express`, the source `runneros` and the `walkeros/flow` Docker image serve. A `text/plain` body that is valid JSON is parsed, and any other `text/plain` body reaches the transformer as the raw string.
 - `@walkeros/server-source-fetch`, for a runtime that serves a `(Request) => Response` handler (Cloudflare Workers, Deno, Bun, or Node.js 18+ with a fetch adapter). See [Batched POST hits](#batched-post-hits) for the wiring.
 - `@walkeros/server-source-gcp` (`sourceCloudFunction`) on Google Cloud Functions.
 - `@walkeros/server-source-aws` (`sourceLambda`) on AWS Lambda. It decodes batched POSTs and GET hits, but answers a POST without a body with 400, so single-event hits sent that way are lost.
@@ -216,7 +216,23 @@ const { collector } = await startFlow({
 export default { fetch: collector.sources.http.push };
 ```
 
-`walkeros run` and the `walkeros/flow` Docker image only serve a source that exposes a Node HTTP handler, which the fetch source does not, so a bundled flow with the fetch source needs a runtime that calls its `push` with each `Request`.
+`runneros` and the `walkeros/flow` Docker image only serve a source that exposes a Node HTTP handler, which the fetch source does not, so a bundled flow with the fetch source needs a runtime that calls its `push` with each `Request`.
+
+### Hit-level fields
+
+Every decoded event carries the hit's page and visitor context, each field only when the hit sends it, value as sent:
+
+| Hit param | Event field | Notes |
+| --------- | ----------- | ----- |
+| `dl` | `source.url` | Page URL. Server destinations that send a page URL (Meta, Snapchat, Pinterest, Bing, TikTok, Criteo, Piwik PRO) read it. |
+| `dr` | `source.referrer` | Page referrer. |
+| `uid`, `cid`, `sid` | `user.id`, `user.device`, `user.session` | |
+| `ul` | `user.language` | Browser language, a visitor fact. `globals` stays free for site-level facts. |
+| `sr` | `user.screenSize` | Screen resolution. |
+
+`timestamp` is the time the hit was received (GA4 `sid` is the session start, not the event time). Consent comes from `gcs`, the event `id` is derived from the hit, and `source.type` is `ga4`.
+
+Because decoded events now carry `source.url`, the [fingerprint transformer](/docs/transformers/fingerprint)'s default `site` component resolves for them, so fingerprint hashes of GA4-decoded events differ from those computed before `source.url` was set.
 
 <Configuration type="transformer" data={data} />
 

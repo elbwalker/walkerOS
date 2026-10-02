@@ -81,6 +81,11 @@ describe('SessionStart', () => {
       }),
     ).toStrictEqual({ isStart: false, storage: false });
 
+    // The configured list stays as configured
+    const domains = ['another.walkeros.io'];
+    sessionWindow({ url, referrer, domains });
+    expect(domains).toEqual(['another.walkeros.io']);
+
     // Default url and referrer (using params instead of mocking window.location for Jest 30 compat)
     expect(sessionWindow({ url, referrer })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),

@@ -3,7 +3,7 @@ jest.mock('../auth', () => ({
 }));
 
 const mockFetch = jest.fn();
-global.fetch = mockFetch as unknown as typeof fetch;
+global.fetch = mockFetch;
 
 import type { Collector, Logger } from '@walkeros/core';
 import {
@@ -17,7 +17,9 @@ const mockLogger: Logger.Instance = {
   warn: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
-  throw: jest.fn() as unknown as Logger.ThrowFn,
+  throw: jest.fn((message: string | Error): never => {
+    throw message instanceof Error ? message : new Error(message);
+  }),
   json: jest.fn(),
   scope: jest.fn().mockReturnThis(),
 };
@@ -251,6 +253,17 @@ describe('storeGcsInit', () => {
   });
 
   describe('file mode (file: true)', () => {
+    it.each([
+      [{ file: true }, true],
+      [{}, undefined],
+    ])(
+      'declared config %p reports file on the instance config',
+      async (config, expected) => {
+        const store = await createStore({}, config);
+        expect(store.config.file).toBe(expected);
+      },
+    );
+
     it('uploads bytes byte-exact with a real mime derived from the key', async () => {
       wireBackingStore();
 
@@ -403,6 +416,7 @@ describe('storeGcsInit', () => {
         expect.objectContaining({
           client_email: 'sa@project.iam.gserviceaccount.com',
         }),
+        expect.any(Function),
       );
     });
 
@@ -418,7 +432,10 @@ describe('storeGcsInit', () => {
 
       await createStore({ credentials: creds });
 
-      expect(createTokenProvider).toHaveBeenCalledWith(creds);
+      expect(createTokenProvider).toHaveBeenCalledWith(
+        creds,
+        expect.any(Function),
+      );
     });
 
     it('should use ADC when no credentials provided', async () => {
@@ -427,7 +444,10 @@ describe('storeGcsInit', () => {
 
       await createStore();
 
-      expect(createTokenProvider).toHaveBeenCalledWith(undefined);
+      expect(createTokenProvider).toHaveBeenCalledWith(
+        undefined,
+        expect.any(Function),
+      );
     });
 
     it('prefers config.credentials over settings.credentials', async () => {
@@ -450,7 +470,10 @@ describe('storeGcsInit', () => {
         { credentials: configCreds },
       );
 
-      expect(createTokenProvider).toHaveBeenCalledWith(configCreds);
+      expect(createTokenProvider).toHaveBeenCalledWith(
+        configCreds,
+        expect.any(Function),
+      );
       // config path wins, so the deprecation warning does not fire
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
@@ -467,7 +490,10 @@ describe('storeGcsInit', () => {
 
       await createStore({}, { credentials: configCreds });
 
-      expect(createTokenProvider).toHaveBeenCalledWith(configCreds);
+      expect(createTokenProvider).toHaveBeenCalledWith(
+        configCreds,
+        expect.any(Function),
+      );
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 

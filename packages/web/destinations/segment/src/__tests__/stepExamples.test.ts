@@ -24,6 +24,7 @@ import type {
   WalkerOS,
   Mapping as WalkerOSMapping,
 } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { Env, SegmentAnalytics, Settings } from '../types';
@@ -33,15 +34,7 @@ type CallRecord = [string, ...unknown[]];
 const initConfig = examples.step.init.in as Destination.Config;
 const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
 
-const noopLogger = {
-  log: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  throw: (msg: string) => {
-    throw new Error(msg);
-  },
-} as unknown as Destination.Context['logger'];
+const noopLogger = createMockLogger();
 
 /**
  * Builds a recording Env where analytics.load() returns an instance
@@ -73,7 +66,7 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
     setAnonymousId: (id: string) => {
       calls.push(['analytics.setAnonymousId', id]);
     },
-  } as unknown as SegmentAnalytics;
+  };
 
   const env: Env = {
     analytics: {

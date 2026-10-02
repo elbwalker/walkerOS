@@ -158,22 +158,30 @@ export function validateContract(input: unknown): ValidateResult {
     }
   }
 
-  // Check for circular extend
+  // Check for circular extend: one error per cycle, at its first member.
+  const reportedCycles = new Set<string>();
   for (const name of contractNames) {
-    const visited = new Set<string>();
+    const chain: string[] = [];
     let current = name;
     while (current) {
-      if (visited.has(current)) {
-        errors.push({
-          path: `${name}.extend`,
-          message: `Circular extend chain: ${[...visited, current].join(' → ')}`,
-          code: 'CIRCULAR_EXTENDS',
-        });
+      const start = chain.indexOf(current);
+      if (start !== -1) {
+        const cycle = chain.slice(start);
+        const key = [...cycle].sort().join('\u0000');
+        if (!reportedCycles.has(key)) {
+          reportedCycles.add(key);
+          errors.push({
+            path: `${cycle[0]}.extend`,
+            message: `Circular extend chain: ${[...cycle, current].join(' → ')}`,
+            code: 'CIRCULAR_EXTENDS',
+          });
+        }
         break;
       }
-      visited.add(current);
-      const entry = contracts[current] as Record<string, unknown> | undefined;
-      current = (entry?.extend as string) || '';
+      chain.push(current);
+      const entry = contracts[current];
+      current =
+        isObject(entry) && typeof entry.extend === 'string' ? entry.extend : '';
     }
   }
 

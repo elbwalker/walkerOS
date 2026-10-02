@@ -8,6 +8,8 @@ import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plu
 // filter watches website/**.
 import { version as walkerosVersion } from './package.json';
 import restoreExpressionIndent from './src/remark/restore-expression-indent';
+import flowSnippets from './src/remark/flow-snippets';
+import exportFlowSnippets from './src/rehype/export-flow-snippets';
 import normalizeExportLinks from './src/remark/normalize-export-links';
 import prependExportContext from './src/remark/prepend-export-context';
 
@@ -27,7 +29,7 @@ const vars = {
 // wrong: the package namespace, and what category the project is in.
 const llmsTxtPreamble = [
   'Privacy-first, composable event data collection (Source → Collector → Destination).',
-  'Current namespace: packages are published under `@walkeros/*` and the command line binary is `walkeros`. Package names from the walker.js era are historical and should not be suggested for new work.',
+  'Current namespace: packages are published under `@walkeros/*` and the command line binary is `walkeros`. `@elbwalker/*` package names are historical; `@walkeros/walker.js` is the default, most basic setup that translates HTML attributes into `dataLayer.push` calls.',
   'walkerOS is not a product analytics tool, not a consent management platform, and not a business intelligence layer. It collects events and routes them to those tools.',
   `To prove an integration works without calling a real endpoint, run \`walkeros push flow.json --event '{"name":"product add"}' --simulate destination.NAME\`. It runs the flow and reports what the destination would have sent.`,
   `Canonical index: ${vars.site}/llms.txt. Generated ${new Date().toISOString().slice(0, 10)}.`,
@@ -177,7 +179,18 @@ const config: Config = {
           // expression, which flattens every nested snippet written as
           // `<CodeSnippet code={`...`} />`. Put that indentation back before
           // any other plugin sees the tree.
-          beforeDefaultRemarkPlugins: [restoreExpressionIndent],
+          // <FlowSlice> and <FlowExample> resolve against flow-complete.json
+          // at build time, so a page ships only its own slices.
+          beforeDefaultRemarkPlugins: [
+            restoreExpressionIndent,
+            [
+              flowSnippets,
+              {
+                flowFile:
+                  require.resolve('@walkeros/cli/examples/flow-complete.json'),
+              },
+            ],
+          ],
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl: `${vars.github}edit/main/website/`,
@@ -752,12 +765,12 @@ const config: Config = {
             to: '/docs/comparisons/dataLayer',
           },
           {
-            from: '/docs/guides/gtm',
-            to: '/docs/comparisons/gtm',
-          },
-          {
             from: '/docs/apps',
             to: '/docs/apps/walkerjs',
+          },
+          {
+            from: ['/docs/apps/runner', '/docs/apps/docker'],
+            to: '/docs/apps/runtime',
           },
           {
             from: [
@@ -778,6 +791,11 @@ const config: Config = {
       {
         siteTitle: 'walkerOS Documentation',
         siteDescription: llmsTxtPreamble,
+        // Every .md export is a published artifact behind llms.txt, so a failed
+        // export fails the build and names the route. The default 'warn'
+        // silently drops the page's .md. postBuild does not run in
+        // `docusaurus start`, so local writing is unaffected.
+        onRouteError: 'throw',
         // depth: 2 groups routes like /docs/destinations/web/amplitude into the
         // "docs/destinations" category, mirroring the pipeline taxonomy.
         depth: 2,
@@ -809,6 +827,9 @@ const config: Config = {
           // non-root baseUrl.
           relativePaths: Boolean(process.env.DOCUSAURUS_BASEURL),
           excludeRoutes: ['/search', '/404', '/tags/**'],
+          // Runs on the page hast before the Markdown conversion: restores the
+          // code languages Shiki dropped from the flow-complete snippets.
+          beforeDefaultRehypePlugins: [exportFlowSnippets],
           // These run on the mdast of the per-page exports only, so neither
           // touches llms.txt:
           // - The export appends `.md` to the route path, so a trailing-slash

@@ -38,7 +38,7 @@ npm install -g @walkeros/cli
 walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json -o dist/
 ```
 
-This creates `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The flow reads `GCP_PROJECT_ID` (required), `BQ_DATASET`, `BQ_TABLE`, and `BQ_LOCATION` (optional, defaults `walkerOS`, `events`, `EU`) from the environment when the container starts, so nothing is baked in at bundle time.
+This creates `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The flow reads `GCP_PROJECT_ID` (required), `BQ_DATASET`, `BQ_TABLE`, and `BQ_LOCATION` (optional, defaults `walkerOS`, `events`, `EU`) from the environment when the container starts, so nothing is baked in at bundle time. Only web flows bake `$env` values in, from `config.bundle.env`.
 
 :::tip[Quick Local Test]
 Test your flow before building Docker using `push --simulate`. The BigQuery call is mocked, so no credentials are needed:
@@ -55,7 +55,7 @@ walkeros push https://www.walkeros.io/flows/gcp-bigquery.json \
 Create a `Dockerfile`:
 
 ```dockerfile
-FROM walkeros/flow:latest
+FROM walkeros/flow:<version>
 
 # Copy the pre-built flow bundle (flow.mjs, package.json, node_modules/)
 COPY dist/ /app/flow/
@@ -66,9 +66,13 @@ COPY sa-bigquery.json /app/sa-bigquery.json
 # Configure runtime
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/sa-bigquery.json
 ENV GCP_PROJECT_ID=your-project-id
-
-EXPOSE 8080
 ```
+
+Replace `<version>` with the `walkeros/flow` version matching your CLI, see
+[image tags](/docs/apps/runtime#image-tags). The image already starts
+`/app/flow/flow.mjs` on port 8080, so no command or `BUNDLE` is needed. To
+bundle inside Docker instead of on your machine, use the
+[canonical two-stage Dockerfile](/docs/apps/runtime#canonical-dockerfile).
 
 Build the image with your GitHub Container Registry tag:
 

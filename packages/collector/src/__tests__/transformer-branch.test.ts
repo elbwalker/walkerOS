@@ -1,10 +1,6 @@
 import type { Transformer, WalkerOS, Collector } from '@walkeros/core';
 import { branch, createMockLogger } from '@walkeros/core';
-import {
-  runTransformerChain,
-  walkChain,
-  extractTransformerNextMap,
-} from '../transformer';
+import { runTransformerChain } from '../transformer';
 
 describe('TransformerResult branching', () => {
   it('should be a valid transformer return type via branch() factory', () => {
@@ -122,13 +118,13 @@ describe('chain branching', () => {
     );
 
     expect(order).toEqual(['router', 'parser']);
-    expect(result.event).toEqual({
+    expect(result.copies[0].event).toEqual({
       name: 'routed action',
       data: { parsed: true },
     });
   });
 
-  it('should resolve branched next through walkChain', async () => {
+  it("should run the branch target's own next after it", async () => {
     const router = createTransformer((event) => {
       return branch(event, 'a'); // 'a' links to 'b' via config.next
     });
@@ -155,9 +151,7 @@ describe('chain branching', () => {
       undefined,
     );
 
-    const singleResult0 = Array.isArray(result.event)
-      ? result.event[0]
-      : result.event;
+    const singleResult0 = result.copies[0].event;
     expect(singleResult0?.data).toEqual({ a: true, b: true });
   });
 
@@ -192,9 +186,7 @@ describe('chain branching', () => {
       ingestData,
     );
 
-    expect(!Array.isArray(result.event) && result.event?.name).toBe(
-      'page purchase',
-    );
+    expect(result.copies[0].event.name).toBe('page purchase');
   });
 
   it('should handle branched chain returning false (drop event)', async () => {
@@ -215,7 +207,7 @@ describe('chain branching', () => {
       undefined,
     );
 
-    expect(result.event).toBeNull();
+    expect(result.copies).toEqual([]);
   });
 
   it('should continue after non-branching transformers in same chain', async () => {
@@ -249,9 +241,7 @@ describe('chain branching', () => {
     );
 
     expect(order).toEqual(['enricher', 'router', 'parser']);
-    const singleResult1 = Array.isArray(result.event)
-      ? result.event[0]
-      : result.event;
+    const singleResult1 = result.copies[0].event;
     expect(singleResult1?.data).toEqual({ enriched: true });
     expect(singleResult1?.name).toBe('parsed action');
   });
@@ -301,9 +291,7 @@ describe('chain branching', () => {
     );
 
     expect(order).toEqual(['enricher', 'api-handler']);
-    const singleResult = Array.isArray(result.event)
-      ? result.event[0]
-      : result.event;
+    const singleResult = result.copies[0].event;
     expect(singleResult?.data).toEqual({ enriched: true, api: true });
   });
 
@@ -340,13 +328,11 @@ describe('chain branching', () => {
       { _meta: { hops: 0, path: [] }, path: '/api/data' },
     );
 
-    const singleResult2 = Array.isArray(result.event)
-      ? result.event[0]
-      : result.event;
+    const singleResult2 = result.copies[0].event;
     expect(singleResult2?.data).toEqual({ handler: 'api' });
   });
 
-  it('should drop event when branch target does not exist', async () => {
+  it('skips a branch target that does not exist, like any unknown id', async () => {
     const router = createTransformer(() => {
       return branch({}, 'nonexistent-parser');
     });
@@ -362,19 +348,20 @@ describe('chain branching', () => {
       undefined,
     );
 
-    // Branch target not found → drop event (return null), not silent continue
-    expect(result.event).toBeNull();
+    // One rule for every unknown id in a route: warn and continue with the
+    // event the router returned.
+    expect(result.copies[0].event).toEqual({});
+    expect(collector.logger.warn).toHaveBeenCalledWith(
+      'Transformer not found: nonexistent-parser',
+    );
   });
 
   it('forkResult.next supports many fan-out (each branch produces its own event)', async () => {
-    // Each branch records the event it received at entry. Under SEQUENTIAL
-    // execution (the pre-Task-3.2 behavior, where `walkChain` treats a
-    // string[] as a single chain), `a` runs first, mutates the event with
+    // Each branch records the event it received at entry. Under sequential
+    // execution `a` runs first, mutates the event with
     // `{ data: { touchedBy: 'a' } }`, and `b` then sees that mutation. Under
     // true fan-out, each branch starts from the parent event independently,
-    // so `b` must NOT see `a`'s mutation. This assertion fails under the old
-    // sequential walk and passes only when each fork branch dispatches as
-    // its own subchain with an isolated ingest.
+    // so `b` must NOT see `a`'s mutation.
     const seenByA: WalkerOS.DeepPartialEvent[] = [];
     const seenByB: WalkerOS.DeepPartialEvent[] = [];
     const router = createTransformer(() => [

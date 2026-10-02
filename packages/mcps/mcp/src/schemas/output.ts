@@ -1,6 +1,20 @@
 import { z } from 'zod';
 
 // CLI tool output shapes
+const ValidateIssueFields = {
+  path: z.string(),
+  message: z.string(),
+  value: z.unknown().optional(),
+  code: z
+    .string()
+    .optional()
+    .describe('Stable code (the documented validate code list)'),
+  keyword: z
+    .string()
+    .optional()
+    .describe('JSON Schema keyword of an ENTRY_SCHEMA finding'),
+};
+
 export const ValidateOutputShape = {
   valid: z.boolean().describe('Whether validation passed'),
   type: z
@@ -9,28 +23,58 @@ export const ValidateOutputShape = {
       z.string().regex(/^(destinations|sources|transformers)\.\w+$/),
     ])
     .describe('What was validated'),
-  errors: z
-    .array(
-      z.object({
-        path: z.string(),
-        message: z.string(),
-        value: z.unknown().optional(),
-        code: z.string().optional(),
-      }),
-    )
-    .describe('Validation errors'),
+  errors: z.array(z.object(ValidateIssueFields)).describe('Validation errors'),
   warnings: z
     .array(
       z.object({
-        path: z.string(),
-        message: z.string(),
+        ...ValidateIssueFields,
         suggestion: z.string().optional(),
       }),
     )
     .describe('Validation warnings'),
   details: z
-    .record(z.string(), z.unknown())
+    .object({
+      scope: z
+        .object({
+          flows: z.array(z.string()),
+          entry: z
+            .object({
+              section: z.string().optional(),
+              key: z.string(),
+              flows: z.array(z.string()),
+              searchedFlows: z.array(z.string()),
+            })
+            .optional(),
+          checks: z.array(z.string()),
+          offline: z.literal(true).optional(),
+        })
+        .optional()
+        .describe('What the run covered'),
+      skipped: z
+        .array(
+          z.object({
+            path: z.string(),
+            check: z.string(),
+            reason: z.string(),
+            code: z.string(),
+          }),
+        )
+        .optional()
+        .describe('Checks in scope that did not run, with the reason'),
+      deferred: z
+        .array(z.object({ path: z.string(), reference: z.string() }))
+        .optional()
+        .describe('Values known only at runtime, not schema-checked'),
+    })
+    .catchall(z.unknown())
     .describe('Additional validation details'),
+  _hints: z
+    .object({
+      next: z.array(z.string()).optional(),
+      warnings: z.array(z.string()).optional(),
+    })
+    .optional()
+    .describe('Suggested next steps'),
 };
 
 export const BundleOutputShape = {
@@ -76,6 +120,23 @@ export const SimulateOutputShape = {
     .array(z.record(z.string(), z.unknown()))
     .optional()
     .describe('Events captured by source simulation'),
+  calls: z
+    .array(z.unknown())
+    .optional()
+    .describe(
+      'Calls a simulated source made on its mock env (only when verbose: true)',
+    ),
+  skipped: z
+    .object({
+      reason: z.enum(['consent', 'pending']),
+      required: z.record(z.string(), z.boolean()).optional(),
+      granted: z.record(z.string(), z.boolean()).optional(),
+      require: z.array(z.string()).optional(),
+    })
+    .optional()
+    .describe(
+      'Why the destination sent nothing: a consent skip, or waiting for its require',
+    ),
   duration: z.number().optional().describe('Simulation duration in ms'),
 };
 

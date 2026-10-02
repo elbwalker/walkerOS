@@ -4,6 +4,7 @@ import {
   clone,
   getEvent,
   getMappingValue,
+  createIngest,
   createMockContext,
   createMockLogger,
 } from '@walkeros/core';
@@ -214,6 +215,76 @@ describe('Server Destination Meta', () => {
     );
 
     expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  describe('client IP and user agent auto-fill', () => {
+    const ingest = {
+      ...createIngest('test'),
+      ip: '203.0.113.7',
+      userAgent: 'Mozilla/5.0 test',
+    };
+    const sentUserData = () =>
+      JSON.parse(mockSendServer.mock.calls[0][1]).data[0].user_data;
+
+    test('fills client IP and user agent from ingest by default', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: { settings: { accessToken, pixelId } },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sentUserData()).toMatchObject({
+        client_ip_address: '203.0.113.7',
+        client_user_agent: 'Mozilla/5.0 test',
+      });
+    });
+
+    test('falls back to event.user.ip and userAgent', async () => {
+      const event = getEvent('entity action', {
+        user: { id: 'us3r', ip: '198.51.100.2', userAgent: 'UA2' },
+      });
+      await destination.push(
+        event,
+        createMockContext({
+          config: { settings: { accessToken, pixelId } },
+          env: testEnv,
+        }),
+      );
+      expect(sentUserData()).toMatchObject({
+        client_ip_address: '198.51.100.2',
+        client_user_agent: 'UA2',
+      });
+    });
+
+    test('sends neither when disabled with false', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: {
+            settings: { accessToken, pixelId, ip: false, userAgent: false },
+          },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sentUserData()).not.toHaveProperty('client_ip_address');
+      expect(sentUserData()).not.toHaveProperty('client_user_agent');
+    });
+
+    test('lets an explicitly mapped value win', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: { settings: { accessToken, pixelId } },
+          data: { user_data: { client_ip_address: '10.0.0.1' } },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sentUserData().client_ip_address).toBe('10.0.0.1');
+    });
   });
 
   test('environment customization', async () => {

@@ -66,9 +66,17 @@ export interface S3StoreSetup {
   region?: string;
 }
 
+/**
+ * Injected dependencies (tests, simulate). The S3 client sends every request
+ * through `fetch`; without it the global `fetch` is used.
+ */
+export interface Env extends CoreStore.BaseEnv {
+  fetch?: typeof fetch;
+}
+
 export type Types = CoreStore.Types<
   S3StoreSettings,
-  CoreStore.BaseEnv,
+  Env,
   S3StoreInitSettings,
   S3StoreSetup
 >;

@@ -9,18 +9,98 @@ type CallOptions = NonNullable<
   Parameters<managedwriter.WriterClient['getWriteStream']>[1]
 >;
 
-// The StreamConnection instance returned by createStreamConnection. It is an
-// EventEmitter, so it exposes the typed `onConnectionError` hook we attach to
-// (and the bare `on('error', …)` it inherits). Derived from the SDK method
-// signature so we don't import the un-exported StreamConnection class.
+// The SDK's StreamConnection instance returned by createStreamConnection.
+// Derived from the SDK method signature so we don't import the un-exported
+// StreamConnection class. The SDK kit's connection type.
 export type StreamConnection = Awaited<
   ReturnType<managedwriter.WriterClient['createStreamConnection']>
 >;
 
-// The `{ off }` disposable returned by onConnectionError, used to remove the
-// listener in closeWriter. Derived from the method's return type (not exported
-// from the package root).
-export type RemoveListener = ReturnType<StreamConnection['onConnectionError']>;
+// SDK-derived shapes the structural types below speak in (types only).
+type ClientOptions = NonNullable<
+  ConstructorParameters<typeof managedwriter.WriterClient>[0]
+>;
+type WriteStreamRequest = Parameters<
+  managedwriter.WriterClient['getWriteStream']
+>[0];
+type WriteStreamInfo = Awaited<
+  ReturnType<managedwriter.WriterClient['getWriteStream']>
+>;
+type TableSchema = NonNullable<WriteStreamInfo['tableSchema']>;
+type ProtoDescriptor = ConstructorParameters<
+  typeof managedwriter.JSONWriter
+>[0]['protoDescriptor'];
+type RowList = Parameters<managedwriter.JSONWriter['appendRows']>[0];
+type AppendResponse = Awaited<
+  ReturnType<ReturnType<managedwriter.JSONWriter['appendRows']>['getResult']>
+>;
+
+/** The `{ off }` disposable returned by `onConnectionError`. */
+export interface ConnectionListener {
+  off(): void;
+}
+
+/** The connection surface the writer uses: its stream id and error hook. */
+export interface WriteConnection {
+  getStreamId(): string;
+  onConnectionError(listener: (err: unknown) => void): ConnectionListener;
+}
+
+/** The fields of an append response that push and pushBatch read. */
+export type AppendOutcome = Pick<AppendResponse, 'rowErrors' | 'appendResult'>;
+
+/** The row writer surface push and pushBatch use. */
+export interface RowWriter {
+  appendRows(rows: RowList): { getResult(): Promise<AppendOutcome> };
+  close(): void;
+}
+
+/** The Storage Write client surface the writer uses. */
+export interface WriteClient<C extends WriteConnection> {
+  createStreamConnection(request: {
+    destinationTable: string;
+    streamId: string;
+  }): Promise<C>;
+  getWriteStream(
+    request: WriteStreamRequest,
+    options?: CallOptions,
+  ): Promise<{ tableSchema?: TableSchema | null }>;
+  close(): void;
+}
+
+/** Converts the table schema into the writer's proto descriptor. */
+export interface SchemaAdapter {
+  convertStorageSchemaToProto2Descriptor(
+    schema: TableSchema,
+    scope: string,
+  ): ProtoDescriptor;
+}
+
+/**
+ * The three Storage Write pieces the writer is built from. The connection type
+ * ties a kit's client to the SAME kit's JSONWriter: the SDK JSONWriter only
+ * accepts the SDK's own StreamConnection.
+ */
+export interface WriterKit<C extends WriteConnection> {
+  WriterClient: new (options: ClientOptions) => WriteClient<C>;
+  JSONWriter: new (args: {
+    connection: C;
+    protoDescriptor: ProtoDescriptor;
+  }) => RowWriter;
+  adapt: SchemaAdapter;
+}
+
+/**
+ * The Storage Write API pieces a destination env may inject (tests, simulate).
+ * Without `WriterClient`, each missing piece falls back to the SDK, so runtime
+ * needs none of them. An injected `WriterClient` needs an injected
+ * `JSONWriter`: its connection cannot feed the SDK writer.
+ */
+export interface WriterEnv {
+  WriterClient?: WriterKit<WriteConnection>['WriterClient'];
+  JSONWriter?: WriterKit<WriteConnection>['JSONWriter'];
+  adapt?: SchemaAdapter;
+}
 
 export interface OpenWriterArgs {
   projectId: string;
@@ -55,22 +135,31 @@ export interface OpenWriterArgs {
    * throw (it runs on a detached emitter tick).
    */
   onConnectionError?: (err: unknown) => void;
+  /** Injected SDK pieces (the destination env); the SDK is the fallback. */
+  env?: WriterEnv;
 }
 
 export interface WriterHandles {
-  writeClient: managedwriter.WriterClient;
-  writer: managedwriter.JSONWriter;
+  writeClient: WriteClient<WriteConnection>;
+  writer: RowWriter;
   // The StreamConnection the writer appends to. Held so closeWriter can remove
   // the connection-error listener it owns.
-  connection: StreamConnection;
+  connection: WriteConnection;
   // The `{ off }` disposable for the connection-error listener, removed in
   // closeWriter so a re-opened writer doesn't accumulate stale listeners.
-  connectionErrorListener?: RemoveListener;
+  connectionErrorListener?: ConnectionListener;
 }
 
 /**
  * Open a long-lived JSONWriter on the table's _default stream.
  * Requires the dataset and table to already exist (run `walkeros setup` first).
+ *
+ * The SDK pieces come from `args.env` when injected (tests, simulate), else
+ * from `@google-cloud/bigquery-storage`. Without an injected `WriterClient`
+ * the SDK kit is used, with an injected `JSONWriter`/`adapt` taking their
+ * place when given. An injected `WriterClient` needs an injected `JSONWriter`
+ * (the SDK writer only accepts the SDK's own connection); without one, init
+ * fails and the injected client is closed.
  *
  * Sequence (per SDK docs and empirical SDK probe):
  *   1. new WriterClient
@@ -81,7 +170,44 @@ export interface WriterHandles {
  *   5. adapt.convertStorageSchemaToProto2Descriptor → protoDescriptor
  *   6. new JSONWriter({ connection, protoDescriptor })
  */
-export async function openWriter(
+export function openWriter(
+  args: OpenWriterArgs,
+  logger: Logger.Instance,
+): Promise<WriterHandles> {
+  const { env } = args;
+  if (!env?.WriterClient) {
+    const sdkKit: WriterKit<StreamConnection> = {
+      WriterClient: managedwriter.WriterClient,
+      JSONWriter: env?.JSONWriter ?? managedwriter.JSONWriter,
+      adapt: env?.adapt ?? adapt,
+    };
+    return openWith(sdkKit, args, logger);
+  }
+  const envKit: WriterKit<WriteConnection> = {
+    WriterClient: env.WriterClient,
+    JSONWriter: env.JSONWriter ?? MissingJSONWriter,
+    adapt: env.adapt ?? adapt,
+  };
+  return openWith(envKit, args, logger);
+}
+
+const MISSING_JSON_WRITER =
+  'BigQuery env: an injected WriterClient needs an injected JSONWriter; its connection cannot feed the SDK writer.';
+
+// The env kit's JSONWriter when an env injects a WriterClient without one.
+// Building it fails, so openWith's cleanup closes the injected client.
+class MissingJSONWriter implements RowWriter {
+  constructor() {
+    throw new Error(MISSING_JSON_WRITER);
+  }
+  appendRows(): { getResult(): Promise<AppendOutcome> } {
+    throw new Error(MISSING_JSON_WRITER);
+  }
+  close(): void {}
+}
+
+async function openWith<C extends WriteConnection>(
+  { WriterClient, JSONWriter, adapt: adaptFn }: WriterKit<C>,
   args: OpenWriterArgs,
   logger: Logger.Instance,
 ): Promise<WriterHandles> {
@@ -116,13 +242,13 @@ export async function openWriter(
   // BigQueryOptions on the query client. Spread the resolved `config.credentials`
   // last so it wins over any `settings.bigquery.credentials`, mirroring the query
   // client's resolution in getConfig (one identity per destination).
-  const writeClient = new managedwriter.WriterClient({
+  const writeClient = new WriterClient({
     projectId,
     ...bigquery,
     ...(credentials !== undefined ? { credentials } : {}),
   });
-  let connectionErrorListener: RemoveListener | undefined;
-  let connection: StreamConnection | undefined;
+  let connectionErrorListener: ConnectionListener | undefined;
+  let connection: C | undefined;
   try {
     // Use streamId (not streamType) so the SDK resolves to the table's
     // implicit `_default` stream without calling CreateWriteStream. Passing
@@ -160,11 +286,11 @@ export async function openWriter(
         `BigQuery write stream ${streamId} returned no tableSchema; cannot build proto descriptor`,
       );
     }
-    const protoDescriptor = adapt.convertStorageSchemaToProto2Descriptor(
+    const protoDescriptor = adaptFn.convertStorageSchemaToProto2Descriptor(
       writeStream.tableSchema,
       'root',
     );
-    const writer = new managedwriter.JSONWriter({
+    const writer = new JSONWriter({
       connection,
       protoDescriptor,
     });
@@ -182,10 +308,10 @@ export async function openWriter(
 // Structural subset of Settings that ensureWriter reads/writes. Kept local so
 // writer.ts doesn't import the full Settings type (which imports back from here).
 export interface EnsureWriterSettings {
-  writer?: managedwriter.JSONWriter;
-  writeClient?: managedwriter.WriterClient;
-  connection?: StreamConnection;
-  connectionErrorListener?: RemoveListener;
+  writer?: RowWriter;
+  writeClient?: WriteClient<WriteConnection>;
+  connection?: WriteConnection;
+  connectionErrorListener?: ConnectionListener;
   writerBroken?: boolean;
   lastStreamError?: Error;
   reopenWriter?: () => Promise<WriterHandles>;

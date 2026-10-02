@@ -65,8 +65,7 @@ export function sessionWindow(
     // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
     // Use domains: [''] to disable direct or hidden referrer
 
-    const domains = config.domains || [];
-    domains.push(url.hostname);
+    const domains = [...(config.domains || []), url.hostname];
     isStart = !domains.includes(referrer);
   }
 

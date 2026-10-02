@@ -25,7 +25,7 @@ import {
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
 import { createMockLogger } from '../../helpers/mock-logger.js';
-import path from 'path';
+import { localPackageDir } from '../../helpers/local-packages.js';
 import type { Flow } from '@walkeros/core';
 import type { BuildOptions } from '../../../types/bundle.js';
 
@@ -394,10 +394,7 @@ describe('Implicit Collector', () => {
 describe('lazy /dev registry', () => {
   // Resolve the real @walkeros/web-source-browser package so its package.json
   // ./dev export is read by the codegen (it genuinely exposes ./dev).
-  const browserPkgPath = path.resolve(
-    __dirname,
-    '../../../../../web/sources/browser',
-  );
+  const browserPkgPath = localPackageDir('@walkeros/web-source-browser');
 
   const flowSettings: Flow = {
     config: {
@@ -952,6 +949,34 @@ describe('windowElb emission drop', () => {
   });
 });
 
+describe('collector global name check', () => {
+  const DATA_PAYLOAD = '{"sources":{},"destinations":{}}';
+  const INJECTION = "x'];alert(1);//";
+
+  it('generateWebEntry refuses a collector global that is no identifier', () => {
+    expect(() =>
+      generateWebEntry('./skeleton.mjs', DATA_PAYLOAD, {
+        windowCollector: INJECTION,
+      }),
+    ).toThrow(/windowCollector/);
+  });
+
+  it.each(['elb', 'elbLayer', 'location', '__proto__', 'document', 'self'])(
+    'refuses the reserved global %s',
+    (windowCollector) => {
+      expect(() =>
+        generateWrapEntry('./skeleton.mjs', { windowCollector }),
+      ).toThrow(/windowCollector/);
+    },
+  );
+
+  it('generateWrapEntry refuses a collector global that is no identifier', () => {
+    expect(() =>
+      generateWrapEntry('./skeleton.mjs', { windowCollector: 'walker-os' }),
+    ).toThrow(/windowCollector/);
+  });
+});
+
 describe('windowElb bridge (createEntryPoint)', () => {
   const buildOptions: BuildOptions = {
     platform: 'browser',
@@ -1377,11 +1402,14 @@ describe('bundle() target resolution', () => {
     expect(buildOptions.withDev).toBe(false);
   });
 
-  it('bakes release + flow name into the collector handed to the bundler', async () => {
+  it('hands flow name, release and config digest to the bundler as provenance', async () => {
     const { bundle } = await import('../../../commands/bundle/index.js');
     await bundle(MINIMAL_FLOW, { silent: true, release: 'v3' });
-    const flowArg = bundleCoreMock.mock.calls[0][0];
-    expect(flowArg.collector).toMatchObject({ name: 'default', release: 'v3' });
+    expect(bundleCoreMock.mock.calls[0][4]).toEqual({
+      flowName: 'default',
+      release: 'v3',
+      configDigest: expect.stringMatching(/^[0-9a-f]{64}$/),
+    });
   });
 });
 
@@ -1481,6 +1509,8 @@ describe('data payload byte stability', () => {
 });
 
 describe('applyCollectorProvenance', () => {
+  const fallback = () => 'digest';
+
   it('bakes the flow name and passed release onto a plain collector', () => {
     const flowSettings: Flow = {
       config: { platform: 'server' },
@@ -1489,7 +1519,7 @@ describe('applyCollectorProvenance', () => {
       collector: { globals: { tenant: 'a' } },
     };
 
-    applyCollectorProvenance(flowSettings, 'web', 'v3');
+    applyCollectorProvenance(flowSettings, 'web', 'v3', fallback);
 
     const result = buildSplitConfigObject(flowSettings, new Map());
     // A plain collector still rides the data-payload passthrough (no new codegen).
@@ -1499,7 +1529,7 @@ describe('applyCollectorProvenance', () => {
     });
   });
 
-  it('leaves an authored collector.name and collector.release untouched', () => {
+  it('keeps an authored collector.name and lets the explicit release win', () => {
     const flowSettings: Flow = {
       config: { platform: 'server' },
       sources: {},
@@ -1507,44 +1537,113 @@ describe('applyCollectorProvenance', () => {
       collector: { name: 'authored-name', release: 'authored' },
     };
 
-    applyCollectorProvenance(flowSettings, 'web', 'v3');
+    applyCollectorProvenance(flowSettings, 'web', 'v3', fallback);
 
     expect(buildDataPayload(flowSettings)).toMatchObject({
-      collector: { name: 'authored-name', release: 'authored' },
+      collector: { name: 'authored-name', release: 'v3' },
     });
   });
 
-  it('falls back to the injected bundle-time clock when no release is given', () => {
+  it('keeps an authored collector.release over the fallback', () => {
     const flowSettings: Flow = {
       config: { platform: 'server' },
       sources: {},
       destinations: {},
-      collector: { globals: { tenant: 'a' } },
+      collector: { release: 'authored' },
     };
 
-    applyCollectorProvenance(
+    applyCollectorProvenance(flowSettings, 'web', undefined, fallback);
+
+    expect(buildDataPayload(flowSettings)).toMatchObject({
+      collector: { name: 'web', release: 'authored' },
+    });
+  });
+
+  it('creates a collector with the fallback release when the flow authored none', () => {
+    const flowSettings: Flow = {
+      config: { platform: 'server' },
+      sources: {},
+      destinations: {},
+    };
+
+    applyCollectorProvenance(flowSettings, 'web', undefined, fallback);
+
+    expect(buildDataPayload(flowSettings)).toMatchObject({
+      collector: { name: 'web', release: 'digest' },
+    });
+  });
+});
+
+describe('declared package exports', () => {
+  // The real gcp destination declares two exports in `walkerOS.exports`;
+  // the demo destination declares none.
+  const gcpPath = localPackageDir('@walkeros/server-destination-gcp');
+  const demoPath = localPackageDir('@walkeros/destination-demo');
+
+  const flowSettings: Flow = {
+    config: { platform: 'server' },
+    sources: {},
+    destinations: {
+      pubsub: {
+        package: '@walkeros/server-destination-gcp',
+        import: 'destinationPubSub',
+      },
+      demo: { package: '@walkeros/destination-demo' },
+    },
+  };
+
+  function options(skipWrapper: boolean): BuildOptions {
+    return {
+      platform: 'node',
+      format: 'esm',
+      skipWrapper,
+      packages: {
+        '@walkeros/server-destination-gcp': {},
+        '@walkeros/destination-demo': {},
+      },
+      output: './dist/bundle.mjs',
+      code: '',
+    };
+  }
+
+  const packagePaths = new Map([
+    ['@walkeros/server-destination-gcp', gcpPath],
+    ['@walkeros/destination-demo', demoPath],
+  ]);
+
+  it('emits __packageExports from the bundled package.json beside __devExports', async () => {
+    const { codeEntry } = await createEntryPoint(
       flowSettings,
-      'web',
-      undefined,
-      () => '2020-01-01T00:00:00.000Z',
+      options(true),
+      packagePaths,
     );
 
-    expect(buildDataPayload(flowSettings)).toMatchObject({
-      collector: { name: 'web', release: '2020-01-01T00:00:00.000Z' },
-    });
+    expect(codeEntry).toContain(
+      `export const __packageExports = {\n  '@walkeros/server-destination-gcp': ["destinationBigQuery","destinationPubSub"],\n};`,
+    );
   });
 
-  it('creates a collector and stamps a string release when the flow authored none', () => {
-    const flowSettings: Flow = {
-      config: { platform: 'server' },
-      sources: {},
-      destinations: {},
-    };
+  it('emits an empty __packageExports when no package declares exports', async () => {
+    const { codeEntry } = await createEntryPoint(
+      {
+        config: { platform: 'server' },
+        sources: {},
+        destinations: { demo: { package: '@walkeros/destination-demo' } },
+      },
+      options(true),
+      packagePaths,
+    );
 
-    applyCollectorProvenance(flowSettings, 'web');
+    expect(codeEntry).toContain('export const __packageExports = {};');
+  });
 
-    expect(buildDataPayload(flowSettings)).toMatchObject({
-      collector: { name: 'web', release: expect.any(String) },
-    });
+  it('emits no __packageExports without the dev surface', async () => {
+    const { codeEntry } = await createEntryPoint(
+      flowSettings,
+      options(false),
+      packagePaths,
+    );
+
+    expect(codeEntry).not.toContain('__packageExports');
   });
 });

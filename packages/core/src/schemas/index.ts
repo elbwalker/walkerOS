@@ -79,11 +79,7 @@ export { StateSchema } from './state';
 // Matcher schemas (used by flow schemas for routing)
 import * as MatcherSchemas from './matcher';
 export { MatcherSchemas };
-export {
-  MatchExpressionSchema,
-  RouteSchema,
-  RouteWithoutManySchema,
-} from './matcher';
+export { MatchExpressionSchema, RouteSchema } from './matcher';
 
 // Hint schemas (direct export - flat record, no namespace needed)
 export { CodeSchema, HintSchema, HintsSchema } from './hint';

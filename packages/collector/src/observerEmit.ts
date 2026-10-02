@@ -86,3 +86,34 @@ export function emit(
 ): void {
   emitStep(collector, buildBaseState(collector, args));
 }
+
+/**
+ * A drop at a collector-owned chain position (`source.before`,
+ * `source.next`, `collector.next`): the event never reaches the
+ * destinations. Emits one `collector.push` `skip` with `skipReason:
+ * 'dropped'` (the same hop as the wrap's in/out, which the skip outranks as
+ * the terminal phase), naming what dropped it
+ * (`by`: the transformer id, or `'route'` for a route `stop`) and where
+ * (`at`: the chain path). The event counts as received (`status.in`), with
+ * no `out` and no counter of its own.
+ */
+export function emitCollectorDrop(
+  collector: Collector.Instance,
+  event: WalkerOS.DeepPartialEvent,
+  ingest: Ingest | undefined,
+  by: string | undefined,
+  at: string,
+): void {
+  collector.status.in++;
+  const state = buildBaseState(collector, {
+    stepId: 'collector.push',
+    stepType: 'collector',
+    phase: 'skip',
+    eventId: typeof event.id === 'string' ? event.id : '',
+    now: Date.now(),
+    ...journeyFields(event, ingest, collector),
+  });
+  state.skipReason = 'dropped';
+  state.meta = { by: by ?? 'route', at };
+  emitStep(collector, state);
+}

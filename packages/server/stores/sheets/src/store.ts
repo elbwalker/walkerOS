@@ -87,6 +87,7 @@ async function ensureSpreadsheetExists(
   storeId: string,
   getToken: TokenProvider,
   logger: Logger.Instance,
+  doFetch: typeof fetch,
 ): Promise<void> {
   const existing = spreadsheetExistsCache.get(spreadsheetId);
   if (existing !== undefined) {
@@ -99,7 +100,7 @@ async function ensureSpreadsheetExists(
     try {
       const token = await getToken();
       const url = `${SHEETS_BASE}/${encodeURIComponent(spreadsheetId)}?fields=spreadsheetId`;
-      res = await fetch(url, {
+      res = await doFetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch (err) {
@@ -158,11 +159,12 @@ async function buildKeyIndex(
   keyCol: string,
   headerRows: number,
   getToken: TokenProvider,
+  doFetch: typeof fetch,
 ): Promise<Map<string, number>> {
   const token = await getToken();
   const range = buildColumnRange(sheet, keyCol, headerRows + 1);
   const url = `${SHEETS_BASE}/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}`;
-  const res = await fetch(url, {
+  const res = await doFetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
@@ -185,11 +187,12 @@ async function readCell(
   column: string,
   row: number,
   getToken: TokenProvider,
+  doFetch: typeof fetch,
 ): Promise<string | undefined> {
   const token = await getToken();
   const range = buildCellRange(sheet, column, row);
   const url = `${SHEETS_BASE}/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}`;
-  const res = await fetch(url, {
+  const res = await doFetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return undefined;
@@ -210,11 +213,12 @@ async function writeCell(
   row: number,
   value: string,
   getToken: TokenProvider,
+  doFetch: typeof fetch,
 ): Promise<void> {
   const token = await getToken();
   const range = buildCellRange(sheet, column, row);
   const url = `${SHEETS_BASE}/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
-  const res = await fetch(url, {
+  const res = await doFetch(url, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -238,11 +242,12 @@ async function appendRow(
   valueCol: string,
   values: [string, string],
   getToken: TokenProvider,
+  doFetch: typeof fetch,
 ): Promise<number | undefined> {
   const token = await getToken();
   const range = buildAppendRange(sheet, keyCol, valueCol);
   const url = `${SHEETS_BASE}/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW`;
-  const res = await fetch(url, {
+  const res = await doFetch(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -307,13 +312,16 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
   const { logger } = context;
   const id = context.id;
   const creds = parseCredentials(resolveCredentials(context.config, logger));
-  const getToken = createTokenProvider(creds);
+  // An injected fetch (tests, simulate) carries every request, token exchange
+  // included; the global fetch is the runtime default.
+  const doFetch = context.env?.fetch ?? context.config.env?.fetch ?? fetch;
+  const getToken = createTokenProvider(creds, doFetch);
   const sheet = resolveSheet(settings);
   const keyCol = resolveKeyColumn(settings);
   const valueCol = resolveValueColumn(settings);
   const headerRows = resolveHeaderRows(settings);
 
-  await ensureSpreadsheetExists(settings.id, id, getToken, logger);
+  await ensureSpreadsheetExists(settings.id, id, getToken, logger, doFetch);
 
   const keyToRow = await buildKeyIndex(
     settings.id,
@@ -321,6 +329,7 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
     keyCol,
     headerRows,
     getToken,
+    doFetch,
   );
 
   const config: Store.Config<Types> = {
@@ -338,7 +347,14 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
     async get(key: string): Promise<Store.StoreValue | undefined> {
       const row = keyToRow.get(key);
       if (row === undefined) return undefined;
-      const cell = await readCell(settings.id, sheet, valueCol, row, getToken);
+      const cell = await readCell(
+        settings.id,
+        sheet,
+        valueCol,
+        row,
+        getToken,
+        doFetch,
+      );
       if (cell === undefined || cell === '') return undefined;
       let parsed: unknown;
       try {
@@ -373,6 +389,7 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
           valueCol,
           [key, serialized],
           getToken,
+          doFetch,
         );
         if (newRow !== undefined) keyToRow.set(key, newRow);
       } else {
@@ -383,6 +400,7 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
           existingRow,
           serialized,
           getToken,
+          doFetch,
         );
       }
     },
@@ -390,7 +408,7 @@ export const storeSheetsInit: Store.Init<Types> = async (context) => {
     async delete(key: string): Promise<void> {
       const row = keyToRow.get(key);
       if (row === undefined) return;
-      await writeCell(settings.id, sheet, valueCol, row, '', getToken);
+      await writeCell(settings.id, sheet, valueCol, row, '', getToken, doFetch);
     },
   };
 };

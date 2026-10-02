@@ -213,6 +213,17 @@ describe('storeS3Init', () => {
   });
 
   describe('file mode (file: true)', () => {
+    it.each([
+      [true, true],
+      [undefined, undefined],
+    ])(
+      'declared file %s is reported on the instance config',
+      async (file, expected) => {
+        const store = await createStore({}, file);
+        expect(store.config.file).toBe(expected);
+      },
+    );
+
     it('uploads a Buffer byte-exact with a real mime derived from the key', async () => {
       const { reads } = wireBackingStore();
 

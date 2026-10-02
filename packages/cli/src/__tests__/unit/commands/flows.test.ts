@@ -1,3 +1,6 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { requireProjectId } from '../../../core/auth.js';
 import {
   listFlows,
@@ -7,6 +10,8 @@ import {
   updateFlow,
   deleteFlow,
   duplicateFlow,
+  createFlowCommand,
+  updateFlowCommand,
 } from '../../../commands/flows/index.js';
 import { listProjects } from '../../../commands/projects/index.js';
 import { setupMockApiClient } from '../../helpers/mock-api-client.js';
@@ -15,6 +20,9 @@ jest.mock('../../../core/api-client.js');
 jest.mock('../../../core/auth.js', () => ({
   ...jest.requireActual('../../../core/auth.js'),
   requireProjectId: jest.fn().mockReturnValue('proj_default'),
+}));
+jest.mock('../../../core/output.js', () => ({
+  writeResult: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../../../commands/projects/index.js', () => ({
   listProjects: jest.fn(),
@@ -419,6 +427,76 @@ describe('flows', () => {
           },
         },
       });
+    });
+  });
+
+  describe('--content', () => {
+    const content = { version: 3, flows: { default: { web: {} } } };
+    let dir: string;
+
+    beforeEach(() => {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'walkeros-flows-content-'));
+    });
+    afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+    it.each([
+      ['inline JSON', () => JSON.stringify(content)],
+      [
+        'a file path',
+        () => {
+          const file = path.join(dir, 'flow.json');
+          fs.writeFileSync(file, JSON.stringify(content, null, 2));
+          return file;
+        },
+      ],
+    ])('create accepts %s', async (_label, input) => {
+      mockPost.mockResolvedValue({ data: { id: 'cfg_new' } });
+      await createFlowCommand('My Flow', {
+        content: input(),
+        project: 'proj_1',
+      });
+      expect(mockPost).toHaveBeenCalledWith('/api/projects/{projectId}/flows', {
+        params: { path: { projectId: 'proj_1' } },
+        body: { name: 'My Flow', config: content },
+      });
+    });
+
+    it('exits 1 with the not-found message for a missing file', async () => {
+      // process.exit throws so control flow stops like the real exit.
+      const exitSpy = jest
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: string | number | null | undefined) => {
+          throw new Error(`__exit__:${code}`);
+        });
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const missing = path.join(dir, 'missing.json');
+
+      try {
+        await expect(
+          createFlowCommand('My Flow', { content: missing, project: 'proj_1' }),
+        ).rejects.toThrow('__exit__:1');
+        expect(errorSpy).toHaveBeenCalledWith(
+          `Configuration file not found: ${missing}`,
+        );
+        expect(mockPost).not.toHaveBeenCalled();
+      } finally {
+        exitSpy.mockRestore();
+        errorSpy.mockRestore();
+      }
+    });
+
+    it('update accepts a file path', async () => {
+      const file = path.join(dir, 'flow.json');
+      fs.writeFileSync(file, JSON.stringify(content, null, 2));
+      mockPatch.mockResolvedValue({ data: { id: 'cfg_abc' } });
+      await updateFlowCommand('cfg_abc', { content: file, project: 'proj_1' });
+      expect(mockPatch).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}',
+        {
+          params: { path: { projectId: 'proj_1', flowId: 'cfg_abc' } },
+          body: { config: content },
+        },
+      );
     });
   });
 });

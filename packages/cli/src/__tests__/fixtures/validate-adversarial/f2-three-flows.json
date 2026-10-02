@@ -1,0 +1,50 @@
+{
+  "version": 4,
+  "flows": {
+    "a": {
+      "config": {
+        "platform": "web"
+      },
+      "destinations": {
+        "ga4": {
+          "package": "pkg-x",
+          "config": {
+            "settings": {
+              "id": "G-ABC123"
+            }
+          }
+        }
+      }
+    },
+    "b": {
+      "config": {
+        "platform": "web"
+      },
+      "destinations": {
+        "ga4": {
+          "package": "pkg-x",
+          "config": {
+            "settings": {
+              "id": "G-ABC123"
+            }
+          }
+        }
+      }
+    },
+    "c": {
+      "config": {
+        "platform": "web"
+      },
+      "destinations": {
+        "meta": {
+          "package": "pkg-x",
+          "config": {
+            "settings": {
+              "id": "bad"
+            }
+          }
+        }
+      }
+    }
+  }
+}

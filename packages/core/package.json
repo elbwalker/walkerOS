@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/core",
   "description": "Core types and platform-agnostic utilities for walkerOS",
-  "version": "4.6.1",
+  "version": "4.7.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -20,6 +20,11 @@
       "types": "./dist/dev.d.ts",
       "import": "./dist/dev.mjs",
       "require": "./dist/dev.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.mjs",
+      "require": "./dist/node.js"
     }
   },
   "scripts": {

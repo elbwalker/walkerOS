@@ -1,12 +1,15 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { VERSION } from './version.js';
 import { setClientContext } from './core/client-context.js';
 import { handleCliError } from './core/api-error.js';
 import { printBanner } from './core/banner.js';
 import { createEmitter } from './telemetry/index.js';
 import { bundleCommand } from './commands/bundle/index.js';
+import {
+  bundleManifestCommand,
+  manifestFlagConflicts,
+} from './commands/bundle/manifest.js';
 import { pushCommand } from './commands/push/index.js';
-import { runCommand } from './commands/run/index.js';
 import { setupCommand } from './commands/setup/index.js';
 import { validateCommand } from './commands/validate/index.js';
 import { registerCacheCommand } from './commands/cache.js';
@@ -104,9 +107,28 @@ program
     '--release <id>',
     'config release id baked into config.collector.release (stamped on event.source.release)',
   )
+  .option(
+    '--manifest [source]',
+    'build from a manifest (URL or path; bare flag reads BUILD_MANIFEST_URL), PUT outputs and a result',
+  )
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
+    if (options.manifest !== undefined) {
+      const conflicts = manifestFlagConflicts(file, options);
+      if (conflicts.length > 0) {
+        throw new Error(
+          `--manifest cannot be combined with ${conflicts.join(', ')}; only --json, --verbose and --silent apply`,
+        );
+      }
+      await bundleManifestCommand({
+        manifest: options.manifest,
+        json: options.json,
+        verbose: options.verbose,
+        silent: options.silent,
+      });
+      return;
+    }
     await bundleCommand({
       config: file,
       output: options.output,
@@ -157,6 +179,24 @@ program
     '--snapshot <source>',
     'JS file to eval before bundle execution (file path, URL, or inline code)',
   )
+  .option(
+    '--ingest <source>',
+    'pipeline context for a simulated transformer, collector or destination (JSON object, file path, or URL)',
+  )
+  .option(
+    '--consent <source>',
+    'starting collector consent for a simulation, any step (JSON object of booleans, file path, or URL)',
+  )
+  .addOption(
+    new Option(
+      '--command <name>',
+      'simulated destination runs this collector command with the event as its data, instead of a push',
+    ).choices(['config', 'consent', 'user', 'run']),
+  )
+  .option(
+    '--page-url <url>',
+    'page URL of a simulated web source (absolute URL; default: the example trigger url, else http://localhost)',
+  )
   .action(async (file, options) => {
     await pushCommand({
       config: file,
@@ -170,6 +210,10 @@ program
       simulate: options.simulate,
       mock: options.mock,
       snapshot: options.snapshot,
+      ingestSource: options.ingest,
+      consentSource: options.consent,
+      command: options.command,
+      pageUrl: options.pageUrl,
     });
   });
 
@@ -212,14 +256,18 @@ program
   )
   .option(
     '--path <path>',
-    'validate a specific entry against its package schema (e.g. destinations.snowplow)',
+    'validate one entry against its package schema in every flow that has it, or only in --flow (e.g. destinations.snowplow, stores.cache)',
   )
   .option('-o, --output <path>', 'write result to file')
   .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
-  .option('--strict', 'fail on warnings')
+  .option('--strict', 'fail on warnings and skipped checks')
+  .option(
+    '--offline',
+    'do not fetch package schemas; step settings are not checked against them',
+  )
   .action(async (input, options) => {
     await validateCommand({
       type: options.type || 'flow',
@@ -231,6 +279,7 @@ program
       verbose: options.verbose,
       silent: options.silent,
       strict: options.strict,
+      offline: options.offline,
     });
   });
 
@@ -384,7 +433,7 @@ flowsCmd
   .command('create <name>')
   .description('Create a new flow')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-c, --content <json>', 'Flow.Json JSON string or file path')
+  .option('-c, --content <content>', 'Flow.Json JSON string, file path or URL')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -398,7 +447,10 @@ flowsCmd
   .description('Update a flow')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('--name <name>', 'new flow name')
-  .option('-c, --content <json>', 'new Flow.Json JSON string or file path')
+  .option(
+    '-c, --content <content>',
+    'new Flow.Json JSON string, file path or URL',
+  )
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -650,38 +702,6 @@ observeCmd
       wait: options.wait,
       timeout: options.timeout,
       json: options.json,
-    });
-  });
-
-// Run command
-program
-  .command('run [file]')
-  .description('Run a walkerOS flow')
-  .option('-f, --flow <name>', 'flow name for multi-flow configs')
-  .option('--flow-id <id>', 'API flow ID (enables heartbeat, polling, secrets)')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
-  .option(
-    '--env-file <path>',
-    'load environment variables from a dotenv file (opt-in; existing env wins; refuses group/other-readable files)',
-  )
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (file, options) => {
-    await runCommand({
-      config: file || process.env.BUNDLE,
-      port:
-        options.port ??
-        (process.env.PORT ? parseInt(process.env.PORT, 10) : undefined),
-      flow: options.flow ?? process.env.WALKEROS_FLOW_NAME,
-      flowId: options.flowId ?? process.env.WALKEROS_FLOW_ID,
-      deploymentId: process.env.WALKEROS_DEPLOYMENT_ID,
-      project: options.project ?? process.env.WALKEROS_PROJECT_ID,
-      envFile: options.envFile,
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
     });
   });
 

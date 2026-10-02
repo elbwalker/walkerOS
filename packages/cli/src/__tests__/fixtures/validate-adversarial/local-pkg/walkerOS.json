@@ -1,0 +1,14 @@
+{
+  "$meta": {
+    "package": "local-pkg",
+    "version": "0.1.0",
+    "type": "destination",
+    "platform": "web"
+  },
+  "schemas": {
+    "settings": {
+      "type": "object",
+      "properties": { "id": { "type": "string", "pattern": "^G-[A-Z0-9]+$" } }
+    }
+  }
+}

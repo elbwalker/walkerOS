@@ -10,7 +10,10 @@ import type {
 import { Const } from './constants';
 import {
   addDestination,
+  markHeldForDrain,
+  mergePushResults,
   pushToDestinations,
+  settleDestinationDeliveries,
   createPushResult,
 } from './destination';
 import {
@@ -23,7 +26,8 @@ import {
 } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { processConsent } from './consent';
-import { on, onApply, redeliverStateAtRun, enterCascade } from './on';
+import { on, onApplyDeferred, startRunRedelivery, enterCascade } from './on';
+import type { DestinationDelivery } from './on';
 import { reconcilePending } from './pending';
 import { destroyAllSteps } from './shutdown';
 import type { RunState } from './types/collector';
@@ -58,6 +62,8 @@ export async function commonHandleCommand(
   let result: Elb.PushResult | undefined;
   let onData: unknown;
   let shouldNotify = false;
+  // Destination `on()` deliveries this command started and did not wait for.
+  const deliveries: DestinationDelivery[] = [];
 
   // Open the bounded-recursion cascade tracker for the OUTERMOST top-level
   // command. Nested commands emitted by reacting state callbacks find it
@@ -75,8 +81,11 @@ export async function commonHandleCommand(
     switch (action) {
       case Const.Commands.Config:
         if (isObject(data)) {
+          // `merge: false`: a config array (the `next` route) is replaced,
+          // never unioned with the previous one.
           assign(collector.config, data as Partial<Collector.Config>, {
             shallow: false,
+            merge: false,
           });
           onData = data;
           shouldNotify = true;
@@ -160,7 +169,11 @@ export async function commonHandleCommand(
         break;
 
       case Const.Commands.Run:
-        result = await runCollector(collector, data as RunState);
+        result = await runCollectorDeferred(
+          collector,
+          data as RunState,
+          deliveries,
+        );
         shouldNotify = true;
         break;
 
@@ -194,8 +207,22 @@ export async function commonHandleCommand(
 
     // Single notification + flush point for all state-mutation commands
     if (shouldNotify) {
-      await onApply(collector, action as On.Types, undefined, onData);
-      const flushed = await pushToDestinations(collector);
+      const applied = await onApplyDeferred(
+        collector,
+        action as On.Types,
+        undefined,
+        onData,
+      );
+      deliveries.push(...applied.deliveries);
+      markHeldForDrain(applied.deliveries);
+      // Every destination is flushed now. One whose delivery is still running
+      // is held, so its events wait for that delivery alone; the settle below
+      // pushes them as soon as it is done, without delaying any other
+      // destination.
+      const flushed = mergePushResults(
+        await pushToDestinations(collector),
+        await settleDestinationDeliveries(collector, deliveries),
+      );
       // `run` is the only command that sets `result` before this point (from
       // runCollector). Overwriting it outright would discard that outcome, so a
       // pre-run event that failed on replay would be invisible: its original
@@ -239,7 +266,18 @@ export function prepareEvent(
 }
 
 /**
- * Creates a full event from a partial event.
+ * Collector state an event is floored with: its globals under the event's
+ * own, its user and consent when the event has none.
+ */
+interface EventFloors {
+  globals: WalkerOS.Properties;
+  user: WalkerOS.User;
+  consent: WalkerOS.Consent;
+}
+
+/**
+ * Creates a full event from a partial event, floored with the collector's
+ * current state (globals, user, consent).
  *
  * @param collector The walkerOS collector instance.
  * @param partialEvent The partial event to transform.
@@ -249,6 +287,38 @@ export function createEvent(
   collector: Collector.Instance,
   partialEvent: WalkerOS.PartialEvent,
   ingest?: Ingest,
+): WalkerOS.Event {
+  return buildEvent(collector, partialEvent, ingest, {
+    globals: collector.globals,
+    user: collector.user,
+    consent: collector.consent,
+  });
+}
+
+/**
+ * Completes an event that was already created and then edited by a chain
+ * (`collector.next`): fills only the fields that are missing, never floors
+ * globals, user or consent again, so a step that removed one keeps it
+ * removed.
+ */
+export function completeEvent(
+  collector: Collector.Instance,
+  event: WalkerOS.DeepPartialEvent,
+  ingest?: Ingest,
+): WalkerOS.Event {
+  return buildEvent(collector, prepareEvent(collector, event), ingest, {
+    globals: {},
+    user: {},
+    consent: {},
+  });
+}
+
+/** Shape completion shared by `createEvent` and `completeEvent`. */
+function buildEvent(
+  collector: Collector.Instance,
+  partialEvent: WalkerOS.PartialEvent,
+  ingest: Ingest | undefined,
+  floors: EventFloors,
 ): WalkerOS.Event {
   // The name arrives from client-controlled input, so its declared type is a
   // claim rather than a guarantee. A wrong-typed value must be rejected here:
@@ -274,9 +344,9 @@ export function createEvent(
     context = {},
     globals = {},
     custom = {},
-    user = collector.user,
+    user = floors.user,
     nested = [],
-    consent = collector.consent,
+    consent = floors.consent,
     // A supplied id is preserved: sources and the push wrap mint the span
     // early so pre-enrichment records can carry it.
     id = getSpanId(),
@@ -314,8 +384,8 @@ export function createEvent(
   };
 
   // The collector's globals (config statics plus `walker globals`) are the
-  // floor for every event; values the event carries win per key.
-  const mergedGlobals = assign(collector.globals, globals);
+  // floor for every created event; values the event carries win per key.
+  const mergedGlobals = assign(floors.globals, globals);
 
   return {
     name,
@@ -364,6 +434,24 @@ export function enrichEvent(
 export async function runCollector(
   collector: Collector.Instance,
   state?: RunState,
+): Promise<Elb.PushResult> {
+  const deliveries: DestinationDelivery[] = [];
+  const result = await runCollectorDeferred(collector, state, deliveries);
+  return mergePushResults(
+    result,
+    await settleDestinationDeliveries(collector, deliveries),
+  );
+}
+
+/**
+ * `runCollector` without waiting for the destinations' run re-delivery: their
+ * deliveries are appended to `deliveries` for the caller to settle after its
+ * own flush, so one slow destination handler delays no other destination.
+ */
+export async function runCollectorDeferred(
+  collector: Collector.Instance,
+  state: RunState | undefined,
+  deliveries: DestinationDelivery[],
 ): Promise<Elb.PushResult> {
   // Set the collector to allowed state
   collector.allowed = true;
@@ -433,7 +521,7 @@ export async function runCollector(
   // path (no require-decrement / queueOn flush). The subsequent `onApply(…,
   // 'run', …)` from commonHandleCommand is a lifecycle broadcast and does not
   // collide with these state re-deliveries.
-  await redeliverStateAtRun(collector);
+  const redelivered = await startRunRedelivery(collector);
 
   // Replay events held while the collector was dormant (FIFO, wall-clock
   // order). Splice first so replayed pushes (now allowed) can never
@@ -460,7 +548,11 @@ export async function runCollector(
   }
 
   // Process any queued events now that the collector is allowed
+  // Each destination's run re-delivery runs on its own: a destination still
+  // receiving it is held and its events wait for it; the others go out now.
+  markHeldForDrain(redelivered);
   const result = await pushToDestinations(collector);
+  deliveries.push(...redelivered);
 
   if (replayOk) return result;
 

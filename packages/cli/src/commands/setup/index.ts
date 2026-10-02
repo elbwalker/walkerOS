@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import type { Logger } from '@walkeros/core';
-import { ENV_MARKER_PREFIX } from '@walkeros/core';
+import { ENV_MARKER_PREFIX, SECRET_MARKER_PREFIX } from '@walkeros/core';
 import { loadFlowConfig } from '../../config/loader.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { createSuccessOutput, writeResult } from '../../core/output.js';
@@ -86,7 +86,8 @@ function isLifecycleFn(
  * Mirrors the resolution semantics in `core/flow.ts` (REF_ENV branch):
  * lookup `process.env[NAME]`; fall back to the inline default if present;
  * otherwise leave the marker in place so the package's own validation
- * surfaces a precise error.
+ * surfaces a precise error. Whole-string `$secret` markers
+ * (`__WALKEROS_SECRET:NAME`) resolve here too, see `resolveSecretMarker`.
  */
 function resolveEnvMarkers<T>(value: T): T {
   if (typeof value === 'string') {
@@ -114,6 +115,9 @@ function resolveEnvMarkers<T>(value: T): T {
  * marker is present.
  */
 function resolveEnvMarkersInString(input: string): string {
+  if (input.startsWith(SECRET_MARKER_PREFIX)) {
+    return resolveSecretMarker(input.slice(SECRET_MARKER_PREFIX.length));
+  }
   if (!input.includes(ENV_MARKER_PREFIX)) return input;
   const esc = ENV_MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp(
@@ -127,6 +131,20 @@ function resolveEnvMarkersInString(input: string): string {
     if (defaultValue !== undefined) return defaultValue;
     return match; // leave unresolved; package validation will surface it
   });
+}
+
+/**
+ * Resolve a deferred `$secret` marker (`__WALKEROS_SECRET:NAME`, always a
+ * whole-string value) against `process.env`. Same contract as the bundle's
+ * runtime guard (`__walkerosRequireSecret` in `bundler.ts`): missing and
+ * empty both throw a key-only error, and the value is never logged or echoed.
+ */
+function resolveSecretMarker(name: string): string {
+  const value = process.env[name];
+  if (value === undefined || value === '') {
+    throw new Error(`WalkerOS: required secret "${name}" is not set`);
+  }
+  return value;
 }
 
 /**

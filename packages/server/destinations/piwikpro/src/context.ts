@@ -4,7 +4,11 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import type { Hit, Input, Settings } from './types';
-import { getGrantedConsent, getMappingValue } from '@walkeros/core';
+import {
+  createMappingRoot,
+  getGrantedConsent,
+  getMappingValue,
+} from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 
 /** Auto-fill defaults. pageViewId has none: its default is the guard in resolveContext. */
@@ -61,7 +65,7 @@ export async function resolveContext(input: {
   identified: boolean;
 }): Promise<Hit> {
   const { settings, event, ingest, collector, identified } = input;
-  const root = { ingest: ingest ?? {}, event };
+  const root = createMappingRoot(ingest, event);
 
   const resolve = async (value: Input | undefined) => {
     if (value === undefined || value === false) return undefined;

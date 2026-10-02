@@ -22,6 +22,11 @@ const sidebars: SidebarsConfig = {
             id: 'getting-started/quickstart/index',
           },
           items: [
+            {
+              type: 'ref',
+              id: 'apps/walkerjs',
+              label: 'Script tag + GTM',
+            },
             'getting-started/quickstart/react',
             'getting-started/quickstart/nextjs',
             'getting-started/quickstart/docker',
@@ -65,6 +70,7 @@ const sidebars: SidebarsConfig = {
             id: 'getting-started/flow/index',
           },
           items: [
+            'getting-started/flow/routing',
             'getting-started/flow/step-examples',
             'getting-started/flow/contract',
             'getting-started/flow/validate',
@@ -572,8 +578,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'apps/walkerjs',
             'apps/cli',
-            'apps/docker',
-            'apps/runner',
+            'apps/runtime',
             {
               type: 'category',
               label: 'Core',
@@ -600,6 +605,7 @@ const sidebars: SidebarsConfig = {
       },
       items: [
         'guides/debugging',
+        'guides/gtm',
         'guides/consent/index',
         'guides/session',
         'guides/user-stitching',

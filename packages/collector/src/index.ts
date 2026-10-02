@@ -3,6 +3,8 @@ export * from './types';
 export * from './constants';
 
 export * from './consent';
+export { runCollectorNext } from './collector-next';
+export type { CollectorNextResult } from './collector-next';
 export * from './flow';
 export * from './push';
 export * from './report-error';
@@ -13,16 +15,43 @@ export {
   DEFAULT_BREAKER_COOLDOWN_MS,
 } from './breaker';
 export type { BreakerConfig, StepOutcome } from './breaker';
-export * from './destination';
-export * from './handle';
-export * from './on';
+export {
+  addDestination,
+  createPushResult,
+  destinationInit,
+  destinationPush,
+  initDestinations,
+  mergeEnvironments,
+  pushToDestinations,
+  registerDestination,
+} from './destination';
+export {
+  commonHandleCommand,
+  completeEvent,
+  createEvent,
+  enrichEvent,
+  prepareEvent,
+  runCollector,
+} from './handle';
+export {
+  callDestinationOn,
+  enterCascade,
+  fireCallbacks,
+  isRequireSatisfied,
+  isStateDelivery,
+  isStatePresent,
+  on,
+  onApply,
+  redeliverStateAtRun,
+  setMark,
+  shouldDeliver,
+} from './on';
 export * from './source';
 export {
   runTransformerChain,
+  runTransformerBefore,
   transformerPush,
   transformerInit,
-  walkChain,
-  extractTransformerNextMap,
 } from './transformer';
 export { wrapEnv } from './wrapEnv';
 export { getCacheStore } from './cache';

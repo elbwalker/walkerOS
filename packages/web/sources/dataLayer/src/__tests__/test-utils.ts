@@ -1,11 +1,16 @@
 import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
 import { sourceDataLayer } from '../index';
 import type { Types } from '../types';
 
 // Test utility for creating properly typed mock push function
-export function createMockPush(collectedEvents: WalkerOS.Event[]) {
-  const mockPush = jest.fn();
+export function createMockPush(
+  collectedEvents: WalkerOS.Event[],
+): jest.MockedFunction<Collector.PushFn> {
+  const mockPush = jest.fn<
+    ReturnType<Collector.PushFn>,
+    Parameters<Collector.PushFn>
+  >();
 
   // Handle Collector.PushFn signature: (event: DeepPartialEvent, context?) => Promise<PushResult>
   mockPush.mockImplementation((event: WalkerOS.DeepPartialEvent) => {
@@ -27,10 +32,13 @@ export function createMockPush(collectedEvents: WalkerOS.Event[]) {
       nested: (event.nested || []).filter(
         (n): n is WalkerOS.Entity => n !== undefined,
       ),
-      consent: Object.entries(event.consent || {}).reduce((acc, [key, val]) => {
-        if (val !== undefined) acc[key] = val;
-        return acc;
-      }, {} as WalkerOS.Consent),
+      consent: Object.entries(event.consent || {}).reduce<WalkerOS.Consent>(
+        (acc, [key, val]) => {
+          if (val !== undefined) acc[key] = val;
+          return acc;
+        },
+        {},
+      ),
       custom: event.custom || {},
       trigger: event.trigger || '',
       timestamp: event.timestamp || Date.now(),
@@ -49,12 +57,14 @@ export function createMockPush(collectedEvents: WalkerOS.Event[]) {
     });
   });
 
-  return mockPush as jest.MockedFunction<Collector.PushFn>;
+  return mockPush;
 }
 
-// Type assertion for dataLayer
+// Reads the named dataLayer off window, narrowed to the array the source installs.
 export function getDataLayer(name = 'dataLayer'): unknown[] {
-  return (window as Record<string, unknown>)[name] as unknown[];
+  const layer: unknown = Reflect.get(window, name);
+  if (!Array.isArray(layer)) throw new Error(`window.${name} is not an array`);
+  return layer;
 }
 
 // Helper function to create and initialize a dataLayer source with proper environment.
@@ -72,19 +82,23 @@ export async function createDataLayerSource(
   options: { runOnInit?: boolean } = {},
 ): Promise<Source.Instance<Types>> {
   const { runOnInit = true } = options;
+  const env: Source.Env<Types> = {
+    push: collector.push.bind(collector),
+    command: collector.command.bind(collector),
+    elb: collector.elb,
+    window,
+    logger: createMockLogger(),
+  };
   const source = await sourceDataLayer({
     collector,
     config: config || {},
-    env: {
-      push: collector.push.bind(collector),
-      command: collector.command.bind(collector),
-      elb: collector.elb,
-      window,
-      logger: createMockLogger(),
-    },
+    env,
     id: 'test-datalayer',
     logger: createMockLogger(),
-    withScope: async (_r, _resp, body) => body({} as never),
+    // The dataLayer source does not call withScope; a real scoped env is
+    // supplied only to satisfy the Source.Context contract.
+    withScope: async (_raw, respond, body) =>
+      body({ ...env, ingest: createIngest('test-datalayer'), respond }),
   });
   // Pass 2: lifecycle init — installs the dataLayer.push interceptor and
   // snapshots pendingReplayCount.

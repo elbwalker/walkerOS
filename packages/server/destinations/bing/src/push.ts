@@ -8,13 +8,14 @@ import type {
   Settings,
   UserData,
 } from './types';
-import { getMappingValue, isObject } from '@walkeros/core';
+import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
+import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashUserData } from './hash';
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, env, logger, collector },
+  { config, rule, data, ingest, env, logger, collector },
 ) {
   const {
     accessToken,
@@ -24,6 +25,8 @@ export const push: PushFn = async function (
     user_data,
     dataProvider = 'walkerOS',
     continueOnValidationError,
+    ip,
+    userAgent,
   } = config.settings as Settings;
 
   const eventData = isObject(data) ? data : {};
@@ -44,7 +47,21 @@ export const push: PushFn = async function (
     ? (eventData.userData as UserData)
     : {};
 
+  // Client IP and user agent auto-fill, overridden by any mapped value
+  const root = createMappingRoot(ingest, event);
+  const clientIp = await resolveClient(ip, DEFAULT_IP, root, collector);
+  const clientUserAgent = await resolveClient(
+    userAgent,
+    DEFAULT_USER_AGENT,
+    root,
+    collector,
+  );
+
   const userData: UserData = {
+    ...(clientIp !== undefined ? { clientIpAddress: clientIp } : {}),
+    ...(clientUserAgent !== undefined
+      ? { clientUserAgent: clientUserAgent }
+      : {}),
     ...(isObject(configData) && isObject(configData.userData)
       ? (configData.userData as UserData)
       : {}),
@@ -121,3 +138,21 @@ export const push: PushFn = async function (
     logger.throw(`Bing UET CAPI error: ${JSON.stringify(result)}`);
   }
 };
+
+const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
+const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [
+  'ingest.userAgent',
+  'event.user.userAgent',
+];
+
+/** A client IP or user agent setting resolved to a non-empty string. */
+async function resolveClient(
+  setting: WalkerOSMapping.Value | false | undefined,
+  fallback: WalkerOSMapping.Value,
+  root: WalkerOSMapping.Root,
+  collector: Collector.Instance,
+): Promise<string | undefined> {
+  if (setting === false) return undefined;
+  const value = await getMappingValue(root, setting ?? fallback, { collector });
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}

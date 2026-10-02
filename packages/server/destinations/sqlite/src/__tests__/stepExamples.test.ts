@@ -7,6 +7,7 @@ import type {
   SqliteClient,
   SqliteClientFactory,
 } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 type ExpectedOut = CallRecord | CallRecord[];
@@ -97,3 +98,6 @@ describe('sqlite server destination -- step examples', () => {
     expect(actual).toEqual(expected);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

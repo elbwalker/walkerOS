@@ -1,5 +1,7 @@
 import type { Store } from '@walkeros/core';
 
+export * as env from './env';
+
 /** Cloud Run with ADC, no credentials field needed. */
 export const cloudRunAdc: Store.Config = {
   settings: {

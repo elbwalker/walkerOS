@@ -1,4 +1,5 @@
 import { createTagger } from '../tagger';
+import { untypedInput } from './test-utils';
 import type { WalkerOS, Collector } from '@walkeros/core';
 
 describe('Tagger', () => {
@@ -522,9 +523,11 @@ describe('Tagger', () => {
     });
 
     test('handles null values when passed directly', () => {
-      const result = createTagger()()
-        .data('nullValue', null as unknown as WalkerOS.Property)
-        .get();
+      // null is outside WalkerOS.Property, so hand data() the raw value a JS
+      // caller would through the shared untyped-input escape.
+      const tagger = createTagger()();
+      tagger.data('nullValue', untypedInput('null'));
+      const result = tagger.get();
 
       expect(result).toMatchObject({
         'data-elb-': 'nullValue:undefined',

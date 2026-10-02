@@ -9,7 +9,7 @@ import { createIngest, createMockContext } from '@walkeros/core';
 import type { Ingest } from '@walkeros/core';
 import type { Source } from '@walkeros/core';
 import type { Types } from '../types';
-import { push as pushEnv } from '../examples/env';
+import { moduleMockEnv as pushEnv } from '../examples/env';
 
 describe('CLI setup wiring (sqs)', () => {
   beforeEach(() => {

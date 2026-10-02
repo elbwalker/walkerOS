@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import esbuild from 'esbuild';
 import { builtinModules } from 'module';
 import path from 'path';
@@ -20,16 +19,12 @@ import {
   validateComponentNames,
   validateReference,
   validateStoreReferences,
-} from './structural-validators.js';
+} from '@walkeros/core/dev';
 
-// Re-export the structural validators so existing import sites (and the public
-// package entry) keep resolving them from `./bundler`. The implementations live
-// in `./structural-validators` so they can run without loading esbuild.
-export {
-  validateComponentNames,
-  validateReference,
-  validateStoreReferences,
-} from './structural-validators.js';
+// Re-export the structural validators so existing import sites keep resolving
+// them from `./bundler`. The implementations live in `@walkeros/core/dev` so
+// they can run without loading esbuild.
+export { validateComponentNames, validateReference, validateStoreReferences };
 
 import {
   parsePackageSpec,
@@ -125,11 +120,16 @@ import {
   downloadPackagesWithResolution,
   loadNpmConfigForPacote,
 } from '../../core/package-manager.js';
-import { traceAndCopy, assertDepsTraced } from './nft-trace.js';
+import {
+  traceAndCopy,
+  assertDepsTraced,
+  collectImportedPackages,
+} from './nft-trace.js';
 import { assertConsumerDepsSatisfied } from './assert-consumer-deps.js';
 import type { Logger } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 import { getTmpPath } from '../../core/tmp.js';
+import { tmpRunDir } from '../../core/tmp-names.js';
 import { toFileImportSpecifier } from '../../core/import-specifier.js';
 import {
   isBuildCached,
@@ -140,6 +140,9 @@ import {
   ensureCodeOnDisk,
 } from '../../core/build-cache.js';
 import type { CodeCacheKeyInputs } from '../../core/build-cache.js';
+import { assertWindowCollector } from '../../config/window-collector.js';
+import { hashInstalledDir, releaseDigest } from '../../core/content-digest.js';
+import { VERSION } from '../../version.js';
 
 export interface BundleStats {
   totalSize: number;
@@ -196,7 +199,7 @@ export async function copyIncludes(
  * NOT maintain a `package-lock.json` for step packages in the zero-setup
  * design, so pacote's resolution is the authoritative version signal.
  */
-function generateCacheKeyContent(
+export function generateCacheKeyContent(
   flowSettings: Flow,
   buildOptions: BuildOptions,
   versionsHash: string,
@@ -219,6 +222,9 @@ function generateCacheKeyContent(
     // version/toolchain hash, not this field.
     emittedFormat: resolveEmittedFormat(buildOptions),
     versionsHash,
+    // Generated code changes with the CLI, so a CLI upgrade never serves a
+    // build made by the previous version.
+    toolchain: VERSION,
   };
   return JSON.stringify(configForCache);
 }
@@ -234,18 +240,52 @@ function resolveEmittedFormat(buildOptions: BuildOptions): 'iife' | 'esm' {
   return buildOptions.platform === 'browser' ? 'iife' : 'esm';
 }
 
+/**
+ * Provenance a `bundle` run bakes onto the collector. Push and simulate pass
+ * none, so their events keep the runtime release.
+ */
+export interface BundleProvenance {
+  /** Keys this flow's entry in `event.source.release`. */
+  flowName: string;
+  /** Explicit release id (`--release`). Beats an authored one. */
+  release?: string;
+  /** Config input of the default release, from `loadBundleConfig`. */
+  configDigest: string;
+}
+
+/**
+ * The resolved top-level set as sorted `name@version` lines. A local package
+ * has no version, so it is named by the content of its installed copy: a
+ * rebuilt `path` package gives a new line.
+ */
+export async function resolvedVersionLines(
+  topLevel: Map<string, { version: string }>,
+  packagePaths: Map<string, string>,
+): Promise<string[]> {
+  const lines: string[] = [];
+  for (const [name, pkg] of [...topLevel.entries()].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    const installed = packagePaths.get(name);
+    lines.push(
+      pkg.version === 'local' && installed
+        ? `${name}@local:${await hashInstalledDir(installed)}`
+        : `${name}@${pkg.version}`,
+    );
+  }
+  return lines;
+}
+
 export async function bundleCore(
   flowSettings: Flow,
   buildOptions: BuildOptions,
   logger: Logger.Instance,
   showStats = false,
+  provenance?: BundleProvenance,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
 
-  // Per-build isolation: unique working dir, shared cache
-  const buildId = crypto.randomUUID();
-  const TEMP_DIR =
-    buildOptions.tempDir || getTmpPath(undefined, `walkeros-build-${buildId}`);
+  // Shared cache root
   const CACHE_DIR = buildOptions.tempDir || getTmpPath();
 
   // Resolve npm config (registry + scope overrides + auth tokens) from .npmrc
@@ -271,6 +311,9 @@ export async function bundleCore(
   await fs.remove(path.join(outputDirAbs, 'package.json'));
   await fs.remove(path.join(outputDirAbs, 'package-lock.json'));
 
+  // Per-build isolation: a unique working dir, created right before the
+  // `try` whose `finally` removes it.
+  const TEMP_DIR = buildOptions.tempDir || (await tmpRunDir('build'));
   try {
     // Step 1: Ensure temporary directory exists
     await fs.ensureDir(TEMP_DIR);
@@ -380,18 +423,33 @@ export async function bundleCore(
     // produces a new hash, which produces a new cache key, which forces a
     // fresh trace + esbuild. This is the right invalidation signal because
     // pacote (not the user's package-lock.json) is the install layer.
-    const sortedVersions = [...resolutionResult.topLevel.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([name, p]) => `${name}@${p.version}`);
+    const sortedVersions = await resolvedVersionLines(
+      resolutionResult.topLevel,
+      packagePaths,
+    );
     const versionsHash = await getHashServer(sortedVersions.join('\n'), 12);
-    // Step packages externalized by esbuild and asserted by nft trace. Use
-    // the packages the user (or auto-add) actually declared, not pacote's
-    // full top-level set: peer dependencies pacote installs (e.g. zod for
-    // schema validation) are not necessarily imported by the runtime
-    // bundle. Tree-shaking drops the bare import, nft never sees it, and
-    // the cross-check would otherwise false-positive. The intent that
-    // matters here is "what step packages does the flow declare".
-    const expectedTopLevelPackages = Object.keys(buildOptions.packages).filter(
+
+    // Bake provenance before the L1 check and codegen, so the release sits
+    // in both the cache key and the artifact.
+    if (provenance) {
+      applyCollectorProvenance(
+        flowSettings,
+        provenance.flowName,
+        provenance.release,
+        () =>
+          releaseDigest({
+            configDigest: provenance.configDigest,
+            versions: sortedVersions,
+            toolchain: VERSION,
+          }),
+      );
+    }
+    // Step packages externalized by esbuild. Use the packages the user (or
+    // auto-add) actually declared, not pacote's full top-level set: peer
+    // dependencies pacote installs (e.g. zod for schema validation) are
+    // inlined unless declared. The nft cross-check narrows this further to
+    // the declared packages the bundle actually imports.
+    const declaredPackages = Object.keys(buildOptions.packages).filter(
       (name) => !name.startsWith('.') && !name.startsWith('/'),
     );
 
@@ -413,20 +471,14 @@ export async function bundleCore(
           await fs.ensureDir(path.dirname(outputPath));
           await fs.writeFile(outputPath, cachedBuild);
 
-          if (buildOptions.platform === 'node') {
-            // Server path: trace from the cached bundle, copy files into
-            // `outDir/node_modules/`, write the informational sidecar.
-            await runNftServerPath(
-              outputPath,
-              flowSettings,
-              buildOptions,
-              TEMP_DIR,
-              expectedTopLevelPackages,
-              logger,
-            );
-          }
-          // Web flows don't ship a sidecar node_modules — esbuild emits a
-          // self-contained IIFE.
+          await finishArtifact(
+            outputPath,
+            flowSettings,
+            buildOptions,
+            TEMP_DIR,
+            declaredPackages,
+            logger,
+          );
 
           const stats = await fs.stat(outputPath);
           const sizeKB = (stats.size / 1024).toFixed(1);
@@ -502,6 +554,7 @@ export async function bundleCore(
       // Keeping it here only over-keys the code cache, which is harmless.
       windowElb: buildOptions.windowElb,
       versionsHash,
+      toolchain: VERSION,
     };
 
     // Check if we have a cached compilation of this exact code entry
@@ -531,7 +584,7 @@ export async function bundleCore(
         TEMP_DIR,
         packagePaths,
         logger,
-        expectedTopLevelPackages,
+        declaredPackages,
         devPackages,
       );
 
@@ -642,10 +695,7 @@ export async function bundleCore(
         // them after stage 1 carefully kept them external. nft traces the
         // bare imports from the final bundle and copies code from
         // `TEMP_DIR/node_modules/` to `dist/node_modules/`.
-        stage2Options.external = [
-          ...getNodeExternals(),
-          ...expectedTopLevelPackages,
-        ];
+        stage2Options.external = [...getNodeExternals(), ...declaredPackages];
         stage2Options.banner = {
           js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
         };
@@ -677,23 +727,14 @@ export async function bundleCore(
       logger.debug('Build cached for future use');
     }
 
-    if (buildOptions.platform === 'node') {
-      // Server path: trace the just-emitted bundle, copy used files into
-      // `outDir/node_modules/`, write an informational sidecar package.json.
-      // This emits the sibling node_modules/ that every server host (deploy
-      // container, simulate-server) resolves the external @walkeros/* from.
-      // Load-bearing, do not remove.
-      await runNftServerPath(
-        outputPath,
-        flowSettings,
-        buildOptions,
-        TEMP_DIR,
-        expectedTopLevelPackages,
-        logger,
-      );
-    }
-    // Web flows don't ship a sidecar node_modules — esbuild emits a
-    // self-contained IIFE.
+    await finishArtifact(
+      outputPath,
+      flowSettings,
+      buildOptions,
+      TEMP_DIR,
+      declaredPackages,
+      logger,
+    );
 
     // Collect stats if requested
     let stats: BundleStats | undefined;
@@ -706,26 +747,73 @@ export async function bundleCore(
       );
     }
 
-    // Copy included folders to output directory
-    if (buildOptions.include && buildOptions.include.length > 0) {
-      const outputDir = path.dirname(outputPath);
-      await copyIncludes(
-        buildOptions.include,
-        buildOptions.configDir || process.cwd(),
-        outputDir,
-        logger,
-      );
-    }
-
     return stats;
   } catch (error) {
     throw error;
   } finally {
-    // Clean up per-build directory (contains entry.js with potential secrets)
+    // Clean up per-build directory (contains entry.js with potential secrets).
+    // Awaited: a process that exits right after the build must not leave it.
     if (!buildOptions.tempDir) {
-      fs.remove(TEMP_DIR).catch(() => {});
+      await fs.remove(TEMP_DIR).catch(() => {});
     }
   }
+}
+
+/**
+ * Whether a build ships the flow's `include` folders. Only a server artifact
+ * reads them at runtime; a browser bundle is served on its own. Shared by the
+ * bundler and the manifest build gate, so both agree on when `include` reads
+ * the local disk.
+ */
+export function includeApplies(buildOptions: {
+  platform: 'node' | 'browser';
+}): boolean {
+  return buildOptions.platform !== 'browser';
+}
+
+/**
+ * The steps every build runs once its output file is written, whether it came
+ * from the cache or a fresh esbuild run, so the two paths cannot drift.
+ */
+async function finishArtifact(
+  outputPath: string,
+  flowSettings: Flow,
+  buildOptions: BuildOptions,
+  tempDir: string,
+  declaredPackages: string[],
+  logger: Logger.Instance,
+): Promise<void> {
+  if (buildOptions.platform === 'node') {
+    // Server path: trace the emitted bundle, copy used files into
+    // `outDir/node_modules/`, write an informational sidecar package.json.
+    // This emits the sibling node_modules/ that every server host (deploy
+    // container, simulate-server) resolves the external @walkeros/* from.
+    // Load-bearing, do not remove.
+    await runNftServerPath(
+      outputPath,
+      flowSettings,
+      buildOptions,
+      tempDir,
+      declaredPackages,
+      logger,
+    );
+  }
+  // Web flows don't ship a sidecar node_modules: esbuild emits a
+  // self-contained IIFE.
+
+  if (!buildOptions.include || buildOptions.include.length === 0) return;
+  if (!includeApplies(buildOptions)) {
+    logger.info(
+      'include is ignored for web builds: a browser bundle cannot read local folders.',
+    );
+    return;
+  }
+  await copyIncludes(
+    buildOptions.include,
+    buildOptions.configDir || process.cwd(),
+    path.dirname(outputPath),
+    logger,
+  );
 }
 
 async function collectBundleStats(
@@ -893,16 +981,17 @@ export function getNodeExternals(): string[] {
  * see the same `node_modules/` tree. The bundle at `outputPath` lives
  * outside `tempDir`, so we stage a copy inside `tempDir` to give nft an
  * entry whose relative path under `base` does not escape via `..`.
- * `expectedPackages` is the pacote-resolved top-level set, used for the
- * post-trace cross-check that catches dynamic-require regressions and
- * hoisted-symlink mistakes.
+ * `declaredPackages` are the non-path `bundle.packages` keys. Those the
+ * bundle imports must reach the trace (the cross-check catches
+ * dynamic-require regressions and hoisted-symlink mistakes); those nothing
+ * imports or traces get a warning.
  */
 async function runNftServerPath(
   outputPath: string,
   flowSettings: Flow,
   buildOptions: BuildOptions,
   tempDir: string,
-  expectedPackages: string[],
+  declaredPackages: string[],
   logger: Logger.Instance,
 ): Promise<void> {
   const outDir = path.dirname(outputPath);
@@ -945,16 +1034,20 @@ async function runNftServerPath(
   const trimmedFileList = result.fileList.filter((f) => f !== stagedRel);
   await fs.remove(path.join(outDir, stagedRel)).catch(() => {});
 
-  // Cross-check: every package pacote resolved at the top level must appear
-  // in the trace output. Catches hoisted-symlink misses, nft per-release
+  // Cross-check: every declared package the bundle imports must appear in
+  // the trace output. Catches hoisted-symlink misses, nft per-release
   // regressions, and dynamic-require deps nft cannot statically follow.
-  // The check is always meaningful now (the expected set comes from the
-  // install layer, not user package.json), so there is no opt-out flag.
-  if (expectedPackages.length > 0) {
-    assertDepsTraced({
+  if (declaredPackages.length > 0) {
+    const unused = assertDepsTraced({
       fileList: trimmedFileList,
-      expectedPackages,
+      declaredPackages,
+      importedPackages: await collectImportedPackages(outputPath),
     });
+    for (const name of unused) {
+      logger.warn(
+        `Package ${name} is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`,
+      );
+    }
   }
 
   const stepPackages = collectAllStepPackages(flowSettings);
@@ -1016,6 +1109,11 @@ export function detectNamedImports(
 interface ImportGenerationResult {
   importStatements: string[];
   devExportEntries: string[];
+  // `'<pkg>': ["exportA", "exportB"]` per package declaring
+  // `walkerOS.exports`, read from the copy being bundled. Emitted beside
+  // `__devExports` so simulate can tell which export a step's examples
+  // belong to.
+  packageExportEntries: string[];
   // Packages that received a lazy `/dev` registry entry. Exposed so a later
   // browser-build step can externalize the same `<pkg>/dev` specifiers without
   // recomputing the set (preventing drift between the registry and externals).
@@ -1118,8 +1216,46 @@ async function generateImportStatements(
   const devExportEntries = devPackages.map(
     (packageName) => `'${packageName}': () => import('${packageName}/dev')`,
   );
+  const packageExports = withDev
+    ? await computePackageExports(usedPackages, packagePaths)
+    : {};
+  const packageExportEntries = Object.entries(packageExports).map(
+    ([packageName, exportNames]) =>
+      `'${packageName}': ${JSON.stringify(exportNames)}`,
+  );
 
-  return { importStatements, devExportEntries, devPackages };
+  return {
+    importStatements,
+    devExportEntries,
+    packageExportEntries,
+    devPackages,
+  };
+}
+
+/**
+ * Reads the export names each package declares in its package.json
+ * `walkerOS.exports`, from the copy being bundled (`packagePaths`).
+ * Packages without the field are left out.
+ */
+export async function computePackageExports(
+  usedPackages: Iterable<string>,
+  packagePaths: Map<string, string>,
+): Promise<Record<string, string[]>> {
+  const result: Record<string, string[]> = {};
+  for (const packageName of usedPackages) {
+    const localPath = packagePaths.get(packageName);
+    if (!localPath) continue;
+
+    try {
+      const pkgJson = await fs.readJSON(path.join(localPath, 'package.json'));
+      const exports = pkgJson?.walkerOS?.exports;
+      if (exports && typeof exports === 'object' && !Array.isArray(exports))
+        result[packageName] = Object.keys(exports);
+    } catch {
+      // Package doesn't have a readable package.json, skip gracefully
+    }
+  }
+  return result;
 }
 
 /**
@@ -1284,17 +1420,21 @@ export async function createEntryPoint(
     buildOptions.withDev !== undefined
       ? buildOptions.withDev === true
       : buildOptions.skipWrapper === true;
-  const { importStatements, devExportEntries, devPackages } =
-    await generateImportStatements(
-      buildOptions.packages,
-      destinationPackages,
-      sourcePackages,
-      transformerPackages,
-      storePackages,
-      namedImports,
-      packagePaths,
-      withDev,
-    );
+  const {
+    importStatements,
+    devExportEntries,
+    packageExportEntries,
+    devPackages,
+  } = await generateImportStatements(
+    buildOptions.packages,
+    destinationPackages,
+    sourcePackages,
+    transformerPackages,
+    storePackages,
+    namedImports,
+    packagePaths,
+    withDev,
+  );
 
   const importsCode = importStatements.join('\n');
   const hasFlow =
@@ -1332,9 +1472,17 @@ export async function createEntryPoint(
     devExportEntries.length > 0
       ? `\nexport const __devExports = {\n  ${devExportEntries.join(',\n  ')},\n};`
       : '';
+  // Declared exports per package, beside the registry (same withDev gate).
+  // Always emitted with the dev surface, `{}` included, so a bundle without
+  // it is reliably one built before it existed.
+  const packageExportsBlock = withDev
+    ? packageExportEntries.length > 0
+      ? `\nexport const __packageExports = {\n  ${packageExportEntries.join(',\n  ')},\n};`
+      : '\nexport const __packageExports = {};'
+    : '';
 
   // Return ESM module (imports + wireConfig + startFlow re-export + optional devExports)
-  const fullModule = wireConfigModule + devExportsBlock;
+  const fullModule = wireConfigModule + devExportsBlock + packageExportsBlock;
   const codeEntry = importsCode
     ? `${importsCode}\n\n${fullModule}`
     : fullModule;
@@ -1409,23 +1557,20 @@ export function buildDataPayload(flowSettings: Flow): Record<string, unknown> {
  * Bake flow-config provenance onto the collector before codegen.
  *
  * The flow name keys this flow's entry in `event.source.release`; the release
- * value stamps that key. Both are set only when absent, so a flow (or an
- * upstream caller) that already authored `collector.name`/`collector.release`
- * keeps its own values. The release falls back to an explicit id, then to a
- * bundle-time timestamp so a standalone bundle still carries a distinguishable
- * release instead of the runtime `__VERSION__` default.
- *
- * `now` is injectable so tests assert a fixed value; production uses wall time.
+ * value stamps that key. An authored `collector.name` is kept. The release is
+ * the explicit id when given, then an authored `collector.release`, then
+ * `fallback()`, so a standalone bundle carries a release instead of the
+ * runtime `__VERSION__` default.
  */
 export function applyCollectorProvenance(
   flowSettings: Flow,
   flowName: string,
-  release?: string,
-  now: () => string = () => new Date().toISOString(),
+  release: string | undefined,
+  fallback: () => string,
 ): void {
   const collector = flowSettings.collector ?? {};
   collector.name ??= flowName;
-  collector.release ??= release ?? now();
+  collector.release = release ?? collector.release ?? fallback();
   flowSettings.collector = collector;
 }
 
@@ -1795,7 +1940,7 @@ export function generateWebEntry(
   const assignments: string[] = [];
   if (options.windowCollector) {
     assignments.push(
-      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
+      `  if (typeof window !== 'undefined') window['${assertWindowCollector(options.windowCollector)}'] = collector;`,
     );
   }
   // windowElb is intentionally NOT assigned here: the browser source is the
@@ -1905,7 +2050,7 @@ export function generateWrapEntry(
   const assignments: string[] = [];
   if (options.windowCollector) {
     assignments.push(
-      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
+      `  if (typeof window !== 'undefined') window['${assertWindowCollector(options.windowCollector)}'] = collector;`,
     );
   }
   // windowElb is intentionally NOT assigned here (see generateWebEntry): the

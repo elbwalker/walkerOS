@@ -11,17 +11,19 @@ import type { Flow } from '@walkeros/core';
  *   - Mapped events (fan-out):   `out: [['return', e1], ['return', e2], ...]`
  *   - Dropped (ignore / no en):  `out: [['return', false]]`
  *
- * Examples set `_p` (page load id), `_s` (hit sequence) and `sid` (becomes
- * `event.timestamp` in ms via `sid * 1000`) so the assertions are
- * deterministic. The synthetic walkerOS event shape mirrors what
+ * Examples set `_p` (page load id), `_s` (hit sequence) and `sid` so the
+ * assertions are deterministic. `event.timestamp` is the receive time
+ * (`Date.now()`), so the examples show a fixed value and the examples test
+ * compares without it. The synthetic walkerOS event shape mirrors what
  * `mapHitToEvents` produces in `map.ts`:
  *   - `id` derived from `tid`, `cid`, `_p`, `_s` and the event's position in
  *     the hit: 16 lowercase hex chars, unique per event, identical when the
  *     same hit is delivered twice (see `id.ts`)
  *   - `entity` + `action` derived from rule.name's first/rest words
- *   - `user.{id,device,session}` from `uid/cid/sid`
- *   - `source: { type: 'ga4', platform?, pageLoadId, hitSequence }` from
- *     `p`, `_p` and `_s`
+ *   - `user.{id,device,session,language,screenSize}` from
+ *     `uid/cid/sid/ul/sr`
+ *   - `source: { type: 'ga4', url?, referrer?, platform?, pageLoadId,
+ *     hitSequence }` from `dl`, `dr`, `p`, `_p` and `_s`
  *   - `consent` from `gcs` (`G100` → all false, `G111` → all true)
  *   - `timing` from event `_et` (defaults to 0 if absent)
  *   - `trigger: 'ga4'` (hard-coded in v1)
@@ -30,7 +32,7 @@ import type { Flow } from '@walkeros/core';
 
 // --- helpers (typed, no casts) -----------------------------------------------
 
-const SID = '1700000000'; // → timestamp 1700000000000
+const SID = '1700000000';
 
 function ga4Event(
   hitSequence: string,
@@ -43,7 +45,6 @@ function ga4Event(
     timing: 0,
     trigger: 'ga4',
     user: { device: 'cid-1', session: SID },
-    globals: {},
     source: { type: 'ga4', pageLoadId: 'p1', hitSequence },
     consent: {},
     ...overrides,
@@ -69,7 +70,7 @@ export const pageView: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('1', 'e696fb64aa2977fd', {
+      ga4Event('1', '619920d96220c8f5', {
         name: 'page view',
         entity: 'page',
         action: 'view',
@@ -77,6 +78,13 @@ export const pageView: Flow.StepExample = {
           id: 'https://shop.example.com/products/sku-123',
           title: 'Trail Runner Pro',
           referrer: 'https://shop.example.com/',
+        },
+        source: {
+          type: 'ga4',
+          url: 'https://shop.example.com/products/sku-123',
+          referrer: 'https://shop.example.com/',
+          pageLoadId: 'p1',
+          hitSequence: '1',
         },
       }),
     ],
@@ -103,7 +111,7 @@ export const purchase: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('2', '502e44f9d66b4f50', {
+      ga4Event('2', '07590930f34326b6', {
         name: 'order complete',
         entity: 'order',
         action: 'complete',
@@ -134,7 +142,7 @@ export const viewItem: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('3', '32d273af6128083f', {
+      ga4Event('3', 'a6ef03f16d295aef', {
         name: 'product view',
         entity: 'product',
         action: 'view',
@@ -158,7 +166,7 @@ export const addToCart: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('4', 'a6836917c43be032', {
+      ga4Event('4', '21854a0390595250', {
         name: 'product add',
         entity: 'product',
         action: 'add',
@@ -183,7 +191,7 @@ export const beginCheckout: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('5', 'e9a2d80f15837449', {
+      ga4Event('5', '04a3521d6259b559', {
         name: 'order start',
         entity: 'order',
         action: 'start',
@@ -211,7 +219,7 @@ export const scroll: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('6', '68d641a4df21861c', {
+      ga4Event('6', 'f4211610dcdb861a', {
         name: 'page scroll',
         entity: 'page',
         action: 'scroll',
@@ -235,7 +243,7 @@ export const search: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('7', 'f7293057f63a752b', {
+      ga4Event('7', '697710c0b9b403d3', {
         name: 'search submit',
         entity: 'search',
         action: 'submit',
@@ -259,7 +267,7 @@ export const login: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('8', '073e353121b1d68e', {
+      ga4Event('8', 'e6aa65225205bcf4', {
         name: 'session login',
         entity: 'session',
         action: 'login',
@@ -283,7 +291,7 @@ export const customEvent: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('9', '09f644269b418d05', {
+      ga4Event('9', 'd7dff1eae9d981dd', {
         name: 'ga4 track',
         entity: 'ga4',
         action: 'track',
@@ -308,11 +316,17 @@ export const consentDenied: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('10', '8edc3aea57048d5d', {
+      ga4Event('10', 'eeb7b2eaa3880daf', {
         name: 'page view',
         entity: 'page',
         action: 'view',
         data: { id: 'https://x', title: 'X' },
+        source: {
+          type: 'ga4',
+          url: 'https://x',
+          pageLoadId: 'p1',
+          hitSequence: '10',
+        },
         consent: { marketing: false, analytics: false },
       }),
     ],
@@ -350,7 +364,7 @@ export const batchPost: Flow.StepExample = {
   out: [
     [
       'return',
-      ga4Event('12', '8ab72f078097141f', {
+      ga4Event('12', 'fa7fa5554916cbb5', {
         name: 'product add',
         entity: 'product',
         action: 'add',
@@ -359,7 +373,7 @@ export const batchPost: Flow.StepExample = {
     ],
     [
       'return',
-      ga4Event('12', '8aba3307809950c2', {
+      ga4Event('12', 'fa82615549188e00', {
         name: 'product add',
         entity: 'product',
         action: 'add',

@@ -1,6 +1,7 @@
 import { startFlow } from '@walkeros/collector';
-import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
+import type { Collector, Source, Transformer, WalkerOS } from '@walkeros/core';
 import { sourceSession } from '../index';
+import type { Settings } from '../types';
 
 // Back web-core storage with an in-memory map so the session source's
 // storageRead/storageWrite genuinely persist between consent grants. This is
@@ -252,5 +253,346 @@ describe('Session Source: ungated path respects run', () => {
     expect(sessionStartCount(captured)).toBe(1);
     // ...while identity still arrives via the command exit, untouched.
     expect(collector.user.session).toBeDefined();
+  });
+
+  test('a next chain on a consent-gated session source runs for session start', async () => {
+    const seen: string[] = [];
+    const captured: WalkerOS.Event[] = [];
+
+    const { collector } = await startFlow({
+      consent: { functional: true },
+      sources: {
+        session: {
+          code: sourceSession,
+          config: { settings: { storage: true, consent: 'functional' } },
+          next: 'tap',
+        },
+      },
+      transformers: {
+        tap: {
+          code: async (context): Promise<Transformer.Instance> => ({
+            type: 'tap',
+            config: context.config,
+            push: async (event) => {
+              seen.push(event.name ?? '');
+              return { event };
+            },
+          }),
+        },
+      },
+      destinations: {
+        capture: {
+          code: {
+            type: 'capture',
+            config: {},
+            push: (event: WalkerOS.Event): void => {
+              captured.push(event);
+            },
+          },
+        },
+      },
+    });
+
+    for (let i = 0; i < 50; i++) await Promise.resolve();
+
+    // The consent rule emits through the source's own pipeline too.
+    expect(seen).toContain('session start');
+    expect(sessionStartCount(captured)).toBe(1);
+    expect(collector.user.session).toBeDefined();
+  });
+});
+
+describe('Session Source: one detection per page load', () => {
+  // A single-page app calls `walker run` on every route change. The landing
+  // condition (navigation type, referrer, marketing parameters) belongs to the
+  // page load, so later runs must not detect a new session from it again.
+  const EXTERNAL = {
+    url: 'https://shop.example/',
+    referrer: 'https://search.example/',
+  };
+
+  interface Capture {
+    events: WalkerOS.Event[];
+    onTypes: string[];
+  }
+
+  const settle = async (): Promise<void> => {
+    // Microtask-only: fake timers are global in this package.
+    for (let i = 0; i < 50; i++) await Promise.resolve();
+  };
+
+  async function startSpaFlow(
+    settings: Settings,
+    options: { run?: boolean; pageview?: boolean } = {},
+  ): Promise<{ collector: Collector.Instance; capture: Capture }> {
+    const capture: Capture = { events: [], onTypes: [] };
+
+    // Stands in for the browser source as walker.js wires it: it waits for
+    // the session command (`require: ['session']`) and fires a page view on
+    // every run.
+    const pageviewSource: Source.Init = async (context) => ({
+      type: 'pageview',
+      config: context.config,
+      push: context.env.elb,
+      on: (type) => {
+        if (type === 'run') context.env.push({ name: 'page view' });
+      },
+    });
+
+    const { collector } = await startFlow({
+      run: options.run ?? true,
+      sources: {
+        session: { code: sourceSession, config: { settings } },
+        ...(options.pageview
+          ? {
+              pageview: {
+                code: pageviewSource,
+                config: { require: ['session'] },
+              },
+            }
+          : {}),
+      },
+      destinations: {
+        capture: {
+          code: {
+            type: 'capture',
+            config: {},
+            init: () => {},
+            push: (event: WalkerOS.Event): void => {
+              capture.events.push(event);
+            },
+            on: (type) => {
+              capture.onTypes.push(type);
+            },
+          },
+        },
+      },
+    });
+
+    await settle();
+    return { collector, capture };
+  }
+
+  async function runTimes(
+    collector: Collector.Instance,
+    times: number,
+  ): Promise<void> {
+    for (let i = 0; i < times; i++) await collector.command('run');
+    await settle();
+  }
+
+  function storedSession(): Collector.SessionData {
+    return JSON.parse(webCore.__store.get('elbSessionId') ?? '{}');
+  }
+
+  beforeEach(() => {
+    webCore.__store.clear();
+    window.history.replaceState({}, '', '/');
+    Object.defineProperty(document, 'referrer', {
+      value: '',
+      configurable: true,
+    });
+
+    Object.defineProperty(window, 'performance', {
+      value: {
+        getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+      },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  test.each<[string, Settings, number]>([
+    ['external referrer', EXTERNAL, 1],
+    ['direct landing (empty referrer)', { url: EXTERNAL.url, referrer: '' }, 1],
+    [
+      'internal referrer',
+      { url: EXTERNAL.url, referrer: 'https://shop.example/cart' },
+      0,
+    ],
+  ])('window, %s, three runs', async (_, settings, count) => {
+    const { collector, capture } = await startSpaFlow(settings);
+
+    await runTimes(collector, 2);
+
+    expect(sessionStartCount(capture.events)).toBe(count);
+  });
+
+  test('window, UTM landing then a route without parameters: 1 session start', async () => {
+    window.history.replaceState({}, '', '/?utm_source=newsletter');
+    const { collector, capture } = await startSpaFlow({});
+
+    window.history.replaceState({}, '', '/products');
+    await runTimes(collector, 2);
+
+    expect(sessionStartCount(capture.events)).toBe(1);
+  });
+
+  test.each(['reload', 'back_forward'])(
+    'window, %s navigation: no session start',
+    async (type) => {
+      window.performance.getEntriesByType = jest
+        .fn()
+        .mockReturnValue([{ type }]);
+      const { collector, capture } = await startSpaFlow(EXTERNAL);
+
+      await runTimes(collector, 2);
+
+      expect(sessionStartCount(capture.events)).toBe(0);
+    },
+  );
+
+  test('two collectors on one page: one session start each', async () => {
+    const first = await startSpaFlow(EXTERNAL);
+    const second = await startSpaFlow(EXTERNAL);
+
+    await runTimes(first.collector, 2);
+    await runTimes(second.collector, 2);
+
+    expect(sessionStartCount(first.capture.events)).toBe(1);
+    expect(sessionStartCount(second.capture.events)).toBe(1);
+  });
+
+  test('run:false: the session start arrives at the first run, once', async () => {
+    const { collector, capture } = await startSpaFlow(EXTERNAL, {
+      run: false,
+    });
+    expect(sessionStartCount(capture.events)).toBe(0);
+
+    await runTimes(collector, 1);
+    expect(sessionStartCount(capture.events)).toBe(1);
+
+    await runTimes(collector, 1);
+    expect(sessionStartCount(capture.events)).toBe(1);
+  });
+
+  test('every run still sends the session command, the first one included', async () => {
+    const { collector, capture } = await startSpaFlow(EXTERNAL);
+    expect(capture.onTypes.filter((type) => type === 'session')).toHaveLength(
+      1,
+    );
+
+    await runTimes(collector, 2);
+
+    expect(capture.onTypes.filter((type) => type === 'session')).toHaveLength(
+      3,
+    );
+  });
+
+  test('storage, URL keeps its UTMs across runs: 1 session start, runs counted', async () => {
+    const { collector, capture } = await startSpaFlow({
+      storage: true,
+      url: 'https://shop.example/?utm_source=newsletter',
+    });
+    const first = storedSession();
+
+    await runTimes(collector, 2);
+
+    expect(sessionStartCount(capture.events)).toBe(1);
+    expect(storedSession()).toMatchObject({ id: first.id, runs: 3 });
+  });
+
+  test('storage, session expired between runs: a new session start', async () => {
+    const { collector, capture } = await startSpaFlow({
+      storage: true,
+      url: 'https://shop.example/?utm_source=newsletter',
+    });
+    const first = storedSession();
+
+    jest.setSystemTime(Date.now() + 31 * 60000);
+    await runTimes(collector, 1);
+
+    expect(sessionStartCount(capture.events)).toBe(2);
+    expect(storedSession().id).not.toBe(first.id);
+    expect(collector.user.session).toBe(storedSession().id);
+  });
+
+  test.each<[string, boolean[], number]>([
+    ['denied twice', [false, false], 1],
+    ['granted twice', [true, true], 1],
+    ['denied then granted', [false, true], 2],
+  ])('consent-gated, UTM landing, %s', async (_, grants, count) => {
+    const { collector, capture } = await startSpaFlow({
+      url: 'https://shop.example/?utm_source=newsletter',
+      referrer: EXTERNAL.referrer,
+      consent: 'marketing',
+    });
+
+    for (const marketing of grants)
+      await collector.command('consent', { marketing });
+    await settle();
+
+    expect(sessionStartCount(capture.events)).toBe(count);
+  });
+
+  test('consent-gated, denied then granted: the storage start keeps its UTMs', async () => {
+    const { collector, capture } = await startSpaFlow({
+      url: 'https://shop.example/?utm_source=newsletter',
+      consent: 'marketing',
+    });
+
+    await collector.command('consent', { marketing: false });
+    await collector.command('consent', { marketing: true });
+    await settle();
+
+    const starts = capture.events.filter(
+      (event) => event.name === 'session start',
+    );
+    expect(starts[1].data).toMatchObject({
+      storage: true,
+      marketing: true,
+      source: 'newsletter',
+    });
+  });
+
+  test('session start carries the session source and the page context', async () => {
+    window.history.replaceState({}, '', '/?utm_source=newsletter');
+    Object.defineProperty(document, 'referrer', {
+      value: 'https://search.example/',
+      configurable: true,
+    });
+
+    const { capture } = await startSpaFlow({});
+
+    const [start] = capture.events.filter(
+      (event) => event.name === 'session start',
+    );
+    // The collector adds its run stamps; the rest is the source's own.
+    const { count, release, trace, ...stamped } = start.source;
+    expect(stamped).toEqual({
+      type: 'session',
+      platform: 'web',
+      url: 'https://example.com/?utm_source=newsletter',
+      referrer: 'https://search.example/',
+    });
+    expect([count, Object.keys(release ?? {}), typeof trace]).toEqual([
+      1,
+      ['web'],
+      'string',
+    ]);
+  });
+
+  test('a configured domains list is not mutated by runs', async () => {
+    const domains = ['a.example'];
+    const { collector } = await startSpaFlow({ ...EXTERNAL, domains });
+
+    await runTimes(collector, 2);
+
+    expect(domains).toEqual(['a.example']);
+  });
+
+  test('require session: the first run orders session start before page view, later runs only add page views', async () => {
+    const { collector, capture } = await startSpaFlow(EXTERNAL, {
+      pageview: true,
+    });
+
+    await runTimes(collector, 2);
+
+    expect(capture.events.map((event) => event.name)).toEqual([
+      'session start',
+      'page view',
+      'page view',
+      'page view',
+    ]);
   });
 });

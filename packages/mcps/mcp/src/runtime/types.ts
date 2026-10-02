@@ -1,4 +1,4 @@
-import type { Ingest, Simulation, WalkerOS } from '@walkeros/core';
+import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import type { BundleStats, PushResult } from '@walkeros/cli';
 
 /**
@@ -25,10 +25,28 @@ export interface FlowRuntime {
    * path or URL is refused with a `RuntimeRefusal`.
    */
   load(input: string): Promise<unknown>;
+  /**
+   * The directory local `path` packages of a loaded input resolve against:
+   * the input file's directory. Absent on a runtime without a filesystem,
+   * where such packages stay a reported skip.
+   */
+  baseDir?(input: string): string | undefined;
   /** Compile a flow. Absent on a runtime that must not build in its process. */
   bundle?(input: string, opts: BundleOptions): Promise<BundleStats | void>;
   /** Build and run one step of a flow. Absent where that must not happen. */
   simulate?(input: string, opts: SimulateOptions): Promise<Simulation.Result>;
+  /**
+   * The values of the secrets a flow config references (`$secret.NAME`),
+   * masked wherever a simulation or push result egresses. Read by the tools
+   * only on a runtime without `loadRun`; a read that fails stops the run.
+   */
+  knownSecrets?(input: string): Promise<string[]>;
+  /**
+   * Read a push or simulate input once: the config and the values of the
+   * secrets it references. A prebuilt bundle yields no config. A read that
+   * fails rejects. Absent with `simulate` and `push`.
+   */
+  loadRun?(input: string): Promise<LoadedRun>;
   /** Build and run a flow against real destinations. Absent where forbidden. */
   push?(
     input: string,
@@ -54,20 +72,42 @@ export interface SimulateOptions {
   stepId: string;
   event: unknown;
   flow?: string;
-  /** Transformer steps only: pipeline context the step reads via `ctx.ingest`. */
+  /** The config from `loadRun`: the runtime does not read the input again. */
+  config?: Flow.Json;
+  /**
+   * Transformer, collector and destination steps: pipeline context the step
+   * reads via `ctx.ingest`. Source steps ignore it.
+   */
   ingest?: Omit<Ingest, '_meta'>;
-  /** Collector steps only: state snapshot seeded before enrichment runs. */
+  /**
+   * Collector state the step starts from. `consent` applies to every step
+   * (the collector's starting consent); `user`, `globals` and `timing` to
+   * collector steps only.
+   */
   state?: {
     consent?: WalkerOS.Consent;
     user?: WalkerOS.User;
     globals?: WalkerOS.Properties;
     timing?: number;
   };
+  /**
+   * Destination steps only: run this collector command with `event` as its
+   * data instead of pushing it (a step example with `command`).
+   */
+  command?: Flow.StepCommand;
+}
+
+/** A push or simulate input as read once by `loadRun`. */
+export interface LoadedRun {
+  config?: Flow.Json;
+  knownSecrets: string[];
 }
 
 export interface PushOptions {
   flow?: string;
   platform?: 'web' | 'server';
+  /** The config from `loadRun`: the runtime does not read the input again. */
+  config?: Flow.Json;
 }
 
 /**
@@ -91,13 +131,13 @@ export function refusalHint(error: unknown, fallback: string): string {
 
 /**
  * Every route named here runs outside the tool's process: the app's own deploy
- * pipeline and simulation surface, or the caller's own machine. A refused
+ * pipeline, or the caller's own machine. A refused
  * caller is never pointed at another in-process route, such as saving the
  * flow and simulating it by id, which would be the same execution one step
  * later.
  */
 export const HINT_OUT_OF_PROCESS =
-  'Build and deploy through the app with deploy_manage, or simulate the flow in the app. On your own machine, use the walkerOS CLI.';
+  'Build and deploy through the app with deploy_manage. To simulate, validate or bundle, use the walkerOS CLI on your own machine.';
 
 /** The refusal a tool raises when its runtime does not provide an operation. */
 export function unavailableOperation(

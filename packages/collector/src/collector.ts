@@ -86,6 +86,10 @@ export async function collector(
   if (initConfig.name !== undefined) collector.name = initConfig.name;
   if (initConfig.release !== undefined) collector.release = initConfig.release;
 
+  // `next` has no default, so the `extend: false` assign above drops it; seed
+  // the collector chain explicitly.
+  if (initConfig.next !== undefined) config.next = initConfig.next;
+
   // Set the push and command functions with the collector reference
   collector.push = createPush(collector, (event) =>
     prepareEvent(collector, event),

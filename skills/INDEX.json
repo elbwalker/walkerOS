@@ -261,7 +261,7 @@
     },
     {
       "name": "walkeros-using-cli",
-      "description": "Use when bundling walkerOS flows, testing events with simulate/push, running local servers, validating configs, or configuring Flow JSON files.",
+      "description": "Use when bundling walkerOS flows, testing events with simulate/push, running or deploying a built flow (runneros, the walkeros/flow image), validating configs, or configuring Flow JSON files.",
       "category": "using",
       "path": "skills/walkeros-using-cli/SKILL.md",
       "url": "https://www.walkeros.io/skills/walkeros-using-cli",

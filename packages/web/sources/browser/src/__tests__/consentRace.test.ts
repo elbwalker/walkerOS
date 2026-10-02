@@ -27,11 +27,11 @@ import type { Types } from '../types';
 const elbLayerKey = 'elbLayer';
 
 const setQueue = (items: unknown[][]): void => {
-  (window as unknown as Record<string, unknown>)[elbLayerKey] = items;
+  Reflect.set(window, elbLayerKey, items);
 };
 
 const clearQueue = (): void => {
-  (window as unknown as Record<string, unknown>)[elbLayerKey] = undefined;
+  Reflect.set(window, elbLayerKey, undefined);
 };
 
 // Every source a flow in this file boots, with the collector it belongs to. A
@@ -236,9 +236,8 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
       },
     });
 
-    const layer = (window as unknown as Record<string, unknown>)[
-      elbLayerKey
-    ] as unknown[];
+    const layer: unknown = Reflect.get(window, elbLayerKey);
+    if (!Array.isArray(layer)) throw new Error('elbLayer is not an array');
 
     // Simulate a page-level script pushing a few events post-init.
     layer.push(['product view', { id: 'A' }]);
@@ -256,9 +255,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
     // ['consent']; we need to verify it activates *and* receives 'run'.
     const collected: string[] = [];
 
-    const cmpSource = async (ctx: {
-      env: { elb: (...a: unknown[]) => Promise<unknown> };
-    }) => ({
+    const cmpSource: Source.Init = async (ctx) => ({
       // Side-effect-free factory: consent push lives in init.
       type: 'cmp',
       config: {},
@@ -275,7 +272,7 @@ describe('elbLayer queue replay vs. fresh walker consent', () => {
     const { collector } = await startFlow({
       run: false,
       sources: {
-        cmp: { code: cmpSource as never },
+        cmp: { code: cmpSource },
         browser: {
           code: browserSource,
           config: {

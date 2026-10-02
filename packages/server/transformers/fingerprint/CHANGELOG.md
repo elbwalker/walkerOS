@@ -1,5 +1,48 @@
 # @walkeros/server-transformer-fingerprint
 
+## 4.7.0
+
+### Minor Changes
+
+- 74821ed: `anonymizeIP` now handles IPv6 (first 48 bits) and IPv4-mapped
+  addresses; `getHashServer` takes an optional HMAC `key`. The fingerprint
+  transformer works with just `{ salt }`: it hashes the anonymized IP, reduced
+  user agent and site, rotated daily. Hashes change once on upgrade;
+  `rotate: "none"` keeps them stable. A missing salt warns.
+
+### Patch Changes
+
+- 4b4937f: The fingerprint settings schema now accepts every mapping value its
+  type allows for `ip`, `userAgent`, `site` and `fields`: paths, value configs
+  and fallback lists such as `["event.source.url", "ingest.origin"]`. Configs
+  using them no longer get settings warnings from `walkeros validate`.
+- 74821ed: Decoded GA4 events and dataLayer events now carry `source.url` and
+  `source.referrer`, so conversion APIs such as Meta and Piwik PRO send them;
+  Piwik PRO now also sends GA4 events it skipped. Fingerprint hashes of these
+  events change once. GA4 `timestamp` is the receive time, and
+  `globals.language`/`globals.screen` moved to
+  `user.language`/`user.screenSize`.
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/core@4.7.0
+  - @walkeros/server-core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

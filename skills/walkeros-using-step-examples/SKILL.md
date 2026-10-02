@@ -103,6 +103,33 @@ export const checkoutPost: Flow.StepExample = {
 };
 ```
 
+### Source Step Example - Commands (CMP, session)
+
+A source that issues walker commands records them in its own call shape: the
+first argument verbatim, callable `'elb'`. Commands come first, in call order,
+then the events. A CMP source:
+
+```typescript
+out: [['elb', 'walker consent', { functional: true, marketing: true }]],
+```
+
+The session source (`env.command('user' | 'session', ...)`, then its event):
+
+```typescript
+out: [
+  ['elb', 'user', { session: 's3ss10n-id', device: 'd3v1c3-id' }],
+  ['elb', 'session', { id: 's3ss10n-id', isStart: true /* ... */ }],
+  ['elb', { name: 'session start', data: { id: 's3ss10n-id' /* ... */ } }],
+],
+```
+
+A source simulation (`walkeros push --simulate source.X`, MCP `flow_simulate`)
+returns exactly these calls: `call elb("walker consent",{...})`. The collector's
+own commands (starting consent from `--consent`, globals, custom, shutdown) and
+the wiring commands `on`, `hook`, `destination` are never part of a source's
+`out`. A consent-gated source needs `--consent` (MCP `state.consent`) to emit
+anything.
+
 ### Source Step Example - Browser
 
 `in` is an HTML string, `out` is a tuple of the `elb()` call:
@@ -221,6 +248,15 @@ Supported commands: `config`, `consent`, `user`, `run`.
   through event mapping.
 - The `out` format is destination-specific. For gtag it's
   `[action, subAction, params]` matching `gtag(...)` calls.
+- Simulate a command example with `--command <name>` (MCP: `command`): the
+  destination simulation runs `collector.command(name, in)` instead of a push
+  and records the calls it makes. Add `--consent` when the destination needs
+  starting consent; it applies first, then the command:
+
+  ```bash
+  walkeros push flow.json -e '{"functional":true,"marketing":true}' \
+    --simulate destination.ga4 --command consent
+  ```
 
 ## Writing Examples
 
@@ -272,6 +308,100 @@ and testing while leaving production output clean.
 
 A `no-restricted-syntax` ESLint rule enforces this, so a `export ... examples`
 from a production entry fails lint.
+
+### Multi-export packages: `exportExamples` and `exportSchemas`
+
+A package whose `package.json` `walkerOS.exports` lists more than one export
+adds a map of EVERY export, the default included, to `src/dev.ts`:
+
+```typescript
+export const exportExamples = {
+  destinationBigQuery: bigqueryExamples,
+  destinationPubSub: pubsubExamples,
+};
+```
+
+The step's export name comes from `resolveExportName` (exported from
+`@walkeros/cli`): the step's `import`, else `bundle.packages[pkg].imports[0]`,
+else the default. When the module has the map, `map[exportName]` is used and a
+missing name resolves to nothing (never a fallback to `examples`); without a
+map, `examples` is used. `selectDevExamples(devModule, exportName)` implements
+this. The CLI simulate, MCP `flow_examples` and `package_get`, core `cdn.ts` and
+the tsup `walkerOS.json` (`exportExamples` key) all follow it. Existing named
+exports (`pubsubExamples`, `sqsExamples`, ...) stay for back compat.
+
+The same package also exports `exportSchemas`, every export to that export's
+schemas in the shape of a single-export `schemas` (`settings` required,
+`mapping`, `setup` where they exist). Reuse the very objects behind
+`schemas.settings` for the default entry, so a `toBe` test pins it:
+
+```typescript
+export const exportSchemas = {
+  destinationBigQuery: {
+    settings: bigquerySchemas.settings,
+    mapping: bigquerySchemas.mapping,
+  },
+  destinationPubSub: {
+    settings: pubsubSchemas.settings,
+    mapping: pubsubSchemas.mapping,
+    setup: pubsubSchemas.setup,
+  },
+};
+```
+
+`walkeros validate` and MCP `package_get` pick the entry for the step's export
+with the same rule. The tsup build (`buildDev`) fails when either map does not
+list exactly the `walkerOS.exports` names, when an `exportSchemas` entry has no
+`settings`, and when any source, transformer, destination or store package
+publishes no `schemas.settings` (a package without settings publishes
+`z.object({})`). Prefixed keys in `schemas` (`pubsubSettings`, ...) stay.
+
+### Mock env and `simulation` paths
+
+`src/examples/env.ts` exports `push` (the mock env simulate injects) and
+`simulation` (the call paths to record). Simulate refuses a package destination
+whose export has no `push` mock ("No mock env for ..."), so it never calls the
+real vendor.
+
+- A `simulation` path names the call that CARRIES the vendor request
+  (`sendServer`, `fetch`, `call:PubSub.topic.publishMessage`,
+  `call:JSONWriter.appendRows`, `call:AWS.SNSClient.send`,
+  `call:fs.createWriteStream.write`), never only a constructor.
+- **`init` is not the request.** Do not record an `init` call (it carries the
+  API key and sends nothing); a path may pass THROUGH init's result
+  (`call:Mixpanel.init.track`). Amplitude and Mixpanel record their tracking
+  calls, not `init`.
+- Grammar (`parseCallPath`, shared by the recorder): an optional `call:` prefix,
+  then `.`-separated segments; an empty segment makes the path unresolvable. The
+  one recorder is `observeEnv(env, paths)` in `@walkeros/core` (collector
+  `wrapEnv` and web-core `getEnv` delegate to it). It returns a Proxy view;
+  nothing on the env objects or prototypes is mutated.
+- Mid-path resolution: on an object, a segment is looked up as a property. After
+  a function, a segment is the function's own property or a parent class's
+  static; anything else (including `call`, `bind`, `name`, `length`) navigates
+  the call result (or the constructed instance, for `new`). Frozen objects and
+  frozen call results are recorded through a view; only a static on a frozen
+  function stays unresolved. A mid-path Promise (async factory) is followed with
+  `.then`. Only the leaf call is recorded: `fn` is the path without `call:`,
+  `args` the leaf call's arguments. `instanceof`, statics and `#private` fields
+  keep working, and a chain returning `this` records once.
+- Pin every list in the package tests with the async
+  `expectSimulationResolves(examples.env)` from `@walkeros/core/dev`: it walks
+  each path through the `push` mock (constructing, calling, awaiting) and fails
+  on a missing segment or a non-function leaf.
+
+  ```typescript
+  import { expectSimulationResolves } from '@walkeros/core/dev';
+  it('declares simulation paths that resolve', () =>
+    expectSimulationResolves(examples.env));
+  ```
+
+- Not recordable: anonymous values such as SQLite prepared-statement rows.
+- Sources: a source package that declares `simulation` runs on its mock client
+  in a source simulation, and those calls are recorded. SQS records
+  `call:AWS.SQSClient.send` (one receive per 100 ms while running); Pub/Sub pull
+  records `call:PubSub.subscription` (messages arrive as events). Their
+  module-mock tests import `moduleMockEnv`, the same env without the client.
 
 ## Metadata: title, description, public
 
@@ -352,10 +482,15 @@ with `--event`. For a source step, that is `SourceInput`
 walkeros push flow.json --simulate source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
 ```
 
-The CLI does not read `examples` and does not compare the result against `out`.
-It prints `success` and the duration, and exits 1 only when the push fails with
-an error; a mapping that produces the wrong output still exits 0. Assert on
-`out` in your own tests (see Testing with Examples below).
+The CLI does not compare the result against `out`. For each simulated step it
+prints the matched mapping key and every recorded call (`--json`: under
+`simulations`), and exits 1 only when the push fails with an error; a mapping
+that produces the wrong output still exits 0. Assert on `out` in your own tests
+(see Testing with Examples below). Add `--ingest` to give a transformer,
+collector or destination step a request context, `--consent` for the collector
+consent it starts from, `--command` for a command example, and `--page-url` for
+the page of a web source (default: the trigger's `options.url`, else
+`http://localhost`). See [using-cli](../walkeros-using-cli/SKILL.md).
 
 The MCP `flow_examples` tool returns `trigger` metadata alongside `in`/`out`,
 and `mapping` for destination examples, giving full visibility into how input
@@ -385,9 +520,19 @@ validation checks that:
   array, string, or object (such as a walkerOS event); `out: false` and empty
   values are skipped. A downstream `in` counts unless its example sets
   `command`.
-- With a `contract`, destination and transformer example `in` values that carry
-  `entity` and `action` are validated against it (warnings, errors with
-  `--strict`).
+- A StepOut `out` (every entry an array with a string head) contributes the
+  events it passes on: `elb` gives `args[0]` when it is an object; `return`
+  gives `a.event` for `{ event }`, `a` for a bare event, each item for an array
+  (fan-out); `false`, `message.ack`, `message.nack`, `response`, `respond` and
+  vendor calls give nothing. A StepOut with no events counts as no usable `out`.
+- Contracts bind only where a `@walkeros/transformer-validate` step links them,
+  as at runtime. Each validate step's own examples run through that step's
+  resolved `settings.contract`, `mode`, `format` and `output`, and the verdict
+  must agree with its `out` (valid: passed on; invalid: `["return", false]` in
+  `strict`, passed on with the `isValid` flag false in `pass`). A disagreement
+  is `CONTRACT_VIOLATION` (warning, error with `--strict`). No other example is
+  checked against the config-level `contract` block, and a flow without a
+  validate step gets no contract checks.
 
 ## Testing with Examples
 
@@ -572,6 +717,13 @@ When adding step examples to a package or flow:
 - [ ] Run tests: `npm run verify:touched -- <pkg>` (L1)
 - [ ] Add `title` and `description` to every public example.
 - [ ] Mark internal/test-only examples with `public: false`.
+- [ ] `examples/env.ts` exports `push` and a `simulation` list naming the
+      request call, pinned with `expectSimulationResolves(examples.env)`.
+- [ ] Multi-export package: `exportExamples` and `exportSchemas` in `dev.ts`
+      list every export (the build fails otherwise).
+- [ ] In a flow file, add examples sparingly: they are mainly internal and for
+      demos (for example a client flow's source with `public: false` examples
+      showing its default behaviour).
 
 ## Related Skills
 

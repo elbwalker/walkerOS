@@ -3,6 +3,7 @@ jest.mock('../auth', () => ({
 }));
 
 import { createMockLogger } from '@walkeros/core';
+import { createTokenProvider } from '../auth';
 import type { SheetsStoreSettings } from '../types';
 import { setup, type SheetsStoreConfig } from '../setup';
 
@@ -250,5 +251,33 @@ describe('setup (Sheets spreadsheet)', () => {
     } finally {
       restore();
     }
+  });
+
+  it('sends every request through an injected env.fetch', async () => {
+    const globalFetch = jest
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new Error('global fetch must not be called'));
+    const responses = [
+      makeResponse({ status: 200 }),
+      makeResponse({ status: 200 }),
+    ];
+    const envFetch = jest.fn<Promise<Response>, Parameters<typeof fetch>>(
+      async () => {
+        const next = responses.shift();
+        if (!next) throw new Error('no response programmed');
+        return next;
+      },
+    );
+    const ctx = {
+      ...createCtx(createConfig({ setup: { headers: ['a', 'b'] } })),
+      env: { fetch: envFetch },
+    };
+
+    const result = await setup(ctx);
+
+    expect(result).toEqual({ headersWritten: true });
+    expect(envFetch).toHaveBeenCalledTimes(2);
+    expect(globalFetch).not.toHaveBeenCalled();
+    expect(createTokenProvider).toHaveBeenLastCalledWith(undefined, envFetch);
   });
 });

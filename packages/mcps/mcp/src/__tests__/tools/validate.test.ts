@@ -1,5 +1,10 @@
 import { createLocalRuntime } from '../../runtime/local.js';
-import { registerFlowValidateTool } from '../../tools/validate.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  createFlowValidateToolSpec,
+  registerFlowValidateTool,
+} from '../../tools/validate.js';
+import { structured, record, rows, textOf } from '../support/tool-result.js';
 import { ValidateOutputShape } from '../../schemas/output.js';
 import type { ValidateResult } from '@walkeros/cli';
 
@@ -11,6 +16,11 @@ jest.mock('@walkeros/cli/dev', () => ({
       flow: { type: 'string' },
       path: { type: 'string' },
     },
+    // The handler parses its input with the real schema.
+    ValidateInputSchema:
+      jest.requireActual<typeof import('@walkeros/cli/dev')>(
+        '@walkeros/cli/dev',
+      ).schemas.ValidateInputSchema,
   },
 }));
 
@@ -50,24 +60,11 @@ import { validate, loadJsonConfig } from '@walkeros/cli';
 const mockValidate = jest.mocked(validate);
 const mockLoadJsonConfig = jest.mocked(loadJsonConfig);
 
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: Function) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
-}
-
 describe('flow_validate tool', () => {
-  let server: ReturnType<typeof createMockServer>;
+  let spec: ReturnType<typeof createFlowValidateToolSpec>;
 
   beforeEach(() => {
-    server = createMockServer();
-    registerFlowValidateTool(server as any, createLocalRuntime());
+    spec = createFlowValidateToolSpec(createLocalRuntime());
     mockValidate.mockReset();
     // The local runtime resolves the input through the cli loader before
     // validating. Stand in for it: parse JSON, otherwise return a marker for
@@ -83,23 +80,30 @@ describe('flow_validate tool', () => {
   });
 
   it('registers with correct name, title, and annotations', () => {
-    const tool = server.getTool('flow_validate');
-    expect(tool).toBeDefined();
-
-    const config = tool.config as any;
-    expect(config.title).toBe('Validate Flow');
-    expect(config.annotations).toEqual({
+    expect(spec.name).toBe('flow_validate');
+    expect(spec.title).toBe('Validate Flow');
+    expect(spec.annotations).toEqual({
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
-      openWorldHint: false,
+      openWorldHint: true,
     });
   });
 
   it('has outputSchema defined', () => {
-    const tool = server.getTool('flow_validate');
-    const config = tool.config as any;
-    expect(config.outputSchema).toBe(ValidateOutputShape);
+    // The mocked input shape is not a zod shape, so the SDK's own
+    // registration would reject it: capture the config without registering.
+    const server = new McpServer({ name: 'test', version: '0.0.0' });
+    const placeholder = new McpServer({
+      name: 'scratch',
+      version: '0.0.0',
+    }).registerTool('placeholder', {}, () => ({ content: [] }));
+    const registerTool = jest
+      .spyOn(server, 'registerTool')
+      .mockReturnValue(placeholder);
+    registerFlowValidateTool(server, createLocalRuntime());
+    const call: unknown[] = registerTool.mock.calls[0] ?? [];
+    expect(record(call[1]).outputSchema).toBe(ValidateOutputShape);
   });
 
   it('calls validate with correct params', async () => {
@@ -112,8 +116,7 @@ describe('flow_validate tool', () => {
     };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('flow_validate');
-    const result = await tool.handler({
+    const result = await spec.handler({
       type: 'event',
       input: '{"name":"page view"}',
       flow: undefined,
@@ -124,9 +127,9 @@ describe('flow_validate tool', () => {
       { name: 'page view' },
       { flow: undefined, path: undefined },
     );
-    expect(result.structuredContent.valid).toBe(true);
-    expect(result.structuredContent.errors).toEqual([]);
-    expect(result.isError).toBeUndefined();
+    expect(structured(result).valid).toBe(true);
+    expect(structured(result).errors).toEqual([]);
+    expect(record(result).isError).toBeUndefined();
   });
 
   it('resolves a file path through the runtime loader, then validates the document', async () => {
@@ -139,8 +142,7 @@ describe('flow_validate tool', () => {
     };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('flow_validate');
-    await tool.handler({
+    await spec.handler({
       type: 'flow',
       input: '/path/to/flow.json',
       flow: 'myFlow',
@@ -164,14 +166,13 @@ describe('flow_validate tool', () => {
     };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('flow_validate');
-    const result = await tool.handler({
+    const result = await spec.handler({
       type: 'event',
       input: '{"name":"page view"}',
       flow: undefined,
     });
 
-    expect(JSON.parse(result.content[0].text).valid).toBe(true);
+    expect(record(JSON.parse(textOf(result))).valid).toBe(true);
   });
 
   it('returns summary with error count on failure', async () => {
@@ -184,28 +185,26 @@ describe('flow_validate tool', () => {
     };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('flow_validate');
-    const result = await tool.handler({
+    const result = await spec.handler({
       type: 'event',
       input: '{"bad":"data"}',
       flow: undefined,
     });
 
-    expect(JSON.parse(result.content[0].text).valid).toBe(false);
+    expect(record(JSON.parse(textOf(result))).valid).toBe(false);
   });
 
   it('returns isError on CLI failure', async () => {
     mockValidate.mockRejectedValue(new Error('Validation failed'));
 
-    const tool = server.getTool('flow_validate');
-    const result = await tool.handler({
+    const result = await spec.handler({
       type: 'event',
       input: '{"name":"bad"}',
       flow: undefined,
     });
 
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
+    expect(record(result).isError).toBe(true);
+    const parsed = record(JSON.parse(textOf(result)));
     expect(parsed.error).toBe('Validation failed');
   });
 
@@ -219,8 +218,7 @@ describe('flow_validate tool', () => {
     };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('flow_validate');
-    await tool.handler({
+    await spec.handler({
       type: 'flow',
       input: '/path/to/flow.json',
       flow: undefined,
@@ -244,15 +242,14 @@ describe('flow_validate tool', () => {
     };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('flow_validate');
-    const result = await tool.handler({
+    const result = await spec.handler({
       type: 'flow',
       input: '/path/to/flow.json',
       path: 'destinations.snowplow',
     });
 
-    expect(result.structuredContent.valid).toBe(true);
-    expect(JSON.parse(result.content[0].text).valid).toBe(true);
+    expect(structured(result).valid).toBe(true);
+    expect(record(JSON.parse(textOf(result))).valid).toBe(true);
   });
 
   describe('step-entry error codes forward verbatim', () => {
@@ -281,23 +278,24 @@ describe('flow_validate tool', () => {
         };
         mockValidate.mockResolvedValue(mockResult);
 
-        const tool = server.getTool('flow_validate');
-        const result = await tool.handler({
+        const result = await spec.handler({
           type: 'flow',
           input: '/path/to/flow.json',
           flow: undefined,
         });
 
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = record(JSON.parse(textOf(result)));
         expect(parsed.valid).toBe(false);
         expect(parsed.errors).toHaveLength(1);
-        expect(parsed.errors[0].code).toBe(code);
+        expect(rows(parsed.errors)[0]?.code).toBe(code);
       },
     );
   });
 
   describe('deprecated package detection: @walkeros/store-memory', () => {
-    it('rejects flow.json declaring @walkeros/store-memory in a store', async () => {
+    // DEPRECATED_PACKAGE is a cli check (validateFlow, a warning for one
+    // minor); the real cli is exercised in validate-real.test.ts (F16).
+    it('adds no private check: the cli verdict is returned unchanged', async () => {
       const flow = {
         version: 4,
         flows: {
@@ -319,79 +317,15 @@ describe('flow_validate tool', () => {
       mockValidate.mockResolvedValue(mockResult);
       mockLoadJsonConfig.mockResolvedValue(flow);
 
-      const tool = server.getTool('flow_validate');
-      const result = await tool.handler({
+      const result = await spec.handler({
         type: 'flow',
         input: JSON.stringify(flow),
         flow: undefined,
       });
 
-      const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.valid).toBe(false);
-      expect(
-        parsed.errors.some((e: { message: string }) =>
-          /@walkeros\/store-memory/.test(e.message),
-        ),
-      ).toBe(true);
-      expect(
-        parsed.errors.some((e: { message: string }) =>
-          /omit cache\.store|built-in cache/.test(e.message),
-        ),
-      ).toBe(true);
-    });
-
-    it('detects @walkeros/store-memory across multiple flows and stores', async () => {
-      const flow = {
-        version: 4,
-        flows: {
-          a: {
-            config: { platform: 'server' },
-            stores: {
-              cache1: { package: '@walkeros/store-memory', config: {} },
-              other: { package: '@walkeros/server-store-fs', config: {} },
-            },
-          },
-          b: {
-            config: { platform: 'server' },
-            stores: {
-              cache2: { package: '@walkeros/store-memory', config: {} },
-            },
-          },
-        },
-      };
-      const mockResult: ValidateResult = {
-        valid: true,
-        type: 'flow',
-        errors: [],
-        warnings: [],
-        details: {},
-      };
-      mockValidate.mockResolvedValue(mockResult);
-      mockLoadJsonConfig.mockResolvedValue(flow);
-
-      const tool = server.getTool('flow_validate');
-      const result = await tool.handler({
-        type: 'flow',
-        input: JSON.stringify(flow),
-        flow: undefined,
-      });
-
-      const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.valid).toBe(false);
-      const memoryErrors = parsed.errors.filter((e: { message: string }) =>
-        /@walkeros\/store-memory/.test(e.message),
-      );
-      expect(memoryErrors.length).toBe(2);
-      expect(
-        parsed.errors.some((e: { path: string }) =>
-          /flows\.a\.stores\.cache1/.test(e.path),
-        ),
-      ).toBe(true);
-      expect(
-        parsed.errors.some((e: { path: string }) =>
-          /flows\.b\.stores\.cache2/.test(e.path),
-        ),
-      ).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
+      expect(parsed.valid).toBe(true);
+      expect(parsed.errors).toEqual([]);
     });
 
     it('passes a flow.json with no @walkeros/store-memory references', async () => {
@@ -416,14 +350,13 @@ describe('flow_validate tool', () => {
       mockValidate.mockResolvedValue(mockResult);
       mockLoadJsonConfig.mockResolvedValue(flow);
 
-      const tool = server.getTool('flow_validate');
-      const result = await tool.handler({
+      const result = await spec.handler({
         type: 'flow',
         input: JSON.stringify(flow),
         flow: undefined,
       });
 
-      const parsed = JSON.parse(result.content[0].text);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.valid).toBe(true);
       expect(parsed.errors).toEqual([]);
     });
@@ -438,8 +371,7 @@ describe('flow_validate tool', () => {
       };
       mockValidate.mockResolvedValue(mockResult);
 
-      const tool = server.getTool('flow_validate');
-      const result = await tool.handler({
+      const result = await spec.handler({
         type: 'event',
         input: '{"name":"page view"}',
         flow: undefined,
@@ -448,22 +380,21 @@ describe('flow_validate tool', () => {
       // The input is resolved once through the runtime loader; the deprecated
       // package pass adds no second load for a non-flow type.
       expect(mockLoadJsonConfig).toHaveBeenCalledTimes(1);
-      const parsed = JSON.parse(result.content[0].text);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.valid).toBe(true);
     });
 
     it('surfaces the load error when a flow input cannot be loaded', async () => {
       mockLoadJsonConfig.mockRejectedValue(new Error('parse error'));
 
-      const tool = server.getTool('flow_validate');
-      const result = await tool.handler({
+      const result = await spec.handler({
         type: 'flow',
         input: 'not json',
         flow: undefined,
       });
 
-      expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('parse error');
+      expect(record(result).isError).toBe(true);
+      expect(textOf(result)).toContain('parse error');
       expect(mockValidate).not.toHaveBeenCalled();
     });
   });

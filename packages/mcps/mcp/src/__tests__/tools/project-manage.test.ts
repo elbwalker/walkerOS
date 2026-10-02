@@ -26,37 +26,19 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import { registerProjectManageTool } from '../../tools/project-manage.js';
+import { createProjectManageToolSpec } from '../../tools/project-manage.js';
 import { stubClient } from '../support/stub-client.js';
-
-type HandlerFn = (input: Record<string, unknown>) => Promise<unknown>;
-
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: HandlerFn }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: HandlerFn) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
-}
+import { structured, record, hintsOf, textOf } from '../support/tool-result.js';
 
 describe('project_manage tool', () => {
-  let server: ReturnType<typeof createMockServer>;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    server = createMockServer();
   });
 
   it('registers with name "project_manage" and correct annotations', () => {
-    registerProjectManageTool(server as never, stubClient());
-    const tool = server.getTool('project_manage');
-    expect(tool).toBeDefined();
-    const config = tool!.config as { annotations: Record<string, boolean> };
-    expect(config.annotations).toEqual({
+    const spec = createProjectManageToolSpec(stubClient());
+    expect(spec.name).toBe('project_manage');
+    expect(spec.annotations).toEqual({
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,
@@ -73,18 +55,14 @@ describe('project_manage tool', () => {
         ],
       };
       const listProjects = jest.fn().mockResolvedValue(projects);
-      registerProjectManageTool(server as never, stubClient({ listProjects }));
-
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({ action: 'list' })) as {
-        structuredContent: { projects: unknown[] };
-      };
+      const spec = createProjectManageToolSpec(stubClient({ listProjects }));
+      const result = await spec.handler({ action: 'list' });
 
       expect(listProjects).toHaveBeenCalledWith({
         cursor: undefined,
         limit: undefined,
       });
-      expect(result.structuredContent.projects).toEqual([
+      expect(structured(result).projects).toEqual([
         { id: 'proj_1', name: '<user_data>My Project</user_data>' },
         { id: 'proj_2', name: '<user_data>Another Project</user_data>' },
       ]);
@@ -92,25 +70,19 @@ describe('project_manage tool', () => {
 
     it('forwards cursor and limit to listProjects', async () => {
       const listProjects = jest.fn().mockResolvedValue({ projects: [] });
-      registerProjectManageTool(server as never, stubClient({ listProjects }));
-
-      const tool = server.getTool('project_manage')!;
-      await tool.handler({ action: 'list', cursor: 'abc', limit: 10 });
+      const spec = createProjectManageToolSpec(stubClient({ listProjects }));
+      await spec.handler({ action: 'list', cursor: 'abc', limit: 10 });
 
       expect(listProjects).toHaveBeenCalledWith({ cursor: 'abc', limit: 10 });
     });
 
     it('hints to create when projects list is empty', async () => {
       const listProjects = jest.fn().mockResolvedValue({ projects: [] });
-      registerProjectManageTool(server as never, stubClient({ listProjects }));
+      const spec = createProjectManageToolSpec(stubClient({ listProjects }));
+      const result = await spec.handler({ action: 'list' });
 
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({ action: 'list' })) as {
-        structuredContent: { projects: unknown[]; _hints: { next: string[] } };
-      };
-
-      expect(result.structuredContent.projects).toEqual([]);
-      expect(result.structuredContent._hints.next).toEqual(
+      expect(structured(result).projects).toEqual([]);
+      expect(hintsOf(result)).toEqual(
         expect.arrayContaining([expect.stringContaining('create')]),
       );
     });
@@ -118,64 +90,50 @@ describe('project_manage tool', () => {
 
   describe('get', () => {
     it('requires projectId', async () => {
-      registerProjectManageTool(server as never, stubClient());
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({ action: 'get' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const spec = createProjectManageToolSpec(stubClient());
+      const result = await spec.handler({ action: 'get' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('projectId is required for get action');
     });
 
     it('returns project data when projectId provided', async () => {
       const project = { id: 'proj_1', name: 'My Project' };
       const getProject = jest.fn().mockResolvedValue(project);
-      registerProjectManageTool(server as never, stubClient({ getProject }));
-
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({
+      const spec = createProjectManageToolSpec(stubClient({ getProject }));
+      const result = await spec.handler({
         action: 'get',
         projectId: 'proj_1',
-      })) as { structuredContent: { id: string } };
+      });
 
       expect(getProject).toHaveBeenCalledWith({ projectId: 'proj_1' });
-      expect(result.structuredContent.id).toBe('proj_1');
+      expect(structured(result).id).toBe('proj_1');
     });
   });
 
   describe('create', () => {
     it('requires name', async () => {
-      registerProjectManageTool(server as never, stubClient());
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({ action: 'create' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const spec = createProjectManageToolSpec(stubClient());
+      const result = await spec.handler({ action: 'create' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('name is required for create action');
     });
 
     it('calls createProject with name', async () => {
       const created = { id: 'proj_new', name: 'New Project' };
       const createProject = jest.fn().mockResolvedValue(created);
-      registerProjectManageTool(server as never, stubClient({ createProject }));
-
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({
+      const spec = createProjectManageToolSpec(stubClient({ createProject }));
+      const result = await spec.handler({
         action: 'create',
         name: 'New Project',
-      })) as {
-        structuredContent: { id: string; _hints: { next: string[] } };
-      };
+      });
 
       expect(createProject).toHaveBeenCalledWith({ name: 'New Project' });
-      expect(result.structuredContent.id).toBe('proj_new');
-      expect(result.structuredContent._hints.next).toEqual(
+      expect(structured(result).id).toBe('proj_new');
+      expect(hintsOf(result)).toEqual(
         expect.arrayContaining([expect.stringContaining('set_default')]),
       );
     });
@@ -183,93 +141,77 @@ describe('project_manage tool', () => {
 
   describe('update', () => {
     it('requires projectId', async () => {
-      registerProjectManageTool(server as never, stubClient());
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({
+      const spec = createProjectManageToolSpec(stubClient());
+      const result = await spec.handler({
         action: 'update',
         name: 'Renamed',
-      })) as { isError: boolean; content: Array<{ text: string }> };
+      });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('projectId is required for update action');
     });
 
     it('requires name', async () => {
-      registerProjectManageTool(server as never, stubClient());
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({
+      const spec = createProjectManageToolSpec(stubClient());
+      const result = await spec.handler({
         action: 'update',
         projectId: 'proj_1',
-      })) as { isError: boolean; content: Array<{ text: string }> };
+      });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('name is required for update action');
     });
 
     it('calls updateProject with projectId and name', async () => {
       const updated = { id: 'proj_1', name: 'Renamed' };
       const updateProject = jest.fn().mockResolvedValue(updated);
-      registerProjectManageTool(server as never, stubClient({ updateProject }));
-
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({
+      const spec = createProjectManageToolSpec(stubClient({ updateProject }));
+      const result = await spec.handler({
         action: 'update',
         projectId: 'proj_1',
         name: 'Renamed',
-      })) as { structuredContent: { name: string } };
+      });
 
       expect(updateProject).toHaveBeenCalledWith({
         projectId: 'proj_1',
         name: 'Renamed',
       });
-      expect(result.structuredContent.name).toBe(
-        '<user_data>Renamed</user_data>',
-      );
+      expect(structured(result).name).toBe('<user_data>Renamed</user_data>');
     });
   });
 
   describe('delete', () => {
     it('requires projectId', async () => {
-      registerProjectManageTool(server as never, stubClient());
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({ action: 'delete' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const spec = createProjectManageToolSpec(stubClient());
+      const result = await spec.handler({ action: 'delete' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain('projectId is required for delete action');
     });
 
     it('calls deleteProject with projectId', async () => {
       const deleteProject = jest.fn().mockResolvedValue({ success: true });
-      registerProjectManageTool(server as never, stubClient({ deleteProject }));
-
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({
+      const spec = createProjectManageToolSpec(stubClient({ deleteProject }));
+      const result = await spec.handler({
         action: 'delete',
         projectId: 'proj_1',
-      })) as { structuredContent: { success: boolean } };
+      });
 
       expect(deleteProject).toHaveBeenCalledWith({ projectId: 'proj_1' });
-      expect(result.structuredContent.success).toBe(true);
+      expect(structured(result).success).toBe(true);
     });
   });
 
   describe('set_default', () => {
     it('requires projectId', async () => {
-      registerProjectManageTool(server as never, stubClient());
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({ action: 'set_default' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const spec = createProjectManageToolSpec(stubClient());
+      const result = await spec.handler({ action: 'set_default' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toContain(
         'projectId is required for set_default action',
       );
@@ -277,25 +219,17 @@ describe('project_manage tool', () => {
 
     it('calls setDefaultProject and hints about flow_manage', async () => {
       const setDefaultProject = jest.fn();
-      registerProjectManageTool(
-        server as never,
+      const spec = createProjectManageToolSpec(
         stubClient({ setDefaultProject }),
       );
-
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({
+      const result = await spec.handler({
         action: 'set_default',
         projectId: 'proj_1',
-      })) as {
-        structuredContent: {
-          defaultProjectId: string;
-          _hints: { next: string[] };
-        };
-      };
+      });
 
       expect(setDefaultProject).toHaveBeenCalledWith('proj_1');
-      expect(result.structuredContent.defaultProjectId).toBe('proj_1');
-      expect(result.structuredContent._hints.next).toEqual(
+      expect(structured(result).defaultProjectId).toBe('proj_1');
+      expect(hintsOf(result)).toEqual(
         expect.arrayContaining([expect.stringContaining('flow_manage')]),
       );
     });
@@ -306,16 +240,11 @@ describe('project_manage tool', () => {
       const listProjects = jest
         .fn()
         .mockRejectedValue(new Error('Unauthorized'));
-      registerProjectManageTool(server as never, stubClient({ listProjects }));
+      const spec = createProjectManageToolSpec(stubClient({ listProjects }));
+      const result = await spec.handler({ action: 'list' });
 
-      const tool = server.getTool('project_manage')!;
-      const result = (await tool.handler({ action: 'list' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
-
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(record(result).isError).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
       expect(parsed.error).toBe('Unauthorized');
       expect(parsed.hint).toContain('logged in');
     });

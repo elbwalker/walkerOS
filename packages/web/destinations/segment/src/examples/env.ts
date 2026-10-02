@@ -36,11 +36,11 @@ export const push: Env = {
 /** Simulation tracking paths for CLI --simulate. */
 export const simulation = [
   'call:analytics.load',
-  'call:analytics.track',
-  'call:analytics.identify',
-  'call:analytics.group',
-  'call:analytics.page',
-  'call:analytics.alias',
-  'call:analytics.reset',
-  'call:analytics.setAnonymousId',
+  'call:analytics.load.track',
+  'call:analytics.load.identify',
+  'call:analytics.load.group',
+  'call:analytics.load.page',
+  'call:analytics.load.alias',
+  'call:analytics.load.reset',
+  'call:analytics.load.setAnonymousId',
 ];

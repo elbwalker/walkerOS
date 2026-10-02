@@ -59,7 +59,7 @@ export function isNotFound(err: unknown): boolean {
 export async function setup(
   ctx: LifecycleContext<WideConfig, Env>,
 ): Promise<SetupResult | undefined> {
-  const { config, env, logger } = ctx;
+  const { config, logger } = ctx;
   const merged = resolveSetup(config.setup, DEFAULT_SETUP);
   if (!merged) {
     logger.debug('setup: skipped (config.setup is false or unset)');
@@ -83,13 +83,19 @@ export async function setup(
     return;
   }
 
-  // Resolve the client. Prefer pre-supplied settings.client (init may have
-  // populated it); otherwise build from env-injected constructor or the SDK.
-  // Track whether setup created the client so we close only what we own.
+  // Resolve the client. Prefer a pre-supplied SDK client; otherwise build one.
+  // Setup needs the SDK's admin surface (exists, createTopic, metadata), which
+  // an injected publisher (tests, simulate) does not carry. Track whether
+  // setup created the client so we close only what we own.
   let createdClient = false;
-  let client: PubSubClient | undefined = settings.client;
+  let client: PubSubClient | undefined =
+    settings.client instanceof PubSub ? settings.client : undefined;
+  if (settings.client && !client) {
+    logger.debug(
+      'setup: settings.client is not a Pub/Sub SDK client; creating one for provisioning',
+    );
+  }
   if (!client) {
-    const Constructor = env?.PubSub ?? PubSub;
     const credentials = parseCredentials(
       resolveCredentials(config, logger),
       logger,
@@ -101,7 +107,7 @@ export async function setup(
         : {}),
       ...(settings.apiEndpoint ? { apiEndpoint: settings.apiEndpoint } : {}),
     };
-    client = new Constructor(clientOptions);
+    client = new PubSub(clientOptions);
     createdClient = true;
   }
 

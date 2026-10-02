@@ -55,9 +55,17 @@ export interface Setup {
   labels?: Record<string, string>;
 }
 
+/**
+ * Injected dependencies (tests, simulate). Every GCS and token request goes
+ * through `fetch`; without it the global `fetch` is used.
+ */
+export interface Env extends Store.BaseEnv {
+  fetch?: typeof fetch;
+}
+
 export type Types = Store.Types<
   GcsStoreSettings,
-  Store.BaseEnv,
+  Env,
   GcsStoreSettings,
   Setup,
   Credential<ServiceAccount>

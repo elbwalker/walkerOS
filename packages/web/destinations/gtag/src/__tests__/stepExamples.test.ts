@@ -5,6 +5,7 @@ import { examples } from '../dev';
 import type { Env } from '../types';
 import { resetConsentState } from '../index';
 import { SettingsSchema } from '../schemas';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 const INIT_DATE_MS = 1700000000000;
 import { resetLoadedScripts } from '../shared/gtag';
@@ -246,3 +247,6 @@ describe('gtag web destination -- step examples', () => {
     expect(actual).toEqual(expected);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

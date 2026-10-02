@@ -26,12 +26,20 @@ describe('Express concurrent requests', () => {
     const N = 30;
     type CapturedEvent = WalkerOS.Event & { ingest?: Ingest };
     const captured: CapturedEvent[] = [];
+    // POST is respond-first by default: the handler acks before delivery
+    // settles ("accepted", not "delivered"), so the test waits for the N
+    // deliveries instead of relying on how many microtasks they take.
+    let markDelivered: () => void = () => undefined;
+    const allDelivered = new Promise<void>((resolve) => {
+      markDelivered = resolve;
+    });
 
     const captureDestination: Destination.Instance = {
       type: 'capture',
       config: {},
       push: async (event, ctx) => {
         captured.push({ ...event, ingest: ctx.ingest as Ingest });
+        if (captured.length === N) markDelivered();
       },
     };
 
@@ -100,6 +108,14 @@ describe('Express concurrent requests', () => {
     await Promise.all(
       calls.map(({ req, res }) => expressSource.push(req, res)),
     );
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      allDelivered,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, 2000);
+      }),
+    ]);
+    clearTimeout(timer);
 
     // Every captured event's ingest carries its own testId — no crosstalk.
     expect(captured).toHaveLength(N);

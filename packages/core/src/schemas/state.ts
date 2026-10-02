@@ -17,6 +17,9 @@ import { ValueSchema } from './mapping';
  *   validation requires it for `get`/`set`, and for `get` it must be a bare
  *   string or a ValueConfig with a `key` (no `value`/`fn`/`map`/`loop`/`set`,
  *   and no `*` wildcard in the path).
+ * - mapping: optional Mapping.Value shaping the value read (get) or the
+ *   payload (set). Its paths are relative to that value, so they carry no
+ *   prefix check.
  */
 // A `set` payload may name a whole root (`event`). A key must resolve to a
 // string and a `get` target must be writable, so both name a path in one.
@@ -69,6 +72,9 @@ export const StateSchema = z
     ),
     value: ValueSchema.optional().describe(
       'set: resolves against { event, ingest } to the payload to store. get: its path is the write target, event. onto the event or ingest. into the ingest.',
+    ),
+    mapping: ValueSchema.optional().describe(
+      'Shapes the value read (get) or the payload (set). Paths are relative to that value. The result merges into the target.',
     ),
   })
   .superRefine((data, ctx) => {

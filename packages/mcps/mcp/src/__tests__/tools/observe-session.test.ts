@@ -9,24 +9,29 @@ import type {
   ObserveSessionResult,
   JourneysResult,
 } from '../../tool-client.js';
+import {
+  structured as structuredOf,
+  record,
+  textOf,
+  str,
+  isErrorResult,
+} from '../support/tool-result.js';
 
-type Structured = {
-  structuredContent: Record<string, unknown>;
-  content: Array<{ text: string }>;
-  isError?: boolean;
-};
-
+/** The `next` hints of a result, or none when it carries no hints. */
 function hintsOf(result: unknown): string[] {
-  const structured = (result as Structured).structuredContent;
-  const hints = structured._hints as { next?: string[] } | undefined;
-  return hints?.next ?? [];
+  const hints = structuredOf(result)._hints;
+  if (hints === undefined) return [];
+  const next = record(hints).next;
+  if (next === undefined) return [];
+  if (!Array.isArray(next) || !next.every((hint) => typeof hint === 'string'))
+    throw new Error(`Not string hints: ${JSON.stringify(next)}`);
+  return next;
 }
 
 function errorOf(result: unknown): string {
-  const r = result as Structured;
-  expect(r.isError).toBe(true);
-  const parsed = JSON.parse(r.content[0].text) as { error: string };
-  return parsed.error;
+  expect(isErrorResult(result)).toBe(true);
+  const parsed: unknown = JSON.parse(textOf(result));
+  return str(record(parsed).error);
 }
 
 /**
@@ -127,7 +132,9 @@ describe('observe_session tool', () => {
     it('requires flowId', async () => {
       const spec = createObserveSessionToolSpec(stubClient());
       const result = await spec.handler({ action: 'start' });
-      expect(errorOf(result)).toContain('flowId is required');
+      expect(errorOf(result)).toBe(
+        'flowId: Invalid input: expected string, received undefined',
+      );
     });
 
     it('rejects arms.container false on both schema surfaces, which neither can honour', () => {
@@ -395,7 +402,7 @@ describe('observe_session tool', () => {
         flowId: 'flow_1',
         sessionId: 'ses_1',
       });
-      expect((result as Structured).structuredContent).toMatchObject({
+      expect(structuredOf(result)).toMatchObject({
         sessionId: 'ses_1',
         status: 'live',
         recordsReceived: 7,
@@ -432,7 +439,7 @@ describe('observe_session tool', () => {
         sessionId: 'ses_1',
       });
 
-      expect((result as Structured).structuredContent).toMatchObject({
+      expect(structuredOf(result)).toMatchObject({
         arms: {
           preview: { attached: true },
           container: { attached: false, settingsName: null, endpoint: null },
@@ -452,8 +459,8 @@ describe('observe_session tool', () => {
         sessionId: 'ses_1',
       });
 
-      const structured = (result as Structured).structuredContent;
-      const text = (result as Structured).content[0].text;
+      const structured = structuredOf(result);
+      const text = textOf(result);
 
       // activationUrl is surfaced whole: it is the artifact a user opens, and
       // the feed credential travels inside it as the elbObserve companion.
@@ -511,7 +518,7 @@ describe('observe_session tool', () => {
       const result = await spec.handler({ action: 'status', flowId: 'flow_1' });
 
       expect(getObserveSession).not.toHaveBeenCalled();
-      expect((result as Structured).structuredContent).toMatchObject({
+      expect(structuredOf(result)).toMatchObject({
         sessionId: null,
       });
     });
@@ -573,7 +580,7 @@ describe('observe_session tool', () => {
         flowId: 'flow_1',
         sessionId: 'ses_live',
       });
-      expect((result as Structured).structuredContent).toMatchObject({
+      expect(structuredOf(result)).toMatchObject({
         sessionId: 'ses_live',
         ended: true,
       });
@@ -596,7 +603,7 @@ describe('observe_session tool', () => {
       const result = await spec.handler({ action: 'stop', flowId: 'flow_1' });
 
       expect(endObserveSession).not.toHaveBeenCalled();
-      expect((result as Structured).structuredContent).toMatchObject({
+      expect(structuredOf(result)).toMatchObject({
         sessionId: null,
         ended: false,
       });
@@ -648,9 +655,9 @@ describe('observe_session tool', () => {
       );
 
       const result = await spec.handler({ action: 'stop', flowId: 'flow_1' });
-      const structured = (result as Structured).structuredContent;
+      const structured = structuredOf(result);
 
-      expect((result as Structured).isError).toBe(true);
+      expect(isErrorResult(result)).toBe(true);
       expect(structured.code).toBe('OBSERVER_UNAVAILABLE');
       expect(structured.error).toContain('Pass sessionId explicitly');
     });
@@ -697,7 +704,7 @@ describe('observe_session tool', () => {
         flowId: 'flow_1',
         sessionId: 'ses_1',
       });
-      expect((result as Structured).structuredContent).toMatchObject({
+      expect(structuredOf(result)).toMatchObject({
         ended: true,
       });
     });

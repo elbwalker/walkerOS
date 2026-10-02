@@ -2,21 +2,13 @@ import { getLanguage, getTimezone, getScreenSize } from '@walkeros/web-core';
 import { examples } from '../dev';
 
 describe('Browser Utilities', () => {
-  const mockWindow = {
-    innerWidth: 1337,
-    innerHeight: 420,
-    screen: {
-      width: 1337,
-      height: 420,
-    },
-  } as Window;
-
-  const mockNavigator = {
-    language: 'de-DE',
-  } as Navigator;
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   test('getLanguage returns navigator language', () => {
-    const language = getLanguage(mockNavigator);
+    jest.spyOn(navigator, 'language', 'get').mockReturnValue('de-DE');
+    const language = getLanguage(navigator);
     expect(language).toBe('de-DE');
   });
 
@@ -27,7 +19,9 @@ describe('Browser Utilities', () => {
   });
 
   test('getScreenSize returns formatted screen dimensions', () => {
-    const screenSize = getScreenSize(mockWindow);
+    jest.spyOn(window.screen, 'width', 'get').mockReturnValue(1337);
+    jest.spyOn(window.screen, 'height', 'get').mockReturnValue(420);
+    const screenSize = getScreenSize(window);
     expect(screenSize).toBe('1337x420');
   });
 

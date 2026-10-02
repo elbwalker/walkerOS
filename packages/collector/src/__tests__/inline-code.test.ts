@@ -284,8 +284,8 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
         inputEvent,
       );
 
-      expect(result.event).not.toBeNull();
-      expect(!Array.isArray(result.event) && result.event!.data).toEqual({
+      expect(result.copies).toHaveLength(1);
+      expect(result.copies[0].event.data).toEqual({
         original: true,
         enriched: true,
         timestamp: 12345,
@@ -337,8 +337,8 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
         inputEvent,
       );
 
-      expect(result.event).not.toBeNull();
-      expect(!Array.isArray(result.event) && result.event!.data).toEqual({
+      expect(result.copies).toHaveLength(1);
+      expect(result.copies[0].event.data).toEqual({
         original: true,
         validated: true,
         enriched: true,
@@ -372,7 +372,7 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
         { name: 'blocked event', data: {} },
       );
 
-      expect(result.event).toBeNull();
+      expect(result.copies).toEqual([]);
     });
   });
 
@@ -452,10 +452,8 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
         event,
       );
 
-      expect(transformedEvent.event).not.toBeNull();
-      expect(
-        !Array.isArray(transformedEvent.event) && transformedEvent.event!.data,
-      ).toEqual({
+      expect(transformedEvent.copies).toHaveLength(1);
+      expect(transformedEvent.copies[0].event.data).toEqual({
         source: 'test',
         transformed: true,
       });

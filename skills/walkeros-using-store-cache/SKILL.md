@@ -68,7 +68,7 @@ in a session share the same key.
     "sessionLookup": {
       "code": {
         "type": "session-lookup",
-        "push": "$code:async (event, context) => { if (!event.user.session) return; const session = await context.env.store.get(event.user.session); if (session) return { event: { ...event, data: { ...event.data, session } } }; }"
+        "push": "$code:async (event, context) => { if (!event.user?.session) return; const session = await context.env.store.get(event.user.session); if (session) return { event: { ...event, data: { ...event.data, session } } }; }"
       },
       "env": { "store": "$store.sessions" }
     }
@@ -162,7 +162,7 @@ built-in memory tier: the Sheets store cannot hold cache entries.
     "crmLookup": {
       "code": {
         "type": "crm-lookup",
-        "push": "$code:async (event, context) => { if (!event.user.id) return; const crm = await context.env.store.get(event.user.id); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
+        "push": "$code:async (event, context) => { if (!event.user?.id) return; const crm = await context.env.store.get(event.user.id); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
       },
       "env": { "store": "$store.crm" }
     }
@@ -179,8 +179,9 @@ Lookup chain on `crm.get(K)`:
    on the unwind: `crm` writes to `files`, which writes GCS and then memory.
 
 TTL ordering: shortest at the top (the `files` memory tier, 300s), longest at
-the cold end (the `crm` entries in GCS, 86400s). The bound on staleness is the
-longest TTL in the chain.
+the cold end (the `crm` entries in GCS, 86400s). A hit in a lower tier restarts
+the TTL of every tier above it, so the bound on staleness is the sum of the TTLs
+along the chain (86400s + 300s here), not the longest one.
 
 **Async-safe by design.** Whether your cache store's `get` is synchronous (the
 built-in `__cache`, an in-memory store) or asynchronous
@@ -355,11 +356,30 @@ from ingest:
 A transformer runs its `get` before its own `next` route, so the route can match
 on `ingest.tenant`. A source picks its route before its state runs.
 
+To fill several fields from one lookup, add `mapping`. Its paths are relative to
+the value read, and the result merges into the target:
+
+```json
+"loadUser": {
+  "state": {
+    "mode": "get", "store": "customers", "key": "event.user.id", "value": "event.user",
+    "mapping": { "map": { "ltv": "ltv", "segment": { "key": "segment", "value": "unknown" } } }
+  }
+}
+```
+
+An object result merges into an object target, anything else replaces it; on a
+`set` the stored entry is read, merged and written back (not atomic). The
+mapping runs on a miss too, so only declared fallbacks are written; `fn` and
+`condition` then receive `undefined`, while `validate` receives the resolved
+value (a declared fallback, or `{}` after a `map`).
+
 Omit `store` to use the built-in `__cache` tier; state keys there are prefixed
 with `state:` so they never collide with cache entries. State is **fail-open**:
-a store error is logged and the event passes through unchanged. Use `state` for
-simple fetch/stash; reach for `$code:` only when the logic is genuinely
-non-declarative.
+a store error is logged and the event passes through unchanged. A `store` not
+declared in `flow.stores`, or one with `file: true`, is a validation error
+(`walkeros validate` and deploy preflight). Use `state` for simple fetch/stash;
+reach for `$code:` only when the logic is genuinely non-declarative.
 
 Full reference: [Website: State](../../website/docs/collector/state.mdx).
 

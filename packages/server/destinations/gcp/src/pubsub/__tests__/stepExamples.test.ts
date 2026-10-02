@@ -4,6 +4,7 @@ import { __getMockCalls, __resetMockCalls } from '@google-cloud/pubsub';
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import * as examples from '../examples';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type CallRecord = [string, ...unknown[]];
 
@@ -113,3 +114,6 @@ describe('Pub/Sub Step Examples', () => {
     expect(actual.map(decodeData)).toEqual(expected.map(decodeExpectedData));
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

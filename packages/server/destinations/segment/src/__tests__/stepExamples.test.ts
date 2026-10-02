@@ -17,6 +17,7 @@ import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { Env, SegmentAnalyticsMock, Settings } from '../types';
+import { expectSimulationResolves } from '@walkeros/core/dev';
 
 type Captured = [callable: string, ...args: unknown[]];
 
@@ -89,3 +90,6 @@ describe('segment server destination -- step examples', () => {
     expect(collected()).toEqual(example.out);
   });
 });
+
+it('declares simulation paths that resolve', () =>
+  expectSimulationResolves(examples.env));

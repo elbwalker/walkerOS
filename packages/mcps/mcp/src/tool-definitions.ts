@@ -5,6 +5,7 @@ import {
   HUB_MANAGE_DESCRIPTION,
   HUB_MANAGE_INPUT_SCHEMA,
 } from './tools/hub-manage.js';
+import { FLOW_SIMULATE_DESCRIPTION } from './tools/simulate-description.js';
 import {
   FRAME_MANAGE_DESCRIPTION,
   FRAME_MANAGE_INPUT_SCHEMA,
@@ -219,13 +220,15 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     description:
       'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
       'Accepts JSON strings, file paths, or URLs as input; on the hosted server only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
-      'Returns validation results with errors, warnings, and details.',
+      "With only type and input, a flow runs every check on every flow and step, including each package's settings schema (fetched from the package CDN; offline: true skips that and says so). " +
+      'flow and path narrow the run; strict turns warnings and skips into failures: valid is false. ' +
+      'Returns valid, errors and warnings with stable codes, and details.scope (what was checked), details.skipped (checks that could not run) and details.deferred (values known only at runtime).',
     inputSchema: schemas.ValidateInputShape as unknown as ZodRawShape,
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
-      openWorldHint: false,
+      openWorldHint: true,
     },
   },
   {
@@ -251,19 +254,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'flow_simulate',
     title: 'Simulate Flow',
-    description:
-      'Simulate events through a walkerOS flow without making real API calls. ' +
-      'For destinations: event is a walkerOS event { name: "entity action", data: {...} }. ' +
-      'For sources: event is { content: ..., trigger?: { type?, options? }, env?: {...} }. ' +
-      'Use step to target a specific step. ' +
-      'Use flow_examples to discover available test data. ' +
-      'IMPORTANT: Destinations with require (e.g. require: ["consent"]) stay pending until ' +
-      'that collector event fires, simulation will error "not found" if require is not satisfied. ' +
-      'Remove require from config or provide consent/user events before simulating. ' +
-      'Separately, destinations with consent (e.g. consent: { marketing: true }) only receive ' +
-      'events where the event includes matching consent. ' +
-      'Mapping transforms event names and data at the destination level. ' +
-      'Policy redacts or injects fields before mapping runs.',
+    description: FLOW_SIMULATE_DESCRIPTION,
     inputSchema: {
       configPath: schemas.SimulateInputShape.configPath,
       event: z

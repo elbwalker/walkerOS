@@ -96,6 +96,9 @@ export interface OnConfig {
 /**
  * Destination `on` handler: receives the action type and a destination context.
  * Already context-style; kept for compatibility with the destination interface.
+ * The collector awaits the returned promise and bounds the wait by
+ * `Destination.Config.timeout`; the handler's effects therefore land before
+ * the destination's next push.
  */
 export type OnFn<T extends Destination.TypesGeneric = Destination.Types> = (
   type: Types,

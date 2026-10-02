@@ -1,5 +1,6 @@
 import { defineConfig, baseConfig } from '@walkeros/config/tsup';
-import { cpSync, existsSync, mkdirSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
+import { cp } from 'fs/promises';
 import { resolve } from 'path';
 import { createHash } from 'crypto';
 
@@ -80,8 +81,10 @@ export default defineConfig([
         mkdirSync(distDir, { recursive: true });
       }
 
+      // Async cp: the sync recursive copy fails with EACCES on virtiofs
+      // mounts (Docker Desktop dev containers) for nested folders.
       if (existsSync(examplesSource)) {
-        cpSync(examplesSource, resolve(distDir, 'examples'), {
+        await cp(examplesSource, resolve(distDir, 'examples'), {
           recursive: true,
         });
       }

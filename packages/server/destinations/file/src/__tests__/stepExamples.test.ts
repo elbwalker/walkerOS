@@ -1,10 +1,11 @@
 import type { WalkerOS } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
-import { startFlow } from '@walkeros/collector';
+import { expectSimulationResolves } from '@walkeros/core/dev';
+import { startFlow, wrapEnv } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { FileStepExample } from '../examples/step';
 import type { CapturedFile, SpyEnv, SpyState } from '../examples/env';
-import type { FileWriteStream } from '../types';
+import type { Env, FileWriteStream } from '../types';
 
 // Build-time version define (jest injects the package version). The collector
 // stamps source.release with this on push, so the expected JSONL must track it
@@ -146,4 +147,44 @@ describe('@walkeros/server-destination-file step examples', () => {
       }),
     ).rejects.toThrow(/fields/i);
   });
+
+  it('declares simulation paths that resolve', () =>
+    expectSimulationResolves(examples.env));
+
+  it('records each written line through the simulation paths', async () => {
+    const dest = jest.requireActual('../').default;
+    const { wrappedEnv, calls } = wrapEnv({
+      ...makeSpyEnv(),
+      simulation: examples.env.simulation,
+    });
+    const fs = wrappedEnv.fs;
+    if (!isFs(fs)) throw new Error('fs mock missing');
+    const env: Env = { fs };
+
+    const { elb } = await startFlow();
+    elb('walker destination', {
+      code: { ...dest, env },
+      config: { settings: { filename: 'events.jsonl' } },
+    });
+    await elb({ name: 'page view', data: { title: 'Home' } });
+
+    expect(calls.map((c) => c.fn)).toEqual(['fs.createWriteStream.write']);
+    const [line] = calls[0].args;
+    if (typeof line !== 'string') throw new Error('line not a string');
+    expect(JSON.parse(line)).toMatchObject({
+      name: 'page view',
+      data: { title: 'Home' },
+    });
+  });
 });
+
+function isFs(value: unknown): value is NonNullable<Env['fs']> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'createWriteStream' in value &&
+    typeof value.createWriteStream === 'function' &&
+    'mkdir' in value &&
+    typeof value.mkdir === 'function'
+  );
+}

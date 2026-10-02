@@ -1,0 +1,35 @@
+{
+  "version": 4,
+  "contract": {
+    "default": {
+      "events": {
+        "order": {
+          "complete": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["total"],
+                "properties": {
+                  "total": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "server": {
+      "extend": "missing"
+    }
+  },
+  "flows": {
+    "a": {
+      "config": {
+        "platform": "server"
+      }
+    }
+  }
+}

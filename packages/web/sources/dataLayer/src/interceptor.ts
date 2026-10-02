@@ -44,7 +44,7 @@ export function interceptDataLayer(
     try {
       // Process each argument
       for (const arg of args) {
-        processEvent(push, settings, arg);
+        processEvent(push, settings, arg, win);
       }
     } finally {
       isProcessing = false;
@@ -84,7 +84,7 @@ export function processExistingEvents(
   try {
     const count = limit ?? dataLayer.length;
     for (let i = 0; i < count; i++) {
-      processEvent(push, settings, dataLayer[i]);
+      processEvent(push, settings, dataLayer[i], win);
     }
   } finally {
     isProcessing = false;
@@ -98,6 +98,7 @@ function processEvent(
   push: Collector.PushFn,
   settings: { prefix?: string; filter?: (event: unknown) => boolean } = {},
   rawEvent: unknown,
+  win: Record<string, unknown>,
 ): void {
   // Apply filter if provided
   if (settings.filter) {
@@ -128,7 +129,7 @@ function processEvent(
   const partialEvent: WalkerOS.DeepPartialEvent = {
     name: eventName,
     data: data as WalkerOS.Properties,
-    source: { type: 'dataLayer', platform: 'web' },
+    source: { type: 'dataLayer', platform: 'web', ...getPageContext(win) },
   };
 
   // Push to collector
@@ -136,6 +137,41 @@ function processEvent(
     () => push(partialEvent),
     () => {}, // Silently handle push errors
   )();
+}
+
+/**
+ * Page context like the browser source stamps it, read when the event is
+ * emitted so SPA navigations are reflected. Fields without a readable value
+ * are omitted, including when a getter throws, so the push itself never fails.
+ */
+function getPageContext(win: Record<string, unknown> | undefined): {
+  url?: string;
+  referrer?: string;
+} {
+  if (!win) return {};
+  // Location and Document are host objects, which `isObject` rejects.
+  const url = tryCatch((): string | undefined => {
+    const location = win.location;
+    return isObjectLike(location) &&
+      'href' in location &&
+      isString(location.href)
+      ? location.href
+      : undefined;
+  })();
+  const referrer = tryCatch((): string | undefined => {
+    const doc = win.document;
+    return isObjectLike(doc) && 'referrer' in doc && isString(doc.referrer)
+      ? doc.referrer
+      : undefined;
+  })();
+  return {
+    ...(url !== undefined ? { url } : {}),
+    ...(referrer !== undefined ? { referrer } : {}),
+  };
+}
+
+function isObjectLike(value: unknown): value is object {
+  return typeof value === 'object' && value !== null;
 }
 
 /**

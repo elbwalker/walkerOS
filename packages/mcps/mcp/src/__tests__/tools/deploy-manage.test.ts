@@ -12,14 +12,16 @@ jest.mock('@walkeros/core', () => ({
     ],
     structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
-  mcpError: jest.fn((error, hint) => {
-    const err = error as Error & { code?: string; details?: unknown[] };
+  mcpError: jest.fn((error: unknown, hint?: unknown) => {
+    const err: object =
+      typeof error === 'object' && error !== null ? error : {};
     const structured: Record<string, unknown> = {
-      error: err?.message ?? 'Unknown error',
+      error: ('message' in err ? err.message : undefined) ?? 'Unknown error',
     };
     if (hint) structured.hint = hint;
-    if (err?.code) structured.code = err.code;
-    if (Array.isArray(err?.details)) structured.details = err.details;
+    if ('code' in err && err.code) structured.code = err.code;
+    if ('details' in err && Array.isArray(err.details))
+      structured.details = err.details;
     return {
       content: [{ type: 'text', text: JSON.stringify(structured) }],
       structuredContent: structured,
@@ -28,21 +30,17 @@ jest.mock('@walkeros/core', () => ({
   }),
 }));
 
-import { registerDeployTool } from '../../tools/deploy-manage.js';
+import { createDeployManageToolSpec } from '../../tools/deploy-manage.js';
 import { stubClient } from '../support/stub-client.js';
+import {
+  structured,
+  record,
+  isErrorResult,
+  textOf,
+} from '../support/tool-result.js';
 
-type HandlerFn = (input: Record<string, unknown>) => Promise<unknown>;
-
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: HandlerFn }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: HandlerFn) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
+function parse(text: string): unknown {
+  return JSON.parse(text);
 }
 
 const DEPLOYMENT_ONE = {
@@ -60,19 +58,14 @@ const DEPLOYMENT_TWO = {
 };
 
 describe('deploy_manage tool', () => {
-  let server: ReturnType<typeof createMockServer>;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    server = createMockServer();
   });
 
   it('registers with name "deploy_manage" and correct annotations', () => {
-    registerDeployTool(server as never, stubClient());
-    const tool = server.getTool('deploy_manage');
-    expect(tool).toBeDefined();
-    const config = tool!.config as { annotations: Record<string, boolean> };
-    expect(config.annotations).toEqual({
+    const tool = createDeployManageToolSpec(stubClient());
+    expect(tool.name).toBe('deploy_manage');
+    expect(tool.annotations).toEqual({
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,
@@ -81,10 +74,8 @@ describe('deploy_manage tool', () => {
   });
 
   it('describes the now-real hosted behavior honestly', () => {
-    registerDeployTool(server as never, stubClient());
-    const tool = server.getTool('deploy_manage')!;
-    const config = tool.config as { description: string };
-    const description = config.description.toLowerCase();
+    const tool = createDeployManageToolSpec(stubClient());
+    const description = tool.description.toLowerCase();
 
     // wait is honored, including the budget
     expect(description).toContain('wait');
@@ -107,29 +98,23 @@ describe('deploy_manage tool', () => {
 
   describe('deploy', () => {
     it('requires flowId', async () => {
-      registerDeployTool(server as never, stubClient());
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({ action: 'deploy' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const tool = createDeployManageToolSpec(stubClient());
+      const result = await tool.handler({ action: 'deploy' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(isErrorResult(result)).toBe(true);
+      const parsed = record(parse(textOf(result)));
       expect(parsed.error).toContain('flowId is required for deploy action');
     });
 
     it('calls deploy with correct options', async () => {
       const deployed = { status: 'deployed', url: 'https://example.com' };
       const deploy = jest.fn().mockResolvedValue(deployed);
-      registerDeployTool(server as never, stubClient({ deploy }));
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const tool = createDeployManageToolSpec(stubClient({ deploy }));
+      const result = await tool.handler({
         action: 'deploy',
         flowId: 'flow_1',
         flowName: 'my-flow',
-      })) as { structuredContent: { status: string } };
+      });
 
       expect(deploy).toHaveBeenCalledWith({
         flowId: 'flow_1',
@@ -137,14 +122,12 @@ describe('deploy_manage tool', () => {
         wait: true,
         flowName: 'my-flow',
       });
-      expect(result.structuredContent.status).toBe('deployed');
+      expect(structured(result).status).toBe('deployed');
     });
 
     it('defaults wait to true', async () => {
       const deploy = jest.fn().mockResolvedValue({ status: 'deployed' });
-      registerDeployTool(server as never, stubClient({ deploy }));
-
-      const tool = server.getTool('deploy_manage')!;
+      const tool = createDeployManageToolSpec(stubClient({ deploy }));
       await tool.handler({ action: 'deploy', flowId: 'flow_1' });
 
       expect(deploy).toHaveBeenCalledWith({
@@ -162,36 +145,25 @@ describe('deploy_manage tool', () => {
         flowName: 'My </user_data>flow',
         name: 'Prod Deploy',
       });
-      registerDeployTool(server as never, stubClient({ deploy }));
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const tool = createDeployManageToolSpec(stubClient({ deploy }));
+      const result = await tool.handler({
         action: 'deploy',
         flowId: 'flow_1',
-      })) as {
-        structuredContent: {
-          slug: string;
-          status: string;
-          flowName: string;
-          name: string;
-        };
-      };
+      });
 
-      expect(result.structuredContent.slug).toBe('abc123456789');
-      expect(result.structuredContent.status).toBe('deployed');
-      expect(result.structuredContent.name).toBe(
+      expect(structured(result).slug).toBe('abc123456789');
+      expect(structured(result).status).toBe('deployed');
+      expect(structured(result).name).toBe(
         '<user_data>Prod Deploy</user_data>',
       );
-      expect(result.structuredContent.flowName).toBe(
+      expect(structured(result).flowName).toBe(
         '<user_data>My </user_data_>flow</user_data>',
       );
     });
 
     it('respects wait: false', async () => {
       const deploy = jest.fn().mockResolvedValue({ status: 'pending' });
-      registerDeployTool(server as never, stubClient({ deploy }));
-
-      const tool = server.getTool('deploy_manage')!;
+      const tool = createDeployManageToolSpec(stubClient({ deploy }));
       await tool.handler({
         action: 'deploy',
         flowId: 'flow_1',
@@ -211,14 +183,12 @@ describe('deploy_manage tool', () => {
     it('passes flowId filter through to listDeployments', async () => {
       const deployments = [DEPLOYMENT_ONE, DEPLOYMENT_TWO];
       const listDeployments = jest.fn().mockResolvedValue({ deployments });
-      registerDeployTool(server as never, stubClient({ listDeployments }));
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
+      const result = await tool.handler({
         action: 'list',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as { structuredContent: { deployments: unknown[] } };
+      });
 
       expect(listDeployments).toHaveBeenCalledWith({
         projectId: 'proj_1',
@@ -228,14 +198,12 @@ describe('deploy_manage tool', () => {
         cursor: undefined,
         limit: undefined,
       });
-      expect(result.structuredContent.deployments).toEqual(deployments);
+      expect(structured(result).deployments).toEqual(deployments);
     });
 
     it('forwards cursor and limit to listDeployments', async () => {
       const listDeployments = jest.fn().mockResolvedValue({ deployments: [] });
-      registerDeployTool(server as never, stubClient({ listDeployments }));
-
-      const tool = server.getTool('deploy_manage')!;
+      const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
       await tool.handler({
         action: 'list',
         projectId: 'proj_1',
@@ -255,9 +223,7 @@ describe('deploy_manage tool', () => {
 
     it('calls listDeployments without flowId', async () => {
       const listDeployments = jest.fn().mockResolvedValue({ deployments: [] });
-      registerDeployTool(server as never, stubClient({ listDeployments }));
-
-      const tool = server.getTool('deploy_manage')!;
+      const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
       await tool.handler({ action: 'list' });
 
       expect(listDeployments).toHaveBeenCalledWith({
@@ -272,9 +238,7 @@ describe('deploy_manage tool', () => {
 
     it('accepts type and status filters', async () => {
       const listDeployments = jest.fn().mockResolvedValue({ deployments: [] });
-      registerDeployTool(server as never, stubClient({ listDeployments }));
-
-      const tool = server.getTool('deploy_manage')!;
+      const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
       await tool.handler({
         action: 'list',
         projectId: 'proj_1',
@@ -295,15 +259,11 @@ describe('deploy_manage tool', () => {
 
   describe('get', () => {
     it('requires flowId', async () => {
-      registerDeployTool(server as never, stubClient());
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({ action: 'get' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const tool = createDeployManageToolSpec(stubClient());
+      const result = await tool.handler({ action: 'get' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(isErrorResult(result)).toBe(true);
+      const parsed = record(parse(textOf(result)));
       expect(parsed.error).toContain('flowId is required for get action');
     });
 
@@ -315,17 +275,14 @@ describe('deploy_manage tool', () => {
         slug: DEPLOYMENT_ONE.slug,
         status: 'active',
       });
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, getDeploymentBySlug }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'get',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as { structuredContent: { slug: string } };
+      });
 
       expect(listDeployments).toHaveBeenCalledWith({
         projectId: 'proj_1',
@@ -335,7 +292,7 @@ describe('deploy_manage tool', () => {
         slug: DEPLOYMENT_ONE.slug,
         projectId: 'proj_1',
       });
-      expect(result.structuredContent.slug).toBe(DEPLOYMENT_ONE.slug);
+      expect(structured(result).slug).toBe(DEPLOYMENT_ONE.slug);
     });
 
     it('returns MULTIPLE_DEPLOYMENTS when two matches and no slug', async () => {
@@ -343,24 +300,18 @@ describe('deploy_manage tool', () => {
         .fn()
         .mockResolvedValue({ deployments: [DEPLOYMENT_ONE, DEPLOYMENT_TWO] });
       const getDeploymentBySlug = jest.fn();
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, getDeploymentBySlug }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'get',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as {
-        isError: boolean;
-        structuredContent: { code: string; details: unknown[] };
-      };
+      });
 
-      expect(result.isError).toBe(true);
-      expect(result.structuredContent.code).toBe('MULTIPLE_DEPLOYMENTS');
-      expect(result.structuredContent.details).toHaveLength(2);
+      expect(isErrorResult(result)).toBe(true);
+      expect(structured(result).code).toBe('MULTIPLE_DEPLOYMENTS');
+      expect(structured(result).details).toHaveLength(2);
       expect(getDeploymentBySlug).not.toHaveBeenCalled();
     });
 
@@ -369,21 +320,18 @@ describe('deploy_manage tool', () => {
         .fn()
         .mockResolvedValue({ deployments: [DEPLOYMENT_ONE, DEPLOYMENT_TWO] });
       const getDeploymentBySlug = jest.fn();
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, getDeploymentBySlug }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'get',
         projectId: 'proj_1',
         flowId: 'flow_abc',
         slug: 'ghi999',
-      })) as { isError: boolean; structuredContent: { code: string } };
+      });
 
-      expect(result.isError).toBe(true);
-      expect(result.structuredContent.code).toBe('NOT_FOUND');
+      expect(isErrorResult(result)).toBe(true);
+      expect(structured(result).code).toBe('NOT_FOUND');
       expect(getDeploymentBySlug).not.toHaveBeenCalled();
     });
 
@@ -394,38 +342,31 @@ describe('deploy_manage tool', () => {
       const getDeploymentBySlug = jest.fn().mockResolvedValue({
         slug: DEPLOYMENT_TWO.slug,
       });
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, getDeploymentBySlug }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'get',
         projectId: 'proj_1',
         flowId: 'flow_abc',
         slug: DEPLOYMENT_TWO.slug,
-      })) as { structuredContent: { slug: string } };
+      });
 
       expect(getDeploymentBySlug).toHaveBeenCalledWith({
         slug: DEPLOYMENT_TWO.slug,
         projectId: 'proj_1',
       });
-      expect(result.structuredContent.slug).toBe(DEPLOYMENT_TWO.slug);
+      expect(structured(result).slug).toBe(DEPLOYMENT_TWO.slug);
     });
   });
 
   describe('delete', () => {
     it('requires flowId', async () => {
-      registerDeployTool(server as never, stubClient());
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({ action: 'delete' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
+      const tool = createDeployManageToolSpec(stubClient());
+      const result = await tool.handler({ action: 'delete' });
 
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(isErrorResult(result)).toBe(true);
+      const parsed = record(parse(textOf(result)));
       expect(parsed.error).toContain('flowId is required for delete action');
     });
 
@@ -434,24 +375,21 @@ describe('deploy_manage tool', () => {
         .fn()
         .mockResolvedValue({ deployments: [DEPLOYMENT_ONE] });
       const deleteDeployment = jest.fn().mockResolvedValue({ success: true });
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, deleteDeployment }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'delete',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as { structuredContent: { deleted: boolean; success: boolean } };
+      });
 
       expect(deleteDeployment).toHaveBeenCalledWith({
         slug: DEPLOYMENT_ONE.slug,
         projectId: 'proj_1',
       });
-      expect(result.structuredContent.deleted).toBe(true);
-      expect(result.structuredContent.success).toBe(true);
+      expect(structured(result).deleted).toBe(true);
+      expect(structured(result).success).toBe(true);
     });
 
     it('returns MULTIPLE_DEPLOYMENTS with details when two active and no slug', async () => {
@@ -459,24 +397,18 @@ describe('deploy_manage tool', () => {
         .fn()
         .mockResolvedValue({ deployments: [DEPLOYMENT_ONE, DEPLOYMENT_TWO] });
       const deleteDeployment = jest.fn();
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, deleteDeployment }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'delete',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as {
-        isError: boolean;
-        structuredContent: { code: string; details: unknown[] };
-      };
+      });
 
-      expect(result.isError).toBe(true);
-      expect(result.structuredContent.code).toBe('MULTIPLE_DEPLOYMENTS');
-      expect(result.structuredContent.details).toHaveLength(2);
+      expect(isErrorResult(result)).toBe(true);
+      expect(structured(result).code).toBe('MULTIPLE_DEPLOYMENTS');
+      expect(structured(result).details).toHaveLength(2);
       expect(deleteDeployment).not.toHaveBeenCalled();
     });
 
@@ -485,21 +417,18 @@ describe('deploy_manage tool', () => {
         .fn()
         .mockResolvedValue({ deployments: [DEPLOYMENT_ONE, DEPLOYMENT_TWO] });
       const deleteDeployment = jest.fn();
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, deleteDeployment }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'delete',
         projectId: 'proj_1',
         flowId: 'flow_abc',
         slug: 'ghi999',
-      })) as { isError: boolean; structuredContent: { code: string } };
+      });
 
-      expect(result.isError).toBe(true);
-      expect(result.structuredContent.code).toBe('NOT_FOUND');
+      expect(isErrorResult(result)).toBe(true);
+      expect(structured(result).code).toBe('NOT_FOUND');
       expect(deleteDeployment).not.toHaveBeenCalled();
     });
   });
@@ -511,16 +440,14 @@ describe('deploy_manage tool', () => {
       const deploy = jest
         .fn()
         .mockResolvedValue({ deploymentId: 'dep_1', slug: 'abc123456789' });
-      registerDeployTool(server as never, stubClient({ deploy }));
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const tool = createDeployManageToolSpec(stubClient({ deploy }));
+      const result = await tool.handler({
         action: 'deploy',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as { structuredContent: { appUrl?: string } };
+      });
 
-      expect(result.structuredContent.appUrl).toBe(
+      expect(structured(result).appUrl).toBe(
         'https://app.walkeros.io/projects/proj_1/deployments/dep_1',
       );
     });
@@ -530,22 +457,19 @@ describe('deploy_manage tool', () => {
       // default instead would run in one project and link into another, and
       // the project-scoped deployment page would answer that link with a 404.
       const deploy = jest.fn().mockResolvedValue({ deploymentId: 'dep_1' });
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ deploy, getDefaultProject: () => 'proj_default' }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'deploy',
         projectId: 'proj_explicit',
         flowId: 'flow_abc',
-      })) as { structuredContent: { appUrl?: string } };
+      });
 
       expect(deploy).toHaveBeenCalledWith(
         expect.objectContaining({ projectId: 'proj_explicit' }),
       );
-      expect(result.structuredContent.appUrl).toBe(
+      expect(structured(result).appUrl).toBe(
         'https://app.walkeros.io/projects/proj_explicit/deployments/dep_1',
       );
     });
@@ -557,19 +481,16 @@ describe('deploy_manage tool', () => {
       const getDeploymentBySlug = jest
         .fn()
         .mockResolvedValue({ id: 'dep_1', slug: DEPLOYMENT_ONE.slug });
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, getDeploymentBySlug }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'get',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as { structuredContent: { appUrl?: string } };
+      });
 
-      expect(result.structuredContent.appUrl).toBe(
+      expect(structured(result).appUrl).toBe(
         'https://app.walkeros.io/projects/proj_1/deployments/dep_1',
       );
     });
@@ -587,20 +508,17 @@ describe('deploy_manage tool', () => {
         status: 'active',
         url: 'https://collect.example.com',
       });
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, getDeploymentBySlug }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'get',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as { structuredContent: { url?: string; appUrl?: string } };
+      });
 
-      expect(result.structuredContent.url).toBe('https://collect.example.com');
-      expect(result.structuredContent.appUrl).toBe(
+      expect(structured(result).url).toBe('https://collect.example.com');
+      expect(structured(result).appUrl).toBe(
         'https://app.walkeros.io/projects/proj_1/deployments/dep_1',
       );
     });
@@ -614,17 +532,15 @@ describe('deploy_manage tool', () => {
         status: 'active',
         url: 'https://collect.example.com',
       });
-      registerDeployTool(server as never, stubClient({ deploy }));
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const tool = createDeployManageToolSpec(stubClient({ deploy }));
+      const result = await tool.handler({
         action: 'deploy',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as { structuredContent: { url?: string; appUrl?: string } };
+      });
 
-      expect(result.structuredContent.url).toBe('https://collect.example.com');
-      expect(result.structuredContent.appUrl).toBe(
+      expect(structured(result).url).toBe('https://collect.example.com');
+      expect(structured(result).appUrl).toBe(
         'https://app.walkeros.io/projects/proj_1/deployments/dep_1',
       );
     });
@@ -639,34 +555,29 @@ describe('deploy_manage tool', () => {
       const getDeploymentBySlug = jest
         .fn()
         .mockResolvedValue({ slug: DEPLOYMENT_ONE.slug, status: 'active' });
-      registerDeployTool(
-        server as never,
+      const tool = createDeployManageToolSpec(
         stubClient({ listDeployments, getDeploymentBySlug }),
       );
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const result = await tool.handler({
         action: 'get',
         projectId: 'proj_1',
         flowId: 'flow_abc',
-      })) as { structuredContent: Record<string, unknown> };
+      });
 
-      expect(result.structuredContent).not.toHaveProperty('appUrl');
+      expect(structured(result)).not.toHaveProperty('appUrl');
     });
 
     it('links nothing when no project can be named', async () => {
       // The stub door has no default project, and none was passed. A link
       // built on a guessed project would point into someone else's work.
       const deploy = jest.fn().mockResolvedValue({ deploymentId: 'dep_1' });
-      registerDeployTool(server as never, stubClient({ deploy }));
-
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({
+      const tool = createDeployManageToolSpec(stubClient({ deploy }));
+      const result = await tool.handler({
         action: 'deploy',
         flowId: 'flow_abc',
-      })) as { structuredContent: Record<string, unknown> };
+      });
 
-      expect(result.structuredContent).not.toHaveProperty('appUrl');
+      expect(structured(result)).not.toHaveProperty('appUrl');
     });
   });
 
@@ -675,16 +586,11 @@ describe('deploy_manage tool', () => {
       const listDeployments = jest
         .fn()
         .mockRejectedValue(new Error('Unauthorized'));
-      registerDeployTool(server as never, stubClient({ listDeployments }));
+      const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
+      const result = await tool.handler({ action: 'list' });
 
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({ action: 'list' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
-
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(isErrorResult(result)).toBe(true);
+      const parsed = record(parse(textOf(result)));
       expect(parsed.error).toBe('Unauthorized');
       expect(parsed.hint).toContain('logged in');
     });
@@ -693,16 +599,11 @@ describe('deploy_manage tool', () => {
       const listDeployments = jest
         .fn()
         .mockRejectedValue(new Error('validation failed'));
-      registerDeployTool(server as never, stubClient({ listDeployments }));
+      const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
+      const result = await tool.handler({ action: 'list' });
 
-      const tool = server.getTool('deploy_manage')!;
-      const result = (await tool.handler({ action: 'list' })) as {
-        isError: boolean;
-        content: Array<{ text: string }>;
-      };
-
-      expect(result.isError).toBe(true);
-      const parsed = JSON.parse(result.content[0].text);
+      expect(isErrorResult(result)).toBe(true);
+      const parsed = record(parse(textOf(result)));
       expect(parsed.error).toBe('validation failed');
       expect(parsed.hint).toBeUndefined();
     });

@@ -7,6 +7,11 @@ jest.mock('@walkeros/cli/dev', () => ({
       flow: { type: 'string' },
       path: { type: 'string' },
     },
+    // The handler parses its input with the real schema.
+    ValidateInputSchema:
+      jest.requireActual<typeof import('@walkeros/cli/dev')>(
+        '@walkeros/cli/dev',
+      ).schemas.ValidateInputSchema,
   },
 }));
 
@@ -18,6 +23,7 @@ jest.mock('@walkeros/cli', () => ({
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { createFlowValidateToolSpec } from '../../tools/validate';
+import { structured, rows, str } from '../support/tool-result.js';
 import { validate } from '@walkeros/cli';
 
 const mockValidate = jest.mocked(validate);
@@ -40,32 +46,29 @@ describe('flow_validate leaves issue messages literal', () => {
     });
 
     const spec = createFlowValidateToolSpec(createLocalRuntime());
-    const r = (await spec.handler({
+    const r = await spec.handler({
       type: 'flow',
       input: '{"bad": true}',
-    })) as {
-      structuredContent: {
-        errors: Array<{ path: string; message: string }>;
-        warnings: Array<{ path: string; message: string }>;
-      };
-    };
+    });
 
-    expect(r.structuredContent.errors).toHaveLength(2);
+    expect(structured(r).errors).toHaveLength(2);
     // Validation messages are tool-generated, not echoed user input — literal
     // like `path`, never wrapped in <user_data>.
-    expect(r.structuredContent.errors[0]!.message).toBe(
+    expect(rows(structured(r).errors)[0]?.message).toBe(
       'expected object, got string',
     );
-    expect(r.structuredContent.errors[0]!.message).not.toContain('<user_data>');
-    expect(r.structuredContent.errors[1]!.message).toBe('missing required key');
-    expect(r.structuredContent.warnings[0]!.message).toBe(
+    expect(str(rows(structured(r).errors)[0]?.message)).not.toContain(
+      '<user_data>',
+    );
+    expect(rows(structured(r).errors)[1]?.message).toBe('missing required key');
+    expect(rows(structured(r).warnings)[0]?.message).toBe(
       'deprecated shape; use v3',
     );
-    expect(r.structuredContent.warnings[0]!.message).not.toContain(
+    expect(str(rows(structured(r).warnings)[0]?.message)).not.toContain(
       '<user_data>',
     );
     // paths stay literal too, so the LLM can reference them
-    expect(r.structuredContent.errors[0]!.path).toBe('web.sources');
+    expect(rows(structured(r).errors)[0]?.path).toBe('web.sources');
   });
 
   it('leaves successful validation output alone (no error messages to wrap)', async () => {
@@ -78,11 +81,11 @@ describe('flow_validate leaves issue messages literal', () => {
     });
 
     const spec = createFlowValidateToolSpec(createLocalRuntime());
-    const r = (await spec.handler({
+    const r = await spec.handler({
       type: 'flow',
       input: '{}',
-    })) as { structuredContent: { valid: boolean } };
+    });
 
-    expect(r.structuredContent.valid).toBe(true);
+    expect(structured(r).valid).toBe(true);
   });
 });

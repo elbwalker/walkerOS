@@ -105,6 +105,17 @@ checks every event against it before the destination sees the event:
 the events of the current run, so a destination added later still receives
 them. `"queue": false` skips only that replay for the destination.
 
+A destination receives the current consent state through its `on('consent')`
+handler before any event is sent to it. This holds when consent was set before
+or after `walker run`, when the destination waits for consent with `require`,
+and when it is added with `walker destination` while the flow is running. The
+collector waits for the handler to finish, up to the destination's
+`config.timeout` (10 seconds by default). If the handler does not finish in
+that time, or fails, the destination receives no events until a later delivery
+of the state finishes. Its events wait in its queue meanwhile and are discarded
+at the next `walker run`. The collector delivers the state again when it
+changes, and with the next event once the timeout has passed.
+
 ### Gate a source with `consent`
 
 The collector drops events from a source when they lack the consent in the
@@ -130,11 +141,7 @@ Use destination gating when events should wait for a decision.
 `"require": ["consent"]` holds a destination back, and holds a source's `on()`
 delivery back, until the collector has a consent state. Any recorded state
 counts, whether granted or denied, so `require` does not check values;
-`config.consent` decides which events the destination receives. A destination
-that `require` activates does not receive the consent state that activated it
-in its `on()` handler, only later consent changes. A destination that forwards
-consent to a vendor, such as gtag with Consent Mode, then keeps the vendor's
-denied default, so gate it with `config.consent` alone. See
+`config.consent` decides which events the destination receives. See
 [conditional activation](/docs/sources/web/cmps#conditional-activation-with-require)
 for how `require` works.
 

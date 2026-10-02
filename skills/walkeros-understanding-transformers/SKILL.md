@@ -103,13 +103,14 @@ export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
 
 The `push` function controls event flow:
 
-| Return               | Behavior                                            |
-| -------------------- | --------------------------------------------------- |
-| `{ event }`          | Continue chain with modified event                  |
-| `void`               | Continue chain, event unchanged                     |
-| `false`              | Stop chain, event dropped                           |
-| `{ event, next }`    | Redirect chain to a different transformer (fan-out) |
-| `{ event, respond }` | Continue chain with wrapped respond function        |
+| Return               | Behavior                                                              |
+| -------------------- | --------------------------------------------------------------------- |
+| `{ event }`          | Continue chain with modified event                                    |
+| `void`               | Continue chain, event unchanged                                       |
+| `false`              | Stop chain, event dropped                                             |
+| `{ event, next }`    | Route via `next` in place of its own `next`, then the chain continues |
+| `{ event, respond }` | Continue chain with wrapped respond function                          |
+| `Result[]`           | Fork: each result is its own copy with a derived `event.id`           |
 
 A `push` that throws also stops the chain and drops the event; the collector
 logs it and counts it in `status.failed`. Catch a library error inside `push`
@@ -198,14 +199,14 @@ bundler to parse the following string as executable JavaScript:
 
 ## Pipeline Integration
 
-Transformers run at two points in the pipeline:
+Transformers run at three points around the collector:
 
 ```
-Source → [Pre-Transformers] → Collector → [Post-Transformers] → Destination
-          (source.next)                   (destination.before)
+Source → [Source chain] → Collector → [Collector chain] → fan-out → [Destination chain] → Destination
+          (source.next)                (collector.next)              (destination.before)
 ```
 
-### Pre-Collector Chain
+### Source Chain
 
 Runs after source captures event, before collector enrichment:
 
@@ -213,20 +214,35 @@ Runs after source captures event, before collector enrichment:
 sources: {
   browser: {
     code: sourceBrowser,
-    next: 'validate'  // First transformer in pre-chain
+    next: 'validate'  // First transformer in the source chain
   }
 }
 ```
 
-### Post-Collector Chain
+### Collector Chain
 
-Runs after collector enrichment, before destination receives event:
+Runs once per event after collector enrichment, before the destination fan-out.
+Every destination receives its output; a `stop` here (or a transformer returning
+`false`) drops the event for all destinations:
+
+```typescript
+startFlow({
+  next: ['bot', 'validate'], // collector.next in flow.json
+  // ...
+});
+```
+
+### Destination Chain
+
+Runs per destination, after the collector chain, before that destination
+receives the event. Use it for per-destination work and filtering; a `stop` here
+skips only this destination:
 
 ```typescript
 destinations: {
   gtag: {
     code: destinationGtag,
-    before: 'redact'  // First transformer in post-chain
+    before: 'redact'  // First transformer in the destination chain
   }
 }
 ```
@@ -255,14 +271,17 @@ transformers: {
 ### Branching and fan-out
 
 Transformers can redirect events to different chains using the `branch()`
-factory from `@walkeros/core`:
+factory from `@walkeros/core`. The route replaces the transformer's own `next`
+for this event; after it, the enclosing array continues:
 
 ```typescript
 import { branch } from '@walkeros/core';
 
 push(event, context) {
-  return branch(event, 'parser');         // Single target
-  return branch(event, ['a', 'b']);       // Fan-out to multiple
+  return branch(event, 'parser');                  // Single target
+  return branch(event, ['a', 'b']);                // Sequence: a, then b
+  return branch(event, { many: ['a', 'b'] });      // Fork: two copies
+  return branch(event, { stop: true });            // End this copy
 }
 ```
 
@@ -280,10 +299,14 @@ operator, no separate router transformer needed:
 
 `one` entries are evaluated in order, first match wins. A `RouteConfig` is a
 disjoint union: each config sets at most one of `next` (gated link), `one`
-(first-match dispatch), or `many` (all-match dispatch), never more than one. An
-entry with no `match` always matches (use it as a fallback). If no entry
-matches, the event passes through unchanged. Use `many` (pre-collector only)
-when every matching branch should run in parallel, terminating the main chain:
+(first-match dispatch), `many` (all-match fan-out), or `stop` (drop), never more
+than one. Every `match` reads `{ ingest, event }` and is evaluated when the
+event reaches it, so it sees what earlier steps wrote. An entry with no `match`
+always matches (use it as a fallback). If no entry matches, the event passes
+through unchanged. Use `many` (allowed in every chain field) when every matching
+branch should run: each matching entry becomes an independent copy of the event
+with its own derived `event.id`, and each copy finishes the rest of the path on
+its own (never merged):
 
 ```json
 "next": {
@@ -335,8 +358,10 @@ duplicating arrays in `before` / `next` references:
 #### Variant 2: cache-only
 
 A step that declares only a `cache` block. Useful for deduplication or
-short-circuit halts. `cache.stop: true` at a pre-collector position halts the
-pipeline (not just the local chain):
+short-circuit halts. `cache.stop: true` in a source chain or `collector.next`
+halts the event for all destinations (not just the local chain); in a
+`destination.before` chain it skips the rest of that chain and the destination
+receives the cached event:
 
 ```json
 {
@@ -406,21 +431,28 @@ rejected with `CONFLICT`.
 
 ### Chain resolution safety
 
-`getNextSteps()` (the public dispatch helper, previously `walkChain`) uses a
-visited set to detect circular references. If a cycle is found, the loop is
-silently broken and the chain ends. If `next` points to a non-existent
-transformer, the chain also ends without error. Note: `getNextSteps` is
-deterministic for the supplied event context. Static analyzers without a real
-event can only enumerate reachability under "match may pass or fail"
-speculation.
+Every chain position runs through one runner (`runTransformerChain` in
+`@walkeros/collector`) over the core continuation stack (`startChain` /
+`advanceChain`). Routes resolve per hop via `getNextSteps(spec, root)`, which
+needs the root `{ ingest, event }` and returns `NextSteps`: ids (plus a
+continuation for the rest of a sequence), a stop, or forks. A member `next` that
+leads back to a step already on its insertion path is skipped, and each copy is
+capped at 256 steps. A step listed twice in an array runs twice. An unknown
+transformer id is logged as a warning and skipped, and the chain continues;
+`walkeros validate` reports it as an `UNKNOWN_ROUTE_TARGET` error. Static tools
+without an event use `getRouteGraph(spec, transformers?)`, which enumerates
+every branch of the same compiled route.
 
 ### Composition principle
 
 A transformer owns its own chain. When a chain references a transformer by name,
 that transformer's own `before` chain runs before its push, and its `next` chain
-after, both are walked recursively, with cycle detection. Cache halt signals
-(`cache.stop: true`) at pre-collector positions propagate pipeline-wide;
-destinations do not see the dropped event. The grammar's recursive `Route` shape
+after, both recursively, with cycle detection. This holds inside an explicit
+array too: the array is the backbone, and a member's own `next` is inserted
+right after that member before the array continues (`["bot", "validate"]` with
+`bot.next = "foo"` runs bot, foo, validate). Cache halt signals
+(`cache.stop: true`) in a source chain or `collector.next` propagate to every
+destination. The grammar's recursive `Route` shape
 (`string | Route[] | RouteConfig`) compiles element-by-element, so sequences can
 mix transformer IDs and inline `one` / `many` / `next` routes
 (`next: ["dedup", { one: [...] }]` is valid). This is the model to default to

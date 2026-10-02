@@ -1,4 +1,9 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
+
+const InputSchema = z.union([
+  schemas.MappingSchemas.ValueSchema,
+  z.literal(false),
+]);
 
 export const SettingsSchema = z.object({
   partnerId: z
@@ -32,6 +37,12 @@ export const SettingsSchema = z.object({
       "Mapping for identity fields (like { email: 'user.email', mapped_user_id: 'user.id' })",
     )
     .optional(),
+  ip: InputSchema.describe(
+    'Client IP, sent as ip. Resolves against { ingest, event }. Default: ["ingest.ip", "event.user.ip"]. false switches it off. A mapped user_data.ip wins.',
+  ).optional(),
+  userAgent: InputSchema.describe(
+    'Client user agent, sent as useragent. Resolves against { ingest, event }. Default: ["ingest.userAgent", "event.user.userAgent"]. false switches it off. A mapped user_data.useragent wins.',
+  ).optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

@@ -1,9 +1,9 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
 
 export const SettingsSchema = z
   .object({
     mapping: z
-      .record(z.string(), z.record(z.string(), z.unknown()))
+      .record(z.string(), schemas.MappingSchemas.RuleSchema)
       .optional()
       .describe(
         "Mapping rules keyed by GA4 event name (`en`), `'*'` for unknown events. A rule replaces the matching default unless it sets `extend` or `remove`; `ignore: true` drops the event.",

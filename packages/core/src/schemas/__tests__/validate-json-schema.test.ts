@@ -14,7 +14,7 @@ describe('direct schema export promotion', () => {
     expect(schemas.validateEventsJsonSchema).toBeDefined();
   });
 
-  test('no-many route schema is reachable as schemas.X', () => {
-    expect(schemas.RouteWithoutManySchema).toBeDefined();
+  test('route schema is reachable as schemas.X', () => {
+    expect(schemas.RouteSchema).toBeDefined();
   });
 });

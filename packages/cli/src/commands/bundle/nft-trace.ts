@@ -1,3 +1,4 @@
+import esbuild from 'esbuild';
 import { nodeFileTrace } from '@vercel/nft';
 import type { NodeFileTraceReasons } from '@vercel/nft';
 import * as path from 'node:path';
@@ -91,8 +92,8 @@ export async function traceAndCopy(opts: TraceOptions): Promise<TraceResult> {
 }
 
 /**
- * Cross-check helper: after tracing, verify every package pacote resolved
- * (the top-level set) was actually picked up by the trace.
+ * Cross-check helper: after tracing, verify every declared package the
+ * bundle imports was actually picked up by the trace.
  *
  * Catches three concrete failure modes that nft cannot diagnose itself:
  * - Hoisted monorepo symlinks where the real package lives outside `base`,
@@ -101,24 +102,34 @@ export async function traceAndCopy(opts: TraceOptions): Promise<TraceResult> {
  * - Deps imported only via dynamic `require` strings nft cannot statically
  *   resolve (and therefore cannot include).
  *
- * The expected set comes from pacote's resolution (the install layer), not
- * from the user's `package.json` (which does not list step packages in the
- * zero-setup design). The check is shallow on purpose: we only verify the
- * package's `package.json` reached the trace, not every file inside. If the
- * manifest is there, nft followed the imports and copied what it found; if
- * a deeper file is missing the user adds it via
- * `flow.<name>.config.bundle.traceInclude`.
+ * The expected set is the declared `bundle.packages` the bundle imports
+ * (`collectImportedPackages`). A declared package nothing imports is not an
+ * error: a dependency used only for its types, or a leftover entry, never
+ * reaches the bundle. Such packages are returned (unless the trace reached
+ * them through another package) so the caller can warn. The check is
+ * shallow on purpose: we only verify the package's `package.json` reached
+ * the trace, not every file inside. If the manifest is there, nft followed
+ * the imports and copied what it found; if a deeper file is missing the
+ * user adds it via `flow.<name>.config.bundle.traceInclude`.
  */
 export interface AssertDepsOptions {
   fileList: string[];
-  expectedPackages: string[];
+  declaredPackages: string[];
+  importedPackages: ReadonlySet<string>;
 }
 
-export function assertDepsTraced(opts: AssertDepsOptions): void {
-  const missing = opts.expectedPackages.filter((dep) => {
-    const expected = `node_modules/${dep}/package.json`;
-    return !opts.fileList.some((f) => f.endsWith(expected));
-  });
+/**
+ * Throws when an imported declared package is missing from the trace.
+ * Returns the declared packages that are neither imported nor traced.
+ */
+export function assertDepsTraced(opts: AssertDepsOptions): string[] {
+  const isTraced = (dep: string): boolean => {
+    const manifest = `node_modules/${dep}/package.json`;
+    return opts.fileList.some((f) => f.endsWith(manifest));
+  };
+  const missing = opts.declaredPackages.filter(
+    (dep) => opts.importedPackages.has(dep) && !isTraced(dep),
+  );
   if (missing.length > 0) {
     throw new Error(
       `nft-trace: resolved packages missing from trace: ${missing.join(', ')}. ` +
@@ -127,6 +138,49 @@ export function assertDepsTraced(opts: AssertDepsOptions): void {
         `Add specific paths to flow.<name>.config.bundle.traceInclude as a workaround.`,
     );
   }
+  return opts.declaredPackages.filter(
+    (dep) => !opts.importedPackages.has(dep) && !isTraced(dep),
+  );
+}
+
+/**
+ * Package names of every bare import (static, dynamic, or require) in a
+ * built bundle, read from esbuild's metafile with all packages external.
+ * Subpaths collapse to their package (`@scope/pkg/dev` is `@scope/pkg`).
+ */
+export async function collectImportedPackages(
+  file: string,
+): Promise<Set<string>> {
+  let result: esbuild.BuildResult<{ metafile: true; write: false }>;
+  try {
+    result = await esbuild.build({
+      entryPoints: [file],
+      bundle: true,
+      write: false,
+      metafile: true,
+      packages: 'external',
+      platform: 'node',
+      format: 'esm',
+      logLevel: 'silent',
+    });
+  } finally {
+    await esbuild.stop();
+  }
+
+  const imported = new Set<string>();
+  for (const input of Object.values(result.metafile.inputs)) {
+    for (const entry of input.imports) {
+      if (entry.external) imported.add(packageNameOf(entry.path));
+    }
+  }
+  return imported;
+}
+
+function packageNameOf(specifier: string): string {
+  const segments = specifier.split('/');
+  return specifier.startsWith('@')
+    ? segments.slice(0, 2).join('/')
+    : segments[0];
 }
 
 /**

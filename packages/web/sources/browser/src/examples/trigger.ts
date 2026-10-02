@@ -1,10 +1,13 @@
 import type { Trigger, Collector } from '@walkeros/core';
+import { isArray, isObject, isString } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { createRegistry, handleTrigger } from '../trigger';
+import { settingsFrom } from '../config';
 import type { Context } from '../types';
 
 type BrowserTriggerType =
   | 'load'
+  | 'history'
   | 'click'
   | 'submit'
   | 'hover'
@@ -47,13 +50,19 @@ interface BrowserInput {
  * @example
  * // Impression trigger, handleTrigger reads data-elbaction directly
  * await trigger('impression', '[data-elb="promo"]')('<div data-elb="promo" data-elbaction="visible:promo seen">Ad</div>');
+ *
+ * @example
+ * // Route change, for a source with `history: true`: lands on `url`, then
+ * // pushes `path`
+ * await trigger('history', { url: 'https://example.com/docs', path: '/pricing' })('');
  */
 const createTrigger: Trigger.CreateFn<string, void> = async (
   config: Collector.InitConfig,
   options?: unknown,
 ) => {
   const sourceId =
-    (options as { sourceId?: string } | undefined)?.sourceId || 'browser';
+    (isObject(options) && isString(options.sourceId) && options.sourceId) ||
+    'browser';
   let flow: Trigger.FlowHandle | undefined;
   const doc = document;
   const win = window;
@@ -61,11 +70,8 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
   const trigger: Trigger.Fn<string, void> =
     (type?: string, opts?: unknown) => async (content: string) => {
       // 1. Set up environment for load triggers (URL, title, referrer)
-      if (type === 'load' || !type) {
-        const loadOpts =
-          typeof opts === 'object' && opts !== null
-            ? (opts as LoadOptions)
-            : {};
+      if (type === 'load' || type === 'history' || !type) {
+        const loadOpts = readLoadOptions(opts);
         if (loadOpts.url) {
           const urlObj = new URL(loadOpts.url);
           win.history.replaceState({}, '', urlObj.pathname);
@@ -91,6 +97,15 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
 
       // 4. For load triggers, source already scanned DOM during init, done
       if (!type || type === 'load') return;
+
+      // A route change runs within microtasks of the push, so one task later
+      // its page view has been sent.
+      if (type === 'history') {
+        const path = isObject(opts) ? stringOf(opts.path) : undefined;
+        if (path) win.history.pushState({}, '', path);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        return;
+      }
 
       // 5. Find target element
       const selector = typeof opts === 'string' ? opts : undefined;
@@ -120,7 +135,7 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
       const context: Context = {
         elb: flow.elb,
         push: flow.collector.push,
-        settings: source.config.settings as Context['settings'],
+        settings: settingsFrom(source.config.settings),
         registry: createRegistry(),
       };
 
@@ -144,10 +159,10 @@ const trigger = (
   input: unknown,
   env: Record<string, unknown>,
 ): void | (() => void) => {
-  if (!input || typeof input !== 'object') return;
-  const data = input as BrowserInput;
-  const doc = env.document as Document;
-  const win = env.window as Window & typeof globalThis;
+  const data = readInput(input);
+  const doc = env.document;
+  const win = env.window;
+  if (!data || !isDocument(doc) || !isWindow(win)) return;
 
   const injectDOM = () => {
     if (!data.attributes) return;
@@ -211,5 +226,59 @@ const trigger = (
     }
   };
 };
+
+function stringOf(value: unknown): string | undefined {
+  return isString(value) ? value : undefined;
+}
+
+function stringsOf(value: unknown): Record<string, string> | undefined {
+  if (!isObject(value)) return undefined;
+  const strings: Record<string, string> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (isString(entry)) strings[key] = entry;
+  }
+  return strings;
+}
+
+function readLoadOptions(value: unknown): LoadOptions {
+  if (!isObject(value)) return {};
+  return {
+    url: stringOf(value.url),
+    title: stringOf(value.title),
+    referrer: stringOf(value.referrer),
+  };
+}
+
+function readInput(value: unknown): BrowserInput | undefined {
+  if (!isObject(value)) return undefined;
+  const children = isArray(value.children)
+    ? value.children.map(stringsOf).filter(isDefinedRecord)
+    : undefined;
+  return {
+    ...readLoadOptions(value),
+    trigger: stringOf(value.trigger) ?? '',
+    element: stringOf(value.element),
+    attributes: stringsOf(value.attributes),
+    children,
+  };
+}
+
+function isDefinedRecord(
+  value: Record<string, string> | undefined,
+): value is Record<string, string> {
+  return value !== undefined;
+}
+
+function isDocument(value: unknown): value is Document {
+  return (
+    typeof value === 'object' && value !== null && 'createElement' in value
+  );
+}
+
+function isWindow(value: unknown): value is Window {
+  return (
+    typeof value === 'object' && value !== null && 'addEventListener' in value
+  );
+}
 
 export { createTrigger, trigger };

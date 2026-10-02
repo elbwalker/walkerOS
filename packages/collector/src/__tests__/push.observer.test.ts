@@ -110,4 +110,42 @@ describe('collector.push self-emission', () => {
     expect(inFrame).toBeDefined();
     expect(inFrame?.inEvent).toBeUndefined();
   });
+
+  test('a pre-collector drop emits one collector skip / dropped', async () => {
+    const states: FlowState[] = [];
+
+    const { collector } = await startFlow({
+      run: true,
+      transformers: {
+        gate: {
+          code: async (context) => ({
+            type: 'gate',
+            config: context.config,
+            push: () => false,
+          }),
+        },
+      },
+    });
+    collector.observers.add((state) => states.push(state));
+
+    const result = await collector.push(
+      { name: 'page view', data: {} },
+      { id: 'web', preChain: 'gate' },
+    );
+
+    expect(result).toMatchObject({ ok: true, dropped: true });
+    const drops = states.filter(
+      (s) => s.stepId === 'collector.push' && s.phase === 'skip',
+    );
+    expect(drops).toEqual([
+      expect.objectContaining({
+        stepType: 'collector',
+        skipReason: 'dropped',
+        meta: { by: 'gate', at: 'source.web.next' },
+      }),
+    ]);
+    // Counted as received, no out.
+    expect(collector.status.in).toBe(1);
+    expect(collector.status.out).toBe(0);
+  });
 });

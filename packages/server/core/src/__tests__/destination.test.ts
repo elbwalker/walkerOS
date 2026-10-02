@@ -46,6 +46,9 @@ describe('Destination', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
+    // Tests set a mapping on the shared mock; every test starts without one.
+    mockDestination.config = {};
+
     mockEvent = createEvent({
       globals: { foo: 'bar' },
       consent: { client: true },

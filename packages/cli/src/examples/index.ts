@@ -42,3 +42,27 @@ import flowSimpleImport from '../../examples/flow-simple.json';
 
 export const flowComplete = validateFlowConfig(flowCompleteImport);
 export const flowSimple = validateFlowConfig(flowSimpleImport);
+
+export {
+  flowCompleteManifest,
+  flowCompleteFeatures,
+  flowCompleteCoverage,
+  flowCompleteCli,
+  isFeatureId,
+  resolvePointer,
+} from './flow-complete.manifest.js';
+export type {
+  ChapterId,
+  UseCaseId,
+  PromptId,
+  Level,
+  FeatureId,
+  FeatureEntry,
+  TeachingEntry,
+  Excluded,
+  Inherited,
+  CliEntry,
+  RouteKind,
+  Combinator,
+  ReferenceKind,
+} from './flow-complete.manifest.js';

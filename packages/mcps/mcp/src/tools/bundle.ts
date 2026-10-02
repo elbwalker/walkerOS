@@ -5,6 +5,7 @@ import { BundleOutputShape } from '../schemas/output.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { parseToolInput } from './parse-input.js';
 import { resolveConfigPath } from './resolve-config-path.js';
 import {
   refusalHint,
@@ -48,12 +49,9 @@ async function flowBundleHandlerBody(
   runtime: FlowRuntime,
   input: unknown,
 ) {
-  const { configPath, flow, stats, output } = (input ?? {}) as {
-    configPath: string;
-    flow?: string;
-    stats?: boolean;
-    output?: string;
-  };
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { configPath, flow, stats, output } = parsed.data;
   // Bundling compiles the config and resolves every package it names. A
   // runtime that must not do that in its process provides no `bundle`.
   if (!runtime.bundle) {
@@ -81,10 +79,8 @@ async function flowBundleHandlerBody(
       );
     }
 
-    const output_ = result as unknown as Record<string, unknown>;
-
     return mcpResult(
-      { success: true, ...output_ },
+      { success: true, ...result },
       {
         next: [
           'Use flow_simulate to test',
@@ -116,8 +112,6 @@ export function registerFlowBundleTool(
       outputSchema: BundleOutputShape,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => flowBundleHandlerBody(client, runtime, args),
   );
 }

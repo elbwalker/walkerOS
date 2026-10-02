@@ -77,8 +77,9 @@ events without consent, set the source's `config.consent` (see the
    replayed via `source.on(type, data)`. Destinations whose `require` just
    emptied are registered and receive the current run's events from the
    collector's replay buffer (bounded by the collector's `queueMax`), unless
-   they set `queue: false`. They do not receive the `on()` calls broadcast
-   while they were pending, including the consent state that activated them.
+   they set `queue: false`. The destination's `on()` handler receives the
+   current state, including the consent state that activated it, before those
+   events are delivered.
 
 ### Key points
 

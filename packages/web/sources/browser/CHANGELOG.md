@@ -1,5 +1,52 @@
 # @walkeros/web-source-browser
 
+## 4.7.0
+
+### Minor Changes
+
+- c9ea71f: New `history` setting for single-page apps: every route change
+  (pushState, replaceState with a new path, back and forward) sends a page view,
+  and tagged elements are picked up as the new route renders. Off by default.
+  Page views after the first now carry the previous page's URL as
+  `data.referrer`.
+
+### Patch Changes
+
+- ef02916: An invalid entity name such as `data-elb="shopping cart"` or
+  `data-elb="foo;bar"` no longer throws and loses the event: it is ignored like
+  a missing entity, so other entities and events on the page are tracked as
+  before. Link ids (`data-elblink`) containing quotes or brackets no longer
+  throw either.
+- 050d776: Simulated click and impression examples of the browser source carry
+  `source` and `globals` again. A page scope from another realm, such as an
+  iframe or a simulated page, is now recognized. Simulate also exposes `Node`,
+  `Element`, `HTMLElement`, `Document` and `ShadowRoot`, so `instanceof` checks
+  behave as in a browser.
+- Updated dependencies [786a860]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [7e5e3de]
+- Updated dependencies [b9668bf]
+- Updated dependencies [74821ed]
+- Updated dependencies [64b06de]
+- Updated dependencies [4b4937f]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [06b498a]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [e860006]
+- Updated dependencies [74821ed]
+- Updated dependencies [74821ed]
+- Updated dependencies [4f89234]
+  - @walkeros/collector@4.7.0
+  - @walkeros/core@4.7.0
+  - @walkeros/web-core@4.7.0
+
 ## 4.6.1
 
 ### Patch Changes

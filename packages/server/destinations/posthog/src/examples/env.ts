@@ -53,14 +53,14 @@ function createMockPostHog() {
  */
 export const push: Env = {
   get PostHog() {
-    return createMockPostHog() as unknown as Env['PostHog'];
+    return createMockPostHog();
   },
 };
 
 /** Simulation tracking paths for CLI --simulate. */
 export const simulation = [
-  'call:client.capture',
-  'call:client.identify',
-  'call:client.groupIdentify',
-  'call:client.shutdown',
+  'call:PostHog.capture',
+  'call:PostHog.identify',
+  'call:PostHog.groupIdentify',
+  'call:PostHog.shutdown',
 ];

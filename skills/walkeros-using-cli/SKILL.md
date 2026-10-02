@@ -2,21 +2,25 @@
 name: walkeros-using-cli
 description:
   Use when bundling walkerOS flows, testing events with simulate/push, running
-  local servers, validating configs, or configuring Flow JSON files.
+  or deploying a built flow (runneros, the walkeros/flow image), validating
+  configs, or configuring Flow JSON files.
 ---
 
 # Using the walkerOS CLI
 
 ## Overview
 
-The walkerOS CLI (`walkeros`) bundles, tests, and runs event collection flows.
+The walkerOS CLI (`walkeros`) validates, simulates, tests and bundles event
+collection flows. It does not run them: a built server flow runs with
+`runneros start` from `@walkeros/runner` (the `walkeros/flow` image).
 
 **Core workflow:**
 
 1. **Configure** - Write Flow.Json JSON config
-2. **Bundle** - Generate optimized JS bundle
+2. **Validate** - `walkeros validate flow.json`
 3. **Test** - Simulate events (mocked) or push (real)
-4. **Deploy** - Run locally or deploy to production
+4. **Bundle** - `walkeros bundle flow.json -o dist/`
+5. **Run** - `runneros start dist/flow.mjs`, or deploy through the app
 
 ## Quick Start
 
@@ -40,7 +44,6 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 | ---------- | ----------------------------------------------------------- | ----- |
 | `bundle`   | Generate JS bundle from config                              | ✅    |
 | `push`     | Execute with real API calls (or `--simulate` for mocked)    | ⚠️    |
-| `run`      | Local HTTP event collection                                 | ✅    |
 | `setup`    | Run a component's `setup()` to provision external resources | ⚠️    |
 | `deploy`   | Deploy flows to cloud                                       | ⚠️    |
 | `previews` | Manage preview bundles for testing on live sites            | ⚠️    |
@@ -82,14 +85,15 @@ walkeros push flow.json --flow myFlow -e event.json --simulate destination.demo
 ### Local Development Server
 
 ```bash
-# HTTP event collection server
-walkeros run flow.json --port 3000
+# Build, then start the artifact with the runtime (a separate package)
+walkeros bundle flow.json -o dist/
+npx --package=@walkeros/runner runneros start dist/flow.mjs --port 3000
 ```
 
-**Server port note:** The `--port` flag (or `PORT` env var) is forwarded at
-runtime to all source configs that have a `port` setting. You don't need to
-hardcode ports in the flow config — set `port: 8080` as a default and let the
-runtime override it.
+**Server port note:** Under `runneros` the runtime owns the port: it listens on
+`--port` (or `PORT`, default 8080), serves `/health` and `/ready`, and hands
+every other request to the flow's HTTP handler. A source's own `port` setting is
+not used there.
 
 ---
 
@@ -190,14 +194,109 @@ walkeros push flow.json --simulate source.browser --event '{"content":"<html>...
 walkeros push flow.json --simulate destination.gtag -e '{"entity":"order","action":"complete","data":{"total":149.97}}'
 ```
 
-Example output:
+Example output (a destination step prints its matched mapping key and every
+recorded vendor call, arguments as compact JSON cut at 300 chars):
 
 ```
-Step: destinations.gtag
-  in:  { name: "order complete", data: { id: "ORD-123", total: 149.97 } }
-  out: ["event", "purchase", { transaction_id: "ORD-123", value: 149.97 }]
-  Status: PASS
+success: true
+  destination.pubsub
+    mapping: none
+    call PubSub.topic.publishMessage({"data":"{\"name\":\"order complete\",...}"})
+  Duration: 44779ms
 ```
+
+- `mapping: <key>` when a rule matched, `mapping: none` when the destination
+  pushed without a rule, `mapping: none (skipped before mapping)` plus
+  `no calls` when nothing was sent. Then why, when consent is the reason:
+  `pending: waits for consent (require)` (never started; names the unmet
+  `require` entries) or
+  `skipped: consent (requires marketing; granted functional)` (started, event
+  denied by its `consent` check). Source, transformer and collector steps print
+  their recorded calls, then `event <json>` or `no events`; a failed step prints
+  `error: <message>`. A source step records the walker commands the source
+  issues itself as `elb` calls in its own call shape, e.g.
+  `call elb("walker consent",{"functional":true,"marketing":true})` for a CMP,
+  `call elb("user",...)` and `call elb("session",...)` for the session source.
+  Not recorded: the collector's own commands (starting consent, globals, custom,
+  shutdown) and the wiring commands `on`, `hook`, `destination`.
+- `--json` puts the same data under `simulations` (one
+  `{ step, name, events, calls: [{ fn, args, ts }], mappingKey?, skipped?, error? }`
+  per simulated step, in order; `skipped` is `{ reason: 'pending', require }` or
+  `{ reason: 'consent', required, granted }`; a multi-destination simulate stops
+  at the first failure). stdout is pure JSON, logs go to stderr, so `| jq` works
+  without `--silent`. Values pass through `toPrintable` (`@walkeros/core/node`):
+  `Error` to `{ name, message }`, `Buffer` to UTF-8, `bigint` to string,
+  `Map`/`Set` to arrays, cycles to `"[Circular]"`.
+- Text and JSON output (and MCP `flow_simulate` and `flow_push`) are scrubbed
+  with `scrubSecrets`, the same redactor the loggers use: service accounts, PEM
+  keys, `Authorization`, `access_token`, credential-named fields and
+  high-entropy runs show as `***`. The values of every `$secret.NAME` the flow
+  references (set in the env, 6+ chars) are masked exactly, raw, JSON-escaped
+  and URL-encoded. The step still receives the real values. With `--json`, a
+  number whose printed form contains a known value becomes `"***"`, so the JSON
+  still parses. Simulate and a real push of a flow config route the flow's own
+  logs through the masking CLI logger, so flow DEBUG lines need `--verbose` (a
+  prebuilt bundle keeps its logger unless `--json`); the run's own CLI lines
+  mask the known values too. The runner masks the secret values it fetches;
+  values from `--env-file` or the container env get the pattern rules only.
+- **Only the target starts.** Destination simulate keeps only the target
+  destination (no source, no other destination initializes); the flow's
+  transformers still start, and a store without a mock env runs for real. Source
+  simulate keeps only the simulated source (no browser page view or CMP decision
+  from another source); captured events stop at the collector. A source package
+  that declares `examples.env.simulation` (SQS, Pub/Sub pull) runs on its mock
+  client with those calls recorded.
+- **No real vendor calls** (destinations only). A package destination whose
+  export has no mock env (`examples.env.push`) is refused before the flow starts
+  (an inline `code` step has no package and runs as given):
+  `No mock env for <package> export <exportName>: simulate would call the real vendor. Add examples.env.push to the package's dev examples.`
+  A named export of a package version without `exportExamples` is refused with
+  `...: this package version predates export-keyed examples; use a version with exportExamples or a local path.`
+  A store whose package ships a mock env runs on it; a store without one runs
+  for real. Sheets and GCS still need a real-format service-account key, since
+  they sign their token request before the mocked `fetch` answers (see the CLI
+  docs, "Secrets in simulate").
+- **`--ingest <json|file|url>`** supplies the request context (a JSON object,
+  e.g. `{"ip":"203.0.113.7","userAgent":"Mozilla/5.0"}`) for `transformer.*`,
+  `collector.*` and `destination.*` simulation. It reaches the destination
+  `before` chain and `context.ingest` (or `collector.next`); the CLI always sets
+  `_meta`. Rejected for `source.*` and a real push:
+  `--ingest applies to transformer, collector and destination simulation only`.
+  A programmatic `pushCommand({ ingest })` on a real push or source simulate
+  errors the same way; `simulateTransformer`, `simulateCollector` and
+  `simulateDestination` take `ingest` directly.
+- **`--consent <json|file|url>`** (a JSON object of booleans) is the collector
+  consent any simulated step starts from, sources included (programmatic
+  `consent`; MCP and collector: `state.consent`). `startFlow` applies it before
+  the flow runs, as a `consent` command only the simulated step hears: a
+  `require: ["consent"]` destination starts, its consent check sees the granted
+  keys, and a Consent Mode (`como`) target records its
+  `gtag('consent','update',...)`. A consent-gated source (the session source
+  with `settings.consent`) starts from it; without it, `no events`. The starting
+  consent is never recorded as a source call. Rejected for a real push only:
+  `--consent sets the collector's starting consent for a simulation; a real push uses the flow's own consent.`
+- **`--command <config|consent|user|run>`** makes a destination simulation run
+  `collector.command(name, event)` instead of a push (a step example's
+  `command`); the event is the command's data and its calls are recorded.
+  Starting consent applies first, then the command. Elsewhere:
+  `--command applies to destination simulation only.`
+- **`--page-url <url>`** sets the page of a simulated web source (absolute
+  `http`/`https` only). Precedence: `--page-url`, then the input trigger's
+  `options.url`, then `http://localhost`. Elsewhere:
+  `--page-url sets the page of a simulated web source; for request context use --ingest.`
+
+Consent mental model (what decides whether a destination receives an event):
+
+| Setting                         | Effect                                                                              | In simulate                                              |
+| ------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `require: ["consent"]`          | Destination stays pending until the collector has ANY consent state                 | `--consent` starts it; else `pending: waits for consent` |
+| `config.consent: { marketing }` | Each event checked against collector consent plus `event.consent`; denied = skipped | grant via `--consent` or the event; else `skipped`       |
+| `event.consent`                 | Per event, counted on top of collector consent                                      | part of the `-e` event                                   |
+
+- **Trace-mode limit.** Simulate injects the mock env before `init`, so clients
+  built in `init` (BigQuery writer, Pub/Sub client) are recorded. Runtime trace
+  mode (an Observe session at trace level) wraps the env per push only, so calls
+  through a client built in `init` are not recorded there.
 
 ### Same flow via MCP (`flow_simulate`)
 
@@ -211,13 +310,17 @@ From an AI assistant the equivalent tool is `flow_simulate`. A few specifics:
   walkerOS event `{ name, data }` and `trigger` is optional
   `{ type?, options? }`. There is no `env` field. Destination and transformer
   steps take a plain walkerOS event `{ name, data, consent? }`.
-- **`collector` is the enrichment step.** It takes a post-`next` partial event
-  plus an optional state snapshot `{ consent?, user?, globals?, timing? }`,
-  applies the collector's `createEvent`, and returns the fully enriched event.
-- **`transformer` steps accept an optional `ingest`** (a raw ingest without
-  `_meta`). Supply it to test a request decoder standalone, for example a GA4
-  decoder reading `ctx.ingest.url`: pass `ingest: { url: "..." }` with the
-  event.
+- **`collector` is the enrichment step plus the collector chain.** It takes a
+  post-`next` partial event plus an optional state snapshot
+  `{ consent?, user?, globals?, timing? }`, applies the collector's enrichment,
+  then runs `collector.next`, and returns every event the destinations would
+  receive (none when a `stop` drops it, several when `many` forks it).
+- **`transformer`, `collector` and `destination` steps accept an optional
+  `ingest`** (a raw ingest without `_meta`). Supply it to test a request decoder
+  standalone (a GA4 decoder reading `ctx.ingest.url`: pass
+  `ingest: { url: "..." }`), or to see the client IP and user agent a
+  conversion-API destination sends (`ingest: { ip, userAgent }`). The result is
+  scrubbed of credentials like the CLI output.
 - **Sources are simulatable as a step**, including the `@walkeros/source-demo`
   demo source.
 - **`configPath` accepts a cloud flow id** (`flow_...` / `cfg_...`), resolved
@@ -239,14 +342,36 @@ source served the last package lookup.
 
 ### Validate flow config
 
-Validate schema, references, and cross-step example compatibility:
+Validate every flow and every step in one run:
 
 ```bash
 walkeros validate flow.json
 ```
 
-All checks run automatically — schema validation, reference checking, and
-cross-step example compatibility. No flags needed for full validation.
+What validate guarantees:
+
+- **Everything by default:** schema, references (resolved per flow with the
+  runtime resolver; an unknown `$var`, a missing store, an unresolvable `$flow`
+  or a cycle is an error), routes, the root `contract`, the bundle preflight,
+  cross-step example compatibility, the examples of
+  `@walkeros/transformer-validate` steps against their linked contract, and each
+  step's settings against its package schema (warnings for one minor;
+  `--offline` skips the fetch).
+- **Narrowing is explicit:** `--flow <name>` narrows per-flow checks (file-level
+  checks still run); `--path <section.key>` checks one entry in every flow that
+  has it, or only in `--flow`.
+- **Every skip is reported** in `details.skipped` and the text output, with a
+  code. A step that imports a named export (step `import`, else
+  `bundle.packages[pkg].imports[0]`) is checked against that export's entry in
+  the package's `exportSchemas`; a single-export package uses `settings`. A
+  multi-export package version without `exportSchemas`, or one that does not
+  list its exports, is a skip (`NO_SETTINGS_SCHEMA`).
+- **The result states its scope:** a `Scope:` line and `details.scope`.
+- **`--strict`** fails on warnings and skips (exit 2; `validate()` and
+  `flow_validate` return `valid: false`) and makes contract example
+  disagreements errors (exit 1). It never changes what runs.
+- **Stable codes:** every error and warning has a `code`; branch on it, never on
+  the message.
 
 For full details on writing and testing with step examples, see
 [using-step-examples](../walkeros-using-step-examples/SKILL.md).
@@ -299,7 +424,14 @@ Output:
 
 Use `-o ./dist/walker.js` for web, `-o ./dist/` for a server directory, or
 `-o ./flow.tar.gz` for a server archive. Web single-file bundles do not support
-archive output.
+archive output. Without `-o` the bundle is written to stdout, which for a server
+flow is `flow.mjs` alone, without its `node_modules/`.
+
+Also: `--release <id>` stamps a config release id on `event.source.release` (it
+beats an authored `collector.release`; the default is a 12-hex content id of
+config, resolved packages and CLI version, so the same input gives the same
+release; env and secret values are not inputs, only their names);
+`--manifest [url|path]` builds from a manifest (see "Manifest builds" below).
 
 ### Push Command
 
@@ -310,9 +442,14 @@ Options:
   -e, --event <json|file|url>   Event to process (required)
   --flow <name>                  Flow to use
   -p, --platform <web|server>   Platform override
-  --simulate <step>              Simulate a step (repeatable for destination.*). Format: source.NAME | destination.NAME | transformer.NAME
-  --mock <step=value>            Mock a step with a specific return value (repeatable)
+  --simulate <step>              Simulate a step (repeatable for destination.*). Format: source.NAME | destination.NAME | transformer.NAME | collector.NAME
+  --mock <step=value>            Mock a step with a specific return value (repeatable); chain members via destination.NAME.before.ID or collector.next.ID
+  --ingest <json|file|url>       Request context for transformer/collector/destination simulate
+  --consent <json|file|url>      Starting collector consent for a simulation, any step
+  --command <name>               Destination simulate runs this command (config|consent|user|run) instead of a push
+  --page-url <url>               Page URL of a simulated web source (http/https)
   --snapshot <source>            JS file to eval before execution (sets global state)
+  --json                         Pure JSON on stdout (incl. simulations); logs to stderr
 ```
 
 ### Validate Command
@@ -322,42 +459,43 @@ walkeros validate <input> [options]
 
 Options:
   --type <type>     Validation type (default: flow). Also: event, mapping, contract
-  --path <path>     Validate entry against package schema (e.g. destinations.snowplow)
-  --flow <name>     Flow name for multi-flow configs
-  --strict          Fail on warnings
+  --path <path>     Check one entry in every flow that has it (e.g. destinations.snowplow, stores.cache)
+  --flow <name>     Narrow per-flow checks to one flow
+  --strict          Fail on warnings and skipped checks
+  --offline         Do not fetch package schemas (settings not checked)
   --json            JSON output
 
 Exit codes:
-  0 = Valid (with --strict: no warnings either)
+  0 = Valid (skips alone do not change it)
   1 = Errors found (contract violations count as errors under --strict)
-  2 = No errors, warnings found (with --strict only)
-  3 = Validation could not run (invalid JSON on stdin or inline, unknown --type)
+  2 = No errors, but warnings or skipped checks found (with --strict only)
+  3 = Validation could not run (missing file, invalid JSON, option that does not apply)
 ```
 
-### Run Command
+### Running a built flow (`runneros`, not the CLI)
+
+The CLI has no `run` command. The runtime is a separate package,
+`@walkeros/runner`, with the binary `runneros`:
 
 ```bash
-# HTTP event collection server
-walkeros run <config|bundle|archive> [options]
+runneros start [artifact] [options]
 
 Options:
+  --flow-id <id>        App flow ID (enables heartbeat and secrets)
+  --project <id>        Project ID (required with --flow-id)
   -p, --port <number>   Port (default: 8080)
-  -h, --host <string>   Host (default: 0.0.0.0)
+  --env-file <path>     Load a dotenv file first (existing env wins)
+  --json                JSON output
+  -v, --verbose         Verbose output
+  -s, --silent          Silent mode
 ```
 
-`run` accepts a flow config, a pre-built bundle, or a `.tar.gz`/`.tgz` flow
-archive (URL or local file). For an archive, the CLI fetches or reads the gzip,
-extracts the bundle and its sibling `node_modules/`, and runs the entry. This
-lets server flows whose step packages are external resolve those packages at
-runtime from the extracted `node_modules/`.
-
-```bash
-# Run a packed server bundle from a local archive
-walkeros run flow.tar.gz --port 8080
-
-# Run a packed server bundle from a URL
-walkeros run https://example.com/flow.tar.gz
-```
+`[artifact]` (or `BUNDLE`, or `flow.mjs` in the working directory) is a
+`.mjs`/`.js`/`.cjs` entry, a `.tar.gz`/`.tgz` archive holding `flow.mjs`, or an
+http(s) URL to either. **The runtime does not bundle**: it has no bundler
+installed; a local flow config is refused and one fed by URL or stdin fails at
+import. Never generate a container or command that hands `flow.json` to the
+runtime; bundle first. The full reference is "Deploying a server flow" below.
 
 ### Setup Command
 
@@ -382,7 +520,25 @@ local development with a built package directory.
 - **Circular copies:** Never include the output directory itself (e.g.,
   `include: ["./dist"]` when output is `dist/`). The CLI detects this and
   errors.
-- **Runtime paths:** The runner sets CWD to the bundle directory. File paths in
+- **`include` is server-only:** root `include` (default `./shared` when that
+  folder exists) is copied next to server bundles only. A web build copies
+  nothing and logs
+  `include is ignored for web builds: a browser bundle cannot read local folders.`
+  A server build served from the build cache copies `include` too. A manifest
+  (hosted) build refuses `include` only on a server flow; on a web flow it is
+  accepted and ignored.
+- **Caches and temp dirs:** caches live in `$TMPDIR/cache/` (`os.tmpdir()`; on
+  Linux `TMPDIR` is often unset, read `$TMPDIR/...` in output as `/tmp/...`).
+  Package entries are written to a temp sibling and renamed in once complete; a
+  failed write warns
+  `Package cache write failed for <name>@<version>: <message>. The build continues without caching it.`
+  Entries from an older CLI miss once. `walkeros cache clear` also removes
+  interrupted writes. Build cache keys cover a local package's (`path`) built
+  contents and the CLI version, so a rebuild needs no `cache clear`;
+  `cache clear --builds` removes both build caches. Each run works in
+  `$TMPDIR/walkeros/<kind>/<6 chars>` (`push`, `build`, `bundle`, `wrap`,
+  `archive`, `setup`).
+- **Runtime paths:** `runneros` sets CWD to the bundle directory. File paths in
   `settings` resolve relative to the bundle, not the project root.
 - **Component names:** Source, transformer, destination, and store names must be
   valid JavaScript identifiers (camelCase). Hyphens like `gtag-wrapper` cause
@@ -415,6 +571,13 @@ The CLI:
 
 There is no `walkerOS.bundle.external` annotation. nft figures it out.
 
+After tracing, every declared `bundle.packages` entry the bundle actually
+imports (bare imports of the built bundle, incl. `imports`) must be in the
+trace, else the build throws `nft-trace: resolved packages missing from trace`.
+A declared package that is neither imported nor traced (e.g. a type-only
+dependency) only warns:
+`Package <name> is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`
+
 **Bundle directory (the server flow's unpacked artifact):**
 
 ```
@@ -425,33 +588,39 @@ dist/
 ```
 
 The same directory can be packed into a `.tar.gz`/`.tgz` archive (see the Bundle
-Command section), and `walkeros run` accepts either form. Web flows are
-unchanged: a single `dist/walker.js`.
+Command section), and `runneros start` accepts either form. Web flows are a
+single `dist/walker.js`, served by any static host.
 
 ### Canonical Dockerfile
 
 ```dockerfile
-FROM node:22.23.0-alpine AS builder
+ARG WALKEROS_VERSION
+
+FROM node:24-alpine AS builder
+ARG WALKEROS_VERSION
 WORKDIR /build
-RUN npm init -y && npm install --save-dev @walkeros/cli
+RUN npm init -y && npm install --save-dev @walkeros/cli@${WALKEROS_VERSION}
 COPY flow.json ./
 RUN npx walkeros bundle flow.json -o dist/
 
-FROM walkeros/flow:4
-WORKDIR /app/flow
-COPY --from=builder /build/dist/ ./
-ENV PORT=8080
-EXPOSE 8080
+FROM walkeros/flow:${WALKEROS_VERSION}
+COPY --from=builder /build/dist/ /app/flow/
 ```
+
+Build with `docker build --build-arg WALKEROS_VERSION=<version> .`.
 
 Notes:
 
 - The build stage only needs `@walkeros/cli`. flow.json drives every step
   package install; pacote handles it.
-- `COPY --from=builder /build/dist/ ./` copies the whole directory (flow.mjs +
-  package.json + node_modules/) into `/app/flow/`.
-- The runner image's defaults match `/app/flow/flow.mjs`. No `BUNDLE` env var
-  needed.
+- `COPY --from=builder /build/dist/ /app/flow/` copies the whole directory
+  (flow.mjs + package.json + node_modules/).
+- The image sets `BUNDLE=/app/flow/flow.mjs`, `PORT=8080` and
+  `CMD ["runneros", "start"]`. No command and no `BUNDLE` needed.
+- One version pins both: `walkeros/flow:<v>` contains `@walkeros/runner@<v>`,
+  matching `@walkeros/cli@<v>`. Images older than `@walkeros/runner` have no
+  `runneros`; check with `docker run --rm walkeros/flow:<v> runneros --version`.
+  Do not assume `latest` or a major tag carries it.
 
 ### Escape hatch: `traceInclude`
 
@@ -480,14 +649,16 @@ resolve against the install root, not the project directory:
 ### Cache (CI)
 
 The bundler caches pacote downloads under `process.env.NPM_CACHE_DIR` (default
-`<tmpDir>/cache/npm`). On CI, persist that path with `actions/cache`:
+`$TMPDIR/cache/npm`). On CI, persist that path with `actions/cache`:
 
 ```yaml
 - uses: actions/cache@v4
   with:
     path: .walkeros-cache/npm
     key: walkeros-${{ hashFiles('**/flow.json') }}
-- run: WALKEROS_TMP_DIR=.walkeros-cache npx walkeros bundle flow.json -o dist/
+- run: npx walkeros bundle flow.json -o dist/
+  env:
+    NPM_CACHE_DIR: ${{ github.workspace }}/.walkeros-cache/npm
 ```
 
 **CI smoke check:**
@@ -497,53 +668,124 @@ The bundler caches pacote downloads under `process.env.NPM_CACHE_DIR` (default
 
 ---
 
+## Deploying a server flow
+
+### Build, run, orchestrate
+
+| Stage                                   | Has                                             | Must not have                                 |
+| --------------------------------------- | ----------------------------------------------- | --------------------------------------------- |
+| Build (`walkeros bundle`)               | Registry access, esbuild, nft, a Node toolchain | Production secrets or traffic                 |
+| Run (`runneros start`)                  | The artifact, its runtime secrets, the port     | A package manager, registry egress, a bundler |
+| Orchestrate (you, CI, the walkerOS app) | The decision of what runs where                 | The ability to execute the artifact           |
+
+The runtime cannot bundle because no bundler is installed in it, not because a
+flag forbids it. Generate two steps (bundle, then start), never one.
+
+### Artifact shape
+
+- **Server:** a DIRECTORY, `dist/flow.mjs` + `dist/package.json` +
+  `dist/node_modules/`. Every `COPY` and `-v` carries the whole directory
+  (`COPY dist/ /app/flow/`, `-v "$PWD/dist:/app/flow:ro"`), never `flow.mjs`
+  alone. Or one file: `walkeros bundle flow.json -o flow.tar.gz`.
+- **Web:** a single `dist/walker.js` for any static host. The runtime has no
+  static-file mode; to serve files from a server flow use `include` +
+  `@walkeros/server-store-fs` + `@walkeros/server-transformer-file`.
+
+### Runtime environment
+
+| Variable                                   | Meaning                                                              |
+| ------------------------------------------ | -------------------------------------------------------------------- |
+| `BUNDLE`                                   | Artifact path or URL (image default `/app/flow/flow.mjs`)            |
+| `PORT`                                     | Port (default 8080)                                                  |
+| `WALKEROS_FLOW_ID`, `WALKEROS_PROJECT_ID`  | App flow and project; together with a token enable heartbeat+secrets |
+| `WALKEROS_DEPLOYMENT_ID`                   | Deployment ID sent with every heartbeat                              |
+| `WALKEROS_DEPLOY_TOKEN` / `WALKEROS_TOKEN` | Token, deploy token first. Env only, never a config file             |
+| `WALKEROS_APP_URL`                         | App base URL (default `https://app.walkeros.io`)                     |
+| `WALKEROS_HEARTBEAT_INTERVAL`              | Seconds (default 60, minimum 10)                                     |
+| `WALKEROS_CACHE_DIR`                       | Error cache dir (then `CACHE_DIR`, then XDG `~/.cache/walkeros`)     |
+| `WALKEROS_OBSERVE_LEVEL`                   | `off`, `standard` or `trace`                                         |
+
+Secrets are fetched ONCE at boot when connected (401/403 is fatal). There is no
+config polling and no hot-swap: a new flow version is a rebuild and a redeploy.
+`/health` is always 200; `/ready` is 200 once the collector is constructed, 503
+otherwise.
+
+### Constraints
+
+- **Filesystem:** archive, URL and stdin inputs write to `/app/flow/`, so a
+  read-only root filesystem works only with a local `.mjs` artifact in place.
+  Point `WALKEROS_CACHE_DIR` at a writable path (the image's `/app/cache`).
+- **Architecture:** the image is `linux/amd64` only.
+- **Default store:** a `state` step without `store` uses the in-process
+  `__cache` store, correct only on ONE instance. Do not scale such a flow out
+  without a shared store.
+
+Full page: `website/docs/apps/runtime.mdx`.
+
+## Build-time values and package specs
+
+- **`config.bundle.env`** declares the values web `$env.NAME` references resolve
+  to at bundle time (literal strings only; a reference inside a value is
+  refused). A local build layers it over the shell env; a hosted or manifest
+  build uses it alone. `$flow` siblings resolve against the ENTRY flow's
+  `bundle.env`. Values end up in a public bundle: never secrets. Server flows
+  ignore it; their `$env` is read at runtime.
+- **Package specs** must be registry version, range or tag, for direct pins,
+  `overrides` values and transitive dependencies. Git, `file:`, `link:` and
+  tarball URLs fail with `UNSUPPORTED_PACKAGE_SPEC`. Use a local `path` for
+  development.
+
+## Manifest builds
+
+`walkeros bundle --manifest <url|path>` (a bare flag reads `BUILD_MANIFEST_URL`)
+builds from a JSON manifest: `version: 1`, `toolchain` (exact CLI version, else
+`TOOLCHAIN_MISMATCH`), `flowConfig`, `flowName?`, `buildEnv?`, `artifacts[]`
+(`outputName`, `putUrl`, `contentType?`, `headers?`, plus `target` for a bundle
+or `target: "wrap"` + `platform` + `skeleton` for a wrap), and `resultPutUrl`.
+The CLI PUTs each artifact, then a result
+`{ ok, toolchain, artifacts: [{ target, outputName, bytes, sha256 }], error?: { code, message, outputName? } }`.
+Unknown top-level keys are ignored; artifact entries are strict; local
+filesystem inputs are refused with `LOCAL_PATH_NOT_ALLOWED`. Only `--json`,
+`-v`, `-s` combine with it. Schemas: `BuildManifestSchema`, `BuildResultSchema`,
+`BUILD_ERROR_CODES` from `@walkeros/cli`.
+
+---
+
 ## Troubleshooting
 
 ### Bundle Fails
 
-1. **Check JSON syntax**: `walkeros validate flow.json --flow`
+1. **Check the config**: `walkeros validate flow.json` (add `--flow <name>` to
+   narrow to one flow)
 2. **Check package names**: Ensure packages exist on npm
 3. **Clear cache**: `walkeros cache clear`
 
 ### Events Not Processing
 
-1. **Validate event**: `walkeros validate event.json`
+1. **Validate event**: `walkeros validate event.json --type event`
 2. **Check mapping**: Event must match entity/action in mapping
 3. **Use simulate first**:
    `walkeros push flow.json -e event.json --simulate destination.demo -v`
 
 ### Destination Not Found in Simulation
 
-If `--simulate destination.NAME` errors with "not found in collector", the
-destination likely has `require: ["consent"]` in its config. This delays
-initialization until a `walker consent` event fires — which doesn't happen
-during simulation.
-
-**Fix:** Remove or comment out the `require` field for simulation testing:
-
-```json
-{
-  "destinations": {
-    "gtag": {
-      "package": "@walkeros/web-destination-gtag",
-      "config": {
-        "settings": { "measurementId": "G-XXXXXX" }
-      }
-    }
-  }
-}
-```
+`Destination "NAME" not found in collector. Available: ...` means the flow has
+no destination with that key; pick one from the list.
 
 ### Destination Silent (0 Events Received)
 
-If the destination is found but receives 0 events:
+Read the line under `mapping:`:
 
-1. **Check consent**: If destination has `consent: { marketing: true }`, the
-   event must include matching consent. Add to event JSON:
-   `{ "name": "page view", "data": {...}, "consent": { "marketing": true } }`
-2. **Check mapping**: The event name must match a mapping rule (entity/action
+1. **`pending: waits for consent (require)`**: the destination has
+   `require: ["consent"]` and never started. Pass starting consent:
+   `--consent '{"functional":true}'` (MCP: `state.consent`). Do not remove
+   `require` to test.
+2. **`skipped: consent (requires marketing; granted functional)`**: its
+   `consent` setting denied the event. Grant the key in `--consent` or in the
+   event's `consent`.
+3. **Check mapping**: The event name must match a mapping rule (entity/action
    keys). Unmapped events pass through unmodified.
-3. **Check policy**: Policy runs BEFORE mapping — verify policy isn't redacting
+4. **Check policy**: Policy runs BEFORE mapping; verify policy isn't redacting
    fields needed by mapping rules.
 
 ### Web Simulation Transport
@@ -598,9 +840,9 @@ version-negotiation rules.
 
 ## Networking
 
-Outbound requests to a configured `WALKEROS_APP_URL` carry an
-`X-Walkeros-Client: walkeros-cli/{version}` header so the host can attribute
-usage. No PII; the header is the only client identifier.
+Outbound requests to a configured `WALKEROS_APP_URL` carry
+`X-WalkerOS-Client: cli` (or `mcp`) and `X-WalkerOS-Client-Version` headers so
+the host can attribute usage and enforce minimum versions. No PII.
 
 ## Telemetry
 

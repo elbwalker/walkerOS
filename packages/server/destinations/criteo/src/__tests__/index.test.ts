@@ -2,6 +2,7 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import {
   clone,
+  createIngest,
   getEvent,
   createMockContext,
   createMockLogger,
@@ -393,5 +394,70 @@ describe('Server Destination Criteo', () => {
     expect(body.events[0].id).toBe('ORD-1');
     expect(body.account).toBe(partnerId);
     expect(body.id.mapping_key).toBe(callerId);
+  });
+
+  describe('client IP and user agent auto-fill', () => {
+    const ingest = {
+      ...createIngest('test'),
+      ip: '203.0.113.7',
+      userAgent: 'Mozilla/5.0 test',
+    };
+    const sent = () => JSON.parse(mockSendServer.mock.calls[0][1]);
+
+    test('fills client IP and user agent from ingest by default', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: { settings: { partnerId, callerId } },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sent().ip).toBe('203.0.113.7');
+      expect(sent().useragent).toBeDefined();
+    });
+
+    test('falls back to event.user.ip and userAgent', async () => {
+      await destination.push(
+        getEvent('entity action', {
+          user: { id: 'us3r', ip: '198.51.100.2', userAgent: 'UA2' },
+        }),
+        createMockContext({
+          config: { settings: { partnerId, callerId } },
+          env: testEnv,
+        }),
+      );
+      expect(sent().ip).toBe('198.51.100.2');
+      expect(sent().useragent).toBeDefined();
+    });
+
+    test('sends neither when disabled with false', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: {
+            settings: { partnerId, callerId, ip: false, userAgent: false },
+          },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sent().ip).toBeUndefined();
+      expect(sent().useragent).toBeUndefined();
+    });
+
+    test('lets an explicit ip setting win over the default', async () => {
+      await destination.push(
+        getEvent(),
+        createMockContext({
+          config: {
+            settings: { partnerId, callerId, ip: { value: '10.0.0.1' } },
+          },
+          env: testEnv,
+          ingest,
+        }),
+      );
+      expect(sent().ip).toBe('10.0.0.1');
+    });
   });
 });

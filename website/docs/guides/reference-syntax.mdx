@@ -48,7 +48,6 @@ walks the value.
 
 ```json
 {
-  "version": 4,
   "variables": {
     "measurementId": "G-XXXXXX",
     "ga4Items": {
@@ -100,6 +99,23 @@ walks the value.
 - Variables may reference other variables. Resolution is recursive with cycle
   detection.
 
+In [`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json),
+the tested example flow, variables live at all three levels:
+
+<FlowSlice feature="root-variables" />
+
+<FlowSlice feature="flow-variables" />
+
+<FlowSlice feature="step-variables" />
+
+A whole-string reference, a deep path and an inline reference:
+
+<FlowSlice feature="ref-var-whole" />
+
+<FlowSlice feature="ref-var-deep" />
+
+<FlowSlice feature="ref-var-inline" />
+
 **Naming convention:** when variables hold structures (mapping templates,
 matchers, consent objects), pick a name that signals the shape, for example
 `ga4ItemMapping`, `ga4ItemsLoop`, `consentMarketing`, `getMastertagJs`. Keep
@@ -127,6 +143,15 @@ Use `$env.` for non-secret config (IDs, hostnames, regions). For credentials,
 tokens, and private keys managed by the secret manager, use `$secret.`: the
 deploy pipeline only injects values referenced as `$secret.NAME`.
 
+<FlowSlice feature="ref-env-default" />
+
+<FlowSlice feature="ref-env" />
+
+Web flows resolve `$env` at build time, from the set the flow declares under
+`config.bundle.env`:
+
+<FlowSlice feature="bundle-env" />
+
 ## `$contract.`: contract references {#contract--contract-references}
 
 Inject a fragment of a named contract entry. Same whole-string and deep-path
@@ -135,9 +160,10 @@ path access, so the value you get is the merged shape.
 
 See [Contract](/docs/getting-started/flow/contract) for the full structure.
 
+<FlowSlice feature="ref-contract" />
+
 ```json
 {
-  "version": 4,
   "contract": {
     "default": {
       "schema": {
@@ -182,7 +208,6 @@ Inject a store instance declared under `stores`. Wired through a component's
 
 ```json
 {
-  "version": 4,
   "flows": {
     "server": {
       "config": { "platform": "server" },
@@ -207,6 +232,8 @@ Inject a store instance declared under `stores`. Wired through a component's
 Store IDs are plain identifiers (camelCase). The `.` is the separator, not a
 path walker, store IDs do not contain dots.
 
+<FlowSlice feature="ref-store" />
+
 ## `$secret.`: secrets {#secret--secrets}
 
 Inject a secret resolved at deploy time. Secrets are stored outside the config
@@ -214,7 +241,6 @@ and never written into customer databases alongside the flow.
 
 ```json
 {
-  "version": 4,
   "flows": {
     "server": {
       "config": { "platform": "server" },
@@ -242,6 +268,8 @@ it is not resolved and stays literal text. When a header needs a prefix,
 store the complete value in the secret, for example `Bearer abc123` for
 `API_AUTHORIZATION` above.
 
+<FlowSlice feature="ref-secret" />
+
 Use `$secret.` for credentials, tokens, and private keys (for example a service
 account JSON on `config.credentials`). The app's deploy pipeline detects
 `$secret.NAME` references and injects the managed secret value into the server
@@ -267,6 +295,26 @@ real JS at build time. Everything after `$code:` is the raw function body.
 The `:` here marks the **payload**. Nothing after the colon is looked up, it
 is compiled as-is.
 
+<FlowSlice feature="ref-code" />
+
+## `$flow.`: cross-flow references
+
+Read a value from another flow's `config` block in the same file. The web flow
+sends to the server flow's URL:
+
+<FlowSlice feature="ref-flow" />
+
+See [Cross-flow references](/docs/getting-started/flow#cross-flow-references-with-flow)
+for the rules.
+
+## Request values: `ingest`
+
+Request context is not a `$` reference. A server source lifts it into `ingest`
+with its `config.ingest` mapping, and later steps read it by path
+(`ingest.ip`, `ingest.path`), for example in a route `match` or a `state` key:
+
+<FlowSlice feature="source-ingest" />
+
 ## Cascade and resolution order
 
 `variables` can live at three levels. Priority (highest wins):
@@ -277,6 +325,23 @@ is compiled as-is.
 
 Resolution runs at `getFlowSettings()` in `@walkeros/core`, the runtime
 replaces every reference before the bundler or collector sees the config.
+
+## Whole-value and inline references
+
+`$flow.`, `$store.`, `$secret.` and `$contract.` resolve only when the reference
+is the entire string value. `$var.` and `$env.` also resolve inside a longer
+string. `walkeros validate` warns about a whole-value reference that would not
+resolve:
+
+- **Malformed:** `"$flow.server.url/collect"` or `"$secret.api_key"` does not
+  match the reference grammar (`$secret.` names are uppercase letters, digits
+  and `_`), so it would not resolve.
+- **Inline:** `"https://x/$store.cache"` uses `$store.` mid-string, so it would
+  ship as literal text. Use the reference as the entire value, or compose the
+  string with `$var` or `$env`.
+
+`$code:` values and values under `title`, `description` and `$comment` are not
+checked.
 
 ## What else to read
 

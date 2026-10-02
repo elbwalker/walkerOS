@@ -251,6 +251,10 @@ ingestion. This replaces the legacy `tabledata.insertAll` path.
   append fails the batch, which routes the events to the dead-letter buffer and
   the `failed` count rather than being logged and ignored.
 
+`walkeros push --simulate destination.<id>` runs offline: the package's mock
+env replaces the Storage Write API client, so nothing reaches BigQuery, and the
+output shows each `JSONWriter.appendRows` call with the rows it would write.
+
 :::caution EXPERIMENTAL SDK
 The upstream `@google-cloud/bigquery-storage` package self-marks as
 `EXPERIMENTAL` (subject to change). Pinned at `^5.1.0`.

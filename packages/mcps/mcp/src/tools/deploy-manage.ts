@@ -7,6 +7,8 @@ import { links } from '../links.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { fieldsOf, isRecord, stringField } from './narrow.js';
+import { parseToolInput } from './parse-input.js';
 import {
   resolveDeploymentSlug,
   type DeploymentSummaryForResolver,
@@ -154,16 +156,34 @@ function withAppUrl(data: unknown, appUrl: string | undefined): unknown {
   return { ...data, appUrl };
 }
 
+/** One deployment summary, or none when a field the resolver reads is missing. */
+function readDeploymentSummary(value: unknown): DeploymentSummaryForResolver[] {
+  if (!isRecord(value)) return [];
+  const slug = stringField(value, 'slug');
+  const type = stringField(value, 'type');
+  const status = stringField(value, 'status');
+  const updatedAt = stringField(value, 'updatedAt');
+  return slug !== undefined &&
+    type !== undefined &&
+    status !== undefined &&
+    updatedAt !== undefined
+    ? [{ ...value, slug, type, status, updatedAt }]
+    : [];
+}
+
 function listForResolver(
   client: ToolClient,
   projectId: string | undefined,
 ): ListDeploymentsForResolver {
   return async (q) => {
-    const resp = (await client.listDeployments({
+    const resp = await client.listDeployments({
       projectId: projectId || q.projectId || undefined,
       flowId: q.flowId,
-    })) as { deployments?: DeploymentSummaryForResolver[] };
-    return resp.deployments ?? [];
+    });
+    const deployments = isRecord(resp) ? resp.deployments : undefined;
+    return Array.isArray(deployments)
+      ? deployments.flatMap(readDeploymentSummary)
+      : [];
   };
 }
 
@@ -179,6 +199,8 @@ export function createDeployManageToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function deployManageHandlerBody(client: ToolClient, input: unknown) {
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
   const {
     action,
     projectId,
@@ -190,18 +212,7 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
     flowName,
     cursor,
     limit,
-  } = (input ?? {}) as {
-    action?: 'deploy' | 'list' | 'get' | 'delete';
-    projectId?: string;
-    flowId?: string;
-    slug?: string;
-    type?: 'web' | 'server';
-    status?: string;
-    wait?: boolean;
-    flowName?: string;
-    cursor?: string;
-    limit?: number;
-  };
+  } = parsed.data;
   const validationError = validateActionInput(
     'deploy_manage',
     action ?? '',
@@ -280,7 +291,7 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
         return mcpResult(
           redactDisplayNames({
             deleted: true,
-            ...(data as Record<string, unknown>),
+            ...fieldsOf(data),
           }),
         );
       }
@@ -305,8 +316,6 @@ export function registerDeployTool(server: McpServer, client: ToolClient) {
       inputSchema: spec.inputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => deployManageHandlerBody(client, args),
   );
 }

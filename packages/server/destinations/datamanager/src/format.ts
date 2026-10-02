@@ -7,6 +7,7 @@ import type {
   AdIdentifiers,
   Consent,
   ConsentStatus,
+  DeviceInfo,
 } from './types';
 import { hashEmail, hashPhone, hashName } from './hash';
 
@@ -217,6 +218,16 @@ export async function formatEvent(
   // Store ID (Google Ads store sales / IN_STORE events)
   if (isString(data.storeId) && data.storeId) {
     dataManagerEvent.eventLocation = { storeId: data.storeId };
+  }
+
+  // Device info (client IP and user agent)
+  const deviceInfo: DeviceInfo = {};
+  if (isString(data.ipAddress) && data.ipAddress)
+    deviceInfo.ipAddress = data.ipAddress;
+  if (isString(data.userAgent) && data.userAgent)
+    deviceInfo.userAgent = data.userAgent;
+  if (Object.keys(deviceInfo).length > 0) {
+    dataManagerEvent.eventDeviceInfo = deviceInfo;
   }
 
   // Event source

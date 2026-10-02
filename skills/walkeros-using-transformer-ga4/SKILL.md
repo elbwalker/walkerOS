@@ -36,14 +36,14 @@ tids only by default. Per-field patching via `extend`/`remove` is supported.
 send several events in one POST body (one per line, as `text/plain`), so the
 source must keep a non-JSON body as `ingest.body`. These server sources do:
 
-- `@walkeros/server-source-express` (shown below), the source `walkeros run` and
-  the `walkeros/flow` image serve. A `text/plain` body that is valid JSON is
-  parsed; any other `text/plain` body reaches the decoder as the raw string.
+- `@walkeros/server-source-express` (shown below), the source `runneros` and the
+  `walkeros/flow` image serve. A `text/plain` body that is valid JSON is parsed;
+  any other `text/plain` body reaches the decoder as the raw string.
 - `@walkeros/server-source-fetch`: a `(Request) => Response` handler with no
   `port`, for a runtime that calls it (Cloudflare Workers, Deno, Bun, Node.js
   18+ with a fetch adapter), e.g.
-  `export default { fetch: collector.sources.http.push }`. `walkeros run` and
-  the `walkeros/flow` image cannot serve it (they only mount a source's Node
+  `export default { fetch: collector.sources.http.push }`. `runneros` and the
+  `walkeros/flow` image cannot serve it (they only mount a source's Node
   `httpHandler`).
 - `sourceCloudFunction` from `@walkeros/server-source-gcp` on Google Cloud
   Functions.
@@ -280,6 +280,30 @@ Mappings reference fields on the decoded `GA4Hit` shape via dotted paths:
 
 Use `params.ep.X` not `ep.X`. The decoder materializes the prefixed keys under
 the `params` namespace.
+
+## Hit-level fields on the decoded event
+
+Set from the hit, each only when present, value as sent.
+
+| Hit param           | Event field                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| `dl`                | `source.url` (page URL)                                      |
+| `dr`                | `source.referrer`                                            |
+| `uid`, `cid`, `sid` | `user.id`, `user.device`, `user.session`                     |
+| `ul`                | `user.language` (browser language)                           |
+| `sr`                | `user.screenSize` (screen resolution)                        |
+| `p`, `_p`, `_s`     | `source.platform`, `source.pageLoadId`, `source.hitSequence` |
+
+- `globals` is left empty: `globals.language` is the site's language, not the
+  visitor's. Mappings or destinations that read `globals.language` or
+  `globals.screen` from decoded events must switch to `user.language` and
+  `user.screenSize`.
+- `timestamp` is the receive time (`Date.now()`), not the session start (`sid`).
+  Event ids do not depend on it.
+- `source.url` feeds server destinations that send a page URL (Meta, Snapchat,
+  Pinterest, Bing, TikTok, Criteo, Piwik PRO; Piwik PRO skips events without it)
+  and the fingerprint transformer's default `site` input. Fingerprint hashes of
+  GA4-decoded events therefore change once on upgrade.
 
 ## Troubleshooting
 

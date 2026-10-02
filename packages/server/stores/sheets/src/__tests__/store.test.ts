@@ -418,7 +418,10 @@ describe('storeSheetsInit', () => {
         const ctx = createCtx({ credentials: settingsSa }, 'crm', configSa);
         await storeSheetsInit(ctx);
 
-        expect(mockCreateTokenProvider).toHaveBeenCalledWith(configSa);
+        expect(mockCreateTokenProvider).toHaveBeenCalledWith(
+          configSa,
+          expect.any(Function),
+        );
         expect(ctx.logger.warn).not.toHaveBeenCalled();
       } finally {
         restore();
@@ -431,7 +434,10 @@ describe('storeSheetsInit', () => {
         const ctx = createCtx({ credentials: settingsSa });
         await storeSheetsInit(ctx);
 
-        expect(mockCreateTokenProvider).toHaveBeenCalledWith(settingsSa);
+        expect(mockCreateTokenProvider).toHaveBeenCalledWith(
+          settingsSa,
+          expect.any(Function),
+        );
         expect(ctx.logger.warn).toHaveBeenCalledTimes(1);
         expect(ctx.logger.warn).toHaveBeenCalledWith(
           'settings.credentials is deprecated; use config.credentials',
@@ -447,7 +453,10 @@ describe('storeSheetsInit', () => {
         const ctx = createCtx();
         await storeSheetsInit(ctx);
 
-        expect(mockCreateTokenProvider).toHaveBeenCalledWith(undefined);
+        expect(mockCreateTokenProvider).toHaveBeenCalledWith(
+          undefined,
+          expect.any(Function),
+        );
         expect(ctx.logger.warn).not.toHaveBeenCalled();
       } finally {
         restore();

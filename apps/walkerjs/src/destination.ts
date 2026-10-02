@@ -1,34 +1,47 @@
-import type { Destination } from '@walkeros/core';
-import type { DataLayer } from './types';
+import type { Destination, WalkerOS } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 
-export function dataLayerDestination(): Destination.Instance {
-  window.dataLayer = window.dataLayer || [];
-  const dataLayerPush = (event: unknown) => {
-    // Do not process events from dataLayer source
-    if (
-      isObject(event) &&
-      isObject(event.source) &&
-      String(event.source.type).includes('dataLayer')
-    )
-      return;
+export type DataLayerPush = Record<string, unknown> & {
+  event: string;
+  _clear: true;
+};
 
-    (window.dataLayer as DataLayer)!.push(event);
-  };
-  const destination: Destination.Instance = {
+// Keys left out while empty: with _clear an empty object would wipe a site's
+// own key of that name, and sites often set their own `user`. Every other key
+// is always pushed, so an empty `data` wipes the previous event's values.
+const OMIT_WHEN_EMPTY = ['user', 'globals', 'consent'];
+
+const isEmptyObject = (value: unknown): boolean =>
+  isObject(value) && Object.keys(value).length === 0;
+
+// The page's dataLayer array, created when there is none. Read at push time:
+// a page may reassign window.dataLayer after load.
+function getDataLayer(): unknown[] {
+  const existing: unknown = Reflect.get(window, 'dataLayer');
+  if (Array.isArray(existing)) return existing;
+  const dataLayer: unknown[] = [];
+  Reflect.set(window, 'dataLayer', dataLayer);
+  return dataLayer;
+}
+
+export function toDataLayerPush(event: WalkerOS.Event): DataLayerPush {
+  const push: DataLayerPush = { event: event.name, _clear: true };
+  for (const [key, value] of Object.entries(event)) {
+    if (!OMIT_WHEN_EMPTY.includes(key) || !isEmptyObject(value))
+      push[key] = value;
+  }
+  // `event` and `_clear` are set first for readability in GTM Preview and
+  // cannot be overwritten: a walkerOS event has neither key.
+  return push;
+}
+
+export function dataLayerDestination(): Destination.Instance {
+  getDataLayer();
+  return {
     type: 'dataLayer',
     config: {},
-    push: (event, context) => {
-      dataLayerPush(context.data || event);
-    },
-    pushBatch: (batch) => {
-      dataLayerPush({
-        name: 'batch',
-        batched_event: batch.key,
-        events: batch.data.length ? batch.data : batch.events,
-      });
+    push: (event) => {
+      getDataLayer().push(toDataLayerPush(event));
     },
   };
-
-  return destination;
 }

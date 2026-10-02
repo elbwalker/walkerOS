@@ -1,17 +1,12 @@
 import { createLocalRuntime } from '../../runtime/local.js';
-import { registerFlowBundleTool } from '../../tools/bundle.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  createFlowBundleToolSpec,
+  registerFlowBundleTool,
+} from '../../tools/bundle.js';
 import { BundleOutputShape } from '../../schemas/output.js';
 
-jest.mock('@walkeros/cli/dev', () => ({
-  schemas: {
-    BundleInputShape: {
-      configPath: { type: 'string' },
-      flow: { type: 'string' },
-      stats: { type: 'boolean' },
-      output: { type: 'string' },
-    },
-  },
-}));
+jest.mock('@walkeros/cli/dev', () => jest.requireActual('@walkeros/cli/dev'));
 
 jest.mock('@walkeros/cli', () => ({
   bundle: jest.fn(),
@@ -48,41 +43,30 @@ jest.mock('@walkeros/core', () => ({
 
 import { bundle } from '@walkeros/cli';
 import { stubClient } from '../support/stub-client.js';
+import {
+  structured,
+  isErrorResult,
+  textOf,
+  record,
+} from '../support/tool-result.js';
 const mockBundle = jest.mocked(bundle);
 
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: Function) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
-}
-
 describe('flow_bundle tool', () => {
-  let server: ReturnType<typeof createMockServer>;
+  let spec: ReturnType<typeof createFlowBundleToolSpec>;
   let getFlow: jest.Mock;
 
   beforeEach(() => {
-    server = createMockServer();
     getFlow = jest.fn();
-    registerFlowBundleTool(
-      server as any,
+    spec = createFlowBundleToolSpec(
       stubClient({ getFlow }),
       createLocalRuntime(),
     );
   });
 
   it('registers with correct name, title, and annotations', () => {
-    const tool = server.getTool('flow_bundle');
-    expect(tool).toBeDefined();
-
-    const config = tool.config as any;
-    expect(config.title).toBe('Bundle Flow');
-    expect(config.annotations).toEqual({
+    expect(spec.name).toBe('flow_bundle');
+    expect(spec.title).toBe('Bundle Flow');
+    expect(spec.annotations).toEqual({
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
@@ -91,9 +75,11 @@ describe('flow_bundle tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    const tool = server.getTool('flow_bundle');
-    const config = tool.config as any;
-    expect(config.outputSchema).toBe(BundleOutputShape);
+    const server = new McpServer({ name: 'test', version: '0.0.0' });
+    const registerTool = jest.spyOn(server, 'registerTool');
+    registerFlowBundleTool(server, stubClient(), createLocalRuntime());
+    const call: unknown[] = registerTool.mock.calls[0] ?? [];
+    expect(record(call[1]).outputSchema).toBe(BundleOutputShape);
   });
 
   it('calls CLI bundle with correct options', async () => {
@@ -105,8 +91,7 @@ describe('flow_bundle tool', () => {
     };
     mockBundle.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('flow_bundle');
-    const result = await tool.handler({
+    const result = await spec.handler({
       configPath: './flow.json',
       flow: 'myFlow',
       stats: true,
@@ -118,9 +103,9 @@ describe('flow_bundle tool', () => {
       stats: true,
       buildOverrides: { output: './dist' },
     });
-    expect(result.structuredContent.success).toBe(true);
-    expect(result.structuredContent.totalSize).toBe(mockResult.totalSize);
-    expect(result.structuredContent.buildTime).toBe(mockResult.buildTime);
+    expect(structured(result).success).toBe(true);
+    expect(structured(result).totalSize).toBe(mockResult.totalSize);
+    expect(structured(result).buildTime).toBe(mockResult.buildTime);
   });
 
   it('defaults stats to true when not provided', async () => {
@@ -131,8 +116,7 @@ describe('flow_bundle tool', () => {
       treeshakingEffective: false,
     });
 
-    const tool = server.getTool('flow_bundle');
-    await tool.handler({
+    await spec.handler({
       configPath: './flow.json',
       flow: undefined,
       stats: undefined,
@@ -149,31 +133,29 @@ describe('flow_bundle tool', () => {
   it('returns warning when bundle returns null', async () => {
     mockBundle.mockResolvedValue(undefined);
 
-    const tool = server.getTool('flow_bundle');
-    const result = await tool.handler({
+    const result = await spec.handler({
       configPath: './flow.json',
       flow: undefined,
       stats: undefined,
       output: undefined,
     });
 
-    expect(result.structuredContent.success).toBe(false);
+    expect(structured(result).success).toBe(false);
   });
 
   it('returns isError on CLI failure', async () => {
     mockBundle.mockRejectedValue(new Error('Build failed'));
 
-    const tool = server.getTool('flow_bundle');
-    const result = await tool.handler({
+    const result = await spec.handler({
       configPath: './flow.json',
       flow: undefined,
       stats: undefined,
       output: undefined,
     });
 
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toBe('Build failed');
+    expect(isErrorResult(result)).toBe(true);
+    const parsed: unknown = JSON.parse(textOf(result));
+    expect(record(parsed).error).toBe('Build failed');
   });
 
   it('resolves a cloud flow id (flow_…) via the client and passes the config inline', async () => {
@@ -186,8 +168,7 @@ describe('flow_bundle tool', () => {
       treeshakingEffective: false,
     });
 
-    const tool = server.getTool('flow_bundle');
-    await tool.handler({
+    await spec.handler({
       configPath: 'flow_abc123',
       flow: undefined,
       stats: undefined,
@@ -212,8 +193,7 @@ describe('flow_bundle tool', () => {
       treeshakingEffective: false,
     });
 
-    const tool = server.getTool('flow_bundle');
-    await tool.handler({
+    await spec.handler({
       configPath: 'cfg_xyz789',
       flow: undefined,
       stats: undefined,
@@ -236,8 +216,7 @@ describe('flow_bundle tool', () => {
       treeshakingEffective: false,
     });
 
-    const tool = server.getTool('flow_bundle');
-    await tool.handler({
+    await spec.handler({
       configPath: './flow.json',
       flow: undefined,
       stats: undefined,

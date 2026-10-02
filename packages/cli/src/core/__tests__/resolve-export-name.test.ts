@@ -164,6 +164,22 @@ describe('resolveExportName', () => {
     expect(result).toEqual({ exportName: 'storeFs', source: 'import' });
   });
 
+  test('resolves transformer kind', () => {
+    const flow: Flow = {
+      config: { platform: 'server' },
+      transformers: {
+        decode: {
+          package: '@walkeros/transformer-ga4',
+          import: 'transformerGa4',
+          config: {},
+        },
+      },
+    };
+
+    const result = resolveExportName(flow, 'transformer', 'decode');
+    expect(result).toEqual({ exportName: 'transformerGa4', source: 'import' });
+  });
+
   test('returns default source when component not in flow', () => {
     const flow: Flow = {
       config: { platform: 'server' },

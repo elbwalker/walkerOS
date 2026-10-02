@@ -1,8 +1,18 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
-import type { Config, DestinationInterface, Settings } from '../types';
-import { getEvent, createMockContext, createMockLogger } from '@walkeros/core';
+import type {
+  AuthClient,
+  Config,
+  DestinationInterface,
+  Env,
+  Settings,
+} from '../types';
+import {
+  createIngest,
+  createMockContext,
+  createMockLogger,
+  getEvent,
+} from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import type { OAuth2Client } from 'google-auth-library';
 import { examples } from '../dev';
 
 jest.mock('../auth', () => ({
@@ -24,9 +34,9 @@ import { createAuthClient, getAccessToken } from '../auth';
 describe('Server Destination Data Manager', () => {
   let destination: DestinationInterface;
   let elb: WalkerOS.Elb;
-  const mockAuthClient = {
+  const mockAuthClient: AuthClient = {
     getAccessToken: jest.fn(),
-  } as unknown as OAuth2Client;
+  };
   const mockFetch = jest.fn();
   const mockAccessToken = 'ya29.c.test_token';
   const mockLogger = createMockLogger();
@@ -130,6 +140,21 @@ describe('Server Destination Data Manager', () => {
       );
     });
 
+    test('keeps an injected authClient and does not create one', async () => {
+      const injected: Env['authClient'] = examples.env.push.authClient;
+      const result = await destination.init({
+        config: { settings: defaultSettings },
+        collector: createMockContext().collector,
+        env: { authClient: injected },
+        logger: mockLogger,
+        id: 'test-dm',
+      });
+      expect(createAuthClient).not.toHaveBeenCalled();
+      expect(
+        result && 'env' in result ? result.env?.authClient : undefined,
+      ).toBe(injected);
+    });
+
     test('creates auth client during init', async () => {
       await getConfig({
         credentials: {
@@ -181,6 +206,71 @@ describe('Server Destination Data Manager', () => {
       },
     },
   };
+
+  describe('client IP and user agent auto-fill', () => {
+    const ingest = {
+      ...createIngest('test'),
+      ip: '203.0.113.7',
+      userAgent: 'Mozilla/5.0 test',
+    };
+    const env = { authClient: mockAuthClient, fetch: mockFetch };
+    const sentDeviceInfo = () =>
+      JSON.parse(mockFetch.mock.calls[0][1].body).events[0].eventDeviceInfo;
+
+    test('fills client IP and user agent from ingest by default', async () => {
+      await destination.push(
+        getEvent('order complete'),
+        createMockContext({ config: { ...defaultConfig, env }, env, ingest }),
+      );
+      expect(sentDeviceInfo()).toEqual({
+        ipAddress: '203.0.113.7',
+        userAgent: 'Mozilla/5.0 test',
+      });
+    });
+
+    test('falls back to event.user.ip and userAgent', async () => {
+      const event = getEvent('order complete', {
+        user: { id: 'us3r', ip: '198.51.100.2', userAgent: 'UA2' },
+      });
+      await destination.push(
+        event,
+        createMockContext({ config: { ...defaultConfig, env }, env }),
+      );
+      expect(sentDeviceInfo()).toEqual({
+        ipAddress: '198.51.100.2',
+        userAgent: 'UA2',
+      });
+    });
+
+    test('sends neither when disabled with false', async () => {
+      const config: Config = {
+        ...defaultConfig,
+        settings: { ...defaultSettings, ip: false, userAgent: false },
+        env,
+      };
+      await destination.push(
+        getEvent('order complete'),
+        createMockContext({ config, env, ingest }),
+      );
+      expect(sentDeviceInfo()).toBeUndefined();
+    });
+
+    test('lets an explicitly mapped value win', async () => {
+      await destination.push(
+        getEvent('order complete'),
+        createMockContext({
+          config: { ...defaultConfig, env },
+          data: { ipAddress: '10.0.0.1' },
+          env,
+          ingest,
+        }),
+      );
+      expect(sentDeviceInfo()).toEqual({
+        ipAddress: '10.0.0.1',
+        userAgent: 'Mozilla/5.0 test',
+      });
+    });
+  });
 
   describe('push', () => {
     test('sends event to Data Manager API', async () => {

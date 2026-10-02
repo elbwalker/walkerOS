@@ -1366,6 +1366,66 @@ describe('validateFlowConfig', () => {
         },
         'flows.default.sources.s.next.one.0.match.and.0.key',
       ],
+      [
+        'an entry match around a nested gate',
+        {
+          transformers: {
+            t: {
+              next: {
+                one: [
+                  {
+                    match: { key: 'data.id', operator: 'exists', value: '' },
+                    next: {
+                      match: {
+                        key: 'event.name',
+                        operator: 'exists',
+                        value: '',
+                      },
+                      next: 'a',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        'flows.default.transformers.t.next.one.0.match.key',
+      ],
+      [
+        'a gated stop',
+        {
+          destinations: {
+            d: {
+              package: '@walkeros/x',
+              before: [
+                'a',
+                {
+                  match: { key: 'name', operator: 'eq', value: 'x' },
+                  stop: true,
+                },
+              ],
+            },
+          },
+        },
+        'flows.default.destinations.d.before.1.match.key',
+      ],
+      [
+        'a collector.next match',
+        {
+          collector: {
+            next: {
+              many: [
+                {
+                  match: { key: 'data.id', operator: 'exists', value: '' },
+                  next: 'a',
+                },
+                'b',
+              ],
+            },
+          },
+        },
+        'flows.default.collector.next.many.0.match.key',
+      ],
     ])('flags %s', (_, steps, path) => {
       expect(rootErrorPaths(steps)).toEqual([path]);
     });
@@ -1456,6 +1516,290 @@ describe('validateFlowConfig', () => {
         result.errors.some((e) =>
           e.message.includes('needs an "event." or "ingest." prefix'),
         ),
+      ).toBe(true);
+    });
+  });
+
+  describe('whole-value references', () => {
+    function flowWithSetting(settings: Record<string, unknown>): unknown {
+      return {
+        version: 4,
+        flows: {
+          web: {
+            config: { platform: 'web' },
+            destinations: {
+              api: {
+                package: '@walkeros/web-destination-api',
+                config: { settings },
+              },
+            },
+          },
+          server: {
+            config: { platform: 'server', url: 'https://collect.example' },
+          },
+        },
+        contract: { web: { events: {} } },
+      };
+    }
+
+    it.each([
+      // Starts with the prefix, so it is a grammar miss, not an inline use.
+      ['$flow.server.url/collect', 'grammar'],
+      ['https://x/$store.cache', 'inline'],
+      ['Bearer $secret.API_KEY', 'inline'],
+      ['see $contract.web', 'inline'],
+      ['$secret.api_key', 'grammar'],
+      ['$store.cache.key', 'grammar'],
+      ['$flow.server.settings.my-key', 'grammar'],
+    ])('warns on %s (%s)', (value, kind) => {
+      const result = validateFlowConfig(
+        JSON.stringify(flowWithSetting({ url: value }), null, 2),
+      );
+      const text =
+        kind === 'inline'
+          ? 'resolve only as the whole value'
+          : 'does not match the';
+      const warning = result.warnings.find((w) => w.message.includes(text));
+      expect(warning).toBeDefined();
+      expect(warning?.path).toBe(
+        'flows.web.destinations.api.config.settings.url',
+      );
+      expect(warning?.line).toBeGreaterThan(1);
+    });
+
+    it('points a longer $flow string at $var or $env composition', () => {
+      const result = validateFlowConfig(
+        JSON.stringify(
+          flowWithSetting({ url: '$flow.server.url/collect' }),
+          null,
+          2,
+        ),
+      );
+      expect(
+        result.warnings.some((w) =>
+          w.message.includes(
+            'To build a longer string, compose with $var or $env.',
+          ),
+        ),
+      ).toBe(true);
+    });
+
+    it('does not warn on prose that mentions a reference', () => {
+      const result = validateFlowConfig(
+        JSON.stringify(
+          {
+            version: 4,
+            flows: {
+              web: {
+                config: { platform: 'web' },
+                destinations: {
+                  api: {
+                    package: '@walkeros/web-destination-api',
+                    config: { settings: { url: '$flow.server.url' } },
+                    examples: {
+                      page: {
+                        title: 'Uses $flow.server.url/collect',
+                        description:
+                          'Points at $flow.server.url/collect for the collect path',
+                        in: { name: 'page view' },
+                      },
+                    },
+                  },
+                },
+              },
+              server: {
+                config: { platform: 'server', url: 'https://collect.example' },
+              },
+            },
+          },
+          null,
+          2,
+        ),
+      );
+      expect(result.errors).toEqual([]);
+      expect(
+        result.warnings.some((w) =>
+          /whole value|does not match the/.test(w.message),
+        ),
+      ).toBe(false);
+    });
+
+    it.each([
+      ['$flow.server.url'],
+      ['$secret.API_KEY'],
+      ['https://$env.HOST:x.example/collect'],
+      ['$var.base/collect'],
+      ['$code:(e) => "$flow.x"'],
+    ])('does not warn on %s', (value) => {
+      const result = validateFlowConfig(
+        JSON.stringify(flowWithSetting({ url: value }), null, 2),
+      );
+      expect(
+        result.warnings.some((w) =>
+          /whole value|does not match the/.test(w.message),
+        ),
+      ).toBe(false);
+    });
+
+    it('skips $secret mentions in prose fields of a web flow', () => {
+      const config = {
+        version: 4,
+        flows: {
+          web: {
+            config: { platform: 'web' },
+            destinations: {
+              api: {
+                package: '@walkeros/web-destination-api',
+                description:
+                  'The server flow reads $secret.api_key, never here.',
+                config: { settings: { url: 'https://collect.example' } },
+                examples: {
+                  hit: {
+                    title: 'Uses $secret.API_TOKEN on the server',
+                    $comment: 'see $secret.API_TOKEN',
+                    in: { name: 'page view' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+      const result = validateFlowConfig(JSON.stringify(config, null, 2));
+      expect(
+        result.errors.filter((e) => e.message.includes('$secret')),
+      ).toEqual([]);
+    });
+
+    describe('prose skip applies only where prose lives', () => {
+      const bad = '$store.x.y';
+      function flowWith(overrides: {
+        mapping?: Record<string, unknown>;
+        settings?: Record<string, unknown>;
+        step?: Record<string, unknown>;
+        example?: Record<string, unknown>;
+        flow?: Record<string, unknown>;
+        root?: Record<string, unknown>;
+      }): string {
+        return JSON.stringify(
+          {
+            version: 4,
+            ...overrides.root,
+            flows: {
+              web: {
+                config: { platform: 'web' },
+                ...overrides.flow,
+                destinations: {
+                  api: {
+                    package: '@walkeros/web-destination-api',
+                    ...overrides.step,
+                    config: {
+                      settings: {
+                        url: 'https://c.example',
+                        ...overrides.settings,
+                      },
+                      mapping: overrides.mapping ?? {},
+                    },
+                    examples: {
+                      hit: { in: { name: 'page view' }, ...overrides.example },
+                    },
+                  },
+                },
+              },
+            },
+            contract: {
+              web: {
+                events: {
+                  page: {
+                    view: {
+                      type: 'object',
+                      description: 'Read from $store.x.y',
+                      properties: {
+                        title: { type: 'string', description: bad },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          null,
+          2,
+        );
+      }
+      const warned = (json: string) =>
+        validateFlowConfig(json).warnings.some((w) =>
+          /whole value|does not match the/.test(w.message),
+        );
+
+      it.each([
+        [
+          'a mapping title value',
+          { mapping: { page: { view: { data: { map: { title: bad } } } } } },
+        ],
+        [
+          'a mapping description',
+          { mapping: { page: { view: { description: bad } } } },
+        ],
+        [
+          'a description key deep in mapping data',
+          {
+            mapping: {
+              page: { view: { data: { map: { description: bad } } } },
+            },
+          },
+        ],
+        ['a settings description', { settings: { description: bad } }],
+        ['a settings title', { settings: { title: bad } }],
+      ])('checks %s', (_label, overrides) => {
+        expect(warned(flowWith(overrides))).toBe(true);
+      });
+
+      it.each([
+        [
+          'a mapping $comment',
+          { mapping: { page: { view: { $comment: bad } } } },
+        ],
+        ['a settings $comment', { settings: { $comment: bad } }],
+        ['a step title', { step: { title: bad } }],
+        ['a step description', { step: { description: bad } }],
+        ['an example title', { example: { title: bad } }],
+        ['an example description', { example: { description: bad } }],
+        ['a flow description', { flow: { description: bad } }],
+        ['a root title', { root: { title: bad } }],
+        ['nothing but the contract', {}],
+      ])('skips %s', (_label, overrides) => {
+        expect(warned(flowWith(overrides))).toBe(false);
+      });
+
+      it('skips a step settings.contract schema but checks settings.title', () => {
+        const contract = {
+          type: 'object',
+          description: 'Read from $store.x.y',
+          properties: { id: { type: 'string', description: bad } },
+        };
+        expect(warned(flowWith({ settings: { contract } }))).toBe(false);
+        expect(warned(flowWith({ settings: { contract, title: bad } }))).toBe(
+          true,
+        );
+      });
+
+      it('checks a $secret in a settings description of a web flow', () => {
+        const result = validateFlowConfig(
+          flowWith({ settings: { description: '$secret.API_KEY' } }),
+        );
+        expect(
+          result.errors.some((e) => e.message.includes('$secret.API_KEY')),
+        ).toBe(true);
+      });
+    });
+
+    it('reports a lowercase $secret name in a web flow', () => {
+      const result = validateFlowConfig(
+        JSON.stringify(flowWithSetting({ token: '$secret.api_key' }), null, 2),
+      );
+      expect(
+        result.errors.some((e) => e.message.includes('$secret.api_key')),
       ).toBe(true);
     });
   });

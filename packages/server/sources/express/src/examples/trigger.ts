@@ -1,4 +1,5 @@
 import type { Trigger, Collector } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 
 export interface Content {
@@ -31,12 +32,49 @@ function discoverPort(collector: Collector.Instance): number | undefined {
 }
 
 /**
+ * The config with the triggered express source on a free port (0) when it
+ * names none, so a simulation needs no port setting. The source is the one
+ * `options.sourceId` names, else the config's only source. A configured port
+ * and every other source stay as given.
+ */
+function withFreePort(
+  config: Collector.InitConfig,
+  options: unknown,
+): Collector.InitConfig {
+  const sources = config.sources ?? {};
+  const ids = Object.keys(sources);
+  const sourceId =
+    isObject(options) && typeof options.sourceId === 'string'
+      ? options.sourceId
+      : ids.length === 1
+        ? ids[0]
+        : undefined;
+  const source = sourceId ? sources[sourceId] : undefined;
+  if (!sourceId || !source) return config;
+
+  const sourceConfig = source.config ?? {};
+  const settings = isObject(sourceConfig.settings) ? sourceConfig.settings : {};
+  if (settings.port !== undefined) return config;
+
+  return {
+    ...config,
+    sources: {
+      ...sources,
+      [sourceId]: {
+        ...source,
+        config: { ...sourceConfig, settings: { ...settings, port: 0 } },
+      },
+    },
+  };
+}
+
+/**
  * Express source createTrigger.
  *
  * Boots a real express server via startFlow, then fires real HTTP requests.
  * Blackbox: no source instance access, no mocked req/res — just fetch().
  *
- * Pass `port: 0` in the express source settings to use a random available port.
+ * Without `settings.port` the triggered source listens on a free port.
  *
  * @example
  * const { trigger, flow } = await createTrigger(config);
@@ -44,8 +82,10 @@ function discoverPort(collector: Collector.Instance): number | undefined {
  * console.log(result.status, result.body);
  */
 const createTrigger: Trigger.CreateFn<Content, Result> = async (
-  config: Collector.InitConfig,
+  initConfig: Collector.InitConfig,
+  options?: unknown,
 ) => {
+  const config = withFreePort(initConfig, options);
   let flow: Trigger.FlowHandle | undefined;
   let baseUrl: string | undefined;
 
@@ -62,7 +102,7 @@ const createTrigger: Trigger.CreateFn<Content, Result> = async (
         const port = discoverPort(result.collector);
         if (!port)
           throw new Error(
-            'Express source server not found — ensure port is configured in source settings',
+            'Express source server not found: the triggered source did not start a server',
           );
         baseUrl = `http://localhost:${port}`;
       }

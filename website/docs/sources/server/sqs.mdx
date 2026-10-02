@@ -13,11 +13,8 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 export const data = {
   ...awsData,
-  schemas: {
-    settings: awsData.schemas?.sqsSettings,
-    setup: awsData.schemas?.sqsSetup,
-  },
-  examples: {},
+  schemas: awsData.exportSchemas?.sourceSqs ?? {},
+  examples: awsData.exportExamples?.sourceSqs ?? {},
 };
 
 # AWS SQS

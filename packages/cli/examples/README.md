@@ -7,37 +7,24 @@ installation.
 
 ## Usage
 
-Use `walkeros bundle <example>.json` to build any example, then `walkeros run`
-to execute.
+Build any example with `walkeros bundle`, then start a built server flow with
+`runneros` from
+[`@walkeros/runner`](https://www.npmjs.com/package/@walkeros/runner). The CLI
+builds flows; it does not run them.
+
+```bash
+walkeros bundle examples/server-collect.json -o dist/
+npx --package=@walkeros/runner runneros start dist/flow.mjs
+```
+
+A server flow builds to a directory (`flow.mjs`, `package.json` and
+`node_modules/`); a web flow builds to a single `walker.js` for any static host.
+Without `-o`, the bundle is written to stdout.
 
 ---
 
 This directory contains example flow configurations demonstrating various
 walkerOS use cases.
-
-## Rebuilding Example Bundles
-
-The `.mjs` bundle files in this directory are pre-built from their corresponding
-`.json` config files. If you update the configs or core packages, rebuild them:
-
-```bash
-cd /workspaces/walkerOS/packages/cli
-
-# Rebuild server-collect
-walkeros bundle examples/server-collect.json --local
-mv server-collect.mjs examples/
-
-# Rebuild web-serve
-walkeros bundle examples/web-serve.json --local
-mv web-serve.js examples/
-
-# Update Docker demos
-cp examples/server-collect.mjs ../docker/demos/demo-collect.mjs
-cp examples/web-serve.js ../docker/demos/demo-serve.mjs
-```
-
-**Important**: Always use `--local` flag when rebuilding examples in the
-devcontainer.
 
 ## Comprehensive Example
 
@@ -45,10 +32,6 @@ devcontainer.
 
 **Purpose**: Complete reference demonstrating ALL JSON-compatible walkerOS
 features
-
-**Features**: 51 features including variables, mapping (key, map, loop, set),
-transformers (enricher, fingerprint), consent gating, wildcards, ingest
-metadata, and more.
 
 **Architecture**: Two named flows (`web` and `server`) showing full event
 pipeline from browser to server-side forwarding.
@@ -59,15 +42,17 @@ Feature Inventory and usage examples.
 **Try it**:
 
 ```bash
-# Web flow (opens browser with demo events)
-walkeros run examples/flow-complete.json --flow web
-
 # Server flow (HTTP collection endpoint)
-walkeros run examples/flow-complete.json --flow server
+walkeros bundle examples/flow-complete.json --flow server -o dist/server/
+npx --package=@walkeros/runner runneros start dist/server/flow.mjs
 
-# Both (full pipeline)
-# Terminal 1: walkeros run examples/flow-complete.json --flow server
-# Terminal 2: walkeros run examples/flow-complete.json --flow web
+# Web flow: build walker.js, then serve dist/web/ with any static server
+walkeros bundle examples/flow-complete.json --flow web -o dist/web/
+
+# Test either flow offline, destinations mocked
+walkeros push examples/flow-complete.json --flow server \
+  --event '{"name":"page view","data":{"title":"Home"}}' \
+  --simulate destination.pubsub
 ```
 
 ---
@@ -76,14 +61,13 @@ walkeros run examples/flow-complete.json --flow server
 
 ### web-serve.json
 
-**Purpose**: Browser bundle that sends events to collector
+**Purpose**: Browser bundle that sends events to a collector
 
 **Features**:
 
 - sourceDemo (generates test events automatically)
 - destinationDemo (console output for debugging)
 - destinationAPI (sends events to http://localhost:8080/collect)
-- Simulates page views and product views
 
 **Use case**: Demo web tracking that connects to server-collect.json for full
 event flow testing
@@ -91,53 +75,9 @@ event flow testing
 **Try it**:
 
 ```bash
-walkeros bundle examples/web-serve.json
-walkeros run examples/web-serve.js -p 3000
-# Open http://localhost:3000 in browser
-```
-
-### web-tracking.json
-
-**Purpose**: Comprehensive browser tracking with multiple analytics platforms
-
-**Features**:
-
-- sourceBrowser (DOM event tracking)
-- destinationAPI → localhost:8080/collect (send to collection server)
-- destinationGtag → Google Analytics 4
-- destinationMeta → Meta Pixel (Facebook)
-- destinationDemo → Console logging
-
-**Event mappings**:
-
-- Page views → GA4 `page_view`, Meta `PageView`
-- Product views → GA4 `view_item`, Meta `ViewContent`
-- Add to cart → GA4 `add_to_cart`, Meta `AddToCart`
-- Purchases → GA4 `purchase`, Meta `Purchase`
-
-**Use case**: Production web tracking with multiple destinations
-
-**Environment variables**:
-
-- `GA4_MEASUREMENT_ID` - Google Analytics 4 measurement ID (default:
-  G-XXXXXXXXXX)
-- `META_PIXEL_ID` - Meta Pixel ID (default: 123456789)
-- `META_TEST_CODE` - Meta test event code (optional)
-
-**Try it**:
-
-```bash
-# Set environment variables
-export GA4_MEASUREMENT_ID="G-YOUR-ID"
-export META_PIXEL_ID="123456789"
-
-# Bundle for browser
-walkeros bundle examples/web-tracking.json --stats
-
-# Simulate events
-walkeros push examples/web-tracking.json \
-  --event '{"name":"product view","data":{"id":"P123","name":"Laptop","price":999}}' \
-  --simulate destination.demo
+walkeros bundle examples/web-serve.json -o dist/web/
+npx serve dist/web -l 3000
+# Load http://localhost:3000/walker.js from a page
 ```
 
 ## Server Examples
@@ -151,7 +91,6 @@ walkeros push examples/web-tracking.json \
 - sourceExpress (HTTP endpoint at /collect)
 - destinationDemo (console logging)
 - CORS enabled for browser requests
-- Health check endpoint
 
 **Use case**: Simple event collector for demo and testing, receives events from
 web-serve.json
@@ -159,87 +98,42 @@ web-serve.json
 **Try it**:
 
 ```bash
-walkeros bundle examples/server-collect.json
-walkeros run examples/server-collect.mjs -p 8080
+walkeros bundle examples/server-collect.json -o dist/server/
+npx --package=@walkeros/runner runneros start dist/server/flow.mjs --port 8080
 
-# In another terminal, send test event:
+# In another terminal, send a test event:
 curl -X POST http://localhost:8080/collect \
   -H "Content-Type: application/json" \
   -d '{"name":"page view","data":{"title":"Test"}}'
 ```
 
-### server-collection.json
-
-**Purpose**: Server-side event collection and forwarding to data platforms
-
-**Features**:
-
-- sourceExpress (HTTP endpoint at /collect)
-- destinationDataManager → Google Tag Manager Server-Side
-- destinationDemo → Console logging
-
-**Event mappings**:
-
-- Page views → GTM `page_view`
-- Product views → GTM `view_item`
-- Add to cart → GTM `add_to_cart`
-- Purchases → GTM `purchase`
-
-**Use case**: Server-side tracking for privacy-compliant data collection
-
-**Environment variables**:
-
-- `GTM_CONTAINER_ID` - GTM Server Container ID (default: GTM-XXXXXXX)
-- `GTM_SERVER_URL` - GTM Server URL (default: https://gtm.example.com)
-
-**Try it**:
+To run the same artifact in Docker, mount the whole directory where the
+`walkeros/flow` image expects it:
 
 ```bash
-# Set environment variables
-export GTM_CONTAINER_ID="GTM-XXXXX"
-export GTM_SERVER_URL="https://your-gtm-server.com"
-
-# Run in Docker
-walkeros run examples/server-collection.json -p 8080
-
-# Send test event (in another terminal)
-curl -X POST http://localhost:8080/collect \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "product view",
-    "data": {
-      "id": "P123",
-      "name": "Laptop",
-      "price": 999
-    },
-    "user": {
-      "id": "user_123",
-      "session": "session_456"
-    }
-  }'
+docker run --rm -p 8080:8080 \
+  -v "$PWD/dist/server:/app/flow:ro" \
+  walkeros/flow:<version>
 ```
 
+Use a `walkeros/flow` version that ships `runneros`, ideally the same version as
+this CLI. See the [runtime docs](https://www.walkeros.io/docs/apps/runtime).
+
 ## Workflow: Web → Server
-
-### Quick Demo Loop (web-serve → server-collect)
-
-The simplest way to see the complete event flow:
 
 **Terminal 1 - Start collector**:
 
 ```bash
-walkeros bundle examples/server-collect.json
-walkeros run examples/server-collect.mjs -p 8080
+walkeros bundle examples/server-collect.json -o dist/server/
+npx --package=@walkeros/runner runneros start dist/server/flow.mjs --port 8080
 ```
 
-**Terminal 2 - Start web server**:
+**Terminal 2 - Serve the web bundle**:
 
 ```bash
-walkeros bundle examples/web-serve.json
-walkeros run examples/web-serve.js -p 3000
+walkeros bundle examples/web-serve.json -o dist/web/
+npx serve dist/web -l 3000
 ```
-
-**Browser**: Open http://localhost:3000
 
 **Events flow**:
 
@@ -247,35 +141,11 @@ walkeros run examples/web-serve.js -p 3000
 Browser (demo source) → destinationAPI → POST /collect → sourceExpress → destinationDemo (console)
 ```
 
-### Production Pattern (web-tracking → server-collection)
-
-For production with real analytics platforms:
-
-**1. Start collection server**:
-
-```bash
-walkeros run examples/server-collection.json -p 8080
-```
-
-**2. Bundle web tracking** (configured to send to localhost:8080):
-
-```bash
-walkeros bundle examples/web-tracking.json
-```
-
-**3. Deploy** bundle to your website
-
-**4. Events flow**:
-
-```
-Browser → destinationAPI (POST /collect) → sourceExpress → destinationDataManager → GTM Server
-```
-
 ## Creating Custom Examples
 
 ### Flow Configuration Structure
 
-Flow configs use the `Flow.Config` format:
+Flow configs use the `Flow.Json` format:
 
 ```json
 {
@@ -321,44 +191,8 @@ Flow configs use the `Flow.Config` format:
 
 - Platform is set via `config: { "platform": "web" }` (or `"server"`)
 - Each step references its npm package directly via `package`
-- Output path is convention-based: `./dist/walker.js` (web) or
-  `./dist/bundle.mjs` (server)
-
-### Available Sources
-
-**Web**:
-
-- `@walkeros/web-source-browser` → `sourceBrowser` (DOM tracking)
-- `@walkeros/web-source-datalayer` → `sourceDataLayer` (data layer integration)
-- `@walkeros/source-demo` → `sourceDemo` (test events)
-
-**Server**:
-
-- `@walkeros/server-source-express` → `sourceExpress` (HTTP endpoint)
-- `@walkeros/server-source-gcp` → `sourceGCP` (Google Cloud Functions)
-
-### Available Destinations
-
-**Web**:
-
-- `@walkeros/web-destination-api` → `destinationAPI` (HTTP API)
-- `@walkeros/web-destination-gtag` → `destinationGtag` (GA4, GTM, Ads)
-- `@walkeros/web-destination-meta` → `destinationMeta` (Meta Pixel)
-- `@walkeros/web-destination-piwikpro` → `destinationPiwikPro`
-- `@walkeros/web-destination-plausible` → `destinationPlausible`
-
-**Server**:
-
-- `@walkeros/server-destination-datamanager` → `destinationDataManager` (GTM
-  Server-Side)
-- `@walkeros/server-destination-meta` → `destinationMeta` (Meta CAPI)
-- `@walkeros/server-destination-aws` → `destinationAWS`
-- `@walkeros/server-destination-gcp` → `destinationGCP`
-- `@walkeros/server-destination-piwikpro` → `destinationPiwikPro`
-
-**Universal**:
-
-- `@walkeros/destination-demo` → `destinationDemo` (console logging)
+- With `-o dist/`, output is `dist/walker.js` (web) or `dist/flow.mjs` plus
+  `package.json` and `node_modules/` (server)
 
 ## Event Naming Convention
 
@@ -382,7 +216,7 @@ The event name is parsed as: `const [entity, action] = event.split(' ')`
 
 ## Next Steps
 
-1. Try each example with `walkeros bundle` and `walkeros push --simulate`
+1. Try each example with `walkeros push --simulate`, then `walkeros bundle`
 2. Modify examples to match your tracking requirements
 3. Create custom flow files for your use case
-4. Deploy to production
+4. Deploy: `walkeros bundle`, then `runneros start` or the `walkeros/flow` image
