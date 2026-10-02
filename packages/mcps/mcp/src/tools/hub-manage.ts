@@ -14,6 +14,7 @@ import type {
   ThreadAnchorType,
 } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { inputIssuesMessage } from './parse-input.js';
 import {
   NO_DEFAULT_PROJECT_ERROR,
   resolveDefaultProject,
@@ -1033,14 +1034,7 @@ export async function hubManageHandler(client: ToolClient, rawInput: unknown) {
     // refusal here.
     const parsed = hubInputSchema.safeParse(rawInput ?? {});
     if (!parsed.success) {
-      throw new HubToolError(
-        'INVALID_INPUT',
-        parsed.error.issues
-          .map(
-            (issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`,
-          )
-          .join('; '),
-      );
+      throw new HubToolError('INVALID_INPUT', inputIssuesMessage(parsed.error));
     }
     const input: HubInput = parsed.data;
     const { action } = input;

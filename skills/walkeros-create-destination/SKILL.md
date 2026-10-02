@@ -582,7 +582,16 @@ Use these templates as your starting point:
    keeps config agnostic and reuses the mapping engine.
 7. **Consent two-layer**: `config.consent` gates walkerOS event delivery.
    `on('consent')` controls vendor SDK internals (opt-out, pause capture, etc.).
-   Both needed for complete consent compliance.
+   Both needed for complete consent compliance. `on()` may be async: the
+   collector awaits it, bounded by `config.timeout`, and delivers the current
+   state before the destination's first push. A state handler that does not
+   settle in that time, or rejects, holds the destination's events in its queue
+   until a later delivery settles; held events are discarded at the next
+   `walker run`. Lifecycle handlers such as `on('run')` are awaited too, bounded
+   by the same timeout, and never hold events. An async state handler must
+   settle: until it settles or reaches `config.timeout`, that destination
+   receives no events. `elb` commands and `startFlow` resolve only after the
+   destinations' `on()` handlers for that command have settled or timed out.
    - For step-example tests, use `command: 'consent'` on `Flow.StepExample` to
      invoke the `on('consent')` handler. Do not push consent data as an event.
 
@@ -806,7 +815,13 @@ requirements (build, test, lint, no `any`):
 
 - [ ] Uses `getEnv<Env>(env)` pattern (never direct `window`/`document` access,
       never `as Window`/`as Document`/`as unknown` casts in src or tests)
-- [ ] `dev.ts` exports `schemas` and `examples`
+- [ ] `dev.ts` exports `schemas` (with `settings`; `z.object({})` when the step
+      has none) and `examples`
+- [ ] Multi-export package (two or more `walkerOS.exports`): `exportExamples`
+      and `exportSchemas` in `dev.ts` list exactly those exports, the default
+      included, and every `exportSchemas` entry has `settings`; the build fails
+      otherwise (see
+      [using-step-examples](../walkeros-using-step-examples/SKILL.md))
 - [ ] Examples match type signatures
 - [ ] Tests use examples for assertions (not hardcoded values)
 - [ ] `walkerOS.json` generated at build time

@@ -4,6 +4,7 @@ import { mcpResult, mcpError } from '@walkeros/core';
 import { redactNestedStrings, wrapUserData } from '../user-data.js';
 import type { ToolClient, FrameLeanWire, FrameWire } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { inputIssuesMessage } from './parse-input.js';
 import {
   validateActionInput,
   assertParam,
@@ -354,15 +355,7 @@ async function frameManageHandler(
   // `message`, so the issues are rewritten as one readable line.
   const parsed = frameInputSchema.safeParse(rawInput ?? {});
   if (!parsed.success) {
-    return mcpError(
-      new Error(
-        parsed.error.issues
-          .map(
-            (issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`,
-          )
-          .join('; '),
-      ),
-    );
+    return mcpError(new Error(inputIssuesMessage(parsed.error)));
   }
   const { action, projectId, pageKey, frameId } = parsed.data;
   const validationError = validateActionInput(

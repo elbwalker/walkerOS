@@ -181,7 +181,7 @@ With `storage: true`, sessions persist across page loads:
 
 ## Session start event
 
-When a new session is detected, the source pushes a `session start` event. In storage mode it also sets `user.session` and `user.device` on the collector, so every event of the session carries them:
+When a new session is detected, the source pushes a `session start` event. It carries `source.type: 'session'` with the page `url` and `referrer`, so destinations see the landing URL with its campaign parameters. In storage mode the source also sets `user.session` and `user.device` on the collector, so every event of the session carries them:
 
 <CodeSnippet
   code={`{
@@ -196,13 +196,19 @@ When a new session is detected, the source pushes a `session start` event. In st
     runs: 1,                 // Page views in this session
     start: 1704067200,       // Session start timestamp
     referrer: 'google.com',  // Hostname only (not full URL)
-    marketing: {
-      source: 'google',
-      medium: 'cpc',
-      campaign: 'winter-sale',
-      clickId: 'gclid',      // Which click ID platform (if present)
-      gclid: 'AW-123...',    // The actual click ID value
-    }
+    marketing: true,         // Set when marketing parameters are present
+    source: 'google',        // utm_source
+    medium: 'cpc',           // utm_medium
+    campaign: 'winter-sale', // utm_campaign
+    clickId: 'gclid',        // Which click ID parameter matched (if present)
+    platform: 'google',      // Ad platform of that click ID
+    gclid: 'AW-123...',      // The actual click ID value
+  },
+  source: {
+    type: 'session',
+    platform: 'web',
+    url: 'https://example.com/?utm_source=google&utm_medium=cpc',
+    referrer: 'https://www.google.com/',
   }
 }`}
   language="typescript"

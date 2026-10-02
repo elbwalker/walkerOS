@@ -22,13 +22,13 @@ import { promisify } from 'util';
 import type { Flow } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { bundle } from '../../../commands/bundle/index.js';
+import { localPackage, localPackageDir } from '../../helpers/local-packages.js';
 
 jest.setTimeout(180_000);
 
 const run = promisify(execFile);
 
-const packagesDir = path.resolve(__dirname, '../../../../..');
-const awsDir = path.join(packagesDir, 'server/destinations/aws');
+const awsDir = localPackageDir('@walkeros/server-destination-aws');
 
 const STREAM = 'walkeros-events';
 const TOPIC_ARN = 'arn:aws:sns:eu-west-1:123456789012:walkeros-events';
@@ -169,13 +169,11 @@ describe('packed AWS destinations in a bundled JSON flow', () => {
             bundle: {
               packages: {
                 '@walkeros/collector': {
-                  path: path.join(packagesDir, 'collector'),
+                  ...localPackage('@walkeros/collector'),
                   imports: ['startFlow'],
                 },
-                '@walkeros/core': { path: path.join(packagesDir, 'core') },
-                '@walkeros/server-core': {
-                  path: path.join(packagesDir, 'server/core'),
-                },
+                '@walkeros/core': localPackage('@walkeros/core'),
+                '@walkeros/server-core': localPackage('@walkeros/server-core'),
                 '@walkeros/server-destination-aws': { path: awsPackage },
               },
             },

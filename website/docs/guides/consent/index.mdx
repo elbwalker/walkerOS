@@ -66,6 +66,17 @@ A destination only requires one granted consent state to process events.
 
 :::
 
+A destination receives the current consent state through its `on('consent')`
+handler before any event is sent to it. This holds when consent was set before
+or after `walker run`, when the destination waits for consent with `require`,
+and when it is added with `walker destination` while the flow is running. The
+collector waits for the handler to finish, up to the destination's
+`config.timeout` (10 seconds by default). If the handler does not finish in
+that time, or fails, the destination receives no events until a later delivery
+of the state finishes. Its events wait in its queue meanwhile and are discarded
+at the next `walker run`. The collector delivers the state again when it
+changes, and with the next event once the timeout has passed.
+
 To revoke consent and stop sharing events with a destination, all matching rules
 have to be set to `false`:
 

@@ -1,23 +1,23 @@
-import type { Collector, Elb } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { Elb } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 import { sourceCookiePro } from '../index';
 import { examples } from '../dev';
+import type { Types } from '../types';
 
 describe('Step Examples', () => {
   beforeEach(() => {
-    const win = window as unknown as Record<string, unknown>;
-    win.OptanonActiveGroups = undefined;
-    win.OneTrust = undefined;
-    win.Optanon = undefined;
-    win.OptanonWrapper = undefined;
+    window.OptanonActiveGroups = undefined;
+    window.OneTrust = undefined;
+    window.Optanon = undefined;
+    window.OptanonWrapper = undefined;
   });
 
   afterEach(() => {
-    const win = window as unknown as Record<string, unknown>;
-    win.OptanonActiveGroups = undefined;
-    win.OneTrust = undefined;
-    win.Optanon = undefined;
-    win.OptanonWrapper = undefined;
+    window.OptanonActiveGroups = undefined;
+    window.OneTrust = undefined;
+    window.Optanon = undefined;
+    window.OptanonWrapper = undefined;
   });
 
   it.each(Object.entries(examples.step))('%s', async (_name, example) => {
@@ -33,37 +33,49 @@ describe('Step Examples', () => {
         ? mapping.settings
         : {};
 
-    const mockElb = jest.fn(async () => ({
-      ok: true,
-      successful: [],
-      failed: [],
-      queued: [],
-    })) as unknown as jest.MockedFunction<Elb.Fn>;
+    const mockElb: jest.MockedFunction<Elb.Fn> = jest
+      .fn()
+      .mockImplementation(async () => ({
+        ok: true,
+        successful: [],
+        failed: [],
+        queued: [],
+      }));
 
-    const collectorStub: Collector.Instance = {
-      allowed: true,
-    } as unknown as Collector.Instance;
+    // The source never reads its collector; a real one stands in for the stub.
+    const { collector } = await startFlow({ run: false });
 
     // Pre-init: seed OneTrust globals so "already loaded" path fires
-    const win = window as unknown as Record<string, unknown>;
-    win.OptanonActiveGroups = example.in as string;
-    win.OneTrust = { IsAlertBoxClosed: () => true };
+    if (typeof example.in !== 'string') {
+      throw new Error(
+        'A CookiePro step example in is the active groups string',
+      );
+    }
+    window.OptanonActiveGroups = example.in;
+    window.OneTrust = { IsAlertBoxClosed: () => true };
+
+    const env: Types['env'] = {
+      push: mockElb,
+      command: mockElb,
+      elb: mockElb,
+      window,
+      logger: createMockLogger(),
+    };
 
     const source = await sourceCookiePro({
-      collector: collectorStub,
+      collector,
       config: {
         settings: { ...mappingSettings },
       },
-      env: {
-        push: mockElb as unknown as Collector.PushFn,
-        command: mockElb as unknown as Collector.CommandFn,
-        elb: mockElb,
-        window,
-        logger: createMockLogger(),
-      },
+      env,
       id: 'test-cookiepro',
       logger: createMockLogger(),
-      withScope: async (_r, _resp, body) => body({} as never),
+      withScope: async (_r, respond, body) =>
+        body({
+          ...env,
+          ingest: createIngest('test-cookiepro'),
+          respond,
+        }),
     });
 
     // Adapter setup (listeners + OptanonWrapper + static read) runs in init().
@@ -74,9 +86,15 @@ describe('Step Examples', () => {
       await Promise.resolve();
     }
 
-    const captured = mockElb.mock.calls.map(
-      (args) => ['elb', ...args] as unknown[],
-    );
+    const captured = mockElb.mock.calls.map((args) => ['elb', ...args]);
     expect(captured).toEqual(example.out);
+  });
+});
+
+describe('legacy trigger', () => {
+  it('ignores a non-window env', () => {
+    const env: Record<string, unknown> = { window: {} };
+    examples.trigger(',C0001,', env);
+    expect(env.window).toEqual({});
   });
 });

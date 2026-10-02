@@ -31,10 +31,10 @@ import {
 import { withFlowContext } from '../../../commands/push/flow-context.js';
 import { createCLILogger } from '../../../core/cli-logger.js';
 import { toPrintable } from '../../../core/to-printable.js';
+import { injectLocalPaths } from '../../helpers/local-packages.js';
 
 const examplesDir = path.resolve(__dirname, '../../../../examples');
 const configPath = path.join(examplesDir, 'flow-complete.json');
-const packagesDir = path.resolve(__dirname, '../../../../..');
 
 /**
  * The fingerprint rotates daily (UTC windows from `new Date()`), so the suite
@@ -111,8 +111,6 @@ const OWNER = 'docs/plans/2026-09-24-step-examples-real.md';
 
 /** Examples no simulation can reproduce yet, with the reason and owner. */
 const WAITING: Record<string, string> = {
-  'web.sources.usercentrics.explicitDecision': `needs an out: its walker consent call is now recorded, the example has none to compare (${OWNER})`,
-  'web.sources.session.marketingSession': `needs an out: with SOURCE_CONSENT it starts one session, the example has none to compare (${OWNER})`,
   'server.transformers.file.walkerJs': `simulate transformer does not capture respond; the HTTP test below serves /walker.js (${OWNER})`,
 };
 
@@ -136,57 +134,9 @@ interface Case {
   example: Flow.StepExample;
 }
 
-function readPackageName(dir: string): string | undefined {
-  const file = path.join(dir, 'package.json');
-  if (!fs.existsSync(file)) return undefined;
-  const pkg: unknown = fs.readJSONSync(file);
-  return isObject(pkg) && typeof pkg.name === 'string' ? pkg.name : undefined;
-}
-
-/** Every @walkeros package directory of the monorepo, by package name. */
-function findPackageDirs(
-  dir: string,
-  depth = 0,
-  found = new Map<string, string>(),
-): Map<string, string> {
-  const name = readPackageName(dir);
-  if (name?.startsWith('@walkeros/')) found.set(name, dir);
-  if (depth >= 4) return found;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    if (['node_modules', 'dist', 'src', 'coverage'].includes(entry.name))
-      continue;
-    if (entry.name.startsWith('.')) continue;
-    findPackageDirs(path.join(dir, entry.name), depth + 1, found);
-  }
-  return found;
-}
-
-/**
- * Points every package of a flow, and its @walkeros dependencies, at the
- * monorepo.
- */
-function injectLocalPaths(flow: Flow, dirs: Map<string, string>): void {
-  const packages = flow.config?.bundle?.packages;
-  if (!packages) return;
-  const add = (name: string): void => {
-    const dir = dirs.get(name);
-    if (!dir) return;
-    if (packages[name]?.path) return;
-    packages[name] = { ...packages[name], path: dir };
-    const pkg: unknown = fs.readJSONSync(path.join(dir, 'package.json'));
-    const deps =
-      isObject(pkg) && isObject(pkg.dependencies) ? pkg.dependencies : {};
-    for (const dep of Object.keys(deps))
-      if (dep.startsWith('@walkeros/')) add(dep);
-  };
-  for (const name of Object.keys(packages)) add(name);
-}
-
 function loadTestConfig(): Flow.Json {
   const config = validateFlowConfig(fs.readJSONSync(configPath));
-  const dirs = findPackageDirs(packagesDir);
-  for (const flow of Object.values(config.flows)) injectLocalPaths(flow, dirs);
+  for (const flow of Object.values(config.flows)) injectLocalPaths(flow);
   return config;
 }
 
@@ -247,10 +197,32 @@ function normalize(value: unknown): unknown {
   return value;
 }
 
-function sourceType(event: unknown): unknown {
-  return isObject(event) && isObject(event.source)
-    ? event.source.type
-    : undefined;
+/**
+ * The session source mints random session and device ids. They are read from
+ * the case's recorded `walker session` call and written as the ids the rest of
+ * the file uses, so the example teaches one continuous visitor.
+ */
+function stableSessionIds(out: unknown): unknown {
+  const ids = new Map<string, string>();
+  const entries: unknown[] = Array.isArray(out) ? out : [];
+  for (const entry of entries) {
+    if (!Array.isArray(entry) || entry[0] !== 'elb' || entry[1] !== 'session')
+      continue;
+    const data: unknown = entry[2];
+    if (!isObject(data)) continue;
+    if (typeof data.id === 'string') ids.set(data.id, 's3ss10n');
+    if (typeof data.device === 'string') ids.set(data.device, 'd3v1c3');
+  }
+  const replace = (value: unknown): unknown => {
+    if (typeof value === 'string') return ids.get(value) ?? value;
+    if (Array.isArray(value)) return value.map(replace);
+    if (!isObject(value)) return value;
+    const result: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value))
+      result[key] = replace(item);
+    return result;
+  };
+  return replace(out);
 }
 
 /**
@@ -261,14 +233,10 @@ function sourceOut(result: Simulation.Result, c: Case): Flow.StepOut {
   const commands: Flow.StepOut = result.calls
     .filter((call) => call.fn === 'elb')
     .map((call) => ['elb', ...call.args]);
-  const { step, example } = c;
-  // Keep the simulated source's own events, and of those the ones its
-  // trigger fired (a page load also fires the browser page view). Server
-  // sources forward the event they received, whatever its source.type.
-  let events = result.events.filter(
-    (event) => c.flow !== 'web' || sourceType(event) === step,
-  );
-  const trigger = example.trigger?.type;
+  // Only the simulated source runs. Of its events keep the ones its trigger
+  // fired: a browser source's own load page view is not the example's.
+  let events = result.events;
+  const trigger = c.example.trigger?.type;
   if (trigger && events.some((event) => event.trigger === trigger))
     events = events.filter((event) => event.trigger === trigger);
   return [
@@ -463,7 +431,10 @@ describe('flow-complete.json', () => {
         expect(result.error).toBeUndefined();
         out = destinationOut(result);
       }
-      const actual = normalize(out);
+      const actual =
+        c.kind === 'sources' && c.step === 'session'
+          ? stableSessionIds(normalize(out))
+          : normalize(out);
       const expected = normalize(c.example.out);
       if (c.step === 'ga4Decode')
         expect(withoutReceiveTime(actual)).toEqual(

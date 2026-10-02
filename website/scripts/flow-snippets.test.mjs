@@ -291,10 +291,10 @@ describe('docs transform: node shapes', () => {
   });
 
   test('FlowExample whose example has no out: key omitted, lang list still matches StepExample', () => {
-    const e = entry('session-source');
+    const e = entry('file-transformer');
     const expected = findStepExample(FLOW, e.pointer, e.example);
     assert.equal(expected.out, undefined, 'fixture assumption: no out');
-    const tree = transform('<FlowExample feature="session-source" />\n');
+    const tree = transform('<FlowExample feature="file-transformer" />\n');
     const [step] = findAll(tree, isJsx('StepExample'));
     const parsed = JSON.parse(attr(step.node, 'example').value.value);
     assert.equal('out' in parsed, false);
@@ -639,7 +639,7 @@ describe('real docs', () => {
     assert.match(source, /onRouteError:\s*'throw'/);
   });
 
-  test("'throw' makes the plugin's own route-error path throw, naming the route", async () => {
+  test("'throw' makes the plugin's own route-error path throw, naming the route", async (t) => {
     // Load the plugin lib the way Docusaurus does (@docusaurus/utils
     // loadFreshModule: jiti with interopDefault). A plain ESM import resolves
     // @docusaurus/logger's CJS default wrongly and every report() call then
@@ -660,7 +660,8 @@ describe('real docs', () => {
       cause = error instanceof Error ? error.message : String(error);
     }
     assert.ok(cause, 'the export plugin throws on the bad fixture');
-    const route = '/docs/collector/state';
+    // A route no page has: the message is fabricated from a mutated fixture.
+    const route = '/docs/fixture-route';
     // Same call as route-processor.js processSingleRoute's catch.
     const message = ERROR_MESSAGES.ROUTE_PROCESSING_FAILED(route, cause);
     assert.throws(
@@ -673,7 +674,33 @@ describe('real docs', () => {
         return true;
       },
     );
+    // Contrast: 'warn' reports instead of throwing. Captured, so the fixture
+    // message never reaches the run log looking like a real route failure.
+    const warn = t.mock.method(console, 'warn', () => {});
     assert.doesNotThrow(() => createLogger('llms-txt', 'warn').reportRouteError(message));
+    assert.equal(warn.mock.callCount(), 1);
+    assert.ok(String(warn.mock.calls[0].arguments[0]).includes(route));
+  });
+
+  test('every real page exports its snippets with a language on every fence', async () => {
+    const files = mdxFiles(join(WEBSITE, 'docs')).filter((path) =>
+      /<Flow(Slice|Example)\b/.test(readFileSync(path, 'utf8')),
+    );
+    // Renders with the stand-in components above; the real explorer rendering is covered by the site build.
+    for (const path of files) {
+      const source = readFileSync(path, 'utf8');
+      const tags = source.match(/<Flow(Slice|Example)\b[^>]*\/>/g) ?? [];
+      assert.equal(
+        tags.length,
+        (source.match(/<Flow(Slice|Example)\b/g) ?? []).length,
+        `${relative(WEBSITE, path)}: every tag is a single self-closing tag`,
+      );
+      const { html } = await compileAndRender(`${tags.join('\n\n')}\n`);
+      const md = toMarkdown(html);
+      const openers = (md.match(/^```.*$/gm) ?? []).filter((_, i) => i % 2 === 0);
+      for (const opener of openers)
+        assert.notEqual(opener, '```', `${relative(WEBSITE, path)}: fence without language`);
+    }
   });
 });
 

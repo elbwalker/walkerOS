@@ -5,8 +5,9 @@
 '@walkeros/runner': patch
 ---
 
-The values of secrets a flow references are masked in simulate output, CLI logs
-and flow logs, also inside JSON strings. The runtime masks the secret values it
-fetches in every log path, heartbeats and `--json` errors included. Simulate
-output also scrubs credential-named fields, `Authorization` headers and PEM
-keys. `scrubSecrets` takes `known`; the CLI logger takes `knownSecrets`.
+Simulate and push output, CLI and flow logs, and the MCP `flow_simulate` and
+`flow_push` results mask the values of secrets a flow references, also inside
+JSON strings, numbers and URLs. `scrubSecrets` takes `known`, the CLI logger
+`knownSecrets`, and `scrubJson` replaces `maskKnownNumbers`. MCP `flow_push` and
+`flow_simulate` read their config once; a config that cannot be read stops the
+run.

@@ -86,7 +86,8 @@ destination, all at once.
    replayed via `source.on(type, data)`. Destinations whose `require` just
    emptied are registered and become eligible to initialize/send; any previously
    queued events are preserved and delivered once the collector is allowed to
-   push, so no data is lost.
+   push, so no data is lost. The destination's `on()` handler receives the
+   current state before those events are delivered.
 
 ### Key points
 

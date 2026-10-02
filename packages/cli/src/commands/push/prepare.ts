@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { getPlatform, type Flow } from '@walkeros/core';
 import { createCLILogger } from '../../core/cli-logger.js';
+import { collectKnownSecrets } from '../../core/known-secrets.js';
 import { tmpRunDir } from '../../core/tmp-names.js';
 import { loadBundleConfig } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
@@ -54,6 +55,7 @@ export async function prepareFlow(input: PrepareInput): Promise<PreparedFlow> {
     silent: input.silent,
     verbose: input.verbose,
     stderr: input.json,
+    knownSecrets: collectKnownSecrets(input.config),
   });
 
   // Resolve config to flowSettings + buildOptions

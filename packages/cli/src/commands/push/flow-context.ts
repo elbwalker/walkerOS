@@ -34,14 +34,20 @@ export interface FlowContextOptions {
 
 /**
  * JSDOM window members a web step reaches as bare globals (a CMP trigger's
- * `new CustomEvent`, a session source's `localStorage`). Exposed for the run,
- * so events are created in the page's own realm, and restored after.
+ * `new CustomEvent`, a session source's `localStorage`, an `instanceof
+ * Element` check). Exposed for the run, so events are created in the page's
+ * own realm and its nodes pass type checks as in a browser, and restored after.
  */
 const DOM_GLOBALS = [
   'CustomEvent',
   'Event',
   'localStorage',
   'sessionStorage',
+  'Node',
+  'Element',
+  'HTMLElement',
+  'Document',
+  'ShadowRoot',
 ] as const;
 
 /**

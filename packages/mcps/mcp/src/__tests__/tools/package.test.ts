@@ -1,7 +1,11 @@
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
+  createPackageGetToolSpec,
+  createPackageSearchToolSpec,
   registerGetPackageSchemaTool,
-  registerPackageSearchTool,
 } from '../../tools/package.js';
+import type { ToolSpec } from '../../tool-spec.js';
+import { structured, record, isErrorResult } from '../support/tool-result.js';
 
 jest.mock('@walkeros/core', () => {
   return {
@@ -34,9 +38,8 @@ jest.mock('@walkeros/core', () => {
 });
 
 import { fetchPackage } from '@walkeros/core';
-const mockFetchPackage = fetchPackage as jest.MockedFunction<
-  typeof fetchPackage
->;
+import { mergeConfigSchema } from '@walkeros/core/dev';
+const mockFetchPackage = jest.mocked(fetchPackage);
 
 jest.mock('../../catalog.js', () => ({
   fetchCatalog: jest.fn(),
@@ -45,36 +48,34 @@ jest.mock('../../catalog.js', () => ({
 }));
 
 import { fetchCatalog } from '../../catalog.js';
-const mockFetchCatalog = fetchCatalog as jest.MockedFunction<
-  typeof fetchCatalog
->;
+const mockFetchCatalog = jest.mocked(fetchCatalog);
 
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: Function) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
+/** The config the first `registerTool` call passed, narrowed. */
+function firstRegisteredConfig(
+  calls: readonly unknown[],
+): Record<string, unknown> {
+  const first = calls[0];
+  if (!Array.isArray(first)) throw new Error('No tool was registered');
+  return record(first[1]);
 }
 
 describe('package_get tool', () => {
-  let mockServer: ReturnType<typeof createMockServer>;
+  let tool: ToolSpec;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockServer = createMockServer();
-    registerGetPackageSchemaTool(mockServer as any);
+    tool = createPackageGetToolSpec();
   });
 
   it('should register with correct name', () => {
-    const tool = mockServer.getTool('package_get');
-    expect(tool).toBeDefined();
+    expect(tool.name).toBe('package_get');
     // No outputSchema — removed to avoid SDK -32602 crashes on unexpected field values
-    expect((tool.config as any).outputSchema).toBeUndefined();
+    const server = new McpServer({ name: 'test', version: '0.0.0' });
+    const registerTool = jest.spyOn(server, 'registerTool');
+    registerGetPackageSchemaTool(server);
+    expect(
+      firstRegisteredConfig(registerTool.mock.calls).outputSchema,
+    ).toBeUndefined();
   });
 
   it('should fetch package info', async () => {
@@ -89,8 +90,6 @@ describe('package_get tool', () => {
       hintKeys: [],
       exampleSummaries: [],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({
       package: '@walkeros/web-destination-snowplow',
     });
@@ -100,9 +99,9 @@ describe('package_get tool', () => {
       { version: undefined },
     );
 
-    const content = result.structuredContent;
+    const content = structured(result);
     expect(content.package).toBe('@walkeros/web-destination-snowplow');
-    expect((content.schemas as Record<string, unknown>).config).toBeDefined();
+    expect(record(content.schemas).config).toBeDefined();
     expect(content.type).toBe('destination');
     expect(content.platform).toEqual(['web']);
   });
@@ -111,10 +110,8 @@ describe('package_get tool', () => {
     mockFetchPackage.mockRejectedValue(
       new Error('Package "nonexistent" not found on npm (HTTP 404)'),
     );
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({ package: 'nonexistent' });
-    expect(result.isError).toBe(true);
+    expect(isErrorResult(result)).toBe(true);
   });
 
   it('should support version parameter', async () => {
@@ -129,14 +126,12 @@ describe('package_get tool', () => {
       hintKeys: [],
       exampleSummaries: [],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({ package: 'pkg', version: '2.0.0' });
 
     expect(mockFetchPackage).toHaveBeenCalledWith('pkg', {
       version: '2.0.0',
     });
-    expect(result.structuredContent.platform).toEqual([]);
+    expect(structured(result).platform).toEqual([]);
   });
 
   it('should include hint text summaries by default (no code blocks)', async () => {
@@ -158,16 +153,14 @@ describe('package_get tool', () => {
       hintKeys: ['auth-default', 'query-tips'],
       exampleSummaries: [],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({
       package: '@walkeros/server-destination-gcp',
     });
 
-    const content = result.structuredContent;
+    const content = structured(result);
     expect(content.platform).toEqual(['server']);
     expect(content.hints).toBeDefined();
-    const hints = content.hints as Record<string, unknown>;
+    const hints = record(content.hints);
     expect(Object.keys(hints)).toHaveLength(2);
     expect(hints['auth-default']).toEqual({
       text: 'Use default credentials on GCP',
@@ -195,13 +188,11 @@ describe('package_get tool', () => {
       hintKeys: ['query-tips'],
       exampleSummaries: [],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({ package: 'pkg', section: 'hints' });
 
-    const content = result.structuredContent;
+    const content = structured(result);
     expect(content.platform).toEqual(['server']);
-    const hints = content.hints as Record<string, unknown>;
+    const hints = record(content.hints);
     expect(hints['query-tips']).toEqual({
       text: 'Use JSON_EXTRACT',
       code: [{ lang: 'sql', code: 'SELECT 1' }],
@@ -231,14 +222,12 @@ describe('package_get tool', () => {
       hintKeys: ['setup'],
       exampleSummaries: [{ name: 'purchase', description: 'Buy' }],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({ package: 'pkg', section: 'examples' });
 
-    const content = result.structuredContent;
+    const content = structured(result);
     expect(content.platform).toEqual(['web']);
     expect(content.examples).toBeDefined();
-    const hints = content.hints as Record<string, unknown>;
+    const hints = record(content.hints);
     expect(hints['setup']).toEqual({ text: 'Install SDK first' });
   });
 
@@ -261,16 +250,77 @@ describe('package_get tool', () => {
       hintKeys: [],
       exampleSummaries: [],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({
       package: '@walkeros/server-destination-gcp',
       section,
     });
 
-    expect(result.structuredContent.exportExamples).toEqual(
+    expect(structured(result).exportExamples).toEqual(
       expected ? exportExamples : undefined,
     );
+  });
+
+  it('returns exportSchemas with a merged config per export', async () => {
+    const bigquerySettings = {
+      type: 'object',
+      properties: { projectId: { type: 'string' } },
+    };
+    const pubsubSettings = {
+      type: 'object',
+      properties: { topic: { type: 'string' } },
+    };
+    const pubsubSetup = { type: 'object', properties: {} };
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/server-destination-gcp',
+      version: '1.0.0',
+      type: 'destination',
+      platform: 'server',
+      schemas: { settings: bigquerySettings },
+      examples: {},
+      exportSchemas: {
+        destinationBigQuery: { settings: bigquerySettings },
+        destinationPubSub: { settings: pubsubSettings, setup: pubsubSetup },
+      },
+      exports: {
+        destinationBigQuery: 'BigQuery',
+        destinationPubSub: 'Pub/Sub',
+      },
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+    const result = await tool.handler({
+      package: '@walkeros/server-destination-gcp',
+    });
+
+    expect(structured(result).exportSchemas).toEqual({
+      destinationBigQuery: {
+        config: mergeConfigSchema('destination', {
+          settings: bigquerySettings,
+        }),
+      },
+      destinationPubSub: {
+        config: mergeConfigSchema('destination', { settings: pubsubSettings }),
+        setup: pubsubSetup,
+      },
+    });
+  });
+
+  it('omits exportSchemas for a single-export package', async () => {
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/web-destination-gtag',
+      version: '1.0.0',
+      type: 'destination',
+      platform: 'web',
+      schemas: { settings: { type: 'object', properties: {} } },
+      examples: {},
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+    const result = await tool.handler({
+      package: '@walkeros/web-destination-gtag',
+    });
+
+    expect(structured(result).exportSchemas).toBeUndefined();
   });
 
   it('should return full content when section=all', async () => {
@@ -286,20 +336,15 @@ describe('package_get tool', () => {
       hintKeys: ['a'],
       exampleSummaries: [{ name: 'p' }],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({ package: 'pkg', section: 'all' });
 
-    const content = result.structuredContent;
+    const content = structured(result);
     expect(content.platform).toEqual(['web']);
     expect(content.schemas).toBeDefined();
     expect(content.examples).toBeDefined();
     expect(content.hints).toBeDefined();
-    const hints = content.hints as Record<
-      string,
-      { text: string; code?: unknown[] }
-    >;
-    expect(hints['a'].code).toBeDefined();
+    const hints = record(content.hints);
+    expect(record(hints['a']).code).toBeDefined();
     expect(content.exampleSummaries).toBeUndefined();
   });
 
@@ -324,18 +369,16 @@ describe('package_get tool', () => {
       hintKeys: [],
       exampleSummaries: [],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({
       package: '@walkeros/web-source-browser',
     });
 
-    const schemas = result.structuredContent.schemas as Record<string, unknown>;
+    const schemas = record(structured(result).schemas);
 
     // config key exists with merged schema
     expect(schemas.config).toBeDefined();
-    const config = schemas.config as Record<string, unknown>;
-    const props = config.properties as Record<string, unknown>;
+    const config = record(schemas.config);
+    const props = record(config.properties);
 
     // Base source fields present
     expect(props.consent).toBeDefined();
@@ -343,8 +386,8 @@ describe('package_get tool', () => {
     expect(props.logger).toBeDefined();
 
     // Package settings merged in
-    const settings = props.settings as Record<string, unknown>;
-    expect((settings.properties as any).pageview).toBeDefined();
+    const settings = record(props.settings);
+    expect(record(settings.properties).pageview).toBeDefined();
 
     // Runtime-only fields excluded
     expect(props.env).toBeUndefined();
@@ -371,15 +414,13 @@ describe('package_get tool', () => {
       hintKeys: [],
       exampleSummaries: [],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({
       package: '@walkeros/web-destination-api',
     });
 
-    const schemas = result.structuredContent.schemas as Record<string, unknown>;
-    const config = schemas.config as Record<string, unknown>;
-    const props = config.properties as Record<string, unknown>;
+    const schemas = record(structured(result).schemas);
+    const config = record(schemas.config);
+    const props = record(config.properties);
 
     // Destination-specific base fields
     expect(props.queue).toBeDefined();
@@ -405,13 +446,11 @@ describe('package_get tool', () => {
       hintKeys: [],
       exampleSummaries: [],
     });
-
-    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({
       package: '@walkeros/web-destination-gtag',
     });
 
-    const schemas = result.structuredContent.schemas as Record<string, unknown>;
+    const schemas = record(structured(result).schemas);
 
     // config is merged
     expect(schemas.config).toBeDefined();
@@ -426,17 +465,15 @@ describe('package_get tool', () => {
 });
 
 describe('package_search tool', () => {
-  let mockServer: ReturnType<typeof createMockServer>;
+  let tool: ToolSpec;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockServer = createMockServer();
-    registerPackageSearchTool(mockServer as any);
+    tool = createPackageSearchToolSpec();
   });
 
   it('should register with correct name', () => {
-    const tool = mockServer.getTool('package_search');
-    expect(tool).toBeDefined();
+    expect(tool.name).toBe('package_search');
   });
 
   it('should return metadata for lookup mode', async () => {
@@ -451,8 +488,6 @@ describe('package_search tool', () => {
       hintKeys: [],
       exampleSummaries: [],
     });
-
-    const tool = mockServer.getTool('package_search');
     const result = await tool.handler({
       package: '@walkeros/web-destination-snowplow',
     });
@@ -462,7 +497,7 @@ describe('package_search tool', () => {
       { version: undefined },
     );
 
-    const content = result.structuredContent;
+    const content = structured(result);
     expect(content.package).toBe('@walkeros/web-destination-snowplow');
     expect(content.version).toBe('0.0.12');
     expect(content.description).toBe('Snowplow destination for walkerOS');
@@ -473,10 +508,8 @@ describe('package_search tool', () => {
     mockFetchPackage.mockRejectedValue(
       new Error('Package "nonexistent" not found on npm (HTTP 404)'),
     );
-
-    const tool = mockServer.getTool('package_search');
     const result = await tool.handler({ package: 'nonexistent' });
-    expect(result.isError).toBe(true);
+    expect(isErrorResult(result)).toBe(true);
   });
 
   it('should return catalog in browse mode', async () => {
@@ -490,8 +523,6 @@ describe('package_search tool', () => {
       },
     ];
     mockFetchCatalog.mockResolvedValue({ entries: mockCatalog, warnings: [] });
-
-    const tool = mockServer.getTool('package_search');
     const result = await tool.handler({});
 
     expect(mockFetchPackage).not.toHaveBeenCalled();
@@ -499,8 +530,8 @@ describe('package_search tool', () => {
       type: undefined,
       platform: undefined,
     });
-    expect(result.structuredContent.catalog).toEqual(mockCatalog);
-    expect(result.structuredContent.count).toBe(1);
+    expect(structured(result).catalog).toEqual(mockCatalog);
+    expect(structured(result).count).toBe(1);
   });
 
   it('should surface catalog warnings in browse output hints', async () => {
@@ -510,14 +541,9 @@ describe('package_search tool', () => {
         'app catalog endpoint unavailable, fell back to npm; results may be incomplete',
       ],
     });
-
-    const tool = mockServer.getTool('package_search');
     const result = await tool.handler({});
 
-    const hints = result.structuredContent._hints as {
-      next?: string[];
-      warnings?: string[];
-    };
+    const hints = record(structured(result)._hints);
     expect(hints.warnings).toEqual([
       'app catalog endpoint unavailable, fell back to npm; results may be incomplete',
     ]);
@@ -525,21 +551,14 @@ describe('package_search tool', () => {
 
   it('should omit warnings hint when catalog returns none', async () => {
     mockFetchCatalog.mockResolvedValue({ entries: [], warnings: [] });
-
-    const tool = mockServer.getTool('package_search');
     const result = await tool.handler({});
 
-    const hints = result.structuredContent._hints as {
-      next?: string[];
-      warnings?: string[];
-    };
+    const hints = record(structured(result)._hints);
     expect(hints.warnings).toBeUndefined();
   });
 
   it('should pass type filter to catalog', async () => {
     mockFetchCatalog.mockResolvedValue({ entries: [], warnings: [] });
-
-    const tool = mockServer.getTool('package_search');
     await tool.handler({ type: 'destination' });
 
     expect(mockFetchCatalog).toHaveBeenCalledWith({
@@ -550,8 +569,6 @@ describe('package_search tool', () => {
 
   it('should pass platform filter to catalog', async () => {
     mockFetchCatalog.mockResolvedValue({ entries: [], warnings: [] });
-
-    const tool = mockServer.getTool('package_search');
     await tool.handler({ platform: 'web' });
 
     expect(mockFetchCatalog).toHaveBeenCalledWith({
@@ -562,8 +579,6 @@ describe('package_search tool', () => {
 
   it('should pass combined filters to catalog', async () => {
     mockFetchCatalog.mockResolvedValue({ entries: [], warnings: [] });
-
-    const tool = mockServer.getTool('package_search');
     await tool.handler({ type: 'source', platform: 'server' });
 
     expect(mockFetchCatalog).toHaveBeenCalledWith({

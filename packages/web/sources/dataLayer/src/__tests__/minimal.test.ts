@@ -115,7 +115,9 @@ describe('DataLayer Source - Minimal', () => {
     expect(Array.isArray(window.customLayer)).toBe(true);
 
     // Push to custom layer
-    (window.customLayer as unknown[]).push({
+    const customLayer = window.customLayer;
+    if (!Array.isArray(customLayer)) throw new Error('customLayer missing');
+    customLayer.push({
       event: 'test_event',
       data: 'test',
     });

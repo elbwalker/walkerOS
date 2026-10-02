@@ -168,8 +168,6 @@ export function registerDiagnosticsTool(
       inputSchema: spec.inputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    () => diagnosticsHandlerBody(client, packageVersion),
   );
 }

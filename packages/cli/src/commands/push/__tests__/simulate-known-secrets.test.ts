@@ -27,11 +27,20 @@ export async function startFlow(config) {
 }
 `;
 
+// The stub bundler also logs the token through the CLI logger it receives,
+// as the run's own lines (detect, load, bundle) would.
 jest.mock('../../bundle/bundler.js', () => ({
-  bundleCore: jest.fn(async (_flow: unknown, options: { output: string }) => {
-    const { outputFile } = jest.requireActual('fs-extra');
-    await outputFile(options.output, STUB_REAL_PUSH);
-  }),
+  bundleCore: jest.fn(
+    async (
+      _flow: unknown,
+      options: { output: string },
+      logger: { info: (message: string) => void },
+    ) => {
+      logger.info(`bundled with ${process.env.KNOWN_TEST_TOKEN}`);
+      const { outputFile } = jest.requireActual('fs-extra');
+      await outputFile(options.output, STUB_REAL_PUSH);
+    },
+  ),
 }));
 
 /** A multi-line service account: its JSON escapes the newlines. */
@@ -169,6 +178,55 @@ export const __devExports = {
       expect(logged).not.toContain(TOKEN);
     },
   );
+
+  it.each([true, false])(
+    'masks a referenced secret in a real push CLI log line (json: %s)',
+    async (json) => {
+      const configPath = path.join(dir, 'flow.json');
+      await fs.writeJSON(configPath, flowJson);
+      const lines: string[] = [];
+      const capture = (...args: unknown[]) => {
+        lines.push(args.map(String).join(' '));
+      };
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(capture);
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(capture);
+      try {
+        await runPushCommand({
+          config: configPath,
+          event: '{"name":"page view"}',
+          json,
+        });
+      } finally {
+        errorSpy.mockRestore();
+        logSpy.mockRestore();
+      }
+
+      expect(lines).toContain('bundled with ***');
+      expect(lines.join('\n')).not.toContain(TOKEN);
+    },
+  );
+
+  it('masks a referenced secret in a simulate CLI log line', async () => {
+    const lines: string[] = [];
+    const capture = (...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    };
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(capture);
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(capture);
+    try {
+      await simulateDestination(
+        flowJson,
+        { name: 'page view' },
+        { destinationId: 'api', json: true },
+      );
+    } finally {
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
+    }
+
+    expect(lines).toContain('bundled with ***');
+    expect(lines.join('\n')).not.toContain(TOKEN);
+  });
 
   it.each([true, false])(
     'masks a referenced secret in a flow log line (json: %s)',

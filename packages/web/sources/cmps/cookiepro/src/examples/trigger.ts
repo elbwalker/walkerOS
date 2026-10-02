@@ -1,5 +1,8 @@
 import type { Trigger, Collector } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
+import type { OneTrustAPI } from '../types';
+
+const oneTrust: OneTrustAPI = { IsAlertBoxClosed: () => true };
 
 const createTrigger: Trigger.CreateFn<string, void> = async (
   config: Collector.InitConfig,
@@ -8,9 +11,8 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
 
   const trigger: Trigger.Fn<string, void> = () => async (content: string) => {
     // Pre-init: set OneTrust globals (source reads these during init)
-    const win = window as unknown as Record<string, unknown>;
-    win.OptanonActiveGroups = content;
-    win.OneTrust = { IsAlertBoxClosed: () => true };
+    window.OptanonActiveGroups = content;
+    window.OneTrust = oneTrust;
 
     // Lazy startFlow — source checks globals immediately during init
     if (!flow) {
@@ -29,10 +31,16 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
 
 /** Sets OptanonActiveGroups and OneTrust globals before source init. */
 const trigger = (input: unknown, env: Record<string, unknown>): void => {
-  const win = env.window as Window & Record<string, unknown>;
-  if (typeof input !== 'string') return;
+  const win = env.window;
+  if (typeof input !== 'string' || !isWindow(win)) return;
   win.OptanonActiveGroups = input;
-  win.OneTrust = { IsAlertBoxClosed: () => true };
+  win.OneTrust = oneTrust;
 };
+
+function isWindow(value: unknown): value is Window {
+  return (
+    typeof value === 'object' && value !== null && 'addEventListener' in value
+  );
+}
 
 export { createTrigger, trigger };

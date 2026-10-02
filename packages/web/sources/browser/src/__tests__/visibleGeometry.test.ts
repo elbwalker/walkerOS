@@ -6,7 +6,8 @@ import {
   triggerVisible,
   destroyVisibilityTracking,
 } from '../triggerVisible';
-import { createRegistry } from '../trigger';
+import { isVisible } from '@walkeros/web-core';
+import { createRegistry, handleTrigger } from '../trigger';
 import { resetSim, setBox, scrollTo } from './ioSimulator';
 
 interface Rect {
@@ -16,18 +17,17 @@ interface Rect {
   height: number;
 }
 
-const rect = (r: Rect): DOMRectReadOnly =>
-  ({
-    x: r.left,
-    y: r.top,
-    top: r.top,
-    left: r.left,
-    width: r.width,
-    height: r.height,
-    right: r.left + r.width,
-    bottom: r.top + r.height,
-    toJSON: () => r,
-  }) as DOMRectReadOnly;
+const rect = (r: Rect): DOMRectReadOnly => ({
+  x: r.left,
+  y: r.top,
+  top: r.top,
+  left: r.left,
+  width: r.width,
+  height: r.height,
+  right: r.left + r.width,
+  bottom: r.top + r.height,
+  toJSON: () => r,
+});
 
 /** Build an entry for an element box against a viewport, clipping as the browser does. */
 const entryFor = (
@@ -59,11 +59,22 @@ const entryFor = (
           height: viewport.height,
         })
       : null,
-  } as IntersectionObserverEntry;
+  };
 };
 
-const win = (width: number, height: number): Window =>
-  ({ innerWidth: width, innerHeight: height }) as Window;
+// isEligible reads only innerWidth/innerHeight, so size the real window.
+// Suites below reset the viewport through resetSim before relying on it.
+const win = (width: number, height: number): Window => {
+  Object.defineProperty(window, 'innerWidth', {
+    value: width,
+    configurable: true,
+  });
+  Object.defineProperty(window, 'innerHeight', {
+    value: height,
+    configurable: true,
+  });
+  return window;
+};
 
 describe('isEligible', () => {
   test('small element: unchanged 50%-of-element behaviour', () => {
@@ -201,17 +212,13 @@ jest.mock('../trigger', () => ({
   Triggers: { Impression: 'impression', Visible: 'visible' },
 }));
 
-// Get references to mocked functions
-const { isVisible } = require('@walkeros/web-core');
-const { handleTrigger } = require('../trigger');
-
 describe('real-world geometries (regression)', () => {
   let mockElb: jest.MockedFunction<Elb.Fn>;
 
   beforeEach(() => {
     jest.useFakeTimers();
-    (isVisible as jest.Mock).mockReturnValue(true);
-    (handleTrigger as jest.Mock).mockResolvedValue([]);
+    jest.mocked(isVisible).mockReturnValue(true);
+    jest.mocked(handleTrigger).mockResolvedValue([]);
 
     mockElb = jest.fn().mockResolvedValue({
       ok: true,
@@ -349,10 +356,10 @@ describe('real-world geometries (regression)', () => {
       forbidden();
       return protoRect.call(this);
     };
-    window.getComputedStyle = ((el: Element) => {
+    window.getComputedStyle = (el: Element) => {
       forbidden();
       return realStyle(el);
-    }) as typeof window.getComputedStyle;
+    };
 
     try {
       // Ascending, not descending: 600 -> 650 -> 700 puts 50px, then 100px,

@@ -1,5 +1,8 @@
 import { sourceCookiePro, DEFAULT_CATEGORY_MAP } from '../index';
-import { createMockLogger } from '@walkeros/core';
+import type { Elb } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
+import type { Types } from '../types';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
 import { examples } from '../dev';
@@ -7,8 +10,19 @@ import {
   createMockElb,
   createMockWindow,
   createCookieProSource,
+  resetMockWindow,
   ConsentCall,
 } from './test-utils';
+
+/** A complete env for a destroy context; destroy itself never reads it. */
+function destroyEnv(elb: Elb.Fn): Types['env'] {
+  return {
+    push: elb,
+    command: elb,
+    elb,
+    logger: createMockLogger(),
+  };
+}
 
 describe('CookiePro Source', () => {
   let consentCalls: ConsentCall[];
@@ -18,6 +32,8 @@ describe('CookiePro Source', () => {
     consentCalls = [];
     mockElb = createMockElb(consentCalls);
   });
+
+  afterEach(() => resetMockWindow());
 
   describe('initialization', () => {
     test('initializes without errors', async () => {
@@ -132,10 +148,10 @@ describe('CookiePro Source', () => {
     });
 
     test('preserves existing OptanonWrapper function', async () => {
+      const originalWrapper = jest.fn();
       const mockWindow = createMockWindow({
-        initialOptanonWrapper: jest.fn(),
+        initialOptanonWrapper: originalWrapper,
       });
-      const originalWrapper = mockWindow.OptanonWrapper as jest.Mock;
 
       await createCookieProSource(mockWindow, mockElb);
 
@@ -433,7 +449,7 @@ describe('CookiePro Source', () => {
       await source.destroy?.({
         id: 'test',
         config: source.config,
-        env: {} as any,
+        env: destroyEnv(mockElb),
         logger: createMockLogger(),
       });
 
@@ -455,7 +471,7 @@ describe('CookiePro Source', () => {
       await source.destroy?.({
         id: 'test',
         config: source.config,
-        env: {} as any,
+        env: destroyEnv(mockElb),
         logger: createMockLogger(),
       });
 
@@ -465,28 +481,30 @@ describe('CookiePro Source', () => {
 
   describe('no window environment', () => {
     test('handles missing window gracefully', async () => {
-      const source = await sourceCookiePro({
-        collector: {} as never,
-        config: {},
-        env: {
-          push: mockElb,
-          command: mockElb,
-          elb: mockElb,
-          window: undefined,
-          logger: {
-            error: () => {},
-            warn: () => {},
-            info: () => {},
-            debug: () => {},
-            json: () => {},
-            throw: (m: string | Error) => {
-              throw typeof m === 'string' ? new Error(m) : m;
-            },
-            scope: function () {
-              return this;
-            },
+      const env: Types['env'] = {
+        push: mockElb,
+        command: mockElb,
+        elb: mockElb,
+        window: undefined,
+        logger: {
+          error: () => {},
+          warn: () => {},
+          info: () => {},
+          debug: () => {},
+          json: () => {},
+          throw: (m: string | Error) => {
+            throw typeof m === 'string' ? new Error(m) : m;
+          },
+          scope: function () {
+            return this;
           },
         },
+      };
+      const { collector } = await startFlow({ run: false });
+      const source = await sourceCookiePro({
+        collector,
+        config: {},
+        env,
         id: 'test-cookiepro',
         logger: {
           error: () => {},
@@ -501,7 +519,8 @@ describe('CookiePro Source', () => {
             return this;
           },
         },
-        withScope: async (_r, _resp, body) => body({} as never),
+        withScope: async (_r, respond, body) =>
+          body({ ...env, ingest: createIngest('test-cookiepro'), respond }),
       });
 
       expect(source.type).toBe('cookiepro');
@@ -519,19 +538,22 @@ describe('CookiePro Source', () => {
         alertBoxClosed: true,
       });
 
+      const env: Types['env'] = {
+        push: mockElb,
+        command: mockElb,
+        elb: mockElb,
+        window: mockWindow,
+        logger: createMockLogger(),
+      };
+      const { collector } = await startFlow({ run: false });
       const source = await sourceCookiePro({
-        collector: {} as never,
+        collector,
         config: { settings: { explicitOnly: false } },
-        env: {
-          push: mockElb,
-          command: mockElb,
-          elb: mockElb,
-          window: mockWindow as unknown as Window & typeof globalThis,
-          logger: createMockLogger(),
-        },
+        env,
         id: 'test-cookiepro',
         logger: createMockLogger(),
-        withScope: async (_r, _resp, body) => body({} as never),
+        withScope: async (_r, respond, body) =>
+          body({ ...env, ingest: createIngest('test-cookiepro'), respond }),
       });
 
       // Pass-1 factory must be side-effect-free: no listener, no consent emit.

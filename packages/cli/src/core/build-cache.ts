@@ -33,6 +33,8 @@ export interface CodeCacheKeyInputs {
   windowCollector?: string;
   windowElb?: string;
   versionsHash: string;
+  /** CLI version: stage-1 codegen changes with it. */
+  toolchain: string;
 }
 
 function serializeKeyInputs(inputs: CodeCacheKeyInputs): string {
@@ -47,6 +49,7 @@ function serializeKeyInputs(inputs: CodeCacheKeyInputs): string {
     windowCollector: inputs.windowCollector ?? null,
     windowElb: inputs.windowElb ?? null,
     versionsHash: inputs.versionsHash,
+    toolchain: inputs.toolchain,
   });
 }
 

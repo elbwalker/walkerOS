@@ -43,7 +43,9 @@ describe('classifyConfigInput', () => {
 });
 
 describe('createHostedRuntime', () => {
-  const getFlow = jest.fn(async () => ({ config: { version: 4, flows: {} } }));
+  const getFlow = jest.fn(
+    async (): Promise<unknown> => ({ config: { version: 4, flows: {} } }),
+  );
   const runtime = createHostedRuntime(stubClient({ getFlow }));
 
   beforeEach(() => getFlow.mockClear());
@@ -90,7 +92,7 @@ describe('createHostedRuntime', () => {
     });
 
     it('returns an empty config for a flow record without one', async () => {
-      getFlow.mockResolvedValueOnce({} as never);
+      getFlow.mockResolvedValueOnce({});
       await expect(runtime.load('flow_bare')).resolves.toEqual({});
     });
 

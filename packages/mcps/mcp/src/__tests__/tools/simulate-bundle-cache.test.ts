@@ -1,17 +1,7 @@
 import { createLocalRuntime } from '../../runtime/local.js';
-import { registerFlowSimulateTool } from '../../tools/simulate.js';
+import { createFlowSimulateToolSpec } from '../../tools/simulate.js';
 
-jest.mock('@walkeros/cli/dev', () => ({
-  schemas: {
-    SimulateInputShape: {
-      configPath: { type: 'string' },
-      event: { type: 'string' },
-      flow: { type: 'string' },
-      platform: { type: 'string' },
-      step: { type: 'string' },
-    },
-  },
-}));
+jest.mock('@walkeros/cli/dev', () => jest.requireActual('@walkeros/cli/dev'));
 
 // The cache lives in its own module so we can stub the heavy bundle producer
 // without touching the CLI. Each call writes a sentinel file at the bundlePath
@@ -32,11 +22,17 @@ const bundleMock = jest.fn(
 );
 
 jest.mock('@walkeros/cli', () => ({
-  bundle: (...args: unknown[]) =>
-    bundleMock(args[0], args[1] as { buildOverrides?: { output?: string } }),
+  bundle: (
+    config: unknown,
+    options: { buildOverrides?: { output?: string } },
+  ) => bundleMock(config, options),
   simulateSource: jest.fn(),
   simulateTransformer: jest.fn(),
   simulateDestination: jest.fn(),
+  loadConfig: jest.fn(async (input: string) =>
+    input.startsWith('{') ? input : '{"version":4,"flows":{}}',
+  ),
+  collectKnownSecrets: jest.fn(() => []),
 }));
 
 jest.mock('@walkeros/core', () => ({
@@ -68,18 +64,6 @@ import {
 
 const mockSimulateDestination = jest.mocked(simulateDestination);
 
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: Function) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
-}
-
 function destResult() {
   return {
     step: 'destination' as const,
@@ -91,14 +75,12 @@ function destResult() {
 }
 
 describe('flow_simulate bundle cache', () => {
-  let server: ReturnType<typeof createMockServer>;
+  let spec: ReturnType<typeof createFlowSimulateToolSpec>;
   let getFlow: jest.Mock;
 
   beforeEach(async () => {
-    server = createMockServer();
     getFlow = jest.fn();
-    registerFlowSimulateTool(
-      server as never,
+    spec = createFlowSimulateToolSpec(
       stubClient({ getFlow }),
       createLocalRuntime(),
     );
@@ -112,15 +94,14 @@ describe('flow_simulate bundle cache', () => {
   });
 
   it('bundles once for two simulate calls with the same config, reuses bundlePath', async () => {
-    const tool = server.getTool('flow_simulate');
     const config = '{"version":4,"flows":{"default":{}}}';
 
-    await tool.handler({
+    await spec.handler({
       configPath: config,
       event: '{"name":"page view"}',
       step: 'destination.gtag',
     });
-    await tool.handler({
+    await spec.handler({
       configPath: config,
       event: '{"name":"page view"}',
       step: 'destination.gtag',
@@ -139,9 +120,7 @@ describe('flow_simulate bundle cache', () => {
   });
 
   it('bypasses the cache for a local file-path configPath (no bundle, no bundlePath)', async () => {
-    const tool = server.getTool('flow_simulate');
-
-    await tool.handler({
+    await spec.handler({
       configPath: './flow.json',
       event: '{"name":"page view"}',
       step: 'destination.gtag',
@@ -165,14 +144,12 @@ describe('flow_simulate bundle cache', () => {
   });
 
   it('rebuilds when the config content changes', async () => {
-    const tool = server.getTool('flow_simulate');
-
-    await tool.handler({
+    await spec.handler({
       configPath: '{"version":4,"flows":{"default":{}}}',
       event: '{"name":"page view"}',
       step: 'destination.gtag',
     });
-    await tool.handler({
+    await spec.handler({
       configPath: '{"version":4,"flows":{"default":{"x":1}}}',
       event: '{"name":"page view"}',
       step: 'destination.gtag',
@@ -185,10 +162,8 @@ describe('flow_simulate bundle cache', () => {
   });
 
   it('keys by resolved config content, so a cloud id whose content changes rebuilds', async () => {
-    const tool = server.getTool('flow_simulate');
-
     getFlow.mockResolvedValueOnce({ config: { version: 4, flows: { a: {} } } });
-    await tool.handler({
+    await spec.handler({
       configPath: 'flow_abc',
       event: '{"name":"page view"}',
       step: 'destination.gtag',
@@ -196,7 +171,7 @@ describe('flow_simulate bundle cache', () => {
 
     // Same id, different resolved content -> must rebuild.
     getFlow.mockResolvedValueOnce({ config: { version: 4, flows: { b: {} } } });
-    await tool.handler({
+    await spec.handler({
       configPath: 'flow_abc',
       event: '{"name":"page view"}',
       step: 'destination.gtag',

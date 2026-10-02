@@ -706,5 +706,7 @@ describe('getUser', () => {
 });
 
 function getElem(selector: string) {
-  return document.getElementById(selector) as HTMLElement;
+  const elem = document.getElementById(selector);
+  if (!elem) throw new Error(`Element not found: ${selector}`);
+  return elem;
 }

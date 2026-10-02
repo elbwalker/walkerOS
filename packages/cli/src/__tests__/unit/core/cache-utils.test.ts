@@ -95,6 +95,18 @@ describe('cache-utils', () => {
       expect(key1).toBe(key2);
     });
 
+    it('normalizes key order differences', async () => {
+      const key1 = await getFlowSettingsCacheKey(
+        '{"flow":{"platform":"web","name":"a"},"build":{}}',
+        fixedDate,
+      );
+      const key2 = await getFlowSettingsCacheKey(
+        '{"build":{},"flow":{"name":"a","platform":"web"}}',
+        fixedDate,
+      );
+      expect(key1).toBe(key2);
+    });
+
     it('different content produces different keys', async () => {
       const content1 = JSON.stringify({ flow: { platform: 'web' } });
       const content2 = JSON.stringify({ flow: { platform: 'server' } });

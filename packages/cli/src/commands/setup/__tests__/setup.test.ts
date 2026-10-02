@@ -148,6 +148,7 @@ function mockLoad(flow: Flow): void {
     flowName: 'default',
     isMultiFlow: false,
     availableFlows: ['default'],
+    configDigest: 'digest',
   });
 }
 

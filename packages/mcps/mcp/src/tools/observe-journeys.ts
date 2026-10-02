@@ -7,6 +7,7 @@ import { redactNestedStrings } from '../user-data.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { parseToolInput } from './parse-input.js';
 
 const TITLE = 'Observe Journeys';
 const DESCRIPTION =
@@ -129,12 +130,9 @@ export function createObserveJourneysToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function observeJourneysHandlerBody(client: ToolClient, input: unknown) {
-  const { flowId, projectId, traceId, limit } = (input ?? {}) as {
-    flowId?: string;
-    projectId?: string;
-    traceId?: string;
-    limit?: number;
-  };
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { flowId, projectId, traceId, limit } = parsed.data;
   if (!flowId) {
     return mcpError(new Error('flowId is required for observe_journeys.'));
   }
@@ -191,8 +189,6 @@ export function registerObserveJourneysTool(
       inputSchema: spec.inputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => observeJourneysHandlerBody(client, args),
   );
 }

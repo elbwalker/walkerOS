@@ -227,17 +227,18 @@ success: true
   without `--silent`. Values pass through `toPrintable` (`@walkeros/core/node`):
   `Error` to `{ name, message }`, `Buffer` to UTF-8, `bigint` to string,
   `Map`/`Set` to arrays, cycles to `"[Circular]"`.
-- Text and JSON output (and MCP `flow_simulate`) are scrubbed with
-  `scrubSecrets`, the same redactor the loggers use: service accounts, PEM keys,
-  `Authorization`, `access_token`, credential-named fields and high-entropy runs
-  show as `***`. The values of every `$secret.NAME` the flow references (set in
-  the env, 6+ chars) are masked exactly, raw and JSON-escaped. The step still
-  receives the real values. With `--json`, a number printing a digits-only known
-  value becomes `"***"`, so the JSON still parses. Simulate and a real push of a
-  flow config route the flow's own logs through the masking CLI logger, so flow
-  DEBUG lines need `--verbose` (a prebuilt bundle keeps its logger unless
-  `--json`). The runner masks the secret values it fetches; values from
-  `--env-file` or the container env get the pattern rules only.
+- Text and JSON output (and MCP `flow_simulate` and `flow_push`) are scrubbed
+  with `scrubSecrets`, the same redactor the loggers use: service accounts, PEM
+  keys, `Authorization`, `access_token`, credential-named fields and
+  high-entropy runs show as `***`. The values of every `$secret.NAME` the flow
+  references (set in the env, 6+ chars) are masked exactly, raw, JSON-escaped
+  and URL-encoded. The step still receives the real values. With `--json`, a
+  number whose printed form contains a known value becomes `"***"`, so the JSON
+  still parses. Simulate and a real push of a flow config route the flow's own
+  logs through the masking CLI logger, so flow DEBUG lines need `--verbose` (a
+  prebuilt bundle keeps its logger unless `--json`); the run's own CLI lines
+  mask the known values too. The runner masks the secret values it fetches;
+  values from `--env-file` or the container env get the pattern rules only.
 - **Only the target starts.** Destination simulate keeps only the target
   destination (no source, no other destination initializes); the flow's
   transformers still start, and a store without a mock env runs for real. Source
@@ -360,8 +361,11 @@ What validate guarantees:
   checks still run); `--path <section.key>` checks one entry in every flow that
   has it, or only in `--flow`.
 - **Every skip is reported** in `details.skipped` and the text output, with a
-  code. Steps that import a named export have no settings schema yet and are
-  skipped (`NO_SETTINGS_SCHEMA`).
+  code. A step that imports a named export (step `import`, else
+  `bundle.packages[pkg].imports[0]`) is checked against that export's entry in
+  the package's `exportSchemas`; a single-export package uses `settings`. A
+  multi-export package version without `exportSchemas`, or one that does not
+  list its exports, is a skip (`NO_SETTINGS_SCHEMA`).
 - **The result states its scope:** a `Scope:` line and `details.scope`.
 - **`--strict`** fails on warnings and skips (exit 2; `validate()` and
   `flow_validate` return `valid: false`) and makes contract example
@@ -423,7 +427,10 @@ Use `-o ./dist/walker.js` for web, `-o ./dist/` for a server directory, or
 archive output. Without `-o` the bundle is written to stdout, which for a server
 flow is `flow.mjs` alone, without its `node_modules/`.
 
-Also: `--release <id>` stamps a config release id on `event.source.release`;
+Also: `--release <id>` stamps a config release id on `event.source.release` (it
+beats an authored `collector.release`; the default is a 12-hex content id of
+config, resolved packages and CLI version, so the same input gives the same
+release; env and secret values are not inputs, only their names);
 `--manifest [url|path]` builds from a manifest (see "Manifest builds" below).
 
 ### Push Command
@@ -526,10 +533,11 @@ local development with a built package directory.
   failed write warns
   `Package cache write failed for <name>@<version>: <message>. The build continues without caching it.`
   Entries from an older CLI miss once. `walkeros cache clear` also removes
-  interrupted writes. Cache keys ignore a local package's (`path`) files: after
-  rebuilding one without a version change, `walkeros cache clear`. Each run
-  works in `$TMPDIR/walkeros/<kind>/<6 chars>` (`push`, `build`, `bundle`,
-  `wrap`, `archive`, `setup`).
+  interrupted writes. Build cache keys cover a local package's (`path`) built
+  contents and the CLI version, so a rebuild needs no `cache clear`;
+  `cache clear --builds` removes both build caches. Each run works in
+  `$TMPDIR/walkeros/<kind>/<6 chars>` (`push`, `build`, `bundle`, `wrap`,
+  `archive`, `setup`).
 - **Runtime paths:** `runneros` sets CWD to the bundle directory. File paths in
   `settings` resolve relative to the bundle, not the project root.
 - **Component names:** Source, transformer, destination, and store names must be

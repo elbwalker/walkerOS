@@ -47,18 +47,17 @@ describe('Scoped visible (end-to-end)', () => {
     left: number;
     width: number;
     height: number;
-  }): DOMRectReadOnly =>
-    ({
-      x: r.left,
-      y: r.top,
-      top: r.top,
-      left: r.left,
-      width: r.width,
-      height: r.height,
-      right: r.left + r.width,
-      bottom: r.top + r.height,
-      toJSON: () => r,
-    }) as DOMRectReadOnly;
+  }): DOMRectReadOnly => ({
+    x: r.left,
+    y: r.top,
+    top: r.top,
+    left: r.left,
+    width: r.width,
+    height: r.height,
+    right: r.left + r.width,
+    bottom: r.top + r.height,
+    toJSON: () => r,
+  });
 
   // Drive an intersection for an element across every captured observer; only
   // the observer that actually registered the element fires a trigger. Fully
@@ -81,7 +80,7 @@ describe('Scoped visible (end-to-end)', () => {
           width: window.innerWidth,
           height: window.innerHeight,
         }),
-      } as IntersectionObserverEntry;
+      };
       observer.callback([entry], observer);
     });
 
@@ -108,9 +107,12 @@ describe('Scoped visible (end-to-end)', () => {
     originalIO = global.IntersectionObserver;
     global.IntersectionObserver = MockIntersectionObserver;
 
-    mockPush = jest.fn().mockImplementation(() => {
+    mockPush = jest.fn<
+      ReturnType<Collector.Instance['push']>,
+      Parameters<Collector.Instance['push']>
+    >(() => {
       return Promise.resolve({ ok: true });
-    }) as jest.MockedFunction<Collector.Instance['push']>;
+    });
 
     ({ collector } = await startFlow());
     collector.push = mockPush;

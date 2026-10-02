@@ -17,9 +17,9 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
 
 describe('Translation Layer', () => {
   let collector: Collector.Instance;
-  let collectedEvents: WalkerOS.Event[];
+  let collectedEvents: WalkerOS.DeepPartialEvent[];
   let mockPush: jest.MockedFunction<Collector.Instance['push']>;
-  let mockElb: jest.MockedFunction<any>;
+  let mockElb: jest.MockedFunction<Context['elb']>;
 
   beforeEach(async () => {
     collectedEvents = [];
@@ -33,12 +33,15 @@ describe('Translation Layer', () => {
     });
 
     // Create mock push function
-    mockPush = jest.fn((...args: any[]) => {
-      collectedEvents.push(args[0] as WalkerOS.Event);
+    mockPush = jest.fn<
+      ReturnType<Collector.Instance['push']>,
+      Parameters<Collector.Instance['push']>
+    >((event) => {
+      collectedEvents.push(event);
       return Promise.resolve({
         ok: true,
       });
-    }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
+    });
 
     // Separate recorders per exit. The translation layer's job IS the routing
     // split (events -> push, `walker *` -> elb), so elb must not forward into
@@ -395,7 +398,7 @@ describe('Translation Layer', () => {
 
   afterEach(() => {
     // Clean up
-    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+    Reflect.set(window, 'elbLayer', undefined);
     document.body.innerHTML = '';
   });
 });

@@ -4,6 +4,7 @@ import { mcpResult, mcpError } from '@walkeros/core';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { parseToolInput } from './parse-input.js';
 
 declare const __VERSION__: string;
 
@@ -39,10 +40,9 @@ export function createFeedbackToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function feedbackHandlerBody(client: ToolClient, input: unknown) {
-  const { text, anonymous: explicitAnonymous } = (input ?? {}) as {
-    text: string;
-    anonymous?: boolean;
-  };
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
+  const { text, anonymous: explicitAnonymous } = parsed.data;
   try {
     let anonymous = client.getFeedbackPreference();
 
@@ -86,8 +86,6 @@ export function registerFeedbackTool(server: McpServer, client: ToolClient) {
       inputSchema: spec.inputSchema,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => feedbackHandlerBody(client, args),
   );
 }

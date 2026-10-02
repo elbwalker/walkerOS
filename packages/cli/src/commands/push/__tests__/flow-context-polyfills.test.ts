@@ -140,7 +140,17 @@ describe('withFlowContext network polyfills integration', () => {
 });
 
 describe('exposeDomGlobals', () => {
-  const names = ['CustomEvent', 'Event', 'localStorage', 'sessionStorage'];
+  const names = [
+    'CustomEvent',
+    'Event',
+    'localStorage',
+    'sessionStorage',
+    'Node',
+    'Element',
+    'HTMLElement',
+    'Document',
+    'ShadowRoot',
+  ];
   let dom: JSDOM;
 
   beforeEach(() => {
@@ -171,6 +181,32 @@ describe('exposeDomGlobals', () => {
     } finally {
       restore();
     }
+  });
+
+  it('exposes the node constructors of the page realm, then restores them', async () => {
+    const { exposeDomGlobals } = await import('../flow-context');
+    const restore = exposeDomGlobals(dom.window);
+    try {
+      const page = dom.window.document;
+      expect(page instanceof Document).toBe(true);
+      expect(page instanceof Node).toBe(true);
+      expect(page.body instanceof HTMLElement).toBe(true);
+      expect(page.body instanceof Element).toBe(true);
+      const host = page.createElement('div');
+      expect(host.attachShadow({ mode: 'open' }) instanceof ShadowRoot).toBe(
+        true,
+      );
+    } finally {
+      restore();
+    }
+    for (const name of [
+      'Node',
+      'Element',
+      'HTMLElement',
+      'Document',
+      'ShadowRoot',
+    ])
+      expect(name in globalThis).toBe(false);
   });
 
   it('defines nothing when a window getter throws', async () => {

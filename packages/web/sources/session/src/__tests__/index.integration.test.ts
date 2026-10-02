@@ -388,6 +388,10 @@ describe('Session Source: one detection per page load', () => {
   beforeEach(() => {
     webCore.__store.clear();
     window.history.replaceState({}, '', '/');
+    Object.defineProperty(document, 'referrer', {
+      value: '',
+      configurable: true,
+    });
 
     Object.defineProperty(window, 'performance', {
       value: {
@@ -539,6 +543,33 @@ describe('Session Source: one detection per page load', () => {
       marketing: true,
       source: 'newsletter',
     });
+  });
+
+  test('session start carries the session source and the page context', async () => {
+    window.history.replaceState({}, '', '/?utm_source=newsletter');
+    Object.defineProperty(document, 'referrer', {
+      value: 'https://search.example/',
+      configurable: true,
+    });
+
+    const { capture } = await startSpaFlow({});
+
+    const [start] = capture.events.filter(
+      (event) => event.name === 'session start',
+    );
+    // The collector adds its run stamps; the rest is the source's own.
+    const { count, release, trace, ...stamped } = start.source;
+    expect(stamped).toEqual({
+      type: 'session',
+      platform: 'web',
+      url: 'https://example.com/?utm_source=newsletter',
+      referrer: 'https://search.example/',
+    });
+    expect([count, Object.keys(release ?? {}), typeof trace]).toEqual([
+      1,
+      ['web'],
+      'string',
+    ]);
   });
 
   test('a configured domains list is not mutated by runs', async () => {

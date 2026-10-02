@@ -1,16 +1,16 @@
 import { z } from 'zod';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { isObject, mcpResult, mcpError } from '@walkeros/core';
-import { scrubSecrets, toPrintable } from '@walkeros/core/node';
-import { maskKnownNumbers } from '@walkeros/cli';
+import { filterValues, mcpResult, mcpError } from '@walkeros/core';
 import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
 import { FLOW_SIMULATE_DESCRIPTION } from './simulate-description.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { parseToolInput } from './parse-input.js';
 import { resolveConfigPath } from './resolve-config-path.js';
+import { readRun, scrubbed, scrubbedError } from './egress.js';
 import {
   refusalHint,
   unavailableOperation,
@@ -33,55 +33,6 @@ const STEP_TYPES: readonly SimulateStepType[] = [
 
 function isStepType(value: string): value is SimulateStepType {
   return STEP_TYPES.some((t) => t === value);
-}
-
-/**
- * Simulate results carry recorded vendor calls and events whose values can
- * hold credentials. They egress like a log line: serialize, scrub (masking
- * the values of the secrets the flow references, `known`), then parse back
- * into the structured result. A number that prints a known secret is masked
- * before serializing, so the scrubbed text still parses.
- */
-function scrubbed(
-  result: Record<string, unknown>,
-  known: readonly string[],
-): Record<string, unknown> {
-  const text = scrubSecrets(
-    JSON.stringify(maskKnownNumbers(toPrintable(result), known)),
-    { known },
-  );
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    parsed = undefined;
-  }
-  if (!isObject(parsed))
-    throw new Error('Simulation result could not be redacted as JSON.');
-  return parsed;
-}
-
-/** The error response egresses the same way: its text and structured copy. */
-function scrubbedError(
-  response: ReturnType<typeof mcpError>,
-  known: readonly string[],
-): ReturnType<typeof mcpError> {
-  let structuredContent: Record<string, unknown>;
-  try {
-    structuredContent = scrubbed(response.structuredContent, known);
-  } catch {
-    structuredContent = {
-      error: 'Simulation failed; the error could not be redacted.',
-    };
-  }
-  return {
-    ...response,
-    content: response.content.map((part) => ({
-      ...part,
-      text: scrubSecrets(part.text, { known }),
-    })),
-    structuredContent,
-  };
 }
 
 const TITLE = 'Simulate Flow';
@@ -177,11 +128,26 @@ export function createFlowSimulateToolSpec(
   };
 }
 
+/** Plain values kept as walkerOS properties; values no property can hold dropped. */
+function toProperties(
+  value: Record<string, unknown> | undefined,
+): WalkerOS.Properties | undefined {
+  if (!value) return undefined;
+  const properties: WalkerOS.Properties = {};
+  for (const [key, entry] of Object.entries(value)) {
+    const property = filterValues(entry);
+    if (property !== undefined) properties[key] = property;
+  }
+  return properties;
+}
+
 async function flowSimulateHandlerBody(
   client: ToolClient,
   runtime: FlowRuntime,
   input: unknown,
 ) {
+  const parsed = parseToolInput(inputSchema, input);
+  if (!parsed.ok) return parsed.error;
   const {
     configPath,
     event,
@@ -192,22 +158,7 @@ async function flowSimulateHandlerBody(
     ingest,
     state,
     command,
-  } = (input ?? {}) as {
-    configPath: string;
-    event?: Record<string, unknown> | string;
-    flow?: string;
-    platform?: 'web' | 'server';
-    step?: string;
-    verbose?: boolean;
-    ingest?: Omit<Ingest, '_meta'>;
-    state?: {
-      consent?: WalkerOS.Consent;
-      user?: WalkerOS.User;
-      globals?: WalkerOS.Properties;
-      timing?: number;
-    };
-    command?: Flow.StepCommand;
-  };
+  } = parsed.data;
   // Simulation compiles the config and imports the bundle, running caller
   // controlled flow code. A runtime that must not do that in its process
   // provides no `simulate`, whatever the input looks like.
@@ -263,11 +214,28 @@ async function flowSimulateHandlerBody(
 
     // Accept a cloud flow/config id as configPath, resolving it to inline JSON.
     const resolvedConfigPath = await resolveConfigPath(client, configPath);
-    known = await knownSecretsOf(runtime, resolvedConfigPath);
+    // Read once: the simulation runs on exactly the config whose secrets
+    // mask the result.
+    const run = await readRun(runtime, resolvedConfigPath);
+    known = run.knownSecrets;
 
     const result: Simulation.Result = await runtime.simulate(
       resolvedConfigPath,
-      { stepType, stepId, event: resolvedEvent, flow, ingest, state, command },
+      {
+        stepType,
+        stepId,
+        event: resolvedEvent,
+        flow,
+        ingest,
+        state: state && {
+          consent: state.consent,
+          user: toProperties(state.user),
+          globals: toProperties(state.globals),
+          timing: state.timing,
+        },
+        command,
+        config: run.config,
+      },
     );
 
     const success = !result.error;
@@ -389,19 +357,6 @@ async function flowSimulateHandlerBody(
   }
 }
 
-/** The flow's secret values; none when the runtime cannot read the config. */
-async function knownSecretsOf(
-  runtime: FlowRuntime,
-  input: string,
-): Promise<string[]> {
-  if (!runtime.knownSecrets) return [];
-  try {
-    return await runtime.knownSecrets(input);
-  } catch {
-    return [];
-  }
-}
-
 function keysOf(consent: WalkerOS.Consent | undefined): string {
   const keys = Object.entries(consent ?? {})
     .filter(([, granted]) => granted)
@@ -450,8 +405,6 @@ export function registerFlowSimulateTool(
       outputSchema: SimulateOutputShape,
       annotations: spec.annotations,
     },
-    // SDK infers handler type from inputSchema shape; ToolSpec.handler is the
-    // type-erased (input: unknown) => Promise<unknown> form by design.
-    spec.handler as Parameters<typeof server.registerTool>[2],
+    (args) => flowSimulateHandlerBody(client, runtime, args),
   );
 }

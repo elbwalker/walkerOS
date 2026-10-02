@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { examples, exportExamples } from '../dev';
+import { examples, exportExamples, exportSchemas, schemas } from '../dev';
 
 interface PackageJson {
   walkerOS: { exports: Record<string, string> };
@@ -27,4 +27,25 @@ describe('exportExamples', () => {
       expect(typeof examples.createTrigger).toBe('function');
     },
   );
+});
+
+describe('exportSchemas', () => {
+  it('lists every export in package.json', () => {
+    expect(Object.keys(exportSchemas).sort()).toEqual(
+      Object.keys(pkg.walkerOS.exports).sort(),
+    );
+  });
+
+  it('keeps the Lambda schema as the sourceLambda entry', () => {
+    expect(exportSchemas.sourceLambda).toEqual({ settings: schemas.settings });
+    expect(exportSchemas.sourceLambda.settings).toBe(schemas.settings);
+  });
+
+  it('ships the SQS schemas for sourceSqs', () => {
+    expect(exportSchemas.sourceSqs).toEqual({
+      settings: schemas.sqsSettings,
+      setup: schemas.sqsSetup,
+    });
+    expect(exportSchemas.sourceSqs.settings).toBe(schemas.sqsSettings);
+  });
 });

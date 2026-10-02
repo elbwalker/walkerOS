@@ -871,7 +871,13 @@ Beyond
 [understanding-development](../walkeros-understanding-development/SKILL.md)
 requirements (build, test, lint, no `any`):
 
-- [ ] `dev.ts` exports `schemas` and `examples`
+- [ ] `dev.ts` exports `schemas` (with `settings`; `z.object({})` when the step
+      has none) and `examples`
+- [ ] Multi-export package (two or more `walkerOS.exports`): `exportExamples`
+      and `exportSchemas` in `dev.ts` list exactly those exports, the default
+      included, and every `exportSchemas` entry has `settings`; the build fails
+      otherwise (see
+      [using-step-examples](../walkeros-using-step-examples/SKILL.md))
 - [ ] Examples include edge cases (minimal, invalid input)
 - [ ] Invalid input returns gracefully (no crashes, clear error)
 - [ ] Tests use examples for assertions (not hardcoded values)

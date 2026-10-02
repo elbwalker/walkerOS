@@ -1,10 +1,20 @@
 import { createLocalRuntime } from '../../runtime/local.js';
 import { HINT_OUT_OF_PROCESS } from '../../runtime/types.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   MAX_PACKAGE_LOOKUPS,
+  createFlowExamplesToolSpec,
   registerFlowExamplesTool,
 } from '../../tools/examples.js';
 import { ExamplesListOutputShape } from '../../schemas/output.js';
+import type { ToolSpec } from '../../tool-spec.js';
+import {
+  structured,
+  record,
+  rows,
+  hintsOf,
+  textOf,
+} from '../support/tool-result.js';
 
 // The real resolver and selector come from their cli source modules: the
 // cli index would pull the whole cli into this mock, and the tool must use
@@ -52,16 +62,30 @@ import { fetchPackage } from '@walkeros/core';
 const mockLoadJsonConfig = jest.mocked(loadJsonConfig);
 const mockFetchPackage = jest.mocked(fetchPackage);
 
-function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
-  return {
-    registerTool(name: string, config: unknown, handler: Function) {
-      tools[name] = { config, handler };
-    },
-    getTool(name: string) {
-      return tools[name];
-    },
-  };
+/** The config the first `registerTool` call passed, narrowed. */
+function firstRegisteredConfig(
+  calls: readonly unknown[],
+): Record<string, unknown> {
+  const first = calls[0];
+  if (!Array.isArray(first)) throw new Error('No tool was registered');
+  return record(first[1]);
+}
+
+function parse(text: string): unknown {
+  return JSON.parse(text);
+}
+
+/** The listed examples of a result, narrowed. */
+function examplesOf(result: unknown): Record<string, unknown>[] {
+  return rows(structured(result).examples);
+}
+
+/** The listed example with this name, or a failure naming what was listed. */
+function exampleNamed(result: unknown, name: string): Record<string, unknown> {
+  const example = examplesOf(result).find((e) => e.exampleName === name);
+  if (!example)
+    throw new Error(`No example ${name}: ${JSON.stringify(result)}`);
+  return example;
 }
 
 const sampleConfig = {
@@ -119,22 +143,18 @@ const sampleConfig = {
 };
 
 describe('flow_examples tool', () => {
-  let server: ReturnType<typeof createMockServer>;
+  let tool: ToolSpec;
 
   beforeEach(() => {
-    server = createMockServer();
-    registerFlowExamplesTool(server as any, createLocalRuntime());
+    tool = createFlowExamplesToolSpec(createLocalRuntime());
     mockLoadJsonConfig.mockReset();
     mockFetchPackage.mockReset();
   });
 
   it('registers with correct name, title, and annotations', () => {
-    const tool = server.getTool('flow_examples');
-    expect(tool).toBeDefined();
-
-    const config = tool.config as any;
-    expect(config.title).toBe('Flow Examples');
-    expect(config.annotations).toEqual({
+    expect(tool.name).toBe('flow_examples');
+    expect(tool.title).toBe('Flow Examples');
+    expect(tool.annotations).toEqual({
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
@@ -143,49 +163,42 @@ describe('flow_examples tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    const tool = server.getTool('flow_examples');
-    const config = tool.config as any;
-    expect(config.outputSchema).toBe(ExamplesListOutputShape);
+    const server = new McpServer({ name: 'test', version: '0.0.0' });
+    const registerTool = jest.spyOn(server, 'registerTool');
+    registerFlowExamplesTool(server, createLocalRuntime());
+    expect(firstRegisteredConfig(registerTool.mock.calls).outputSchema).toBe(
+      ExamplesListOutputShape,
+    );
   });
 
   it('returns all examples from a single-flow config', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig);
     const result = await tool.handler({ configPath: './flow.json' });
 
-    expect(result.isError).toBeUndefined();
-    expect(result.structuredContent.flow).toBe('default');
-    expect(result.structuredContent.count).toBe(4);
-    expect(result.structuredContent.examples).toHaveLength(4);
+    expect(record(result).isError).toBeUndefined();
+    expect(structured(result).flow).toBe('default');
+    expect(structured(result).count).toBe(4);
+    expect(examplesOf(result)).toHaveLength(4);
   });
 
   it('filters by step', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig);
     const result = await tool.handler({
       configPath: './flow.json',
       step: 'destination.gtag',
     });
 
-    expect(result.structuredContent.count).toBe(2);
-    expect(
-      result.structuredContent.examples.every(
-        (e: any) => e.step === 'destination.gtag',
-      ),
-    ).toBe(true);
+    expect(structured(result).count).toBe(2);
+    expect(examplesOf(result).every((e) => e.step === 'destination.gtag')).toBe(
+      true,
+    );
   });
 
   it('excludes in/out/mapping by default (metadata only)', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig);
     const result = await tool.handler({ configPath: './flow.json' });
 
-    const purchase = result.structuredContent.examples.find(
-      (e: any) => e.exampleName === 'purchase',
-    );
+    const purchase = exampleNamed(result, 'purchase');
     expect(purchase.hasMapping).toBe(true);
     expect(purchase.hasIn).toBe(true);
     expect(purchase.hasOut).toBe(true);
@@ -195,17 +208,13 @@ describe('flow_examples tool', () => {
   });
 
   it('includes in/out/mapping when full: true', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig);
     const result = await tool.handler({
       configPath: './flow.json',
       full: true,
     });
 
-    const purchase = result.structuredContent.examples.find(
-      (e: any) => e.exampleName === 'purchase',
-    );
+    const purchase = exampleNamed(result, 'purchase');
     expect(purchase.mapping).toEqual({
       name: 'purchase',
       data: { map: { value: 'data.total' } },
@@ -220,39 +229,31 @@ describe('flow_examples tool', () => {
         staging: { config: { platform: 'web' } },
       },
     };
-    mockLoadJsonConfig.mockResolvedValue(multiFlowConfig as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(multiFlowConfig);
     const result = await tool.handler({ configPath: './flow.json' });
 
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
+    expect(record(result).isError).toBe(true);
+    const parsed = record(parse(textOf(result)));
     expect(parsed.error).toContain('Multiple flows found');
   });
 
   it('errors on config load failure', async () => {
     mockLoadJsonConfig.mockRejectedValue(new Error('File not found'));
-
-    const tool = server.getTool('flow_examples');
     const result = await tool.handler({ configPath: './missing.json' });
 
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
+    expect(record(result).isError).toBe(true);
+    const parsed = record(parse(textOf(result)));
     expect(parsed.error).toBe('File not found');
   });
 
   it('includes trigger metadata when full: true', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig);
     const result = await tool.handler({
       configPath: './flow.json',
       full: true,
     });
 
-    const browser = result.structuredContent.examples.find(
-      (e: any) => e.exampleName === 'basic',
-    );
+    const browser = exampleNamed(result, 'basic');
     expect(browser.hasTrigger).toBe(true);
     expect(browser.trigger).toEqual({ type: 'load' });
   });
@@ -275,13 +276,11 @@ describe('flow_examples tool', () => {
         },
       },
     };
-    mockLoadJsonConfig.mockResolvedValue(configWithHidden as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(configWithHidden);
     const result = await tool.handler({ configPath: './flow.json' });
 
-    expect(result.structuredContent.count).toBe(1);
-    expect(result.structuredContent.examples[0].exampleName).toBe('visible');
+    expect(structured(result).count).toBe(1);
+    expect(examplesOf(result)[0].exampleName).toBe('visible');
   });
 
   it('includes public: false examples when includeHidden: true', async () => {
@@ -302,23 +301,17 @@ describe('flow_examples tool', () => {
         },
       },
     };
-    mockLoadJsonConfig.mockResolvedValue(configWithHidden as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(configWithHidden);
     const result = await tool.handler({
       configPath: './flow.json',
       includeHidden: true,
     });
 
-    expect(result.structuredContent.count).toBe(2);
-    const names = result.structuredContent.examples.map(
-      (e: any) => e.exampleName,
-    );
+    expect(structured(result).count).toBe(2);
+    const names = examplesOf(result).map((e) => e.exampleName);
     expect(names).toContain('visible');
     expect(names).toContain('hidden');
-    const hidden = result.structuredContent.examples.find(
-      (e: any) => e.exampleName === 'hidden',
-    );
+    const hidden = exampleNamed(result, 'hidden');
     expect(hidden.public).toBe(false);
   });
 
@@ -343,14 +336,10 @@ describe('flow_examples tool', () => {
         },
       },
     };
-    mockLoadJsonConfig.mockResolvedValue(configWithMetadata as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(configWithMetadata);
     const result = await tool.handler({ configPath: './flow.json' });
 
-    const purchase = result.structuredContent.examples.find(
-      (e: any) => e.exampleName === 'purchase',
-    );
+    const purchase = exampleNamed(result, 'purchase');
     expect(purchase.title).toBe('Purchase Event');
     expect(purchase.description).toBe('Fires when an order is completed');
   });
@@ -367,26 +356,51 @@ describe('flow_examples tool', () => {
         },
       },
     };
-    mockLoadJsonConfig.mockResolvedValue(configNoExamples as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(configNoExamples);
     const result = await tool.handler({ configPath: './flow.json' });
 
-    expect(result.structuredContent.count).toBe(0);
-    expect(result.structuredContent.examples).toEqual([]);
+    expect(structured(result).count).toBe(0);
+    expect(examplesOf(result)).toEqual([]);
   });
 
   it('tags inline examples with source: "inline"', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig);
     const result = await tool.handler({ configPath: './flow.json' });
 
-    expect(
-      result.structuredContent.examples.every(
-        (e: any) => e.source === 'inline',
-      ),
-    ).toBe(true);
+    expect(examplesOf(result).every((e) => e.source === 'inline')).toBe(true);
+  });
+
+  it('reports package examples that fail the step example schema', async () => {
+    mockLoadJsonConfig.mockResolvedValue({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          transformers: { ga4: { package: '@walkeros/transformer-ga4' } },
+        },
+      },
+    });
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/transformer-ga4',
+      version: '1.0.0',
+      type: 'transformer',
+      schemas: {},
+      examples: {
+        step: {
+          purchase: { in: {}, out: [['return', {}]] },
+          broken: { title: 7, in: {} },
+        },
+      },
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(structured(result).count).toBe(1);
+    expect(record(structured(result)._hints).warnings).toEqual([
+      'Skipped 1 package example(s) that do not match the step example schema: transformer.ga4.broken.',
+    ]);
   });
 
   it('falls back to package-shipped examples when a step has no inline examples', async () => {
@@ -401,7 +415,7 @@ describe('flow_examples tool', () => {
         },
       },
     };
-    mockLoadJsonConfig.mockResolvedValue(configNoInline as any);
+    mockLoadJsonConfig.mockResolvedValue(configNoInline);
     mockFetchPackage.mockResolvedValue({
       packageName: '@walkeros/transformer-ga4',
       version: '1.0.0',
@@ -423,20 +437,12 @@ describe('flow_examples tool', () => {
       hintKeys: [],
       exampleSummaries: [],
     });
-
-    const tool = server.getTool('flow_examples');
     const result = await tool.handler({ configPath: './flow.json' });
 
-    expect(result.isError).toBeUndefined();
-    expect(result.structuredContent.count).toBe(2);
-    expect(
-      result.structuredContent.examples.every(
-        (e: any) => e.source === 'package',
-      ),
-    ).toBe(true);
-    const names = result.structuredContent.examples.map(
-      (e: any) => e.exampleName,
-    );
+    expect(record(result).isError).toBeUndefined();
+    expect(structured(result).count).toBe(2);
+    expect(examplesOf(result).every((e) => e.source === 'package')).toBe(true);
+    const names = examplesOf(result).map((e) => e.exampleName);
     expect(names).toContain('addToCart');
     expect(names).toContain('purchase');
     expect(mockFetchPackage).toHaveBeenCalledWith(
@@ -495,11 +501,8 @@ describe('flow_examples tool', () => {
           ...stepFields,
         }),
       );
-      const tool = server.getTool('flow_examples');
       const result = await tool.handler({ configPath: './flow.json' });
-      const names = result.structuredContent.examples.map(
-        (e: { exampleName: string }) => e.exampleName,
-      );
+      const names = examplesOf(result).map((e) => e.exampleName);
       expect(names).toEqual(expected);
     });
 
@@ -515,13 +518,8 @@ describe('flow_examples tool', () => {
         },
       );
       mockLoadJsonConfig.mockResolvedValue(config);
-      const tool = server.getTool('flow_examples');
       const result = await tool.handler({ configPath: './flow.json' });
-      expect(
-        result.structuredContent.examples.map(
-          (e: { exampleName: string }) => e.exampleName,
-        ),
-      ).toEqual(['publish']);
+      expect(examplesOf(result).map((e) => e.exampleName)).toEqual(['publish']);
     });
   });
 
@@ -542,14 +540,12 @@ describe('flow_examples tool', () => {
         },
       },
     };
-    mockLoadJsonConfig.mockResolvedValue(configInline as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(configInline);
     const result = await tool.handler({ configPath: './flow.json' });
 
-    expect(result.structuredContent.count).toBe(1);
-    expect(result.structuredContent.examples[0].exampleName).toBe('custom');
-    expect(result.structuredContent.examples[0].source).toBe('inline');
+    expect(structured(result).count).toBe(1);
+    expect(examplesOf(result)[0].exampleName).toBe('custom');
+    expect(examplesOf(result)[0].source).toBe('inline');
     expect(mockFetchPackage).not.toHaveBeenCalled();
   });
 
@@ -565,12 +561,10 @@ describe('flow_examples tool', () => {
         },
       },
     };
-    mockLoadJsonConfig.mockResolvedValue(configNoPackage as any);
-
-    const tool = server.getTool('flow_examples');
+    mockLoadJsonConfig.mockResolvedValue(configNoPackage);
     const result = await tool.handler({ configPath: './flow.json' });
 
-    expect(result.structuredContent.count).toBe(0);
+    expect(structured(result).count).toBe(0);
     expect(mockFetchPackage).not.toHaveBeenCalled();
   });
 
@@ -592,16 +586,14 @@ describe('flow_examples tool', () => {
         },
       },
     };
-    mockLoadJsonConfig.mockResolvedValue(configMixed as any);
+    mockLoadJsonConfig.mockResolvedValue(configMixed);
     mockFetchPackage.mockRejectedValue(new Error('HTTP 404'));
-
-    const tool = server.getTool('flow_examples');
     const result = await tool.handler({ configPath: './flow.json' });
 
-    expect(result.isError).toBeUndefined();
-    expect(result.structuredContent.count).toBe(1);
-    expect(result.structuredContent.examples[0].exampleName).toBe('inlineOne');
-    expect(result.structuredContent.examples[0].source).toBe('inline');
+    expect(record(result).isError).toBeUndefined();
+    expect(structured(result).count).toBe(1);
+    expect(examplesOf(result)[0].exampleName).toBe('inlineOne');
+    expect(examplesOf(result)[0].source).toBe('inline');
   });
 
   it('looks up a package shared by several steps once', async () => {
@@ -616,7 +608,7 @@ describe('flow_examples tool', () => {
           },
         },
       },
-    } as any);
+    });
     mockFetchPackage.mockResolvedValue({
       packageName: '@walkeros/transformer-ga4',
       version: '1.0.0',
@@ -626,12 +618,10 @@ describe('flow_examples tool', () => {
       hintKeys: [],
       exampleSummaries: [],
     });
-
-    const tool = server.getTool('flow_examples');
     const result = await tool.handler({ configPath: './flow.json' });
 
     expect(mockFetchPackage).toHaveBeenCalledTimes(1);
-    expect(result.structuredContent.count).toBe(2);
+    expect(structured(result).count).toBe(2);
   });
 
   it('caps package lookups per request and warns about skipped packages', async () => {
@@ -644,38 +634,31 @@ describe('flow_examples tool', () => {
     mockLoadJsonConfig.mockResolvedValue({
       version: 4,
       flows: { default: { config: { platform: 'web' }, destinations } },
-    } as any);
+    });
     mockFetchPackage.mockRejectedValue(new Error('HTTP 404'));
-
-    const tool = server.getTool('flow_examples');
     const result = await tool.handler({ configPath: './flow.json' });
 
     expect(mockFetchPackage).toHaveBeenCalledTimes(MAX_PACKAGE_LOOKUPS);
-    expect(JSON.stringify(result.structuredContent._hints.warnings)).toMatch(
+    expect(JSON.stringify(record(structured(result)._hints).warnings)).toMatch(
       new RegExp(`first ${MAX_PACKAGE_LOOKUPS} packages`),
     );
   });
 
   it('suggests flow_simulate only when the runtime can simulate', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig);
     const local = createLocalRuntime();
-    const readOnlyServer = createMockServer();
-    registerFlowExamplesTool(readOnlyServer as any, {
+    const readOnly = createFlowExamplesToolSpec({
       load: (input) => local.load(input),
     });
 
-    const withSimulate = await server
-      .getTool('flow_examples')
-      .handler({ configPath: './flow.json' });
-    const withoutSimulate = await readOnlyServer
-      .getTool('flow_examples')
-      .handler({ configPath: './flow.json' });
+    const withSimulate = await tool.handler({ configPath: './flow.json' });
+    const withoutSimulate = await readOnly.handler({
+      configPath: './flow.json',
+    });
 
-    expect(withSimulate.structuredContent._hints.next).toEqual([
+    expect(hintsOf(withSimulate)).toEqual([
       'Use flow_simulate with step and event to simulate',
     ]);
-    expect(withoutSimulate.structuredContent._hints.next).toEqual([
-      HINT_OUT_OF_PROCESS,
-    ]);
+    expect(hintsOf(withoutSimulate)).toEqual([HINT_OUT_OF_PROCESS]);
   });
 });

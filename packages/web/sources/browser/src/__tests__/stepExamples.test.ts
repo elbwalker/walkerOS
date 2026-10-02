@@ -1,4 +1,5 @@
 import type { Elb } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 import { getConfig } from '../config';
 import { createRegistry, handleTrigger } from '../trigger';
 import { translateToCoreCollector } from '../translation';
@@ -26,26 +27,24 @@ describe('Step Examples', () => {
   );
 
   it.each(supported)('%s', async (_name, example) => {
-    const triggerInfo = example.trigger as
-      | { type?: string; options?: unknown }
-      | undefined;
-    const content = example.in as string;
+    const triggerInfo = example.trigger;
+    const content = typeof example.in === 'string' ? example.in : '';
 
     // Seed URL / title / referrer for load-style examples
     if (triggerInfo?.type === 'load' || !triggerInfo?.type) {
-      const opts = (triggerInfo?.options || {}) as {
-        url?: string;
-        title?: string;
-        referrer?: string;
-      };
-      if (opts.url) {
-        const urlObj = new URL(opts.url);
+      const opts = isObject(triggerInfo?.options) ? triggerInfo.options : {};
+      const url = typeof opts.url === 'string' ? opts.url : undefined;
+      const title = typeof opts.title === 'string' ? opts.title : undefined;
+      const referrer =
+        typeof opts.referrer === 'string' ? opts.referrer : undefined;
+      if (url) {
+        const urlObj = new URL(url);
         window.history.replaceState({}, '', urlObj.pathname);
       }
-      if (opts.title) document.title = opts.title;
-      if (opts.referrer) {
+      if (title) document.title = title;
+      if (referrer) {
         Object.defineProperty(document, 'referrer', {
-          value: opts.referrer,
+          value: referrer,
           configurable: true,
         });
       }
@@ -54,12 +53,14 @@ describe('Step Examples', () => {
     // Inject HTML
     if (content) document.body.innerHTML = content;
 
-    const mockElb = jest.fn(async () => ({
-      ok: true,
-      successful: [],
-      failed: [],
-      queued: [],
-    })) as unknown as jest.MockedFunction<Elb.Fn>;
+    const mockElb: jest.MockedFunction<Elb.Fn> = jest
+      .fn()
+      .mockImplementation(async () => ({
+        ok: true,
+        successful: [],
+        failed: [],
+        queued: [],
+      }));
 
     const settings = getConfig({ scope: document }, document);
     const context: Context = {
@@ -91,7 +92,7 @@ describe('Step Examples', () => {
       // Plus any data-elb elements with load triggers
       const loadElems = document.querySelectorAll('[data-elbaction*="load"]');
       for (const elem of Array.from(loadElems)) {
-        await handleTrigger(context, elem as Element, 'load');
+        await handleTrigger(context, elem, 'load');
       }
     } else {
       const target = selector ? document.querySelector(selector) : null;
@@ -99,9 +100,28 @@ describe('Step Examples', () => {
       await handleTrigger(context, target, type);
     }
 
-    const captured = mockElb.mock.calls.map(
-      (args) => ['elb', ...args] as unknown[],
-    );
+    const captured = mockElb.mock.calls.map((args) => ['elb', ...args]);
     expect(captured).toEqual(example.out);
+  });
+});
+
+describe('legacy trigger', () => {
+  it('runs on the package mock env', () => {
+    const env = examples.env.push;
+    expect(
+      examples.trigger(
+        { trigger: 'click', attributes: { 'data-elb': 'cta' } },
+        { window: env.window, document: env.document },
+      ),
+    ).toEqual(expect.any(Function));
+  });
+
+  it('ignores an env without a window and a document', () => {
+    expect(
+      examples.trigger(
+        { trigger: 'click', attributes: { 'data-elb': 'cta' } },
+        {},
+      ),
+    ).toBeUndefined();
   });
 });

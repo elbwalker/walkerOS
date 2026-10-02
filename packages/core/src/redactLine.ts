@@ -331,7 +331,7 @@ function maskLine(line: string): string {
 // ── Known secret values ──────────────────────────────────────────────────────
 
 // Shorter values are too likely to occur in ordinary text to mask on sight.
-const MIN_KNOWN_LEN = 6;
+export const MIN_KNOWN_LEN = 6;
 
 export interface ScrubOptions {
   /**
@@ -343,8 +343,9 @@ export interface ScrubOptions {
 
 /**
  * Mask every exact occurrence of each known value, raw, JSON-escaped (the
- * form it takes inside serialized JSON) and escaped twice (a JSON string
- * serialized again, e.g. a request body inside JSON output), longest first so
+ * form it takes inside serialized JSON), escaped twice (a JSON string
+ * serialized again, e.g. a request body inside JSON output) and URL-encoded
+ * (a URL, or a form body where a space is `+`), longest first so
  * a value containing another is masked whole. Literal split/join, never a regex built from the
  * value.
  */
@@ -360,12 +361,35 @@ export function maskKnownValues(
     forms.add(value);
     forms.add(escaped);
     forms.add(JSON.stringify(escaped).slice(1, -1));
+    // In a URL or a form body: `encodeURIComponent` (also with a space as
+    // `+`), `encodeURI` (keeps `/ : + =`) and `URLSearchParams` (also
+    // encodes `! ' ( ) ~`, a space as `+`).
+    const component = uriEncoded(encodeURIComponent, value);
+    if (component) {
+      forms.add(component);
+      forms.add(component.replace(/%20/g, '+'));
+    }
+    const uri = uriEncoded(encodeURI, value);
+    if (uri) forms.add(uri);
+    forms.add(new URLSearchParams({ v: value }).toString().slice(2));
   }
   let s = line;
   for (const form of [...forms].sort((a, b) => b.length - a.length)) {
     if (s.includes(form)) s = replaceKnown(s, form);
   }
   return s;
+}
+
+/** `encode(value)`, or undefined for a value it cannot encode (a lone surrogate). */
+function uriEncoded(
+  encode: (value: string) => string,
+  value: string,
+): string | undefined {
+  try {
+    return encode(value);
+  } catch {
+    return undefined;
+  }
 }
 
 /**

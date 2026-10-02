@@ -237,6 +237,27 @@ describe('flow-complete.json', () => {
           expect([name, pkg.version]).toEqual([name, cliVersion]);
   });
 
+  it('uses only packages packages/cli declares, so turbo reruns its simulate suite when one changes', () => {
+    const declared = (field: string): string[] => {
+      const deps = isObject(cliPackage) ? cliPackage[field] : undefined;
+      return isObject(deps) ? Object.keys(deps) : [];
+    };
+    const cliDeps = new Set([
+      ...declared('dependencies'),
+      ...declared('devDependencies'),
+    ]);
+    const used = new Set<string>();
+    for (const flow of Object.values(flowComplete.flows))
+      for (const name of Object.keys(flow.config?.bundle?.packages ?? {}))
+        used.add(name);
+    for (const [, step] of steps())
+      if (typeof step.package === 'string') used.add(step.package);
+    const missing = [...used].filter(
+      (name) => name.startsWith('@walkeros/') && !cliDeps.has(name),
+    );
+    expect(missing).toEqual([]);
+  });
+
   it('marks exactly one example public per step', () => {
     for (const [pointer, step] of steps()) {
       if (!isObject(step.examples)) continue;

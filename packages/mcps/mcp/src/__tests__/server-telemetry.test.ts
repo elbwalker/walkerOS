@@ -50,6 +50,26 @@ import {
   __resetMcpEmitterSingletonForTesting,
 } from '../server.js';
 import type { ToolClient } from '../tool-client.js';
+import { record } from './support/tool-result.js';
+
+/**
+ * Read one registered tool's stored (wrapped) handler off the SDK's private
+ * `_registeredTools` map, narrowed rather than cast. It is called detached
+ * (no `this`), as reading it off the entry and calling it would.
+ */
+function registeredHandler(
+  server: ReturnType<typeof createWalkerOSMcpServer>,
+  name: string,
+): (...args: unknown[]) => Promise<unknown> {
+  const tools: unknown = Reflect.get(server, '_registeredTools');
+  const entry = record(record(tools)[name]);
+  const handler = entry.handler;
+  if (typeof handler !== 'function') {
+    throw new Error(`No handler registered for ${name}`);
+  }
+  return async (...args: unknown[]): Promise<unknown> =>
+    Reflect.apply(handler, undefined, args);
+}
 
 function stubClient(): ToolClient {
   const notImpl = async () => {
@@ -117,11 +137,8 @@ function simulateInitialize(
   server: ReturnType<typeof createWalkerOSMcpServer>,
   clientInfo: { name: string; version: string } | undefined,
 ): Promise<void> {
-  const underlying = server.server as unknown as {
-    _clientVersion: typeof clientInfo;
-    oninitialized?: () => void;
-  };
-  underlying._clientVersion = clientInfo;
+  const underlying = server.server;
+  Reflect.set(underlying, '_clientVersion', clientInfo);
   underlying.oninitialized?.();
   // emitter creation is async inside the oninitialized hook; yield twice so
   // the microtask queue drains (createMcpEmitter -> emitStart).
@@ -185,14 +202,8 @@ describe('MCP server telemetry lifecycle', () => {
     // Replace a registered tool's handler with a fast-path success stub, then
     // invoke the *wrapped* handler the server stored. The wrapper is applied
     // before `oninitialized`, so the handler we read here is the wrapped one.
-    const internal = server as unknown as {
-      _registeredTools: Record<
-        string,
-        { handler: (...args: unknown[]) => Promise<unknown> }
-      >;
-    };
     const toolName = 'flow_validate';
-    const wrapped = internal._registeredTools[toolName].handler;
+    const wrapped = registeredHandler(server, toolName);
 
     // The wrapper calls the original handler, which was replaced by
     // `registerFlowValidateTool`. Stub by shadowing handler closure: we
@@ -223,12 +234,6 @@ describe('MCP server telemetry lifecycle', () => {
       version: '2.0',
     });
 
-    const internal = server as unknown as {
-      _registeredTools: Record<
-        string,
-        { handler: (...args: unknown[]) => Promise<unknown> }
-      >;
-    };
     // Install a known-throwing original under a fresh slot so we control
     // the outcome. Replace the outer wrapped handler with a manual copy of
     // the wrapper logic isn't needed — we instead replace the raw handler
@@ -241,11 +246,11 @@ describe('MCP server telemetry lifecycle', () => {
     // the emitInvoke outcome field.
 
     const throwingTool = 'flow_push';
-    const thrower = internal._registeredTools[throwingTool].handler;
+    const thrower = registeredHandler(server, throwingTool);
     let caught: unknown;
     try {
       // Pass deliberately malformed args so the inner handler throws quickly.
-      await thrower(null as unknown as Record<string, unknown>, {});
+      await thrower(null, {});
     } catch (err) {
       caught = err;
     }

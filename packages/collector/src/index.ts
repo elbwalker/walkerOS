@@ -15,9 +15,37 @@ export {
   DEFAULT_BREAKER_COOLDOWN_MS,
 } from './breaker';
 export type { BreakerConfig, StepOutcome } from './breaker';
-export * from './destination';
-export * from './handle';
-export * from './on';
+export {
+  addDestination,
+  createPushResult,
+  destinationInit,
+  destinationPush,
+  initDestinations,
+  mergeEnvironments,
+  pushToDestinations,
+  registerDestination,
+} from './destination';
+export {
+  commonHandleCommand,
+  completeEvent,
+  createEvent,
+  enrichEvent,
+  prepareEvent,
+  runCollector,
+} from './handle';
+export {
+  callDestinationOn,
+  enterCascade,
+  fireCallbacks,
+  isRequireSatisfied,
+  isStateDelivery,
+  isStatePresent,
+  on,
+  onApply,
+  redeliverStateAtRun,
+  setMark,
+  shouldDeliver,
+} from './on';
 export * from './source';
 export {
   runTransformerChain,

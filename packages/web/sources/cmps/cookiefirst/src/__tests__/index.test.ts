@@ -1,5 +1,8 @@
 import { sourceCookieFirst, DEFAULT_CATEGORY_MAP } from '../index';
-import { createMockLogger } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
+import type { Source } from '@walkeros/core';
+import type { Types } from '../types';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
 import { examples } from '../dev';
@@ -7,8 +10,15 @@ import {
   createMockElb,
   createMockWindow,
   createCookieFirstSource,
+  resetMockWindow,
   ConsentCall,
 } from './test-utils';
+
+/** A scope binder for a source that never binds a scope. */
+const withScopeFor =
+  (env: Types['env']): Source.Context<Types>['withScope'] =>
+  async (_r, respond, body) =>
+    body({ ...env, ingest: createIngest('test-cookiefirst'), respond });
 
 describe('CookieFirst Source', () => {
   let consentCalls: ConsentCall[];
@@ -19,9 +29,13 @@ describe('CookieFirst Source', () => {
     mockElb = createMockElb(consentCalls);
   });
 
+  afterEach(() => {
+    resetMockWindow();
+  });
+
   describe('initialization', () => {
     test('initializes without errors', async () => {
-      const mockWindow = createMockWindow();
+      const { window: mockWindow } = createMockWindow();
 
       await expect(
         createCookieFirstSource(mockWindow, mockElb),
@@ -29,14 +43,14 @@ describe('CookieFirst Source', () => {
     });
 
     test('returns correct source type', async () => {
-      const mockWindow = createMockWindow();
+      const { window: mockWindow } = createMockWindow();
       const source = await createCookieFirstSource(mockWindow, mockElb);
 
       expect(source.type).toBe('cookiefirst');
     });
 
     test('uses default settings when none provided', async () => {
-      const mockWindow = createMockWindow();
+      const { window: mockWindow } = createMockWindow();
       const source = await createCookieFirstSource(mockWindow, mockElb);
 
       expect(source.config.settings?.categoryMap).toEqual(DEFAULT_CATEGORY_MAP);
@@ -45,7 +59,7 @@ describe('CookieFirst Source', () => {
     });
 
     test('merges custom settings with defaults', async () => {
-      const mockWindow = createMockWindow();
+      const { window: mockWindow } = createMockWindow();
       const source = await createCookieFirstSource(mockWindow, mockElb, {
         settings: {
           categoryMap: { performance: 'statistics' },
@@ -67,7 +81,7 @@ describe('CookieFirst Source', () => {
 
   describe('existing consent processing', () => {
     test('processes existing consent on initialization', async () => {
-      const mockWindow = createMockWindow(inputs.fullConsent);
+      const { window: mockWindow } = createMockWindow(inputs.fullConsent);
 
       await createCookieFirstSource(mockWindow, mockElb);
 
@@ -76,7 +90,7 @@ describe('CookieFirst Source', () => {
     });
 
     test('does not process null consent with explicitOnly=true', async () => {
-      const mockWindow = createMockWindow(null);
+      const { window: mockWindow } = createMockWindow(null);
 
       await createCookieFirstSource(mockWindow, mockElb);
 
@@ -84,7 +98,7 @@ describe('CookieFirst Source', () => {
     });
 
     test('processes null consent with explicitOnly=false', async () => {
-      const mockWindow = createMockWindow(null);
+      const { window: mockWindow } = createMockWindow(null);
 
       await createCookieFirstSource(mockWindow, mockElb, {
         settings: { explicitOnly: false },
@@ -97,7 +111,7 @@ describe('CookieFirst Source', () => {
 
   describe('category mapping', () => {
     test('maps minimal consent correctly', async () => {
-      const mockWindow = createMockWindow(inputs.minimalConsent);
+      const { window: mockWindow } = createMockWindow(inputs.minimalConsent);
 
       await createCookieFirstSource(mockWindow, mockElb);
 
@@ -105,7 +119,9 @@ describe('CookieFirst Source', () => {
     });
 
     test('maps analytics only consent correctly', async () => {
-      const mockWindow = createMockWindow(inputs.analyticsOnlyConsent);
+      const { window: mockWindow } = createMockWindow(
+        inputs.analyticsOnlyConsent,
+      );
 
       await createCookieFirstSource(mockWindow, mockElb);
 
@@ -113,7 +129,9 @@ describe('CookieFirst Source', () => {
     });
 
     test('maps marketing only consent correctly', async () => {
-      const mockWindow = createMockWindow(inputs.marketingOnlyConsent);
+      const { window: mockWindow } = createMockWindow(
+        inputs.marketingOnlyConsent,
+      );
 
       await createCookieFirstSource(mockWindow, mockElb);
 
@@ -121,7 +139,7 @@ describe('CookieFirst Source', () => {
     });
 
     test('uses custom category mapping', async () => {
-      const mockWindow = createMockWindow(inputs.fullConsent);
+      const { window: mockWindow } = createMockWindow(inputs.fullConsent);
 
       await createCookieFirstSource(mockWindow, mockElb, {
         settings: {
@@ -146,7 +164,7 @@ describe('CookieFirst Source', () => {
         necessary: true,
         custom_category: true,
       };
-      const mockWindow = createMockWindow(customConsent);
+      const { window: mockWindow } = createMockWindow(customConsent);
 
       await createCookieFirstSource(mockWindow, mockElb);
 
@@ -159,7 +177,11 @@ describe('CookieFirst Source', () => {
 
   describe('event handling', () => {
     test('handles cf_init event', async () => {
-      const mockWindow = createMockWindow(null);
+      const {
+        window: mockWindow,
+        dispatch,
+        setConsent,
+      } = createMockWindow(null);
 
       await createCookieFirstSource(mockWindow, mockElb);
 
@@ -167,19 +189,17 @@ describe('CookieFirst Source', () => {
       expect(consentCalls).toHaveLength(0);
 
       // Simulate CMP loading and user accepting
-      (
-        mockWindow as unknown as { __setConsent: (c: unknown) => void }
-      ).__setConsent(inputs.fullConsent);
-      (
-        mockWindow as unknown as { __dispatchEvent: (e: string) => void }
-      ).__dispatchEvent('cf_init');
+      setConsent(inputs.fullConsent);
+      dispatch('cf_init');
 
       expect(consentCalls).toHaveLength(1);
       expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
     });
 
     test('handles cf_consent event', async () => {
-      const mockWindow = createMockWindow(inputs.minimalConsent);
+      const { window: mockWindow, dispatch } = createMockWindow(
+        inputs.minimalConsent,
+      );
 
       await createCookieFirstSource(mockWindow, mockElb);
 
@@ -188,18 +208,16 @@ describe('CookieFirst Source', () => {
       expect(consentCalls[0].consent).toEqual(outputs.minimalConsentMapped);
 
       // User updates consent
-      (
-        mockWindow as unknown as {
-          __dispatchEvent: (e: string, d: unknown) => void;
-        }
-      ).__dispatchEvent('cf_consent', inputs.fullConsent);
+      dispatch('cf_consent', inputs.fullConsent);
 
       expect(consentCalls).toHaveLength(2);
       expect(consentCalls[1].consent).toEqual(outputs.fullConsentMapped);
     });
 
     test('handles multiple consent changes', async () => {
-      const mockWindow = createMockWindow(inputs.minimalConsent);
+      const { window: mockWindow, dispatch } = createMockWindow(
+        inputs.minimalConsent,
+      );
 
       await createCookieFirstSource(mockWindow, mockElb);
 
@@ -207,19 +225,11 @@ describe('CookieFirst Source', () => {
       expect(consentCalls).toHaveLength(1);
 
       // First change
-      (
-        mockWindow as unknown as {
-          __dispatchEvent: (e: string, d: unknown) => void;
-        }
-      ).__dispatchEvent('cf_consent', inputs.partialConsent);
+      dispatch('cf_consent', inputs.partialConsent);
       expect(consentCalls).toHaveLength(2);
 
       // Second change
-      (
-        mockWindow as unknown as {
-          __dispatchEvent: (e: string, d: unknown) => void;
-        }
-      ).__dispatchEvent('cf_consent', inputs.fullConsent);
+      dispatch('cf_consent', inputs.fullConsent);
       expect(consentCalls).toHaveLength(3);
 
       expect(consentCalls[2].consent).toEqual(outputs.fullConsentMapped);
@@ -228,7 +238,10 @@ describe('CookieFirst Source', () => {
 
   describe('custom global name', () => {
     test('uses custom global name', async () => {
-      const mockWindow = createMockWindow(inputs.fullConsent, 'MyCMP');
+      const { window: mockWindow } = createMockWindow(
+        inputs.fullConsent,
+        'MyCMP',
+      );
 
       await createCookieFirstSource(mockWindow, mockElb, {
         settings: { globalName: 'MyCMP' },
@@ -241,7 +254,7 @@ describe('CookieFirst Source', () => {
 
   describe('cleanup', () => {
     test('destroy removes event listeners', async () => {
-      const mockWindow = createMockWindow(inputs.fullConsent);
+      const { window: mockWindow } = createMockWindow(inputs.fullConsent);
 
       const source = await createCookieFirstSource(mockWindow, mockElb);
 
@@ -252,7 +265,13 @@ describe('CookieFirst Source', () => {
       await source.destroy?.({
         id: 'test',
         config: source.config,
-        env: {} as any,
+        env: {
+          push: mockElb,
+          command: mockElb,
+          elb: mockElb,
+          window: mockWindow,
+          logger: createMockLogger(),
+        },
         logger: createMockLogger(),
       });
 
@@ -270,28 +289,30 @@ describe('CookieFirst Source', () => {
 
   describe('no window environment', () => {
     test('handles missing window gracefully', async () => {
-      const source = await sourceCookieFirst({
-        collector: {} as never,
-        config: {},
-        env: {
-          push: mockElb,
-          command: mockElb,
-          elb: mockElb,
-          window: undefined,
-          logger: {
-            error: () => {},
-            warn: () => {},
-            info: () => {},
-            debug: () => {},
-            json: () => {},
-            throw: (m: string | Error) => {
-              throw typeof m === 'string' ? new Error(m) : m;
-            },
-            scope: function () {
-              return this;
-            },
+      const env: Types['env'] = {
+        push: mockElb,
+        command: mockElb,
+        elb: mockElb,
+        window: undefined,
+        logger: {
+          error: () => {},
+          warn: () => {},
+          info: () => {},
+          debug: () => {},
+          json: () => {},
+          throw: (m: string | Error) => {
+            throw typeof m === 'string' ? new Error(m) : m;
+          },
+          scope: function () {
+            return this;
           },
         },
+      };
+      const { collector } = await startFlow({ run: false });
+      const source = await sourceCookieFirst({
+        collector,
+        config: {},
+        env,
         id: 'test-cookiefirst',
         logger: {
           error: () => {},
@@ -306,7 +327,7 @@ describe('CookieFirst Source', () => {
             return this;
           },
         },
-        withScope: async (_r, _resp, body) => body({} as never),
+        withScope: withScopeFor(env),
       });
 
       expect(source.type).toBe('cookiefirst');
@@ -318,21 +339,24 @@ describe('CookieFirst Source', () => {
     test('factory attaches no listener and emits no consent until init() runs', async () => {
       // CookieFirst already loaded with consent: a static read WOULD emit if
       // the factory performed it.
-      const mockWindow = createMockWindow({ necessary: true });
+      const { window: mockWindow } = createMockWindow({ necessary: true });
+
+      const env: Types['env'] = {
+        push: mockElb,
+        command: mockElb,
+        elb: mockElb,
+        window: mockWindow,
+        logger: createMockLogger(),
+      };
+      const { collector } = await startFlow({ run: false });
 
       const source = await sourceCookieFirst({
-        collector: {} as never,
+        collector,
         config: { settings: { explicitOnly: false } },
-        env: {
-          push: mockElb,
-          command: mockElb,
-          elb: mockElb,
-          window: mockWindow,
-          logger: createMockLogger(),
-        },
+        env,
         id: 'test-cookiefirst',
         logger: createMockLogger(),
-        withScope: async (_r, _resp, body) => body({} as never),
+        withScope: withScopeFor(env),
       });
 
       // Pass-1 factory must be side-effect-free: no listener, no consent emit.

@@ -27,7 +27,7 @@ const tagged = (action: string, entity = 'p'): HTMLDivElement => {
 
 describe('data-elbobserve integration (source + collector)', () => {
   let collector: Collector.Instance;
-  let collectedEvents: WalkerOS.Event[];
+  let collectedEvents: WalkerOS.DeepPartialEvent[];
   let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
   beforeEach(async () => {
@@ -38,10 +38,13 @@ describe('data-elbobserve integration (source + collector)', () => {
     // the source itself removes window.elb via Reflect.deleteProperty).
     Reflect.deleteProperty(window, 'elbLayer');
 
-    mockPush = jest.fn().mockImplementation((...args: unknown[]) => {
-      collectedEvents.push(args[0] as WalkerOS.Event);
+    mockPush = jest.fn<
+      ReturnType<Collector.Instance['push']>,
+      Parameters<Collector.Instance['push']>
+    >((event) => {
+      collectedEvents.push(event);
       return Promise.resolve({ ok: true });
-    }) as jest.MockedFunction<Collector.Instance['push']>;
+    });
 
     ({ collector } = await startFlow());
     collector.push = mockPush;

@@ -340,6 +340,16 @@
                     ]
                   }
                 }
+              ],
+              "out": [
+                [
+                  "elb",
+                  "walker consent",
+                  {
+                    "functional": true,
+                    "marketing": true
+                  }
+                ]
               ]
             },
             "implicitSuppressed": {
@@ -410,12 +420,77 @@
               "trigger": {
                 "type": "load",
                 "options": {
-                  "url": "https://www.example.com/?utm_source=google&utm_medium=cpc&utm_campaign=trail&gclid=gclid-abc123"
+                  "url": "https://www.example.com/?utm_source=google&utm_medium=cpc&utm_campaign=trail&gclid=gclid-abc123",
+                  "referrer": "https://www.google.com/"
                 }
               },
               "in": {
                 "storage": true
-              }
+              },
+              "out": [
+                [
+                  "elb",
+                  "user",
+                  {
+                    "session": "s3ss10n",
+                    "device": "d3v1c3"
+                  }
+                ],
+                [
+                  "elb",
+                  "session",
+                  {
+                    "id": "s3ss10n",
+                    "start": 1790251200000,
+                    "isNew": true,
+                    "count": 1,
+                    "runs": 1,
+                    "isStart": true,
+                    "storage": true,
+                    "referrer": "www.google.com",
+                    "campaign": "trail",
+                    "medium": "cpc",
+                    "source": "google",
+                    "gclid": "gclid-abc123",
+                    "clickId": "gclid",
+                    "platform": "google",
+                    "marketing": true,
+                    "device": "d3v1c3",
+                    "updated": 1790251200000
+                  }
+                ],
+                [
+                  "elb",
+                  {
+                    "name": "session start",
+                    "data": {
+                      "id": "s3ss10n",
+                      "start": 1790251200000,
+                      "isNew": true,
+                      "count": 1,
+                      "runs": 1,
+                      "isStart": true,
+                      "storage": true,
+                      "referrer": "www.google.com",
+                      "campaign": "trail",
+                      "medium": "cpc",
+                      "source": "google",
+                      "gclid": "gclid-abc123",
+                      "clickId": "gclid",
+                      "platform": "google",
+                      "marketing": true,
+                      "device": "d3v1c3",
+                      "updated": 1790251200000
+                    },
+                    "source": {
+                      "type": "session",
+                      "platform": "web",
+                      "url": "https://www.example.com/?utm_source=google&utm_medium=cpc&utm_campaign=trail&gclid=gclid-abc123",
+                      "referrer": "https://www.google.com/"
+                    }
+                  }
+                ]
+              ]
             }
           }
         },

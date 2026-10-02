@@ -1,4 +1,5 @@
 import { resolveLocalPackage, copyLocalPackage } from '../local-packages';
+import { hashInstalledDir } from '../content-digest';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -115,5 +116,64 @@ describe('copyLocalPackage', () => {
 
     const pkg = await fs.readJson(path.join(pkgDir, 'package.json'));
     expect(pkg.main).toBe('./index.ts');
+  });
+});
+
+describe('installed copy hash covers exactly the copied set', () => {
+  let root: string;
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'local-pkg-hash-'));
+  });
+
+  afterEach(() => fs.remove(root));
+
+  async function installedHash(source: string): Promise<string> {
+    const target = path.join(root, `target-${Date.now()}-${Math.random()}`);
+    const info = await resolveLocalPackage('pkg', source, root, logger);
+    return hashInstalledDir(await copyLocalPackage(info, target, logger));
+  }
+
+  it.each([
+    // [case, files, consumed edit, ignored edit]
+    [
+      'package',
+      {
+        'package.json': '{"name":"pkg"}',
+        'dist/index.mjs': 'v1',
+        'src/a.ts': 's1',
+      },
+      'dist/index.mjs',
+      'src/a.ts',
+    ],
+    [
+      'directory',
+      { 'index.ts': 'v1', 'node_modules/dep/index.js': 'd1' },
+      'index.ts',
+      'node_modules/dep/index.js',
+    ],
+  ])(
+    '%s: a consumed file changes the hash, an excluded one does not',
+    async (_case, files, consumed, ignored) => {
+      const source = path.join(root, 'src-pkg');
+      for (const [rel, content] of Object.entries(files)) {
+        await fs.outputFile(path.join(source, rel), content);
+      }
+      const before = await installedHash(source);
+
+      await fs.outputFile(path.join(source, ignored), 'changed');
+      expect(await installedHash(source)).toBe(before);
+
+      await fs.outputFile(path.join(source, consumed), 'changed');
+      expect(await installedHash(source)).not.toBe(before);
+    },
+  );
+
+  it('file: the one file is consumed', async () => {
+    const file = path.join(root, 'decoder.ts');
+    await fs.outputFile(file, 'v1');
+    const before = await installedHash(file);
+    await fs.outputFile(file, 'v2');
+    expect(await installedHash(file)).not.toBe(before);
   });
 });

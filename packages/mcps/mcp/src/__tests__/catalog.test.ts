@@ -48,13 +48,11 @@ describe('normalizePlatform', () => {
   });
 
   it('should filter non-string values from arrays', () => {
-    expect(normalizePlatform([42, 'web', null] as unknown as string[])).toEqual(
-      ['web'],
-    );
+    expect(normalizePlatform([42, 'web', null])).toEqual(['web']);
   });
 
   it('should return empty array for non-string non-array', () => {
-    expect(normalizePlatform(42 as unknown as string)).toEqual([]);
+    expect(normalizePlatform(42)).toEqual([]);
   });
 });
 
@@ -262,9 +260,9 @@ describe('fetchCatalog', () => {
     await fetchCatalog({ baseUrl: 'http://app.test' });
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    const init = mockFetch.mock.calls[0][1] as RequestInit;
+    const init = mockFetch.mock.calls[0][1];
     expect(init.headers).toMatchObject({
-      'X-Walkeros-Client': expect.stringMatching(/^walkeros-mcp\//) as unknown,
+      'X-Walkeros-Client': expect.stringMatching(/^walkeros-mcp\//),
     });
   });
 
@@ -282,13 +280,13 @@ describe('fetchCatalog', () => {
     await fetchCatalog();
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
-    const npmInit = mockFetch.mock.calls[0][1] as RequestInit;
-    const jsdelivrInit = mockFetch.mock.calls[1][1] as RequestInit;
+    const npmInit = mockFetch.mock.calls[0][1];
+    const jsdelivrInit = mockFetch.mock.calls[1][1];
     expect(npmInit.headers).toMatchObject({
-      'X-Walkeros-Client': expect.stringMatching(/^walkeros-mcp\//) as unknown,
+      'X-Walkeros-Client': expect.stringMatching(/^walkeros-mcp\//),
     });
     expect(jsdelivrInit.headers).toMatchObject({
-      'X-Walkeros-Client': expect.stringMatching(/^walkeros-mcp\//) as unknown,
+      'X-Walkeros-Client': expect.stringMatching(/^walkeros-mcp\//),
     });
   });
 

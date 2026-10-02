@@ -13,10 +13,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 export const data = {
   ...gcpData,
-  schemas: {
-    settings: gcpData.schemas?.pubsubSettings,
-    mapping: gcpData.schemas?.pubsubMapping,
-  },
+  schemas: gcpData.exportSchemas?.destinationPubSub ?? {},
   examples: gcpData.exportExamples?.destinationPubSub ?? {},
 };
 
