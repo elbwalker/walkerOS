@@ -1,0 +1,44 @@
+# The edge serves the old copy for up to 3 hours, browsers for 20 minutes; for an instant flip,
+# purge https://static.walkeros.io/vN.M/walker.js in the Bunny dashboard
+# (pull zone, Purge).
+name: CDN rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Exact published @walkeros/walker.js version to put back on its vN.M slot (e.g. 4.7.1)'
+        required: true
+        type: string
+
+# Shares the release group, so a rollback dispatched while a release runs
+# waits for it and its upload cannot overwrite the rollback afterwards.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm-publish
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.15.0'
+          # This job reads the storage zone password under npm-publish: no
+          # dependency cache that a lower-privileged workflow can write (see
+          # release.yml).
+          package-manager-cache: false
+      - name: Put the version back
+        env:
+          BUNNY_STATIC_STORAGE_PASSWORD: ${{ secrets.BUNNY_STATIC_STORAGE_PASSWORD }}
+          BUNNY_STATIC_STORAGE_ZONE: ${{ vars.BUNNY_STATIC_STORAGE_ZONE }}
+          VERSION: ${{ inputs.version }}
+        run: bash scripts/cdn-upload.sh "$VERSION" --rollback

@@ -18,6 +18,7 @@ import { ensureDir } from 'fs-extra';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
+import type { Flow } from '@walkeros/core';
 
 import { bundle } from '../../../commands/bundle/index.js';
 import { bundleCore } from '../../../commands/bundle/bundler.js';
@@ -27,6 +28,10 @@ import { VERSION } from '../../../version.js';
 import { loadBundleConfig } from '../../../config/loader.js';
 import { createCLILogger } from '../../../core/cli-logger.js';
 import { MINIMAL_FLOW } from '../../fixtures/minimal-flow.js';
+import { withLocalPackages } from '../../helpers/local-packages.js';
+
+/** The minimal flow bundled against this working tree. */
+const LOCAL_FLOW = withLocalPackages(MINIMAL_FLOW);
 
 /**
  * Internal minified function names that previously leaked onto `window` when
@@ -110,7 +115,7 @@ describe('CDN bundle — jsdom smoke', () => {
   beforeAll(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'walkeros-jsdom-'));
     const out = join(tmpDir, 'walker.js');
-    await bundle(MINIMAL_FLOW, {
+    await bundle(LOCAL_FLOW, {
       target: 'cdn',
       silent: true,
       buildOverrides: {
@@ -230,7 +235,7 @@ describe('browser bundle — no global-scope leak', () => {
     // cache:false so this pure leak test never reads/writes the shared
     // `/tmp/cache/builds`: a warm cache could otherwise serve good IIFE bytes
     // over a regressed source (false green) or stale bytes over a correct one.
-    await bundle(MINIMAL_FLOW, {
+    await bundle(LOCAL_FLOW, {
       target: 'cdn',
       silent: true,
       cache: false,
@@ -257,7 +262,7 @@ describe('browser bundle — no global-scope leak', () => {
     const wrappedPath = join(tmpDir, 'wrapped.js');
 
     const logger = createCLILogger({ silent: true });
-    const { flowSettings, buildOptions } = loadBundleConfig(MINIMAL_FLOW, {
+    const { flowSettings, buildOptions } = loadBundleConfig(LOCAL_FLOW, {
       configPath: join(tmpDir, 'flow.json'),
     });
     buildOptions.output = skeletonPath;
@@ -296,7 +301,7 @@ describe('browser bundle — no global-scope leak', () => {
 
     async function buildCdn(cache: boolean): Promise<string> {
       const out = join(tmpDir, `walker.${cache ? 'cached' : 'fresh'}.js`);
-      await bundle(MINIMAL_FLOW, {
+      await bundle(LOCAL_FLOW, {
         target: 'cdn',
         silent: true,
         cache,
@@ -338,7 +343,7 @@ describe('browser bundle — no global-scope leak', () => {
  * DO have a browser source and therefore still expose `window.elb`.
  */
 describe('CDN bundle without a browser source — window.elb', () => {
-  const BROWSERLESS_FLOW = {
+  const BROWSERLESS_FLOW = withLocalPackages({
     version: 4,
     flows: {
       default: {
@@ -358,7 +363,7 @@ describe('CDN bundle without a browser source — window.elb', () => {
         },
       },
     },
-  };
+  });
 
   let tmpDir: string;
   let script: string;
@@ -394,7 +399,9 @@ describe('CDN bundle without a browser source — window.elb', () => {
  * whether the flow is built with `walkeros bundle` or from a build manifest.
  */
 describe('CDN bundle — collector global from config.settings', () => {
-  const NAMED_FLOW = {
+  // A manifest build refuses local package paths, so the manifest case
+  // builds the published packages; the `walkeros bundle` case this tree.
+  const PUBLISHED_NAMED_FLOW: Flow.Json = {
     ...MINIMAL_FLOW,
     flows: {
       default: {
@@ -406,6 +413,7 @@ describe('CDN bundle — collector global from config.settings', () => {
       },
     },
   };
+  const NAMED_FLOW = withLocalPackages(PUBLISHED_NAMED_FLOW);
   const NAMED_GLOBALS = ['elb', 'elbLayer', 'walkerCollector'];
 
   let tmpDir: string;
@@ -447,7 +455,7 @@ describe('CDN bundle — collector global from config.settings', () => {
             JSON.stringify({
               version: 1,
               toolchain: VERSION,
-              flowConfig: NAMED_FLOW,
+              flowConfig: PUBLISHED_NAMED_FLOW,
               artifacts: [
                 {
                   target: 'cdn',
@@ -480,4 +488,115 @@ describe('CDN bundle — collector global from config.settings', () => {
     const { added } = await runScriptAndDiffGlobals(script);
     expect(added.sort()).toEqual([...NAMED_GLOBALS].sort());
   }, 180000);
+});
+
+/**
+ * The observe recorder ships only in an observed wrap. With the same
+ * `elbObserve` credential in storage, an observed wrap attaches and posts its
+ * FlowState records, with the recorded vendor calls at trace level, to the
+ * observer's `/ingest`; a plain wrap has no recorder, so nothing posts.
+ */
+describe('observe wrap — jsdom', () => {
+  const OBSERVE = {
+    url: 'https://obs.example',
+    binding: 'pb_x',
+    level: 'trace',
+  } as const;
+  const CREDENTIAL = 'obsw_pb_x.ses_1.secret';
+
+  const GTAG_FLOW = withLocalPackages({
+    version: 4,
+    flows: {
+      default: {
+        config: { platform: 'web' },
+        sources: MINIMAL_FLOW.flows.default.sources,
+        destinations: {
+          gtag: {
+            package: '@walkeros/web-destination-gtag',
+            config: {
+              loadScript: false,
+              settings: { ga4: { measurementId: 'G-TEST' } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  let tmpDir: string;
+  let plain: string;
+  let observed: string;
+
+  beforeAll(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'walkeros-observe-'));
+    const skeletonPath = join(tmpDir, 'skeleton.mjs');
+    await bundle(GTAG_FLOW, {
+      target: 'cdn-skeleton',
+      silent: true,
+      cache: false,
+      buildOverrides: { output: skeletonPath },
+    });
+    const wrap = async (name: string, observe?: typeof OBSERVE) => {
+      const outputPath = join(tmpDir, name);
+      await wrapSkeleton({
+        skeletonPath,
+        platform: 'browser',
+        outputPath,
+        ...(observe ? { observe } : {}),
+      });
+      return readFile(outputPath, 'utf8');
+    };
+    plain = await wrap('plain.js');
+    observed = await wrap('observed.js', OBSERVE);
+  }, 120000);
+
+  afterAll(async () => {
+    await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  });
+
+  /** Boot a wrap with the credential in storage, push one event, collect fetches. */
+  async function requests(script: string): Promise<FetchCall[]> {
+    const virtualConsole = new VirtualConsole();
+    virtualConsole.on('jsdomError', () => {});
+    const dom = new JSDOM('<!doctype html><html><body></body></html>', {
+      runScripts: 'outside-only',
+      url: 'https://example.com/',
+      virtualConsole,
+    });
+    dom.window.localStorage.setItem('elbObserve', CREDENTIAL);
+
+    const fetchCalls: FetchCall[] = [];
+    const stub = async (url: unknown, init?: { body?: unknown }) => {
+      fetchCalls.push({
+        url: String(url),
+        body: init?.body != null ? String(init.body) : undefined,
+      });
+      return { ok: true, status: 200 };
+    };
+    Reflect.set(dom.window, 'fetch', stub);
+
+    dom.window.eval(script);
+    await new Promise((r) => setTimeout(r, 100));
+    const elb = Reflect.get(dom.window, 'elb');
+    expect(typeof elb).toBe('function');
+    await elb('page view', { title: 'Test' });
+    // The observe poster flushes its batch after 50 ms.
+    await new Promise((r) => setTimeout(r, 200));
+    dom.window.close();
+    return fetchCalls;
+  }
+
+  it('an observed wrap posts its records with the vendor calls to /ingest', async () => {
+    const posts = (await requests(observed)).filter((call) =>
+      call.url.startsWith('https://obs.example/ingest/ses_1'),
+    );
+    expect(posts.length).toBeGreaterThan(0);
+    const bodies = posts.map((call) => call.body ?? '').join('\n');
+    expect(bodies).toContain('"calls"');
+    expect(bodies).toContain('window.gtag');
+  });
+
+  it('a plain wrap with the same credential makes no request', async () => {
+    expect(await requests(plain)).toEqual([]);
+  });
 });

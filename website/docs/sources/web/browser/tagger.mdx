@@ -122,7 +122,8 @@ const attributes = tagger()
 ### Context and global properties
 
 <CodeSnippet
-  code={`const attributes = tagger('product')
+  code={`const attributes = tagger()
+.entity('product')
 .data('id', 123)
 .context('test', 'engagement')
 .globals('lang', 'en')
@@ -208,10 +209,19 @@ const attributes = tagger('product')
 
 // Result:
 // {
-//   'data-elb-': 'description:Product with\\\\: special\\\\; chars & \\\\"quotes\\\\"'
+//   'data-elb-': 'description:Product with\\\\: special\\\\; chars & "quotes"'
 // }`}
   language="typescript"
 />
+
+:::warning
+
+The browser source does not read these escapes back yet. A value with `:`
+arrives with a backslash, and a value with `;` or `'` is split into extra
+properties. For such values write the attribute by hand: `:` needs no escaping,
+a value with `;` goes in single quotes, and a `'` is not supported.
+
+:::
 
 ## Available methods (API reference)
 
@@ -279,26 +289,28 @@ tagger().action({ load: 'view', click: 'select', impression: 'view' });`}
 
 ##### `actions(trigger: string, action?: string)` | `actions(object: Record<string, string>)`
 
-Adds action mappings for event triggers. Creates a `data-elbactions` attribute.
+Adds action mappings that apply to the nearest entity and every entity above
+it. Creates a `data-elbactions` attribute, which on its own works for the
+`click` and `submit` triggers only. Use `action()` for every other trigger.
 
 <CodeSnippet
   code={`// Single action
-tagger().actions('load', 'view');
+tagger().actions('click', 'select');
 
 // Combined trigger:action
-tagger().actions('load:view');
+tagger().actions('click:select');
 
 // Multiple actions
-tagger().actions({ load: 'view', click: 'select', visible: 'visible' });
+tagger().actions({ click: 'select', submit: 'send' });
 
 // Can be combined with action() method
-tagger().action('click', 'select').actions('load', 'view');`}
+tagger().action('load', 'view').actions('click', 'select');`}
   language="typescript"
 />
 
 ##### `context(key: string, value: Property)` | `context(object: Properties)`
 
-Adds context properties that apply to all events.
+Adds context properties for events triggered inside the element.
 
 <CodeSnippet
   code={`// Single context
@@ -311,7 +323,7 @@ tagger().context({ test: 'engagement', position: 'header', type: 'promo' });`}
 
 ##### `globals(key: string, value: Property)` | `globals(object: Properties)`
 
-Adds global properties that persist across page views.
+Adds global properties that apply to every event on the page.
 
 <CodeSnippet
   code={`// Single global

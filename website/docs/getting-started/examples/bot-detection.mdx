@@ -17,16 +17,17 @@ This server flow scores every incoming event for bot and AI-agent traffic before
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/server-source-express": {},
-            "@walkeros/server-transformer-bot": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/collector": { "version": "^4" },
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/server-transformer-bot": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
+          "next": "bot",
           "config": {
             "settings": { "port": 8080 },
             "ingest": {
@@ -82,18 +83,22 @@ This server flow scores every incoming event for bot and AI-agent traffic before
 
 ## Run it
 
-Save the config as `flow.json` and push an event through the built flow with the destination mocked. Nothing is sent anywhere:
+Save the config as `flow.json` and run the bot transformer of the built flow on an event. `--ingest` passes the request context the Express source extracts, here the user agent of a GPTBot request. Nothing is sent anywhere:
 
 <CodeSnippet
-  code={`npx walkeros push flow.json -e '{"name":"page view"}' --simulate destination.console`}
+  code={`npx walkeros push flow.json -e '{"name":"page view"}' --simulate transformer.bot \\
+  --ingest '{"userAgent":"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"}'`}
   language="bash"
 />
 
-You should see:
+You should see, besides an `Output:` line naming the built bundle before each `Simulating` line:
 
 <CodeSnippet
-  code={`success: true
-  Duration: 42ms`}
+  code={`Simulating transformer: bot
+success: true
+  transformer.bot
+    event {"name":"page view","user":{"botScore":90,"botCategory":"ai-crawler","botProduct":"GPTBot"}}
+  Duration: 15758ms`}
   language="bash"
 />
 
@@ -114,7 +119,7 @@ Every event now carries `user.botScore` (0-99, higher means more automated), `us
   language="bash"
 />
 
-Offline runs have no request behind them, so simulated events resolve no signals at all and score `null` with category `unknown`, which means not measured rather than human. `ingest.bot.reasons` then names which mappings are missing. To act on the scores, add a mapping condition on your real destinations that drops or segments events where `botScore` exceeds 50. See [Bot detection](/docs/transformers/bot) for the full filtering recipes.
+Without `--ingest`, a simulated event has no request behind it, so it resolves no signals at all and scores `null` with category `unknown`, which means not measured rather than human. `ingest.bot.reasons` then names which mappings are missing. To act on the scores, add a mapping condition on your real destinations that drops or segments events where `botScore` exceeds 50. See [Bot detection](/docs/transformers/bot) for the full filtering recipes.
 
 ## Next steps
 

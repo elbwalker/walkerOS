@@ -1,4 +1,10 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import http from 'http';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
+import { createCLILogger } from '../../../core/cli-logger.js';
+import { withFlowContext } from '../flow-context';
 import type { NetworkCall } from '../types';
 
 describe('JSDOM network polyfills', () => {
@@ -112,6 +118,69 @@ describe('JSDOM network polyfills', () => {
     });
   });
 
+  describe('XMLHttpRequest polyfill', () => {
+    it('completes a request aborted after send with abort, not load', async () => {
+      const { applyNetworkPolyfills } = await import('../flow-context');
+      applyNetworkPolyfills(dom, networkCalls);
+
+      const xhr = new dom.window.XMLHttpRequest();
+      const events: string[] = [];
+      for (const type of ['readystatechange', 'load', 'abort', 'loadend'])
+        xhr.addEventListener(type, () =>
+          events.push(`${type} ${xhr.readyState} ${xhr.status}`),
+        );
+      xhr.onabort = () => events.push('onabort');
+      xhr.open('POST', 'https://api.example.com/events');
+      xhr.send('{"event":"page view"}');
+      xhr.abort();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(events).toEqual([
+        'readystatechange 4 0',
+        'abort 4 0',
+        'onabort',
+        'loadend 4 0',
+      ]);
+      expect(xhr.readyState).toBe(xhr.UNSENT);
+      expect(networkCalls).toHaveLength(1);
+    });
+
+    it('drops the completion of a request reopened before it completes', async () => {
+      const { applyNetworkPolyfills } = await import('../flow-context');
+      applyNetworkPolyfills(dom, networkCalls);
+
+      const xhr = new dom.window.XMLHttpRequest();
+      const events: string[] = [];
+      for (const type of ['readystatechange', 'load', 'loadend'])
+        xhr.addEventListener(type, () => events.push(type));
+      xhr.open('POST', 'https://api.example.com/events');
+      xhr.send('{"event":"page view"}');
+      xhr.open('GET', 'https://api.example.com/other');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(events).toEqual([]);
+      expect(xhr.readyState).toBe(xhr.OPENED);
+    });
+
+    it('resets a completed request to UNSENT on abort, without events', async () => {
+      const { applyNetworkPolyfills } = await import('../flow-context');
+      applyNetworkPolyfills(dom, networkCalls);
+
+      const xhr = new dom.window.XMLHttpRequest();
+      xhr.open('POST', 'https://api.example.com/events');
+      xhr.send('{"event":"page view"}');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const events: string[] = [];
+      for (const type of ['readystatechange', 'abort', 'loadend'])
+        xhr.addEventListener(type, () => events.push(type));
+      xhr.abort();
+
+      expect(events).toEqual([]);
+      expect(xhr.readyState).toBe(xhr.UNSENT);
+      expect(xhr.status).toBe(0);
+    });
+  });
+
   describe('cleanup', () => {
     it('should not leave polyfills on global after cleanup', async () => {
       const { applyNetworkPolyfills, cleanupNetworkPolyfills } =
@@ -139,6 +208,105 @@ describe('withFlowContext network polyfills integration', () => {
   });
 });
 
+describe('withFlowContext: a vendor SDK reaching page globals at import', () => {
+  let dir: string;
+  let server: http.Server;
+  let origin: string;
+  let received: number;
+
+  beforeEach(async () => {
+    dir = mkdtempSync(join(tmpdir(), 'walkeros-page-globals-'));
+    received = 0;
+    server = http.createServer((_req, res) => {
+      received++;
+      res.end();
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, '127.0.0.1', resolve),
+    );
+    const address = server.address();
+    if (!address || typeof address === 'string')
+      throw new Error('server has no port');
+    origin = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterEach(async () => {
+    await new Promise((resolve) => server.close(resolve));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('imports the bundle, records its XHR without sending it, then restores', async () => {
+    const bundlePath = join(dir, 'bundle.mjs');
+    // Module top level as mixpanel-browser and posthog-js have it.
+    writeFileSync(
+      bundlePath,
+      `
+const useXhr = 'withCredentials' in new XMLHttpRequest();
+const href = location.href;
+if (typeof self === 'undefined') globalThis.self = globalThis;
+
+export function wireConfig() {
+  return {};
+}
+
+export async function startFlow() {
+  const xhr = new XMLHttpRequest();
+  await new Promise((resolve, reject) => {
+    xhr.onload = resolve;
+    xhr.onerror = reject;
+    xhr.open('POST', '${origin}/collect');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send('{"event":"page view"}');
+  });
+  return { useXhr, href, status: xhr.status, page: self === window };
+}
+`,
+      'utf-8',
+    );
+    const names = ['XMLHttpRequest', 'location', 'self'];
+    const before = names.map((name) =>
+      Object.getOwnPropertyDescriptor(globalThis, name),
+    );
+    const networkCalls: NetworkCall[] = [];
+    let flow: unknown;
+
+    const result = await withFlowContext(
+      {
+        esmPath: bundlePath,
+        platform: 'web',
+        logger: createCLILogger({ silent: true }),
+        networkCalls,
+      },
+      async (mod) => {
+        flow = await mod.startFlow({});
+        return { success: true, duration: 0 };
+      },
+    );
+
+    expect(result).toEqual({ success: true, duration: 0 });
+    expect(flow).toEqual({
+      useXhr: true,
+      href: 'http://localhost/',
+      status: 200,
+      page: true,
+    });
+    expect(networkCalls).toEqual([
+      {
+        type: 'xhr',
+        url: `${origin}/collect`,
+        method: 'POST',
+        body: '{"event":"page view"}',
+        headers: { 'Content-Type': 'application/json' },
+        timestamp: expect.any(Number),
+      },
+    ]);
+    expect(received).toBe(0);
+    expect(
+      names.map((name) => Object.getOwnPropertyDescriptor(globalThis, name)),
+    ).toEqual(before);
+  });
+});
+
 describe('exposeDomGlobals', () => {
   const names = [
     'CustomEvent',
@@ -150,6 +318,9 @@ describe('exposeDomGlobals', () => {
     'HTMLElement',
     'Document',
     'ShadowRoot',
+    'XMLHttpRequest',
+    'location',
+    'self',
   ];
   let dom: JSDOM;
 

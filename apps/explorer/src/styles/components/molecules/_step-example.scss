@@ -1,0 +1,19 @@
+// StepExample: Event, Mapping and Out side by side while each box keeps a
+// readable width, wrapping to fewer per row and finally a stack as the
+// container narrows. Flex wrap rather than Grid: no breakpoint or JS height
+// sync, and a wrapped box fills its row. Each box is a CodeView that sizes to
+// its code (_code-view.scss); this only lays out the row and caps it lower.
+.elb-step-example-boxes {
+  display: flex;
+  flex-wrap: wrap;
+  // Boxes in a row share the tallest one's height, itself capped below.
+  align-items: stretch;
+  gap: var(--spacing-grid-gap);
+
+  // (0,3,0) outranks the CodeView cap regardless of stylesheet order.
+  .elb-step-example & > .elb-explorer-box {
+    flex: 1 1 var(--step-example-min-box-width);
+    min-width: 0;
+    max-height: var(--step-example-max-height);
+  }
+}

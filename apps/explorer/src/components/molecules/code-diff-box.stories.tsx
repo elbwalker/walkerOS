@@ -24,7 +24,7 @@ const JSON_A = `{
   "sources": {
     "browser": {
       "package": "@walkeros/web-source-browser",
-      "config": { "pageview": true, "session": true }
+      "config": { "settings": { "pageview": true } }
     }
   },
   "destinations": {
@@ -39,7 +39,7 @@ const JSON_B = `{
   "sources": {
     "browser": {
       "package": "@walkeros/web-source-browser",
-      "config": { "pageview": true, "session": false, "hash": true }
+      "config": { "settings": { "pageview": false, "prefix": "data-track" } }
     }
   },
   "destinations": {

@@ -65,9 +65,10 @@ once a value is set to `true` it's treated as consent being granted.
   language="javascript"
 />
 
-Setting a consent state to `false` will immediately stop a destination from
-processing any events. Previously pushed events during the run are shared with
-existing destinations once consent is granted.
+When none of the keys in a destination's `config.consent` is granted, the
+destination stops receiving events. Its events wait in a queue instead, and
+once consent is granted during the same run, the queued events are delivered
+in order.
 
 :::info
 
@@ -136,14 +137,14 @@ elb('walker run');
 
 ### consent
 
-Every time the `consent` changes, the rules-matching function(s) will be called
-with `consent` as the first argument and `context` (carrying `collector` and
-`logger`) as the second.
+A consent handler is called with `consent` as the first argument and `context`
+(carrying `collector` and `logger`) as the second. `rules` is an object keyed
+by consent name.
 
 <CodeSnippet
   code={`function onConsent(consent, context) {
 console.log('consent with', { consent, instance: context.collector });
-if (consent.marketing) context.collector.push('walker user', readFromStorage());
+if (consent.marketing) elb('walker user', readFromStorage());
 }
 
 elb('walker on', {
@@ -153,14 +154,20 @@ rules: { marketing: onConsent },
   language="javascript"
 />
 
-The `onConsent` function will only be called when the `marketing` consent
-changes:
+`onConsent` runs whenever a `walker consent` command contains `marketing`,
+whether the value is `true` or `false` and whether it changed. It receives only
+the values of that command, so check the value inside the handler:
 
 <CodeSnippet
   code={`elb('walker consent', { functional: true }); // Won't trigger the onConsent function
-elb('walker consent', { marketing: true }); // Will trigger the onConsent function`}
+elb('walker consent', { marketing: true }); // Will trigger the onConsent function
+elb('walker consent', { marketing: false }); // Will also trigger the onConsent function`}
   language="javascript"
 />
+
+When registered, and when the collector starts, the handler receives the full
+consent state and runs if `marketing` is set. No handler is called before the
+collector runs.
 
 ## user
 
@@ -246,7 +253,7 @@ callbacks above, source `on` handlers, and destination `on` handlers) happens at
 collector starts, it delivers the current state once to every subscriber that
 has not yet seen it.
 
-This gives three practical guarantees:
+This gives five practical guarantees:
 
 * **Exactly-once.** Each subscriber is invoked once per state change. The
   collector tracks what each subscriber has already received, so re-running or
@@ -335,8 +342,9 @@ The overall function execution order is as follows:
 
 Others are:
 
-* preSessionStart
-* postSessionStart
+* preCommand / postCommand
+* preTransformerInit / postTransformerInit
+* preTransformerPush / postTransformerPush
 * preStoreGet / postStoreGet
 * preStoreSet / postStoreSet
 * preStoreDelete / postStoreDelete
@@ -344,46 +352,43 @@ Others are:
 ### Function signatures
 
 In general, `params` will be prefixed as a parameter, containing `fn` which is
-the original function and `result` for the post-hooks. Use the following
-function signatures:
+the original function and `result` for the post-hooks. A post-hook's return
+value replaces the result, so return `params.result` to keep it. Use the
+following function signatures:
 
 <CodeSnippet
   code={`// Push
-function prePush(params, event, data, options, context, nested) {
-return params.fn(event, data, options, context, nested);
+function prePush(params, event, options) {
+return params.fn(event, options);
 }
-function postPush(params, event, data, trigger, context, nested) {
+function postPush(params, event, options) {
 console.log('default return result', params.result);
-return;
+return params.result;
 }
 
 // DestinationInit
-function preDestinationInit(params, config) {
-return params.fn(config);
+function preDestinationInit(params, context) {
+return params.fn(context);
 }
-function postDestinationInit(params, config) {
+function postDestinationInit(params, context) {
 console.log('default return result', params.result);
 return params.result;
 }
 
 // DestinationPush
-function preDestinationPush(params, event, config, mapping, runState) {
-console.log('default return result', params.result);
-return params.fn(event, config, mapping, runState);
+function preDestinationPush(params, event, context) {
+return params.fn(event, context);
 }
-function postDestinationPush(params) {
-// Custom code with a void return
-return;
+function postDestinationPush(params, event, context) {
+return params.result;
 }
 
 // DestinationPushBatch
-function preDestinationPushBatch(params, event, config, mapping, runState) {
-console.log('default return result', params.result);
-return params.fn(event, config, mapping, runState);
+function preDestinationPushBatch(params, batch, context) {
+return params.fn(batch, context);
 }
-function postDestinationPushBatch(params) {
-// Custom code with a void return
-return;
+function postDestinationPushBatch(params, batch, context) {
+return params.result;
 }
 
 // StoreGet
@@ -432,6 +437,7 @@ elb('walker hook', {
 name: 'postPush',
 fn: function (params, ...args) {
 console.log('walker exec time', Date.now() - window.elbTimer);
+return params.result;
 },
 });
 

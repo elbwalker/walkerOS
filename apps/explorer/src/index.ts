@@ -18,6 +18,7 @@ export type { CodeDiffBoxProps } from './components/molecules/code-diff-box';
 export { CodeSnippet } from './components/molecules/code-snippet';
 export { FlowMap } from './components/molecules/flow-map';
 export { PropertyTable } from './components/molecules/property-table';
+export { StepExample } from './components/molecules/step-example';
 export {
   Dropdown,
   DropdownItem,
@@ -41,6 +42,7 @@ export type {
   FlowStageConfig,
 } from './components/molecules/flow-map';
 export type { PropertyTableProps } from './components/molecules/property-table';
+export type { StepExampleProps } from './components/molecules/step-example';
 export type {
   DropdownProps,
   DropdownItemProps,

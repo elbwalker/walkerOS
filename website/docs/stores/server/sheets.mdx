@@ -85,7 +85,7 @@ Add to your `flow.json`:
 
 ## Wiring with the built-in cache
 
-To absorb the Sheets quota, wire the store with the built-in cache via `Flow.Store.cache`. The cache is on by default with an in-memory tier and requires no extra store declaration:
+To absorb the Sheets quota, wire the store with the built-in cache via `Flow.Store.cache`. Declaring `cache` uses the built-in in-memory tier by default and requires no extra store declaration:
 
 <CodeSnippet
   code={`{
@@ -102,8 +102,11 @@ To absorb the Sheets quota, wire the store with the built-in cache via `Flow.Sto
     }
   },
   "transformers": {
-    "enrich": {
-      "package": "@walkeros/transformer-enrich",
+    "crmLookup": {
+      "code": {
+        "type": "crm-lookup",
+        "push": "$code:async (event, context) => { const userId = event.user?.id; if (!userId) return; const crm = await context.env.store.get(userId); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
+      },
       "env": { "store": "$store.crm" }
     }
   }
@@ -111,7 +114,7 @@ To absorb the Sheets quota, wire the store with the built-in cache via `Flow.Sto
   language="json"
 />
 
-Use `ttl: 5000` for demos (fast iteration), `ttl: 60000` or higher for production-ish loads. Without a cache, every event hits Sheets directly and trips the 60 req/min quota in under one second.
+The consumer here is an inline `code` transformer; any transformer or destination that reads its `env.store` works the same way. `ttl` is in seconds. Use a short `ttl` such as `5` for demos (fast iteration), `60` or higher for production-ish loads. Without a cache, every event hits Sheets directly and trips the 60 req/min quota in under one second.
 
 The cache config lives at `packages/core/src/types/cache.ts`. See the [`understanding-stores`](https://github.com/elbwalker/walkerOS/tree/main/skills/understanding-stores) skill for the broader store/cache pattern.
 
@@ -193,4 +196,4 @@ Each value is JSON-stringified into one cell (the `value` column). Reads JSON-pa
 - **Single-cell value shape.** Multi-column structured rows are out of scope, ship a richer schema in a later phase if customers ask.
 - **No drift detection on header content.** If an operator manually edits row 1, the next `walkeros setup store.<id>` overwrites it without warning.
 - **No transactional updates.** `set` is two HTTP calls (read index, write cell). Concurrent writers can interleave.
-- **Not a request-cache backend.** The Sheets store is a key-value state store, not a request-cache backend. It stores a single JSON cell per key and cannot persist the encoded request-cache value, so wiring it as a request cache throws. Cache structured or binary HTTP responses in a filesystem, S3, GCS, or in-memory store instead.
+- **Not a cache tier.** The Sheets store is a key-value state store. It cannot be a cache tier (a `cache.store` target); a cache can still wrap it. Its cells hold structured JSON only and a binary value is rejected. Cache structured or binary HTTP responses in a filesystem, S3, GCS, or in-memory store instead.

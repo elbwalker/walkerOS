@@ -17,9 +17,8 @@
           "package": "@walkeros/server-source-express",
           "config": {
             "settings": {
-              "path": "/collect",
-              "port": 8080,
-              "status": true
+              "paths": ["/collect"],
+              "port": 8080
             }
           }
         }

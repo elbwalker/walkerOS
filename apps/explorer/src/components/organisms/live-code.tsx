@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { WalkerOS } from '@walkeros/core';
 import { debounce, isString, tryCatchAsync } from '@walkeros/core';
 import { CodeBox } from '../molecules/code-box';
@@ -114,7 +114,7 @@ export function LiveCode({
   }, [input, config, options, updateOutput]);
 
   return (
-    <Grid columns={3} className={className} rowHeight={rowHeight}>
+    <Grid columns={config ? 3 : 2} className={className} rowHeight={rowHeight}>
       <CodeBox
         label={labelInput}
         code={input}

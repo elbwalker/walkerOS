@@ -15,7 +15,7 @@ for more details.
 Install the required packages:
 
 <CodeSnippet
-  code={`npm install @walkeros/collector @walkeros/web-source-browser`}
+  code={`npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser`}
   language="bash"
 />
 
@@ -39,13 +39,16 @@ declare global {
   }
 }
 
-export async function initializeWalker(): Promise<void> {
-  // Skip initialization if already done
-  if (window.walker) return;
+let walkerReady: Promise<void> | undefined;
 
-  // Create collector with run: false for manual pageview control
-  const { collector, elb } = await startFlow({
-    run: false,
+// Starts the flow once, later calls return the same promise
+export function initializeWalker(): Promise<void> {
+  walkerReady ??= startWalker();
+  return walkerReady;
+}
+
+async function startWalker(): Promise<void> {
+  const { collector } = await startFlow({
     consent: { functional: true },
     sources: {
       browser: {
@@ -53,7 +56,7 @@ export async function initializeWalker(): Promise<void> {
         config: {
           settings: {
             pageview: true,
-            session: true,
+            history: true, // a page view on every route change
             elb: 'elb',
           },
         },
@@ -65,9 +68,7 @@ export async function initializeWalker(): Promise<void> {
         code: {
           type: 'console',
           config: {},
-          push(event, data) {
-            console.log('Event:', event, data);
-          },
+          push: (event) => console.log('Event:', event.name),
         },
       },
     },
@@ -88,87 +89,65 @@ export function tagger(entity?: string) {
 
 ### 2. App integration
 
-For Next.js applications, use the Next.js router events:
+The collector sends the first page view when it starts. With `history: true`
+the browser source sends one on every route change and picks up the tagged
+elements the new route renders, so the app only starts the walker once.
+Some routers set the new page title after the route change, so its page view
+can carry the previous title. For exact titles, see
+[single-page apps](/docs/sources/web/browser/#single-page-apps).
+
+With the Pages Router, start it in `_app.tsx`:
 
 <CodeSnippet
   code={`// pages/_app.tsx
-import { useRouter } from 'next/router';
-import { useEffect, useRef } from 'react';
+import type { AppProps } from 'next/app';
+import { useEffect } from 'react';
 import { initializeWalker } from '../walker';
 
-export default function App({ Component, pageProps }) {
-  const router = useRouter();
-  const hasInitialized = useRef(false);
-  const firstRun = useRef(true);
-
+export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
-    // Prevent double execution
-    if (!hasInitialized.current) {
-      initializeWalker();
-      hasInitialized.current = true;
-    }
+    // Starts once, also when React StrictMode runs effects twice
+    initializeWalker();
   }, []);
-
-  useEffect(() => {
-    const handleRouteChange = () => {
-      if (firstRun.current) {
-        firstRun.current = false;
-        return;
-      }
-      window.elb('walker run');
-    };
-
-    // Next.js route events
-    router.events.on('routeChangeComplete', handleRouteChange);
-
-    // Call on initial load
-    handleRouteChange();
-
-    return () => {
-      router.events.off('routeChangeComplete', handleRouteChange);
-    };
-  }, [router.events]);
 
   return <Component {...pageProps} />;
 }`}
   language="tsx"
 />
 
-For Next.js 13+ with App Router:
+With the App Router, effects only run in a Client Component, so start it from
+one and render that from the root layout:
+
+<CodeSnippet
+  code={`// app/walker-tracker.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { initializeWalker } from '../walker';
+
+export function WalkerTracker() {
+  useEffect(() => {
+    // Starts once, also when React StrictMode runs effects twice
+    initializeWalker();
+  }, []);
+
+  return null;
+}`}
+  language="tsx"
+/>
 
 <CodeSnippet
   code={`// app/layout.tsx
-'use client';
+import type { ReactNode } from 'react';
+import { WalkerTracker } from './walker-tracker';
 
-import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
-import { initializeWalker } from './walker';
-
-export default function RootLayout({ children }) {
-  const pathname = usePathname();
-  const hasInitialized = useRef(false);
-  const firstRun = useRef(true);
-
-  useEffect(() => {
-    // Prevent double execution
-    if (!hasInitialized.current) {
-      initializeWalker();
-      hasInitialized.current = true;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false;
-      return;
-    }
-
-    window.elb('walker run');
-  }, [pathname]);
-
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <WalkerTracker />
+        {children}
+      </body>
     </html>
   );
 }`}
@@ -177,34 +156,28 @@ export default function RootLayout({ children }) {
 
 ## Component usage
 
-Component usage is identical to React. Use the tagger helper and manual events:
+Component usage is identical to React. Use the tagger helper and manual events.
+Here the tagger sends `product view` when the product is on the page, and the
+button sends `product add` manually. With the App Router, the `onClick` handler
+makes this a Client Component, so its file starts with `'use client'`:
 
 <CodeSnippet
-  code={`import { tagger } from '../walker';
+  code={`'use client';
 
-function ProductPage({ product }) {
-  // Manual event tracking
-  useEffect(() => {
-    window.elb('product view', {
-      id: product.id,
-      name: product.name,
-      price: product.price,
-    });
-  }, [product]);
+import { tagger } from '../walker';
 
+function ProductPage({ product }: { product: { id: number; name: string } }) {
   return (
     <div
-      {...tagger('product')
-        .action('view')
+      {...tagger()
+        .entity('product')
+        .action('load', 'view')
         .data('id', product.id)
         .data('name', product.name)
         .get()}
     >
       <h1>{product.name}</h1>
-      <button
-        {...tagger().action('add').get()}
-        onClick={() => window.elb('product add', { id: product.id })}
-      >
+      <button onClick={() => window.elb('product add', { id: product.id })}>
         Add to Cart
       </button>
     </div>
@@ -222,12 +195,15 @@ chain.
 
 ## Testing
 
-During walker initialization, we added a console destination. This will
-output events to the console. Open your browser's developer console to see
-tracked events:
+During walker initialization, we added a console destination. It logs each
+event's name to the console. Open your browser's developer console and navigate
+from the home page to a product page to see tracked events. The first page view
+is the home page, the second the product page, then the product's view:
 
 ```
-Event: "product view", { id: 123, name: "Premium Chocolate", price: 12.99 }
+Event: page view
+Event: page view
+Event: product view
 ```
 
 ## Best practices
@@ -250,9 +226,12 @@ Event: "product view", { id: 123, name: "Premium Chocolate", price: 12.99 }
 
 ### Route changes not tracked
 
-1. Check that `walker run` is called on route changes
-2. Ensure firstRun logic is preventing double execution on initial load
-3. Verify router event listeners are working correctly
+1. Check that the browser source has `history: true`
+2. Remove route-change `walker run` calls: with `history` on they send a second
+   page view
+3. A route that reuses its component when only a parameter changes does not
+   fire its tagged elements again: remount it per route, for example with a
+   `template.tsx` or a `key`
 
 ### TypeScript errors
 

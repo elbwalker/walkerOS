@@ -118,10 +118,10 @@ the values that change on every push shown as placeholders:
 | `id`, `timestamp`, `timing` | Event id, time in milliseconds, seconds since the page or route started |
 | `source` | Where the event came from, with the page `url` and `referrer` |
 
-`user`, `globals` and `consent` are left out of the push while they are empty,
-for example `user` until you set one, so a `user` your site pushed stays intact.
-Every other key is in every push, `data`, `context` and `custom` even when
-empty, so `_clear` wipes the previous event's values from GTM's data model.
+`user` and `consent` are left out of the push while they are empty, for example
+`user` until you set one, so a `user` your site pushed stays intact. Every other
+key is in every push, `data`, `context`, `custom` and `globals` even when empty,
+so `_clear` wipes the previous event's values from GTM's data model.
 
 Two events need no tagging:
 

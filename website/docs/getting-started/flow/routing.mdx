@@ -97,7 +97,7 @@ Every chain field (`source.before`, `source.next`, `transformer.before`, `transf
 type Route = string | Route[] | RouteConfig;
 ```
 
-A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, `stop`, or none of them (pure gate that only filters by `match`). `match` is optional everywhere; omit it to always match.
+A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, `stop`, or none of them (pure gate that only filters by `match`). `match` is optional on `next`, `one`, `many` and `stop`; omit it to always match. A pure gate requires `match`.
 
 At every position, `match` reads the same root: `{ ingest, event }`. Use `ingest.*` for request context and `event.*` for the event as it is at that point (at `source.before`, the source's raw output). Each route is evaluated only when the event reaches it.
 

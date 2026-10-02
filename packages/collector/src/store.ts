@@ -1,7 +1,7 @@
 import type { Cache, Collector, Store } from '@walkeros/core';
 import { emitStep, useHooks } from '@walkeros/core';
 import { createCacheStore } from './cache-store';
-import { buildBaseState } from './observerEmit';
+import { stepError, stepState } from './observerEmit';
 import { wrapStoreWithCache } from './store-cache-wrapper';
 import { buildReportError } from './report-error';
 
@@ -63,45 +63,38 @@ function applyStoreHooks(
 
   instance.get = async (key: string): Promise<Store.StoreValue | undefined> => {
     const started = Date.now();
-    const inState = buildBaseState(collector, {
-      stepId: stepIdFor,
-      stepType: 'store',
-      phase: 'in',
-      eventId: '',
-      now: started,
-    });
+    const inState = stepState(collector, stepIdFor, 'store', 'in', '', started);
     inState.meta = { op: 'get', key };
     emitStep(collector, inState);
 
     try {
       const result = await innerGet(key);
       const finished = Date.now();
-      const outState = buildBaseState(collector, {
-        stepId: stepIdFor,
-        stepType: 'store',
-        phase: 'out',
-        eventId: '',
-        now: finished,
-      });
+      const outState = stepState(
+        collector,
+        stepIdFor,
+        'store',
+        'out',
+        '',
+        finished,
+      );
       outState.durationMs = finished - started;
       outState.meta = { op: 'get', key };
       emitStep(collector, outState);
       return result;
     } catch (err) {
       const finished = Date.now();
-      const errState = buildBaseState(collector, {
-        stepId: stepIdFor,
-        stepType: 'store',
-        phase: 'error',
-        eventId: '',
-        now: finished,
-      });
+      const errState = stepState(
+        collector,
+        stepIdFor,
+        'store',
+        'error',
+        '',
+        finished,
+      );
       errState.durationMs = finished - started;
       errState.meta = { op: 'get', key };
-      errState.error =
-        err instanceof Error
-          ? { name: err.name, message: err.message }
-          : { message: String(err) };
+      errState.error = stepError(err);
       emitStep(collector, errState);
       throw err;
     }
@@ -113,13 +106,7 @@ function applyStoreHooks(
     ttl?: number,
   ): Promise<void> => {
     const started = Date.now();
-    const inState = buildBaseState(collector, {
-      stepId: stepIdFor,
-      stepType: 'store',
-      phase: 'in',
-      eventId: '',
-      now: started,
-    });
+    const inState = stepState(collector, stepIdFor, 'store', 'in', '', started);
     // Store values can be secrets or PII: emit only the op + key, never the
     // raw value, on any phase (in/out/error). Observers see what happened,
     // not what was written.
@@ -129,31 +116,30 @@ function applyStoreHooks(
     try {
       await innerSet(key, value, ttl);
       const finished = Date.now();
-      const outState = buildBaseState(collector, {
-        stepId: stepIdFor,
-        stepType: 'store',
-        phase: 'out',
-        eventId: '',
-        now: finished,
-      });
+      const outState = stepState(
+        collector,
+        stepIdFor,
+        'store',
+        'out',
+        '',
+        finished,
+      );
       outState.durationMs = finished - started;
       outState.meta = { op: 'set', key };
       emitStep(collector, outState);
     } catch (err) {
       const finished = Date.now();
-      const errState = buildBaseState(collector, {
-        stepId: stepIdFor,
-        stepType: 'store',
-        phase: 'error',
-        eventId: '',
-        now: finished,
-      });
+      const errState = stepState(
+        collector,
+        stepIdFor,
+        'store',
+        'error',
+        '',
+        finished,
+      );
       errState.durationMs = finished - started;
       errState.meta = { op: 'set', key };
-      errState.error =
-        err instanceof Error
-          ? { name: err.name, message: err.message }
-          : { message: String(err) };
+      errState.error = stepError(err);
       emitStep(collector, errState);
       throw err;
     }
@@ -161,44 +147,37 @@ function applyStoreHooks(
 
   instance.delete = async (key: string): Promise<void> => {
     const started = Date.now();
-    const inState = buildBaseState(collector, {
-      stepId: stepIdFor,
-      stepType: 'store',
-      phase: 'in',
-      eventId: '',
-      now: started,
-    });
+    const inState = stepState(collector, stepIdFor, 'store', 'in', '', started);
     inState.meta = { op: 'delete', key };
     emitStep(collector, inState);
 
     try {
       await innerDelete(key);
       const finished = Date.now();
-      const outState = buildBaseState(collector, {
-        stepId: stepIdFor,
-        stepType: 'store',
-        phase: 'out',
-        eventId: '',
-        now: finished,
-      });
+      const outState = stepState(
+        collector,
+        stepIdFor,
+        'store',
+        'out',
+        '',
+        finished,
+      );
       outState.durationMs = finished - started;
       outState.meta = { op: 'delete', key };
       emitStep(collector, outState);
     } catch (err) {
       const finished = Date.now();
-      const errState = buildBaseState(collector, {
-        stepId: stepIdFor,
-        stepType: 'store',
-        phase: 'error',
-        eventId: '',
-        now: finished,
-      });
+      const errState = stepState(
+        collector,
+        stepIdFor,
+        'store',
+        'error',
+        '',
+        finished,
+      );
       errState.durationMs = finished - started;
       errState.meta = { op: 'delete', key };
-      errState.error =
-        err instanceof Error
-          ? { name: err.name, message: err.message }
-          : { message: String(err) };
+      errState.error = stepError(err);
       emitStep(collector, errState);
       throw err;
     }

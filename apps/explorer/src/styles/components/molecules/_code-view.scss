@@ -1,0 +1,45 @@
+// CodeView renders static code, which has an intrinsic height, unlike Monaco.
+// Without an explicit height and outside a Grid it carries
+// `.elb-code-view--fit`: the box sizes to its code and scrolls inside past
+// the cap, instead of the Box default fixed height.
+.elb-code-view--fit {
+  // (0,2,0) outranks `.elb-explorer-box` in _box.scss, which loads later.
+  &.elb-explorer-box {
+    height: auto;
+    min-height: 0;
+    max-height: var(--height-code-view-max);
+  }
+
+  // Content-based flex basis down the static chain, so the sizing does not
+  // depend on how an auto-height container resolves the default `flex: 1`.
+  > .elb-explorer-content,
+  .elb-code-static,
+  .elb-code-static pre {
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+}
+
+// CodeView without a header or tabs floats its actions (copy) over the code's
+// top-right corner. `.elb-explorer-content` is the positioning context.
+.elb-code-view-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  display: flex;
+  background: var(--bg-box);
+  border-radius: var(--radius-button);
+  opacity: 0;
+  transition: opacity 0.15s;
+
+  .elb-explorer-content:hover > &,
+  &:focus-within {
+    opacity: 1;
+  }
+
+  // No hover on touch screens: keep the action visible.
+  @media (hover: none) {
+    opacity: 1;
+  }
+}

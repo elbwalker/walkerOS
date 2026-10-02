@@ -45,33 +45,63 @@ export interface BuildBaseStateArgs {
 }
 
 /**
- * Build a `FlowState` carrying the six always-populated fields. Callers
- * fill in additional fields (consent, batch, error, meta, inEvent,
- * outEvent, mappingKey, durationMs) as relevant for the step site.
+ * Build a `FlowState` carrying the always-populated fields. Callers fill in
+ * additional fields (consent, batch, error, meta, inEvent, outEvent,
+ * mappingKey, durationMs) as relevant for the step site.
  *
  * `flowId` is the collector's static flow `name`, falling back to `'default'`
- * when the flow is unnamed.
+ * when the flow is unnamed. The journey trio is stamped only when `journey`
+ * carries a truthy value, so store and init records never carry it.
  */
+export function stepState(
+  collector: Collector.Instance,
+  stepId: string,
+  stepType: FlowState['stepType'],
+  phase: FlowState['phase'],
+  eventId: string,
+  now = Date.now(),
+  journey?: JourneyFields,
+): FlowState {
+  const state: FlowState = {
+    flowId: collector.name ?? 'default',
+    stepId,
+    stepType,
+    phase,
+    eventId,
+    timestamp: new Date(now).toISOString(),
+    elapsedMs: now - collector.status.startedAt,
+  };
+  // An undefined trace/source/parent must not appear as an explicit key.
+  if (journey?.traceId) state.traceId = journey.traceId;
+  if (journey?.sourceId) state.sourceId = journey.sourceId;
+  if (journey?.parentEventId) state.parentEventId = journey.parentEventId;
+  return state;
+}
+
+/** Object-argument form of `stepState`. */
 export function buildBaseState(
   collector: Collector.Instance,
   args: BuildBaseStateArgs,
 ): FlowState {
-  const startedAt = collector.status.startedAt;
-  const state: FlowState = {
-    flowId: collector.name ?? 'default',
-    stepId: args.stepId,
-    stepType: args.stepType,
-    phase: args.phase,
-    eventId: args.eventId,
-    timestamp: new Date(args.now).toISOString(),
-    elapsedMs: args.now - startedAt,
-  };
-  // Stamp journey-correlation fields only when a truthy value is in scope;
-  // an undefined trace/source/parent must not appear as an explicit key.
-  if (args.traceId) state.traceId = args.traceId;
-  if (args.sourceId) state.sourceId = args.sourceId;
-  if (args.parentEventId) state.parentEventId = args.parentEventId;
-  return state;
+  return stepState(
+    collector,
+    args.stepId,
+    args.stepType,
+    args.phase,
+    args.eventId,
+    args.now,
+    args,
+  );
+}
+
+/**
+ * The error a `FlowState` carries: name and message for an `Error`, the
+ * message alone for anything else thrown.
+ */
+export function stepError(err: unknown): NonNullable<FlowState['error']> {
+  return err instanceof Error
+    ? { name: err.name, message: err.message }
+    : { message: String(err) };
 }
 
 /**
@@ -105,14 +135,15 @@ export function emitCollectorDrop(
   at: string,
 ): void {
   collector.status.in++;
-  const state = buildBaseState(collector, {
-    stepId: 'collector.push',
-    stepType: 'collector',
-    phase: 'skip',
-    eventId: typeof event.id === 'string' ? event.id : '',
-    now: Date.now(),
-    ...journeyFields(event, ingest, collector),
-  });
+  const state = stepState(
+    collector,
+    'collector.push',
+    'collector',
+    'skip',
+    typeof event.id === 'string' ? event.id : '',
+    Date.now(),
+    journeyFields(event, ingest, collector),
+  );
   state.skipReason = 'dropped';
   state.meta = { by: by ?? 'route', at };
   emitStep(collector, state);

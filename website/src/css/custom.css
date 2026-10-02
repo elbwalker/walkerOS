@@ -249,3 +249,10 @@ h6 {
     margin: 0.5em 0;
   }
 }
+
+/* Explorer code blocks in docs prose keep the paragraph rhythm below them.
+   Unlayered, so it wins over the Tailwind base reset. */
+.markdown .elb-code-snippet:not(:last-child),
+.markdown .elb-step-example:not(:last-child) {
+  margin-bottom: var(--ifm-leading);
+}

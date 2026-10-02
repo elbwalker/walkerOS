@@ -83,7 +83,7 @@ static, their content can be defined dynamically with different value types.
   entity: 'promotion', // The entity name involved in the event
   action: 'view', // The specific action performed on the entity
   timestamp: 1647261462000, // Time when the event fired
-  timing: 3.14, // Duration how long it took to trigger this event
+  timing: 3.14, // Seconds from the start of the run until the event fired
   source: {
     // Details about the origin of the event
     type: 'browser', // Source kind (e.g. browser, dataLayer, express)
@@ -158,8 +158,10 @@ There are recommended identifiers used for stitching user journeys together:
 `id`, `device`, and `session`.
 
 This enables cross-device tracking or linking sessions for a cohesive user
-journey. On a server-side setup, a temporarily `hash` value is added. Any other
-user-related information can also be added. A few values are recommended:
+journey. On a server-side setup, the
+[fingerprint transformer](/docs/transformers/fingerprint) can add a `hash` value
+(written to `user.hash` by default). Any other user-related information can
+also be added. A few values are recommended:
 
 <CodeSnippet
   code={`interface User extends Properties {
@@ -167,8 +169,11 @@ user-related information can also be added. A few values are recommended:
 id?: string; // User ID
 device?: string; // Typically a cookie or local storage ID
 session?: string; // Session ID
-hash?: string; // Temporary hash for server-side setups
+hash?: string; // Hashed identifier, e.g. from the fingerprint transformer
 // User related
+address?: string; // Postal address
+email?: string; // Email address
+phone?: string; // Phone number
 userAgent?: string; // Full user agent string
 browser?: string; // Browser name
 browserVersion?: string; // Browser version
@@ -177,6 +182,7 @@ language?: string; // User's language settings
 country?: string; // Country code
 region?: string; // Region code
 city?: string; // City name
+zip?: string; // Postal code
 timezone?: string; // Timezone
 os?: string; // Operating system
 osVersion?: string; // Operating system version

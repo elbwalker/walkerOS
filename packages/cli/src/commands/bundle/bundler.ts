@@ -126,6 +126,7 @@ import {
   collectImportedPackages,
 } from './nft-trace.js';
 import { assertConsumerDepsSatisfied } from './assert-consumer-deps.js';
+import { buildFlagDefines, flowNeeds, needsMarker } from './build-flags.js';
 import type { Logger } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 import { getTmpPath } from '../../core/tmp.js';
@@ -633,7 +634,14 @@ export async function bundleCore(
         buildOptions.platform === 'node'
           ? `import { createRequire } from 'module';const require = createRequire(import.meta.url);\n`
           : '';
-      const esmOutput = `${banner}${compiledCode}\n${dataDeclaration}`;
+      // A browser skeleton ends with its flow's needs, which the publish-time
+      // wrap reads to define the build flags. Appended after the cached stage
+      // 1 code, so the code cache key is unchanged.
+      const needs =
+        buildOptions.platform === 'browser'
+          ? `\n${needsMarker(flowNeeds(flowSettings))}\n`
+          : '';
+      const esmOutput = `${banner}${compiledCode}\n${dataDeclaration}${needs}`;
       await fs.writeFile(outputPath, esmOutput);
     } else {
       // Production path: stage 2 esbuild compilation. Reached only by `cdn`
@@ -684,9 +692,12 @@ export async function bundleCore(
         // `window` explicitly, so they still run. The browser entry has zero
         // exports, so no `globalName` is needed (one would add a window var).
         stage2Options.format = 'iife';
+        // Every build flag is defined from the flow's needs, so a feature the
+        // flow does not use folds out (see build-flags.ts).
         stage2Options.define = {
           'process.env.NODE_ENV': '"production"',
           global: 'globalThis',
+          ...buildFlagDefines(flowNeeds(flowSettings)),
         };
         stage2Options.target = resolveTarget(buildOptions);
       } else {

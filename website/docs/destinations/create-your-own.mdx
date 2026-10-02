@@ -267,7 +267,7 @@ import { destinationWebhook } from './destinationWebhook';
 const { elb } = await startFlow({
 destinations: {
 myWebhook: {
-destination: destinationWebhook,
+code: destinationWebhook,
 config: {
   settings: {
     url: 'https://api.example.com/events',

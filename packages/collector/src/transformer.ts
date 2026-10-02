@@ -56,12 +56,11 @@ import {
   createMappingRoot,
   validateStepEntry,
   processEventMapping,
-  compileState,
-  applyState,
 } from '@walkeros/core';
-import { buildBaseState, journeyFields } from './observerEmit';
-import { getCacheStore, getStateStore } from './cache';
+import { journeyFields, stepError, stepState } from './observerEmit';
+import { getCacheStore } from './cache';
 import { buildReportError, errorMeta } from './report-error';
+import { compileStepState, runStepState, warnStateOff } from './state';
 
 /**
  * Extracts chain property from definition and merges into config.
@@ -115,16 +114,19 @@ export async function initTransformers(
     // Validate the entry via the shared predicate. A code-less entry must
     // declare at least one operative field (package, before, next, cache,
     // state, mapping). Unknown keys and code+package conflicts are also
-    // rejected.
-    const validation = validateStepEntry(
-      transformerDef as Record<string, unknown>,
-      'Transformer',
-    );
-    if (!validation.ok) {
-      collector.logger.warn(
-        `Transformer ${transformerId} invalid (${validation.code}): ${validation.reason}. Skipping.`,
+    // rejected. Build flag (see @walkeros/core build-flags): CLI bundles
+    // validate at build time and fold this out.
+    if (typeof __WALKEROS_VALIDATE__ === 'undefined' || __WALKEROS_VALIDATE__) {
+      const validation = validateStepEntry(
+        transformerDef as Record<string, unknown>,
+        'Transformer',
       );
-      continue;
+      if (!validation.ok) {
+        collector.logger.warn(
+          `Transformer ${transformerId} invalid (${validation.code}): ${validation.reason}. Skipping.`,
+        );
+        continue;
+      }
     }
 
     // Use unified chain property extractor for both before and next
@@ -151,6 +153,11 @@ export async function initTransformers(
     // Merge definition-level state into config for runtime access. A
     // config-level `state` (if present) takes precedence over def-level.
     const resolvedState = transformerDef.config?.state ?? transformerDef.state;
+    warnStateOff(
+      collector,
+      stepId('transformer', transformerId),
+      resolvedState,
+    );
     const configWithState =
       resolvedState !== undefined && configWithCache.state === undefined
         ? { ...configWithCache, state: resolvedState }
@@ -390,22 +397,17 @@ export async function transformerPush(
   transformerLogger.debug('push', { event: (event as { name?: string }).name });
 
   const eventId = typeof event.id === 'string' ? event.id : '';
-  const { traceId, sourceId, parentEventId } = journeyFields(
-    event,
-    ingest,
-    collector,
-  );
+  const journey = journeyFields(event, ingest, collector);
   const started = Date.now();
-  const inState = buildBaseState(collector, {
-    stepId: stepId('transformer', transformerId),
-    stepType: 'transformer',
-    phase: 'in',
+  const inState = stepState(
+    collector,
+    stepId('transformer', transformerId),
+    'transformer',
+    'in',
     eventId,
-    now: started,
-    traceId,
-    sourceId,
-    parentEventId,
-  });
+    started,
+    journey,
+  );
   inState.inEvent = event;
   emitStep(collector, inState);
 
@@ -418,16 +420,15 @@ export async function transformerPush(
     )(event, context);
 
     const finished = Date.now();
-    const outState = buildBaseState(collector, {
-      stepId: stepId('transformer', transformerId),
-      stepType: 'transformer',
-      phase: 'out',
+    const outState = stepState(
+      collector,
+      stepId('transformer', transformerId),
+      'transformer',
+      'out',
       eventId,
-      now: finished,
-      traceId,
-      sourceId,
-      parentEventId,
-    });
+      finished,
+      journey,
+    );
     outState.durationMs = finished - started;
     outState.outEvent = result;
     emitStep(collector, outState);
@@ -437,21 +438,17 @@ export async function transformerPush(
     return result;
   } catch (err) {
     const finished = Date.now();
-    const errState = buildBaseState(collector, {
-      stepId: stepId('transformer', transformerId),
-      stepType: 'transformer',
-      phase: 'error',
+    const errState = stepState(
+      collector,
+      stepId('transformer', transformerId),
+      'transformer',
+      'error',
       eventId,
-      now: finished,
-      traceId,
-      sourceId,
-      parentEventId,
-    });
+      finished,
+      journey,
+    );
     errState.durationMs = finished - started;
-    errState.error =
-      err instanceof Error
-        ? { name: err.name, message: err.message }
-        : { message: String(err) };
+    errState.error = stepError(err);
     emitStep(collector, errState);
     throw err;
   }
@@ -880,9 +877,7 @@ async function runMember(
   // Compile declarative state entries. `get` runs before the push (so the
   // mapping can read fetched values); `set` runs after the push settled the
   // event and before the member's route resolves.
-  const stateEntries = transformer.config?.state
-    ? compileState(transformer.config.state)
-    : undefined;
+  const stateEntries = compileStepState(transformer.config?.state);
   const stateGet = stateEntries?.filter((entry) => entry.mode === 'get');
   const stateSet = stateEntries?.filter((entry) => entry.mode === 'set');
 
@@ -890,21 +885,14 @@ async function runMember(
     evt: WalkerOS.DeepPartialEvent,
   ): Promise<WalkerOS.DeepPartialEvent> => {
     if (!stateSet || stateSet.length === 0) return evt;
-    return applyState(
-      stateSet,
-      (id) => getStateStore(id, collector),
-      evt,
-      collector,
-      ingest,
-    );
+    return runStepState(collector, stateSet, evt, ingest);
   };
 
   if (stateGet && stateGet.length > 0) {
-    processedEvent = await applyState(
-      stateGet,
-      (id) => getStateStore(id, collector),
-      processedEvent,
+    processedEvent = await runStepState(
       collector,
+      stateGet,
+      processedEvent,
       ingest,
     );
   }

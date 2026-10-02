@@ -92,12 +92,15 @@ function logOnCallbackError(
  * truth for "which types are state cells" — every list/membership check derives
  * from here, so adding a cell is a one-line change (no silently-missed site).
  */
-const STATE_CELLS: readonly On.Types[] = [
-  Const.Commands.Consent,
-  Const.Commands.User,
-  Const.Commands.Globals,
-  Const.Commands.Custom,
-];
+const STATE_CELLS = ['consent', 'user', 'globals', 'custom'] as const;
+
+type StateCell = (typeof STATE_CELLS)[number];
+
+/** Is `type` a state cell? Narrows it to a key of the collector's cells. */
+function isStateCell(type: On.Types): type is StateCell {
+  const cells: readonly On.Types[] = STATE_CELLS;
+  return cells.includes(type);
+}
 
 /**
  * State-delivery event types: the reactive-state commands that bump
@@ -107,7 +110,7 @@ const STATE_CELLS: readonly On.Types[] = [
  * (onReady/onRun check `allowed`, onSession checks `session`).
  */
 export function isStateDelivery(type: On.Types): boolean {
-  return STATE_CELLS.includes(type);
+  return isStateCell(type);
 }
 
 /**
@@ -126,18 +129,7 @@ export function isStatePresent(
   collector: Collector.Instance,
   type: On.Types,
 ): boolean {
-  switch (type) {
-    case Const.Commands.Consent:
-      return Object.keys(collector.consent).length > 0;
-    case Const.Commands.User:
-      return Object.keys(collector.user).length > 0;
-    case Const.Commands.Globals:
-      return Object.keys(collector.globals).length > 0;
-    case Const.Commands.Custom:
-      return Object.keys(collector.custom).length > 0;
-    default:
-      return false;
-  }
+  return isStateCell(type) && Object.keys(collector[type]).length > 0;
 }
 
 /**
@@ -162,12 +154,8 @@ export function isRequireSatisfied(
   collector: Collector.Instance,
   type: On.Types,
 ): boolean {
+  if (isStateCell(type)) return isStatePresent(collector, type);
   switch (type) {
-    case Const.Commands.Consent:
-    case Const.Commands.User:
-    case Const.Commands.Globals:
-    case Const.Commands.Custom:
-      return isStatePresent(collector, type);
     case Const.Commands.Run:
     case Const.Commands.Ready:
       return collector.allowed === true;
@@ -222,12 +210,9 @@ export function setMark(
   subscriber: object,
   type: On.Types,
 ): void {
-  let marks = collector.delivery.get(subscriber);
-  if (!marks) {
-    marks = {};
-    collector.delivery.set(subscriber, marks);
-  }
-  marks[String(type)] = cellVersionOf(collector, type);
+  // Marks never pass a cell's version, so advancing to the current version
+  // is the same as setting it.
+  advanceMark(collector, subscriber, type, cellVersionOf(collector, type));
 }
 
 /**
@@ -590,9 +575,7 @@ function awaitOverdueDelivery(
     const count = (overdueDeliveries.get(destination) || 0) - 1;
     if (count > 0) overdueDeliveries.set(destination, count);
     else overdueDeliveries.delete(destination);
-    const lost = lostCells.get(destination);
-    if (lost) lost.add(String(type));
-    else lostCells.set(destination, new Set([String(type)]));
+    addLostCell(destination, type);
     clearInFlightVersion(destination, type, version);
     closeStateDelivery(collector, destination);
     logger.debug('late settle after timeout');
@@ -700,6 +683,12 @@ function clearInFlightVersion(
  */
 const lostCells = new WeakMap<Destination.Instance, Set<string>>();
 
+function addLostCell(destination: Destination.Instance, type: On.Types): void {
+  const lost = lostCells.get(destination);
+  if (lost) lost.add(String(type));
+  else lostCells.set(destination, new Set([String(type)]));
+}
+
 /**
  * Destinations whose init flush is running. `held` records whether the flush
  * opened a state delivery window, closed once when the flush ends.
@@ -741,9 +730,7 @@ export function markStateLost(
   type: On.Types,
 ): void {
   clearMark(collector, destination, type);
-  const lost = lostCells.get(destination);
-  if (lost) lost.add(String(type));
-  else lostCells.set(destination, new Set([String(type)]));
+  addLostCell(destination, type);
   stateHolds.set(destination, { type, since: Date.now() });
 }
 
@@ -862,13 +849,9 @@ function releaseHoldIfCurrent(
 ): void {
   if (!stateHolds.has(destination)) return;
   if (stateInFlight.get(destination)) return;
-  if (lostCells.get(destination)?.size) return;
-  const owed = STATE_CELLS.some(
-    (cell) =>
-      isStatePresent(collector, cell) &&
-      shouldDeliver(collector, destination, cell),
-  );
-  if (!owed) stateHolds.delete(destination);
+  if (!owesDestinationState(collector, destination)) {
+    stateHolds.delete(destination);
+  }
 }
 
 /**
@@ -957,17 +940,10 @@ function resolveDeliveryData(
   type: On.Types,
   config?: unknown,
 ): unknown {
+  if (isStateCell(type)) return config || collector[type];
   switch (type) {
-    case Const.Commands.Consent:
-      return config || collector.consent;
     case Const.Commands.Session:
       return collector.session;
-    case Const.Commands.User:
-      return config || collector.user;
-    case Const.Commands.Custom:
-      return config || collector.custom;
-    case Const.Commands.Globals:
-      return config || collector.globals;
     case Const.Commands.Config:
       return config || collector.config;
     default:

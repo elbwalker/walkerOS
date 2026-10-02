@@ -26,6 +26,7 @@ import {
 } from './bundler.js';
 import type { ObserveWeb } from '@walkeros/core';
 import { tmpRunDir } from '../../core/tmp-names.js';
+import { buildFlagDefines, readNeedsMarker } from './build-flags.js';
 import type { WrapEntryPreview } from './bundler.js';
 import type { MinifyOptions } from '../../types/bundle.js';
 
@@ -248,9 +249,19 @@ export async function wrapSkeleton(
       // `window` explicitly, so they still run. The entry has zero exports, so
       // no `globalName` is needed.
       esbuildOptions.format = 'iife';
+      // Build flags from the needs the skeleton carries. Only a baked observe
+      // config adds to them: the recorder runs only for a collector that has
+      // one. A skeleton without needs (an older CLI) keeps every flag on.
+      const needs = readNeedsMarker(skeletonText);
       esbuildOptions.define = {
         'process.env.NODE_ENV': '"production"',
         global: 'globalThis',
+        ...buildFlagDefines(
+          needs && {
+            ...needs,
+            observe: needs.observe || options.observe !== undefined,
+          },
+        ),
       };
       // Externalize `<pkg>/dev` so the wrap skips resolving the lazy registry's
       // literals and DCE drops the unreferenced registry (see above). The node

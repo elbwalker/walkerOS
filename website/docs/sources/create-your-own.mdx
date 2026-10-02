@@ -394,7 +394,7 @@ await expressSource.push(req, res); // typed!`}
   language="typescript"
 />
 
-Symmetric helpers exist for every step kind: `Source.getSource`, `Destination.getDestination`, `Transformer.getTransformer`, `Store.getStore`. Each throws `<Kind> not found: <id>` when the id is unknown. The helpers are opt-in and have no runtime cost.
+Symmetric helpers exist for every step kind: `Source.getSource`, `Destination.getDestination`, `Transformer.getTransformer`, `Store.getStore`. Each throws `<Kind> not found: <id>` when the id is unknown. The helpers are opt-in: they do nothing unless you call them.
 
 ## Setup lifecycle (optional)
 

@@ -153,7 +153,6 @@ describe('docs transform: node shapes', () => {
       attrValue(code, 'code'),
       oracle(resolvePointer(FLOW, e.pointer)),
     );
-    assert.equal(attr(code, 'height'), undefined, 'short slice: no height');
     assert.equal(caption.name, 'figcaption');
     const link = caption.children.find((c) => c.type === 'link');
     assert.equal(link.url, guideChapterUrl(e.chapter));
@@ -163,27 +162,14 @@ describe('docs transform: node shapes', () => {
     assert.equal(findAll(tree, isJsx('FlowSlice')).length, 0);
   });
 
-  test('a slice over 30 lines gets height 480px; string, not expression', () => {
-    const tree = transform('<FlowSlice feature="flow-sources" />\n');
-    const [code] = findAll(tree, isJsx('CodeView'));
-    const height = attr(code.node, 'height');
-    assert.ok(height, 'height set');
-    assert.equal(height.value, '480px');
-  });
-
-  test('exactly 30 lines is not tall, 31 is (boundary against the oracle)', () => {
-    // Every object feature: height present iff oracle lines > 30.
+  test('every object slice renders its oracle code and sets no height', () => {
+    // CodeView sizes a slice to its code, so no slice pins a height.
     for (const e of flowCompleteFeatures) {
       const value = resolvePointer(FLOW, e.pointer);
       if (!isRecord(value) && !Array.isArray(value)) continue;
       const tree = transform(`<FlowSlice feature="${e.id}" />\n`);
       const [code] = findAll(tree, isJsx('CodeView'));
-      const lines = oracle(value).split('\n').length;
-      assert.equal(
-        attr(code.node, 'height') !== undefined,
-        lines > 30,
-        `${e.id}: ${lines} lines`,
-      );
+      assert.equal(attr(code.node, 'height'), undefined, e.id);
       assert.equal(attrValue(code.node, 'code'), oracle(value), e.id);
     }
   });
