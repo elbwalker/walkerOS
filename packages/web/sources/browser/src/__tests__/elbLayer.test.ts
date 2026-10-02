@@ -24,6 +24,7 @@ const settings = (): Settings => ({
   scope: document,
   pageview: false,
   capture: true,
+  history: false,
   elb: false,
   elbLayer: 'elbLayer',
 });

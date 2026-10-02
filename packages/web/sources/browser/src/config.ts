@@ -16,6 +16,7 @@ export function getConfig(
     prefix: 'data-elb',
     pageview: true,
     capture: true,
+    history: false,
     elb: 'elb',
     elbLayer: 'elbLayer',
     scope: envDocument || undefined,
@@ -34,6 +35,7 @@ export function settingsFrom(value: unknown): Settings {
   if (isString(value.prefix)) init.prefix = value.prefix;
   if (isBoolean(value.pageview)) init.pageview = value.pageview;
   if (isBoolean(value.capture)) init.capture = value.capture;
+  if (isBoolean(value.history)) init.history = value.history;
   if (isString(value.name)) init.name = value.name;
   if (isString(value.elb) || value.elb === false) init.elb = value.elb;
   if (isString(value.elbLayer) || isBoolean(value.elbLayer))

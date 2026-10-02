@@ -127,7 +127,10 @@ describe('window footprint', () => {
 
 describe('settingsFrom', () => {
   test('keeps the fields of resolved settings', () => {
-    const resolved = getConfig({ prefix: 'data-x', pageview: false }, document);
+    const resolved = getConfig(
+      { prefix: 'data-x', pageview: false, history: true },
+      document,
+    );
     expect(settingsFrom(resolved)).toEqual(resolved);
   });
 

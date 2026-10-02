@@ -1,120 +1,92 @@
-import type { WalkerOS, Destination } from '@walkeros/core';
+import type { Destination, WalkerOS } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 import { dataLayerDestination } from '../destination';
-import { mockDataLayer } from './setup';
 
-describe('Destination Tests', () => {
-  beforeEach(() => {});
+// Driven through a real collector, so the push is what a page gets.
 
-  describe('Initialization', () => {
-    test('should create destination', () => {
-      const destination = dataLayerDestination();
+const dataLayer = (): unknown[] => {
+  const value: unknown = Reflect.get(window, 'dataLayer');
+  return Array.isArray(value) ? value : [];
+};
+const lastPush = (): unknown => dataLayer()[dataLayer().length - 1];
 
-      expect(destination).toMatchObject({
-        type: 'dataLayer',
-        config: {},
-        push: expect.any(Function),
-        pushBatch: expect.any(Function),
-      });
-    });
+beforeEach(() => {
+  Reflect.deleteProperty(window, 'dataLayer');
+});
 
-    test('should push event to dataLayer', () => {
-      const destination = dataLayerDestination();
-      const event = {
-        name: 'foo bar',
-      } as unknown as WalkerOS.Event;
-      destination.push(event, {} as unknown as Destination.PushContext);
-      expect(mockDataLayer).toHaveBeenCalledWith(event);
-    });
-
-    test('should not push events from dataLayer source', () => {
-      const destination = dataLayerDestination();
-      const event = {
-        name: 'foo bar',
-        source: {
-          type: 'dataLayer',
-        },
-      } as unknown as WalkerOS.Event;
-      destination.push(event, {} as unknown as Destination.PushContext);
-      expect(mockDataLayer).not.toHaveBeenCalled();
-    });
-
-    test('should push context data when available', () => {
-      const destination = dataLayerDestination();
-      const event = {
-        name: 'foo bar',
-      } as unknown as WalkerOS.Event;
-      const contextData = { custom: 'data' };
-      destination.push(event, {
-        data: contextData,
-      } as unknown as Destination.PushContext);
-      expect(mockDataLayer).toHaveBeenCalledWith(contextData);
-    });
+it('pushes the full event plus event and _clear', async () => {
+  const { elb } = await startFlow({
+    destinations: { dataLayer: { code: dataLayerDestination() } },
   });
-
-  describe('Batch Processing', () => {
-    test('should push batch with events array', () => {
-      const destination = dataLayerDestination();
-      const batch = {
-        key: 'test-batch',
-        data: [{ name: 'event1' }, { name: 'event2' }],
-        events: [],
-      } as unknown as Destination.Batch<unknown>;
-
-      destination.pushBatch?.(batch, {} as unknown as Destination.PushContext);
-
-      expect(mockDataLayer).toHaveBeenCalledWith({
-        name: 'batch',
-        batched_event: 'test-batch',
-        events: [{ name: 'event1' }, { name: 'event2' }],
-      });
-    });
-
-    test('should push batch with events fallback when data is empty', () => {
-      const destination = dataLayerDestination();
-      const batch = {
-        key: 'test-batch',
-        data: [],
-        events: [{ name: 'fallback1' }, { name: 'fallback2' }],
-      } as unknown as Destination.Batch<unknown>;
-
-      destination.pushBatch?.(batch, {} as unknown as Destination.PushContext);
-
-      expect(mockDataLayer).toHaveBeenCalledWith({
-        name: 'batch',
-        batched_event: 'test-batch',
-        events: [{ name: 'fallback1' }, { name: 'fallback2' }],
-      });
-    });
+  await elb('product view', { name: 'Cotton Tee', price: 25 });
+  expect(lastPush()).toMatchObject({
+    event: 'product view',
+    name: 'product view',
+    entity: 'product',
+    action: 'view',
+    data: { name: 'Cotton Tee', price: 25 },
+    _clear: true,
   });
+});
 
-  describe('Edge Cases', () => {
-    test('should handle non-object events', () => {
-      const destination = dataLayerDestination();
-      const event = 'string event' as unknown as WalkerOS.Event;
-      destination.push(event, {} as unknown as Destination.PushContext);
-      expect(mockDataLayer).toHaveBeenCalledWith(event);
-    });
-
-    test('should handle events with non-object source', () => {
-      const destination = dataLayerDestination();
-      const event = {
-        name: 'foo bar',
-        source: 'string source',
-      } as unknown as WalkerOS.Event;
-      destination.push(event, {} as unknown as Destination.PushContext);
-      expect(mockDataLayer).toHaveBeenCalledWith(event);
-    });
-
-    test('should handle events with dataLayer-like source type', () => {
-      const destination = dataLayerDestination();
-      const event = {
-        name: 'foo bar',
-        source: {
-          type: 'custom-dataLayer-source',
-        },
-      } as unknown as WalkerOS.Event;
-      destination.push(event, {} as unknown as Destination.PushContext);
-      expect(mockDataLayer).not.toHaveBeenCalled();
-    });
+it('keeps an existing dataLayer array (GTM may own it)', async () => {
+  const existing: unknown[] = [{ gtm: 'start' }];
+  Reflect.set(window, 'dataLayer', existing);
+  const { elb } = await startFlow({
+    destinations: { dataLayer: { code: dataLayerDestination() } },
   });
+  await elb('product view', { name: 'Cotton Tee' });
+  expect(Reflect.get(window, 'dataLayer')).toBe(existing);
+  expect(existing).toHaveLength(2);
+});
+
+it('pushes a fresh object, not the collector event reference', async () => {
+  const seen: WalkerOS.Event[] = [];
+  const spy: Destination.Instance = {
+    type: 'spy',
+    config: {},
+    push: (event) => {
+      seen.push(event);
+    },
+  };
+  const { elb } = await startFlow({
+    destinations: {
+      dataLayer: { code: dataLayerDestination() },
+      spy: { code: spy },
+    },
+  });
+  await elb('product view', { name: 'Cotton Tee' });
+  expect(lastPush()).not.toBe(seen[seen.length - 1]);
+});
+
+it('omits user, globals and consent while they are empty (D1)', async () => {
+  const { elb } = await startFlow({
+    destinations: { dataLayer: { code: dataLayerDestination() } },
+  });
+  await elb('product view', { name: 'Cotton Tee' });
+  const last = lastPush();
+  expect(last).not.toHaveProperty('user'); // window mode, no walker user set
+  expect(last).not.toHaveProperty('globals');
+  expect(last).not.toHaveProperty('consent');
+});
+
+it('pushes empty data, context and custom, so _clear wipes the last values', async () => {
+  const { elb } = await startFlow({
+    destinations: { dataLayer: { code: dataLayerDestination() } },
+  });
+  await elb('order complete');
+  expect(lastPush()).toMatchObject({ data: {}, context: {}, custom: {} });
+});
+
+it('pushes user once it has content', async () => {
+  const { elb } = await startFlow({
+    destinations: { dataLayer: { code: dataLayerDestination() } },
+  });
+  await elb('walker user', { id: 'u1' });
+  await elb('product view', { name: 'Cotton Tee' });
+  expect(lastPush()).toMatchObject({ user: { id: 'u1' } });
+});
+
+it('has no pushBatch', () => {
+  expect(dataLayerDestination().pushBatch).toBeUndefined();
 });

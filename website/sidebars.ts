@@ -22,6 +22,11 @@ const sidebars: SidebarsConfig = {
             id: 'getting-started/quickstart/index',
           },
           items: [
+            {
+              type: 'ref',
+              id: 'apps/walkerjs',
+              label: 'Script tag + GTM',
+            },
             'getting-started/quickstart/react',
             'getting-started/quickstart/nextjs',
             'getting-started/quickstart/docker',
@@ -600,6 +605,7 @@ const sidebars: SidebarsConfig = {
       },
       items: [
         'guides/debugging',
+        'guides/gtm',
         'guides/consent/index',
         'guides/session',
         'guides/user-stitching',

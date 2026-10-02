@@ -3,6 +3,11 @@ import type { Config, Plugin } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plugin-llms-txt';
 import { version as coreVersion } from '../packages/core/package.json';
+// The site's own version, kept in lockstep with every @walkeros/* package by
+// the changesets "fixed" group. Reading it here rather than from core keeps
+// the version in the same file that triggers the website deploy, whose push
+// filter watches website/**.
+import { version as walkerosVersion } from './package.json';
 import restoreExpressionIndent from './src/remark/restore-expression-indent';
 import flowSnippets from './src/remark/flow-snippets';
 import exportFlowSnippets from './src/rehype/export-flow-snippets';
@@ -25,7 +30,7 @@ const vars = {
 // wrong: the package namespace, and what category the project is in.
 const llmsTxtPreamble = [
   'Privacy-first, composable event data collection (Source → Collector → Destination).',
-  'Current namespace: packages are published under `@walkeros/*` and the command line binary is `walkeros`. Package names from the walker.js era are historical and should not be suggested for new work.',
+  'Current namespace: packages are published under `@walkeros/*` and the command line binary is `walkeros`. `@elbwalker/*` package names are historical; `@walkeros/walker.js` is the default, most basic setup that translates HTML attributes into `dataLayer.push` calls.',
   'walkerOS is not a product analytics tool, not a consent management platform, and not a business intelligence layer. It collects events and routes them to those tools.',
   `To prove an integration works without calling a real endpoint, run \`walkeros push flow.json --event '{"name":"product add"}' --simulate destination.NAME\`. It runs the flow and reports what the destination would have sent.`,
   `Canonical index: ${vars.site}/llms.txt. Generated ${new Date().toISOString().slice(0, 10)}.`,
@@ -70,6 +75,7 @@ const config: Config = {
 
   customFields: {
     coreVersion,
+    walkerosVersion,
   },
 
   // Even if you don't use internationalization, you can use this field to set
@@ -738,10 +744,6 @@ const config: Config = {
           {
             from: '/docs/comparisons/dataLayerGTM',
             to: '/docs/comparisons/dataLayer',
-          },
-          {
-            from: '/docs/guides/gtm',
-            to: '/docs/comparisons/gtm',
           },
           {
             from: '/docs/apps',

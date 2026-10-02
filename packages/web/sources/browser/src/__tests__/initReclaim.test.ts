@@ -37,9 +37,8 @@ describe('walker init subtree reclaim', () => {
   });
 
   // `primary` names the source whose push `startFlow` exports as `elb`, and the
-  // type parameter types it. That pairing is what a walker.js page runs on
-  // (apps/walkerjs assigns this same `flow.elb` onto `window.elb`), and it
-  // gives `elb('walker init', <element>)` its typed BrowserPush overload
+  // type parameter types it. That pairing gives
+  // `elb('walker init', <element>)` its typed BrowserPush overload
   // without a cast. Declaring `primary` explicitly also keeps the export
   // pinned to the browser source if another source is ever added here.
   const start = async () => {

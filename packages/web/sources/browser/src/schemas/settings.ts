@@ -39,6 +39,13 @@ export const SettingsSchema = z.object({
       'Read click/submit triggers in the capture phase so tagged elements are resolved at click time before app handlers run (set false for the previous bubble-phase behavior)',
     ),
 
+  history: z
+    .boolean()
+    .default(false)
+    .describe(
+      'Single-page apps: send a page view on every route change (pushState, replaceState with a new path, back and forward) and pick up tagged elements as the new route renders',
+    ),
+
   elb: z
     .union([JavaScriptVarName, z.literal(false)])
     .default('elb')

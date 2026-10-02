@@ -211,11 +211,13 @@ export function getUser(
 export function getPageViewData(
   prefix: string,
   scope: Scope,
+  href?: string,
 ): [WalkerOS.Properties, WalkerOS.OrderedProperties] {
   // static page view
   const doc = (scope as Element).ownerDocument || (scope as Document);
   const win = doc.defaultView!;
-  const loc = win.location;
+  // A history run describes the URL snapshotted at its route change.
+  const loc = href ? new URL(href) : win.location;
   const page = 'page';
   const scopeElement =
     'body' in scope ? (scope as Document).body : (scope as Element);

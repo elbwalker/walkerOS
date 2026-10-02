@@ -7,6 +7,7 @@ import type { Context } from '../types';
 
 type BrowserTriggerType =
   | 'load'
+  | 'history'
   | 'click'
   | 'submit'
   | 'hover'
@@ -49,6 +50,11 @@ interface BrowserInput {
  * @example
  * // Impression trigger, handleTrigger reads data-elbaction directly
  * await trigger('impression', '[data-elb="promo"]')('<div data-elb="promo" data-elbaction="visible:promo seen">Ad</div>');
+ *
+ * @example
+ * // Route change, for a source with `history: true`: lands on `url`, then
+ * // pushes `path`
+ * await trigger('history', { url: 'https://example.com/docs', path: '/pricing' })('');
  */
 const createTrigger: Trigger.CreateFn<string, void> = async (
   config: Collector.InitConfig,
@@ -64,7 +70,7 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
   const trigger: Trigger.Fn<string, void> =
     (type?: string, opts?: unknown) => async (content: string) => {
       // 1. Set up environment for load triggers (URL, title, referrer)
-      if (type === 'load' || !type) {
+      if (type === 'load' || type === 'history' || !type) {
         const loadOpts = readLoadOptions(opts);
         if (loadOpts.url) {
           const urlObj = new URL(loadOpts.url);
@@ -91,6 +97,15 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
 
       // 4. For load triggers, source already scanned DOM during init, done
       if (!type || type === 'load') return;
+
+      // A route change runs within microtasks of the push, so one task later
+      // its page view has been sent.
+      if (type === 'history') {
+        const path = isObject(opts) ? stringOf(opts.path) : undefined;
+        if (path) win.history.pushState({}, '', path);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        return;
+      }
 
       // 5. Find target element
       const selector = typeof opts === 'string' ? opts : undefined;

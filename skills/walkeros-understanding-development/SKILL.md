@@ -60,7 +60,7 @@ packages/
     └── destinations/ # aws, gcp, meta
 
 apps/
-├── walkerjs/       # Ready-to-use browser bundle
+├── walkerjs/       # Zero-config browser file for GTM
 ├── quickstart/     # Code examples (source of truth for patterns)
 └── demos/          # Demo applications
 ```
