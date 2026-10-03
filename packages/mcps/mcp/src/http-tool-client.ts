@@ -50,8 +50,12 @@ import {
   feedback,
   getFeedbackPreference,
   setFeedbackPreference,
+  fetchHealth,
+  fetchOpenApi,
+  compareContract,
 } from '@walkeros/cli';
 import type {
+  ContractComparison,
   DeviceAuthorization,
   DeviceLoginResult,
   ListFlowsOptions,
@@ -90,6 +94,11 @@ import type {
   FrameListWire,
   FrameLeanListWire,
 } from './tool-client.js';
+
+// __VERSION__ is this package's version, replaced at build time by tsup's
+// `define` (see tsup.config.ts). In tests, it is set on globalThis (see
+// src/__tests__/support/version.ts).
+declare const __VERSION__: string;
 
 /**
  * Default ToolClient implementation backed by @walkeros/cli. Every method
@@ -378,34 +387,42 @@ export class HttpToolClient implements ToolClient {
   }
 
   /**
-   * Unauthenticated reachability probe of the app's PUBLIC `/api/health`
-   * route. Uses a plain `fetch` (no `createApiClient`, whose every request
-   * rejects without a credential) so diagnostics works logged-out. Resolves
-   * `{ reachable: false }` only on a real network/timeout failure.
+   * Unauthenticated reachability probe of the app's PUBLIC health route
+   * (`GET /api/health`) at `appBaseUrl()`, through the CLI's `fetchHealth`.
+   * Sends no credential, so diagnostics works logged-out. Resolves
+   * `{ reachable: false, error }` only on a real network/timeout failure.
    */
   async checkHealth(): Promise<{
     reachable: boolean;
     status?: string;
     version?: string;
+    error?: string;
   }> {
-    try {
-      const res = await fetch(`${resolveAppUrl()}/api/health`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      // A non-2xx status still means the app is reachable; only network or
-      // timeout errors (the catch below) mark it unreachable.
-      const body: unknown = await res.json().catch(() => undefined);
-      const result: { reachable: boolean; status?: string; version?: string } =
-        { reachable: true };
-      if (body && typeof body === 'object') {
-        const record = body as Record<string, unknown>;
-        if (typeof record.status === 'string') result.status = record.status;
-        if (typeof record.version === 'string') result.version = record.version;
-      }
-      return result;
-    } catch {
-      return { reachable: false };
-    }
+    const health = await fetchHealth(this.appBaseUrl());
+    return {
+      reachable: health.reachable,
+      ...(health.status !== undefined && { status: health.status }),
+      ...(health.appVersion !== undefined && { version: health.appVersion }),
+      ...(health.error !== undefined && { error: health.error }),
+    };
+  }
+
+  /**
+   * The contract verdict for this MCP against `appBaseUrl()`, per operation,
+   * naming `@walkeros/mcp` as the client.
+   */
+  async checkContract(): Promise<ContractComparison> {
+    return compareContract({
+      baseUrl: this.appBaseUrl(),
+      client: { type: 'mcp', version: __VERSION__ },
+    });
+  }
+
+  /** The live public OpenAPI document of `appBaseUrl()`, without a credential. */
+  async openapiDocument(): Promise<unknown> {
+    const result = await fetchOpenApi(this.appBaseUrl());
+    if (!result.ok) throw new Error(`GET ${result.url}: ${result.error}`);
+    return result.document;
   }
 
   async submitFeedback(text: string, options?: FeedbackOptions): Promise<void> {

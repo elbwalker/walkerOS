@@ -1,5 +1,26 @@
 # @walkeros/mcp
 
+## 4.7.1
+
+### Patch Changes
+
+- 91e9aeb: New `walkeros diagnostics` command shows the CLI version, app URL,
+  app health and an API compatibility verdict checked per operation against the
+  live app; the MCP `diagnostics` tool reports it too and
+  `walkeros://reference/openapi` serves the live document. `compareContract` and
+  `ContractComparison` are reshaped, `annotateErrorWithDrift` is removed, and
+  deployment listing rejects an unknown `status` or `type`.
+- 91e9aeb: The `ObserveSessionResult` type now includes `configSnapshot`,
+  `serverEndpoint` and `createdBy`, which the app already returns for every
+  Observe session.
+- Updated dependencies [91e9aeb]
+- Updated dependencies [0635330]
+- Updated dependencies [bd511d0]
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+  - @walkeros/cli@4.7.1
+  - @walkeros/core@4.7.1
+
 ## 4.7.0
 
 ### Minor Changes

@@ -884,7 +884,7 @@ describe('applyState get with mapping', () => {
     expect(out.user).not.toHaveProperty('segment');
   });
 
-  test('a consent key on a loop item gates that item, not the event consent', async () => {
+  test('a consent key on a loop item does not gate it, the event consent does', async () => {
     const { out } = await getWith(
       { orders: [{ consent: { marketing: true }, id: 'a' }] },
       {
@@ -899,7 +899,7 @@ describe('applyState get with mapping', () => {
         consent: { marketing: false },
       },
     );
-    expect(out.user?.orders).toEqual(['a']);
+    expect(out.user).not.toHaveProperty('orders');
   });
 
   test('fn receives the real event', async () => {

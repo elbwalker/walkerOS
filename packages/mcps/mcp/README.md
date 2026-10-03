@@ -95,17 +95,17 @@ The server registers 19 tools.
 
 ### Local, no account
 
-| Tool             | Description                                                                        |
-| ---------------- | ---------------------------------------------------------------------------------- |
-| `flow_load`      | Load a flow from a file path, URL, inline JSON, or flow ID, or create an empty one |
-| `flow_validate`  | Validate an event, flow config, mapping rule, or data contract                     |
-| `flow_simulate`  | Run an event through a flow with mocked vendor calls and inspect each step         |
-| `flow_bundle`    | Compile a flow into a tree-shaken, deployable JavaScript bundle                    |
-| `flow_push`      | Push a real event through a flow to real destinations, making real API calls       |
-| `flow_examples`  | List the step examples in a flow, the fixtures simulation can replay               |
-| `package_search` | Find packages by name, type, or platform. The entry point for package discovery    |
-| `package_get`    | Read one package's schemas, configuration hints, and examples by exact name        |
-| `diagnostics`    | Report MCP and CLI versions, app URL, backend, and whether the app is reachable    |
+| Tool             | Description                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| `flow_load`      | Load a flow from a file path, URL, inline JSON, or flow ID, or create an empty one   |
+| `flow_validate`  | Validate an event, flow config, mapping rule, or data contract                       |
+| `flow_simulate`  | Run an event through a flow with mocked vendor calls and inspect each step           |
+| `flow_bundle`    | Compile a flow into a tree-shaken, deployable JavaScript bundle                      |
+| `flow_push`      | Push a real event through a flow to real destinations, making real API calls         |
+| `flow_examples`  | List the step examples in a flow, the fixtures simulation can replay                 |
+| `package_search` | Find packages by name, type, or platform. The entry point for package discovery      |
+| `package_get`    | Read one package's schemas, configuration hints, and examples by exact name          |
+| `diagnostics`    | Report MCP and CLI versions, app URL, app reachability, and the API contract verdict |
 
 ### walkerOS cloud
 
@@ -132,7 +132,7 @@ The server registers 19 tools.
 | `walkeros://reference/consent`     | The consent model at destination, rule, and field level         |
 | `walkeros://reference/variables`   | Variable patterns: `$var`, `$env`, `$secret`, `$code`, `$store` |
 | `walkeros://reference/contract`    | Event schemas, wildcards, and inheritance                       |
-| `walkeros://reference/openapi`     | OpenAPI 3.1 specification for the walkerOS API                  |
+| `walkeros://reference/openapi`     | The live OpenAPI 3.1 document of the app this server talks to   |
 | `walkeros://reference/packages`    | The full package catalog                                        |
 | `walkeros://schema/{packageName}`  | JSON schema for one package                                     |
 
@@ -192,6 +192,12 @@ To use the tool registry without the MCP protocol, for example with the Vercel
 AI SDK, call `createToolHandlers(client, version, runtime)` or import
 `TOOL_DEFINITIONS` and supply your own `ToolClient`. The stdio binary stays
 available as `@walkeros/mcp/stdio` and the `walkeros-mcp` bin entry.
+
+A `ToolClient` may implement `checkContract()` and `openapiDocument()`. The
+`diagnostics` tool reports the first as its contract verdict, `unknown` when it
+is absent; the `walkeros://reference/openapi` resource serves the second.
+`HttpToolClient` implements both against the app it talks to. The tool roster
+ships as `@walkeros/mcp/surface.json`.
 
 ## Documentation
 

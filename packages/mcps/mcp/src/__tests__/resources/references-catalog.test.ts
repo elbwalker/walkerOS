@@ -6,6 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { record, rows, str } from '../support/tool-result.js';
+import { stubClient } from '../support/stub-client.js';
 
 /**
  * Register the reference resources on a real McpServer and read them back
@@ -13,7 +14,7 @@ import { record, rows, str } from '../support/tool-result.js';
  */
 async function connectedClient(): Promise<Client> {
   const server = new McpServer({ name: 'test', version: '0.0.0' });
-  registerReferenceResources(server);
+  registerReferenceResources(server, stubClient());
   const [clientTransport, serverTransport] =
     InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0' });

@@ -1,5 +1,5 @@
 import { requireProjectId } from '../../core/auth.js';
-import { apiFetch } from '../../core/http.js';
+import { apiRequest } from '../../core/api-request.js';
 import { throwApiError } from '../../core/api-error.js';
 
 // === Programmatic API ===
@@ -21,13 +21,12 @@ export interface ListJourneysOptions {
  */
 export async function listJourneys(options: ListJourneysOptions) {
   const id = options.projectId ?? requireProjectId();
-  const params = new URLSearchParams();
-  if (options.traceId) params.set('traceId', options.traceId);
-  if (options.limit !== undefined) params.set('limit', String(options.limit));
-  const qs = params.toString();
-
-  const response = await apiFetch(
-    `/api/projects/${id}/flows/${options.flowId}/journeys${qs ? `?${qs}` : ''}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/flows/{flowId}/journeys',
+    {
+      path: { projectId: id, flowId: options.flowId },
+      query: { traceId: options.traceId || undefined, limit: options.limit },
+    },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));

@@ -15,7 +15,7 @@ export const SettingsSchema = z
     explicitOnly: z
       .boolean()
       .describe(
-        'Only process consent after the user made an explicit choice. Ignores default/implicit states. Default: true.',
+        'Has no effect in this source: it skips CookieFirst.consent while it is null (no choice made yet) and reports every consent CookieFirst provides after that, whether explicitOnly is true or false. Default: true.',
       )
       .optional(),
 

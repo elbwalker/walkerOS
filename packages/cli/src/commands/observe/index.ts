@@ -1,5 +1,6 @@
 import { requireProjectId } from '../../core/auth.js';
-import { apiFetch } from '../../core/http.js';
+import { apiRequest } from '../../core/api-request.js';
+import type { ResponseJson } from '../../core/api-request.js';
 import { handleCliError, throwApiResponseError } from '../../core/api-error.js';
 import { writeResult } from '../../core/output.js';
 import { credentialSource } from '../../core/auth.js';
@@ -7,7 +8,10 @@ import type { GlobalOptions } from '../../types/global.js';
 import type { components } from '../../types/api.gen.js';
 import { getFlow } from '../flows/index.js';
 
-type ObserveSessionResponse = components['schemas']['ObserveSessionResponse'];
+type ObserveSessionResponse = ResponseJson<
+  'GET /api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}',
+  200
+>;
 type CreateObserveSessionRequest =
   components['schemas']['CreateObserveSessionRequest'];
 type ObserveLevel = components['schemas']['ObserveLevel'];
@@ -51,13 +55,9 @@ export async function startObserveSession(
     // omitted rather than sent as a bare [] the app would have to interpret.
     ...(options.origins?.length ? { origins: options.origins } : {}),
   };
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/observe-sessions`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    },
+  const response = await apiRequest(
+    'POST /api/projects/{projectId}/flows/{flowId}/observe-sessions',
+    { path: { projectId: pid, flowId: options.flowId }, body },
   );
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
@@ -80,8 +80,15 @@ export async function getObserveSession(
   options: GetObserveSessionOptions,
 ): Promise<ObserveSessionResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/observe-sessions/${options.sessionId}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}',
+    {
+      path: {
+        projectId: pid,
+        flowId: options.flowId,
+        sessionId: options.sessionId,
+      },
+    },
   );
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
@@ -107,9 +114,15 @@ export async function endObserveSession(
   options: EndObserveSessionOptions,
 ): Promise<void> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/observe-sessions/${options.sessionId}`,
-    { method: 'DELETE' },
+  const response = await apiRequest(
+    'DELETE /api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}',
+    {
+      path: {
+        projectId: pid,
+        flowId: options.flowId,
+        sessionId: options.sessionId,
+      },
+    },
   );
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
@@ -130,9 +143,15 @@ export async function heartbeatObserveSession(options: {
 }): Promise<void> {
   const pid = options.projectId ?? requireProjectId();
   try {
-    await apiFetch(
-      `/api/projects/${pid}/flows/${options.flowId}/observe-sessions/${options.sessionId}/heartbeat`,
-      { method: 'POST' },
+    await apiRequest(
+      'POST /api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/heartbeat',
+      {
+        path: {
+          projectId: pid,
+          flowId: options.flowId,
+          sessionId: options.sessionId,
+        },
+      },
     );
   } catch {
     // Best-effort by design; the next tick tries again.

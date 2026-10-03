@@ -3,7 +3,7 @@ import type { Walker } from '@walkeros/web-core';
 import type { Scope } from './types';
 import { assign, castValue, isArray, trim } from '@walkeros/core';
 import { Const } from '@walkeros/collector';
-import { getAttribute } from '@walkeros/web-core';
+import { getAttribute, splitAttribute, splitKeyVal } from '@walkeros/web-core';
 
 export function getElbAttributeName(
   prefix: string,
@@ -29,13 +29,6 @@ export function getElbValues(
     let [key, val]: Walker.KeyVal = splitKeyVal(str);
 
     if (!key) return values;
-
-    // Handle keys without value
-    if (!val) {
-      // Manually remove the : from key on empty values
-      if (key.endsWith(':')) key = key.slice(0, -1);
-      val = '';
-    }
 
     // Dynamic values
     if (val.startsWith('#')) {
@@ -324,20 +317,20 @@ function getEntity(
 
   // Add linked elements (data-elblink)
   queryAllComposed(element, `[${linkName}]`, (link) => {
-    const [linkId, linkState]: Walker.KeyVal = splitKeyVal(
-      getAttribute(link, linkName),
-    );
+    const [linkId, linkState] = getLink(link, linkName);
 
     // Get all linked child elements if link is a parent
     // Note: Searches entire document including shadow roots.
     // Acceptable because link-parent usage is rare in practice.
-    // The id is compared by value, a quoted selector would break on `"` or `\`.
+    // The id is compared by parsed value, a quoted selector would break on
+    // `"` or `\`, and the raw attribute may hold quotes or escapes.
     if (linkState === 'parent')
       queryAllComposed(
         element.ownerDocument.body,
         `[${linkName}]`,
         (wormhole) => {
-          if (wormhole.getAttribute(linkName) !== `${linkId}:child`) return;
+          const [id, state] = getLink(wormhole, linkName);
+          if (id !== linkId || state !== 'child') return;
 
           scopeElems.push(wormhole);
 
@@ -388,18 +381,17 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
 
   // Link
   if (elem.matches(`[${linkName}]`)) {
-    const [linkId, linkState]: Walker.KeyVal = splitKeyVal(
-      getAttribute(elem, linkName),
-    );
+    const [linkId, linkState] = getLink(elem, linkName);
     if (linkState === 'child') {
       // Link-parent lookup does not cross shadow boundaries.
       // Uses simple queryAll (no shadow recursion) since this runs
-      // during per-event entity traversal. The id is compared by value, like
-      // the link-child lookup in getEntity.
+      // during per-event entity traversal. The id is compared by parsed
+      // value, like the link-child lookup in getEntity.
       const doc = elem.ownerDocument;
       let found: HTMLElement | null = null;
       queryAll(doc, `[${linkName}]`, (el) => {
-        if (!found && el.getAttribute(linkName) === `${linkId}:parent`)
+        const [id, state] = getLink(el, linkName);
+        if (!found && id === linkId && state === 'parent')
           found = el as HTMLElement;
       });
       return found;
@@ -545,18 +537,9 @@ function resolveAttributes(
   return { actions: [], nearestOnly: false };
 }
 
-function splitAttribute(str: string, separator = ';'): Walker.Attributes {
-  const values: Walker.Attributes = [];
-
-  if (!str) return values;
-
-  const reg = new RegExp(`(?:[^${separator}']+|'[^']*')+`, 'ig');
-  return str.match(reg) || [];
-}
-
-function splitKeyVal(str: string): Walker.KeyVal {
-  const [key, value] = str.split(/:(.+)/, 2);
-  return [trim(key), trim(value)];
+// A data-elblink value as parsed [id, state], e.g. ['details', 'parent']
+function getLink(elem: Element, linkName: string): Walker.KeyVal {
+  return splitKeyVal(getAttribute(elem, linkName));
 }
 
 function parseAttribute(str: string): Walker.KeyVal {

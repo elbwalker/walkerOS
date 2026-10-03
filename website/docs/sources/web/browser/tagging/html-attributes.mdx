@@ -407,9 +407,41 @@ below, gets an empty string.
   language="html"
 />
 
-A single quote cannot be part of a value, and backslash escaping is not
-supported. Double quotes are kept as written, so write the attribute itself in
-single quotes when a value needs them:
+### Escaping
+
+A backslash makes the next character plain text, so it is not read as a
+separator or a quote. Write `\'` for a single quote, `\;` for a semicolon, and
+`\\` for a backslash. Escapes work inside single quotes and in keys too, where
+`\:` keeps a colon in the key. A colon in a value needs no escape, since only
+the first colon splits key and value.
+
+<CodeSnippet
+  code={`<!-- backslash escapes -->
+<p data-elb="foo" data-elb-foo="name:Men\\'s shirt;brand:Levi\\'s">{ "name": "Men's shirt", "brand": "Levi's" }</p>
+<p data-elb="foo" data-elb-foo="b:a\\;r">{ "b": "a;r" }</p>
+<p data-elb="foo" data-elb-foo="title:'it\\'s'">{ "title": "it's" }</p>
+<p data-elb="foo" data-elb-foo="path:C:\\\\temp">{ "path": "C:\\\\temp" }</p>`}
+  language="html"
+/>
+
+An unescaped `'` only closes a quoted part right before a `;`, a `:`, or the
+end, so an apostrophe in text like `name:Men's shirt;brand:Levi's` reads as
+written. Together with other single quotes in the same attribute it can still
+be misread, so escape every apostrophe in text to be safe, as in the first line
+above.
+
+An escape does not turn off dynamic values: `\#x` still reads the property `x`
+from the element, see [dynamic field values](#dynamic-field-values).
+
+:::warning
+
+A single backslash escapes the next character, so `path:C:\temp` reads as
+`C:temp`. Write `\\` wherever a value needs a backslash.
+
+:::
+
+Double quotes are kept as written, so write the attribute itself in single
+quotes when a value needs them:
 
 <CodeSnippet
   code={`<p data-elb="foo" data-elb-foo='quote:say "hi"'>{ quote: 'say "hi"' }</p>`}

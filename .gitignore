@@ -92,6 +92,9 @@ typings/
 # Turbobuild
 .turbo
 
+# tsup config temp files (left behind when a build is killed)
+tsup.config.bundled_*
+
 # Claude Code data (conversations, cache)
 .claude/data/
 

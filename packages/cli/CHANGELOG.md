@@ -1,5 +1,32 @@
 # @walkeros/cli
 
+## 4.7.1
+
+### Patch Changes
+
+- 91e9aeb: New `walkeros diagnostics` command shows the CLI version, app URL,
+  app health and an API compatibility verdict checked per operation against the
+  live app; the MCP `diagnostics` tool reports it too and
+  `walkeros://reference/openapi` serves the live document. `compareContract` and
+  `ContractComparison` are reshaped, `annotateErrorWithDrift` is removed, and
+  deployment listing rejects an unknown `status` or `type`.
+- 0635330: Web bundles now leave out features the flow does not use. The minimal
+  web flow drops from about 115 KB to 93 KB (40 KB to 32 KB gzipped). Skeletons
+  built by older CLI versions still wrap with every feature.
+- bd511d0: Web flows with the Mixpanel or PostHog destination can now be pushed
+  and simulated. Simulating a web flow no longer loads vendor scripts, and
+  simulating a source no longer starts the flow's destinations. A web push
+  records XMLHttpRequest calls like fetch and sendBeacon, listed as
+  `networkCalls` in `--json`.
+- Updated dependencies [0635330]
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+  - @walkeros/collector@4.7.1
+  - @walkeros/core@4.7.1
+  - @walkeros/server-core@4.7.1
+  - @walkeros/server-destination-api@4.7.1
+  - @walkeros/transformer-validate@4.7.1
+
 ## 4.7.0
 
 ### Minor Changes

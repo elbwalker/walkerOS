@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { VERSION } from './version.js';
 import { mergeAuthHeaders } from './auth-headers.js';
+import { heartbeatUrl } from './api-paths.js';
 import { stepId } from '@walkeros/core';
 import type { Collector, Logger } from '@walkeros/core';
 import type { DedupedError, RingEntry } from './log-ring.js';
@@ -174,7 +175,7 @@ export function createHeartbeat(
         : [];
 
       const response = await fetch(
-        `${config.appUrl}/api/projects/${config.projectId}/runners/heartbeat`,
+        heartbeatUrl(config.appUrl, config.projectId),
         {
           method: 'POST',
           headers: mergeAuthHeaders(config.token, {

@@ -266,7 +266,8 @@ Common patterns shown below. For detailed examples of all 12 strategies, see
 // Fallback chain: Value[] at any value position (first defined value wins)
 [{ key: 'data.sku' }, { key: 'data.id' }, { value: 'unknown' }]
 
-// Consent-gated
+// Consent-gated (the event's consent decides, in a loop too: a `consent`
+// key on a loop item is plain data)
 { key: 'user.email', consent: { marketing: true } }
 
 // Validate

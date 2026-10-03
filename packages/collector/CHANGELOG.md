@@ -1,5 +1,17 @@
 # @walkeros/collector
 
+## 4.7.1
+
+### Patch Changes
+
+- 0635330: Browser bundles built with the CLI only include observe, stores, step
+  `state` and runtime validation when the flow uses them. A step `state` that
+  such a bundle cannot run, for example on a destination added with
+  `walker destination`, logs a warning.
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+  - @walkeros/core@4.7.1
+
 ## 4.7.0
 
 ### Minor Changes

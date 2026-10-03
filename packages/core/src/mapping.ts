@@ -210,11 +210,16 @@ async function processMappingValue(
             ? [value]
             : await resolveMappingValue(value, scope, cbContext);
 
+        // Each item is mapped with the parent's consent: a `consent` key on
+        // the item is plain data and never grants anything. Undefined items
+        // stay filtered out.
         mappingValue = isArray(data)
           ? (
               await Promise.all(
                 data.map((item) =>
-                  getMappingValue(item, itemMapping, cbContext),
+                  isDefined(item)
+                    ? resolveMappingValue(item, itemMapping, cbContext)
+                    : undefined,
                 ),
               )
             ).filter(isDefined)

@@ -1,3 +1,6 @@
+import { apiRequest } from '@walkeros/cli';
+import type { ResponseJson } from '@walkeros/cli';
+
 // __VERSION__ is replaced at build time by tsup's `define` (see tsup.config.ts).
 // In tests, it's set on globalThis (see src/__tests__/support/version.ts).
 declare const __VERSION__: string;
@@ -171,19 +174,20 @@ async function fetchCatalogFrom(
   baseUrl: string,
   filters?: { type?: string; platform?: string },
 ): Promise<SourceResult> {
-  const params = new URLSearchParams();
-  if (filters?.type) params.set('type', filters.type);
-  if (filters?.platform) params.set('platform', filters.platform);
-
-  const url = `${baseUrl}/api/packages${params.toString() ? `?${params}` : ''}`;
-  const res = await fetch(url, {
+  const res = await apiRequest('GET /api/packages', {
+    auth: 'none',
+    baseUrl,
+    query: {
+      type: filters?.type || undefined,
+      platform: filters?.platform || undefined,
+    },
     signal: AbortSignal.timeout(15000),
     headers: { 'X-Walkeros-Client': CLIENT_HEADER },
   });
   if (!res.ok) throw new Error(`Catalog fetch failed: ${res.status}`);
 
-  const data = (await res.json()) as { catalog: CatalogEntry[] };
-  const entries = data.catalog;
+  const data: ResponseJson<'GET /api/packages', 200> = await res.json();
+  const entries: CatalogEntry[] = data.catalog;
   return { entries, complete: entries.length > 0, requested: entries.length };
 }
 

@@ -115,7 +115,7 @@ On a miss `fn` and `condition` receive `undefined`, so guard for it. An unguarde
 A few more rules:
 
 - **A `null` anywhere inside a picked object drops the whole object.** Picking `address` from `{ "address": { "street": "x", "zip": null } }` writes no `address`, while other picked fields still land. When the stored value contains `null` or other non-JSON values, the entry logs a warning.
-- **The event's consent gates a mapping, never a field in the stored value.** A `consent` key inside the stored row does not unlock a consent-gated field. Items of a `loop` are mapped like a new source, so a `consent` key on an item does gate that item.
+- **The event's consent gates a mapping, never a field in the stored value.** A `consent` key inside the stored row does not unlock a consent-gated field. Each item of a `loop` is mapped with the loop's item mapping under the event's consent: a loop item's `consent` key neither unlocks nor holds back a value.
 - **`set` with `mapping`** shapes the payload, then reads the stored entry, merges the result into it, and writes it back. This is not atomic: when two instances write the same key at once, the last writer wins. A stored value that is not an object is replaced, with a warning. A result that is not an object is written without a read.
 
 ## Examples

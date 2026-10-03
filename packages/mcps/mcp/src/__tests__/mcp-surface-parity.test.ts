@@ -57,7 +57,7 @@ import {
 import { featureDenialHint } from '../tools/feature-gate.js';
 import { stubClient } from './support/stub-client.js';
 import { hintsOf } from './support/tool-result.js';
-import fixture from './fixtures/mcp-surface-parity.json';
+import fixture from '../surface.json';
 import type {
   ToolClient,
   ObserveSessionResult,
@@ -81,13 +81,12 @@ import type {
  * package: the app calls `createWalkerOSMcpServer` (or `createToolHandlers`)
  * with its own `ToolClient`, and the client is the only part that differs. A
  * green run here is therefore NOT evidence that two independent
- * implementations agree, and the identical fixture committed on the app side
- * is a second copy of one contract, not a second opinion about it.
+ * implementations agree.
  *
- * NOTHING VERIFIES THE TWO COPIES ARE IDENTICAL. Each repository's test reads
- * only its own copy and no script or CI step compares them, so editing one
- * copy alone leaves both suites green while the two fixtures describe
- * different surfaces. Keeping them in step is a manual diff at edit time.
+ * ONE FILE HOLDS THE ROSTER. `src/surface.json` ships as
+ * `@walkeros/mcp/surface.json`; the app reads that shipped file to assert its
+ * hosted server registers this roster, so the package's code and its roster
+ * travel in one version.
  *
  * WHAT IT DOES DO, and why it belongs at the source. It fails an unreviewed
  * change to the published tool surface here, before publish, instead of
@@ -187,8 +186,10 @@ function session(
     flowId: 'flow_1',
     status: 'live',
     errorMessage: null,
+    configSnapshot: {},
     observedFlowName: 'web',
     serverFlowName: 'server',
+    serverEndpoint: 'https://container.example.com',
     web: {
       activationUrl: 'https://shop.example.com?elbPreview=gr_x',
       credential: 'obsw_pb1.ses_1.tok',
@@ -205,6 +206,7 @@ function session(
     },
     expiresAt: '2026-07-18T01:00:00.000Z',
     recordsReceived: 7,
+    createdBy: 'user_1',
     createdAt: '2026-07-18T00:00:00.000Z',
     ...overrides,
   };

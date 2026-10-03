@@ -143,6 +143,11 @@ Iterate an array source and transform each element. `loop: [source, value]`:
 `source` selects the array (a path, or `'this'` for the event itself), `value`
 transforms each item.
 
+Each item is mapped under the event's consent. A loop item's `consent` key
+neither unlocks nor holds back a value; the event's consent decides. A
+`condition` or `fn` inside the item mapping sees that same consent in
+`context.consent`.
+
 <LiveCode
   language="typescript"
   labelInput="Configuration"

@@ -337,8 +337,24 @@ IDs) come back literally, so a returned config can be edited and sent back to
 
 When an MCP request fails, the `diagnostics` tool (read-only, no parameters,
 works logged out) reports the MCP and CLI versions, the resolved app URL, app
-`/api/health` reachability, the bundled OpenAPI contract version, and which
-source served the last package lookup.
+`/api/health` reachability, the API contract verdict against that app, and which
+source served the last package lookup. From a terminal, `walkeros diagnostics`
+(or `--json`) prints the same facts for the CLI:
+
+```text
+cli 4.8.0
+app https://app.walkeros.io (default)
+health reachable, status ok, app 3f2a91c
+contract: in-sync (server 4.7.0+5e6f7a8b, client 4.7.0+1a2b3c4d, 55 operations)
+```
+
+The verdict compares, operation by operation, what this client calls with the
+live `/api/openapi.json`: `in-sync`, `changed` (operations differ with the same
+floor, direction not determined) and `server-older` (both with the changed or
+missing operations and the commands that call them), `client-outdated` (naming
+the version the server requires), `unknown` (naming the request that failed), or
+`in-process` on the hosted MCP door. The `walkeros://reference/openapi` resource
+serves the live document itself.
 
 ### Validate flow config
 
