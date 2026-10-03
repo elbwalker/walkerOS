@@ -47,25 +47,23 @@ export function createTagger(
     const globalProperties: WalkerOS.Properties = {};
     const linkProperties: Record<string, string> = {};
 
-    // Helper function to escape special characters
+    // Backslash-escape what the attribute parser reads as syntax: the
+    // separator, quotes and the backslash itself. Values keep their colons,
+    // since only the first unescaped colon splits key and value.
     function escapeValue(value: WalkerOS.Property | undefined): string {
       if (!isDefined(value) || value === null) return 'undefined';
+      return String(value).replace(/[\\;']/g, '\\$&');
+    }
 
-      let str = String(value);
-
-      // Escape backslashes first, then other characters
-      str = str.replace(/\\/g, '\\\\');
-      str = str.replace(/;/g, '\\;');
-      str = str.replace(/:/g, '\\:');
-      str = str.replace(/'/g, "\\'");
-
-      return str;
+    // A colon in a key would end it, so keys escape it as well.
+    function escapeKey(key: string): string {
+      return key.replace(/[\\;:']/g, '\\$&');
     }
 
     // Helper function to serialize key-value pairs
     function serializeKeyValue(obj: WalkerOS.Properties): string {
       return Object.entries(obj)
-        .map(([key, value]) => `${key}:${escapeValue(value)}`)
+        .map(([key, value]) => `${escapeKey(key)}:${escapeValue(value)}`)
         .join(';');
     }
 

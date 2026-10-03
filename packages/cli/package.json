@@ -20,7 +20,8 @@
       "default": "./dist/examples/index.js"
     },
     "./examples/*": "./examples/*",
-    "./openapi/spec.json": "./openapi/spec.json"
+    "./openapi/spec.json": "./openapi/spec.json",
+    "./openapi/client-operations.json": "./openapi/client-operations.json"
   },
   "bin": {
     "walkeros": "./dist/cli.js"
@@ -31,6 +32,7 @@
     "!examples/shared/walker.js",
     "!dist/examples/shared/walker.js",
     "openapi/spec.json",
+    "openapi/client-operations.json",
     "src/telemetry/flow.json",
     "README.md",
     "CHANGELOG.md"
@@ -43,7 +45,7 @@
     "test:debug": "jest --colors --detectOpenHandles --testPathIgnorePatterns '__tests__/e2e/' '__tests__/integration/'",
     "test:integration": "jest --colors --testPathPatterns='__tests__/integration/'",
     "test:e2e": "jest --colors --testPathPatterns='__tests__/e2e/'",
-    "generate:types": "openapi-typescript ${OPENAPI_SPEC:-./openapi/spec.json} -o src/types/api.gen.d.ts && prettier --write src/types/api.gen.d.ts ./openapi/spec.json",
+    "generate:types": "node scripts/generate-client-spec.mjs && openapi-typescript ./openapi/spec.json --default-non-nullable false -o src/types/api.gen.d.ts && prettier --write src/types/api.gen.d.ts ./openapi/spec.json",
     "generate:types:local": "OPENAPI_SPEC=${WALKEROS_APP_URL:-http://localhost:3000}/api/openapi.json npm run generate:types",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts*\"",

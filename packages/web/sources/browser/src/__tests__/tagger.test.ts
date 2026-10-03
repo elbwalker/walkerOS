@@ -1,4 +1,5 @@
 import { createTagger } from '../tagger';
+import { getElbValues } from '../walker';
 import { untypedInput } from './test-utils';
 import type { WalkerOS, Collector } from '@walkeros/core';
 
@@ -344,7 +345,7 @@ describe('Tagger', () => {
 
     test('escapes special characters like other methods', () => {
       const result = createTagger()().scoped('k', "a;b:c'd\\e").get();
-      expect(result).toMatchObject({ 'data-elb_': "k:a\\;b\\:c\\'d\\\\e" });
+      expect(result).toMatchObject({ 'data-elb_': "k:a\\;b:c\\'d\\\\e" });
     });
   });
 
@@ -387,10 +388,17 @@ describe('Tagger', () => {
       });
     });
 
-    test('escapes colons in values', () => {
+    test('keeps colons in values unescaped', () => {
       const result = createTagger()().data('key', 'value:with:colons').get();
       expect(result).toMatchObject({
-        'data-elb-': 'key:value\\:with\\:colons',
+        'data-elb-': 'key:value:with:colons',
+      });
+    });
+
+    test('escapes special characters in keys', () => {
+      const result = createTagger()().data("a:b;c'd\\e", 'v').get();
+      expect(result).toMatchObject({
+        'data-elb-': "a\\:b\\;c\\'d\\\\e:v",
       });
     });
 
@@ -413,7 +421,42 @@ describe('Tagger', () => {
     test('escapes complex values', () => {
       const result = createTagger()().context('test', "a;b:c'd\\e").get();
       expect(result).toMatchObject({
-        'data-elbcontext': "test:a\\;b\\:c\\'d\\\\e",
+        'data-elbcontext': "test:a\\;b:c\\'d\\\\e",
+      });
+    });
+  });
+
+  describe('Round-trip through the browser source', () => {
+    function read(attributes: Record<string, string>): WalkerOS.Properties {
+      const el = document.createElement('div');
+      Object.entries(attributes).forEach(([k, v]) => el.setAttribute(k, v));
+      return getElbValues('data-elb', el, '');
+    }
+
+    test.each<[string, WalkerOS.PropertyType]>([
+      ['apostrophe', "Men's shirt"],
+      ['semicolon', 'a;b'],
+      ['colon', 'a:b'],
+      ['backslash', 'back\\slash'],
+      ['surrounding quotes', "'quoted'"],
+      ['only semicolons', ';;'],
+      ['literal escape sequence', 'a\\;b'],
+      ['empty string', ''],
+      ['integer', 42],
+      ['float', 3.14],
+      ['true', true],
+      ['false', false],
+      ['unicode', 'Grüße, 日本 👋'],
+    ])('reads back a value with %s', (_, value) => {
+      expect(read(createTagger()().data('key', value).get())).toEqual({
+        key: value,
+      });
+    });
+
+    test('reads back a key with special characters', () => {
+      const key = "a:b;c'd\\e";
+      expect(read(createTagger()().data(key, 'v').get())).toEqual({
+        [key]: 'v',
       });
     });
   });

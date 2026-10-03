@@ -1,8 +1,19 @@
 import { requireProjectId } from '../../core/auth.js';
-import { apiFetch } from '../../core/http.js';
+import { apiRequest } from '../../core/api-request.js';
+import type { ApiRequestInit, ResponseJson } from '../../core/api-request.js';
 import { throwApiError } from '../../core/api-error.js';
 import { getFlow } from '../flows/index.js';
-import type { components } from '../../types/api.gen.js';
+
+type PreviewResponse = ResponseJson<
+  'GET /api/projects/{projectId}/flows/{flowId}/previews/{previewId}',
+  200
+>;
+type CreatePreviewBody =
+  ApiRequestInit<'POST /api/projects/{projectId}/flows/{flowId}/previews'>['body'];
+type MintGrantResponse = ResponseJson<
+  'POST /api/projects/{projectId}/flows/{flowId}/previews/{previewId}/grant',
+  200
+>;
 
 // === Programmatic API ===
 
@@ -13,10 +24,13 @@ export interface ListPreviewsOptions {
 
 export async function listPreviews(
   options: ListPreviewsOptions,
-): Promise<components['schemas']['ListPreviewsResponse']> {
+): Promise<
+  ResponseJson<'GET /api/projects/{projectId}/flows/{flowId}/previews', 200>
+> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/previews`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/flows/{flowId}/previews',
+    { path: { projectId: pid, flowId: options.flowId } },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
@@ -33,10 +47,17 @@ export interface GetPreviewOptions {
 
 export async function getPreview(
   options: GetPreviewOptions,
-): Promise<components['schemas']['PreviewResponse']> {
+): Promise<PreviewResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/previews/${options.previewId}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/flows/{flowId}/previews/{previewId}',
+    {
+      path: {
+        projectId: pid,
+        flowId: options.flowId,
+        previewId: options.previewId,
+      },
+    },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
@@ -53,7 +74,7 @@ export interface CreatePreviewOptions {
   /** What the preview should run: the flow's draft (default) or a deployed
    *  version's stored config. Anchored to the generated API contract so a new
    *  request field becomes a type error here rather than silent drift. */
-  source?: components['schemas']['CreatePreviewRequest']['source'];
+  source?: NonNullable<CreatePreviewBody>['source'];
   /** Target site URL. When present, the CLI asks the server to re-mint an
    *  origin-bound activation grant for this URL's origin. Grants are
    *  app-signed and origin-bound, so a client cannot forge a working activation
@@ -65,7 +86,7 @@ export interface CreatePreviewOptions {
 
 export async function createPreview(
   options: CreatePreviewOptions,
-): Promise<components['schemas']['PreviewResponse']> {
+): Promise<PreviewResponse> {
   const pid = options.projectId ?? requireProjectId();
 
   // Derive (and validate) the target origin up front so an invalid --url fails
@@ -99,23 +120,24 @@ export async function createPreview(
     settingsId = match.id;
   }
 
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/previews`,
+  const response = await apiRequest(
+    'POST /api/projects/{projectId}/flows/{flowId}/previews',
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      path: { projectId: pid, flowId: options.flowId },
+      body: {
         flowSettingsId: settingsId,
         ...(options.source ? { source: options.source } : {}),
-      }),
+      },
     },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throwApiError(body, 'Failed to create preview');
   }
-  const created: components['schemas']['PreviewResponse'] =
-    await response.json();
+  const created: ResponseJson<
+    'POST /api/projects/{projectId}/flows/{flowId}/previews',
+    201
+  > = await response.json();
 
   // No target URL: the create response already carries a valid grant-based
   // activationUrl for the flow's default/configured origin. Return it as-is.
@@ -123,12 +145,11 @@ export async function createPreview(
 
   // Target URL given: re-mint an origin-bound grant for that origin. The
   // server signs the grant; the CLI cannot produce a valid one client-side.
-  const grantResponse = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/previews/${created.id}/grant`,
+  const grantResponse = await apiRequest(
+    'POST /api/projects/{projectId}/flows/{flowId}/previews/{previewId}/grant',
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ origins: [origin] }),
+      path: { projectId: pid, flowId: options.flowId, previewId: created.id },
+      body: { origins: [origin] },
     },
   );
   if (!grantResponse.ok) {
@@ -144,8 +165,7 @@ export async function createPreview(
       throw error;
     }
   }
-  const grant: components['schemas']['MintGrantResponse'] =
-    await grantResponse.json();
+  const grant: MintGrantResponse = await grantResponse.json();
   return { ...created, activationUrl: grant.activationUrl };
 }
 
@@ -168,17 +188,20 @@ export interface RegrantPreviewOptions {
  */
 export async function regrantPreview(
   options: RegrantPreviewOptions,
-): Promise<components['schemas']['MintGrantResponse']> {
+): Promise<MintGrantResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/previews/${options.previewId}/grant`,
+  const response = await apiRequest(
+    'POST /api/projects/{projectId}/flows/{flowId}/previews/{previewId}/grant',
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      path: {
+        projectId: pid,
+        flowId: options.flowId,
+        previewId: options.previewId,
+      },
+      body: {
         origins: options.origins,
         ...(options.sessionId ? { sessionId: options.sessionId } : {}),
-      }),
+      },
     },
   );
   if (!response.ok) {
@@ -196,9 +219,15 @@ export interface DeletePreviewOptions {
 
 export async function deletePreview(options: DeletePreviewOptions) {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/previews/${options.previewId}`,
-    { method: 'DELETE' },
+  const response = await apiRequest(
+    'DELETE /api/projects/{projectId}/flows/{flowId}/previews/{previewId}',
+    {
+      path: {
+        projectId: pid,
+        flowId: options.flowId,
+        previewId: options.previewId,
+      },
+    },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));

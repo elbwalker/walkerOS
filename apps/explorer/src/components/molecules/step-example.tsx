@@ -16,8 +16,7 @@ export interface StepExampleProps {
  *
  * Rendered with the static Shiki path, so the code is in server-rendered HTML
  * and in the docs Markdown export. That export relies on this DOM: one
- * labelled box per part, each with a single `pre > code`, in Event, [Mapping],
- * Out order.
+ * labelled box per part, each with a `pre > code` that names its language.
  *
  * @example
  * <StepExample example={data.examples.step.addToCart} />

@@ -87,7 +87,8 @@ export const sourceCookieFirst: Source.Init<Types> = async (context) => {
      * uses OR logic: if ANY category is true, the group is true.
      */
     const handleConsent = (consent: CookieFirstConsent | null) => {
-      // Skip if explicitOnly and no explicit consent given
+      // A null consent means no choice yet and is skipped by the next line
+      // either way, so explicitOnly changes nothing here.
       if (settings.explicitOnly && !consent) return;
       if (!consent) return;
 

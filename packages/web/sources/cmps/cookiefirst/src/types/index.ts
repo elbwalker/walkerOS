@@ -54,9 +54,9 @@ export interface Settings {
   categoryMap?: Record<string, string>;
 
   /**
-   * Only process explicit consent (user made a choice).
-   * When true: Ignores consent if CookieFirst.consent is null
-   * When false: Processes any consent state including defaults
+   * Has no effect in this source: it skips CookieFirst.consent while it is
+   * null (no choice made yet) and processes every consent object after that,
+   * whether this is true or false.
    *
    * Default: true
    */

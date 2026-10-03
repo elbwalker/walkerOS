@@ -20,8 +20,8 @@ The tagger solves several challenges when working with walkerOS data attributes:
 
 * **Consistent formatting** - Ensures data attributes follow walkerOS
   conventions
-* **Automatic escaping** - Handles special characters in values (semicolons,
-  colons, quotes, backslashes)
+* **Automatic escaping** - Escapes semicolons, single quotes and backslashes in
+  values, plus colons in keys, so the browser source reads them back as passed
 * **Type safety** - Provides TypeScript support for better development
   experience
 * **Fluent API** - Chainable methods for building complex attribute sets
@@ -202,26 +202,26 @@ const attributes = tagger('product')
 
 ### Value escaping
 
+The tagger puts a backslash before every semicolon, single quote and backslash
+in keys and values, and before colons in keys. These are the
+[escapes](/docs/sources/web/browser/tagging/html-attributes#escaping)
+the browser source reads, so the value arrives as passed.
+
 <CodeSnippet
   code={`const attributes = tagger()
-.data('description', 'Product with: special; chars & "quotes"')
+.data('description', "Men's shirt: size L; blue")
 .get();
 
 // Result:
 // {
-//   'data-elb-': 'description:Product with\\\\: special\\\\; chars & "quotes"'
+//   'data-elb-': "description:Men\\\\'s shirt: size L\\\\; blue"
 // }`}
   language="typescript"
 />
 
-:::warning
-
-The browser source does not read these escapes back yet. A value with `:`
-arrives with a backslash, and a value with `;` or `'` is split into extra
-properties. For such values write the attribute by hand: `:` needs no escaping,
-a value with `;` goes in single quotes, and a `'` is not supported.
-
-:::
+Like any attribute value, it is still cast to a number or boolean where it
+looks like one, trimmed of surrounding whitespace, and read from the element
+when it starts with `#`.
 
 ## Available methods (API reference)
 

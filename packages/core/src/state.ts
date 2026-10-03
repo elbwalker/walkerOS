@@ -78,9 +78,8 @@ function isEmptyResult(value: unknown): boolean {
  * an empty result writes nothing. An object result merges into an object
  * target (get: the `value` path, set: the stored entry), anything else
  * replaces it. The set merge reads then writes, it is not atomic. Consent
- * gates on the event's consent, not on a stored `consent` key. Exception:
- * a `loop` item is mapped like any loop item, so a `consent` key on the item
- * itself gates that item's mapping.
+ * gates on the event's consent, never on a stored `consent` key, also not
+ * on one inside a `loop` item.
  *
  * Each entry is fail-open: a store or resolution error is logged and the
  * event is left unmutated, the chain continues. An unknown store logs an

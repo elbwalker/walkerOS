@@ -1,6 +1,7 @@
 import { getPlatform, isObject } from '@walkeros/core';
 import { requireProjectId } from '../../core/auth.js';
-import { apiFetch } from '../../core/http.js';
+import { apiRequest } from '../../core/api-request.js';
+import type { ApiRequestInit, ResponseJson } from '../../core/api-request.js';
 import { handleCliError, throwApiError } from '../../core/api-error.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
@@ -11,10 +12,47 @@ import type { GlobalOptions } from '../../types/global.js';
 
 // === Programmatic API ===
 
+type ListDeploymentsQuery = NonNullable<
+  ApiRequestInit<'GET /api/projects/{projectId}/deployments'>['query']
+>;
+
+/** A deployment status, as the contract's list filter declares it. */
+export type DeploymentStatus = NonNullable<ListDeploymentsQuery['status']>;
+
+/** A deployment type, as the contract's list filter declares it. */
+export type DeploymentType = NonNullable<ListDeploymentsQuery['type']>;
+
+/** Every deployment status. The compiler holds it equal to the contract's. */
+export const DEPLOYMENT_STATUSES = {
+  idle: true,
+  deploying: true,
+  published: true,
+  active: true,
+  stopped: true,
+  failed: true,
+} satisfies Record<DeploymentStatus, true>;
+
+/** Every deployment type. The compiler holds it equal to the contract's. */
+export const DEPLOYMENT_TYPES = {
+  web: true,
+  server: true,
+} satisfies Record<DeploymentType, true>;
+
+function isMember<T extends string>(
+  members: Readonly<Record<T, true>>,
+  value: string,
+): value is T {
+  return Object.hasOwn(members, value);
+}
+
+export function isDeploymentStatus(value: string): value is DeploymentStatus {
+  return isMember(DEPLOYMENT_STATUSES, value);
+}
+
 export interface ListDeploymentsOptions {
   projectId?: string;
-  type?: 'web' | 'server';
-  status?: string;
+  type?: DeploymentType;
+  status?: DeploymentStatus;
   flowId?: string;
   cursor?: string;
   limit?: number;
@@ -22,16 +60,18 @@ export interface ListDeploymentsOptions {
 
 export async function listDeployments(options: ListDeploymentsOptions = {}) {
   const id = options.projectId ?? requireProjectId();
-  const params = new URLSearchParams();
-  if (options.type) params.set('type', options.type);
-  if (options.status) params.set('status', options.status);
-  if (options.flowId) params.set('flowId', options.flowId);
-  if (options.cursor) params.set('cursor', options.cursor);
-  if (options.limit !== undefined) params.set('limit', String(options.limit));
-  const qs = params.toString();
-
-  const response = await apiFetch(
-    `/api/projects/${id}/deployments${qs ? `?${qs}` : ''}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/deployments',
+    {
+      path: { projectId: id },
+      query: {
+        type: options.type,
+        status: options.status,
+        flowId: options.flowId || undefined,
+        cursor: options.cursor || undefined,
+        limit: options.limit,
+      },
+    },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
@@ -121,8 +161,9 @@ export async function getDeploymentBySlug(options: {
 }) {
   const id = options.projectId ?? requireProjectId();
 
-  const response = await apiFetch(
-    `/api/projects/${id}/deployments/${options.slug}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/deployments/{deploymentId}',
+    { path: { projectId: id, deploymentId: options.slug } },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
@@ -138,11 +179,13 @@ export async function createDeployment(options: {
 }) {
   const id = options.projectId ?? requireProjectId();
 
-  const response = await apiFetch(`/api/projects/${id}/deployments`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: options.type, label: options.label }),
-  });
+  const response = await apiRequest(
+    'POST /api/projects/{projectId}/deployments',
+    {
+      path: { projectId: id },
+      body: { type: options.type, label: options.label },
+    },
+  );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throwApiError(body, 'Failed to create deployment');
@@ -156,9 +199,9 @@ export async function deleteDeployment(options: {
 }) {
   const id = options.projectId ?? requireProjectId();
 
-  const response = await apiFetch(
-    `/api/projects/${id}/deployments/${options.slug}`,
-    { method: 'DELETE' },
+  const response = await apiRequest(
+    'DELETE /api/projects/{projectId}/deployments/{deploymentId}',
+    { path: { projectId: id, deploymentId: options.slug } },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
@@ -181,6 +224,17 @@ interface DeploymentsCommandOptions extends GlobalOptions {
   limit?: number;
 }
 
+/** A flag's value narrowed to its members; any other value is an error. */
+function flagValue<T extends string>(
+  flag: string,
+  value: string | undefined,
+  members: Readonly<Record<T, true>>,
+): T | undefined {
+  if (value === undefined) return undefined;
+  if (isMember(members, value)) return value;
+  throw new Error(`${flag} must be one of: ${Object.keys(members).join(', ')}`);
+}
+
 async function handleResult(
   fn: () => Promise<unknown>,
   options: DeploymentsCommandOptions,
@@ -200,8 +254,8 @@ export async function listDeploymentsCommand(
     () =>
       listDeployments({
         projectId: options.project,
-        type: options.type as ListDeploymentsOptions['type'],
-        status: options.status,
+        type: flagValue('--type', options.type, DEPLOYMENT_TYPES),
+        status: flagValue('--status', options.status, DEPLOYMENT_STATUSES),
         cursor: options.cursor,
         limit: options.limit,
       }),
@@ -265,16 +319,21 @@ export async function createDeployCommand(
     if (isRemoteFlow) {
       // Fetch flow from API to determine type
       const id = options.project ?? requireProjectId();
-      const resp = await apiFetch(`/api/projects/${id}/flows/${config}`);
+      const resp = await apiRequest(
+        'GET /api/projects/{projectId}/flows/{flowId}',
+        { path: { projectId: id, flowId: config } },
+      );
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}));
         throwApiError(body, `Failed to fetch flow ${config}`);
       }
-      const flow = (await resp.json()) as { config?: unknown };
+      const flow: ResponseJson<
+        'GET /api/projects/{projectId}/flows/{flowId}',
+        200
+      > = await resp.json();
       if (!flow.config) throw new Error('Flow has no config');
 
-      const flowConfig = flow.config as { flows?: Record<string, unknown> };
-      const flows = flowConfig.flows;
+      const flows = flow.config.flows;
       if (!flows) throw new Error('Invalid flow config: missing flows');
       const flowName = options.flow ?? Object.keys(flows)[0];
       if (!flowName) throw new Error('No flows found in config');

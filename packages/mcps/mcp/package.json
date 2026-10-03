@@ -14,13 +14,15 @@
     "./stdio": {
       "types": "./dist/stdio.d.ts",
       "default": "./dist/stdio.js"
-    }
+    },
+    "./surface.json": "./src/surface.json"
   },
   "bin": {
     "walkeros-mcp": "./dist/stdio.js"
   },
   "files": [
     "dist/**",
+    "src/surface.json",
     "README.md"
   ],
   "scripts": {

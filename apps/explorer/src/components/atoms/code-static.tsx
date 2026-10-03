@@ -1,5 +1,9 @@
 import React from 'react';
-import { createHighlighterCoreSync, type HighlighterCore } from 'shiki/core';
+import {
+  createHighlighterCoreSync,
+  type HighlighterCore,
+  type ShikiTransformer,
+} from 'shiki/core';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 import json from 'shiki/langs/json.mjs';
 import javascript from 'shiki/langs/javascript.mjs';
@@ -63,9 +67,21 @@ function getHighlighterSync(): HighlighterCore {
   return highlighter;
 }
 
-function resolveLang(language: string | undefined): string {
-  if (!language) return 'json';
+function resolveLang(language: string): string {
   return (LANGS as readonly string[]).includes(language) ? language : 'text';
+}
+
+// Marks `<code>` with `language-<lang>`, the convention HTML-to-Markdown
+// converters read, so the docs Markdown export (converted from this HTML)
+// writes a fence with a language. Takes the caller's language, not the
+// resolved one: a fence can name `yaml` even though it renders as plain text.
+function languageClass(language: string): ShikiTransformer {
+  return {
+    name: 'elb-language-class',
+    code(node) {
+      this.addClassToHast(node, `language-${language}`);
+    },
+  };
 }
 
 export function CodeStatic({
@@ -73,10 +89,12 @@ export function CodeStatic({
   language,
   className,
 }: CodeStaticProps): React.ReactElement {
+  const lang = language || 'json';
   const rendered = getHighlighterSync().codeToHtml(code, {
-    lang: resolveLang(language),
+    lang: resolveLang(lang),
     themes: { light: ELB_THEME_LIGHT, dark: ELB_THEME_DARK },
     defaultColor: 'light',
+    transformers: [languageClass(lang)],
   });
 
   const wrapperClass = `elb-code-static${className ? ` ${className}` : ''}`;

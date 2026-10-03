@@ -1205,3 +1205,62 @@ describe('getMappingValue keeps its guard and inference', () => {
     ).toBe('loyal');
   });
 });
+
+describe('loop items never supply their own consent', () => {
+  const cases: Array<{
+    name: string;
+    event?: WalkerOS.Consent;
+    collector: WalkerOS.Consent;
+    item: WalkerOS.Consent;
+    expected: string[];
+  }> = [
+    {
+      name: 'event consent denies, the item claims a grant',
+      event: { marketing: false },
+      collector: {},
+      item: { marketing: true },
+      expected: [],
+    },
+    {
+      name: 'event consent grants',
+      event: { marketing: true },
+      collector: {},
+      item: { marketing: true },
+      expected: ['a'],
+    },
+    {
+      name: 'event consent grants, the item claims a denial',
+      event: { marketing: true },
+      collector: {},
+      item: { marketing: false },
+      expected: ['a'],
+    },
+    {
+      name: 'collector consent denies, the item claims a grant',
+      event: undefined,
+      collector: { marketing: false },
+      item: { marketing: true },
+      expected: [],
+    },
+    {
+      name: 'collector consent grants',
+      event: undefined,
+      collector: { marketing: true },
+      item: { marketing: true },
+      expected: ['a'],
+    },
+  ];
+
+  test.each(cases)('$name', async ({ event, collector, item, expected }) => {
+    expect(
+      await getMappingValue(
+        {
+          ...(event ? { consent: event } : {}),
+          items: [{ consent: item, id: 'a' }],
+        },
+        { loop: ['items', { key: 'id', consent: { marketing: true } }] },
+        { collector: createMockCollector({ consent: collector }) },
+      ),
+    ).toEqual(expected);
+  });
+});

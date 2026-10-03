@@ -388,5 +388,41 @@ describe('Mapping', () => {
       // Verify destination never received event (no consent)
       expect(spyDestination.push).not.toHaveBeenCalled();
     });
+
+    test.each([
+      { consent: { marketing: false }, expected: [] },
+      { consent: { marketing: true }, expected: ['a'] },
+    ])(
+      'loop items are gated by the event consent, not their own ($consent.marketing)',
+      async ({ consent, expected }) => {
+        spyDestination.config = {
+          data: {
+            map: {
+              items: {
+                loop: [
+                  'data.items',
+                  { key: 'id', consent: { marketing: true } },
+                ],
+              },
+            },
+          },
+        };
+
+        const { elb } = await startFlow({
+          consent,
+          destinations: { spy: { code: spyDestination } },
+        });
+
+        await elb({
+          name: 'order complete',
+          data: { items: [{ consent: { marketing: true }, id: 'a' }] },
+        });
+
+        expect(spyDestination.push).toHaveBeenCalledWith(
+          expect.any(Object),
+          expect.objectContaining({ data: { items: expected } }),
+        );
+      },
+    );
   });
 });

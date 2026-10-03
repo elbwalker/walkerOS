@@ -1,20 +1,19 @@
 /**
- * Gives the flow-complete snippets their code languages back in the Markdown
- * export.
+ * Captions the flow-complete snippets in the Markdown export and checks their
+ * code blocks name a language.
  *
- * website/src/remark/flow-snippets.ts renders FlowSlice and FlowExample through
- * explorer's CodeView, whose Shiki HTML (`pre > code`) carries no language
- * class, so `hast-util-to-mdast` would write a fence without a language. The
- * docs plugin stamps each figure with `data-export-lang`, one language per
- * code block in document order. This plugin copies them onto the `code`
- * elements as `language-<lang>` classes, and wraps each CodeView header label
- * (the pointer, `Event`, `Out`) in `code` so it reads as an inline code
- * caption.
+ * website/src/remark/flow-snippets.ts renders FlowSlice and FlowExample as
+ * `figure.flow-slice` and `figure.flow-example` holding explorer CodeViews.
+ * This plugin wraps each CodeView header label (the pointer, `Event`, `Out`)
+ * in `code`, so it reads as an inline code caption. The fence languages come
+ * from explorer's CodeStatic (`language-<lang>` on `pre > code`); a snippet
+ * code block without one throws, since explorer's DOM no longer matches and
+ * the export would ship fences without a language.
  *
  * Registered under the LLM export plugin's `content.beforeDefaultRehypePlugins`,
  * which run on the extracted hast before `rehype-remark`. It depends on
- * explorer's DOM: one `pre > code` per CodeView and `span.elb-explorer-label`
- * headers. A block count that does not match the language list throws.
+ * explorer's DOM: `pre > code` per CodeView and `span.elb-explorer-label`
+ * headers.
  */
 
 interface Element {
@@ -69,7 +68,18 @@ function labelOf(label: Element): Element | undefined {
     : undefined;
 }
 
-function transformFigure(figure: Element, langs: string[]): void {
+/** Whether a `code` element names its language the way rehype-remark reads it. */
+function hasLanguage(code: Element): boolean {
+  const className = code.properties.className;
+  return (
+    Array.isArray(className) &&
+    className.some(
+      (name) => typeof name === 'string' && /^language-./.test(name),
+    )
+  );
+}
+
+function transformFigure(figure: Element): void {
   const inside = descendants(figure);
   const labels = inside.filter(
     (element) =>
@@ -84,16 +94,13 @@ function transformFigure(figure: Element, langs: string[]): void {
       ),
     );
 
-  if (codes.length !== langs.length) {
+  const unnamed = codes.filter((code) => !hasLanguage(code)).length;
+  if (codes.length === 0 || unnamed > 0) {
     const name = labels.map(textContent).join(', ') || '(no label)';
     throw new Error(
-      `export-flow-snippets: figure "${name}" has ${codes.length} code blocks, data-export-lang lists ${langs.length} (${langs.join(',')})`,
+      `export-flow-snippets: figure "${name}" has ${codes.length} code blocks, ${unnamed} of them without a language-<lang> class`,
     );
   }
-
-  codes.forEach((code, index) => {
-    code.properties.className = [`language-${langs[index]}`];
-  });
 
   for (const label of labels) {
     if (labelOf(label)) continue;
@@ -110,12 +117,13 @@ function transformFigure(figure: Element, langs: string[]): void {
 
 function walk(node: unknown): void {
   if (!isRecord(node)) return;
-  if (isElement(node) && node.tagName === 'figure') {
-    const langs = node.properties.dataExportLang;
-    if (typeof langs === 'string') {
-      transformFigure(node, langs.split(','));
-      return;
-    }
+  if (
+    isElement(node) &&
+    node.tagName === 'figure' &&
+    (hasClass(node, 'flow-slice') || hasClass(node, 'flow-example'))
+  ) {
+    transformFigure(node);
+    return;
   }
   const children = node.children;
   if (Array.isArray(children)) for (const child of children) walk(child);

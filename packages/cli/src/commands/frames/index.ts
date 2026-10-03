@@ -1,9 +1,14 @@
 import { requireProjectId } from '../../core/auth.js';
-import { apiFetch } from '../../core/http.js';
+import { apiRequest } from '../../core/api-request.js';
+import type { ResponseJson } from '../../core/api-request.js';
 import { throwApiResponseError } from '../../core/api-error.js';
 import type { components } from '../../types/api.gen.js';
 
-type FrameResponse = components['schemas']['Frame'];
+type FrameResponse = ResponseJson<
+  'GET /api/projects/{projectId}/frames/{frameId}',
+  200
+>;
+// The list operation answers one of two shapes, chosen by `pageKey`.
 type FrameListResponse = components['schemas']['FrameListResponse'];
 type FrameLeanListResponse = components['schemas']['FrameLeanListResponse'];
 
@@ -24,7 +29,9 @@ export async function listFrames(
   options: ListFramesOptions = {},
 ): Promise<FrameLeanListResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(`/api/projects/${pid}/frames`);
+  const response = await apiRequest('GET /api/projects/{projectId}/frames', {
+    path: { projectId: pid },
+  });
   return readJson(response, 'Failed to list frames');
 }
 
@@ -38,10 +45,10 @@ export async function listPageFrames(
   options: ListPageFramesOptions,
 ): Promise<FrameListResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const params = new URLSearchParams({ pageKey: options.pageKey });
-  const response = await apiFetch(
-    `/api/projects/${pid}/frames?${params.toString()}`,
-  );
+  const response = await apiRequest('GET /api/projects/{projectId}/frames', {
+    path: { projectId: pid },
+    query: { pageKey: options.pageKey },
+  });
   return readJson(response, 'Failed to list page frames');
 }
 
@@ -54,8 +61,9 @@ export async function getFrame(
   options: GetFrameOptions,
 ): Promise<FrameResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/frames/${encodeURIComponent(options.frameId)}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/frames/{frameId}',
+    { path: { projectId: pid, frameId: options.frameId } },
   );
   return readJson(response, 'Failed to read frame');
 }

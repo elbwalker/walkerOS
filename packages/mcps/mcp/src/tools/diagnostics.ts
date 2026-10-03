@@ -1,24 +1,22 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult } from '@walkeros/core';
-import { VERSION as CLI_VERSION, compareContract } from '@walkeros/cli';
+import {
+  VERSION as CLI_VERSION,
+  bakedContractVersion,
+  operationUrl,
+} from '@walkeros/cli';
 import type { ContractComparison } from '@walkeros/cli';
-import openapiSpec from '@walkeros/cli/openapi/spec.json';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { getPackageBaseUrl, getLastCatalogSource } from '../catalog.js';
 import { normalizeBaseUrl } from '../base-url.js';
 
-// The bundled OpenAPI contract version, embedded at build time via the import
-// above (no runtime module resolution). This is the client's bundled baseline,
-// not the live backend's spec.
-const CONTRACT_OPENAPI_VERSION: string = openapiSpec.info.version;
-
 const TITLE = 'Diagnostics';
 const DESCRIPTION =
   'Report the MCP runtime surface: MCP and CLI versions, the resolved app URL ' +
-  'and its source, app /api/health reachability, the bundled OpenAPI contract ' +
-  'version, and which source served the last package catalog fetch. ' +
+  'and its source, app /api/health reachability, the API contract verdict ' +
+  'against that app, and which source served the last package catalog fetch. ' +
   'Read-only and callable when logged out; use it when a request fails to see ' +
   'which versions and backend you are on.';
 
@@ -76,72 +74,65 @@ async function diagnosticsHandlerBody(
   // { reachable: false }. When present, its contract is to resolve
   // { reachable: false } on failure, but catch here too so a throwing client
   // never breaks diagnostics.
-  const health: { reachable: boolean; status?: string } = client.checkHealth
-    ? await client.checkHealth().catch(() => ({ reachable: false }))
-    : { reachable: false };
-  const healthUnavailable = !client.checkHealth;
+  const healthCheck: Promise<{
+    reachable: boolean;
+    status?: string;
+    version?: string;
+    error?: string;
+  }> = client.checkHealth
+    ? client.checkHealth().catch((error: unknown) => ({
+        reachable: false,
+        error: errorMessage(error),
+      }))
+    : Promise.resolve({ reachable: false });
 
-  // Contract drift verdict: compare the client's baked baseline against the
-  // live app's /api/health. The probe gets the SAME `resolved` this response
-  // prints as appUrl.resolved, never its own resolution: left to itself it
-  // reads the local machine (WALKEROS_APP_URL, the CLI config file on disk,
-  // then a hardcoded production default), so a hosted door, which has no CLI
-  // config, would report a verdict about a backend it is not served by. Two
-  // answers in one response must not describe two different backends.
-  // `resolved` is already free of a trailing slash (ToolClient.appBaseUrl
-  // promises that, and both doors normalize), so no normalizeBaseUrl here.
-  // Degrade to 'unknown' if the probe throws so a network blip never breaks
-  // diagnostics.
-  const contractComparison: ContractComparison = await compareContract({
-    baseUrl: resolved,
-  }).catch(() => ({
-    verdict: 'unknown' as const,
-    bakedVersion: CONTRACT_OPENAPI_VERSION,
-  }));
+  // The contract verdict comes from the CLIENT, like the URL: the local door
+  // compares per operation against the app it resolves, a hosted door served
+  // inside the app answers `in-process`. A client without the method, or one
+  // that throws, yields `unknown` with the reason.
+  const contractCheck: Promise<ContractComparison> = client.checkContract
+    ? client
+        .checkContract()
+        .catch((error: unknown) =>
+          unknownContract(
+            resolved,
+            packageVersion,
+            `contract check failed: ${errorMessage(error)}`,
+          ),
+        )
+    : Promise.resolve(
+        unknownContract(
+          resolved,
+          packageVersion,
+          'no contract check on this client',
+        ),
+      );
+
+  const [health, contract] = await Promise.all([healthCheck, contractCheck]);
 
   const catalogInfo = getLastCatalogSource();
 
   const warnings: string[] = [];
-  if (appUrlSource === 'default') {
-    warnings.push(
-      'WALKEROS_APP_URL did not set the app URL; appUrl.resolved is the backend the client resolved on its own. On a local MCP, set WALKEROS_APP_URL to target a specific backend.',
-    );
+  if (envAppUrl === undefined) {
+    warnings.push(`WALKEROS_APP_URL is not set; app URL from ${appUrlSource}`);
   }
-  if (healthUnavailable) {
-    warnings.push(
-      'health check is unavailable on this client; app reachability is reported as false.',
-    );
+  if (!client.checkHealth) {
+    warnings.push('no health check on this client');
   } else if (!health.reachable) {
-    warnings.push(
-      `app /api/health is unreachable at ${resolved}; check the URL, network, and that the app is running.`,
-    );
-  }
-  if (
-    contractComparison.verdict === 'client-older' &&
-    contractComparison.action
-  ) {
-    warnings.push(
-      `client contract is behind the server: ${contractComparison.action}.`,
-    );
+    const url = operationUrl('GET /api/health', { baseUrl: resolved });
+    warnings.push(`GET ${url} failed: ${health.error ?? 'no response'}`);
   }
 
   const result = {
     mcp: { version: packageVersion },
     cli: { version: CLI_VERSION },
     appUrl: { resolved, source: appUrlSource },
-    // app.version is intentionally omitted: the CLI's generated HealthResponse
-    // is { status } only, so it is not a typed field here.
     app: {
       reachable: health.reachable,
       ...(health.status !== undefined && { status: health.status }),
+      ...(health.version !== undefined && { version: health.version }),
     },
-    contract: {
-      openapiVersion: CONTRACT_OPENAPI_VERSION,
-      verdict: contractComparison.verdict,
-      ...(contractComparison.action !== undefined && {
-        action: contractComparison.action,
-      }),
-    },
+    contract: { openapiVersion: bakedContractVersion, ...contract },
     catalog: catalogInfo
       ? {
           lastSource: catalogInfo.source,
@@ -152,6 +143,28 @@ async function diagnosticsHandlerBody(
   };
 
   return mcpResult(result, warnings.length > 0 ? { warnings } : undefined);
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** The `unknown` verdict this MCP reports when its client gives none. */
+function unknownContract(
+  appUrl: string,
+  packageVersion: string,
+  reason: string,
+): ContractComparison {
+  return {
+    verdict: 'unknown',
+    appUrl,
+    client: {
+      package: '@walkeros/mcp',
+      version: packageVersion,
+      contract: bakedContractVersion,
+    },
+    reason,
+  };
 }
 
 export function registerDiagnosticsTool(

@@ -8,10 +8,40 @@
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { schemas } from '@walkeros/core/dev';
-import openapiSpec from '@walkeros/cli/openapi/spec.json';
 import { fetchCatalog, getPackageBaseUrl } from '../catalog.js';
+import type { ToolClient } from '../tool-client.js';
 
-export function registerReferenceResources(server: McpServer) {
+const OPENAPI_URI = 'walkeros://reference/openapi';
+
+/** The live OpenAPI document as text, or why it is unavailable. */
+async function openapiText(
+  client: ToolClient,
+): Promise<{ text: string; mimeType: string }> {
+  if (!client.openapiDocument) {
+    return {
+      text: 'openapi document unavailable: no openapi document on this client',
+      mimeType: 'text/plain',
+    };
+  }
+  try {
+    const document = await client.openapiDocument();
+    return {
+      text: JSON.stringify(document, null, 2),
+      mimeType: 'application/json',
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return {
+      text: `openapi document unavailable: ${reason}`,
+      mimeType: 'text/plain',
+    };
+  }
+}
+
+export function registerReferenceResources(
+  server: McpServer,
+  client: ToolClient,
+) {
   // Flow Schema reference (generated from Zod)
   server.resource(
     'flow-schema',
@@ -226,25 +256,18 @@ export function registerReferenceResources(server: McpServer) {
     },
   );
 
-  // OpenAPI 3.1 specification for the walkerOS cloud HTTP API
+  // The live OpenAPI 3.1 document of the app the client talks to, read on
+  // each request, so it always describes the backend the tools reach.
   server.resource(
     'openapi',
-    'walkeros://reference/openapi',
+    OPENAPI_URI,
     {
-      description: 'walkerOS cloud API — OpenAPI 3.1 specification',
+      description:
+        'walkerOS cloud API: the live OpenAPI 3.1 document of the app this server talks to',
       mimeType: 'application/json',
     },
-    // The spec is embedded at build time (import above), so it is always
-    // available with no runtime module resolution. This serves the client's
-    // bundled contract baseline, not the live backend's spec.
     async () => ({
-      contents: [
-        {
-          uri: 'walkeros://reference/openapi',
-          text: JSON.stringify(openapiSpec, null, 2),
-          mimeType: 'application/json',
-        },
-      ],
+      contents: [{ uri: OPENAPI_URI, ...(await openapiText(client)) }],
     }),
   );
 

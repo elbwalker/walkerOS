@@ -50,8 +50,12 @@ jest.mock('@walkeros/cli', () => ({
   feedback: jest.fn(),
   getFeedbackPreference: jest.fn(),
   setFeedbackPreference: jest.fn(),
+  fetchHealth: jest.fn(),
+  fetchOpenApi: jest.fn(),
+  compareContract: jest.fn(),
 }));
 
+import './support/version.js';
 import * as cli from '@walkeros/cli';
 import { HttpToolClient } from '../http-tool-client.js';
 import { record } from './support/tool-result.js';
@@ -63,8 +67,10 @@ const observeSession: ObserveSessionResult = {
   flowId: 'fl_1',
   status: 'live',
   errorMessage: null,
+  configSnapshot: {},
   observedFlowName: 'web',
   serverFlowName: 'server',
+  serverEndpoint: 'https://obs-ses-1.containers.test',
   web: {
     activationUrl: 'https://shop.example/?elbObserve=obsw_pb1.ses_1.tok',
     credential: 'obsw_pb1.ses_1.tok',
@@ -81,19 +87,16 @@ const observeSession: ObserveSessionResult = {
   },
   expiresAt: '2026-07-21T00:00:00.000Z',
   recordsReceived: 7,
+  createdBy: 'user_1',
   createdAt: '2026-07-20T00:00:00.000Z',
 };
 
 /**
- * What the CLI returns for the same session: the MCP `ObserveSessionResult`
- * plus the app fields the client passes through untouched.
+ * What the CLI returns for the same session. Typing the MCP fixture as the
+ * CLI's contract type keeps `ObserveSessionResult` and the contract in step.
  */
-const cliObserveSession: Awaited<ReturnType<typeof cli.startObserveSession>> = {
-  ...observeSession,
-  configSnapshot: {},
-  serverEndpoint: 'https://obs-ses-1.containers.test',
-  createdBy: 'user_1',
-};
+const cliObserveSession: Awaited<ReturnType<typeof cli.startObserveSession>> =
+  observeSession;
 
 const projectList: Awaited<ReturnType<typeof cli.listProjects>> = {
   projects: [],
@@ -203,6 +206,7 @@ describe('HttpToolClient', () => {
       sessionId: 'ses_1',
     });
     expect(result.recordsReceived).toBe(7);
+    expect(result.createdBy).toBe('user_1');
   });
 
   it('delegates endObserveSession with the session ref', async () => {
@@ -282,33 +286,86 @@ describe('HttpToolClient', () => {
     expect(cli.feedback).toHaveBeenCalledWith('hello', { anonymous: true });
   });
 
-  it('checkHealth returns reachable true with NO token set (tokenless probe)', async () => {
-    // credentialSource returns null → logged out; checkHealth must not require auth.
-    jest.mocked(cli.credentialSource).mockReturnValue(null);
-    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
-    const mockFetch = jest
-      .fn()
-      .mockResolvedValue({ json: async () => ({ status: 'ok' }) });
-    global.fetch = mockFetch;
+  it('checkHealth probes appBaseUrl through the tokenless fetchHealth', async () => {
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test/');
+    jest.mocked(cli.fetchHealth).mockResolvedValue({
+      reachable: true,
+      status: 'ok',
+      appVersion: 'abc1234',
+      contractVersion: '4.7.0+80fb4d79',
+      minSupportedClient: '4.7.0',
+    });
 
-    const client = new HttpToolClient();
-    const result = await client.checkHealth();
+    const result = await new HttpToolClient().checkHealth();
 
-    expect(result.reachable).toBe(true);
-    expect(result.status).toBe('ok');
-    // Probes the public /api/health route with a plain fetch (no Authorization).
-    const [url, init] = mockFetch.mock.calls[0];
-    expect(url).toBe('https://app.test/api/health');
-    expect(init.headers).toBeUndefined();
+    expect(cli.fetchHealth).toHaveBeenCalledWith('https://app.test');
+    expect(result).toEqual({
+      reachable: true,
+      status: 'ok',
+      version: 'abc1234',
+    });
   });
 
-  it('checkHealth returns reachable false on a network/timeout failure', async () => {
+  it('checkHealth passes the failure reason on', async () => {
     jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
-    global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
+    jest.mocked(cli.fetchHealth).mockResolvedValue({
+      reachable: false,
+      error: 'timeout after 5000 ms',
+    });
 
-    const client = new HttpToolClient();
-    const result = await client.checkHealth();
-    expect(result.reachable).toBe(false);
+    expect(await new HttpToolClient().checkHealth()).toEqual({
+      reachable: false,
+      error: 'timeout after 5000 ms',
+    });
+  });
+
+  it('checkContract compares appBaseUrl, naming this MCP as the client', async () => {
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://stage.test/');
+    const comparison: cli.ContractComparison = {
+      verdict: 'in-sync',
+      appUrl: 'https://stage.test',
+      client: {
+        package: '@walkeros/mcp',
+        version: '0.0.0-test',
+        contract: '4.7.0+80fb4d79',
+      },
+      operations: 55,
+      missing: [],
+      changed: [],
+    };
+    jest.mocked(cli.compareContract).mockResolvedValue(comparison);
+
+    expect(await new HttpToolClient().checkContract()).toBe(comparison);
+    expect(cli.compareContract).toHaveBeenCalledWith({
+      baseUrl: 'https://stage.test',
+      client: { type: 'mcp', version: '0.0.0-test' },
+    });
+  });
+
+  it('openapiDocument returns the live document of appBaseUrl', async () => {
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
+    const document = { openapi: '3.1.0', paths: {} };
+    jest.mocked(cli.fetchOpenApi).mockResolvedValue({
+      ok: true,
+      url: 'https://app.test/api/openapi.json',
+      document,
+    });
+
+    expect(await new HttpToolClient().openapiDocument()).toBe(document);
+    expect(cli.fetchOpenApi).toHaveBeenCalledWith('https://app.test');
+  });
+
+  it('openapiDocument rejects with the request and its reason', async () => {
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
+    jest.mocked(cli.fetchOpenApi).mockResolvedValue({
+      ok: false,
+      url: 'https://app.test/api/openapi.json',
+      error: 'HTTP 503',
+    });
+
+    await expect(new HttpToolClient().openapiDocument()).rejects.toThrow(
+      'GET https://app.test/api/openapi.json: HTTP 503',
+    );
   });
 
   it('delegates sync config helpers without awaiting', () => {

@@ -481,10 +481,11 @@ function checkSkillsExport(): void {
 }
 
 // FlowSlice and FlowExample are resolved at build time by
-// website/src/remark/flow-snippets.ts, and website/src/rehype/export-flow-snippets.ts
-// restores their code languages in the export. A throw in that rehype plugin
-// only warns under the llms plugin's default `onRouteError: 'warn'` and drops
-// the page's .md, so guard the outcome here: every docs page rendering a
+// website/src/remark/flow-snippets.ts, and their code blocks reach the export
+// with the language explorer's CodeStatic names on them, which
+// website/src/rehype/export-flow-snippets.ts checks. A throw in that rehype
+// plugin only warns under the llms plugin's default `onRouteError: 'warn'` and
+// drops the page's .md, so guard the outcome here: every docs page rendering a
 // snippet is exported, carries no unresolved tag, and has a ```json fence when
 // it renders a FlowExample or a FlowSlice of an object or array.
 const SNIPPET_TAG = /<(FlowSlice|FlowExample)\b[^>]*?\bfeature="([^"]+)"/g;
@@ -531,7 +532,7 @@ export function findFlowSnippetExportIssues(
       found.push({
         file,
         message:
-          'the .md export has no ```json fence for its flow-complete snippets (export-flow-snippets did not run)',
+          'the .md export has no ```json fence for its flow-complete snippets (their code blocks lost the language)',
       });
   }
   return found;
