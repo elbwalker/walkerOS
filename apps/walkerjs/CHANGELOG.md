@@ -1,5 +1,18 @@
 # @walkeros/walker.js
 
+## 4.7.1
+
+### Patch Changes
+
+- 91e9aeb: Attribute values now support backslash escapes: `\'`, `\;` and `\\`
+  keep a quote, semicolon or backslash in the value, so `name:Men\'s shirt`
+  works and tagger output is read back as passed. The tagger no longer escapes
+  colons in values. A single backslash in existing markup now escapes the next
+  character, so write `\\` for a literal backslash.
+- bd511d0: Every dataLayer push now carries `globals`, also when it is empty.
+  With `_clear: true`, GTM no longer keeps the previous page's globals after a
+  single-page app route change to a page without `data-elbglobals`.
+
 ## 4.7.0
 
 ### Minor Changes
