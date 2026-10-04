@@ -1,5 +1,5 @@
 {
-  "$comment": "Shared MCP surface contract for the local plane (walkerOS packages/mcps/mcp) and the hosted plane (app src/lib/mcp). Both planes pin their own copy of this file and assert the tools they actually expose against it, so a rename, an added or dropped field, a changed description, or a reworded hint fails a test on the side that drifted instead of silently diverging. Edit it only together with the matching copy in the other repo.",
+  "$comment": "Shipped as @walkeros/mcp/surface.json; the app asserts its hosted server registers this roster.",
   "toolNames": [
     "auth",
     "deploy_manage",

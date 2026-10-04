@@ -255,6 +255,16 @@ describe('deploy_manage tool', () => {
         limit: undefined,
       });
     });
+
+    it('refuses a status the contract does not declare, before any request', async () => {
+      const listDeployments = jest.fn().mockResolvedValue({ deployments: [] });
+      const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
+      const result = await tool.handler({ action: 'list', status: 'running' });
+
+      expect(isErrorResult(result)).toBe(true);
+      expect(textOf(result)).toContain('status');
+      expect(listDeployments).not.toHaveBeenCalled();
+    });
   });
 
   describe('get', () => {

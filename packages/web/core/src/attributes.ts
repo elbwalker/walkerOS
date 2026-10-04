@@ -1,5 +1,3 @@
-import { trim } from '@walkeros/core';
-
 /**
  * Get attribute value from element
  * @param element - DOM element
@@ -12,25 +10,43 @@ export function getAttribute(element: Element, name: string): string {
 
 /**
  * Split attribute string by separator (semicolon by default)
- * Handles quoted values containing the separator
+ * Handles quoted values containing the separator and backslash escapes:
+ * a backslash keeps the next character, e.g. `\;`, in the current part.
+ * Parts keep their quotes and escapes, splitKeyVal removes them.
  * @param str - String to split
  * @param separator - Separator character (default: ';')
  * @returns Array of attribute strings
  */
 export function splitAttribute(str: string, separator = ';'): string[] {
   if (!str) return [];
-  const reg = new RegExp(`(?:[^${separator}']+|'[^']*')+`, 'ig');
+  // An escape pair, a quote group, or any other non-separator char. A quote
+  // group only closes before a separator, a colon or the end, so a quote that
+  // closes none, like the apostrophe in "Men's", is a plain character.
+  const reg = new RegExp(
+    `(?:\\\\[\\s\\S]?|'(?:\\\\[\\s\\S]|[^'\\\\])*'(?=\\s*(?:[${separator}:]|$))|[^${separator}\\\\])+`,
+    'g',
+  );
   return str.match(reg) || [];
 }
 
 /**
- * Split key-value pair by first colon
+ * Split key-value pair by the first unescaped colon
+ * Removes surrounding whitespace and quotes and resolves backslash escapes
+ * in both key and value.
  * @param str - String in format "key:value"
  * @returns Tuple of [key, value]
  */
 export function splitKeyVal(str: string): [string, string] {
-  const [key, value] = str.split(/:(.+)/, 2);
-  return [trim(key || ''), trim(value || '')];
+  const [, key = str, value = ''] =
+    str.match(/^((?:\\[\s\S]|[^\\:])*):([\s\S]*)$/) || [];
+  return [unquote(key), unquote(value)];
+}
+
+// Drop unescaped surrounding quotes, resolve escapes and trim whitespace.
+function unquote(str: string): string {
+  return str
+    .replace(/^\s*'|\\([\s\S])|'\s*$/g, (_, char?: string) => char || '')
+    .trim();
 }
 
 /**

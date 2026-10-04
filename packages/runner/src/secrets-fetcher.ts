@@ -1,4 +1,5 @@
 import { mergeAuthHeaders } from './auth-headers.js';
+import { secretValuesUrl } from './api-paths.js';
 import { fetchWithRetry } from './fetch-retry.js';
 import { throwIfRunnerAuthFailure } from './runner-auth-error.js';
 
@@ -28,7 +29,7 @@ export async function fetchSecrets(
   options: FetchSecretsOptions,
 ): Promise<Record<string, string>> {
   const { appUrl, token, projectId, flowId } = options;
-  const url = `${appUrl}/api/projects/${encodeURIComponent(projectId)}/flows/${encodeURIComponent(flowId)}/secrets/values`;
+  const url = secretValuesUrl(appUrl, projectId, flowId);
 
   // Runs sequentially after the bundle fetch within Scaleway's ~100s container
   // health window, so keep the total budget small. Retries transient failures

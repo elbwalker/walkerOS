@@ -78,6 +78,30 @@ jobs:
           echo "No completed green push or dispatch \"Build and test\" run on $SHA; the release runs the full suite on the bumped build."
           echo "tested=false" >> "$GITHUB_OUTPUT"
 
+      # Client contract preflight: the operations the released clients call,
+      # compared per operation with what stage serves. Public request, no
+      # credential, no install: the script runs on plain node from a sparse
+      # checkout. An unreachable stage warns and never blocks. A pre-release
+      # only warns on a mismatch. The trailing --warn-only makes a stable
+      # release warn as well; without it a stable release blocks.
+      - name: Checkout CLI contract files
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: packages/cli
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.15.0'
+          package-manager-cache: false
+      - name: Client contract against stage
+        env:
+          PRE_RELEASE_WARN_ONLY: ${{ inputs.release_type != 'stable release' && '--warn-only' || '' }}
+        run: |
+          node packages/cli/scripts/check-client-contract.mjs \
+            --live https://stage.app.walkeros.io/api/openapi.json \
+            $PRE_RELEASE_WARN_ONLY --warn-only
+
   # Needs only the gate, so the npm-publish approval is requested once, at the
   # start. The reviewer rule stays on npm-publish; no other job carries it.
   #

@@ -1,5 +1,28 @@
 # @walkeros/explorer
 
+## 4.7.1
+
+### Patch Changes
+
+- dbc172c: Read-only code boxes (`CodeView`, `CodeSnippet`) now size to their
+  content instead of a fixed height, and snippets show a copy button. New
+  `StepExample` shows a step's event, mapping and output side by side, wrapping
+  to a stack on narrow screens. `Grid` now honors `columns`: at most that many
+  boxes per row, the rest wrap.
+- 91e9aeb: Read-only code blocks (`CodeView`, `CodeSnippet`, `StepExample`) now
+  name their language on the rendered `<code>` element, so Markdown converted
+  from the page keeps each code fence's language, including languages that
+  render as plain text.
+- Updated dependencies [91e9aeb]
+- Updated dependencies [0635330]
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+- Updated dependencies [0635330]
+  - @walkeros/web-core@4.7.1
+  - @walkeros/web-source-browser@4.7.1
+  - @walkeros/collector@4.7.1
+  - @walkeros/core@4.7.1
+
 ## 4.7.0
 
 ### Minor Changes

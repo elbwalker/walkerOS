@@ -1,21 +1,23 @@
 import '../support/version.js';
 
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { registerReferenceResources } from '../../resources/references.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { record, str } from '../support/tool-result.js';
+import { stubClient } from '../support/stub-client.js';
+import type { ToolClient } from '../../tool-client.js';
 
 /**
- * Register the reference resources on a real McpServer and read them back
- * through a connected client, the way an MCP host does.
+ * Register the reference resources for a door on a real McpServer and read
+ * the openapi resource back through a connected client, the way an MCP host
+ * does.
  */
-async function connectedClient(): Promise<Client> {
+async function readOpenapi(
+  door: ToolClient,
+): Promise<{ text: string; mimeType: string }> {
   const server = new McpServer({ name: 'test', version: '0.0.0' });
-  registerReferenceResources(server);
+  registerReferenceResources(server, door);
   const [clientTransport, serverTransport] =
     InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0' });
@@ -23,56 +25,55 @@ async function connectedClient(): Promise<Client> {
     server.connect(serverTransport),
     client.connect(clientTransport),
   ]);
-  return client;
+  const { resources } = await client.listResources();
+  expect(resources.find((r) => r.name === 'openapi')).toBeDefined();
+  const result = await client.readResource({
+    uri: 'walkeros://reference/openapi',
+  });
+  const content = record(result.contents[0]);
+  return { text: str(content.text), mimeType: str(content.mimeType) };
 }
 
-/** The text of a read resource's first content block. */
-function firstText(result: { contents: unknown[] }): string {
-  return str(record(result.contents[0]).text);
-}
+const LIVE_DOCUMENT = {
+  openapi: '3.1.0',
+  info: { title: 'walkerOS', version: '4.7.0+80fb4d79' },
+  paths: { '/api/health': { get: { responses: {} } } },
+};
 
-// Read the real bundled spec the build embeds, to assert the resource serves it.
-// resources -> __tests__ -> src -> mcp -> mcps -> packages, then into cli.
-const here = dirname(fileURLToPath(import.meta.url));
-const specPath = join(here, '../../../../../cli/openapi/spec.json');
-interface SpecShape {
-  info: { version: string };
-}
-function parseSpec(text: string): SpecShape {
-  const parsed: unknown = JSON.parse(text);
-  if (
-    parsed &&
-    typeof parsed === 'object' &&
-    'info' in parsed &&
-    parsed.info &&
-    typeof parsed.info === 'object' &&
-    'version' in parsed.info &&
-    typeof parsed.info.version === 'string'
-  ) {
-    return { info: { version: parsed.info.version } };
-  }
-  throw new Error('spec.json missing info.version');
-}
-const bundledSpec = parseSpec(readFileSync(specPath, 'utf-8'));
-
-describe('openapi reference resource serves the embedded bundled spec', () => {
-  it('returns the real spec with info.version, not the error fallback', async () => {
-    const client = await connectedClient();
-    const { resources } = await client.listResources();
-    const resource = resources.find((r) => r.name === 'openapi');
-    expect(resource).toBeDefined();
-
-    const result = await client.readResource({
-      uri: 'walkeros://reference/openapi',
+describe('openapi reference resource', () => {
+  it("serves the client's live document", async () => {
+    let calls = 0;
+    const door = stubClient({
+      openapiDocument: async () => {
+        calls += 1;
+        return LIVE_DOCUMENT;
+      },
     });
-    const text = firstText(result);
+    const { text, mimeType } = await readOpenapi(door);
+    expect(JSON.parse(text)).toEqual(LIVE_DOCUMENT);
+    expect(mimeType).toBe('application/json');
+    expect(calls).toBe(1);
+  });
 
-    // The resource imports the spec statically, so serving it at all plus the
-    // version match below proves the real spec. A substring scan for an error
-    // marker would false-positive on legitimate spec content (404 descriptions
-    // contain "not found").
-    const parsed = parseSpec(text);
-    expect(parsed.info.version).toBeDefined();
-    expect(parsed.info.version).toBe(bundledSpec.info.version);
+  it('states the reason when the document cannot be read', async () => {
+    const door = stubClient({
+      openapiDocument: async () => {
+        throw new Error(
+          'GET https://app.walkeros.io/api/openapi.json: HTTP 503',
+        );
+      },
+    });
+    expect(await readOpenapi(door)).toEqual({
+      text: 'openapi document unavailable: GET https://app.walkeros.io/api/openapi.json: HTTP 503',
+      mimeType: 'text/plain',
+    });
+  });
+
+  it('states that a client without the method has no document', async () => {
+    const { openapiDocument: _omit, ...withoutDocument } = stubClient();
+    expect(await readOpenapi(withoutDocument)).toEqual({
+      text: 'openapi document unavailable: no openapi document on this client',
+      mimeType: 'text/plain',
+    });
   });
 });

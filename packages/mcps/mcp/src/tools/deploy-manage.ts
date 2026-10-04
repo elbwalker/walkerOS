@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { DeploymentStatus, DeploymentType } from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthError, AUTH_HINT } from '../types.js';
 import { redactDisplayNames } from '../user-data.js';
@@ -31,6 +32,29 @@ const DESCRIPTION =
   'For get and delete pass flowId (required) plus optional slug to disambiguate when a flow has multiple active deployments. ' +
   "If a flow has >=2 active deployments and no slug is supplied, the tool returns a MULTIPLE_DEPLOYMENTS error with a details[] list showing each deployment's slug, type, status, and updatedAt.";
 
+// The list filters' values. The compiler holds each record equal to the
+// contract's enum, which the CLI types as DeploymentStatus and DeploymentType.
+const DEPLOYMENT_STATUSES = {
+  idle: true,
+  deploying: true,
+  published: true,
+  active: true,
+  stopped: true,
+  failed: true,
+} satisfies Record<DeploymentStatus, true>;
+
+const DEPLOYMENT_TYPES = {
+  web: true,
+  server: true,
+} satisfies Record<DeploymentType, true>;
+
+/** A record's keys, each narrowed to the record's key type. */
+function membersOf<T extends string>(members: Readonly<Record<T, true>>): T[] {
+  return Object.keys(members).filter((key): key is T =>
+    Object.hasOwn(members, key),
+  );
+}
+
 const inputSchema = {
   action: z
     .enum(['deploy', 'list', 'get', 'delete'])
@@ -47,10 +71,13 @@ const inputSchema = {
       'Deployment slug. Optional disambiguator for get/delete when the flow has multiple active deployments.',
     ),
   type: z
-    .enum(['web', 'server'])
+    .enum(membersOf(DEPLOYMENT_TYPES))
     .optional()
     .describe('Deployment type filter for list.'),
-  status: z.string().optional().describe('Status filter for list.'),
+  status: z
+    .enum(membersOf(DEPLOYMENT_STATUSES))
+    .optional()
+    .describe('Status filter for list.'),
   wait: z
     .boolean()
     .optional()

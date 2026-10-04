@@ -7,6 +7,7 @@ import { getInstallationId } from './install-id.js';
 import { isTelemetryEnabled, isDebugMode } from './consent.js';
 import { maybePrintFirstRunNotice } from './first-run-notice.js';
 import { resolveAppUrl } from '../lib/config-file.js';
+import { operationUrl } from '../core/api-request.js';
 
 const SEND_TIMEOUT_MS = 1000;
 
@@ -188,7 +189,9 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
 export function resolveTelemetryEndpoint(): string | undefined {
   const appUrl = resolveAppUrl();
   if (!appUrl) return undefined;
-  return `${appUrl.replace(/\/$/, '')}/api/telemetry`;
+  return operationUrl('POST /api/telemetry', {
+    baseUrl: appUrl.replace(/\/$/, ''),
+  });
 }
 
 async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {

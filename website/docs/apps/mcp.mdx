@@ -339,8 +339,18 @@ Report the MCP runtime surface. Read-only, takes no parameters, and works even
 when logged out. Reach for it when a request fails, to see which versions and
 backend you are on. The response includes the MCP version, the CLI version, the
 app URL the client resolved and whether `WALKEROS_APP_URL` is what set it, app
-`/api/health` reachability, the bundled OpenAPI contract version, and which
-source served the last package catalog lookup.
+`/api/health` reachability and the app version, the API contract verdict
+against that app, and which source served the last package catalog lookup.
+
+The `contract` block carries the bundled contract label (`openapiVersion`) and
+the verdict with its facts: the operations the server lacks or changed, or the
+`@walkeros/mcp` version the server requires. The verdicts are the ones
+`walkeros diagnostics` prints, see
+[API version compatibility](/docs/apps/cli#api-version-compatibility). The local
+door compares operation by operation against the app it calls; the hosted door
+answers `in-process`. Warnings state facts only, such as
+`WALKEROS_APP_URL is not set; app URL from default` or
+`GET <url>/api/health failed: <reason>`.
 
 This tool has no parameters.
 
@@ -589,7 +599,7 @@ Needs the `frames` feature.
 | `walkeros://reference/consent` | Consent model (destination/rule/field level) |
 | `walkeros://reference/variables` | Variable patterns ($var/$env/$code/$store) |
 | `walkeros://reference/contract` | Event schemas, wildcards, inheritance |
-| `walkeros://reference/openapi` | OpenAPI 3.1 specification |
+| `walkeros://reference/openapi` | The live OpenAPI 3.1 document of the app the door talks to |
 | `walkeros://reference/packages` | Full package catalog |
 | `walkeros://schema/{packageName}` | Per-package JSON schemas |
 
@@ -635,8 +645,8 @@ Two things worth knowing:
 
 - **The link points at the app the door is connected to.** The hosted door
   answers with its own origin; the local door answers with whatever
-  `WALKEROS_APP_URL` or your CLI config resolves to. Run `diagnostics` if you
-  are unsure which backend you are on.
+  `WALKEROS_APP_URL` or your CLI config resolves to. `diagnostics` names the
+  backend a door is on.
 - **No link is better than a wrong one.** When a tool cannot name a screen that
   exists, the response simply carries no `appUrl`. A step scan that named no
   flow, a step whose last change was its removal, and a thread anchored to
@@ -645,7 +655,9 @@ Two things worth knowing:
 ## Two doors, one tool set
 
 Every `@walkeros/mcp` tool is registered on both doors, and both doors run the
-same code against the same app.
+same code against the same app. The tool roster ships as
+`@walkeros/mcp/surface.json`, and the app checks that its hosted door registers
+exactly that roster.
 
 | Door | How it runs | Auth |
 |------|-------------|------|

@@ -1,5 +1,5 @@
 import { links } from '../links.js';
-import fixture from './fixtures/mcp-surface-parity.json';
+import fixture from '../surface.json';
 
 const BASE = 'https://app.walkeros.io';
 const FLOW = { baseUrl: BASE, projectId: 'proj_1', flowId: 'flw_1' };

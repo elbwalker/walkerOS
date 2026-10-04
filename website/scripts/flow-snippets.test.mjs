@@ -26,6 +26,9 @@ const FLOW_FILE = join(ROOT, 'packages/cli/examples/flow-complete.json');
 const { default: flowSnippets } = await import(
   `${WEBSITE}src/remark/flow-snippets.ts`
 );
+const { default: exportDropComments } = await import(
+  `${WEBSITE}src/rehype/export-drop-comments.ts`
+);
 const { default: exportFlowSnippets } = await import(
   `${WEBSITE}src/rehype/export-flow-snippets.ts`
 );
@@ -40,6 +43,12 @@ const { flowCompleteFeatures, resolvePointer } = await import(
 );
 const { findStepExample, guideChapterUrl } = await import(
   `${WEBSITE}src/components/snippets/flow-complete.ts`
+);
+const { CodeView: ExplorerCodeView } = await import(
+  `${ROOT}/apps/explorer/src/components/molecules/code-view.tsx`
+);
+const { StepExample: ExplorerStepExample } = await import(
+  `${ROOT}/apps/explorer/src/components/molecules/step-example.tsx`
 );
 const { convertHtmlToMarkdown } = await import(
   `${ROOT}/node_modules/@signalwire/docusaurus-plugin-llms-txt/lib/transformation/html-parser.js`
@@ -142,8 +151,10 @@ describe('docs transform: node shapes', () => {
     const [figure] = findAll(tree, isJsx('figure'));
     assert.ok(figure, 'a figure is emitted');
     assert.equal(figure.node.type, 'mdxJsxFlowElement');
-    assert.equal(attrValue(figure.node, 'className'), 'flow-slice');
-    assert.equal(attrValue(figure.node, 'data-export-lang'), 'json');
+    assert.deepEqual(
+      figure.node.attributes.map((a) => [a.name, a.value]),
+      [['className', 'flow-slice']],
+    );
     const [code, caption] = figure.node.children;
     assert.equal(code.name, 'CodeView');
     const e = entry('cmp-category-map');
@@ -249,8 +260,10 @@ describe('docs transform: node shapes', () => {
     const expected = findStepExample(FLOW, e.pointer, e.example);
     const tree = transform('<FlowExample feature="ga4-purchase" />\n');
     const [figure] = findAll(tree, isJsx('figure'));
-    assert.equal(attrValue(figure.node, 'className'), 'flow-example');
-    assert.equal(attrValue(figure.node, 'data-export-lang'), 'json,json,javascript');
+    assert.deepEqual(
+      figure.node.attributes.map((a) => [a.name, a.value]),
+      [['className', 'flow-example']],
+    );
     const [step] = findAll(tree, isJsx('StepExample'));
     const example = attr(step.node, 'example');
     assert.equal(example.value.type, 'mdxJsxAttributeValueExpression');
@@ -270,13 +283,7 @@ describe('docs transform: node shapes', () => {
     assert.equal(caption.children.find((c) => c.type === 'link').url, guideChapterUrl(e.chapter));
   });
 
-  test('FlowExample without mapping lists two languages', () => {
-    const tree = transform('<FlowExample feature="collect-api" />\n');
-    const [figure] = findAll(tree, isJsx('figure'));
-    assert.equal(attrValue(figure.node, 'data-export-lang'), 'json,javascript');
-  });
-
-  test('FlowExample whose example has no out: key omitted, lang list still matches StepExample', () => {
+  test('FlowExample whose example has no out: key omitted', () => {
     const e = entry('file-transformer');
     const expected = findStepExample(FLOW, e.pointer, e.example);
     assert.equal(expected.out, undefined, 'fixture assumption: no out');
@@ -284,9 +291,6 @@ describe('docs transform: node shapes', () => {
     const [step] = findAll(tree, isJsx('StepExample'));
     const parsed = JSON.parse(attr(step.node, 'example').value.value);
     assert.equal('out' in parsed, false);
-    const [figure] = findAll(tree, isJsx('figure'));
-    // StepExample always renders an Out CodeView, so two blocks.
-    assert.equal(attrValue(figure.node, 'data-export-lang').split(',').length, 2);
   });
 
   test('several tags on one page are all replaced, in order', () => {
@@ -379,54 +383,22 @@ function flowFileOf(name, flow) {
   return path;
 }
 
-// Stubs with the explorer SSR DOM shape (box.tsx, code-static.tsx, grid).
-function CodeView({ label, code, language, height }) {
+// The real explorer CodeView, so the export sees its SSR DOM (header label,
+// `pre > code` with the language class); asserts the props arrived.
+function CodeView(props) {
+  const { label, code, language } = props;
   assert.equal(typeof code, 'string', `CodeView ${label}: code is a string`);
   assert.equal(typeof language, 'string');
-  const lines = code.split('\n').map((line, i) =>
-    React.createElement('span', { className: 'line', key: i }, React.createElement('span', { style: { color: '#000' } }, line)),
-  );
-  const withBreaks = lines.flatMap((line, i) => (i === 0 ? [line] : ['\n', line]));
-  return React.createElement(
-    'div',
-    { className: 'elb-explorer elb-explorer-box', style: height ? { height } : undefined },
-    label &&
-      React.createElement(
-        'div',
-        { className: 'elb-explorer-header' },
-        React.createElement('span', { className: 'elb-explorer-label' }, label),
-        React.createElement('div', null, React.createElement('button', { className: 'elb-explorer-btn', title: 'Copy to clipboard' }, React.createElement('svg'))),
-      ),
-    React.createElement(
-      'div',
-      { className: 'elb-explorer-content' },
-      React.createElement(
-        'div',
-        { className: 'elb-code-static' },
-        React.createElement('pre', { className: 'shiki shiki-themes elbTheme-light elbTheme-dark', tabIndex: 0 }, React.createElement('code', null, ...withBreaks)),
-      ),
-    ),
-  );
+  return React.createElement(ExplorerCodeView, props);
 }
-// Mirrors StepExample.tsx DOM order; asserts the prop arrived.
-function StepExample({ example }) {
+
+// The real explorer StepExample (Out formatted by core's formatOut); asserts
+// the prop arrived.
+function StepExample(props) {
+  const { example } = props;
   assert.ok(isRecord(example), 'StepExample.example is an object, not undefined');
   assert.ok('in' in example, 'example.in present');
-  const out = Array.isArray(example.out)
-    ? { code: example.out.map((call) => `${call[0]}(${call.slice(1).map((a) => JSON.stringify(a)).join(', ')});`).join('\n'), language: 'javascript' }
-    : { code: String(JSON.stringify(example.out, null, 2)), language: 'json' };
-  return React.createElement(
-    React.Fragment,
-    null,
-    example.description && React.createElement('p', { className: 'step-example-description' }, example.description),
-    React.createElement(
-      'div',
-      { className: 'elb-explorer elb-explorer-grid-wrapper' },
-      React.createElement(CodeView, { label: 'Event', code: JSON.stringify(example.in, null, 2), language: 'json' }),
-      example.mapping !== undefined && React.createElement(CodeView, { label: 'Mapping', code: JSON.stringify(example.mapping, null, 2), language: 'json' }),
-      React.createElement(CodeView, { label: 'Out', code: out.code, language: out.language }),
-    ),
-  );
+  return React.createElement(ExplorerStepExample, props);
 }
 
 let lastProps = [];
@@ -515,7 +487,7 @@ function toMarkdown(bodyHtml) {
     {
       rehypeProcessLinks: false,
       remarkGfm: true,
-      beforeDefaultRehypePlugins: [exportFlowSnippets],
+      beforeDefaultRehypePlugins: [exportDropComments, exportFlowSnippets],
       remarkPlugins: [normalizeExportLinks, [prependExportContext, { indexUrl: 'https://www.walkeros.io/llms.txt' }]],
     },
     ['.theme-doc-markdown'],
@@ -531,16 +503,24 @@ describe('export side: convertHtmlToMarkdown with exportFlowSnippets', () => {
     assert.doesNotMatch(md, /Copy to clipboard/);
   });
 
-  test('a Prism fence and a figure without data-export-lang are untouched', () => {
+  test('a Prism fence and a figure that is no flow snippet are untouched', () => {
     const md = toMarkdown(
-      '<figure><pre><code>plain</code></pre></figure><pre class="prism-code language-ts"><code>let a</code></pre>',
+      '<figure><span class="elb-explorer-label">Label</span><pre><code>plain</code></pre></figure><pre class="prism-code language-ts"><code>let a</code></pre>',
     );
+    assert.doesNotMatch(md, /`Label`/);
     assert.doesNotMatch(md, /```json/);
   });
 
-  test('count mismatch throws', () => {
-    const fixture = readFileSync(join(FIXTURES, 'slice.html'), 'utf8').replace('data-export-lang="json"', 'data-export-lang="json,json"');
-    assert.throws(() => toMarkdown(fixture), /flow|mismatch|count|block/i);
+  test('a snippet code block without a language throws', () => {
+    const fixture = readFileSync(join(FIXTURES, 'slice.html'), 'utf8').replace('<code class=language-json>', '<code>');
+    assert.throws(() => toMarkdown(fixture), /export-flow-snippets: .*without a language/);
+  });
+
+  test('a snippet figure without a code block throws', () => {
+    assert.throws(
+      () => toMarkdown('<figure class="flow-slice"><span class="elb-explorer-label">/a</span></figure>'),
+      /export-flow-snippets: figure "\/a" has 0 code blocks/,
+    );
   });
 
   test('end to end: plugin output rendered to HTML, then exported', async () => {
@@ -634,10 +614,10 @@ describe('real docs', () => {
     const LIB = `${ROOT}/node_modules/@signalwire/docusaurus-plugin-llms-txt/lib`;
     const { createLogger } = jiti(`${LIB}/logging/index.js`);
     const { ERROR_MESSAGES } = jiti(`${LIB}/constants.js`);
-    // The real error exportFlowSnippets raises on a count mismatch.
+    // The real error exportFlowSnippets raises on a code block without a language.
     const bad = readFileSync(join(FIXTURES, 'slice.html'), 'utf8').replace(
-      'data-export-lang="json"',
-      'data-export-lang="json,json"',
+      '<code class=language-json>',
+      '<code>',
     );
     let cause;
     try {
@@ -672,7 +652,7 @@ describe('real docs', () => {
     const files = mdxFiles(join(WEBSITE, 'docs')).filter((path) =>
       /<Flow(Slice|Example)\b/.test(readFileSync(path, 'utf8')),
     );
-    // Renders with the stand-in components above; the real explorer rendering is covered by the site build.
+    // Renders with the real explorer CodeView and StepExample.
     for (const path of files) {
       const source = readFileSync(path, 'utf8');
       const tags = source.match(/<Flow(Slice|Example)\b[^>]*\/>/g) ?? [];

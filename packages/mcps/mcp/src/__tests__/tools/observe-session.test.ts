@@ -77,8 +77,10 @@ function sessionResult(
     flowId: 'flow_1',
     status: 'live',
     errorMessage: null,
+    configSnapshot: {},
     observedFlowName: 'web',
     serverFlowName: 'server',
+    serverEndpoint: 'https://container.example.com',
     web: {
       activationUrl: ACTIVATION_URL,
       credential: FEED_CREDENTIAL,
@@ -97,6 +99,7 @@ function sessionResult(
     },
     expiresAt: '2026-07-18T01:00:00.000Z',
     recordsReceived: 7,
+    createdBy: 'user_1',
     createdAt: '2026-07-18T00:00:00.000Z',
     ...overrides,
   };
@@ -424,11 +427,13 @@ describe('observe_session tool', () => {
     });
 
     it('reports a detached arm when its part is absent', async () => {
-      const getObserveSession = jest
-        .fn()
-        .mockResolvedValue(
-          sessionResult({ server: null, serverFlowName: null }),
-        );
+      const getObserveSession = jest.fn().mockResolvedValue(
+        sessionResult({
+          server: null,
+          serverEndpoint: null,
+          serverFlowName: null,
+        }),
+      );
       const spec = createObserveSessionToolSpec(
         stubClient({ getObserveSession, getDefaultProject: () => 'proj_1' }),
       );

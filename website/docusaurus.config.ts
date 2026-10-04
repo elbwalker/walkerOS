@@ -10,6 +10,7 @@ import { version as coreVersion } from '../packages/core/package.json';
 import { version as walkerosVersion } from './package.json';
 import restoreExpressionIndent from './src/remark/restore-expression-indent';
 import flowSnippets from './src/remark/flow-snippets';
+import exportDropComments from './src/rehype/export-drop-comments';
 import exportFlowSnippets from './src/rehype/export-flow-snippets';
 import normalizeExportLinks from './src/remark/normalize-export-links';
 import prependExportContext from './src/remark/prepend-export-context';
@@ -808,9 +809,12 @@ const config: Config = {
           // non-root baseUrl.
           relativePaths: Boolean(process.env.DOCUSAURUS_BASEURL),
           excludeRoutes: ['/search', '/404', '/tags/**'],
-          // Runs on the page hast before the Markdown conversion: restores the
-          // code languages Shiki dropped from the flow-complete snippets.
-          beforeDefaultRehypePlugins: [exportFlowSnippets],
+          // These run on the page hast before the Markdown conversion:
+          // - React's server render leaves `<!-- -->` between adjacent text
+          //   nodes; drop every comment so none reaches the Markdown.
+          // - Caption the flow-complete snippets and check their code blocks
+          //   name a language.
+          beforeDefaultRehypePlugins: [exportDropComments, exportFlowSnippets],
           // These run on the mdast of the per-page exports only, so neither
           // touches llms.txt:
           // - The export appends `.md` to the route path, so a trailing-slash

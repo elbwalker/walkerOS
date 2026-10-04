@@ -495,7 +495,11 @@ export async function initSource(
 }
 
 /**
- * Initialize sources. Sources with `require` are deferred to collector.pending.
+ * Initialize sources. Every source whose factory succeeds is registered and
+ * its init runs, `require` or not (a factory that throws is logged and the
+ * source skipped); sources never go to collector.pending (that holds
+ * destinations only). A source with `require` stays unstarted: its `on()`
+ * deliveries wait in `queueOn` until every required event has occurred.
  */
 export async function initSources(
   collector: Collector.Instance,

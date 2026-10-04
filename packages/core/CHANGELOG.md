@@ -1,5 +1,15 @@
 # @walkeros/core
 
+## 4.7.1
+
+### Patch Changes
+
+- 0635330: Adds build-time flags that let a bundler leave unused features out of
+  a browser bundle. Nothing changes when they are not set.
+- 91e9aeb: A `consent` key on a `loop` item neither unlocks nor holds back a
+  value inside that loop; the event's consent decides. This applies to
+  destination, source and state mappings alike.
+
 ## 4.7.0
 
 ### Minor Changes

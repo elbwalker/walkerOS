@@ -1,4 +1,5 @@
 import type {
+  ContractComparison,
   DeviceAuthorization,
   DeviceLoginResult,
   ListFlowsOptions,
@@ -97,12 +98,18 @@ export interface ObserveSessionResult {
   flowId: string;
   status: string;
   errorMessage: string | null;
+  /** The flow config the session was opened on, as the app snapshotted it. */
+  configSnapshot: Record<string, unknown>;
   observedFlowName: string | null;
   serverFlowName: string | null;
+  /** Legacy mirror of `server.endpoint`, kept for published readers; read `server.endpoint`. */
+  serverEndpoint: string | null;
   web: ObserveSessionWebPart | null;
   server: ObserveSessionServerPart | null;
   expiresAt: string;
   recordsReceived: number;
+  /** Id of the user who opened the session. */
+  createdBy: string;
   createdAt: string;
 }
 
@@ -592,15 +599,32 @@ export interface ToolClient {
   appBaseUrl(): string;
 
   // Diagnostics: unauthenticated reachability probe of the app's public
-  // `/api/health` route. Resolves `{ reachable: false }` only on a real
-  // network/timeout failure, never on "not authenticated". Optional: clients
-  // that cannot probe reachability (e.g. in-process hosts) may omit it, and
-  // diagnostics degrades to `app.reachable: false`.
+  // health route. Resolves `{ reachable: false, error }` only on a real
+  // network/timeout failure, never on "not authenticated"; `version` is the
+  // app's version. Optional: clients that cannot probe reachability (e.g.
+  // in-process hosts) may omit it, and diagnostics degrades to
+  // `app.reachable: false`.
   checkHealth?(): Promise<{
     reachable: boolean;
     status?: string;
     version?: string;
+    error?: string;
   }>;
+
+  /**
+   * The API contract verdict for this door against the app it talks to
+   * (`appBaseUrl()`). A door that calls the app over HTTP compares per
+   * operation; a door served inside the app answers `in-process`. Optional:
+   * without it, diagnostics reports `unknown`.
+   */
+  checkContract?(): Promise<ContractComparison>;
+
+  /**
+   * The live OpenAPI document of the app this door talks to, served as the
+   * `walkeros://reference/openapi` resource. Rejects when it cannot be read.
+   * Optional: without it, the resource states that it is unavailable.
+   */
+  openapiDocument?(): Promise<unknown>;
 
   // Feedback
   submitFeedback(text: string, options?: FeedbackOptions): Promise<void>;

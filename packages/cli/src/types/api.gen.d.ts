@@ -4,173 +4,6 @@
  */
 
 export interface paths {
-  '/api/auth/magic-link': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Request magic link
-     * @description Send a magic link to the provided email address for passwordless authentication. Always returns success to prevent email enumeration.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['MagicLinkRequest'];
-        };
-      };
-      responses: {
-        /** @description Magic link sent (or would be sent if email exists) */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['MagicLinkResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/auth/verify': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Legacy magic link entry point
-     * @description Side-effect-free redirector to the /auth/verify page for links minted before the page-URL change. Never consumes the token; redemption happens via POST.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description Magic link token */
-          token: string;
-          /** @description Redirect URL after verification */
-          redirect_to?: string;
-        };
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Redirect to the /auth/verify page with the token forwarded */
-        307: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Redeem magic link token
-     * @description Redeem a magic link token and create an authenticated session. Redeems immediately when the browser-nonce cookie from the magic-link request matches; otherwise answers confirm_required and expects a follow-up call with confirm: true.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['VerifyRequest'];
-        };
-      };
-      responses: {
-        /** @description Redemption result. status=ok sets the session cookie and carries the redirect target. */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['VerifyResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/auth/logout': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * End session
-     * @description Destroy the current session and clear the session cookie.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Redirect to login page */
-        302: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/auth/whoami': {
     parameters: {
       query?: never;
@@ -178,10 +11,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Current identity
-     * @description Return the identity of the authenticated user. Supports session cookie and Bearer token.
-     */
     get: {
       parameters: {
         query?: never;
@@ -191,7 +20,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Current user identity */
         200: {
           headers: {
             [name: string]: unknown;
@@ -200,7 +28,6 @@ export interface paths {
             'application/json': components['schemas']['WhoamiResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -214,302 +41,6 @@ export interface paths {
     put?: never;
     post?: never;
     delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/account': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Delete own account
-     * @description Soft-delete the authenticated account, starting the 30-day grace window. Requires a confirmation of the account email in the body. Revokes all sessions, API tokens, and MCP tokens. Blocked with 409 when the caller is the sole owner of a project that still has other members.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['DeleteAccountRequest'];
-        };
-      };
-      responses: {
-        /** @description Account scheduled for deletion */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Confirmation email does not match */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Sole owner of a shared project */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeleteAccountBlocked'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    /**
-     * Set own display name
-     * @description Set or clear the display name of the authenticated account, trimmed and at most 80 characters; null clears it. It is what the person’s comments read as on a frame share, where an address is never shown. Requires a signed-in session: a bearer token is refused with 401 `SESSION_REQUIRED`.
-     */
-    patch: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            /** @example Ayla */
-            displayName: string | null;
-          };
-        };
-      };
-      responses: {
-        /** @description The stored display name */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['UpdateAccountResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description No live account of a person answers to the session (`NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    trace?: never;
-  };
-  '/api/account/export': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Export own account data
-     * @description Download a portable JSON export of everything the platform holds about the authenticated account: profile, memberships, token and session metadata, MCP sessions with messages, feedback, and invitations. Metadata only; token hashes and secret values are never included. Served as a file attachment.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Account data export (file attachment) */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['AccountExportResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sessions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List sessions
-     * @description List all active sessions for the authenticated user. The current session is marked with isCurrent: true.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description List of active sessions */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListSessionsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/sessions/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Revoke session
-     * @description Revoke a session by ID. Cannot revoke the current session (use logout instead).
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Session revoked */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
     options?: never;
     head?: never;
     patch?: never;
@@ -522,10 +53,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List my projects
-     * @description List all projects where the authenticated user is a member.
-     */
     get: {
       parameters: {
         query?: {
@@ -538,7 +65,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description List of projects */
         200: {
           headers: {
             [name: string]: unknown;
@@ -547,7 +73,6 @@ export interface paths {
             'application/json': components['schemas']['ListProjectsResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -559,10 +84,6 @@ export interface paths {
       };
     };
     put?: never;
-    /**
-     * Create project
-     * @description Create a new project. The authenticated user becomes the owner.
-     */
     post: {
       parameters: {
         query?: never;
@@ -576,7 +97,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Project created */
         201: {
           headers: {
             [name: string]: unknown;
@@ -585,7 +105,6 @@ export interface paths {
             'application/json': components['schemas']['CreateProjectResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -594,7 +113,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -618,10 +136,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Get project
-     * @description Get a single project by ID. Requires membership.
-     */
     get: {
       parameters: {
         query?: never;
@@ -633,7 +147,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Project details */
         200: {
           headers: {
             [name: string]: unknown;
@@ -642,7 +155,6 @@ export interface paths {
             'application/json': components['schemas']['ProjectDetailResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -651,7 +163,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -664,10 +175,6 @@ export interface paths {
     };
     put?: never;
     post?: never;
-    /**
-     * Delete project
-     * @description Delete a project and all its resources. Requires owner role.
-     */
     delete: {
       parameters: {
         query?: never;
@@ -679,14 +186,12 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Project deleted */
         204: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -695,7 +200,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -704,7 +208,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -717,10 +220,6 @@ export interface paths {
     };
     options?: never;
     head?: never;
-    /**
-     * Update project
-     * @description Update project details. Requires owner role.
-     */
     patch: {
       parameters: {
         query?: never;
@@ -736,7 +235,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Project updated */
         200: {
           headers: {
             [name: string]: unknown;
@@ -745,7 +243,6 @@ export interface paths {
             'application/json': components['schemas']['UpdateProjectResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -754,7 +251,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -763,7 +259,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -772,273 +267,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    trace?: never;
-  };
-  '/api/projects/{projectId}/members': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List members
-     * @description List all members of a project. Requires membership.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description List of members */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListMembersResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Add member
-     * @description Add a member to the project by email. Requires owner role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['AddMemberRequest'];
-        };
-      };
-      responses: {
-        /** @description Member added */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Member'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/members/{userId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Remove member
-     * @description Remove a member from the project. Requires owner role.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          userId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Member removed */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    /**
-     * Update member role
-     * @description Update a member's role. Requires owner role.
-     */
-    patch: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          userId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['UpdateMemberRequest'];
-        };
-      };
-      responses: {
-        /** @description Role updated */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Member'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1058,10 +286,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List flows
-     * @description List all flows for a project.
-     */
     get: {
       parameters: {
         query?: {
@@ -1079,7 +303,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description List of flows */
         200: {
           headers: {
             [name: string]: unknown;
@@ -1088,7 +311,6 @@ export interface paths {
             'application/json': components['schemas']['ListFlowsResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1097,7 +319,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1109,10 +330,6 @@ export interface paths {
       };
     };
     put?: never;
-    /**
-     * Create flow
-     * @description Create a new flow in the project. Requires member role.
-     */
     post: {
       parameters: {
         query?: never;
@@ -1128,7 +345,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Flow created */
         201: {
           headers: {
             [name: string]: unknown;
@@ -1137,7 +353,6 @@ export interface paths {
             'application/json': components['schemas']['Flow'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -1146,7 +361,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1155,7 +369,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -1164,7 +377,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Conflict */
         409: {
           headers: {
             [name: string]: unknown;
@@ -1188,14 +400,9 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Get flow
-     * @description Get a single flow by ID. Use ?fields to select specific sections (reduces response size).
-     */
     get: {
       parameters: {
         query?: {
-          /** @description Comma-separated dot-paths to select specific fields (e.g., "config.variables,config.flows.tracking.sources"). Always includes id, createdAt, updatedAt. */
           fields?: string;
         };
         header?: never;
@@ -1207,7 +414,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Flow details */
         200: {
           headers: {
             [name: string]: unknown;
@@ -1216,7 +422,6 @@ export interface paths {
             'application/json': components['schemas']['FlowDetailResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1225,7 +430,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1238,15 +442,10 @@ export interface paths {
     };
     put?: never;
     post?: never;
-    /**
-     * Soft-delete flow
-     * @description Soft delete a flow (sets deleted_at timestamp). Requires member role.
-     */
     delete: {
       parameters: {
         query?: never;
         header?: {
-          /** @description ETag from a previous GET. Returns 412 if flow was modified since. */
           'if-match'?: string;
         };
         path: {
@@ -1257,14 +456,12 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Flow deleted */
         204: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1273,7 +470,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -1282,7 +478,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1291,7 +486,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description ETag mismatch — flow was modified since last read */
         412: {
           headers: {
             [name: string]: unknown;
@@ -1302,15 +496,10 @@ export interface paths {
     };
     options?: never;
     head?: never;
-    /**
-     * Update flow
-     * @description Update an existing flow. Creates a version snapshot before applying changes. Requires member role. Use Content-Type: application/merge-patch+json to send only changed fields (RFC 7386).
-     */
     patch: {
       parameters: {
         query?: never;
         header?: {
-          /** @description ETag from a previous GET. Returns 412 if flow was modified since. */
           'if-match'?: string;
         };
         path: {
@@ -1326,7 +515,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Flow updated */
         200: {
           headers: {
             [name: string]: unknown;
@@ -1335,7 +523,6 @@ export interface paths {
             'application/json': components['schemas']['FlowUpdateResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -1344,7 +531,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1353,7 +539,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -1362,7 +547,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1371,7 +555,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Conflict */
         409: {
           headers: {
             [name: string]: unknown;
@@ -1380,7 +563,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description ETag mismatch — flow was modified since last read */
         412: {
           headers: {
             [name: string]: unknown;
@@ -1400,10 +582,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Duplicate flow
-     * @description Create a copy of an existing flow with a new ID and no version history. Requires member role.
-     */
     post: {
       parameters: {
         query?: never;
@@ -1420,7 +598,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Flow duplicated */
         201: {
           headers: {
             [name: string]: unknown;
@@ -1429,7 +606,6 @@ export interface paths {
             'application/json': components['schemas']['Flow'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -1438,7 +614,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1447,7 +622,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -1456,7 +630,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1465,7 +638,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Conflict */
         409: {
           headers: {
             [name: string]: unknown;
@@ -1489,10 +661,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List secrets
-     * @description List a flow's secrets as metadata only (name, id, timestamps). Values are never returned. Requires member role and the secrets entitlement.
-     */
     get: {
       parameters: {
         query?: never;
@@ -1505,7 +673,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Secret metadata list */
         200: {
           headers: {
             [name: string]: unknown;
@@ -1524,7 +691,6 @@ export interface paths {
             };
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1533,7 +699,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -1542,7 +707,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1554,10 +718,6 @@ export interface paths {
       };
     };
     put?: never;
-    /**
-     * Create secret
-     * @description Create a secret for a flow. The value is encrypted at rest and never returned. Requires member role and the secrets entitlement.
-     */
     post: {
       parameters: {
         query?: never;
@@ -1577,7 +737,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Secret created (metadata only) */
         201: {
           headers: {
             [name: string]: unknown;
@@ -1594,7 +753,6 @@ export interface paths {
             };
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -1603,7 +761,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1612,7 +769,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -1621,7 +777,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Conflict */
         409: {
           headers: {
             [name: string]: unknown;
@@ -1646,10 +801,6 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /**
-     * Update secret value
-     * @description Rotate a secret's value (re-encrypts). The value is never returned. Requires member role and the secrets entitlement.
-     */
     put: {
       parameters: {
         query?: never;
@@ -1669,7 +820,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Secret updated (metadata only) */
         200: {
           headers: {
             [name: string]: unknown;
@@ -1686,7 +836,6 @@ export interface paths {
             };
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -1695,7 +844,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1704,7 +852,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -1713,7 +860,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1725,10 +871,6 @@ export interface paths {
       };
     };
     post?: never;
-    /**
-     * Delete secret
-     * @description Soft-delete a secret. Idempotent: deleting a missing secret returns 204. Requires member role and the secrets entitlement.
-     */
     delete: {
       parameters: {
         query?: never;
@@ -1742,14 +884,12 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Secret deleted */
         204: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1758,7 +898,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -1781,10 +920,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Get decrypted secret values
-     * @description Return decrypted secret values for a flow as a name-to-value map. Dual auth: a runtime container Bearer token bound to (projectId, flowId) with the `runner:read-secrets` scope returns only the bundle-referenced subset; a session cookie with member role returns all of the flow's secrets for administration. Responses are never cached.
-     */
     get: {
       parameters: {
         query?: never;
@@ -1797,7 +932,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Decrypted secret values keyed by name */
         200: {
           headers: {
             [name: string]: unknown;
@@ -1810,7 +944,6 @@ export interface paths {
             };
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -1819,7 +952,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -1828,7 +960,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1841,325 +972,6 @@ export interface paths {
     };
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/steps/{stepPath}/examples': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /**
-     * Edit step example
-     * @description Edit an existing named example in place, merging provided fields onto the stored entry. Returns 404 when the named example does not exist.
-     */
-    put: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          /** @description Dot-segmented step path (sectionKey.stepName), e.g. "destinations.gtag". */
-          stepPath: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['EditStepExampleRequest'];
-        };
-      };
-      responses: {
-        /** @description Updated examples object map */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['StepExamplesResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unprocessable entity */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    /**
-     * Add step example
-     * @description Add a named example to a step. Examples are stored as an object map keyed by name. Rejects duplicate names with 409.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          /** @description Dot-segmented step path (sectionKey.stepName), e.g. "destinations.gtag". */
-          stepPath: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateStepExampleRequest'];
-        };
-      };
-      responses: {
-        /** @description Updated examples object map */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['StepExamplesResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unprocessable entity */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    /**
-     * Remove step example
-     * @description Remove a named example from a step. Returns 404 when the named example does not exist.
-     */
-    delete: {
-      parameters: {
-        query: {
-          /** @description Name of the example to remove. */
-          name: string;
-        };
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          /** @description Dot-segmented step path (sectionKey.stepName), e.g. "destinations.gtag". */
-          stepPath: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Updated examples object map */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['StepExamplesResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unprocessable entity */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/observe-examples': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Save an observed hop as a step example
-     * @description Persist an observed journey hop as a named example on a step of the DRAFT flow config. Gated by the 'observe' feature. The step path and scenario come from the body; `example.in` is stored verbatim (post-redaction). Rejects a duplicate scenario name with 409.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['ObserveSaveExampleRequest'];
-        };
-      };
-      responses: {
-        /** @description Updated examples object map */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['StepExamplesResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unprocessable entity */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
     delete?: never;
     options?: never;
     head?: never;
@@ -2173,10 +985,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Get latest deployment
-     * @description Get the latest deployment for a flow.
-     */
     get: {
       parameters: {
         query?: never;
@@ -2189,7 +997,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Latest deployment (or null) */
         200: {
           headers: {
             [name: string]: unknown;
@@ -2198,7 +1005,6 @@ export interface paths {
             'application/json': components['schemas']['DeploymentResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -2207,7 +1013,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -2219,10 +1024,6 @@ export interface paths {
       };
     };
     put?: never;
-    /**
-     * Start deployment
-     * @description Start a new deployment for a flow. The bundle runs asynchronously on the worker. Returns 400 AMBIGUOUS_CONFIG when the flow has multiple named settings (use the per-settings deploy endpoint instead). When an Idempotency-Key replays a prior request, returns 200 with status `already_created`.
-     */
     post: {
       parameters: {
         query?: never;
@@ -2235,7 +1036,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Deployment started, or idempotent replay of a prior request */
         200: {
           headers: {
             [name: string]: unknown;
@@ -2244,7 +1044,6 @@ export interface paths {
             'application/json': components['schemas']['StartDeploymentResponse'];
           };
         };
-        /** @description Deployment started */
         201: {
           headers: {
             [name: string]: unknown;
@@ -2253,7 +1052,6 @@ export interface paths {
             'application/json': components['schemas']['StartDeploymentResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -2262,7 +1060,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -2271,7 +1068,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -2280,7 +1076,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -2289,7 +1084,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Deployment already in progress */
         409: {
           headers: {
             [name: string]: unknown;
@@ -2298,7 +1092,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited or concurrent deploy limit (Retry-After header) */
         429: {
           headers: {
             [name: string]: unknown;
@@ -2307,7 +1100,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Service unavailable */
         503: {
           headers: {
             [name: string]: unknown;
@@ -2318,375 +1110,6 @@ export interface paths {
         };
       };
     };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/deploy/{deploymentId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get deployment
-     * @description Get a specific deployment by ID.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Deployment details */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeploymentDetailResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    /**
-     * Delete deployment
-     * @description Delete a deployment and its container. Requires owner role.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Deployment deleted */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              id: string;
-              /** @enum {string} */
-              status: 'deleted';
-            };
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/settings': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List settings
-     * @description List active named settings for a flow.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description List of settings */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListSettingsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get settings
-     * @description Get a single settings entry with its latest deployment.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          settingsId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Settings details with deployment */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['FlowSettingsDetail'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/json': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Download settings JSON
-     * @description Download the named flow settings as a self-contained Config JSON file. Includes parent variables and definitions.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          settingsId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Flow Config JSON file */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['FlowConfig'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/bundle': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Download settings bundle
-     * @description Download the compiled JS/MJS for the settings' latest deployment. Redirects to a presigned download URL.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          settingsId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Redirect to presigned bundle URL */
-        302: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Service unavailable */
-        503: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -2700,10 +1123,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Get latest settings deployment
-     * @description Get the latest deployment for a specific settings entry.
-     */
     get: {
       parameters: {
         query?: never;
@@ -2717,7 +1136,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Latest deployment (or null) */
         200: {
           headers: {
             [name: string]: unknown;
@@ -2726,7 +1144,6 @@ export interface paths {
             'application/json': components['schemas']['SettingsDeploymentResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -2735,7 +1152,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -2747,10 +1163,6 @@ export interface paths {
       };
     };
     put?: never;
-    /**
-     * Deploy settings
-     * @description Start a deployment for a specific settings entry. Detects platform from the settings. The body is optional and carries only `humanText`, the reason for the change, which becomes the description of the release this deploy produces; it is ignored when the release already has one.
-     */
     post: {
       parameters: {
         query?: never;
@@ -2768,7 +1180,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Deployment started */
         201: {
           headers: {
             [name: string]: unknown;
@@ -2777,7 +1188,6 @@ export interface paths {
             'application/json': components['schemas']['DeploySettingsResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -2786,7 +1196,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -2795,7 +1204,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Deployment already in progress */
         409: {
           headers: {
             [name: string]: unknown;
@@ -2804,7 +1212,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Settings orphaned */
         422: {
           headers: {
             [name: string]: unknown;
@@ -2813,7 +1220,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Service unavailable */
         503: {
           headers: {
             [name: string]: unknown;
@@ -2830,68 +1236,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deployments/{deploymentId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get settings deployment detail
-     * @description Get a specific deployment by ID, scoped to a settings entry.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          settingsId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Deployment details */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['SettingsDeploymentDetailResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/projects/{projectId}/flows/{flowId}/previews': {
     parameters: {
       query?: never;
@@ -2899,10 +1243,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List previews
-     * @description List all previews for a flow, ordered by creation date descending.
-     */
     get: {
       parameters: {
         query?: never;
@@ -2915,7 +1255,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description List of previews */
         200: {
           headers: {
             [name: string]: unknown;
@@ -2924,7 +1263,6 @@ export interface paths {
             'application/json': components['schemas']['ListPreviewsResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -2933,7 +1271,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -2945,10 +1282,6 @@ export interface paths {
       };
     };
     put?: never;
-    /**
-     * Create preview
-     * @description Create a new preview for a web flow settings entry. Bundles the flow and publishes to a unique token-based URL.
-     */
     post: {
       parameters: {
         query?: never;
@@ -2965,7 +1298,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Preview created */
         201: {
           headers: {
             [name: string]: unknown;
@@ -2974,7 +1306,6 @@ export interface paths {
             'application/json': components['schemas']['CreatePreviewResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -2983,7 +1314,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -2992,7 +1322,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -3001,7 +1330,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -3010,7 +1338,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Quota exceeded */
         429: {
           headers: {
             [name: string]: unknown;
@@ -3019,7 +1346,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Bundle or upload failed */
         502: {
           headers: {
             [name: string]: unknown;
@@ -3043,10 +1369,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Get preview
-     * @description Get a single preview by ID.
-     */
     get: {
       parameters: {
         query?: never;
@@ -3060,7 +1382,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Preview details */
         200: {
           headers: {
             [name: string]: unknown;
@@ -3069,7 +1390,6 @@ export interface paths {
             'application/json': components['schemas']['PreviewResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -3078,7 +1398,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -3091,10 +1410,6 @@ export interface paths {
     };
     put?: never;
     post?: never;
-    /**
-     * Delete preview
-     * @description Delete a preview and its S3 bundle. Requires member role.
-     */
     delete: {
       parameters: {
         query?: never;
@@ -3108,14 +1423,12 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Preview deleted */
         204: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -3124,7 +1437,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -3133,7 +1445,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -3158,10 +1469,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Mint preview activation grant
-     * @description Mint a fresh, origin-bound activation grant for an existing preview. Grants are origin-bound, so a preview needs one grant per host origin — re-mint whenever the target origin changes.
-     */
     post: {
       parameters: {
         query?: never;
@@ -3179,7 +1486,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Grant minted */
         200: {
           headers: {
             [name: string]: unknown;
@@ -3188,7 +1494,6 @@ export interface paths {
             'application/json': components['schemas']['MintGrantResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -3197,7 +1502,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -3206,7 +1510,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -3215,7 +1518,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -3224,7 +1526,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description No active web deployment / host bundle not preview-enabled */
         409: {
           headers: {
             [name: string]: unknown;
@@ -3233,7 +1534,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -3259,10 +1559,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Start observe session
-     * @description Start an Observe session for a flow. Validates the flow topology, inserts the row, and kicks off detached provisioning. Returns the row immediately as arming.
-     */
     post: {
       parameters: {
         query?: never;
@@ -3279,7 +1575,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Observe session started */
         201: {
           headers: {
             [name: string]: unknown;
@@ -3288,7 +1583,6 @@ export interface paths {
             'application/json': components['schemas']['ObserveSessionResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -3297,7 +1591,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -3306,7 +1599,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -3315,7 +1607,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -3324,7 +1615,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Flow topology not supported */
         409: {
           headers: {
             [name: string]: unknown;
@@ -3333,7 +1623,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limit exceeded */
         429: {
           headers: {
             [name: string]: unknown;
@@ -3357,10 +1646,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Get observe session
-     * @description Get an observe session: status, error message, config snapshot, web activation info, and the live server endpoint when live.
-     */
     get: {
       parameters: {
         query?: never;
@@ -3374,7 +1659,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Observe session details */
         200: {
           headers: {
             [name: string]: unknown;
@@ -3383,7 +1667,6 @@ export interface paths {
             'application/json': components['schemas']['ObserveSessionResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -3392,7 +1675,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -3401,7 +1683,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -3414,10 +1695,6 @@ export interface paths {
     };
     put?: never;
     post?: never;
-    /**
-     * End observe session
-     * @description End an observe session: tear down the container, revoke credentials, delete the web preview, delete the row. Idempotent.
-     */
     delete: {
       parameters: {
         query?: never;
@@ -3431,14 +1708,12 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Observe session ended */
         204: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -3447,7 +1722,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -3456,7 +1730,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -3467,85 +1740,6 @@ export interface paths {
         };
       };
     };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/journeys': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get observe session journeys
-     * @description Assemble the session's cross-runtime journeys server-side: fetch the raw records from the observer, derive the pipeline topology from the config snapshot, and run the pure assembler. Returns the journeys and per-platform loss gaps wrapped with the session scope.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          sessionId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Assembled journeys */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ObserveSessionJourneysResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Observer unavailable */
-        502: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -3558,10 +1752,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Get flow journeys
-     * @description Resolve the flow's single active Observe session and assemble its cross-runtime journeys server-side. `observe_sessions.flow_id` is UNIQUE, so a flow has at most one session; when none is active the response carries `sessionId: null` with empty journeys rather than a 404. Narrow with `traceId` (one trace) and `limit` (page cap, most recent kept). This is the MCP `observe_journeys` REST contract.
-     */
     get: {
       parameters: {
         query?: {
@@ -3577,7 +1767,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Assembled flow journeys */
         200: {
           headers: {
             [name: string]: unknown;
@@ -3586,7 +1775,6 @@ export interface paths {
             'application/json': components['schemas']['FlowJourneysResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -3595,7 +1783,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -3604,7 +1791,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -3613,7 +1799,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -3622,7 +1807,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Observer unavailable */
         502: {
           headers: {
             [name: string]: unknown;
@@ -3650,10 +1834,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Heartbeat observe session
-     * @description Keep an observe session warm. The window posts this every 30s while open; a stale session is reaped by the janitor.
-     */
     post: {
       parameters: {
         query?: never;
@@ -3667,7 +1847,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Heartbeat recorded */
         200: {
           headers: {
             [name: string]: unknown;
@@ -3676,7 +1855,6 @@ export interface paths {
             'application/json': components['schemas']['ObserveSessionHeartbeatResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -3685,542 +1863,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/end': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * End observe session (beacon)
-     * @description The navigator.sendBeacon end target for page unload. Mirrors the DELETE end route because sendBeacon cannot send a DELETE. Idempotent.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          sessionId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Observe session ended */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/versions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List versions
-     * @description List all versions for a flow.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description List of versions */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListVersionsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/versions/{versionNumber}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get version
-     * @description Get a specific version of a flow.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          versionNumber: number;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Version details with content */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['GetVersionResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/versions/{versionNumber}/restore': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Restore version
-     * @description Restore a flow to a specific version. Creates a new version snapshot. Requires member role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          versionNumber: number;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Flow restored */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Flow'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/tokens': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List my automation tokens
-     * @description The caller's live automation tokens, with the scope and audience each carries. No raw token value is ever returned; `tokenPrefix` is the only fragment of one that survives issuance. A connected app's access token lives in the same store and is deliberately absent: it is taken back by disconnecting the app.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description List of automation tokens */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListAutomationTokensResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Create automation token
-     * @description Mint an automation token for the authenticated user. The audience is `api` and `mcp`, so one token works against REST and against `/api/mcp`, and the chosen scope decides how far it gets at either: `read` is refused every non-safe REST method with 403 `INSUFFICIENT_SCOPE`. The raw token is returned once and cannot be retrieved again, so the answer carries `Cache-Control: no-store`.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateAutomationTokenRequest'];
-        };
-      };
-      responses: {
-        /** @description Token created (raw token shown once) */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CreateAutomationTokenResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/tokens/revoke-all': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Revoke all access
-     * @description Revoke every grant this person holds, the tokens hanging from them, and every automation token they hold. Runner tokens survive: those are the credentials deployed flow containers run with, so revoking them would stop every container the person is running. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token cannot disconnect everything its owner has connected.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Access revoked */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/tokens/{tokenId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Revoke automation token
-     * @description Revoke one of the caller's tokens. Idempotent and scoped to the caller: an unknown id, another person's token and an already revoked one all answer 204, since a distinguishable answer would tell the caller which ids exist.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          tokenId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Token revoked */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/bundle': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Bundle flow
-     * @description Bundle a flow for deploy or download. Requires ?output=download: bearer callers get a 302 to a presigned S3 URL, session callers get the bundle bytes streamed. A POST without output=download returns 400.
-     */
-    post: {
-      parameters: {
-        query: {
-          /** @description Named flow to bundle (required for multi-settings flows) */
-          flow?: string;
-          /** @description Required. Must be "download" */
-          output: 'download';
-        };
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Bundle file streamed (session callers) */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Redirect to presigned bundle URL (bearer callers) */
-        302: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Bundle upstream unavailable */
-        502: {
           headers: {
             [name: string]: unknown;
           };
@@ -4243,10 +1886,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List deployments
-     * @description List deployments for a project. Supports filtering by status, type, origin, and flowId, plus pagination.
-     */
     get: {
       parameters: {
         query?: {
@@ -4274,7 +1913,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description List of deployments */
         200: {
           headers: {
             [name: string]: unknown;
@@ -4283,7 +1921,6 @@ export interface paths {
             'application/json': components['schemas']['ListDeploymentsResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -4292,7 +1929,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -4304,15 +1940,10 @@ export interface paths {
       };
     };
     put?: never;
-    /**
-     * Create deployment
-     * @description Create a new deployment slot. Supports an Idempotency-Key header — a repeated key returns the original deployment id with status `already_created`. Requires member role.
-     */
     post: {
       parameters: {
         query?: never;
         header?: {
-          /** @description Optional client key to make creation idempotent. */
           'idempotency-key'?: string;
         };
         path: {
@@ -4323,10 +1954,7 @@ export interface paths {
       requestBody?: {
         content: {
           'application/json': {
-            /**
-             * @example web
-             * @enum {string}
-             */
+            /** @enum {string} */
             type: 'web' | 'server';
             label?: string;
             flowId?: string;
@@ -4335,7 +1963,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Deployment created */
         201: {
           headers: {
             [name: string]: unknown;
@@ -4344,7 +1971,6 @@ export interface paths {
             'application/json': components['schemas']['CreateDeploymentResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -4353,7 +1979,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -4362,7 +1987,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -4371,7 +1995,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Conflict */
         409: {
           headers: {
             [name: string]: unknown;
@@ -4380,254 +2003,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/deployments/latest': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List latest deployments
-     * @description List the latest deployment for each flow in the project.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Latest deployment per flow */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['LatestDeploymentsByFlow'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/runtimes/register': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Register runtime
-     * @description Register a server-side runtime container and get a presigned bundle URL.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['RegisterRuntimeRequest'];
-        };
-      };
-      responses: {
-        /** @description Presigned bundle URL */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/observe/ticket': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Create SSE ticket
-     * @description Generate a one-time ticket for authenticating an SSE connection to the Observer service. Requires project membership. An optional scope narrows the ticket to a subset of the project feed (e.g. one Observe session).
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['ObserveTicketRequest'];
-        };
-      };
-      responses: {
-        /** @description Ticket generated */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ObserveTicketResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/observe/validate-ticket': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Validate ticket
-     * @description Internal endpoint for the Observer service to validate and consume a ticket.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['ValidateTicketRequest'];
-        };
-      };
-      responses: {
-        /** @description Ticket payload */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ValidateTicketResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Invalid or expired ticket */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
           headers: {
             [name: string]: unknown;
           };
@@ -4650,10 +2026,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Health check
-     * @description Check the health of the API and its dependencies.
-     */
     get: {
       parameters: {
         query?: never;
@@ -4663,7 +2035,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Health status */
         200: {
           headers: {
             [name: string]: unknown;
@@ -4689,10 +2060,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * OpenAPI spec
-     * @description Return the OpenAPI 3.1 specification for this API.
-     */
     get: {
       parameters: {
         query?: never;
@@ -4702,7 +2069,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description OpenAPI document */
         200: {
           headers: {
             [name: string]: unknown;
@@ -4710,137 +2076,6 @@ export interface paths {
           content: {
             'application/json': {
               [key: string]: unknown;
-            };
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/ingest/v1/{projectId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Event ingestion
-     * @description Ingest walkerOS events for a project. Served by the Observer service (port 3001).
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Accepted */
-        202: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/stream/v1': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * SSE stream
-     * @description Server-Sent Events stream for real-time event observation. Requires a valid ticket. Served by the Observer service (port 3001).
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description One-time ticket from /api/projects/{projectId}/observe/ticket */
-          ticket: string;
-          /** @description Project ID for scoped validation */
-          project: string;
-        };
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description SSE event stream */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/health': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Observer health
-     * @description Health check for the Observer service (port 3001).
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Health status */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              status: string;
             };
           };
         };
@@ -4863,10 +2098,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Submit user feedback
-     * @description Accepts free-form feedback from the walkerOS CLI, MCP, or a future in-app form. Public endpoint — no authentication required. The body `userId` is stored verbatim as a best-effort contact email and is not validated against the app users table.
-     */
     post: {
       parameters: {
         query?: never;
@@ -4880,7 +2111,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Feedback stored */
         201: {
           headers: {
             [name: string]: unknown;
@@ -4889,918 +2119,7 @@ export interface paths {
             'application/json': components['schemas']['FeedbackResponse'];
           };
         };
-        /** @description Validation error */
         400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/service-accounts': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List service accounts
-     * @description List service accounts for a project. Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description List of service accounts */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListServiceAccountsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Create service account
-     * @description Create a service account and its first token. The raw token is returned once and cannot be retrieved again. Requires admin role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateServiceAccountRequest'];
-        };
-      };
-      responses: {
-        /** @description Service account created (raw token shown once) */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CreateServiceAccountResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/service-accounts/{serviceAccountId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get service account
-     * @description Get a single service account by ID. Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          serviceAccountId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Service account details */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ServiceAccountSummary'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    /**
-     * Delete service account
-     * @description Soft-delete a service account and revoke all its tokens. Requires admin role.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          serviceAccountId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Service account deleted */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    /**
-     * Update service account
-     * @description Update a service account's name, description, or role. Requires admin role.
-     */
-    patch: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          serviceAccountId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['UpdateServiceAccountRequest'];
-        };
-      };
-      responses: {
-        /** @description Service account updated */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ServiceAccountSummary'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    trace?: never;
-  };
-  '/api/projects/{projectId}/service-accounts/{serviceAccountId}/tokens': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List service account tokens
-     * @description List tokens for a service account. Returns summaries (no raw token values). Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          serviceAccountId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description List of tokens */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListSaTokensResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Create service account token
-     * @description Create a new token for a service account. The raw token is returned once and cannot be retrieved again. Requires admin role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          serviceAccountId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateSaTokenRequest'];
-        };
-      };
-      responses: {
-        /** @description Token created (raw token shown once) */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CreateSaTokenResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/service-accounts/{serviceAccountId}/tokens/{tokenId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Revoke service account token
-     * @description Revoke a service account token. Requires admin role.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          serviceAccountId: string;
-          tokenId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Token revoked */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/invitations': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List invitations
-     * @description List invitations for a project. Defaults to pending; pass ?status=all for every status. Requires admin role.
-     */
-    get: {
-      parameters: {
-        query?: {
-          status?:
-            | 'pending'
-            | 'accepted'
-            | 'declined'
-            | 'expired'
-            | 'cancelled'
-            | 'all';
-        };
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description List of invitations */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListInvitationsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Create invitation
-     * @description Create an invitation and send the invite email. Requires admin role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateInvitationRequest'];
-        };
-      };
-      responses: {
-        /** @description Invitation created */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CreateInvitationResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Invitation limit reached */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/invitations/{inviteId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Cancel invitation
-     * @description Cancel a pending invitation. Requires admin role.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          inviteId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Invitation cancelled */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/invitations/{token}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Preview invitation
-     * @description Preview invitation details. No authentication required — the token is the credential.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          /** @description Opaque invitation token (the credential). */
-          token: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Invitation preview */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['InvitationPreview'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/invitations/{token}/accept': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Accept invitation
-     * @description Accept an invitation. Requires authentication; the authenticated user's email must match the invitation email.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          /** @description Opaque invitation token (the credential). */
-          token: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Invitation accepted */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['AcceptInvitationResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/invitations/{token}/decline': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Decline invitation
-     * @description Decline an invitation. No authentication required — the token is the credential.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          /** @description Opaque invitation token (the credential). */
-          token: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Invitation declined */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeclineInvitationResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
           headers: {
             [name: string]: unknown;
           };
@@ -5825,10 +2144,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Submit telemetry event
-     * @description Accept a single walkerOS v4 event from the CLI or MCP telemetry emitter. Public endpoint — no authentication. `source.type` is constrained to `cli` or `mcp`.
-     */
     post: {
       parameters: {
         query?: never;
@@ -5842,14 +2157,12 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Telemetry event accepted */
         204: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -5860,141 +2173,6 @@ export interface paths {
         };
       };
     };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/billing': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get billing details
-     * @description Get billing details for a project, or null when none are set. Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Billing details (or null when unset) */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json':
-              | components['schemas']['BillingDetailsResponse']
-              | null;
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    /**
-     * Upsert billing details
-     * @description Create or update billing details for a project. Requires owner role.
-     */
-    put: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['UpsertBillingDetailsRequest'];
-        };
-      };
-      responses: {
-        /** @description Billing details saved */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['BillingDetailsResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -6008,10 +2186,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Get deployment detail
-     * @description Get deployment detail. Accepts a dep_ID or a slug. Requires member role.
-     */
     get: {
       parameters: {
         query?: never;
@@ -6024,7 +2198,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Deployment detail */
         200: {
           headers: {
             [name: string]: unknown;
@@ -6033,7 +2206,6 @@ export interface paths {
             'application/json': components['schemas']['DeploymentDetailResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -6042,7 +2214,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -6051,7 +2222,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -6060,7 +2230,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -6073,10 +2242,6 @@ export interface paths {
     };
     put?: never;
     post?: never;
-    /**
-     * Delete deployment
-     * @description Tear down and soft-delete a deployment. Idempotent. Requires owner role.
-     */
     delete: {
       parameters: {
         query?: never;
@@ -6089,14 +2254,12 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Deployment deleted (or already absent) */
         204: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -6105,7 +2268,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -6114,7 +2276,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -6125,210 +2286,6 @@ export interface paths {
         };
       };
     };
-    options?: never;
-    head?: never;
-    /**
-     * Update deployment
-     * @description Update a deployment's label, or stop/resume it. Stop and resume require admin role; label updates require member role.
-     */
-    patch: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            label?: string;
-            /** @enum {string} */
-            action?: 'stop' | 'resume';
-          };
-        };
-      };
-      responses: {
-        /** @description Deployment updated */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['UpdateDeploymentResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Deployment state changed concurrently */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    trace?: never;
-  };
-  '/api/projects/{projectId}/deployments/{deploymentId}/publish': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Publish deployment version
-     * @description Push a new version to a deployment, either from an existing flow setting or from a direct config upload. Bundles in-process and transitions the deployment to `deploying`. Requires member role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: {
-          /** @description Optional client key to make publishing idempotent. */
-          'idempotency-key'?: string;
-        };
-        path: {
-          projectId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json':
-            | {
-                /** @enum {string} */
-                source: 'flow';
-                flowId: string;
-                flowSettingsName: string;
-              }
-            | {
-                /** @enum {string} */
-                source: 'config';
-                config: {
-                  [key: string]: unknown;
-                };
-              };
-        };
-      };
-      responses: {
-        /** @description Version published (bundling/deploying) */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['PublishVersionResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Publish already in progress */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited or concurrent deploy limit */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Build service unavailable */
-        503: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -6341,10 +2298,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Stream deployment status (SSE)
-     * @description Server-Sent Events (`text/event-stream`) stream of a deployment's live status. Emits named events: `status` (a snapshot payload, schema below), `done` (terminal, no body), and `timeout`. The CLI consumes this with a raw fetch while waiting for a deploy to finish. Requires member role. The schema documents the JSON `data:` of a `status` event; `errorCode`/`errorMessage` carry the persisted, redacted classification of a failed deploy.
-     */
     get: {
       parameters: {
         query?: never;
@@ -6357,7 +2310,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description SSE stream; `status` event payload shape documented here. */
         200: {
           headers: {
             [name: string]: unknown;
@@ -6366,7 +2318,6 @@ export interface paths {
             'text/event-stream': components['schemas']['DeploymentStreamStatusEvent'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -6375,89 +2326,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/deployments/{deploymentId}/versions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List deployment versions
-     * @description List the version history for a deployment, paginated. Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: {
-          limit?: number;
-          offset?: number | null;
-        };
-        header?: never;
-        path: {
-          projectId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Version history */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListDeploymentVersionsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
           headers: {
             [name: string]: unknown;
           };
@@ -6482,10 +2351,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List flow releases
-     * @description List the release history for a flow across all of its deployment lineages, newest first, paginated. Each entry is a deployed version joined to its parent deployment (slug and type). `rationale=true` joins each row's stored rationale summary on, which requires the `hub` feature; without it the `rationale` key is absent from every row rather than null, and no feature beyond member role is needed. Requires member role.
-     */
     get: {
       parameters: {
         query?: {
@@ -6502,7 +2367,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Flow release history */
         200: {
           headers: {
             [name: string]: unknown;
@@ -6511,7 +2375,6 @@ export interface paths {
             'application/json': components['schemas']['ListFlowReleasesResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -6520,7 +2383,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -6529,7 +2391,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -6538,7 +2399,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -6564,10 +2424,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Read one release in full
-     * @description One release of this flow with its rationale and its diff. The path segment is either the spine version id (`ver_...`) or the flow-unique spine number, and the route decides which it was, so a caller holding only the number needs no lookup first. The diff is computed server-side from the two stored snapshots and is never accepted from a caller; its predecessor is the next LOWER spine number, not the previous row by time, because spine rows are reused across redeploys of identical content. `diff.text` is rendered from masked content, so an empty string can still mean the releases differ inside an inline secret: `diff.contentIdentical`, compared over the unmasked hashes, is the trustworthy answer. `diff` is null for the flow's oldest release. An unknown address, a sibling flow's version, and an autosave revision all answer 404 alike. Requires member role and the `hub` feature.
-     */
     get: {
       parameters: {
         query?: never;
@@ -6575,14 +2431,12 @@ export interface paths {
         path: {
           projectId: string;
           flowId: string;
-          /** @description Spine version id of the release (ver_...) or its spine number */
           versionId: string;
         };
         cookie?: never;
       };
       requestBody?: never;
       responses: {
-        /** @description The release, its rationale, and its diff */
         200: {
           headers: {
             [name: string]: unknown;
@@ -6591,7 +2445,6 @@ export interface paths {
             'application/json': components['schemas']['ReleaseDetailResponse'];
           };
         };
-        /** @description Invalid release reference */
         400: {
           headers: {
             [name: string]: unknown;
@@ -6600,7 +2453,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -6609,7 +2461,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -6618,7 +2469,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -6627,96 +2477,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/releases/{versionId}/content': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Read a release snapshot
-     * @description The flow config one release of this flow froze, addressed by its spine version id. This is the only route that serves a release snapshot: the positional `/versions/{versionNumber}` route numbers the autosave revisions, a disjoint set of rows, so a release number handed to it addresses an unrelated revision or nothing. Inline secret literals are masked. An unknown id, a sibling flow's version, and an autosave revision all answer 404 alike. Requires member role and the `hub` feature.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          /** @description Spine version ID of the release (ver_...) */
-          versionId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The release snapshot */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ReleaseContentResponse'];
-          };
-        };
-        /** @description Invalid version id */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -6742,84 +2502,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List release rationale
-     * @description Read the rationale attached to the given releases of a flow. `versionIds` is a comma-separated list of spine version ids (at most 100), all of which must belong to this flow. Releases without rationale are absent from the response. Requires member role.
-     */
-    get: {
-      parameters: {
-        query: {
-          versionIds: string;
-        };
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Rationale for the requested releases */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListVersionAnnotationsResponse'];
-          };
-        };
-        /** @description Invalid version ids */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    /**
-     * Write release rationale
-     * @description Create or update the human rationale for one release of this flow. A null `humanText` clears it. The generated summary is machine-written and cannot be set through this route. The target must be a numbered release version of this flow, not an autosave revision. Requires member role.
-     */
+    get?: never;
     put: {
       parameters: {
         query?: never;
@@ -6833,14 +2516,12 @@ export interface paths {
       requestBody?: {
         content: {
           'application/json': {
-            /** @example ver_a1b2c3d4 */
             versionId: string;
             humanText: string | null;
           };
         };
       };
       responses: {
-        /** @description The stored rationale */
         200: {
           headers: {
             [name: string]: unknown;
@@ -6849,7 +2530,6 @@ export interface paths {
             'application/json': components['schemas']['UpsertVersionAnnotationResponse'];
           };
         };
-        /** @description Invalid body, or the target is not a release */
         400: {
           headers: {
             [name: string]: unknown;
@@ -6858,7 +2538,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -6867,7 +2546,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -6876,7 +2554,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -6885,7 +2562,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -6910,10 +2586,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List discussion threads on a flow
-     * @description Threads anchored to things in this flow, most recently active first. `anchorType` and `anchorKey` narrow to one anchor and are only meaningful together. `includeMessages=true` attaches the messages; otherwise each thread carries `messageCount` alone. Attaching them holds the page to a smaller ceiling than the lean index and caps each thread at its newest 50 messages, with `hasMoreMessages` set when a thread holds more. Because that ceiling is below the `limit` a caller may pass, the response carries `hasMoreThreads`: a full page is not proof of a complete list. A resolved thread carries the release that settled it, and `resolvedByVersionId` is null once that release is gone, which is what `anchorLabel` is kept for. Requires member role.
-     */
     get: {
       parameters: {
         query?: {
@@ -6937,7 +2609,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Threads on this flow */
         200: {
           headers: {
             [name: string]: unknown;
@@ -6946,7 +2617,6 @@ export interface paths {
             'application/json': components['schemas']['ListHubThreadsResponse'];
           };
         };
-        /** @description Invalid query */
         400: {
           headers: {
             [name: string]: unknown;
@@ -6955,7 +2625,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -6964,7 +2633,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -6973,7 +2641,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -6982,7 +2649,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -6994,10 +2660,6 @@ export interface paths {
       };
     };
     put?: never;
-    /**
-     * Open a discussion thread
-     * @description Open a thread on one anchor, with its first message. A thread never exists empty, so `text` is required and may not be blank. A `release` anchor must name a numbered release of this flow: the server verifies it and derives the label, so `anchorLabel` is ignored for that type. For any other anchor type `anchorLabel` is a display snapshot of the anchor as it reads now, stored so a later rename leaves the thread readable instead of unlabeled, and defaults to the anchor key. Requires member role.
-     */
     post: {
       parameters: {
         query?: never;
@@ -7011,10 +2673,7 @@ export interface paths {
       requestBody?: {
         content: {
           'application/json': {
-            /**
-             * @example release
-             * @enum {string}
-             */
+            /** @enum {string} */
             anchorType:
               | 'step'
               | 'entity_action'
@@ -7028,7 +2687,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description The opened thread, with its first message */
         201: {
           headers: {
             [name: string]: unknown;
@@ -7037,7 +2695,6 @@ export interface paths {
             'application/json': components['schemas']['HubThreadResponse'];
           };
         };
-        /** @description Invalid body, or the anchor is not a release */
         400: {
           headers: {
             [name: string]: unknown;
@@ -7046,7 +2703,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -7055,7 +2711,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -7064,7 +2719,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Flow not found, or the anchor names no release of it */
         404: {
           headers: {
             [name: string]: unknown;
@@ -7073,7 +2727,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -7099,10 +2752,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Reply to a thread
-     * @description Append a message to a thread. `text` may not be blank: a message cannot be cleared, so empty is invalid rather than a way to erase one. Replying does not reopen a resolved thread: the resolve link is a statement about a release and is never retracted implicitly. Requires member role.
-     */
     post: {
       parameters: {
         query?: never;
@@ -7110,7 +2759,6 @@ export interface paths {
         path: {
           projectId: string;
           flowId: string;
-          /** @description Thread ID (thr_...) */
           threadId: string;
         };
         cookie?: never;
@@ -7123,7 +2771,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description The thread, with the new message */
         201: {
           headers: {
             [name: string]: unknown;
@@ -7132,7 +2779,6 @@ export interface paths {
             'application/json': components['schemas']['HubThreadResponse'];
           };
         };
-        /** @description Invalid body */
         400: {
           headers: {
             [name: string]: unknown;
@@ -7141,7 +2787,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -7150,7 +2795,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -7159,7 +2803,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -7168,7 +2811,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -7185,107 +2827,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/threads/{threadId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /**
-     * Resolve or reopen a thread
-     * @description Resolving records the release that settled the thread: pass `resolvedByVersionId`, or omit it to record the flow’s newest release. The target must be a numbered release of this flow, never an autosave revision. Reopening drops the link. Requires member role.
-     */
-    patch: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          /** @description Thread ID (thr_...) */
-          threadId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            /**
-             * @example open
-             * @enum {string}
-             */
-            status: 'open' | 'resolved';
-            /** @example ver_a1b2c3d4 */
-            resolvedByVersionId?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The updated thread */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['HubThreadResponse'];
-          };
-        };
-        /** @description Invalid body, or the target is not a release */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    trace?: never;
-  };
   '/api/projects/{projectId}/knowledge': {
     parameters: {
       query?: never;
@@ -7293,10 +2834,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List knowledge captured in this project
-     * @description What people wrote on the frames of a page, most recently active first. Two kinds come back together and `kind` separates them: a `thread` carries its text in messages, a `description` carries one body and cannot be replied to. `pageKey` narrows to a whole page, resolved server-side to every frame that page holds at any depth; `frameId` narrows to one frame; `markId` narrows to one mark within it and is refused without `frameId`, since a mark id alone addresses nothing. `includeMessages=true` attaches message bodies and holds the page to a much smaller ceiling, so `hasMoreEntries` is what separates a complete answer from a truncated one. `validity` says when an entry was true and `freshness` compares that against the flow’s newest release; neither is a verdict. Requires member role.
-     */
     get: {
       parameters: {
         query?: {
@@ -7314,7 +2851,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Knowledge in this project */
         200: {
           headers: {
             [name: string]: unknown;
@@ -7323,7 +2859,6 @@ export interface paths {
             'application/json': components['schemas']['ListKnowledgeResponse'];
           };
         };
-        /** @description Invalid query, or a mark filter with no frame */
         400: {
           headers: {
             [name: string]: unknown;
@@ -7332,7 +2867,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -7341,7 +2875,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -7350,7 +2883,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -7359,7 +2891,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -7371,298 +2902,6 @@ export interface paths {
       };
     };
     put?: never;
-    /**
-     * Open a thread on a mark or a frame
-     * @description Open a thread on one mark of one frame, or on the frame itself with `anchorType` `page` and no `markId`, with its first message. A thread never exists empty, so `text` is required and may not be blank. `clientThreadId` and `clientMessageId` are minted by the client at compose time and are what make a replay idempotent: repeating a known `clientThreadId` hands back the existing thread and writes nothing, so an offline queue can drain repeatedly without duplicating what a person wrote once. `flowId` binds the capture to a flow or is explicitly null; a flow this project cannot see answers 404, never 403. A frame this project does not hold answers 404 with `FRAME_NOT_FOUND`, which a draining client waits on and retries, because the frame’s own write may not have landed yet. The server decides the composed anchor key, the born release, the author and the source: a client cannot assert any of them. Requires member role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            /**
-             * @example tag
-             * @enum {string}
-             */
-            anchorType: 'tag' | 'page';
-            /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-            frameId: string;
-            markId?: string;
-            anchorLabel?: string;
-            flowId: string | null;
-            subjectKey?: string;
-            spatial?: components['schemas']['KnowledgeSpatial'];
-            /** @example ct_7f3a91 */
-            clientThreadId: string;
-            text: string;
-            /** @example ct_7f3a91 */
-            clientMessageId: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The thread, with its first message */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['KnowledgeThreadResponse'];
-          };
-        };
-        /** @description Invalid body */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The named flow or frame is not in this project */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/knowledge/{threadId}/messages': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Reply to a knowledge thread
-     * @description Append a message to a thread and get the whole thread back, so a surface renders the new exchange without a second read. `text` may not be blank: a message cannot be cleared, so empty is invalid rather than a way to erase one. Repeating a `clientMessageId` already on the thread appends nothing and leaves `updatedAt` alone, so a retrying drain never keeps bumping a thread to the top of every list. A description has no conversation and cannot be replied to; addressing one answers 404. Requires member role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Thread ID (thr_...) */
-          threadId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            text: string;
-            /** @example ct_7f3a91 */
-            clientMessageId: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The thread, with the new message */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['KnowledgeThreadResponse'];
-          };
-        };
-        /** @description Invalid body */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/knowledge/description': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /**
-     * Write the description of a mark or a frame
-     * @description Write the one description of one anchor, a mark or the frame itself, replacing whatever it said before. There is no id to mint: the anchor is the key, so a replayed write lands on the same row by construction, which is why this is a PUT. An empty `body` is refused rather than stored, so a drain that arrives with nothing to say can never erase what a person wrote. The response is 200 whether the description was opened or replaced. Requires member role.
-     */
-    put: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            /**
-             * @example tag
-             * @enum {string}
-             */
-            anchorType: 'tag' | 'page';
-            /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-            frameId: string;
-            markId?: string;
-            anchorLabel?: string;
-            flowId: string | null;
-            subjectKey?: string;
-            spatial?: components['schemas']['KnowledgeSpatial'];
-            body: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The stored description */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['KnowledgeDescriptionResponse'];
-          };
-        };
-        /** @description Invalid body */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The named flow or frame is not in this project */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
     post?: never;
     delete?: never;
     options?: never;
@@ -7677,10 +2916,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List the frames of a page, or of the whole project
-     * @description A frame is a named rectangle with marks inside it, the spatial unit of a measurement plan. Naming a `pageKey` returns that page’s frames at any depth, marks and all, newest updated first: the walk starts at the page’s top-level frames and descends containment, so a child is reachable through its parent rather than by carrying a page of its own. Naming no page returns every live frame of the project WITHOUT its marks, which is what makes that read cheap enough to answer "what does this project have": the marks are the bulk of a frame and a listing never renders them. That lean read asks nothing about containment, so a frame whose parent cannot be resolved still appears. `include=marks` asks that project-wide read for the marks anyway, for a surface that spans pages and cannot fetch a page at a time; it is a second, heavier read of the same rows, taken after the lean list has already painted, and omitting it returns exactly the lean rows. It says nothing to the page read, which carries marks either way. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
-     */
     get: {
       parameters: {
         query?: {
@@ -7695,7 +2930,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description The page’s frames with their marks, or the project’s frames without them */
         200: {
           headers: {
             [name: string]: unknown;
@@ -7706,7 +2940,6 @@ export interface paths {
               | components['schemas']['FrameLeanListResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -7715,7 +2948,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -7724,7 +2956,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -7733,7 +2964,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -7742,7 +2972,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -7768,24 +2997,18 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Read one frame
-     * @description One frame with its marks. A frame of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted frame is gone to every read. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
-     */
     get: {
       parameters: {
         query?: never;
         header?: never;
         path: {
           projectId: string;
-          /** @description Frame ID (frm_...) */
           frameId: string;
         };
         cookie?: never;
       };
       requestBody?: never;
       responses: {
-        /** @description The frame */
         200: {
           headers: {
             [name: string]: unknown;
@@ -7794,7 +3017,6 @@ export interface paths {
             'application/json': components['schemas']['Frame'];
           };
         };
-        /** @description The path segment does not address a frame */
         400: {
           headers: {
             [name: string]: unknown;
@@ -7803,7 +3025,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -7812,7 +3033,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -7821,7 +3041,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -7830,2491 +3049,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    /**
-     * Create or replace one frame
-     * @description The path is the identity, so the body carries no id: a create is a write to an absent row at `baseVersion` 0 and everything else is a replace. `clientWriteId` is minted at compose time and is what makes a replayed drain exact: a write whose id already produced the stored version landed once and is answered with that version, writing nothing, so an offline queue drains repeatedly without turning one edit into two versions. A write against a version someone else has moved past answers 409 `FRAME_VERSION_CONFLICT` carrying the head, which is what lets a client raise keep-mine against load-theirs on the one frame that conflicted instead of dropping what a person drew. A name another live frame already holds is a distinct 409 `FRAME_NAME_EXISTS`. A relation naming a frame this project does not hold, or one that would place a frame inside itself, is 400 `INVALID_FRAME`. The screenshot is never touched here: a frame write carries no capture. Requires member role.
-     */
-    put: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            frame: components['schemas']['FrameInput'];
-            baseVersion: number;
-            clientWriteId: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The stored version */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['PutFrameResponse'];
-          };
-        };
-        /** @description Invalid body, a bad relation, or a path segment that addresses no frame */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description A stale base version, carrying the head, or a name another live frame already holds. Only the version conflict carries `head`: a name clash needs no frame to resolve, since the client already knows the name it sent. */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json':
-              | components['schemas']['FrameConflictResponse']
-              | components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    post?: never;
-    /**
-     * Delete one frame
-     * @description Soft-delete the frame and, transitively, every variation of what this delete removes. Children are not variations and survive: each live frame under a removed one is re-parented to its nearest live ancestor in the same transaction and placed where it was, each placement read through the home placement (the first placement) of every removed frame it climbs out of, so it keeps its spot on the page. One left with no live ancestor becomes top-level and inherits the page it hung under, so nothing is left unreachable. Those moves are server writes that bump their own versions, and the answer carries the moved frames as stored now; a client still holding a pre-delete version meets a conflict carrying the new parent. A frame this project does not hold answers 404: a delete that removed nothing is not a delete that succeeded. `baseVersion` names the version the caller last saw: a frame that has moved past it answers 409 `FRAME_VERSION_CONFLICT` with the version that holds now, and nothing is deleted, so an undo cannot take marks someone else just added. The version is checked under the delete’s own lock. Requires member role.
-     */
-    delete: {
-      parameters: {
-        query?: {
-          baseVersion?: number | null;
-        };
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The frame is deleted; the frames the delete moved, as stored now */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeleteFrameResponse'];
-          };
-        };
-        /** @description The path segment does not address a frame, or `baseVersion` is not a version */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The frame has moved past `baseVersion`; nothing was deleted */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['FrameDeleteConflictResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/frames/{frameId}/screenshot': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Store the capture of one frame
-     * @description Store one screenshot and set it on its frame. The image arrives as base64 rather than multipart, because the extension relay carries string bodies only. The server decides everything about the bytes: it decodes them, counts the DECODED length against a 4 MB cap, reads the type from the file’s own magic bytes, and hashes them, so nothing the client claims about size or type is consulted. Captures are deduplicated by content within a project: identical pixels resolve to one asset and one upload, and `reused` says whether that happened, which is the common answer rather than the rare one because re-capturing an unchanged frame produces identical bytes. A body past the cap is 413 `PAYLOAD_TOO_LARGE` and one that is not a PNG is 415 `UNSUPPORTED_MEDIA_TYPE`. The capture bumps no frame version: it is not an edit, so an upload never conflicts with the frame write the client queued beside it. Requires member role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            imageBase64: string;
-            meta: components['schemas']['FrameScreenshotMeta'];
-          };
-        };
-      };
-      responses: {
-        /** @description The asset the bytes resolved to, and whether it already existed */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ScreenshotUploadResponse'];
-          };
-        };
-        /** @description Invalid body, or a path segment that addresses no frame */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description This project does not hold the named frame */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The decoded image is past the 4 MB cap */
-        413: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The bytes are not a PNG */
-        415: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/assets/{assetId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Read one stored capture
-     * @description The bytes of one frame screenshot, for the app canvas. The extension keeps its own capture locally and never reads assets back. Same-origin and session-authenticated: the response carries `Cross-Origin-Resource-Policy: same-origin`, so no other site can embed a tenant capture off the reader’s session. The bytes are immutable by construction, since the object key is their own content hash, which is why they are cacheable for a year, and `private` keeps a shared cache from serving one tenant’s capture to the next request for the same URL. An asset another project holds answers 404, never 403. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Asset ID (fas_...) */
-          assetId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The image bytes */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'image/png': string;
-          };
-        };
-        /** @description The path segment does not address an asset */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/canvases': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List the canvases of the project
-     * @description A canvas is a named, freely arranged board over a project’s frames, the surface on which a plan is laid out across pages rather than within one. This returns every live canvas by name WITHOUT its document: the document is the bulk of a canvas and a listing renders none of it, so opening a board is the single-canvas read. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The project’s canvases, without their documents */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CanvasListResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Create one canvas
-     * @description Create one empty canvas at version 1. The id is the client’s, so a board drawn before the first save keeps its identity when it arrives. A canvas comes into existence here and nowhere else: a document write to an id the project does not hold is a 404 rather than a create, which is what keeps a stray write from minting a board. A name another live canvas already holds is 409 `CANVAS_NAME_EXISTS`; the partial unique index is over live rows, so a name a deleted canvas still carries is free. An id that is not a canvas id is refused by the body schema as 400 `VALIDATION_ERROR`. An id that is not available, because a canvas, in this project or another, already holds it, is 400 `INVALID_CANVAS`, whose message says nothing about the project that holds it. Requires member role.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            /** @example cnv_V1StGXR8Z5jdHi6BmyT7K */
-            id: string;
-            name: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The created canvas, with its empty document */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Canvas'];
-          };
-        };
-        /** @description Invalid body, or an id that is not available */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description A name another live canvas already holds */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/canvases/{canvasId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Read one canvas
-     * @description One canvas with its whole document: the nodes with their positions, the edges, and the node keys the board suppresses. A canvas of another project reads back as nothing and answers 404, never 403, so this route cannot become an oracle for what exists elsewhere. A deleted canvas is gone to every read. Requires viewer role: project viewers and deployers read the board, and every write stays with members.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Canvas ID (cnv_...) */
-          canvasId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The canvas */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Canvas'];
-          };
-        };
-        /** @description The path segment does not address a canvas */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    /**
-     * Replace the document of one canvas
-     * @description The whole board every time: a canvas is read and written as a unit, so there is no partial write to reconcile. `clientWriteId` is minted at compose time and is what makes a replayed drain exact: a write whose id already produced the stored version landed once and is answered with that version, writing nothing, so an offline queue drains repeatedly without turning one edit into two versions. A write against a version someone else has moved past answers 409 `CANVAS_VERSION_CONFLICT` carrying the head, which is what lets a client raise keep-mine against load-theirs on the board that conflicted instead of dropping what a person drew. A canvas this project does not hold, or one that was removed, is 404 `CANVAS_NOT_FOUND`: this door replaces a document and never creates one. Requires member role.
-     */
-    put: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Canvas ID (cnv_...) */
-          canvasId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            document: components['schemas']['CanvasDocument'];
-            baseVersion: number;
-            clientWriteId: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The stored version */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['PutCanvasResponse'];
-          };
-        };
-        /** @description Invalid body, or a path segment that addresses no canvas */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description This project does not hold the named canvas */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description A stale base version, carrying the head */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CanvasConflictResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/shares': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List the shares of the project
-     * @description Every live share of the project, most recently changed first, with what the canvas badges a shared frame with: the link setting, the number of invited addresses and the open threads on the shared frame and every frame nested in it. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The project’s shares */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListProjectSharesResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/frames/{frameId}/share': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Read the share of one frame
-     * @description The frame’s share as members manage it: the invited addresses with their roles, the link setting and, while anyone with the link can open the frame, `linkUrl`: the canonical address with the link key in its fragment. `share` is null while the frame is not shared. `coveredBy` lists the shares of the frame’s ancestors, nearest first, each of which already includes it. The response is never cached. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The frame’s share, or null */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['FrameShareResponse'];
-          };
-        };
-        /** @description The path segment does not address a frame */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description This project does not hold the frame (`FRAME_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    /**
-     * Set who the link of a frame reaches
-     * @description Set the general access of a frame’s share: `restricted` (invited people and project members) or `anyone` with the link, and the role the link confers, `viewer` or `commenter`; a link never edits. The first write creates the share at `baseVersion` 0. Turning the link on mints a fresh key and turning it off destroys the key, so a revoked link never comes back to life. A write against a version someone else has moved past answers 409 `SHARE_VERSION_CONFLICT` carrying the share as it stands. A frame with more than 256 frames nested in it, or nested deeper than 32 levels, is 422 `SHARE_TOO_LARGE`. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
-     */
-    put: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            baseVersion: number;
-            /**
-             * @example restricted
-             * @enum {string}
-             */
-            linkAccess: 'restricted' | 'anyone';
-            /**
-             * @example viewer
-             * @enum {string}
-             */
-            linkRole: 'viewer' | 'commenter';
-          };
-        };
-      };
-      responses: {
-        /** @description The share after the write */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['FrameShareWriteResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description This project does not hold the frame (`FRAME_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description A stale base version, carrying the share as it stands */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['FrameShareConflictResponse'];
-          };
-        };
-        /** @description The frame holds more than one share serves (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    post?: never;
-    /**
-     * Stop sharing a frame
-     * @description Delete the frame’s share with its link and every invited address; the next request through the share is refused. Deleting a share that does not exist also answers 204. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The frame is not shared */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description The path segment does not address a frame */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/frames/{frameId}/share/link/reset': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Replace the link key of a frame’s share
-     * @description Mint a new link key. The current link stops working for everyone holding it on their next request; invited people and project members keep their access. A frame that is not shared is 404 `SHARE_NOT_FOUND`, and a share whose link is off is 409 `SHARE_LINK_OFF`. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The share with its new link */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['FrameShareWriteResponse'];
-          };
-        };
-        /** @description The path segment does not address a frame */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The frame is not shared (`SHARE_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The link is off (`SHARE_LINK_OFF`) */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/frames/{frameId}/share/grants': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Invite addresses to a frame’s share
-     * @description Grant up to 20 addresses one role on the frame’s share, creating a restricted share with the first grant it adds; an invite that adds nobody to a frame that is not shared creates nothing and answers `share: null`. Grants are bound to the address: whoever signs in as it holds the role, with no token and no accept step. Every address gets its own outcome in request order: `added`, `GRANT_EXISTS`, `ALREADY_MEMBER` (project membership already confers the role), `GRANT_LIMIT` (50 per share) or `INVALID_EMAIL`. Each added address is emailed once after the grants are stored; the email carries the canonical address and no credential, and `emailFailed` marks an address whose email did not go out, which still holds its access. Limited to 20 invites per hour per member. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            emails: string[];
-            /**
-             * @example commenter
-             * @enum {string}
-             */
-            role: 'viewer' | 'commenter' | 'editor';
-          };
-        };
-      };
-      responses: {
-        /** @description The share and the outcome of every address */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['AddShareGrantsResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description This project does not hold the frame (`FRAME_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The frame holds more than one share serves (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/frames/{frameId}/share/grants/{grantId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Remove one invited address
-     * @description Remove a grant; the person’s access through it ends on their next request. Removing a grant that does not exist also answers 204. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-          /** @description Grant ID (shg_...) */
-          grantId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The grant is gone */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description A path segment does not address a frame or a grant */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    /**
-     * Change the role of one invited address
-     * @description Change the role a grant confers; it takes effect on that person’s next request and sends no email. A grant the frame’s share does not hold is 404 `GRANT_NOT_FOUND`. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
-     */
-    patch: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-          /** @description Grant ID (shg_...) */
-          grantId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            /**
-             * @example commenter
-             * @enum {string}
-             */
-            role: 'viewer' | 'commenter' | 'editor';
-          };
-        };
-      };
-      responses: {
-        /** @description The share after the change */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['FrameShareWriteResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The share holds no such grant (`GRANT_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    trace?: never;
-  };
-  '/api/projects/{projectId}/knowledge/{threadId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Remove a thread opened through a share
-     * @description Moderation: delete a thread that was opened through a frame share, with its messages. A thread opened anywhere else answers 404 `THREAD_NOT_FOUND`, as an unknown one does. The removal is audited. Requires a signed-in session (a bearer token is refused with 401 `SESSION_REQUIRED`), member role and the `frames` feature.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          /** @description Thread ID (thr_...) */
-          threadId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The thread is gone */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description The path segment does not address a thread */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description No share thread with this id (`THREAD_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/shares/{shareId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Read a shared frame
-     * @description The shared frame as its reader may see it: every frame of the shared subtree, root first and breadth first, the bases its variations need to paint, and the reader’s role and label. People are display labels, never an address or an id, and frames carry no page address, flow or DOM anchor. Never cached, never indexed. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: {
-          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
-          'X-Share-Key'?: string;
-        };
-        path: {
-          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
-          shareId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The shared frame */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ShareArtifact'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/shares/{shareId}/assets/{assetId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Read a screenshot of a shared frame
-     * @description One capture of a frame inside the share; a capture of any frame around it answers 404 `ASSET_NOT_FOUND` like an unknown id. An `<img>` cannot send a header, so the share’s cookie carries the link key here. The entity tag is the bytes’ own hash and a matching `If-None-Match` answers 304. `Cache-Control: private, max-age=3600` and `Cross-Origin-Resource-Policy: same-origin`. A share serves at most 3000 screenshots in 10 minutes. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: {
-          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
-          'X-Share-Key'?: string;
-        };
-        path: {
-          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
-          shareId: string;
-          /** @description Asset ID (fas_...) */
-          assetId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The image bytes */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'image/png': string;
-          };
-        };
-        /** @description The reader’s copy is current */
-        304: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no capture of a frame in the share has this id (`ASSET_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/shares/{shareId}/knowledge': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List the notes on a shared frame
-     * @description The notes on the frames of the share, most recently active first, with their messages unless `includeMessages=false`. What a reader sees follows the role the share confers: a viewer reads descriptions only; a commenter or editor reads the threads too, anonymous holders of a commenter link included. `frameId` narrows to one frame of the share (a frame outside it is 404 `FRAME_NOT_FOUND`), `markId` to one mark within it. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
-     */
-    get: {
-      parameters: {
-        query?: {
-          frameId?: string;
-          markId?: string;
-          includeMessages?: 'true' | 'false';
-          limit?: number;
-        };
-        header?: {
-          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
-          'X-Share-Key'?: string;
-        };
-        path: {
-          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
-          shareId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The notes the reader may see */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListShareKnowledgeResponse'];
-          };
-        };
-        /** @description Invalid query, or a mark filter with no frame */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); `frameId` names no frame of the share (`FRAME_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Comment on a shared frame
-     * @description Open a thread on a frame of the share (`page`) or on one of its marks (`tag`), optionally pinned to a point given in the frame’s own fractions, with its first message. The thread is bound to no flow and carries no DOM anchor. A replay of a known `clientThreadId` hands back the thread it wrote; one held by a thread the reader cannot see is 409 `CLIENT_THREAD_ID_TAKEN`. Writing needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the commenter or editor role (403 `FORBIDDEN` below it). The body may be at most 32 KiB (413 `PAYLOAD_TOO_LARGE`). Comments are limited to 10 per minute per person and 120 per hour per share. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: {
-          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
-          'X-Share-Key'?: string;
-        };
-        path: {
-          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
-          shareId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            /** @example ct_7f3a91 */
-            clientThreadId: string;
-            /**
-             * @example tag
-             * @enum {string}
-             */
-            anchorType: 'tag' | 'page';
-            /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-            frameId: string;
-            markId?: string;
-            anchorLabel?: string;
-            spatial?: {
-              at: {
-                x: number;
-                y: number;
-              };
-            };
-            text: string;
-            /** @example ct_7f3a91 */
-            clientMessageId: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The thread, with its first message */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ShareThread'];
-          };
-        };
-        /** @description Invalid body */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The role does not allow commenting (`FORBIDDEN`) */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); the frame is not in the share (`FRAME_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The client thread id is taken (`CLIENT_THREAD_ID_TAKEN`) */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The body is past 32 KiB */
-        413: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/shares/{shareId}/knowledge/{threadId}/messages': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Reply on a thread of a shared frame
-     * @description Append a message in the reader’s own name and get the whole thread back. A thread outside the share answers 404 `KNOWLEDGE_NOT_FOUND` like an unknown one; a repeat of a `clientMessageId` already on the thread appends nothing. Writing needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the commenter or editor role (403 `FORBIDDEN` below it). The body may be at most 32 KiB (413 `PAYLOAD_TOO_LARGE`). Comments are limited to 10 per minute per person and 120 per hour per share. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: {
-          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
-          'X-Share-Key'?: string;
-        };
-        path: {
-          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
-          shareId: string;
-          /** @description Thread ID (thr_...) */
-          threadId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            text: string;
-            /** @example ct_7f3a91 */
-            clientMessageId: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The thread, with the new message */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ShareThread'];
-          };
-        };
-        /** @description Invalid body */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The role does not allow commenting (`FORBIDDEN`) */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no thread of the share has this id (`KNOWLEDGE_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The body is past 32 KiB */
-        413: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/shares/{shareId}/knowledge/{threadId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /**
-     * Resolve or reopen a thread of a shared frame
-     * @description Set a thread’s status. An editor may change any thread of the share, anyone else only a thread they opened (403 `FORBIDDEN` otherwise); either way it takes a signed-in session (401 `SIGN_IN_REQUIRED`). A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
-     */
-    patch: {
-      parameters: {
-        query?: never;
-        header?: {
-          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
-          'X-Share-Key'?: string;
-        };
-        path: {
-          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
-          shareId: string;
-          /** @description Thread ID (thr_...) */
-          threadId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            /**
-             * @example open
-             * @enum {string}
-             */
-            status: 'open' | 'resolved';
-          };
-        };
-      };
-      responses: {
-        /** @description The thread after the change */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ShareThread'];
-          };
-        };
-        /** @description Invalid body */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Neither an editor nor the thread’s author (`FORBIDDEN`) */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no thread of the share has this id (`KNOWLEDGE_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    trace?: never;
-  };
-  '/api/shares/{shareId}/frames/{frameId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /**
-     * Write a frame of a shared frame
-     * @description Replace one frame of the share, or create a frame inside it at `baseVersion` 0. The frame takes exactly the fields the share serves for editing: name, parent, placements, size, marks and base. A source, flow or origin is refused, and every field the share withholds stays as stored, so a write never drops what its editor could not see. Every shared tag field must have its type, and a variance nests its alternative shapes at most 16 levels deep (400 `INVALID_FRAME`). A tag id or a placement id names one entry: a repeat is 400 `VALIDATION_ERROR`. The shared frame keeps its parent, placement, size and base; a frame below it stays inside the share and extends nothing or a frame the share serves. A replay of the write that produced the stored version answers that version. A write against a version someone else has moved past answers 409 `FRAME_VERSION_CONFLICT` with that version and no marks: read the share again to load theirs, or write again at that version to keep yours. A name another live frame already holds is 409 `FRAME_NAME_EXISTS`, carrying nothing else. Writing needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the editor role (403 `FORBIDDEN` below it), both settled before the body is read. The body may be at most 1 MiB (413 `PAYLOAD_TOO_LARGE`). Frame writes are limited to 60 per minute per person. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
-     */
-    put: {
-      parameters: {
-        query?: never;
-        header?: {
-          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
-          'X-Share-Key'?: string;
-        };
-        path: {
-          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
-          shareId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            frame: {
-              name: string;
-              /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-              parentId: string | null;
-              placements?: {
-                id: string;
-                rect: components['schemas']['PlanRect'];
-              }[];
-              size?: components['schemas']['PlanSize'];
-              marks: {
-                tags: {
-                  id: string;
-                  /** @enum {string} */
-                  kind?:
-                    | 'entity'
-                    | 'property'
-                    | 'action'
-                    | 'context'
-                    | 'globals'
-                    | 'user'
-                    | 'consent'
-                    | 'link'
-                    | 'note';
-                  name?: string;
-                  value?: string | null;
-                  parentId?: string;
-                  entity?: string;
-                  /** @enum {string} */
-                  scope?: '-' | '_';
-                  rect?: components['schemas']['PlanRect'];
-                  at?: {
-                    x: number;
-                    y: number;
-                  };
-                  description?: string;
-                  observe?: boolean;
-                  variance?: components['schemas']['ShareVariance'];
-                  /** @enum {string} */
-                  origin?: 'drawn' | 'generated' | 'observed';
-                  cleared?: (
-                    | 'value'
-                    | 'parentId'
-                    | 'entity'
-                    | 'scope'
-                    | 'rect'
-                    | 'at'
-                    | 'description'
-                    | 'observe'
-                    | 'variance'
-                    | 'origin'
-                    | 'anchor'
-                  )[];
-                }[];
-                note?: {
-                  description: string;
-                };
-              };
-              /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-              extends: string | null;
-            };
-            baseVersion: number;
-            clientWriteId: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The stored version */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['PutSharedFrameResponse'];
-          };
-        };
-        /** @description Invalid body, a repeated tag or placement id among them (`VALIDATION_ERROR`); a mark field without its type or nested too deep; or a frame the share cannot hold: a moved shared frame, a parent or base outside the share, a frame inside it without placements and size, or an id another frame holds (`INVALID_FRAME`) */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The role does not allow editing (`FORBIDDEN`) */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no frame of the share has this id, which includes a base the share only paints with and a new frame written at a version other than 0 (`FRAME_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description A stale base version, carrying the version that holds now, or a name another live frame already holds */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json':
-              | components['schemas']['SharedFrameConflictResponse']
-              | components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The body is past 1 MiB */
-        413: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The share holds more frames than one share serves, or the write would take it there (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    post?: never;
-    /**
-     * Delete a frame of a shared frame
-     * @description Delete one frame of the share, with every variation the delete takes along. The frames it held stay: each moves to the nearest frame the delete keeps and is placed where it was, its placements read through the home placement (the first placement) of every removed frame it climbs out of. The answer carries those frames, each with its parent, its placements and the version the move gave it, and no marks. The shared frame itself is never deleted here, and neither is a frame whose delete would take it along (403 `FORBIDDEN`). A frame that a frame outside the share varies answers 409 `FRAME_HAS_EXTERNAL_VARIATIONS`, since the delete would take that frame along too. `baseVersion` names the version the editor last saw: a frame that has moved past it answers 409 `FRAME_VERSION_CONFLICT` with the version that holds now, and nothing is deleted; read the share again to see it. Deleting needs a signed-in session (401 `SIGN_IN_REQUIRED` for a reader admitted by the link alone) and the editor role (403 `FORBIDDEN` below it), both settled before a malformed `baseVersion` is answered. Frame writes and deletes share a limit of 60 per minute per person. A session cookie is optional: anyone the share admits reads through it, which is a project member, a signed-in person whose address holds a grant, or anyone holding the link while it is on. A bearer token is refused with 401 `SESSION_REQUIRED`. Nothing says whether a share exists: without a session and a valid key every share id answers 401 (and the share’s cookie is dropped), and a signed-in reader without access gets 404 `SHARE_NOT_FOUND`.
-     */
-    delete: {
-      parameters: {
-        query?: {
-          baseVersion?: number | null;
-        };
-        header?: {
-          /** @description The link key, read by the share page from the fragment of `/s/{shareId}#k={key}`. While it admits the reader, the response mirrors it into an httpOnly `share_key` cookie scoped to this share’s API path, which is how images load. */
-          'X-Share-Key'?: string;
-        };
-        path: {
-          /** @description Share ID (shr_...). It names the share and grants nothing by itself. */
-          shareId: string;
-          /** @description Frame ID (frm_...) */
-          frameId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The frame is deleted; the frames the delete moved, as stored now */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeleteSharedFrameResponse'];
-          };
-        };
-        /** @description `baseVersion` is not a version (`VALIDATION_ERROR`) */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The role does not allow editing, or the frame is the shared frame or its delete would take the shared frame along (`FORBIDDEN`) */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found: the signed-in reader has no access to the share (`SHARE_NOT_FOUND`); no frame of the share has this id, which includes a base the share only paints with (`FRAME_NOT_FOUND`) */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description A stale base version, carrying the version that holds now, or a frame outside the share varies this frame (`FRAME_HAS_EXTERNAL_VARIATIONS`) */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json':
-              | components['schemas']['SharedFrameConflictResponse']
-              | components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The share holds more frames than one share serves (`SHARE_TOO_LARGE`) */
-        422: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/shares/shared-with-me': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List the frames shared with me
-     * @description The frame shares the signed-in person’s address holds a grant on, newest first: the share, the frame’s name, the role, who invited them and when. Names no project. Requires a signed-in session: a bearer token is refused with 401 `SESSION_REQUIRED`.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description The shares the person was invited to */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['SharedWithMeResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
         429: {
           headers: {
             [name: string]: unknown;
@@ -10340,10 +3074,6 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List the releases that touched one step
-     * @description The releases of this flow that added, changed, or removed one step, newest first, each carrying the rationale stored for it. `step` is a `type.name` key over source, transformer, destination, store, and contract. `flow` narrows the scan to one named flow inside the config and is ignored for a contract key. `limit` bounds the releases scanned, not the entries returned. When nothing matched, `knownSteps` lists the addressable keys of the newest scanned release. Requires member role.
-     */
     get: {
       parameters: {
         query: {
@@ -10360,7 +3090,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description The releases that touched the step */
         200: {
           headers: {
             [name: string]: unknown;
@@ -10369,7 +3098,6 @@ export interface paths {
             'application/json': components['schemas']['StepHistoryResponse'];
           };
         };
-        /** @description Invalid step key or query */
         400: {
           headers: {
             [name: string]: unknown;
@@ -10378,7 +3106,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -10387,7 +3114,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Forbidden */
         403: {
           headers: {
             [name: string]: unknown;
@@ -10396,7 +3122,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -10405,1201 +3130,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Rate limited */
         429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/releases/summarize': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Summarize or check a release
-     * @description Describe what one release of this flow changed against an earlier release, or check a written note against that same change. In `draft` mode the generated text is stored as the release's generated summary; in `check` mode nothing is stored and the response says whether the note matches. The diff is always recomputed from the two stored snapshots, with secret literals masked, and is never taken from the request. Both versions must be numbered releases of this flow, and `prevVersionId` must be the earlier of the two. Requires member role and the `hub` feature.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': {
-            /** @example ver_a1b2c3d4 */
-            versionId: string;
-            /** @example ver_a1b2c3d4 */
-            prevVersionId: string;
-            /** @enum {string} */
-            mode: 'draft' | 'check';
-            currentText?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description The generated summary or the check verdict */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['SummarizeReleaseResponse'];
-          };
-        };
-        /** @description Invalid body, a target is not a release, the pair is out of order, or no LLM provider is configured */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description The model call failed or returned no usable text */
-        502: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/deployments/{deploymentId}/versions/current/content': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get current deployed content
-     * @description Get the active deployed per-setting content for a deployment, used to diff changes since deploy. Content is masked and display-only; every field is null when there is no deployed baseline. Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Deployed content (or a null baseline) */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeployedContentResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Rate limited */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/deployments/{deploymentId}/heartbeats': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List deployment heartbeats
-     * @description List heartbeat records for a deployment with optional from/to time-range filtering and pagination. Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description ISO start of the time range. */
-          from?: string;
-          /** @description ISO end of the time range. */
-          to?: string;
-          limit?: number;
-          offset?: number | null;
-        };
-        header?: never;
-        path: {
-          projectId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Heartbeat history */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListHeartbeatsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/deployments/{deploymentId}/rotate-ingest-token': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Rotate ingest token
-     * @description Rotate the ingest token for a deployment. Owner-only. No grace window: the previous token is immediately invalidated and the new token is returned once.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description New ingest token */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['RotateIngestTokenResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/deployments/{deploymentId}/usage': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Deployment usage
-     * @description Aggregate usage summary plus bucketed chart data for a deployment over the requested period. Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Time window for the usage summary. */
-          period?: '1h' | '24h' | '7d' | '30d';
-        };
-        header?: never;
-        path: {
-          projectId: string;
-          deploymentId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Usage summary and chart buckets */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeploymentUsageResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/custom-domains': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List custom domains
-     * @description List custom domains attached to any deployment of this flow. Requires member role and the customDomains feature.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Custom domains for the flow */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListCustomDomainsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Attach custom domain
-     * @description Attach a custom domain to the flow's latest server deployment, or to an explicit deployment supplied in the body. Requires member role and the customDomains feature.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateCustomDomainRequest'];
-        };
-      };
-      responses: {
-        /** @description Custom domain attached */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CustomDomain'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Conflict */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/custom-domains/{domainId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Detach custom domain
-     * @description Detach a custom domain from its deployment and remove the Scaleway record. Idempotent: a missing domain still returns 204.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          domainId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Custom domain detached */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy-token': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Self-hosted deploy-token status
-     * @description Report whether a self-hosted deploy token exists for this config, plus the deployment health summary when present. Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          settingsId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Deploy-token status */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeployTokenStatusResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Mint self-hosted deploy token
-     * @description Create a self-hosted deployment (if none exists) and mint a flow+deployment-bound runner token. Admin-only. The raw token is returned once and never stored in plaintext.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          flowId: string;
-          settingsId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Deploy token minted */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CreateDeployTokenResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/entitlements': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Resolved entitlements
-     * @description Return resolved feature entitlements for the authenticated user and project. Used by CLI/API clients; the web UI uses SSR-resolved entitlements. Requires viewer role.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Resolved entitlements */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['EntitlementsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/settings/llm': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Active LLM provider
-     * @description Report which LLM provider is currently active for the project and where billing is sourced. Never returns the apiKey. Requires member role and the chat feature.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Active LLM provider status */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['LlmConfigStatusResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description No platform LLM provider configured */
-        503: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['LlmConfigStatusResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Set LLM provider
-     * @description Set or clear the project LLM provider override. Admin-only, gated by the chat feature. The apiKey is write-only: it is encrypted and never returned.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['SetLlmConfigRequest'];
-        };
-      };
-      responses: {
-        /** @description LLM config saved or cleared */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['SetLlmConfigResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/chat/sessions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List chat sessions
-     * @description List the caller's recent chat sessions for a project, ordered by last activity. Requires member role and the chat feature.
-     */
-    get: {
-      parameters: {
-        query?: {
-          limit?: number;
-          offset?: number | null;
-        };
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Chat session list */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListChatSessionsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/chat/sessions/{sessionId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get chat session
-     * @description Return a chat session and its full message history when the caller owns it. Foreign or unknown sessions return 404 (never 403) so existence is not leaked. Requires member role and the chat feature.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-          sessionId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Chat session with messages */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ChatSessionDetailResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/chat/elicit': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Answer elicitation prompt
-     * @description Answer a pending MCP elicitation prompt (accept, decline, or cancel), unblocking the waiting tool invocation. Requires member role and the chat feature.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['ElicitRequest'];
-        };
-      };
-      responses: {
-        /** @description Elicitation resolved */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ElicitResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/projects/{projectId}/runners': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List runners (deprecated)
-     * @description Deprecated: runners migrated to deployments (origin=self-hosted). Always returns an empty list for backward compatibility. Requires member role.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          projectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Empty runner list */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListRunnersResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
           headers: {
             [name: string]: unknown;
           };
@@ -11626,10 +3157,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Runner heartbeat
-     * @description Accept a self-hosted runner heartbeat with usage counters. Authenticated by a flow+deployment-bound runner token. Updates deployment liveness and records an immutable usage row.
-     */
     post: {
       parameters: {
         query?: never;
@@ -11645,7 +3172,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Heartbeat accepted */
         200: {
           headers: {
             [name: string]: unknown;
@@ -11654,7 +3180,6 @@ export interface paths {
             'application/json': components['schemas']['RunnerHeartbeatResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -11663,7 +3188,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Unauthorized */
         401: {
           headers: {
             [name: string]: unknown;
@@ -11672,7 +3196,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -11696,16 +3219,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Package catalog
-     * @description Resolved `@walkeros/*` package catalog for the add-step picker, optionally filtered by type and platform.
-     */
     get: {
       parameters: {
         query?: {
-          /** @description Filter by package type. */
           type?: string;
-          /** @description Filter by platform. */
           platform?: string;
         };
         header?: never;
@@ -11714,7 +3231,6 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Package catalog */
         200: {
           headers: {
             [name: string]: unknown;
@@ -11723,7 +3239,6 @@ export interface paths {
             'application/json': components['schemas']['PackageCatalogResponse'];
           };
         };
-        /** @description Validation error */
         400: {
           headers: {
             [name: string]: unknown;
@@ -11732,7 +3247,6 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Package catalog unavailable */
         502: {
           headers: {
             [name: string]: unknown;
@@ -11751,199 +3265,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/packages/search': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Search packages
-     * @description Returns the full @walkeros/* package catalog; clients filter locally.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Search results */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['PackageSearchResponse'];
-          };
-        };
-        /** @description Package search unavailable */
-        502: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Log a settled search
-     * @description Records one settled search outcome (the term the user paused on and whether the catalog matched it). Fire-and-forget; returns 204.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['PackageSearchLogRequest'];
-        };
-      };
-      responses: {
-        /** @description Search logged */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/observe/timing': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Report connect timing
-     * @description Fire-and-forget beacon for client-side connect timing SLIs. No auth required; carries no secrets. Returns 204.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['ObserveTimingRequest'];
-        };
-      };
-      responses: {
-        /** @description Timing recorded */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/oauth/register': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Register a client
-     * @description RFC 7591 dynamic client registration. Unauthenticated: a client registers itself before it holds any credential. Issues public clients only (`token_endpoint_auth_method: none`), which prove themselves with PKCE. Errors use the RFC 7591 section 3.2.2 shape, not the standard error envelope.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['OAuthClientRegistrationRequest'];
-        };
-      };
-      responses: {
-        /** @description Client registered */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['OAuthClientRegistrationResponse'];
-          };
-        };
-        /** @description Invalid client metadata or redirect URI */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['OAuthRegistrationError'];
-          };
-        };
-        /** @description Registration ceiling reached (Retry-After header) */
-        429: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/oauth/device_authorization': {
     parameters: {
       query?: never;
@@ -11953,10 +3274,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Start a device authorization
-     * @description RFC 8628 section 3.1. A client that cannot host a browser redirect asks for a device code and a user code here, then polls the token endpoint while the person approves the user code at `/oauth/device`. Unauthenticated, and public clients only: the code is worth nothing until a signed-in person approves it. Body is `application/x-www-form-urlencoded`; errors use the RFC 6749 section 5.2 shape, not the standard error envelope.
-     */
     post: {
       parameters: {
         query?: never;
@@ -11970,7 +3287,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Device authorization opened */
         200: {
           headers: {
             [name: string]: unknown;
@@ -11979,7 +3295,6 @@ export interface paths {
             'application/json': components['schemas']['DeviceAuthorizationResponse'];
           };
         };
-        /** @description invalid_request, unauthorized_client, invalid_scope or invalid_target */
         400: {
           headers: {
             [name: string]: unknown;
@@ -11988,7 +3303,6 @@ export interface paths {
             'application/json': components['schemas']['OAuthError'];
           };
         };
-        /** @description invalid_client: unknown, revoked or confidential client */
         401: {
           headers: {
             [name: string]: unknown;
@@ -12014,10 +3328,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Exchange a grant for tokens
-     * @description RFC 6749 section 3.2. Runs the authorization code, refresh token and device code grants. The client authenticates here: a public client with PKCE, a confidential one with HTTP Basic or a form secret. Body is `application/x-www-form-urlencoded` only; errors use the RFC 6749 section 5.2 shape, not the standard error envelope, and a failed Basic authentication is answered with a `WWW-Authenticate: Basic` challenge. Responses are never cacheable. Rate limited per `client_id`.
-     */
     post: {
       parameters: {
         query?: never;
@@ -12031,7 +3341,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Tokens issued */
         200: {
           headers: {
             [name: string]: unknown;
@@ -12040,7 +3349,6 @@ export interface paths {
             'application/json': components['schemas']['TokenResponse'];
           };
         };
-        /** @description invalid_request, invalid_grant, invalid_scope, invalid_target, unsupported_grant_type, or a device grant status (authorization_pending, slow_down, access_denied, expired_token) */
         400: {
           headers: {
             [name: string]: unknown;
@@ -12049,7 +3357,6 @@ export interface paths {
             'application/json': components['schemas']['OAuthError'];
           };
         };
-        /** @description invalid_client: unknown, revoked, or bad credentials */
         401: {
           headers: {
             [name: string]: unknown;
@@ -12058,7 +3365,6 @@ export interface paths {
             'application/json': components['schemas']['OAuthError'];
           };
         };
-        /** @description Per-client token budget reached (Retry-After header) */
         429: {
           headers: {
             [name: string]: unknown;
@@ -12084,10 +3390,6 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Revoke a token
-     * @description RFC 7009. Client authentication is the same as at the token endpoint. A refresh token revokes its whole rotation family, an access token only itself. An authenticated request always answers 200 with an empty body, unknown tokens included: a distinguishable answer would be an oracle. Body is `application/x-www-form-urlencoded`.
-     */
     post: {
       parameters: {
         query?: never;
@@ -12101,14 +3403,12 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Revoked, or nothing matched */
         200: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
         };
-        /** @description invalid_request or unsupported_token_type */
         400: {
           headers: {
             [name: string]: unknown;
@@ -12117,7 +3417,6 @@ export interface paths {
             'application/json': components['schemas']['OAuthError'];
           };
         };
-        /** @description invalid_client: unknown, revoked, or bad credentials */
         401: {
           headers: {
             [name: string]: unknown;
@@ -12129,440 +3428,6 @@ export interface paths {
       };
     };
     delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/oauth/device/approve': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Decide a device authorization
-     * @description The person's approve or deny decision on a pending device authorization. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token can never approve its own device. Requires the `X-CSRF-Token` minted with the consent page, bound to this user code.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['DeviceApprovalRequest'];
-        };
-      };
-      responses: {
-        /** @description Decision recorded */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DeviceApprovalResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/oauth/authorize': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Decide a consent request
-     * @description The person's allow or deny decision on the consent screen at `/oauth/authorize`. The ticket is the HMAC-signed authorization request that screen was rendered from, so the decision cannot alter what was validated, and it is bound to the person it was minted for. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token can never approve a consent. The response says where to send the browser: the client's registered redirect URI, carrying `code` on allow and `error=access_denied` on deny.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['OAuthConsentDecisionRequest'];
-        };
-      };
-      responses: {
-        /** @description Decision recorded */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['OAuthConsentDecisionResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/oauth/grants': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List connected apps
-     * @description The apps the signed-in person has consented to, as the Connected apps page renders them. Revoked grants are absent. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a machine token cannot read the connections its owner holds.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Connected apps */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListOAuthGrantsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    /**
-     * Disconnect every app
-     * @description Revoke every grant this person holds and the tokens hanging from them. Automation tokens hang from no grant and survive. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`, so a read-scoped machine token cannot disconnect everything its owner has connected.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Apps disconnected */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/oauth/grants/{grantId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Disconnect one app
-     * @description Revoke one grant and the tokens hanging from it. Idempotent: an unknown grant, another person's grant and an already revoked one all answer 204, and the token sweep runs either way, so pressing Disconnect twice cleans up a token minted inside the first press's window. Session only: a bearer credential is refused with 401 `SESSION_REQUIRED`.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          grantId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description App disconnected */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/admin/oauth/clients': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List OAuth clients
-     * @description Every registered OAuth client, revoked ones included. No secret material is returned. Admin only: a non-admin caller gets 404, not 403, so the endpoint does not confirm its own existence.
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OAuth client list */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ListOAuthClientsResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    put?: never;
-    /**
-     * Create a confidential OAuth client
-     * @description Create an OAuth client that authenticates with a secret. The raw secret is returned exactly once and is never retrievable afterwards. Admin only: a non-admin caller gets 404, not 403.
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['CreateOAuthClientRequest'];
-        };
-      };
-      responses: {
-        /** @description Client created */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['CreateOAuthClientResponse'];
-          };
-        };
-        /** @description Validation error */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/admin/oauth/clients/{clientId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Revoke an OAuth client
-     * @description Revoke a client together with the grants consented to it and the tokens minted under them. Admin only: a non-admin caller gets 404, not 403, the same answer an unknown client id gets.
-     */
-    delete: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          clientId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Client revoked */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-        /** @description Not found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
-        };
-      };
-    };
     options?: never;
     head?: never;
     patch?: never;
@@ -12574,9 +3439,7 @@ export interface components {
   schemas: {
     ErrorResponse: {
       error: {
-        /** @example VALIDATION_ERROR */
         code: string;
-        /** @example Validation failed */
         message: string;
         details?: {
           field?: string;
@@ -12588,27 +3451,6 @@ export interface components {
         } & {
           [key: string]: unknown;
         };
-      };
-    };
-    ClientOutdatedError: {
-      error: {
-        /** @enum {string} */
-        code: 'CLIENT_OUTDATED';
-        /** @example This endpoint requires @walkeros/cli >= 3.5.0 (you are on 3.3.1). */
-        message: string;
-        /** @example 3.5.0 */
-        minVersion: string;
-        /** @example 3.3.1 */
-        clientVersion: string;
-        /** @example cli */
-        client: string;
-        /** @example npm install -g @walkeros/cli@latest */
-        upgrade: string;
-        /**
-         * Format: uri
-         * @example https://walkeros.io/docs/upgrading
-         */
-        docs: string;
       };
     };
     FlowConfig: {
@@ -12632,73 +3474,43 @@ export interface components {
       [key: string]: unknown;
     };
     Flow: {
-      /** @example flow_a1b2c3d4 */
       id: string;
-      /** @example my-website-flow */
       name: string;
       config: components['schemas']['FlowConfig'];
       settings?: components['schemas']['FlowSettingsSummary'][];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
       /** Format: date-time */
       deletedAt?: string | null;
     };
     FlowSettingsSummary: {
-      /** @example cfg_a1b2c3d4 */
       id: string;
       name: string;
-      /**
-       * @example web
-       * @enum {string}
-       */
+      /** @enum {string} */
       platform: 'web' | 'server';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
     };
     FlowSummary: {
-      /** @example flow_a1b2c3d4 */
       id: string;
-      /** @example my-website-flow */
       name: string;
       summary?: string;
       settings?: components['schemas']['FlowSettingsListItem'][];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
       /** Format: date-time */
       deletedAt: string | null;
     };
     FlowSettingsListItem: {
-      /** @example cfg_a1b2c3d4 */
       id: string;
       name: string;
-      /**
-       * @example web
-       * @enum {string}
-       */
+      /** @enum {string} */
       platform: 'web' | 'server';
       serving: components['schemas']['ServingStatus'];
       latestAttempt: components['schemas']['LatestAttemptStatus'];
@@ -12716,242 +3528,19 @@ export interface components {
       | 'stopped'
       | 'failed'
       | null;
-    Version: {
-      /** @example 1 */
-      version: number;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * @example user
-       * @enum {string}
-       */
-      createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
-      /** @example sha256:abc123... */
-      contentHash?: string;
-    };
     Project: {
-      /** @example proj_x7y8z9 */
       id: string;
-      /** @example My Website */
       name: string;
-      /**
-       * @example owner
-       * @enum {string}
-       */
-      role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-      /** @example 3 */
-      memberCount: number;
-      /** @example 5 */
-      flowCount: number;
-      /** @example 2 */
-      deploymentCount: number;
-      /** @example false */
-      isDemo: boolean;
-    };
-    Member: {
-      userId: string;
-      /** Format: email */
-      email: string;
       /** @enum {string} */
       role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-    };
-    DeleteAccountRequest: {
-      /** @example me@example.com */
-      confirm: string;
-    };
-    DeleteAccountBlocked: {
-      error: {
-        /**
-         * @example SOLE_OWNER
-         * @enum {string}
-         */
-        code: 'SOLE_OWNER';
-        message: string;
-        details: {
-          /**
-           * @example [
-           *       "proj_abc123"
-           *     ]
-           */
-          projects: string[];
-        };
-      };
-    };
-    AccountExportResponse: {
-      /** @example 2026-06-10T12:00:00.000Z */
-      exportedAt: string;
-      profile: {
-        /** @example user_a1b2c3d4 */
-        id: string;
-        /** @example me@example.com */
-        email: string;
-        displayName: string | null;
-        createdAt: string;
-        lastLoginAt: string | null;
-        /** @example user */
-        globalRole: string;
-        traits: string[];
-      };
-      memberships: {
-        projectId: string;
-        projectName: string;
-        role: string;
-        joinedAt: string;
-      }[];
-      tokens: {
-        id: string;
-        name: string;
-        /** @example automation */
-        kind: string;
-        /** @example read write */
-        scope: string;
-        /** @example api mcp */
-        audience: string;
-        projectId: string | null;
-        createdAt: string;
-        lastUsedAt: string | null;
-        expiresAt: string;
-        revokedAt: string | null;
-      }[];
-      sessions: {
-        id: string;
-        createdAt: string;
-        expiresAt: string;
-        lastTouchedAt: string;
-      }[];
-      mcpSessions: {
-        id: string;
-        projectId: string | null;
-        createdAt: string;
-        lastActiveAt: string;
-        expiresAt: string;
-        messages: {
-          seq: number;
-          role: string;
-          content?: unknown;
-          createdAt: string;
-        }[];
-      }[];
-      feedback: {
-        id: string;
-        projectId: string | null;
-        text: string;
-        source: string;
-        createdAt: string;
-      }[];
-      invitations: {
-        id: string;
-        projectId: string;
-        invitedEmail: string;
-        role: string;
-        status: string;
-        createdAt: string;
-        expiresAt: string;
-        acceptedAt: string | null;
-        declinedAt: string | null;
-        cancelledAt: string | null;
-      }[];
-    };
-    AutomationTokenSummary: {
-      /** @example tok_a1b2c3d4 */
-      id: string;
-      /** @example CI Pipeline */
-      name: string;
-      /** @example wos_pat_a1b2 */
-      tokenPrefix: string;
-      /**
-       * @example [
-       *       "read",
-       *       "write"
-       *     ]
-       */
-      scope: string[];
-      /**
-       * @example [
-       *       "api",
-       *       "mcp"
-       *     ]
-       */
-      audience: string[];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      lastUsedAt: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      expiresAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      revokedAt: string | null;
-    };
-    FlowSettingsDetail: {
-      /** @example cfg_a1b2c3d4 */
-      id: string;
-      name: string;
-      /**
-       * @example web
-       * @enum {string}
-       */
-      platform: 'web' | 'server';
-      config: {
-        [key: string]: unknown;
-      };
-      deployment?: {
-        id: string;
-        status: string;
-        type: string;
-        containerUrl?: string | null;
-        publicUrl?: string | null;
-        errorMessage?: string | null;
-        /**
-         * Format: date-time
-         * @example 2026-01-26T14:30:00.000Z
-         */
-        createdAt: string;
-        /**
-         * Format: date-time
-         * @example 2026-01-26T14:30:00.000Z
-         */
-        updatedAt: string;
-      } | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
+      memberCount: number;
+      flowCount: number;
+      deploymentCount: number;
+      isDemo: boolean;
     };
     DeploySettingsRequest: {
       flow?: string;
@@ -12959,27 +3548,18 @@ export interface components {
     };
     DeploySettingsResponse: {
       deploymentId: string;
-      /** @example cfg_a1b2c3d4 */
       settingsId: string;
       status: string;
     };
     FlowDetailResponse: {
-      /** @example flow_a1b2c3d4 */
       id: string;
-      /** @example my-website-flow */
       name: string;
       config: components['schemas']['FlowConfig'];
       settings?: components['schemas']['FlowSettingsEnriched'][];
       bundleId?: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
       /** Format: date-time */
       deletedAt: string | null;
@@ -12996,85 +3576,49 @@ export interface components {
         type: string;
         target: string | null;
         containerUrl: string | null;
-        /**
-         * Format: date-time
-         * @example 2026-01-26T14:30:00.000Z
-         */
+        /** Format: date-time */
         createdAt: string;
         updatedAt: string | null;
       } | null;
       serving: components['schemas']['ServingStatus'];
       latestAttempt: components['schemas']['LatestAttemptStatus'];
       deployedAt: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
     };
     FlowUpdateResponse: {
-      /** @example flow_a1b2c3d4 */
       id: string;
-      /** @example my-website-flow */
       name: string;
       config: components['schemas']['FlowConfig'];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
     };
     CreateProjectResponse: {
-      /** @example proj_x7y8z9 */
       id: string;
       name: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
     };
     UpdateProjectResponse: {
-      /** @example proj_x7y8z9 */
       id: string;
       name: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
     };
     DeploymentSummary: {
-      /** @example dep_a1b2c3d4 */
       id: string;
-      /**
-       * @example web
-       * @enum {string}
-       */
+      /** @enum {string} */
       type: 'web' | 'server';
-      /** @example k7m2x9p4q1w8 */
       slug: string;
       target: string | null;
       label: string | null;
-      /**
-       * @example cloud
-       * @enum {string}
-       */
+      /** @enum {string} */
       origin: 'cloud' | 'self-hosted';
-      /**
-       * @example active
-       * @enum {string}
-       */
+      /** @enum {string} */
       status:
         | 'idle'
         | 'deploying'
@@ -13085,7 +3629,6 @@ export interface components {
       serving: components['schemas']['ServingStatus'];
       currentVersionNumber: number | null;
       url: string | null;
-      /** @example flow_a1b2c3d4 */
       flowId: string | null;
       flowName: string | null;
       /** Format: date-time */
@@ -13098,26 +3641,15 @@ export interface components {
       };
     };
     DeploymentDetailResponse: {
-      /** @example dep_a1b2c3d4 */
       id: string;
-      /**
-       * @example web
-       * @enum {string}
-       */
+      /** @enum {string} */
       type: 'web' | 'server';
-      /** @example k7m2x9p4q1w8 */
       slug: string;
       target: string | null;
       label: string | null;
-      /**
-       * @example cloud
-       * @enum {string}
-       */
+      /** @enum {string} */
       origin: 'cloud' | 'self-hosted';
-      /**
-       * @example active
-       * @enum {string}
-       */
+      /** @enum {string} */
       status:
         | 'idle'
         | 'deploying'
@@ -13187,34 +3719,20 @@ export interface components {
     DeploymentError: {
       code: string;
       message: string;
-      /**
-       * @example bundle
-       * @enum {string}
-       */
+      /** @enum {string} */
       phase: 'preflight' | 'deploy' | 'bundle' | 'publish' | 'provision';
       detail?: string;
     };
     CreateDeploymentResponse: {
-      /** @example dep_a1b2c3d4 */
       id: string;
-      /**
-       * @example web
-       * @enum {string}
-       */
+      /** @enum {string} */
       type: 'web' | 'server';
-      /** @example k7m2x9p4q1w8 */
       slug: string;
       target: string | null;
       label: string | null;
-      /**
-       * @example cloud
-       * @enum {string}
-       */
+      /** @enum {string} */
       origin: 'cloud' | 'self-hosted';
-      /**
-       * @example active
-       * @enum {string}
-       */
+      /** @enum {string} */
       status:
         | 'idle'
         | 'deploying'
@@ -13225,7 +3743,6 @@ export interface components {
       serving: components['schemas']['ServingStatus'];
       currentVersionNumber: number | null;
       url: string | null;
-      /** @example flow_a1b2c3d4 */
       flowId: string | null;
       flowName: string | null;
       /** Format: date-time */
@@ -13239,15 +3756,10 @@ export interface components {
     };
     StartDeploymentResponse:
       | {
-          /** @example dep_a1b2c3d4 */
           deploymentId: string;
-          /** @example k7m2x9p4q1w8 */
           slug: string;
           target: string | null;
-          /**
-           * @example web
-           * @enum {string}
-           */
+          /** @enum {string} */
           type: 'web' | 'server';
           /** @enum {string} */
           status: 'deploying';
@@ -13263,10 +3775,7 @@ export interface components {
     DeploymentStreamStatusEvent: {
       status: string;
       substatus: string | null;
-      /**
-       * @example web
-       * @enum {string}
-       */
+      /** @enum {string} */
       type: 'web' | 'server';
       target: string | null;
       containerUrl: string | null;
@@ -13284,93 +3793,6 @@ export interface components {
       offset: number;
       nextCursor: string | null;
     };
-    UpdateDeploymentResponse: {
-      /** @example dep_a1b2c3d4 */
-      id: string;
-      /**
-       * @example web
-       * @enum {string}
-       */
-      type: 'web' | 'server';
-      /** @example k7m2x9p4q1w8 */
-      slug: string;
-      target: string | null;
-      label: string | null;
-      /**
-       * @example cloud
-       * @enum {string}
-       */
-      origin: 'cloud' | 'self-hosted';
-      /**
-       * @example active
-       * @enum {string}
-       */
-      status:
-        | 'idle'
-        | 'deploying'
-        | 'published'
-        | 'active'
-        | 'stopped'
-        | 'failed';
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-    };
-    LatestDeploymentsByFlow: {
-      [key: string]: {
-        id: string;
-        flowId: string;
-        slug: string;
-        type: string;
-        status: string;
-        target: string | null;
-        containerUrl: string | null;
-        createdAt: string;
-      };
-    };
-    PublishVersionResponse: {
-      versionNumber: number;
-      versionId: string;
-      /** @example dep_a1b2c3d4 */
-      deploymentId: string;
-      /** @enum {string} */
-      status: 'deploying';
-      source:
-        | {
-            /** @enum {string} */
-            type: 'flow';
-            flowId: string;
-            flowSettingsName: string;
-          }
-        | {
-            /** @enum {string} */
-            type: 'config';
-          };
-      /** Format: date-time */
-      createdAt: string;
-    };
-    ListDeploymentVersionsResponse: {
-      versions: {
-        number: number;
-        status: string;
-        source: {
-          type: string;
-          flowId?: string;
-          flowSettingsId?: string;
-          configHash?: string;
-        };
-        errorMessage: string | null;
-        errorCode: string | null;
-        bundlePath: string | null;
-        /** Format: date-time */
-        publishedAt: string;
-        publishedBy: string | null;
-      }[];
-      total: number;
-      limit: number;
-      offset: number;
-    };
     ListFlowReleasesResponse: {
       releases: components['schemas']['FlowRelease'][];
       total: number;
@@ -13379,17 +3801,11 @@ export interface components {
     };
     FlowRelease: {
       id: string;
-      /** @example dep_a1b2c3d4 */
       deploymentId: string;
-      /** @example k7m2x9p4q1w8 */
       deploymentSlug: string | null;
-      /**
-       * @example web
-       * @enum {string|null}
-       */
+      /** @enum {string|null} */
       deploymentType: 'web' | 'server' | null;
       versionNumber: number;
-      /** @example ver_a1b2c3d4 */
       flowVersionId: string | null;
       flowVersionNumber: number | null;
       status: string;
@@ -13406,78 +3822,40 @@ export interface components {
       hasGeneratedSummary: boolean;
       firstLine: string | null;
     };
-    ReleaseContentResponse: {
-      /** @example ver_a1b2c3d4 */
-      versionId: string;
-      /** @example 22 */
-      versionNumber: number;
-      content: components['schemas']['FlowConfig'];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /** @enum {string} */
-      createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
-    };
     ReleaseDiff: {
-      /** @example ver_a1b2c3d4 */
       prevVersionId: string;
       prevVersionNumber: number;
       text: string;
       contentIdentical: boolean;
     };
     ReleaseDetailResponse: {
-      /** @example ver_a1b2c3d4 */
       versionId: string;
       versionNumber: number;
       contentHash: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
       createdBy: string;
       rationale: components['schemas']['VersionAnnotation'] | null;
       diff: components['schemas']['ReleaseDiff'] | null;
     };
     VersionAnnotation: {
-      /** @example ver_a1b2c3d4 */
       versionId: string;
       humanText: string | null;
       generatedSummary: string | null;
-      /** @example user_a1b2c3d4 */
       author: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
     };
-    ListVersionAnnotationsResponse: {
-      annotations: components['schemas']['VersionAnnotation'][];
-    };
     UpsertVersionAnnotationResponse: {
-      /** @example ver_a1b2c3d4 */
       versionId: string;
       humanText: string | null;
       generatedSummary: string | null;
-      /** @example user_a1b2c3d4 */
       author: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
     };
     ListHubThreadsResponse: {
@@ -13485,38 +3863,22 @@ export interface components {
       hasMoreThreads: boolean;
     };
     HubThread: {
-      /** @example thr_a1b2c3d4 */
       id: string;
-      /**
-       * @example release
-       * @enum {string}
-       */
+      /** @enum {string} */
       anchorType: 'step' | 'entity_action' | 'release' | 'contract' | 'tag';
       anchorKey: string;
       anchorLabel: string;
-      /**
-       * @example open
-       * @enum {string}
-       */
+      /** @enum {string} */
       status: 'open' | 'resolved';
       resolvedByVersionId: string | null;
       resolvedByVersionNumber: number | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       resolvedAt: string | null;
       resolvedBy: string | null;
       createdBy: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
       messageCount: number;
       messages?: components['schemas']['HubMessage'][];
@@ -13524,48 +3886,28 @@ export interface components {
     };
     HubMessage: {
       id: string;
-      /** @example user_a1b2c3d4 */
       author: string;
       text: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
     };
     HubThreadResponse: {
-      /** @example thr_a1b2c3d4 */
       id: string;
-      /**
-       * @example release
-       * @enum {string}
-       */
+      /** @enum {string} */
       anchorType: 'step' | 'entity_action' | 'release' | 'contract' | 'tag';
       anchorKey: string;
       anchorLabel: string;
-      /**
-       * @example open
-       * @enum {string}
-       */
+      /** @enum {string} */
       status: 'open' | 'resolved';
       resolvedByVersionId: string | null;
       resolvedByVersionNumber: number | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       resolvedAt: string | null;
       resolvedBy: string | null;
       createdBy: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
       messageCount: number;
       messages?: components['schemas']['HubMessage'][];
@@ -13593,20 +3935,14 @@ export interface components {
       author: components['schemas']['KnowledgeAuthor'];
       /** @enum {string} */
       source: 'tag_mode' | 'hub' | 'mcp';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
       /**
        * @description discriminator enum property added by openapi-typescript
        * @enum {string}
        */
       kind: 'thread';
-      /**
-       * @example tag
-       * @enum {string}
-       */
+      /** @enum {string} */
       anchorType:
         | 'step'
         | 'entity_action'
@@ -13614,15 +3950,9 @@ export interface components {
         | 'contract'
         | 'tag'
         | 'page';
-      /**
-       * @example open
-       * @enum {string}
-       */
+      /** @enum {string} */
       status: 'open' | 'resolved';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
       messageCount: number;
       messages?: components['schemas']['KnowledgeMessage'][];
@@ -13662,15 +3992,10 @@ export interface components {
     };
     KnowledgeMessage: {
       id: string;
-      /** @example user_a1b2c3d4 */
       author: string;
-      /** @example ayla@elbwalker.com */
       authorLabel: string;
       text: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
       clientMessageId: string | null;
     };
@@ -13689,114 +4014,16 @@ export interface components {
       author: components['schemas']['KnowledgeAuthor'];
       /** @enum {string} */
       source: 'tag_mode' | 'hub' | 'mcp';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
       /**
        * @description discriminator enum property added by openapi-typescript
        * @enum {string}
        */
       kind: 'description';
-      /**
-       * @example tag
-       * @enum {string}
-       */
+      /** @enum {string} */
       anchorType: 'tag' | 'page';
       body: string;
-    };
-    KnowledgeThreadResponse: {
-      id: string;
-      anchorKey: string;
-      anchorLabel: string;
-      frameId: string | null;
-      frameName: string | null;
-      flowId: string | null;
-      subjectKey: string | null;
-      spatial: components['schemas']['KnowledgeSpatial'] | null;
-      validity: components['schemas']['KnowledgeValidity'];
-      /** @enum {string} */
-      freshness: 'current' | 'subject_changed' | 'unknown';
-      author: components['schemas']['KnowledgeAuthor'];
-      /** @enum {string} */
-      source: 'tag_mode' | 'hub' | 'mcp';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-      /** @enum {string} */
-      kind: 'thread';
-      /**
-       * @example tag
-       * @enum {string}
-       */
-      anchorType:
-        | 'step'
-        | 'entity_action'
-        | 'release'
-        | 'contract'
-        | 'tag'
-        | 'page';
-      /**
-       * @example open
-       * @enum {string}
-       */
-      status: 'open' | 'resolved';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      messageCount: number;
-      messages?: components['schemas']['KnowledgeMessage'][];
-      hasMoreMessages?: boolean;
-    };
-    KnowledgeDescriptionResponse: {
-      id: string;
-      anchorKey: string;
-      anchorLabel: string;
-      frameId: string | null;
-      frameName: string | null;
-      flowId: string | null;
-      subjectKey: string | null;
-      spatial: components['schemas']['KnowledgeSpatial'] | null;
-      validity: components['schemas']['KnowledgeValidity'];
-      /** @enum {string} */
-      freshness: 'current' | 'subject_changed' | 'unknown';
-      author: components['schemas']['KnowledgeAuthor'];
-      /** @enum {string} */
-      source: 'tag_mode' | 'hub' | 'mcp';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-      /** @enum {string} */
-      kind: 'description';
-      /**
-       * @example tag
-       * @enum {string}
-       */
-      anchorType: 'tag' | 'page';
-      body: string;
-    };
-    FrameInput: {
-      name: string;
-      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-      parentId: string | null;
-      placements: components['schemas']['FramePlacement'][];
-      size: components['schemas']['PlanSize'];
-      marks: {
-        [key: string]: unknown;
-      };
-      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-      extends: string | null;
-      source: components['schemas']['FrameSource'];
-      /** @enum {string} */
-      origin: 'drawn' | 'imported' | 'observed';
-      flowId: string | null;
     };
     FramePlacement: {
       id: string;
@@ -13835,7 +4062,6 @@ export interface components {
         }
       | null;
     Frame: {
-      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
       id: string;
       projectId: string;
       name: string;
@@ -13852,37 +4078,24 @@ export interface components {
       flowId: string | null;
       screenshot: components['schemas']['FrameScreenshot'] | null;
       version: number;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
       createdBy: string;
       updatedBy: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       deletedAt: string | null;
     };
     FrameScreenshot: {
       assetId: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       capturedAt: string;
       size: components['schemas']['PlanSize'];
       dpr: number;
       capturedRect: components['schemas']['PlanRect'];
     };
     FrameLean: {
-      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
       id: string;
       projectId: string;
       name: string;
@@ -13896,22 +4109,13 @@ export interface components {
       flowId: string | null;
       screenshot: components['schemas']['FrameScreenshot'] | null;
       version: number;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       updatedAt: string;
       createdBy: string;
       updatedBy: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       deletedAt: string | null;
     };
     FrameListResponse: {
@@ -13919,576 +4123,6 @@ export interface components {
     };
     FrameLeanListResponse: {
       frames: components['schemas']['FrameLean'][];
-    };
-    PutFrameResponse: {
-      version: number;
-    };
-    FrameConflictResponse: {
-      error: {
-        /** @enum {string} */
-        code: 'FRAME_VERSION_CONFLICT';
-        message: string;
-      };
-      head: components['schemas']['Frame'];
-    };
-    DeleteFrameResponse: {
-      relocated: components['schemas']['Frame'][];
-    };
-    FrameDeleteConflictResponse: {
-      error: {
-        /** @enum {string} */
-        code: 'FRAME_VERSION_CONFLICT';
-        message: string;
-      };
-      version: number;
-    };
-    CanvasDocument: {
-      /** @enum {number} */
-      v: 1;
-      nodes: components['schemas']['CanvasNodeEntry'][];
-      edges: components['schemas']['CanvasEdgeEntry'][];
-      hidden: string[];
-    };
-    CanvasNodeEntry: {
-      kind: string;
-      ref: string;
-      position: components['schemas']['CanvasPoint'];
-      parent?: string;
-      size?: {
-        width: number;
-        height: number;
-      };
-      label?: string;
-    };
-    CanvasPoint: {
-      x: number;
-      y: number;
-    };
-    CanvasEdgeEntry: {
-      id: string;
-      /** @enum {string} */
-      kind: 'navigation';
-      from: string;
-      to: string;
-      label?: string;
-    };
-    Canvas: {
-      /** @example cnv_V1StGXR8Z5jdHi6BmyT7K */
-      id: string;
-      projectId: string;
-      name: string;
-      document: components['schemas']['CanvasDocument'];
-      version: number;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-      createdBy: string;
-      updatedBy: string;
-    };
-    CanvasLean: {
-      /** @example cnv_V1StGXR8Z5jdHi6BmyT7K */
-      id: string;
-      projectId: string;
-      name: string;
-      version: number;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-      createdBy: string;
-      updatedBy: string;
-    };
-    CanvasListResponse: {
-      canvases: components['schemas']['CanvasLean'][];
-    };
-    PutCanvasResponse: {
-      version: number;
-    };
-    CanvasConflictResponse: {
-      error: {
-        /** @enum {string} */
-        code: 'CANVAS_VERSION_CONFLICT';
-        message: string;
-      };
-      head: components['schemas']['Canvas'];
-    };
-    FrameShare: {
-      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
-      id: string;
-      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-      frameId: string;
-      frameName: string;
-      /** @example https://app.walkeros.io/s/shr_v1stgxr8z5jdhi6bmyt7k */
-      url: string;
-      /**
-       * @example restricted
-       * @enum {string}
-       */
-      linkAccess: 'restricted' | 'anyone';
-      /**
-       * @example viewer
-       * @enum {string}
-       */
-      linkRole: 'viewer' | 'commenter';
-      linkUrl: string | null;
-      version: number;
-      grants: components['schemas']['FrameShareGrant'][];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-    };
-    FrameShareGrant: {
-      id: string;
-      email: string;
-      /**
-       * @example commenter
-       * @enum {string}
-       */
-      role: 'viewer' | 'commenter' | 'editor';
-      invitedBy: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-    };
-    FrameShareResponse: {
-      share: components['schemas']['FrameShare'] | null;
-      coveredBy: components['schemas']['CoveringShare'][];
-    };
-    CoveringShare: {
-      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
-      shareId: string;
-      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-      frameId: string;
-      frameName: string;
-    };
-    FrameShareWriteResponse: {
-      share: components['schemas']['FrameShare'];
-    };
-    FrameShareConflictResponse: {
-      error: {
-        /** @enum {string} */
-        code: 'SHARE_VERSION_CONFLICT';
-        message: string;
-      };
-      share: components['schemas']['FrameShare'] | null;
-    };
-    AddShareGrantsResponse: {
-      share: components['schemas']['FrameShare'] | null;
-      results: components['schemas']['ShareGrantResult'][];
-    };
-    ShareGrantResult: {
-      email: string;
-      /** @enum {string} */
-      outcome:
-        | 'added'
-        | 'GRANT_EXISTS'
-        | 'ALREADY_MEMBER'
-        | 'GRANT_LIMIT'
-        | 'INVALID_EMAIL';
-      emailFailed?: boolean;
-    };
-    ListProjectSharesResponse: {
-      shares: components['schemas']['ShareSummary'][];
-    };
-    ShareSummary: {
-      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
-      id: string;
-      /** @example frm_V1StGXR8Z5jdHi6BmyT7K */
-      frameId: string;
-      url: string;
-      /**
-       * @example restricted
-       * @enum {string}
-       */
-      linkAccess: 'restricted' | 'anyone';
-      /**
-       * @example viewer
-       * @enum {string}
-       */
-      linkRole: 'viewer' | 'commenter';
-      grantCount: number;
-      openThreadCount: number;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-    };
-    UpdateAccountResponse: {
-      displayName: string | null;
-    };
-    ShareArtifact: {
-      share: components['schemas']['ShareInfo'];
-      frames: components['schemas']['ShareFrame'][];
-      bases: components['schemas']['ShareBase'][];
-    };
-    ShareInfo: {
-      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
-      id: string;
-      rootFrameId: string;
-      /**
-       * @example commenter
-       * @enum {string}
-       */
-      role: 'viewer' | 'commenter' | 'editor';
-      signedIn: boolean;
-      viewerLabel: string | null;
-      sharedBy: string | null;
-      project: {
-        id: string;
-        name: string;
-      } | null;
-      /**
-       * @example viewer
-       * @enum {string|null}
-       */
-      linkRole: 'viewer' | 'commenter' | null;
-      canManage: boolean;
-      viewerNamed: boolean;
-      /** @default true */
-      keyAccepted: boolean | null;
-    };
-    ShareFrame: {
-      id: string;
-      name: string;
-      parentId: string | null;
-      placements: {
-        id: string;
-        rect: {
-          x: number;
-          y: number;
-          w: number;
-          h: number;
-        };
-      }[];
-      size: {
-        width: number;
-        height: number;
-      };
-      marks: components['schemas']['ShareMarks'];
-      extends: string | null;
-      source:
-        | {
-            /** @enum {string} */
-            kind: 'page';
-            key: string;
-          }
-        | {
-            /** @enum {string} */
-            kind: 'figma';
-          }
-        | {
-            /** @enum {string} */
-            kind: 'image';
-          }
-        | null;
-      screenshot: components['schemas']['ShareFrameScreenshot'] | null;
-      version: number;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-    };
-    ShareMarks: {
-      tags: components['schemas']['ShareTag'][];
-      note?: {
-        description: string;
-      };
-    };
-    ShareTag: {
-      id: string;
-      /** @enum {string} */
-      kind?:
-        | 'entity'
-        | 'property'
-        | 'action'
-        | 'context'
-        | 'globals'
-        | 'user'
-        | 'consent'
-        | 'link'
-        | 'note';
-      name?: string;
-      value?: string | null;
-      parentId?: string;
-      entity?: string;
-      /** @enum {string} */
-      scope?: '-' | '_';
-      rect?: components['schemas']['PlanRect'];
-      at?: {
-        x: number;
-        y: number;
-      };
-      description?: string;
-      observe?: boolean;
-      variance?: components['schemas']['ShareVariance'];
-      /** @enum {string} */
-      origin?: 'drawn' | 'generated' | 'observed';
-      anchor?: components['schemas']['ShareTagAnchor'];
-      cleared?: (
-        | 'value'
-        | 'parentId'
-        | 'entity'
-        | 'scope'
-        | 'rect'
-        | 'at'
-        | 'description'
-        | 'observe'
-        | 'variance'
-        | 'origin'
-        | 'anchor'
-      )[];
-    };
-    ShareVariance: {
-      count?: {
-        min: number;
-        max?: number;
-      };
-      when?: {
-        minWidth?: number;
-        maxWidth?: number;
-        path?: string;
-        flag?: string;
-      };
-      oneOf?: components['schemas']['ShareSemNode'][];
-    };
-    ShareSemNode: {
-      entity: string;
-      contexts: {
-        [key: string]: string | null;
-      };
-      data: {
-        [key: string]: string | null;
-      };
-      actions: string[];
-      children: components['schemas']['ShareSemNode'][];
-      variance?: components['schemas']['ShareVariance'];
-      own?: {
-        entity: string;
-        key: string;
-        value: string | null;
-        /** @enum {string} */
-        scope?: '-' | '_';
-        spelled?: string;
-      }[];
-      observe?: boolean;
-      link?: {
-        name: string;
-        value: string;
-      }[];
-      /** @enum {boolean} */
-      implicit?: true;
-      reachAll?: string[];
-    };
-    ShareTagAnchor: {
-      css: string;
-      text?: string;
-      fingerprint?: {
-        tag: string;
-      };
-    };
-    ShareFrameScreenshot: {
-      assetId: string;
-      capturedAt: string;
-      size: {
-        width: number;
-        height: number;
-      };
-      dpr: number;
-      capturedRect: {
-        x: number;
-        y: number;
-        w: number;
-        h: number;
-      };
-    };
-    ShareBase: {
-      id: string;
-      name: string;
-      extends: string | null;
-      marks: components['schemas']['ShareMarks'];
-    };
-    ListShareKnowledgeResponse: {
-      entries: components['schemas']['ShareKnowledgeEntry'][];
-      hasMoreEntries: boolean;
-    };
-    ShareKnowledgeEntry:
-      | components['schemas']['ShareThread']
-      | components['schemas']['ShareDescription'];
-    ShareThread: {
-      id: string;
-      /**
-       * @example tag
-       * @enum {string}
-       */
-      anchorType: 'tag' | 'page';
-      anchorKey: string;
-      anchorLabel: string;
-      frameId: string | null;
-      markId: string | null;
-      spatial: {
-        at: {
-          x: number;
-          y: number;
-        };
-      } | null;
-      author: components['schemas']['ShareAuthor'];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-      /**
-       * @description discriminator enum property added by openapi-typescript
-       * @enum {string}
-       */
-      kind: 'thread';
-      /**
-       * @example open
-       * @enum {string}
-       */
-      status: 'open' | 'resolved';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      messageCount: number;
-      removable: boolean;
-      messages?: components['schemas']['ShareMessage'][];
-      hasMoreMessages?: boolean;
-    };
-    ShareAuthor: {
-      label: string;
-      /** @enum {string} */
-      badge: 'member' | 'guest';
-      isYou: boolean;
-    };
-    ShareMessage: {
-      id: string;
-      text: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      author: components['schemas']['ShareAuthor'];
-      clientMessageId: string | null;
-    };
-    ShareDescription: {
-      id: string;
-      /**
-       * @example tag
-       * @enum {string}
-       */
-      anchorType: 'tag' | 'page';
-      anchorKey: string;
-      anchorLabel: string;
-      frameId: string | null;
-      markId: string | null;
-      spatial: {
-        at: {
-          x: number;
-          y: number;
-        };
-      } | null;
-      author: components['schemas']['ShareAuthor'];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      updatedAt: string;
-      /**
-       * @description discriminator enum property added by openapi-typescript
-       * @enum {string}
-       */
-      kind: 'description';
-      body: string;
-    };
-    PutSharedFrameResponse: {
-      version: number;
-    };
-    SharedFrameConflictResponse: {
-      error: {
-        /** @enum {string} */
-        code: 'FRAME_VERSION_CONFLICT';
-        message: string;
-      };
-      version: number;
-    };
-    DeleteSharedFrameResponse: {
-      relocated: components['schemas']['ShareRelocatedFrame'][];
-    };
-    ShareRelocatedFrame: {
-      id: string;
-      parentId: string | null;
-      placements: {
-        id: string;
-        rect: {
-          x: number;
-          y: number;
-          w: number;
-          h: number;
-        };
-      }[];
-      version: number;
-    };
-    SharedWithMeResponse: {
-      shares: components['schemas']['SharedWithMeEntry'][];
-    };
-    SharedWithMeEntry: {
-      /** @example shr_v1stgxr8z5jdhi6bmyt7k */
-      shareId: string;
-      frameName: string;
-      /**
-       * @example commenter
-       * @enum {string}
-       */
-      role: 'viewer' | 'commenter' | 'editor';
-      sharedBy: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      sharedAt: string;
-    };
-    SummarizeReleaseResponse: {
-      /** @enum {string} */
-      mode: 'draft' | 'check';
-      text: string;
-      cached: boolean;
-      /** @example mistral/platform/mistral-large-2512 */
-      modelId: string;
-      versionNumber: number;
-      prevVersionNumber: number;
     };
     StepHistoryResponse: {
       step: string;
@@ -14500,49 +4134,18 @@ export interface components {
       knownSteps?: string[];
     };
     StepHistoryEntry: {
-      /** @example ver_a1b2c3d4 */
       versionId: string;
       versionNumber: number;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
+      /** Format: date-time */
       createdAt: string;
       flow: string | null;
-      /**
-       * @example changed
-       * @enum {string}
-       */
+      /** @enum {string} */
       change: 'added' | 'removed' | 'changed';
       humanText: string | null;
       generatedSummary: string | null;
     };
-    HeartbeatResponse: {
-      /** @enum {boolean} */
-      ack: true;
-      /** @example dep_a1b2c3d4 */
-      deploymentId: string;
-      /** @enum {string} */
-      action: 'none' | 'stop' | 'update';
-      versionNumber?: number;
-      bundleUrl?: string;
-    };
-    ObserveTicketRequest: {
-      scope?: {
-        /** @enum {string} */
-        kind: 'session';
-        sessionId: string;
-      };
-    };
-    ObserveTicketResponse: {
-      ticket: string;
-      /** Format: uri */
-      observerUrl: string;
-    };
     PreviewResponse: {
-      /** @example prv_abc123xyz456 */
       id: string;
-      /** @example flow_a1b2c3d4 */
       flowId: string;
       flowSettingsId: string;
       projectId: string;
@@ -14574,7 +4177,7 @@ export interface components {
             deploymentVersionId: string;
           };
       /** @default true */
-      tagMode: boolean;
+      tagMode?: boolean;
     };
     MintGrantRequest: {
       origins: string[];
@@ -14590,10 +4193,8 @@ export interface components {
       sessionId?: string;
     };
     ObserveSessionResponse: {
-      /** @example ses_abc123xyz456 */
       id: string;
       projectId: string;
-      /** @example flow_a1b2c3d4 */
       flowId: string;
       status: string;
       errorMessage: string | null;
@@ -14634,23 +4235,6 @@ export interface components {
       WALKEROS_DEPLOYMENT_ID: string;
       WALKEROS_INGEST_TOKEN: string;
     };
-    ObserveSessionJourneysResponse: {
-      /** @example ses_abc123xyz456 */
-      sessionId: string;
-      /** @example flow_a1b2c3d4 */
-      flowId: string;
-      /** Format: date-time */
-      assembledAt: string;
-      journeys: {
-        [key: string]: unknown;
-      }[];
-      gaps: {
-        [key: string]: unknown;
-      }[];
-      unattributed?: {
-        [key: string]: unknown;
-      }[];
-    };
     CreateObserveSessionRequest: {
       settingsName: string;
       force?: boolean;
@@ -14665,342 +4249,17 @@ export interface components {
       /** @enum {boolean} */
       ok: true;
     };
-    SecretName: string;
-    CreateSecretRequest: {
-      name: string;
-      value: string;
-    };
-    UpdateSecretRequest: {
-      value: string;
-    };
-    SecretSummary: {
-      id: string;
-      name: string;
-      flowId: string;
-      /** Format: date-time */
-      createdAt: string | null;
-      /** Format: date-time */
-      updatedAt: string | null;
-    };
-    SecretListResponse: {
-      secrets: {
-        id: string;
-        name: string;
-        flowId: string;
-        /** Format: date-time */
-        createdAt: string | null;
-        /** Format: date-time */
-        updatedAt: string | null;
-      }[];
-    };
     FeedbackRequest: {
-      /** @example The MCP flow_bundle tool is great but slow on large configs. */
       text: string;
-      /**
-       * Format: email
-       * @example alex@example.com
-       */
+      /** Format: email */
       userId?: string;
-      /** @example proj_abc123 */
       projectId?: string;
-      /** @example 0.4.2 */
       version?: string;
     };
     FeedbackResponse: {
       /** @enum {boolean} */
       ok: true;
-      /** @example fb_abcdef1234567890 */
       id: string;
-    };
-    StepExample: {
-      title?: string;
-      description?: string;
-      public?: boolean;
-      trigger?: {
-        type?: string;
-        options?: unknown;
-      };
-      mapping?: unknown;
-      command?: string;
-      in: components['schemas']['StepExampleEvent'];
-      out?: unknown[][];
-    };
-    StepExampleEvent: {
-      entity?: string;
-      action?: string;
-      data?: {
-        [key: string]: unknown;
-      };
-      context?: {
-        [key: string]: unknown;
-      };
-      globals?: {
-        [key: string]: unknown;
-      };
-      custom?: {
-        [key: string]: unknown;
-      };
-      id?: string;
-      timestamp?: string;
-      timing?: {
-        [key: string]: unknown;
-      };
-      user?: {
-        [key: string]: unknown;
-      };
-      version?: string;
-      source?: string;
-      trigger?: string;
-    };
-    CreateStepExampleRequest: {
-      title?: string;
-      description?: string;
-      public?: boolean;
-      trigger?: {
-        type?: string;
-        options?: unknown;
-      };
-      mapping?: unknown;
-      command?: string;
-      name: string;
-      event: components['schemas']['StepExampleEvent'];
-      out?: unknown[][];
-    };
-    EditStepExampleRequest: {
-      title?: string;
-      description?: string;
-      public?: boolean;
-      trigger?: {
-        type?: string;
-        options?: unknown;
-      };
-      mapping?: unknown;
-      command?: string;
-      name: string;
-      event?: components['schemas']['StepExampleEvent'];
-      out?: unknown[][];
-    };
-    StepExamplesResponse: {
-      examples: {
-        [key: string]: components['schemas']['StepExample'];
-      };
-    };
-    ObserveStepExample: {
-      in?: unknown;
-      out?: unknown;
-      mapping?: unknown;
-      title?: string;
-      description?: string;
-    };
-    ObserveSaveExampleRequest: {
-      stepPath: string;
-      scenario: string;
-      example: components['schemas']['ObserveStepExample'];
-    };
-    SecretValuesResponse: {
-      values: {
-        [key: string]: string;
-      };
-    };
-    ServiceAccountSummary: {
-      id: string;
-      name: string;
-      /** @enum {string} */
-      role: 'member' | 'deployer' | 'viewer';
-      email: string;
-      description: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-    };
-    CreateServiceAccountRequest: {
-      name: string;
-      /** @enum {string} */
-      role: 'member' | 'deployer' | 'viewer';
-      description?: string;
-    };
-    UpdateServiceAccountRequest: {
-      name?: string;
-      description?: string;
-      /** @enum {string} */
-      role?: 'member' | 'deployer' | 'viewer';
-    };
-    CreateServiceAccountResponse: {
-      id: string;
-      name: string;
-      /** @enum {string} */
-      role: 'member' | 'deployer' | 'viewer';
-      email: string;
-      token: string;
-      tokenId: string;
-      tokenPrefix: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-    };
-    ListServiceAccountsResponse: {
-      serviceAccounts: components['schemas']['ServiceAccountSummary'][];
-      total: number;
-    };
-    CreateSaTokenRequest: {
-      name: string;
-      expiresInDays?: number;
-    };
-    SaTokenSummary: {
-      id: string;
-      name: string;
-      prefix: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      lastUsedAt: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      expiresAt: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      revokedAt: string | null;
-    };
-    CreateSaTokenResponse: {
-      id: string;
-      name: string;
-      token: string;
-      prefix: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      expiresAt: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-    };
-    ListSaTokensResponse: {
-      tokens: components['schemas']['SaTokenSummary'][];
-      total: number;
-    };
-    Invitation: {
-      id: string;
-      /**
-       * Format: email
-       * @example user@example.com
-       */
-      email: string;
-      /**
-       * @default member
-       * @example member
-       * @enum {string}
-       */
-      role: 'admin' | 'member' | 'deployer' | 'viewer';
-      /** @enum {string} */
-      status: 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
-      invitedBy: string | null;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      expiresAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-    };
-    CreateInvitationRequest: {
-      /**
-       * Format: email
-       * @example user@example.com
-       */
-      email: string;
-      /**
-       * @default member
-       * @example member
-       * @enum {string}
-       */
-      role: 'admin' | 'member' | 'deployer' | 'viewer';
-    };
-    CreateInvitationResponse: {
-      id: string;
-      /**
-       * Format: email
-       * @example user@example.com
-       */
-      email: string;
-      /**
-       * @default member
-       * @example member
-       * @enum {string}
-       */
-      role: 'admin' | 'member' | 'deployer' | 'viewer';
-      /** @enum {string} */
-      status: 'pending';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      expiresAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-    };
-    ListInvitationsResponse: {
-      invitations: components['schemas']['Invitation'][];
-      total: number;
-    };
-    InvitationPreview: {
-      projectName: string;
-      /**
-       * Format: email
-       * @example user@example.com
-       */
-      email: string;
-      /**
-       * @default member
-       * @example member
-       * @enum {string}
-       */
-      role: 'admin' | 'member' | 'deployer' | 'viewer';
-      /** @enum {string} */
-      status: 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      expiresAt: string;
-      /**
-       * Format: email
-       * @example user@example.com
-       */
-      invitedByEmail: string;
-    };
-    AcceptInvitationResponse: {
-      projectId: string;
-      projectName: string;
-      /**
-       * @default member
-       * @example member
-       * @enum {string}
-       */
-      role: 'admin' | 'member' | 'deployer' | 'viewer';
-      alreadyMember: boolean;
     };
     TelemetryEvent: {
       id: string;
@@ -15052,263 +4311,6 @@ export interface components {
         [key: string]: unknown;
       };
     };
-    UpsertBillingDetailsRequest: {
-      companyName: string;
-      address: string;
-      address2?: string;
-      postalCode: string;
-      city: string;
-      country: string;
-      vatId?: string;
-      /** Format: email */
-      invoiceEmail: string;
-      contactName?: string;
-    };
-    BillingDetailsResponse: {
-      id: string;
-      projectId: string;
-      companyName: string;
-      address: string;
-      address2: string | null;
-      postalCode: string;
-      city: string;
-      country: string;
-      vatId: string | null;
-      invoiceEmail: string;
-      contactName: string | null;
-      /** @enum {string} */
-      taxTreatment: 'reverse_charge' | 'domestic' | 'export' | 'eu_standard';
-      /** @enum {string} */
-      viesStatus: 'verified' | 'invalid' | 'unavailable' | 'not_checked';
-      viesCompanyName: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-    };
-    DeployedContentResponse: {
-      deploymentId: string | null;
-      versionNumber: number | null;
-      status: string | null;
-      flowSettingsName: string | null;
-      /** Format: date-time */
-      publishedAt: string | null;
-      content?: unknown;
-    };
-    ListHeartbeatsResponse: {
-      records: components['schemas']['HeartbeatRecord'][];
-      total: number;
-      limit: number;
-      offset: number;
-    };
-    HeartbeatRecord: {
-      id: string;
-      instanceId: string | null;
-      cliVersion: string | null;
-      configVersion: number | null;
-      mode: string | null;
-      uptime: number | null;
-      eventsIn: number | null;
-      eventsOut: number | null;
-      eventsFailed: number | null;
-      perDestinationBreakdown?: unknown;
-      /** Format: date-time */
-      receivedAt: string;
-    };
-    RotateIngestTokenResponse: {
-      ingestToken: string;
-    };
-    DeploymentUsageResponse: {
-      totalEventsIn: number;
-      totalEventsOut: number;
-      totalEventsFailed: number;
-      totalInstances: number;
-      heartbeatCount: number;
-      /** Format: date-time */
-      from: string;
-      /** Format: date-time */
-      to: string;
-      averageThroughputPerHour: number;
-      period: string;
-      buckets: components['schemas']['UsageBucket'][];
-      destinations?: components['schemas']['UsageDestination'][];
-    };
-    UsageBucket: {
-      /** Format: date-time */
-      bucket: string;
-      eventsIn: number;
-      eventsOut: number;
-      eventsFailed: number;
-      instances: number;
-    };
-    UsageDestination: {
-      name: string;
-      count: number;
-      failed: number;
-      duration: number;
-      dlqSize: number;
-      dropped: number;
-    };
-    CreateCustomDomainRequest: {
-      hostname: string;
-      deploymentId?: string;
-    };
-    CustomDomain: {
-      id: string;
-      deploymentId: string;
-      hostname: string;
-      kind: string;
-      status: string;
-      scwResourceId: string | null;
-      certStatus: string;
-      /** Format: date-time */
-      verifiedAt: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-    };
-    ListCustomDomainsResponse: {
-      domains: components['schemas']['CustomDomain'][];
-    };
-    DeployTokenStatusResponse:
-      | {
-          /** @enum {boolean} */
-          hasToken: false;
-        }
-      | {
-          /** @enum {boolean} */
-          hasToken: true;
-          deploymentId: string;
-          status: string;
-          healthy: boolean;
-          /** Format: date-time */
-          lastHeartbeatAt: string | null;
-          instanceId: string | null;
-          cliVersion: string | null;
-        };
-    CreateDeployTokenResponse: {
-      token: string;
-      deploymentId: string;
-      projectId: string;
-      flowId: string;
-      configName: string;
-    };
-    EntitlementsResponse: {
-      planId: string;
-      role: string;
-      entitlements: {
-        [key: string]: boolean | number;
-      };
-    };
-    SetLlmConfigRequest:
-      | {
-          /** @enum {string} */
-          action: 'clear';
-        }
-      | {
-          /** @enum {string} */
-          action: 'set';
-          config:
-            | {
-                /** @enum {string} */
-                provider: 'mistral';
-                modelId: string;
-                apiKey: string;
-              }
-            | {
-                /** @enum {string} */
-                provider: 'anthropic';
-                modelId: string;
-                apiKey: string;
-              }
-            | {
-                /** @enum {string} */
-                provider: 'openai';
-                modelId: string;
-                apiKey: string;
-              }
-            | {
-                /** @enum {string} */
-                provider: 'google';
-                modelId: string;
-                apiKey: string;
-              }
-            | {
-                /** @enum {string} */
-                provider: 'openai-compatible';
-                modelId: string;
-                apiKey: string;
-                /** Format: uri */
-                baseURL: string;
-              };
-        };
-    SetLlmConfigResponse:
-      | {
-          /** @enum {boolean} */
-          cleared: true;
-        }
-      | {
-          /** @enum {boolean} */
-          saved: true;
-        };
-    LlmConfigStatusResponse: {
-      provider: string;
-      /** @enum {string} */
-      source: 'platform' | 'byok' | 'byom';
-    };
-    ListChatSessionsResponse: {
-      sessions: components['schemas']['ChatSessionSummary'][];
-      total: number;
-    };
-    ChatSessionSummary: {
-      id: string;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      lastActiveAt: string;
-      messageCount: number;
-      firstUserMessage?: string;
-    };
-    ChatSessionDetailResponse: {
-      id: string;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      lastActiveAt: string;
-      messages: components['schemas']['ChatSessionMessage'][];
-    };
-    ChatSessionMessage: {
-      seq: number;
-      role: string;
-      content?: unknown;
-      /** Format: date-time */
-      createdAt: string;
-    };
-    ElicitRequest: {
-      sessionId: string;
-      elicitationId: string;
-      result:
-        | {
-            /** @enum {string} */
-            action: 'accept';
-            content?: {
-              [key: string]: string | number | boolean | string[];
-            };
-          }
-        | {
-            /** @enum {string} */
-            action: 'decline';
-          }
-        | {
-            /** @enum {string} */
-            action: 'cancel';
-          };
-    };
-    ElicitResponse: {
-      /** @enum {boolean} */
-      ok: true;
-    };
     PackageCatalogResponse: {
       catalog: components['schemas']['PackageCatalogEntry'][];
       count: number;
@@ -15320,98 +4322,16 @@ export interface components {
       type: string;
       platform: string[];
     };
-    PackageSearchResponse: {
-      packages: components['schemas']['PackageSearchHit'][];
-      count: number;
-    };
-    PackageSearchHit: {
-      name: string;
-      version: string;
-      description: string;
-    };
-    PackageSearchLogRequest: {
-      query: string;
-      /** @enum {string} */
-      result: 'hit' | 'miss';
-      /** @enum {string} */
-      platform?: 'web' | 'server';
-      projectId?: string;
-    };
-    ListRunnersResponse: {
-      runners: unknown[];
-      total: number;
-    };
     RunnerHeartbeatResponse: {
       id: string;
       instanceId: string;
       deploymentId: string;
     };
-    ObserveTimingRequest: {
-      connectId: string;
-      ticketMs: number;
-      sseMs: number;
-      totalMs: number;
-    };
-    MagicLinkResponse: {
-      /** @example true */
-      success: boolean;
-      /** @example Magic link sent */
-      message: string;
-    };
-    MagicLinkRequest: {
-      /**
-       * Format: email
-       * @example user@example.com
-       */
-      email: string;
-      /** @example /dashboard */
-      redirect_to?: string;
-    };
-    VerifyResponse:
-      | {
-          /** @enum {string} */
-          status: 'ok';
-          /** @example / */
-          redirectTo: string;
-        }
-      | {
-          /** @enum {string} */
-          status: 'confirm_required';
-          /** @example user@example.com */
-          email: string;
-        }
-      | {
-          /** @enum {string} */
-          status: 'expired' | 'used' | 'invalid' | 'malformed';
-        };
-    VerifyRequest: {
-      token: string;
-      /** @example /dashboard */
-      redirect_to?: string;
-      confirm?: boolean;
-    };
     WhoamiResponse: {
-      /** @example user_a1b2c3d4 */
       userId: string;
-      /**
-       * Format: email
-       * @example user@example.com
-       */
+      /** Format: email */
       email: string;
-      /** @example null */
       projectId: string | null;
-    };
-    ListSessionsResponse: {
-      sessions: {
-        id: string;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        expiresAt: string;
-        /** Format: date-time */
-        lastTouchedAt: string;
-        isCurrent: boolean;
-      }[];
     };
     ListProjectsResponse: {
       projects: components['schemas']['Project'][];
@@ -15422,44 +4342,17 @@ export interface components {
       name: string;
     };
     ProjectDetailResponse: {
-      /** @example proj_x7y8z9 */
       id: string;
       name: string;
-      /**
-       * Format: uri
-       * @example https://example.com
-       */
+      /** Format: uri */
       siteUrl?: string | null;
       /** @enum {string} */
       role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
     };
     UpdateProjectRequest: {
       name?: string;
-      /**
-       * Format: uri
-       * @example https://example.com
-       */
+      /** Format: uri */
       siteUrl?: string | null;
-    };
-    ListMembersResponse: {
-      members: components['schemas']['Member'][];
-      total: number;
-    };
-    AddMemberRequest: {
-      /**
-       * Format: email
-       * @example user@example.com
-       */
-      email: string;
-      /**
-       * @default member
-       * @enum {string}
-       */
-      role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
-    };
-    UpdateMemberRequest: {
-      /** @enum {string} */
-      role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
     };
     ListFlowsResponse: {
       flows: components['schemas']['FlowSummary'][];
@@ -15467,17 +4360,14 @@ export interface components {
       nextCursor: string | null;
     };
     CreateFlowRequest: {
-      /** @example my-website-flow */
       name: string;
       config?: components['schemas']['FlowConfig'];
     };
     UpdateFlowRequest: {
-      /** @example my-website-flow */
       name?: string;
       config?: components['schemas']['FlowConfig'];
     };
     DuplicateFlowRequest: {
-      /** @example my-website-flow */
       name?: string;
     };
     DeploymentResponse: {
@@ -15494,9 +4384,6 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     } | null;
-    ListSettingsResponse: {
-      settings: components['schemas']['FlowSettingsSummary'][];
-    };
     SettingsDeploymentResponse: {
       id: string;
       flowId: string;
@@ -15512,25 +4399,8 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     } | null;
-    SettingsDeploymentDetailResponse: {
-      id: string;
-      flowId: string;
-      settingsId: string;
-      status: string;
-      /** @enum {string} */
-      type: 'web' | 'server';
-      containerUrl: string | null;
-      publicUrl: string | null;
-      errorMessage: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-    };
     FlowJourneysResponse: {
-      /** @example ses_abc123xyz456 */
       sessionId: string | null;
-      /** @example flow_a1b2c3d4 */
       flowId: string;
       /** Format: date-time */
       assembledAt: string;
@@ -15544,147 +4414,24 @@ export interface components {
         [key: string]: unknown;
       }[];
     };
-    ListVersionsResponse: {
-      data: components['schemas']['Version'][];
-      /** @example flow_a1b2c3d4 */
-      flowId: string;
-      total: number;
-      limit: number;
-      offset: number;
-      hasMore: boolean;
-    };
-    GetVersionResponse: {
-      /** @example 1 */
-      version: number;
-      content: components['schemas']['FlowConfig'];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /** @enum {string} */
-      createdBy: 'user' | 'auto_save' | 'restore' | 'deploy' | 'preview';
-    };
-    ListAutomationTokensResponse: {
-      tokens: components['schemas']['AutomationTokenSummary'][];
-    };
-    CreateAutomationTokenResponse: {
-      /** @example tok_a1b2c3d4 */
-      id: string;
-      /** @example CI Pipeline */
-      name: string;
-      /** @example wos_pat_a1b2c3d4... */
-      token: string;
-      /** @example wos_pat_a1b2 */
-      tokenPrefix: string;
-      /**
-       * @example [
-       *       "read",
-       *       "write"
-       *     ]
-       */
-      scope: string[];
-      /**
-       * @example [
-       *       "api",
-       *       "mcp"
-       *     ]
-       */
-      audience: string[];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      expiresAt: string;
-    };
-    CreateAutomationTokenRequest: {
-      /** @example CI Pipeline */
-      name: string;
-      /**
-       * @example read write
-       * @enum {string}
-       */
-      scope: 'read' | 'read write';
-      /** @example 90 */
-      expiresInDays: 30 | 90 | 180 | 365;
-    };
-    RegisterRuntimeRequest: {
-      flowId: string;
-      bundlePath: string;
-    };
-    ValidateTicketResponse: {
-      userId: string;
-      projectId: string;
-      replay: {
-        size: number;
-        ttlMs: number;
-      };
-      scope: {
-        /** @enum {string} */
-        kind: 'session';
-        sessionId: string;
-      } | null;
-    };
-    ValidateTicketRequest: {
-      ticket: string;
-    };
     HealthResponse: {
-      /** @example ok */
       status: string;
-      /**
-       * @description Build identity of the running app (git short hash injected at build time).
-       * @example a1b2c3d
-       */
       appVersion: string;
-      /**
-       * @description Semver of the API contract the server implements.
-       * @example 1.0.0
-       */
       contractVersion: string;
-      /**
-       * @description Deterministic sha256 of the OpenAPI contract content.
-       * @example e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-       */
       contractHash: string;
-    };
-    DeclineInvitationResponse: {
-      message: string;
-    };
-    ScreenshotUploadResponse: {
-      /** @example fas_V1StGXR8Z5jdHi6BmyT7K */
-      assetId: string;
-      reused: boolean;
-    };
-    FrameScreenshotMeta: {
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      capturedAt: string;
-      size: components['schemas']['PlanSize'];
-      dpr: number;
-      capturedRect: components['schemas']['PlanRect'];
+      minSupportedClient: string;
     };
     HeartbeatRequest: {
-      /** @example a1b2c3d4e5f6 */
       instanceId: string;
-      /** @example flow_abc123 */
       flowId: string;
       configVersion?: string;
       /** @enum {string} */
       mode?: 'local' | 'collect' | 'serve';
-      /** @example 1.3.0 */
       cliVersion?: string;
       uptime?: number;
       metadata?: {
         [key: string]: unknown;
       };
-      /** @example dpl_abc123 */
       deploymentId?: string;
       counters?: {
         eventsIn: number;
@@ -15716,87 +4463,37 @@ export interface components {
         message: string;
       }[];
     };
-    OAuthClientRegistrationResponse: {
-      /** @example client_abc */
-      client_id: string;
-      /** @example 1725400000 */
-      client_id_issued_at: number;
-      client_name: string;
-      redirect_uris: string[];
-      /** @enum {string} */
-      token_endpoint_auth_method: 'none';
-      grant_types: string[];
-      response_types: string[];
-    };
-    OAuthRegistrationError: {
-      /** @enum {string} */
-      error: 'invalid_client_metadata' | 'invalid_redirect_uri';
-      error_description: string;
-    };
-    OAuthClientRegistrationRequest: {
-      /**
-       * @example [
-       *       "https://claude.ai/api/mcp/auth_callback"
-       *     ]
-       */
-      redirect_uris: string[];
-      client_name?: string;
-      /** @enum {string} */
-      token_endpoint_auth_method?: 'none';
-      grant_types?: ('authorization_code' | 'refresh_token')[];
-      response_types?: 'code'[];
-      /** Format: uri */
-      client_uri?: string;
-      /** Format: uri */
-      logo_uri?: string;
-      scope?: string;
-      software_id?: string;
-      software_version?: string;
-    };
     DeviceAuthorizationResponse: {
       device_code: string;
-      /** @example WDJB-MJHT */
       user_code: string;
       verification_uri: string;
       verification_uri_complete: string;
-      /** @example 900 */
       expires_in: number;
-      /** @example 5 */
       interval: number;
     };
     OAuthError: {
-      /** @example invalid_client */
       error: string;
       error_description: string;
     };
     DeviceAuthorizationRequest: {
-      /** @example walkeros-cli */
       client_id: string;
-      /** @example read write offline_access */
       scope?: string;
-      /** @example https://app.walkeros.io/api */
       resource?: string;
     };
     TokenResponse: {
       access_token: string;
       /** @enum {string} */
       token_type: 'Bearer';
-      /** @example 3600 */
       expires_in: number;
       refresh_token?: string;
-      /** @example read write offline_access */
       scope: string;
     };
     TokenRequest: {
-      /**
-       * @example authorization_code
-       * @enum {string}
-       */
+      /** @enum {string} */
       grant_type:
         | 'authorization_code'
         | 'refresh_token'
         | 'urn:ietf:params:oauth:grant-type:device_code';
-      /** @example walkeros-cli */
       client_id?: string;
       client_secret?: string;
       code?: string;
@@ -15804,9 +4501,7 @@ export interface components {
       code_verifier?: string;
       refresh_token?: string;
       device_code?: string;
-      /** @example read offline_access */
       scope?: string;
-      /** @example https://app.walkeros.io/api */
       resource?: string;
     };
     RevocationRequest: {
@@ -15815,111 +4510,6 @@ export interface components {
       token_type_hint?: 'access_token' | 'refresh_token';
       client_id?: string;
       client_secret?: string;
-    };
-    DeviceApprovalResponse: {
-      /** @enum {boolean} */
-      success: true;
-      /** @enum {string} */
-      decision: 'approve' | 'deny';
-    };
-    DeviceApprovalRequest: {
-      /** @example WDJB-MJHT */
-      userCode: string;
-      /** @enum {string} */
-      decision: 'approve' | 'deny';
-    };
-    OAuthConsentDecisionResponse: {
-      /** @example https://claude.ai/api/mcp/auth_callback?code=abc&state=xyz */
-      redirectTo: string;
-    };
-    OAuthConsentDecisionRequest: {
-      ticket: string;
-      /** @enum {string} */
-      decision: 'allow' | 'deny';
-    };
-    ListOAuthGrantsResponse: {
-      grants: components['schemas']['OAuthGrantSummary'][];
-    };
-    OAuthGrantSummary: {
-      id: string;
-      clientId: string;
-      clientName: string;
-      scope: string[];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      lastUsedAt: string | null;
-    };
-    ListOAuthClientsResponse: {
-      clients: components['schemas']['OAuthClientSummary'][];
-    };
-    OAuthClientSummary: {
-      clientId: string;
-      /** @enum {string} */
-      kind: 'dcr' | 'cimd' | 'confidential' | 'builtin';
-      name: string;
-      redirectUris: string[];
-      grantTypes: string[];
-      /** @enum {string} */
-      tokenEndpointAuthMethod:
-        | 'none'
-        | 'client_secret_basic'
-        | 'client_secret_post';
-      allowedResources: ('mcp' | 'api')[];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      revokedAt: string | null;
-    };
-    CreateOAuthClientResponse: {
-      clientId: string;
-      /** @enum {string} */
-      kind: 'dcr' | 'cimd' | 'confidential' | 'builtin';
-      name: string;
-      redirectUris: string[];
-      grantTypes: string[];
-      /** @enum {string} */
-      tokenEndpointAuthMethod:
-        | 'none'
-        | 'client_secret_basic'
-        | 'client_secret_post';
-      allowedResources: ('mcp' | 'api')[];
-      /**
-       * Format: date-time
-       * @example 2026-01-26T14:30:00.000Z
-       */
-      revokedAt: string | null;
-      clientSecret: string;
-    };
-    CreateOAuthClientRequest: {
-      name: string;
-      redirectUris: string[];
-      /**
-       * @default [
-       *       "authorization_code",
-       *       "refresh_token"
-       *     ]
-       */
-      grantTypes: ('authorization_code' | 'refresh_token')[];
-      /**
-       * @default [
-       *       "mcp",
-       *       "api"
-       *     ]
-       */
-      allowedResources: ('mcp' | 'api')[];
-      /**
-       * @default client_secret_basic
-       * @enum {string}
-       */
-      authMethod: 'client_secret_basic' | 'client_secret_post';
     };
   };
   responses: never;

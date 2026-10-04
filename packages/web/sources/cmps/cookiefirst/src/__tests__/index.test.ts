@@ -97,7 +97,7 @@ describe('CookieFirst Source', () => {
       expect(consentCalls).toHaveLength(0);
     });
 
-    test('processes null consent with explicitOnly=false', async () => {
+    test('does not process null consent with explicitOnly=false either', async () => {
       const { window: mockWindow } = createMockWindow(null);
 
       await createCookieFirstSource(mockWindow, mockElb, {

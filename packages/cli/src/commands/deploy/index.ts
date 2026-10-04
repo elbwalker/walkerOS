@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { createApiClient } from '../../core/api-client.js';
 import { requireProjectId } from '../../core/auth.js';
-import { apiFetch } from '../../core/http.js';
+import { apiRequest } from '../../core/api-request.js';
+import type { ResponseJson } from '../../core/api-request.js';
 import {
   ApiError,
   handleCliError,
@@ -12,14 +13,13 @@ import { parseSSEEvents } from '../../core/sse.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import type { GlobalOptions } from '../../types/global.js';
-import type { components } from '../../types/api.gen.js';
 import { getFlow } from '../flows/index.js';
 
-/**
- * Response body of POST .../settings/{settingsId}/deploy, now that the
- * per-settings deploy route is in the OpenAPI contract (api.gen.d.ts).
- */
-type DeploySettingsResponse = components['schemas']['DeploySettingsResponse'];
+/** Response body of POST .../settings/{settingsId}/deploy. */
+type DeploySettingsResponse = ResponseJson<
+  'POST /api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy',
+  201
+>;
 
 // === Helpers ===
 
@@ -90,9 +90,10 @@ export async function streamDeploymentStatus(
 ): Promise<DeploymentResult> {
   const timeoutMs = options.timeout ?? DEFAULT_DEPLOY_WAIT_MS;
 
-  const response = await apiFetch(
-    `/api/projects/${projectId}/deployments/${deploymentId}/stream`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/deployments/{deploymentId}/stream',
     {
+      path: { projectId, deploymentId },
       headers: { Accept: 'text/event-stream' },
       signal: options.signal ?? AbortSignal.timeout(timeoutMs),
     },
@@ -206,12 +207,11 @@ export async function deploy(options: DeployOptions) {
   return { ...data, ...result };
 }
 
-// The per-settings deploy route now has an OpenAPI contract, so the success
-// body is typed (`DeploySettingsResponse`). It still uses a raw `apiFetch`
-// rather than the typed `client.POST()` on purpose: the bounded Retry-After
-// retry below inspects `response.status` and the `Retry-After` header, and the
-// `--wait` path then streams `text/event-stream`. openapi-fetch's `{ data,
-// error }` client hides the raw `Response`, so it cannot drive either path.
+// Uses `apiRequest`, which answers the raw `Response`, rather than the typed
+// `client.POST()`: the bounded Retry-After retry below inspects
+// `response.status` and the `Retry-After` header, and the `--wait` path then
+// streams `text/event-stream`. openapi-fetch's `{ data, error }` client hides
+// the raw `Response`, so it cannot drive either path.
 async function deploySettings(options: {
   flowId: string;
   projectId: string;
@@ -227,9 +227,12 @@ async function deploySettings(options: {
   // means a retry after a failed attempt is a new deploy, not a silent replay
   // of `already_created`.
   const triggerDeploy = () =>
-    apiFetch(
-      `/api/projects/${projectId}/flows/${flowId}/settings/${settingsId}/deploy`,
-      { method: 'POST', headers: { 'Idempotency-Key': randomUUID() } },
+    apiRequest(
+      'POST /api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy',
+      {
+        path: { projectId, flowId, settingsId },
+        headers: { 'Idempotency-Key': randomUUID() },
+      },
     );
 
   let response = await triggerDeploy();
@@ -267,7 +270,7 @@ async function deploySettings(options: {
     throwApiResponseError(response, body, `Deploy failed (${response.status})`);
   }
 
-  const data = (await response.json()) as DeploySettingsResponse;
+  const data: DeploySettingsResponse = await response.json();
   if (!options.wait) return data;
 
   // 2. Stream deployment status via SSE
@@ -293,8 +296,9 @@ export async function getDeployment(options: {
       projectId,
       flowName: options.flowName,
     });
-    const response = await apiFetch(
-      `/api/projects/${projectId}/flows/${options.flowId}/settings/${settingsId}/deploy`,
+    const response = await apiRequest(
+      'GET /api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy',
+      { path: { projectId, flowId: options.flowId, settingsId } },
     );
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
