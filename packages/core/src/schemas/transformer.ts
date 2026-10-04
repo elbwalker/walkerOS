@@ -101,7 +101,7 @@ export const ConfigSchema = z
         'Path-specific mock values keyed by chain path. Takes precedence over global mock. Dev/testing only.',
       ),
     mapping: MappingConfigSchema.optional().describe(
-      'Declarative event-to-event mapping applied when this transformer step has no code. At this position, only event-mutating fields apply (policy, mapping[].policy, mapping[].name, mapping[].ignore, mapping[].consent, include); vendor-payload fields are ignored.',
+      'Declarative event-to-event mapping applied when this transformer step has no code. At this position, only event-mutating fields apply (policy, mapping[].policy, mapping[].name, mapping[].ignore, include); consent is not enforced and vendor-payload fields are ignored.',
     ),
   })
   .strict()

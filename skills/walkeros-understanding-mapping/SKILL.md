@@ -95,7 +95,7 @@ interface Rule {
   silent?: boolean; // Process settings side effects, skip destination default push
   policy?: Policy; // Event-specific pre-processing
   condition?: Function; // Match condition (for arrays)
-  consent?: Consent; // Required consent for this rule
+  consent?: Consent; // Not enforced yet; config.consent gates a destination
   settings?: unknown; // Custom event configuration
   batch?: number; // Batch size for grouping
   extend?: RulePatch; // Config-layer merge onto a package-shipped default rule
@@ -457,7 +457,7 @@ TypeScript ignores the unused second arg.
 | `silent`    | Run settings side effects, skip default forwarding                      |
 | `policy`    | Pre-process event                                                       |
 | `condition` | Match condition (arrays)                                                |
-| `consent`   | Required consent                                                        |
+| `consent`   | Not enforced yet; `config.consent` gates a destination                  |
 | `settings`  | Custom configuration                                                    |
 | `batch`     | Batch size                                                              |
 | `extend`    | Config-layer merge onto a package-shipped default (null clears a field) |
@@ -511,7 +511,7 @@ one-time init warning:
 | `mapping[].policy`       | Applies, per-event policy                                                         |
 | `mapping[].name`         | Applies, **renames** the event (mutation is observable downstream)                |
 | `mapping[].ignore`       | Applies, drops the event **from the chain entirely** (no downstream step sees it) |
-| `mapping[].consent`      | Applies, consent gate                                                             |
+| `mapping[].consent`      | Not enforced at this position                                                     |
 | `data`, `mapping[].data` | Ignored at this position (event mutation does not produce a vendor payload)       |
 | `mapping[].silent`       | Ignored at this position (destination-only concept)                               |
 

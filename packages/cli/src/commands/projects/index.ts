@@ -1,5 +1,5 @@
 import { createApiClient } from '../../core/api-client.js';
-import { handleCliError } from '../../core/api-error.js';
+import { handleCliError, throwApiError } from '../../core/api-error.js';
 import { requireProjectId } from '../../core/auth.js';
 import { writeResult } from '../../core/output.js';
 import {
@@ -20,7 +20,7 @@ export async function listProjects(options: ListProjectsOptions = {}) {
   const { data, error } = await client.GET('/api/projects', {
     params: { query: { cursor: options.cursor, limit: options.limit } },
   });
-  if (error) throw new Error(error.error?.message || 'Failed to list projects');
+  if (error) throwApiError(error, 'Failed to list projects');
   return data;
 }
 
@@ -30,7 +30,7 @@ export async function getProject(options: { projectId?: string } = {}) {
   const { data, error } = await client.GET('/api/projects/{projectId}', {
     params: { path: { projectId: id } },
   });
-  if (error) throw new Error(error.error?.message || 'Failed to get project');
+  if (error) throwApiError(error, 'Failed to get project');
   return data;
 }
 
@@ -39,8 +39,7 @@ export async function createProject(options: { name: string }) {
   const { data, error } = await client.POST('/api/projects', {
     body: { name: options.name },
   });
-  if (error)
-    throw new Error(error.error?.message || 'Failed to create project');
+  if (error) throwApiError(error, 'Failed to create project');
   return data;
 }
 
@@ -54,8 +53,7 @@ export async function updateProject(options: {
     params: { path: { projectId: id } },
     body: { name: options.name },
   });
-  if (error)
-    throw new Error(error.error?.message || 'Failed to update project');
+  if (error) throwApiError(error, 'Failed to update project');
   return data;
 }
 
@@ -65,8 +63,7 @@ export async function deleteProject(options: { projectId?: string } = {}) {
   const { data, error } = await client.DELETE('/api/projects/{projectId}', {
     params: { path: { projectId: id } },
   });
-  if (error)
-    throw new Error(error.error?.message || 'Failed to delete project');
+  if (error) throwApiError(error, 'Failed to delete project');
   // Drop a now-stale default. Compare against the resolved `id`, not
   // `options.projectId`, so deleting the default with no explicit id (resolved
   // via requireProjectId()) still clears it.

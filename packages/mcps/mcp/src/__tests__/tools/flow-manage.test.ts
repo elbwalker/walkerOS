@@ -27,6 +27,7 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { createFlowManageToolSpec } from '../../tools/flow-manage.js';
+import { CodedError } from '../support/coded-error.js';
 import { stubClient } from '../support/stub-client.js';
 import {
   structured,
@@ -476,7 +477,7 @@ describe('flow_manage tool', () => {
     it('catches errors and returns mcpError with auth hint', async () => {
       const listAllFlows = jest
         .fn()
-        .mockRejectedValue(new Error('Unauthorized'));
+        .mockRejectedValue(new CodedError('Unauthorized', 'UNAUTHORIZED', 401));
       const spec = createFlowManageToolSpec(stubClient({ listAllFlows }));
       const result = await spec.handler({ action: 'list' });
 

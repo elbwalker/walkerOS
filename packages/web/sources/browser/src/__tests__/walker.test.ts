@@ -595,6 +595,19 @@ describe('Walker', () => {
     ]);
   });
 
+  test('A quoted action param may contain a semicolon', () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div data-elb="product" data-elb-product="id:1">
+        <button id="quoted-param" data-elbaction="click:add('a;b', product)"></button>
+      </div>`,
+    );
+
+    expect(getEvents(getElem('quoted-param'), Triggers.Click)).toMatchObject([
+      { entity: 'product', action: 'add', data: { id: 1 } },
+    ]);
+  });
+
   test('Hand-written link ids with escapes pair parent and child', () => {
     document.body.insertAdjacentHTML(
       'beforeend',

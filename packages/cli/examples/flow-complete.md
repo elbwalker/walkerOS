@@ -347,8 +347,8 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
 
 ## consent-privacy: Consent and personal data
 
-- **Purpose:** consent at the destination, the rule and the field; `policy`
-  before mapping; what happens to the email and the IP address.
+- **Purpose:** consent at the destination and the field; `policy` before
+  mapping; what happens to the email and the IP address.
 - **Features:**
   - `cmp-category-map` at
     `/flows/web/sources/usercentrics/config/settings/categoryMap`: categoryMap
@@ -367,8 +367,8 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
     Destination consent: Meta only gets events with marketing consent.
   - `rule-consent` at
     `/flows/web/destinations/ga4/config/mapping/order/complete/consent`: Rule
-    consent on purchases: functional, like the destination; marketing consent
-    belongs to Meta and Data Manager.
+    consent on purchases: not enforced yet; the destination's functional consent
+    gates them. Marketing consent belongs to Meta and Data Manager.
   - `value-consent` at
     `/flows/web/destinations/collect/config/policy/user.email/consent`: Field
     consent: the email is only kept with marketing consent.

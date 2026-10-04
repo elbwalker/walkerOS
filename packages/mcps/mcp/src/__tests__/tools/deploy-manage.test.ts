@@ -31,6 +31,7 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { createDeployManageToolSpec } from '../../tools/deploy-manage.js';
+import { CodedError } from '../support/coded-error.js';
 import { stubClient } from '../support/stub-client.js';
 import {
   structured,
@@ -595,7 +596,7 @@ describe('deploy_manage tool', () => {
     it('catches errors and returns mcpError with auth hint', async () => {
       const listDeployments = jest
         .fn()
-        .mockRejectedValue(new Error('Unauthorized'));
+        .mockRejectedValue(new CodedError('Unauthorized', 'UNAUTHORIZED', 401));
       const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
       const result = await tool.handler({ action: 'list' });
 

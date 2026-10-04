@@ -424,11 +424,12 @@ the first colon splits key and value.
   language="html"
 />
 
-An unescaped `'` only closes a quoted part right before a `;`, a `:`, or the
-end, so an apostrophe in text like `name:Men's shirt;brand:Levi's` reads as
-written. Together with other single quotes in the same attribute it can still
-be misread, so escape every apostrophe in text to be safe, as in the first line
-above.
+An unescaped `'` directly followed by an ASCII letter, a digit, `_`, or any
+non-ASCII character (such as `é`, `€`, `’`, or a non-breaking space) never
+closes a quoted part, so an apostrophe in text like
+`name:Men's shirt;brand:Levi's` reads as written. Together with other single
+quotes in the same attribute it can still be misread, so escape every
+apostrophe in text to be safe, as in the first line above.
 
 An escape does not turn off dynamic values: `\#x` still reads the property `x`
 from the element, see [dynamic field values](#dynamic-field-values).

@@ -10,6 +10,7 @@ import {
 import { randomBytes } from 'crypto';
 import { join } from 'path';
 import { homedir } from 'os';
+import { notAuthenticatedError } from '../core/api-error.js';
 
 export interface WalkerOSConfig {
   /**
@@ -194,9 +195,7 @@ export function getFeedbackPreference(): boolean | undefined {
  */
 export function setDefaultProject(projectId: string): void {
   const config = readConfig();
-  if (!config) {
-    throw new Error('Not authenticated. Run `walkeros auth login` first.');
-  }
+  if (!config) throw notAuthenticatedError();
   writeConfig({ ...config, defaultProjectId: projectId });
 }
 

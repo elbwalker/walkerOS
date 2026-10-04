@@ -129,7 +129,7 @@ The server registers 19 tools.
 | `walkeros://reference/flow-schema` | Flow configuration structure and connection rules               |
 | `walkeros://reference/event-model` | Event naming, properties, and auto-populated fields             |
 | `walkeros://reference/mapping`     | Mapping syntax: data, map, loop, set, condition, policy         |
-| `walkeros://reference/consent`     | The consent model at destination, rule, and field level         |
+| `walkeros://reference/consent`     | The consent model at destination and field level                |
 | `walkeros://reference/variables`   | Variable patterns: `$var`, `$env`, `$secret`, `$code`, `$store` |
 | `walkeros://reference/contract`    | Event schemas, wildcards, and inheritance                       |
 | `walkeros://reference/openapi`     | The live OpenAPI 3.1 document of the app this server talks to   |

@@ -161,9 +161,9 @@ export interface Config<T extends TypesGeneric = Types> {
    *
    * At the transformer position, only event-mutating fields apply:
    * `policy`, `mapping[].policy`, `mapping[].name`, `mapping[].ignore`,
-   * `mapping[].consent`, `include`. Vendor-payload fields (`data`,
-   * `mapping[].data`, `silent`) are ignored at this position with a
-   * one-time warning.
+   * `include`. `consent` is not enforced at this position. Vendor-payload
+   * fields (`data`, `mapping[].data`, `silent`) are ignored at this position
+   * with a one-time warning.
    */
   mapping?: MappingConfig;
 }

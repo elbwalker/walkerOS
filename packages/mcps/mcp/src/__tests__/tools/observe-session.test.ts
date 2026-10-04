@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createObserveSessionToolSpec } from '../../tools/observe-session.js';
 import { createFlowManageToolSpec } from '../../tools/flow-manage.js';
 import { TOOL_DEFINITIONS } from '../../tool-definitions.js';
+import { CodedError } from '../support/coded-error.js';
 import { stubClient } from '../support/stub-client.js';
 import type {
   ObserveSessionResult,
@@ -626,33 +627,18 @@ describe('observe_session tool', () => {
           new Error('Observer unavailable (OBSERVER_UNAVAILABLE)'),
         );
 
-    /**
-     * A failure carrying its code as a FIELD and not in its message, the shape
-     * the API client throws. Built locally so the assertion below needs no
-     * module mock, and worded so the code cannot leak into the payload through
-     * the message: only carrying the field can make the assertion pass.
-     */
-    class CodedFailure extends Error {
-      constructor(
-        message: string,
-        readonly code: string,
-      ) {
-        super(message);
-        this.name = 'CodedFailure';
-      }
-    }
-
     it('keeps the underlying code as a field, not just as prose', async () => {
       // The wrapper reports the recovery instruction, but it must not flatten a
       // coded failure into text: `mcpError` builds the machine-readable part of
       // its payload from `code` on the error it is handed, so a bare re-throw
-      // would leave callers string-matching the message.
+      // would leave callers string-matching the message. The failure is worded
+      // so the code cannot reach the payload through the message.
       const spec = createObserveSessionToolSpec(
         stubClient({
           listJourneys: jest
             .fn()
             .mockRejectedValue(
-              new CodedFailure('Observer unavailable', 'OBSERVER_UNAVAILABLE'),
+              new CodedError('Observer unavailable', 'OBSERVER_UNAVAILABLE'),
             ),
           endObserveSession: jest.fn(),
           getDefaultProject: () => 'proj_1',
@@ -666,6 +652,55 @@ describe('observe_session tool', () => {
       expect(structured.code).toBe('OBSERVER_UNAVAILABLE');
       expect(structured.error).toContain('Pass sessionId explicitly');
     });
+
+    // The session read and end need the same role, scope and feature as the
+    // lookup, so a refused caller is told the refusal, never to pass sessionId.
+    it.each([
+      [
+        'role',
+        new CodedError('Requires member role or higher', 'FORBIDDEN', 403),
+      ],
+      [
+        'scope',
+        new CodedError('This token cannot write', 'INSUFFICIENT_SCOPE', 403),
+      ],
+      [
+        'feature',
+        new CodedError(
+          'observe is not available on your current plan',
+          'FEATURE_NOT_AVAILABLE',
+          403,
+        ),
+      ],
+      [
+        'code-only feature',
+        new CodedError(
+          'observe is not available on your current plan',
+          'FEATURE_NOT_AVAILABLE',
+        ),
+      ],
+    ])(
+      'reports a %s refusal of the lookup as the refusal',
+      async (_label, refusal) => {
+        const endObserveSession = jest.fn();
+        const spec = createObserveSessionToolSpec(
+          stubClient({
+            listJourneys: jest.fn().mockRejectedValue(refusal),
+            endObserveSession,
+            getDefaultProject: () => 'proj_1',
+          }),
+        );
+
+        const result = await spec.handler({ action: 'stop', flowId: 'flow_1' });
+        const payload = structuredOf(result);
+
+        expect(isErrorResult(result)).toBe(true);
+        expect(payload.error).toBe(refusal.message);
+        expect(payload.code).toBe(refusal.code);
+        expect(payload).not.toHaveProperty('hint');
+        expect(endObserveSession).not.toHaveBeenCalled();
+      },
+    );
 
     it('tells stop to pass sessionId instead of failing opaquely', async () => {
       const endObserveSession = jest.fn();

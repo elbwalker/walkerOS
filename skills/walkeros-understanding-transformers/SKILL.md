@@ -410,11 +410,11 @@ semantic is disambiguated by where the step sits:
 | Transformer | A mutated event that continues through the chain          |
 
 At the transformer position, only event-mutating fields apply: `policy`,
-`mapping[].policy`, `mapping[].name`, `mapping[].ignore`, `mapping[].consent`,
-and `include`. Vendor-payload fields (`data`, `mapping[].data`, `silent`) are
-ignored with a one-time init warning. `mapping[].ignore: true` drops the event
-from the chain (not "skip this destination", which is the destination-position
-semantic).
+`mapping[].policy`, `mapping[].name`, `mapping[].ignore`, and `include`.
+`consent` is not enforced at this position. Vendor-payload fields (`data`,
+`mapping[].data`, `silent`) are ignored with a one-time init warning.
+`mapping[].ignore: true` drops the event from the chain (not "skip this
+destination", which is the destination-position semantic).
 
 ### Closed schema (unknown keys are errors)
 

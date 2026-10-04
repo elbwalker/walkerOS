@@ -1,4 +1,5 @@
 import { createApiClient } from '../../../core/api-client.js';
+import { ApiError } from '../../../core/api-error.js';
 import { resolveAccessToken } from '../../../core/auth.js';
 import { resolveAppUrl } from '../../../lib/config-file.js';
 
@@ -78,9 +79,12 @@ describe('createApiClient', () => {
     mockResolveAccessToken.mockResolvedValue(null);
     const client = createApiClient();
 
-    await expect(client.GET('/api/projects')).rejects.toThrow(
-      'Not authenticated',
-    );
+    const request = client.GET('/api/projects');
+    await expect(request).rejects.toBeInstanceOf(ApiError);
+    await expect(request).rejects.toMatchObject({
+      code: 'UNAUTHORIZED',
+      message: expect.stringContaining('Not authenticated'),
+    });
   });
 
   it('refuses to send the bearer over plain http off the local machine', async () => {

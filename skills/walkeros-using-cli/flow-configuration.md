@@ -327,8 +327,8 @@ its operative fields. Three variants ship:
 `mapping` here uses the same `Mapping.Config` shape as on a destination, but the
 position semantic differs: on a destination it produces a vendor payload; on a
 transformer step it mutates the event itself. Only event-mutating fields apply
-(`policy`, `mapping[].policy`, `mapping[].name`, `mapping[].ignore`,
-`mapping[].consent`, `include`); vendor-payload fields (`data`,
+(`policy`, `mapping[].policy`, `mapping[].name`, `mapping[].ignore`, `include`);
+`consent` is not enforced there, and vendor-payload fields (`data`,
 `mapping[].data`, `silent`) are ignored at this position with a one-time init
 warning. See
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md) for

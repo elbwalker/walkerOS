@@ -69,15 +69,75 @@ describe('attributes', () => {
       [
         'apostrophes in text',
         "name:Men's shirt;brand:Levi's",
+        ';',
         ["name:Men's shirt", "brand:Levi's"],
       ],
-      ['an apostrophe in a quoted value', "k:'it's';b:1", ["k:'it's'", 'b:1']],
-      ['a quoted key', "'k;x':v;b:1", ["'k;x':v", 'b:1']],
-      ['spaces around a quoted value', "k: 'a;b' ;c:1", ["k: 'a;b' ", 'c:1']],
+      [
+        'apostrophes before non-ASCII letters',
+        "title:l'été;city:l'île",
+        ';',
+        ["title:l'été", "city:l'île"],
+      ],
+      [
+        'an apostrophe in a quoted value',
+        "k:'it's';b:1",
+        ';',
+        ["k:'it's'", 'b:1'],
+      ],
+      ['a quoted key', "'k;x':v;b:1", ';', ["'k;x':v", 'b:1']],
+      [
+        'spaces around a quoted value',
+        "k: 'a;b' ;c:1",
+        ';',
+        ["k: 'a;b' ", 'c:1'],
+      ],
+      ['a quoted action param', "click:add('x;y')", ';', ["click:add('x;y')"]],
+      [
+        'a quoted action param before another action',
+        "click:add('x;y');load:view",
+        ';',
+        ["click:add('x;y')", 'load:view'],
+      ],
+      [
+        'several quoted action params',
+        "click:add('x;y', 'z')",
+        ';',
+        ["click:add('x;y', 'z')"],
+      ],
+      [
+        'quoted action params split on commas',
+        "'x;y', 'z'",
+        ',',
+        ["'x;y'", " 'z'"],
+      ],
+      [
+        'a quoted colon in an action param',
+        "click:add('a:b');load:view",
+        ';',
+        ["click:add('a:b')", 'load:view'],
+      ],
+      [
+        'whitespace between a quoted param and the parenthesis',
+        "click:add('x;y' );load:view",
+        ';',
+        ["click:add('x;y' )", 'load:view'],
+      ],
+      [
+        'nested parentheses',
+        "click:add(fn('x;y'));load:view",
+        ';',
+        ["click:add(fn('x;y'))", 'load:view'],
+      ],
+      [
+        'double quotes, kept as written',
+        'quote:say "hi";b:1',
+        ';',
+        ['quote:say "hi"', 'b:1'],
+      ],
     ])(
-      'should only close a quote at the end of a part: %s',
-      (_, str, expected) => {
-        expect(splitAttribute(str)).toEqual(expected);
+      'should close a quote unless a word or non-ASCII character follows: %s',
+      (_, str, separator, expected) => {
+        expect(splitAttribute(str, separator)).toEqual(expected);
       },
     );
 
@@ -139,6 +199,11 @@ describe('attributes', () => {
       ['an escaped trailing space', 'k:x\\ ', ['k', 'x']],
       ['an apostrophe in a quoted value', "k:'it's'", ['k', "it's"]],
       ['a multi-line value', 'k:a\nb', ['k', 'a\nb']],
+      [
+        'a quoted colon in an action param',
+        "click:add('a:b')",
+        ['click', "add('a:b')"],
+      ],
     ])('should read %s', (_, str, expected) => {
       expect(splitKeyVal(str)).toEqual(expected);
     });

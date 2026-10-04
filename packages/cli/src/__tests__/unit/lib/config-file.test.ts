@@ -108,7 +108,12 @@ describe('config-file defaultProject', () => {
     });
 
     it('throws when not authenticated (no config)', () => {
-      expect(() => setDefaultProject('proj_abc')).toThrow('Not authenticated');
+      expect(() => setDefaultProject('proj_abc')).toThrow(
+        expect.objectContaining({
+          code: 'UNAUTHORIZED',
+          message: expect.stringContaining('Not authenticated'),
+        }),
+      );
     });
   });
 

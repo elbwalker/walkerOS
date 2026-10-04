@@ -104,6 +104,21 @@ describe('the entry', () => {
     ]);
   });
 
+  // The quoted param holds the separator, so it must stay one param. Only the
+  // entity filter makes a param observable: with `product` after it, the click
+  // reaches the product entity once instead of falling back to the page.
+  it('keeps a quoted action param with a semicolon in one param', async () => {
+    document.body.innerHTML =
+      '<div data-elb="product" data-elb-product="name:Cotton Tee" data-elbaction="click:add(\'x;y\', product)"><button id="b">Add</button></div>';
+    load();
+    await settle();
+    document.getElementById('b')?.click();
+    await settle();
+    expect(events().filter((event) => String(event).endsWith(' add'))).toEqual([
+      'product add',
+    ]);
+  });
+
   // The browser source replays a backlog before the run's page view.
   it('delivers calls queued before load, before the page view', async () => {
     Reflect.set(window, 'elbLayer', [

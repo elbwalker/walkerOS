@@ -781,7 +781,7 @@ const teaching = {
     chapter: 'consent-privacy',
     level: 'intermediate',
     useCases: ['consent'],
-    note: 'Rule consent on purchases: functional, like the destination; marketing consent belongs to Meta and Data Manager.',
+    note: "Rule consent on purchases: not enforced yet; the destination's functional consent gates them. Marketing consent belongs to Meta and Data Manager.",
     docs: [],
   },
   'value-consent': {

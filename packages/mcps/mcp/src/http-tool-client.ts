@@ -251,8 +251,8 @@ export class HttpToolClient implements ToolClient {
   /**
    * Observe session lifecycle over the CLI's authenticated boundary. The trio
    * routes through the same `apiFetch` as every other method here, so token
-   * resolution, base URL, and `ApiError` shaping (which `isAuthError` reads)
-   * stay identical to the rest of the client.
+   * resolution, base URL, and `ApiError` shaping (which
+   * `isAuthenticationError` reads) stay identical to the rest of the client.
    */
   async startObserveSession(
     options: StartObserveSessionOptions,
