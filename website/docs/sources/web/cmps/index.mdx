@@ -116,8 +116,8 @@ source recorded the consent, and whenever it did.
 
 The CookiePro and Usercentrics sources support `explicitOnly` (default:
 `true`) to skip implicit or default consent and report only active user
-choices. The CookieFirst source reports nothing while `CookieFirst.consent` is
-`null`, whatever `explicitOnly` says.
+choices. The CookieFirst source reports nothing until the visitor has made a
+choice.
 
 For more details on how consent works in walkerOS, see the
 [consent management guide](/docs/guides/consent).
