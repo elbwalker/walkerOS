@@ -90,6 +90,59 @@ have to be set to `false`:
   language="javascript"
 />
 
+## Opt-out
+
+An opt-out beats consent: when a user opts out, no event of theirs is sent,
+whatever consent they granted. Mark the user with `optout: true` and stop the
+event at the first step of the chain with a gated stop:
+
+<CodeSnippet
+  code={`{
+  "match": { "key": "event.user.optout", "operator": "eq", "value": "true" },
+  "stop": true
+}`}
+  language="json"
+/>
+
+- **Web:** put the stop first in `collector.next`. An opted-out browser sends
+  nothing. Sources still run, for example the session source keeps its ids in
+  storage.
+- **Server:** put the stop first in the source's `next`, before deduplication.
+  An opted-out event leaves no dedup entry and no fingerprint hash, and reaches
+  no destination.
+
+`eq` compares as strings, so a boolean `true` and the string `"true"` both
+match.
+
+Set the flag before the first event. A `walker user` command queued in
+`elbLayer` before walker.js loads applies before anything is sent:
+
+<CodeSnippet
+  code={`// Before walker.js loads
+window.elbLayer = window.elbLayer || [];
+window.elbLayer.push(['walker user', { optout: true }]);`}
+  language="javascript"
+/>
+
+`data-elbuser` is read right before the page view, so it keeps the page view in
+the browser. Events queued in `elbLayer` before walker.js loaded are replayed
+before it is read and are sent.
+
+<CodeSnippet
+  code={`<body data-elbuser="optout:true">`}
+  language="html"
+/>
+
+A `walker user` command after walker.js loaded stops every later event, but the
+page view of that page has already been sent.
+
+The server flow of
+[`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json),
+the tested example flow, stops opted-out events before `dedup`; its web flow
+uses the same stop first in `collector.next`:
+
+<FlowSlice feature="user-optout" />
+
 ## on consent
 
 To run code when consent changes, use the `on consent` command. `rules` is an

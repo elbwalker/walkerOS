@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn, SetupFn } from './lifecycle';
+import type { ConfigTypes, EntryTypes, TypedStepEntry } from './util';
 
 export interface BaseEnv {
   [key: string]: unknown;
@@ -139,6 +140,18 @@ export type InitStore<T extends TypesGeneric = Types> = {
 export interface InitStores {
   [storeId: string]: InitStore<any>;
 }
+
+/** One typed store entry for `startFlow`; the rules are in `types/util.ts`. */
+export type InitStoreEntry<T extends TypesGeneric> = TypedStepEntry<
+  InitStore<T>,
+  InitStore<ConfigTypes<T>>,
+  InitStore<TypesGeneric>
+>;
+
+/** Typed counterpart of `InitStores` for `startFlow`; the rules are in `types/util.ts`. */
+export type InitStoresOf<St> = {
+  [K in keyof St]: InitStoreEntry<EntryTypes<St[K], TypesGeneric, Types>>;
+};
 
 export interface Stores {
   [storeId: string]: Instance;

@@ -4,6 +4,8 @@ import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthenticationError, AUTH_HINT } from '../types.js';
 import {
   wrapUserData,
+  wrapListedRecord,
+  redactDisplayNames,
   redactNestedStrings,
   keepStructural,
 } from '../user-data.js';
@@ -52,12 +54,35 @@ function flowPageUrl(
   return links.flow({ baseUrl: client.appBaseUrl(), projectId, flowId });
 }
 
-/** A flow summary with its display name wrapped as user data. */
-function safeSummary(flow: unknown): unknown {
-  const name = stringField(flow, 'name');
-  return isRecord(flow) && name !== undefined
-    ? { ...flow, name: wrapUserData(name) }
-    : flow;
+/**
+ * One page of a project's flows, each flow through the same wrapper the
+ * grouped list uses, so one flow answers one shape on both list paths. A door
+ * that answers a bare array gets the same `{ flows }` body; a shape this tool
+ * does not know has every display name in it wrapped.
+ */
+function safeFlowPage(data: unknown): unknown {
+  if (Array.isArray(data)) return { flows: data.map(wrapListedRecord) };
+  const flows = isRecord(data) ? data.flows : undefined;
+  return isRecord(data) && Array.isArray(flows)
+    ? { ...data, flows: flows.map(wrapListedRecord) }
+    : redactDisplayNames(data);
+}
+
+/**
+ * One group of the all-projects list (`{ project, flows }`): the project's
+ * name and every flow wrapped like the per-project list. The group itself goes
+ * through the wrapper too, so a door answering flat flow rows instead of
+ * groups still never hands over a raw name.
+ */
+function safeFlowGroup(group: unknown): unknown {
+  const safe = wrapListedRecord(group);
+  if (!isRecord(safe)) return safe;
+  const { project, flows } = safe;
+  return {
+    ...safe,
+    ...(project !== undefined && { project: wrapListedRecord(project) }),
+    ...(Array.isArray(flows) && { flows: flows.map(wrapListedRecord) }),
+  };
 }
 
 /** A flow record with its name wrapped and its config's strings redacted. */
@@ -341,12 +366,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
             cursor,
             limit,
           });
-          const flows = isRecord(data) ? data.flows : undefined;
-          const safe =
-            isRecord(data) && Array.isArray(flows)
-              ? { ...data, flows: flows.map(safeSummary) }
-              : data;
-          return mcpResult(safe);
+          return mcpResult(safeFlowPage(data));
         }
         const data = await client.listAllFlows({
           sort,
@@ -355,7 +375,11 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
           cursor,
           limit,
         });
-        const safe = Array.isArray(data) ? data.map(safeSummary) : data;
+        // Both doors answer an array of groups. Any other shape is not one
+        // this tool knows, so every display name in it is wrapped.
+        const safe = Array.isArray(data)
+          ? data.map(safeFlowGroup)
+          : redactDisplayNames(data);
         return mcpResult(
           { projects: safe },
           {

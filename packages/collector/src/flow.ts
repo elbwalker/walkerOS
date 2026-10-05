@@ -1,4 +1,13 @@
-import type { Collector, Elb, EmitFn, ObserverFn } from '@walkeros/core';
+import type {
+  Collector,
+  Destination,
+  Elb,
+  EmitFn,
+  ObserverFn,
+  Source,
+  Store,
+  Transformer,
+} from '@walkeros/core';
 import {
   OBSERVE_STORAGE_KEY,
   createBatchedPoster,
@@ -247,15 +256,30 @@ function installObserve(
   );
 }
 
-export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
-  initConfig?: Collector.InitConfig,
+/**
+ * Creates a collector, initializes its sources and runs the flow.
+ *
+ * Each step entry is typed from its own `code`: settings, mapping rule
+ * settings and `env` keys autocomplete and are checked per entry. An entry
+ * without inferable Types (a code-less hop, an untyped mock) stays loose on
+ * its own. Write the config inline: an explicit type argument
+ * (`startFlow<Push>(...)`) turns the inference off for the whole call.
+ */
+export async function startFlow<
+  ElbPush extends Elb.Fn = Elb.Fn,
+  S = Record<string, Source.TypesGeneric>,
+  D = Record<string, Destination.TypesGeneric>,
+  T = Record<string, Transformer.TypesGeneric>,
+  St = Record<string, Store.TypesGeneric>,
+>(
+  initConfig?: Collector.InitConfigOf<S, D, T, St>,
 ): Promise<StartFlow<ElbPush>> {
-  initConfig = initConfig || {};
-  const instance = await collector(initConfig);
+  const config: Collector.InitConfig = initConfig ?? {};
+  const instance = await collector(config);
 
   // Caller-supplied observers land in the advisory Set verbatim.
-  if (initConfig.observers) {
-    for (const observer of initConfig.observers) {
+  if (config.observers) {
+    for (const observer of config.observers) {
       instance.observers.add(observer);
     }
   }
@@ -264,15 +288,15 @@ export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
   // command, so source-init and run-phase records are captured. Build flag
   // (see @walkeros/core build-flags): a lean bundle folds the poster out.
   if (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__) {
-    installObserve(instance, initConfig);
-  } else if (initConfig.observe) {
+    installObserve(instance, config);
+  } else if (config.observe) {
     instance.logger.warn('observe: not in this build, config ignored');
   }
 
   // Initialize sources; the collector's elb adapter is already available
-  await initSources(instance, initConfig.sources || {});
+  await initSources(instance, config.sources || {});
 
-  const { consent, user, globals, custom } = initConfig;
+  const { consent, user, globals, custom } = config;
 
   // Route all four startup state cells through `command` so each bumps
   // `stateVersion`, broadcasts to subscribers, and triggers reconcile. A bare

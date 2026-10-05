@@ -12,6 +12,10 @@ import type {
 import type { ToolSpec } from '../tool-spec.js';
 import { isRecord, stringField } from './narrow.js';
 import { parseToolInput } from './parse-input.js';
+import {
+  NO_DEFAULT_PROJECT_ERROR,
+  resolveDefaultProject,
+} from './project-context.js';
 
 const TITLE = 'Observe Session';
 /**
@@ -306,16 +310,6 @@ async function resolveSessionId(
   }
 }
 
-function resolveProjectId(
-  client: ToolClient,
-  projectId: string | undefined,
-): string | null {
-  return projectId ?? client.getDefaultProject();
-}
-
-const NO_DEFAULT_PROJECT_ERROR =
-  'No project ID given and no default project set. Pass projectId or set one with project_manage set_default.';
-
 export function createObserveSessionToolSpec(client: ToolClient): ToolSpec {
   return {
     name: 'observe_session',
@@ -344,7 +338,7 @@ async function observeSessionHandlerBody(client: ToolClient, input: unknown) {
   if (!flowId) {
     return mcpError(new Error('flowId is required for observe_session.'));
   }
-  const resolvedProjectId = resolveProjectId(client, projectId);
+  const resolvedProjectId = resolveDefaultProject(client, projectId);
   if (!resolvedProjectId) {
     return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
   }

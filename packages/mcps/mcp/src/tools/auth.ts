@@ -4,6 +4,7 @@ import { mcpResult, mcpError } from '@walkeros/core';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
+import { redactDisplayNames } from '../user-data.js';
 import { fieldsOf } from './narrow.js';
 import { parseToolInput } from './parse-input.js';
 
@@ -11,6 +12,30 @@ const TITLE = 'Authentication';
 const DESCRIPTION =
   'Manage walkerOS authentication. Check login status, log in via the device authorization grant, or log out. ' +
   'No terminal or browser required, the MCP client handles the authorization URL.';
+
+/** A `'host'` door has no login of its own: the host checks every request. */
+const HOST_LOGIN_MESSAGE =
+  'This connection is already authenticated by the host; no login needed.';
+
+/** Logging out of a `'host'` door is the host's job, so the tool says where. */
+const HOST_LOGOUT_MESSAGE =
+  'This connection is authorized by the host, so there is no session here to log out of. ' +
+  'To end it, disconnect walkerOS in your MCP client, or revoke it in the walkerOS app under Account, Connected apps.';
+
+/**
+ * What a logout says when a credential is still there afterwards, by where it
+ * comes from: a session stored while the revocation was in flight (a parallel
+ * login or token refresh), or a `WALKEROS_TOKEN` the door did not clear.
+ */
+const STILL_AUTHENTICATED: Record<
+  Exclude<ReturnType<ToolClient['credentialSource']>, null>,
+  string
+> = {
+  config:
+    'A newer session was stored while logging out and was kept. Call auth logout again to remove it.',
+  env: 'WALKEROS_TOKEN is still set for this server process, so calls stay authenticated. Remove it from the MCP server configuration.',
+  host: HOST_LOGOUT_MESSAGE,
+};
 
 const inputSchema = {
   action: z
@@ -55,14 +80,26 @@ async function authHandlerBody(client: ToolClient, input: unknown) {
             { next: ['Use auth with action "login" to authenticate'] },
           );
         }
+        // A hosted whoami lists the person's projects by name, and a name is
+        // user-writable text, so every door's answer is wrapped.
         const user = await client.whoami();
         return mcpResult({
           authenticated: true,
-          ...fieldsOf(user),
+          ...redactDisplayNames(fieldsOf(user)),
         });
       }
 
       case 'login': {
+        if (client.credentialSource() === 'host') {
+          return mcpResult(
+            { authenticated: true, message: HOST_LOGIN_MESSAGE },
+            {
+              next: [
+                'Use auth with action "status" to see which account you are on',
+              ],
+            },
+          );
+        }
         if (deviceCode) {
           const poll = await client.pollForToken(deviceCode, {
             timeoutMs: 60000,
@@ -120,18 +157,26 @@ async function authHandlerBody(client: ToolClient, input: unknown) {
       }
 
       case 'logout': {
-        const { deleted } = await client.logout();
-        const hadEnvToken =
-          typeof process.env.WALKEROS_TOKEN === 'string' &&
-          process.env.WALKEROS_TOKEN.length > 0;
-        delete process.env.WALKEROS_TOKEN;
+        if (client.credentialSource() === 'host') {
+          return mcpError(new Error(HOST_LOGOUT_MESSAGE));
+        }
+        const { deleted, envCleared } = await client.logout();
+        // Never report a logout the credential survived: ask the door again
+        // rather than trust what this logout removed.
+        const remaining = client.credentialSource();
+        if (remaining !== null) {
+          return mcpResult({
+            loggedOut: false,
+            message: STILL_AUTHENTICATED[remaining],
+          });
+        }
         let message: string;
-        if (deleted && hadEnvToken) {
+        if (deleted && envCleared) {
           message =
             'Logged out. Config removed and WALKEROS_TOKEN cleared from process environment.';
         } else if (deleted) {
           message = 'Logged out and config removed.';
-        } else if (hadEnvToken) {
+        } else if (envCleared) {
           message =
             'No config found. WALKEROS_TOKEN cleared from process environment.';
         } else {

@@ -2279,26 +2279,29 @@ Create `demo.html`:
   <script src="http://localhost:3000/walker.js"></script>
 </head>
 <body>
-  <h1 data-elb="promotion" data-elb-promotion="name:Get Started">
-    Welcome to walkerOS
-  </h1>
-  <button data-elbaction="click:cta">Start Tracking</button>
+  <div data-elb="promotion" data-elb-promotion="name:Get Started" data-elbaction="load:view">
+    <h1>Welcome to walkerOS</h1>
+    <button data-elbaction="click:cta">Start Tracking</button>
+  </div>
 
   <script>
-    // Manual tracking
-    track('custom event', { action: 'demo', value: 42 });
+    // Manual tracking, once the page has loaded and track() exists
+    window.addEventListener('load', function () {
+      track('custom event', { action: 'demo', value: 42 });
+    });
   </script>
 </body>
 </html>`}
   language="html"
 />
 
-Open in browser. Terminal 1 shows:
+Open it in the browser and click the button. Terminal 1 logs `promotion view`,
+`page view` and `custom event` on load, and `promotion cta` on the click:
 ```
-[Server Logger] page view
 [Server Logger] promotion view
-[Server Logger] promotion cta
+[Server Logger] page view
 [Server Logger] custom event
+[Server Logger] promotion cta
 ```
 
 ## Cache command

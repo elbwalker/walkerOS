@@ -327,10 +327,11 @@ its operative fields. Three variants ship:
 `mapping` here uses the same `Mapping.Config` shape as on a destination, but the
 position semantic differs: on a destination it produces a vendor payload; on a
 transformer step it mutates the event itself. Only event-mutating fields apply
-(`policy`, `mapping[].policy`, `mapping[].name`, `mapping[].ignore`, `include`);
-`consent` is not enforced there, and vendor-payload fields (`data`,
-`mapping[].data`, `silent`) are ignored at this position with a one-time init
-warning. See
+(`policy`, and per rule `condition`, `policy`, `name`, `ignore`); `consent`,
+`include`, `data` and per rule `remove`, `batch`, `settings`, `extend`, `silent`
+do nothing there and are named in a one-time init warning. A `config.mapping`
+wins over the step-level `mapping`; next to `code` or `package`, a mapping never
+runs (warned too). See
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md) for
 full mapping syntax.
 

@@ -21,8 +21,8 @@ and add third-party integrations to your website, configured within the
 unified gtag destination.
 
 Just want events in GTM without a flow? [walker.js](/docs/apps/walkerjs) is one
-script tag that pushes every walkerOS event to the dataLayer, see
-[Use walkerOS events in GTM](/docs/guides/gtm).
+script tag that pushes every tagged event to the dataLayer, with a complete
+[GTM setup](/docs/apps/walkerjs#use-it-in-gtm).
 
 ## Installation
 
@@ -62,8 +62,13 @@ Leave `loadScript` unset when the container is already on the page, for example
 when you are feeding an existing GTM setup while you migrate. walkerOS then
 neither loads the container nor pushes the `gtm.js` bootstrap event: it adopts
 the configured dataLayer (creating it if it does not exist yet) and pushes your
-mapped events into it, so your existing triggers keep firing exactly as often
+events into it, so your existing triggers keep firing exactly as often
 as before.
+
+Each push carries `event` with the event name. With a data mapping (`data` or
+`include` on the rule or the destination config, or `settings.gtm.data`), it
+carries the mapped values. Without one, it carries the whole walkerOS event as
+it is.
 
 `loadScript` is set once per destination and applies to every flavor configured
 on it. On a destination that also configures `ga4` or `ads`, the same flag

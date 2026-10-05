@@ -44,8 +44,10 @@ Download the file and serve it from your own domain.
 
 ## Need more?
 
-Destinations, consent, custom mappings: build your own in the walkerOS app at
-[app.walkeros.io](https://app.walkeros.io).
+Destinations, consent rules and mapping come with your own bundle: write a flow
+file and build it with the walkerOS CLI, or build it in the walkerOS app. Your
+`data-elb` tagging carries over, see
+[Grow with it](https://www.walkeros.io/docs/apps/walkerjs#grow-with-it).
 
 ## Contribute
 

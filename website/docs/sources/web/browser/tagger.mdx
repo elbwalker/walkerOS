@@ -352,14 +352,15 @@ tagger().scoped({ size: 'L', color: 'red' });
 
 ##### `link(id: string, type: string)` | `link(object: Record<string, string>)`
 
-Adds link relationships between elements.
+Sets the element's link to another element. An element carries one link: a
+second, different link or an object with more than one entry throws an error.
 
 <CodeSnippet
-  code={`// Single link
-tagger().link('details', 'parent');
+  code={`tagger().link('details', 'parent');
+// Creates: data-elblink="details:parent"
 
-// Multiple links
-tagger().link({ details: 'parent', modal: 'child', sidebar: 'child' });`}
+// Same link as an object with one entry
+tagger().link({ details: 'parent' });`}
   language="typescript"
 />
 

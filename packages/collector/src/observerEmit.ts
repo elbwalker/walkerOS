@@ -118,21 +118,36 @@ export function emit(
 }
 
 /**
- * A drop at a collector-owned chain position (`source.before`,
- * `source.next`, `collector.next`): the event never reaches the
- * destinations. Emits one `collector.push` `skip` with `skipReason:
- * 'dropped'` (the same hop as the wrap's in/out, which the skip outranks as
- * the terminal phase), naming what dropped it
- * (`by`: the transformer id, or `'route'` for a route `stop`) and where
- * (`at`: the chain path). The event counts as received (`status.in`), with
- * no `out` and no counter of its own.
+ * Why a collector-owned position dropped an event.
+ * - `dropped`: a chain hop or a route `stop` (`source.before`, `source.next`,
+ *   `collector.next`); `by` is the transformer id, `'route'` when omitted.
+ * - `consent`: the source's `config.consent` is not granted; `required` is
+ *   that requirement and `consent` the state it was checked against.
+ */
+export type CollectorDrop =
+  | { reason: 'dropped'; at: string; by?: string }
+  | {
+      reason: 'consent';
+      at: string;
+      required: WalkerOS.Consent;
+      consent: WalkerOS.Consent;
+    };
+
+/**
+ * A drop at a collector-owned position: the event never reaches the
+ * destinations. Emits one `collector.push` `skip` (the same hop as the
+ * wrap's in/out, which the skip outranks as the terminal phase) whose
+ * `skipReason` is the drop's reason and whose `meta.at` names where it
+ * happened. A chain drop names what dropped it (`meta.by`); a consent drop
+ * carries the gate's record the way a destination consent skip does
+ * (`meta.required` and the checked `consent`). The event counts as received
+ * (`status.in`), with no `out` and no counter of its own.
  */
 export function emitCollectorDrop(
   collector: Collector.Instance,
   event: WalkerOS.DeepPartialEvent,
   ingest: Ingest | undefined,
-  by: string | undefined,
-  at: string,
+  drop: CollectorDrop,
 ): void {
   collector.status.in++;
   const state = stepState(
@@ -144,7 +159,12 @@ export function emitCollectorDrop(
     Date.now(),
     journeyFields(event, ingest, collector),
   );
-  state.skipReason = 'dropped';
-  state.meta = { by: by ?? 'route', at };
+  state.skipReason = drop.reason;
+  if (drop.reason === 'consent') {
+    state.consent = { ...drop.consent };
+    state.meta = { at: drop.at, required: { ...drop.required } };
+  } else {
+    state.meta = { by: drop.by ?? 'route', at: drop.at };
+  }
   emitStep(collector, state);
 }

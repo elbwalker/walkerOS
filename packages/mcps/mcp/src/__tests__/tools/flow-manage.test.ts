@@ -72,7 +72,12 @@ describe('flow_manage tool', () => {
         cursor: undefined,
         limit: undefined,
       });
-      expect(structured(result).projects).toEqual(allFlows);
+      expect(structured(result).projects).toEqual([
+        {
+          project: { id: 'proj_1', name: '<user_data>Project 1</user_data>' },
+          flows: [{ id: 'flow_1', name: '<user_data>My Flow</user_data>' }],
+        },
+      ]);
     });
 
     it('with projectId calls listFlows', async () => {
@@ -116,6 +121,32 @@ describe('flow_manage tool', () => {
         cursor: 'xyz',
         limit: 5,
       });
+    });
+  });
+
+  describe('project fallback', () => {
+    const origProjectId = process.env.WALKEROS_PROJECT_ID;
+
+    afterEach(() => {
+      if (origProjectId !== undefined) {
+        process.env.WALKEROS_PROJECT_ID = origProjectId;
+      } else {
+        delete process.env.WALKEROS_PROJECT_ID;
+      }
+    });
+
+    it('never reads WALKEROS_PROJECT_ID itself: only the door names a default', async () => {
+      // A hosted door runs this layer in a shared server process, where the
+      // variable is no person's selection.
+      process.env.WALKEROS_PROJECT_ID = 'proj_server_env';
+      const getFlow = jest.fn();
+      const spec = createFlowManageToolSpec(
+        stubClient({ getFlow, getDefaultProject: () => null }),
+      );
+      const result = await spec.handler({ action: 'get', flowId: 'flow_1' });
+
+      expect(record(result).isError).toBe(true);
+      expect(getFlow).not.toHaveBeenCalled();
     });
   });
 

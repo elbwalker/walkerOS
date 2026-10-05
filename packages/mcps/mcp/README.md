@@ -148,11 +148,11 @@ Read these before writing a configuration by hand.
 
 ## Environment variables
 
-| Variable              | Required | Default                   | Purpose                                                                   |
-| --------------------- | -------- | ------------------------- | ------------------------------------------------------------------------- |
-| `WALKEROS_TOKEN`      | No       | none                      | Automation token (`wos_pat_...`), an alternative to the `auth` tool login |
-| `WALKEROS_PROJECT_ID` | No       | none                      | Active project ID (`proj_...`)                                            |
-| `WALKEROS_APP_URL`    | No       | `https://app.walkeros.io` | Base URL override                                                         |
+| Variable              | Required | Default                   | Purpose                                                                    |
+| --------------------- | -------- | ------------------------- | -------------------------------------------------------------------------- |
+| `WALKEROS_TOKEN`      | No       | none                      | Automation token (`wos_pat_...`), an alternative to the `auth` tool login  |
+| `WALKEROS_PROJECT_ID` | No       | none                      | Project (`proj_...`) for calls without `projectId`, ahead of `set_default` |
+| `WALKEROS_APP_URL`    | No       | `https://app.walkeros.io` | Base URL override                                                          |
 
 ## Programmatic usage
 
@@ -192,6 +192,11 @@ To use the tool registry without the MCP protocol, for example with the Vercel
 AI SDK, call `createToolHandlers(client, version, runtime)` or import
 `TOOL_DEFINITIONS` and supply your own `ToolClient`. The stdio binary stays
 available as `@walkeros/mcp/stdio` and the `walkeros-mcp` bin entry.
+
+A `ToolClient` served inside a host that authenticates every request itself
+returns `'host'` from `credentialSource()`. The `auth` tool then reports the
+connection as logged in, answers `login` with "no login needed" and refuses
+`logout`, which never reaches the client: the connection ends in the host.
 
 A `ToolClient` may implement `checkContract()` and `openapiDocument()`. The
 `diagnostics` tool reports the first as its contract verdict, `unknown` when it

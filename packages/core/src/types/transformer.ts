@@ -4,6 +4,7 @@ import type { DestroyFn } from './lifecycle';
 import type { Ingest } from './ingest';
 import type { Config as MappingConfig } from './mapping';
 import type { MatchExpression } from './matcher';
+import type { ConfigTypes, EntryTypes, TypedStepEntry } from './util';
 
 /**
  * Unified route grammar for Flow v4. A `Route` is one of:
@@ -160,10 +161,11 @@ export interface Config<T extends TypesGeneric = Types> {
    * when a rule has `ignore: true`).
    *
    * At the transformer position, only event-mutating fields apply:
-   * `policy`, `mapping[].policy`, `mapping[].name`, `mapping[].ignore`,
-   * `include`. `consent` is not enforced at this position. Vendor-payload
-   * fields (`data`, `mapping[].data`, `silent`) are ignored at this position
-   * with a one-time warning.
+   * `policy`, and per rule `condition`, `policy`, `name` and `ignore`.
+   * Everything else does nothing here and is named in a one-time init
+   * warning: `consent`, `include` and `data`, and per rule `consent`,
+   * `include`, `remove`, `batch`, `settings`, `extend`, `data` and
+   * `silent`. A `config.mapping` wins over the step-level `mapping`.
    */
   mapping?: MappingConfig;
 }
@@ -287,8 +289,9 @@ export type Init<T extends TypesGeneric = Types> = (
 export type InitTransformer<T extends TypesGeneric = Types> = {
   /**
    * Initialization function. When omitted, the entry is a pass-through step:
-   * - If `mapping` is present, the collector synthesizes a mapping-only
-   *   push using `processEventMapping`.
+   * - If `mapping` or `config.mapping` is present, the collector
+   *   synthesizes a mapping-only push using `processEventMapping`. With
+   *   `code`, a mapping never runs (warned at init).
    * - Otherwise it's a named hop that only hosts a `before` / `next` /
    *   `cache` chain.
    *
@@ -313,6 +316,18 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
 export interface InitTransformers {
   [transformerId: string]: InitTransformer<any>;
 }
+
+/** One typed transformer entry for `startFlow`; the rules are in `types/util.ts`. */
+export type InitTransformerEntry<T extends TypesGeneric> = TypedStepEntry<
+  InitTransformer<T>,
+  InitTransformer<ConfigTypes<T>>,
+  InitTransformer<TypesGeneric>
+>;
+
+/** Typed counterpart of `InitTransformers` for `startFlow`; the rules are in `types/util.ts`. */
+export type InitTransformersOf<T> = {
+  [K in keyof T]: InitTransformerEntry<EntryTypes<T[K], TypesGeneric, Types>>;
+};
 
 /**
  * Active transformer instances registry.

@@ -55,6 +55,7 @@ To define the entities' **properties**, set the **composited attribute** \`data-
 | visible | each time an element re-enters the viewport after being out of view |
 | hover | each time the mouse enters the corresponding element |
 | submit | on valid form submission |
+| scroll(depth) | once, on scroll, when \`depth\` percent of the element (50 by default) is above the bottom of the viewport |
 | wait(ms) | waits ms seconds (15 seconds by default) until triggering |
 | pulse(ms) | recurring trigger every ms seconds (15 seconds by default) if the page is not hidden |
 
@@ -94,7 +95,7 @@ To prevent an action from triggering unwanted entities, restrict the action to a
 
 ## Linking elements
 
-Use \`data-elblink\` to extend the scope of an entity by elements placed somewhere else (like modals). Specific IDs connect linked elements hierarchically as parent or child.
+Use \`data-elblink\` to extend the scope of an entity by elements placed somewhere else (like modals). Specific IDs connect linked elements hierarchically as parent or child. An element carries one link.
 
 \`\`\`html
 <div data-elb="info" data-elblink="details:parent">...</div>
@@ -409,11 +410,11 @@ tagger().globals({ lang: 'en', plan: 'paid', version: '1.0' });
 
 ##### \`.link(id: string, type: string)\` | \`.link(object: Record<string, string>)\`
 
-Adds link relationships between elements.
+Sets the element's link to another element. An element carries one link: a second, different link or an object with more than one entry throws an error.
 
 \`\`\`typescript
-tagger().link('details', 'parent');
-tagger().link({ details: 'parent', modal: 'child', sidebar: 'child' });
+tagger().link('details', 'parent'); // data-elblink="details:parent"
+tagger().link({ details: 'parent' }); // the same link as an object
 \`\`\`
 
 ##### \`.get()\`

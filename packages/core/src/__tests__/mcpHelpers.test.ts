@@ -21,6 +21,40 @@ describe('mcpHelpers', () => {
         next: ['do something'],
       });
     });
+
+    it('answers an array as { items }, never a bare or spread array', () => {
+      const rows = [{ id: 'a' }, { id: 'b' }];
+      const plain = mcpResult(rows);
+      expect(plain.structuredContent).toEqual({ items: rows });
+
+      const hinted = mcpResult(rows, { next: ['more'] });
+      expect(hinted.structuredContent).toEqual({
+        items: rows,
+        _hints: { next: ['more'] },
+      });
+      expect(hinted.structuredContent).not.toHaveProperty('0');
+    });
+
+    it.each([
+      ['undefined', undefined, null],
+      ['null', null, null],
+      ['a string', 'done', 'done'],
+      ['a number', 3, 3],
+      ['a boolean', false, false],
+    ])('answers %s as { value }', (_label, input, value) => {
+      expect(mcpResult(input).structuredContent).toEqual({ value });
+    });
+
+    it.each([
+      ['an object', { id: 'p' }],
+      ['an array', [1, 2]],
+      ['undefined', undefined],
+    ])('serializes the same body into text for %s', (_label, input) => {
+      const result = mcpResult(input, { warnings: ['w'] });
+      expect(JSON.parse(result.content[0].text)).toStrictEqual(
+        result.structuredContent,
+      );
+    });
   });
 
   describe('mcpError', () => {

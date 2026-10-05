@@ -2,25 +2,17 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { isAuthenticationError, AUTH_HINT } from '../types.js';
-import { wrapUserData } from '../user-data.js';
+import { wrapListedRecord } from '../user-data.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
-import { fieldsOf, isRecord, stringField } from './narrow.js';
+import { fieldsOf, isRecord } from './narrow.js';
 import { parseToolInput } from './parse-input.js';
 import {
   validateActionInput,
   assertParam,
   PROJECT_MANAGE_REQUIREMENTS,
 } from '../action-requirements.js';
-
-/** A project record with its display name wrapped as user data. */
-function wrapProjectName(project: unknown): unknown {
-  const name = stringField(project, 'name');
-  return isRecord(project) && name !== undefined
-    ? { ...project, name: wrapUserData(name) }
-    : project;
-}
 
 const TITLE = 'Project Management';
 const DESCRIPTION =
@@ -105,21 +97,23 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
             },
           );
         }
-        const safe = Array.isArray(projects)
-          ? items.map(wrapProjectName)
-          : { ...fieldsOf(projects), projects: items.map(wrapProjectName) };
-        return mcpResult(safe);
+        // A door that answers a bare array gets the same `{ projects }` body
+        // as one that answers a page, never a generic wrapper key.
+        return mcpResult({
+          ...fieldsOf(projects),
+          projects: items.map(wrapListedRecord),
+        });
       }
 
       case 'get': {
         const project = await client.getProject({ projectId });
-        return mcpResult(wrapProjectName(project));
+        return mcpResult(wrapListedRecord(project));
       }
 
       case 'create': {
         assertParam(name, 'name', 'create');
         const created = await client.createProject({ name });
-        return mcpResult(wrapProjectName(created), {
+        return mcpResult(wrapListedRecord(created), {
           next: [
             'Use project_manage with action "set_default" to make this your active project',
           ],
@@ -129,7 +123,7 @@ async function projectManageHandlerBody(client: ToolClient, input: unknown) {
       case 'update': {
         assertParam(name, 'name', 'update');
         const updated = await client.updateProject({ projectId, name });
-        return mcpResult(wrapProjectName(updated));
+        return mcpResult(wrapListedRecord(updated));
       }
 
       case 'delete': {

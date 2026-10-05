@@ -19,8 +19,13 @@ export interface TaggerInstance {
     ((context: WalkerOS.Properties) => TaggerInstance);
   globals: ((key: string, value: WalkerOS.Property) => TaggerInstance) &
     ((globals: WalkerOS.Properties) => TaggerInstance);
+  /**
+   * Sets the element's one link (`data-elblink="id:type"`). An element carries
+   * one link: a second distinct link, or an object with more than one entry,
+   * throws. Repeating the same link is allowed.
+   */
   link: ((id: string, type: string) => TaggerInstance) &
-    ((links: Record<string, string>) => TaggerInstance);
+    ((link: Record<string, string>) => TaggerInstance);
   get: () => Record<string, string>;
 }
 
@@ -45,7 +50,8 @@ export function createTagger(
     const actionsProperties: Record<string, string> = {};
     const contextProperties: WalkerOS.Properties = {};
     const globalProperties: WalkerOS.Properties = {};
-    const linkProperties: Record<string, string> = {};
+    // One link per element: getLink reads data-elblink as a single id:type
+    let linkPair: [string, string] | undefined;
 
     // Backslash-escape what the attribute parser reads as syntax: the
     // separator, quotes and the backslash itself. Values keep their colons,
@@ -181,15 +187,30 @@ export function createTagger(
       },
 
       link(
-        idOrLinks: string | Record<string, string>,
+        idOrLink: string | Record<string, string>,
         type?: string,
       ): TaggerInstance {
-        if (isString(idOrLinks)) {
-          linkProperties[idOrLinks] = type!;
-        } else {
-          Object.assign(linkProperties, idOrLinks);
-        }
+        const pairs: Array<[string, string]> = isString(idOrLink)
+          ? [[idOrLink, type ?? '']]
+          : Object.entries(idOrLink);
+        const rule = `One link per element: ${prefix}link`;
 
+        if (pairs.length > 1)
+          throw new Error(
+            `${rule} holds one id and type, got ${pairs.length} (${pairs
+              .map(([id]) => id)
+              .join(', ')})`,
+          );
+
+        const [pair] = pairs;
+        if (!pair) return instance;
+
+        if (linkPair && (linkPair[0] !== pair[0] || linkPair[1] !== pair[1]))
+          throw new Error(
+            `${rule} already holds "${linkPair.join(':')}", got "${pair.join(':')}"`,
+          );
+
+        linkPair = pair;
         return instance;
       },
 
@@ -237,9 +258,11 @@ export function createTagger(
           attributes[`${prefix}globals`] = serializeKeyValue(globalProperties);
         }
 
-        // Add link attributes
-        if (Object.keys(linkProperties).length > 0) {
-          attributes[`${prefix}link`] = serializeKeyValue(linkProperties);
+        // Add the link attribute
+        if (linkPair) {
+          attributes[`${prefix}link`] = serializeKeyValue({
+            [linkPair[0]]: linkPair[1],
+          });
         }
 
         return attributes;

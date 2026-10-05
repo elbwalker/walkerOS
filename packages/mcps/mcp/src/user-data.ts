@@ -18,6 +18,39 @@ export function wrapUserData(s: string): string {
 }
 
 /**
+ * Human-facing display text: user-authored strings the assistant should only
+ * read. `name` and `flowName` are display names, `summary` is a flow's
+ * one-line summary built from its step keys. The one key list behind both
+ * {@link wrapListedRecord} (top level) and {@link redactDisplayNames} (deep).
+ */
+const DISPLAY_TEXT_KEYS: ReadonlySet<string> = new Set([
+  'name',
+  'flowName',
+  'summary',
+]);
+
+/**
+ * A listed record (a project, a flow summary, the project of a flow group)
+ * with its top-level display text wrapped as user data. Every other field
+ * stays literal, nested ones included, so a flow's `settings[].name` (an
+ * identifier the assistant passes back as `flowName`) is never wrapped.
+ * Anything that is not an object passes through unchanged.
+ */
+export function wrapListedRecord(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    return value;
+  const fields: Array<[string, unknown]> = Object.entries(value);
+  const out: Record<string, unknown> = {};
+  for (const [key, field] of fields) {
+    out[key] =
+      DISPLAY_TEXT_KEYS.has(key) && typeof field === 'string'
+        ? wrapUserData(field)
+        : field;
+  }
+  return out;
+}
+
+/**
  * The single redaction rule for every tool that echoes flow/deployment data
  * back to the chat assistant:
  *
@@ -75,15 +108,11 @@ export function redactNestedStrings<T>(value: T, opts?: RedactOptions): T {
   return walk(value, opts) as T;
 }
 
-/** Human-facing display fields wrapped on echoed flow/deployment summaries even
- *  when the rest of the object is left literal. */
-const DISPLAY_NAME_KEYS = new Set(['name', 'flowName']);
-
 /**
- * Recursively wraps ONLY the human-facing display `name`/`flowName` fields,
- * leaving every other value (ids, slugs, status, type, dates) literal. Use on
- * tool responses that echo deployment/flow summaries where the only
- * user-authored free-text is the display name.
+ * Recursively wraps ONLY the human-facing display text fields (`name`,
+ * `flowName`, `summary`), leaving every other value (ids, slugs, status, type,
+ * dates) literal. Use on tool responses that echo deployment/flow summaries
+ * where the only user-authored free-text is display text.
  */
 export function redactDisplayNames<T>(value: T): T {
   return walkDisplay(value) as T;
@@ -94,7 +123,7 @@ function walkDisplay(value: unknown): unknown {
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
-      if (DISPLAY_NAME_KEYS.has(k) && typeof v === 'string') {
+      if (DISPLAY_TEXT_KEYS.has(k) && typeof v === 'string') {
         out[k] = wrapUserData(v);
       } else {
         out[k] = walkDisplay(v);

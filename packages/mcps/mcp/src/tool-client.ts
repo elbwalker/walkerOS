@@ -404,6 +404,8 @@ export interface ToolClient {
   getDefaultProject(): string | null;
 
   // Flows
+  /** Every project's flows, as an array of `{ project: { id, name }, flows }`
+   *  groups whose `flows` are the rows `listFlows` answers for that project. */
   listAllFlows(options?: {
     sort?: string;
     order?: 'asc' | 'desc';
@@ -575,14 +577,22 @@ export interface ToolClient {
     options?: { timeoutMs?: number },
   ): Promise<DeviceLoginResult>;
   whoami(): Promise<unknown>;
-  /** Where a credential would come from, without resolving or refreshing it. */
-  credentialSource(): 'env' | 'config' | null;
+  /**
+   * Where a credential would come from, without resolving or refreshing it:
+   * `'env'` (`WALKEROS_TOKEN`), `'config'` (a stored login), `'host'` (the
+   * door is served inside a host that authenticates every request itself, so
+   * this process holds no login to start or end), or null (none).
+   */
+  credentialSource(): 'env' | 'config' | 'host' | null;
   /**
    * Retire the session. Where the credential was issued to this process, that
    * means revoking it with the server before dropping it locally; a plane
-   * holding a bearer it did not issue reports nothing deleted.
+   * holding a bearer it did not issue reports nothing deleted. `envCleared`
+   * reports that the door also dropped a `WALKEROS_TOKEN` from its own process
+   * environment, which only a door that owns its process does. The `auth`
+   * tool never calls this on a `'host'` door.
    */
-  logout(): Promise<{ deleted: boolean }>;
+  logout(): Promise<{ deleted: boolean; envCleared?: boolean }>;
 
   /**
    * The base URL of the walkerOS app this door talks to, without a trailing

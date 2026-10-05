@@ -81,8 +81,11 @@ runtime flexibility, not price.
 
 ## Can they work together?
 
-Yes! You don't have to choose one or the other. walkerOS can push events to GTM
-via the [GTM destination](/docs/destinations/web/gtag/gtm), letting you:
+Yes! You don't have to choose one or the other. The quickest way is
+[walker.js](/docs/apps/walkerjs): one script tag that turns `data-elb`
+attributes into dataLayer pushes for your existing GTM triggers and tags, no
+build step. For events shaped by a flow you build yourself, walkerOS pushes to
+GTM via the [GTM destination](/docs/destinations/web/gtag/gtm), letting you:
 
 - Use walkerOS for structured, consent-aware event collection
 - Keep GTM if your team is already familiar with it

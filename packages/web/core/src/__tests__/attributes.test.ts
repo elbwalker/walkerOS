@@ -210,6 +210,15 @@ describe('attributes', () => {
   });
 
   describe('parseInlineConfig', () => {
+    // The example in website/docs/core/web.mdx
+    it('should parse the documented example', () => {
+      expect(parseInlineConfig('tracking:true;debug:false;port:3000')).toEqual({
+        tracking: true,
+        debug: false,
+        port: 3000,
+      });
+    });
+
     it('should parse boolean values', () => {
       const config = parseInlineConfig('enabled:true;disabled:false');
       expect(config).toEqual({

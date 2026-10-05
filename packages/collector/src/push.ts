@@ -140,14 +140,30 @@ export function createPush<T extends Collector.Instance>(
 
             // Check consent requirements
             if (mapping.consent) {
+              const eventConsent = processed.event.consent as
+                | WalkerOS.Consent
+                | undefined;
               const grantedConsent = getGrantedConsent(
                 mapping.consent,
                 collector.consent,
-                processed.event.consent as WalkerOS.Consent | undefined,
+                eventConsent,
               );
 
+              // Denied: the event never reaches the collector. Recorded
+              // like a chain drop, with the consent gate as its reason.
               if (!grantedConsent) {
-                return createPushResult({ ok: true });
+                const at = id ? `source.${id}` : 'collector.push';
+                collector.logger.debug('Event dropped by source consent', {
+                  at,
+                  required: mapping.consent,
+                });
+                emitCollectorDrop(collector, processed.event, pipelineIngest, {
+                  reason: 'consent',
+                  at,
+                  required: mapping.consent,
+                  consent: { ...collector.consent, ...eventConsent },
+                });
+                return createPushResult({ ok: true, dropped: true });
               }
             }
 
@@ -176,13 +192,11 @@ export function createPush<T extends Collector.Instance>(
                   chainResult.droppedBy ? ` (${chainResult.droppedBy})` : ''
                 }`,
               );
-              emitCollectorDrop(
-                collector,
-                partialEvent,
-                pipelineIngest,
-                chainResult.droppedBy,
-                chainPath ?? 'collector.push.preChain',
-              );
+              emitCollectorDrop(collector, partialEvent, pipelineIngest, {
+                reason: 'dropped',
+                by: chainResult.droppedBy,
+                at: chainPath ?? 'collector.push.preChain',
+              });
               return createPushResult({ ok: true, dropped: true });
             }
 

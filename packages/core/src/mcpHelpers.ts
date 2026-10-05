@@ -1,18 +1,38 @@
+import { isArray, isObject } from './is';
+
+/**
+ * The body of a tool result. MCP requires `structuredContent` to be a JSON
+ * object, so a plain object passes as it is, an array is answered as
+ * `{ items }` and any other value as `{ value }` (`undefined` as `null`,
+ * which JSON can carry).
+ */
+function resultBody(result: unknown): Record<string, unknown> {
+  if (isObject(result)) return result;
+  if (isArray(result)) return { items: result };
+  return { value: result ?? null };
+}
+
+/**
+ * A successful MCP tool result. `structuredContent` is always an object and
+ * the text block is the same object serialized, so a client reading either
+ * one sees the same answer. Hints are attached as `_hints`.
+ */
 export function mcpResult(
   result: unknown,
   hints?: { next?: string[]; warnings?: string[] },
 ) {
-  const enriched = hints
-    ? { ...(result as Record<string, unknown>), _hints: hints }
-    : result;
+  const body = resultBody(result);
+  const structured: Record<string, unknown> = hints
+    ? { ...body, _hints: hints }
+    : body;
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify(enriched, null, 2),
+        text: JSON.stringify(structured, null, 2),
       },
     ],
-    structuredContent: enriched as Record<string, unknown>,
+    structuredContent: structured,
   };
 }
 

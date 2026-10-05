@@ -361,6 +361,8 @@ jobs:
           PACKAGES: ${{ steps.changesets.outputs.packages }}
         run: |
           VERSION="v$(node -p "require('./packages/collector/package.json').version")"
+          # Tag the pushed version commit (the published tree), never the default branch tip.
+          TARGET="$(git rev-parse HEAD)"
 
           printf '## Changes\n\n%s\n\n## Published Packages\n\n%s\n' \
             "$CHANGES" "$PACKAGES" > /tmp/release-notes.md
@@ -369,9 +371,17 @@ jobs:
           # die here just because the tag already landed.
           if gh release view "$VERSION" >/dev/null 2>&1; then
             echo "Release $VERSION already exists, refreshing notes"
+            if git fetch --quiet origin "refs/tags/$VERSION:refs/tags/$VERSION" && TAGGED="$(git rev-list -n1 "$VERSION")"; then
+              if [ "$TAGGED" != "$TARGET" ]; then
+                echo "::warning::Tag $VERSION is at $TAGGED, not at the version commit $TARGET. It is not moved; retag by hand if needed."
+              fi
+            else
+              echo "::warning::Could not read tag $VERSION to check it against the version commit $TARGET."
+            fi
             gh release edit "$VERSION" --notes-file /tmp/release-notes.md
           else
             gh release create "$VERSION" \
+              --target "$TARGET" \
               --title "walkerOS $VERSION" \
               --notes-file /tmp/release-notes.md
           fi

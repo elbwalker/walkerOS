@@ -1,4 +1,5 @@
 import type { Destination, Simulation } from './types';
+import { isThenable } from './is';
 
 /**
  * Env key under which the collector injects the observe-mode call recorder
@@ -75,10 +76,6 @@ function isCallable(value: unknown): value is Callable {
 
 function isNavigable(value: unknown): value is object {
   return typeof value === 'object' && value !== null;
-}
-
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return isNavigable(value) && 'then' in value && isCallable(value.then);
 }
 
 /**

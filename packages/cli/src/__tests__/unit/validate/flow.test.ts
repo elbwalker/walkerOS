@@ -262,6 +262,34 @@ describe('validateFlow', () => {
     ).toBe(true);
   });
 
+  it('passes structural warnings through as warnings, not errors', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          transformers: {
+            shaped: {
+              mapping: {
+                consent: { marketing: true },
+                policy: { 'user.id': { value: 'anonymous' } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.valid).toBe(true);
+    expect(result.warnings).toContainEqual({
+      path: 'flows.default.transformers.shaped',
+      message:
+        "`mapping.consent` does nothing at the transformer position; only `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply.",
+      code: 'TRANSFORMER_MAPPING_NO_OP',
+    });
+  });
+
   it('warns on colon-instead-of-dot typos ($store:NAME)', () => {
     const result = validateFlow({
       version: 4,

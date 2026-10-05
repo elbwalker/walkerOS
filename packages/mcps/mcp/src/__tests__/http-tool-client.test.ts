@@ -5,7 +5,7 @@ jest.mock('@walkeros/cli', () => ({
   updateProject: jest.fn(),
   deleteProject: jest.fn(),
   setDefaultProject: jest.fn(),
-  getDefaultProject: jest.fn(),
+  resolveProjectId: jest.fn(),
   listAllFlows: jest.fn(),
   listFlows: jest.fn(),
   getFlow: jest.fn(),
@@ -370,10 +370,29 @@ describe('HttpToolClient', () => {
 
   it('delegates sync config helpers without awaiting', () => {
     jest.mocked(cli.credentialSource).mockReturnValue('env');
-    jest.mocked(cli.getDefaultProject).mockReturnValue('proj_1');
+    jest.mocked(cli.resolveProjectId).mockReturnValue('proj_1');
     const client = new HttpToolClient();
     expect(client.credentialSource()).toBe('env');
     expect(client.getDefaultProject()).toBe('proj_1');
+  });
+
+  it('resolves the default project the way the CLI does, WALKEROS_PROJECT_ID first', () => {
+    // The CLI's resolver owns the order (env, then config); the door must
+    // reach it rather than the config-only default, or an env-only setup
+    // answers "no project selected".
+    jest.mocked(cli.resolveProjectId).mockReturnValue('proj_env');
+    expect(new HttpToolClient().getDefaultProject()).toBe('proj_env');
+    expect(cli.resolveProjectId).toHaveBeenCalled();
+  });
+
+  it('lets the CLI refuse a set_default that WALKEROS_PROJECT_ID would override', () => {
+    jest.mocked(cli.setDefaultProject).mockImplementation(() => {
+      throw new Error('WALKEROS_PROJECT_ID is set to proj_env');
+    });
+    expect(() => new HttpToolClient().setDefaultProject('proj_other')).toThrow(
+      'WALKEROS_PROJECT_ID is set to proj_env',
+    );
+    expect(cli.setDefaultProject).toHaveBeenCalledWith('proj_other');
   });
 
   it('starts a device authorization against the resolved app URL', async () => {
@@ -409,11 +428,37 @@ describe('HttpToolClient', () => {
     expect(result).toEqual({ status: 'pending' });
   });
 
-  it('logs out through the revoking cli logout, not a bare config delete', async () => {
-    jest.mocked(cli.logout).mockResolvedValue(logoutResult);
+  describe('logout', () => {
+    const origEnvToken = process.env.WALKEROS_TOKEN;
 
-    await expect(new HttpToolClient().logout()).resolves.toEqual(logoutResult);
-    expect(cli.logout).toHaveBeenCalled();
+    afterEach(() => {
+      if (origEnvToken !== undefined) {
+        process.env.WALKEROS_TOKEN = origEnvToken;
+      } else {
+        delete process.env.WALKEROS_TOKEN;
+      }
+    });
+
+    it('logs out through the revoking cli logout, not a bare config delete', async () => {
+      delete process.env.WALKEROS_TOKEN;
+      jest.mocked(cli.logout).mockResolvedValue(logoutResult);
+
+      await expect(new HttpToolClient().logout()).resolves.toEqual({
+        ...logoutResult,
+        envCleared: false,
+      });
+      expect(cli.logout).toHaveBeenCalled();
+    });
+
+    it('clears WALKEROS_TOKEN from its own process and reports it', async () => {
+      process.env.WALKEROS_TOKEN = 'tok_env_abc';
+      jest.mocked(cli.logout).mockResolvedValue(logoutResult);
+
+      const result = await new HttpToolClient().logout();
+
+      expect(result.envCleared).toBe(true);
+      expect(process.env.WALKEROS_TOKEN).toBeUndefined();
+    });
   });
 
   it('names the app through the same resolution every other method uses', () => {

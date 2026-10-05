@@ -235,6 +235,25 @@ describe('project_manage tool', () => {
         expect.arrayContaining([expect.stringContaining('flow_manage')]),
       );
     });
+
+    it('reports a door refusal as an error, never as a selected default', async () => {
+      const setDefaultProject = jest.fn(() => {
+        throw new Error(
+          'WALKEROS_PROJECT_ID is set to proj_env and takes precedence over the default project',
+        );
+      });
+      const spec = createProjectManageToolSpec(
+        stubClient({ setDefaultProject }),
+      );
+      const result = await spec.handler({
+        action: 'set_default',
+        projectId: 'proj_other',
+      });
+
+      expect(record(result).isError).toBe(true);
+      expect(textOf(result)).toContain('WALKEROS_PROJECT_ID');
+      expect(textOf(result)).not.toContain('defaultProjectId');
+    });
   });
 
   describe('error handling', () => {

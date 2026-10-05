@@ -73,7 +73,8 @@ await getMappingEvent(
 
 A rule's `condition` is checked while matching: the first rule whose
 `condition` passes is used; if none passes, the `*` → `*` rule applies, if there
-is one. Once a rule matches, the collector runs `policy` (event-level), resolves
+is one. A condition may be async: conditions are awaited one by one, in rule
+order. A condition that throws is logged and counts as no match. Once a rule matches, the collector runs `policy` (event-level), resolves
 `data`, then hands the result to the destination's `push` (or buffers it when
 `batch` is set). A rule-level `consent` is not checked: gate a destination with
 `config.consent`, or a single value with a `consent` entry.

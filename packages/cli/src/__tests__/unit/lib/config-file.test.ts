@@ -14,10 +14,13 @@ import {
   writeTelemetryOnlyConfig,
   setDefaultProject,
   getDefaultProject,
+  resolveProjectId,
+  hasStoredCredential,
   clearDefaultProject,
   setFeedbackPreference,
   getFeedbackPreference,
   getConfigPath,
+  type WalkerOSConfig,
 } from '../../../lib/config-file.js';
 
 const testDir = join(tmpdir(), `config-file-test-${Date.now()}`);
@@ -78,6 +81,9 @@ describe('config-file defaultProject', () => {
     // getConfigDir returns join(XDG_CONFIG_HOME, 'walkeros'), so we set
     // XDG_CONFIG_HOME to testDir and the config lands in testDir/walkeros/.
     process.env = { ...originalEnv, XDG_CONFIG_HOME: testDir };
+    // The container may export both; every case states its own env.
+    delete process.env.WALKEROS_TOKEN;
+    delete process.env.WALKEROS_PROJECT_ID;
     mkdirSync(join(testDir, 'walkeros'), { recursive: true });
   });
 
@@ -114,6 +120,92 @@ describe('config-file defaultProject', () => {
           message: expect.stringContaining('Not authenticated'),
         }),
       );
+    });
+
+    it('throws for a config that holds no credential (telemetry only)', () => {
+      writeTelemetryOnlyConfig({ telemetryEnabled: false });
+      expect(() => setDefaultProject('proj_abc')).toThrow(
+        expect.objectContaining({ code: 'UNAUTHORIZED' }),
+      );
+      expect(readConfig()?.defaultProjectId).toBeUndefined();
+    });
+
+    it('accepts an OAuth login (accessToken, no static token)', () => {
+      writeConfig({
+        accessToken: 'at_1',
+        accessTokenExpiresAt: '2026-10-05T00:00:00.000Z',
+        refreshToken: 'rt_1',
+      });
+      setDefaultProject('proj_oauth');
+      expect(readConfig()?.defaultProjectId).toBe('proj_oauth');
+      expect(readConfig()?.refreshToken).toBe('rt_1');
+    });
+
+    it('creates a config holding only the default for an env-only token', () => {
+      rmSync(join(testDir, 'walkeros'), { recursive: true, force: true });
+      process.env.WALKEROS_TOKEN = 'wos_pat_env';
+      setDefaultProject('proj_env');
+
+      expect(JSON.parse(readFileSync(getConfigPath(), 'utf-8'))).toEqual({
+        defaultProjectId: 'proj_env',
+      });
+      expect(statSync(getConfigPath()).mode & 0o777).toBe(0o600);
+      expect(statSync(join(testDir, 'walkeros')).mode & 0o777).toBe(0o700);
+    });
+
+    it('surfaces a config directory it cannot write as an error', () => {
+      process.env.WALKEROS_TOKEN = 'wos_pat_env';
+      // A file where the config directory belongs: the write cannot succeed.
+      rmSync(join(testDir, 'walkeros'), { recursive: true, force: true });
+      writeFileSync(join(testDir, 'walkeros'), 'not a directory');
+      // The filesystem error itself, not an UNAUTHORIZED refusal.
+      expect(() => setDefaultProject('proj_env')).toThrow(
+        expect.objectContaining({
+          code: expect.stringMatching(/^E(EXIST|NOTDIR)$/),
+        }),
+      );
+    });
+
+    it('refuses while WALKEROS_PROJECT_ID names another project', () => {
+      writeConfig(baseConfig);
+      process.env.WALKEROS_PROJECT_ID = 'proj_pinned';
+      expect(() => setDefaultProject('proj_other')).toThrow(
+        /WALKEROS_PROJECT_ID is set to proj_pinned/,
+      );
+      expect(readConfig()?.defaultProjectId).toBeUndefined();
+    });
+
+    it('accepts the project WALKEROS_PROJECT_ID already names', () => {
+      writeConfig(baseConfig);
+      process.env.WALKEROS_PROJECT_ID = 'proj_pinned';
+      setDefaultProject('proj_pinned');
+      expect(readConfig()?.defaultProjectId).toBe('proj_pinned');
+    });
+  });
+
+  describe('hasStoredCredential', () => {
+    const cases: Array<[string, WalkerOSConfig | null, boolean]> = [
+      ['a legacy static token', { token: 'sk' }, true],
+      ['an OAuth access token', { accessToken: 'at' }, true],
+      ['a telemetry-only config', { telemetryEnabled: true }, false],
+      ['no config', null, false],
+    ];
+    it.each(cases)('%s', (_label, config, expected) => {
+      expect(hasStoredCredential(config)).toBe(expected);
+    });
+  });
+
+  describe('resolveProjectId', () => {
+    it('prefers WALKEROS_PROJECT_ID over the config default', () => {
+      writeConfig({ ...baseConfig, defaultProjectId: 'proj_config' });
+      process.env.WALKEROS_PROJECT_ID = 'proj_env';
+      expect(resolveProjectId()).toBe('proj_env');
+    });
+
+    it('falls back to the config default, then null', () => {
+      expect(resolveProjectId()).toBeNull();
+      writeConfig({ ...baseConfig, defaultProjectId: 'proj_config' });
+      expect(resolveProjectId()).toBe('proj_config');
     });
   });
 

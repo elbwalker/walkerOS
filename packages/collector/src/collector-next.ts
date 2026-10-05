@@ -68,13 +68,11 @@ export async function runCollectorNext(
         result.droppedBy ? ` (${result.droppedBy})` : ''
       }`,
     );
-    emitCollectorDrop(
-      collector,
-      event,
-      ingest,
-      result.droppedBy,
-      COLLECTOR_NEXT_PATH,
-    );
+    emitCollectorDrop(collector, event, ingest, {
+      reason: 'dropped',
+      by: result.droppedBy,
+      at: COLLECTOR_NEXT_PATH,
+    });
     return { copies: [], respond, dropped: true };
   }
 

@@ -17,6 +17,7 @@ import {
   registerAllThemes,
 } from '../../themes';
 import { applyWalkerOSDecorations } from '../../utils/monaco-walkeros-decorations';
+import { prepareMonaco } from './code';
 
 export interface CodeDiffSummary {
   /** Count of hunks that exist only in modified (pure additions). */
@@ -148,6 +149,9 @@ export function CodeDiff({
 
   const handleBeforeMount = useCallback(
     (monaco: Monaco) => {
+      // Runs before the diff's models exist, so a TypeScript or JavaScript
+      // diff that mounts before any Code still gets the shared setup.
+      prepareMonaco(monaco);
       registerAllThemes(monaco);
       beforeMount?.(monaco);
     },

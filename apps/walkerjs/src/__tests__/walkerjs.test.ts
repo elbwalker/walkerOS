@@ -1,5 +1,5 @@
 import { isObject } from '@walkeros/core';
-import fixture from './fixtures/push.product-view.json';
+import fixture from './fixtures/push.product-add.json';
 
 // The entry as a page runs it: loaded as a side-effect module, fresh per load,
 // with a real collector behind it. Every assertion reads window.dataLayer.
@@ -201,12 +201,15 @@ const stabilize = (push: Record<string, unknown>): Record<string, unknown> => {
   return stable;
 };
 
-it('pushes the documented product view', async () => {
+// The docs page renders the fixture and shows this markup.
+it('pushes the documented product add', async () => {
   document.body.setAttribute('data-elbglobals', 'pagetype:product');
   document.body.innerHTML =
-    '<div data-elb="product" data-elb-product="name:Cotton Tee;price:25" data-elbaction="load:view"></div>';
+    '<div data-elb="product" data-elb-product="id:tee;name:Cotton Tee;price:25" data-elbaction="load:view"><button id="b" data-elbaction="click:add">Add to cart</button></div>';
   load();
   await settle();
-  const [push] = named('product view');
+  document.getElementById('b')?.click();
+  await settle();
+  const [push] = named('product add');
   expect(stabilize(push)).toEqual(fixture);
 });

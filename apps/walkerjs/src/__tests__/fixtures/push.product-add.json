@@ -1,8 +1,9 @@
 {
-  "event": "product view",
+  "event": "product add",
   "_clear": true,
-  "name": "product view",
+  "name": "product add",
   "data": {
+    "id": "tee",
     "name": "Cotton Tee",
     "price": 25
   },
@@ -13,9 +14,9 @@
   "custom": {},
   "nested": [],
   "id": "<id>",
-  "trigger": "load",
+  "trigger": "click",
   "entity": "product",
-  "action": "view",
+  "action": "add",
   "timestamp": "<timestamp>",
   "timing": "<timing>",
   "source": "<source>"

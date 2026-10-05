@@ -64,6 +64,7 @@ The same transformer can appear in several chains. For example, you might use `f
 Use `collector.next` for work every destination needs, and `destination.before` for work only one destination needs. The collector chain runs once per event, after the collector completed it (globals, user, consent, ids) and before the event is handed to the destinations.
 
 The server flow of the complete example uses every position. The source chain
+stops an opted-out user (see [Opt-out](/docs/guides/consent#opt-out)), then
 runs `dedup` before the collector:
 
 <FlowSlice feature="source-next" />
@@ -73,7 +74,8 @@ and `bot` always, `enrich` for everything but impressions.
 
 <FlowSlice feature="collector-next" />
 
-On the web, `collector.next` runs one inline step:
+On the web, `collector.next` stops an opted-out user, then runs one inline
+step:
 
 <FlowSlice feature="web-collector-next" />
 

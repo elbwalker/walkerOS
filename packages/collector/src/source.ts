@@ -217,13 +217,11 @@ export async function initSource(
       );
       if (beforeResult.copies.length === 0) {
         // Dropped or stopped: the event never reaches the collector.
-        emitCollectorDrop(
-          collector,
-          identified,
-          scope.ingest,
-          beforeResult.droppedBy,
-          chainPath,
-        );
+        emitCollectorDrop(collector, identified, scope.ingest, {
+          reason: 'dropped',
+          by: beforeResult.droppedBy,
+          at: chainPath,
+        });
         return createPushResult({ ok: true, dropped: true });
       }
       // Pipeline-halt signal from a `cache.stop: true` HIT inside the

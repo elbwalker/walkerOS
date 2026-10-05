@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createObserveSessionToolSpec } from '../../tools/observe-session.js';
 import { createFlowManageToolSpec } from '../../tools/flow-manage.js';
 import { TOOL_DEFINITIONS } from '../../tool-definitions.js';
+import { NO_DEFAULT_PROJECT_ERROR } from '../../tools/project-context.js';
 import { CodedError } from '../support/coded-error.js';
 import { stubClient } from '../support/stub-client.js';
 import type {
@@ -166,6 +167,20 @@ describe('observe_session tool', () => {
           schema.safeParse({ ...input, arms: { container: false } }).success,
         ).toBe(false);
       }
+    });
+  });
+
+  describe('project fallback', () => {
+    it('answers the shared no-project remedy when neither call nor door names one', async () => {
+      const startObserveSession = jest.fn();
+      const spec = createObserveSessionToolSpec(
+        stubClient({ startObserveSession, getDefaultProject: () => null }),
+      );
+      const result = await spec.handler({ action: 'start', flowId: 'flow_1' });
+
+      expect(isErrorResult(result)).toBe(true);
+      expect(structuredOf(result).error).toBe(NO_DEFAULT_PROJECT_ERROR);
+      expect(startObserveSession).not.toHaveBeenCalled();
     });
   });
 

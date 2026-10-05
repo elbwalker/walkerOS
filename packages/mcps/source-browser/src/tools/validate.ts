@@ -1,19 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
+import { getTriggerActions, Triggers } from '@walkeros/web-source-browser';
 import { withDom } from '../lib/dom.js';
 import { ValidateTaggingOutputShape } from '../schemas/output.js';
 
-const KNOWN_TRIGGERS = [
-  'load',
-  'click',
-  'impression',
-  'visible',
-  'hover',
-  'submit',
-  'wait',
-  'pulse',
-];
+const KNOWN_TRIGGERS: string[] = Object.values(Triggers);
 
 type Issue = { check: string; message: string; element: string };
 
@@ -132,26 +124,22 @@ export function registerValidateTool(server: McpServer) {
             });
           });
 
-          // 5. Unknown triggers
+          // 5. Unknown triggers, read with the browser source's own parser
           body
             .querySelectorAll(`[${actionAttr}], [${actionsAttr}]`)
             .forEach((el) => {
-              const val =
-                el.getAttribute(actionAttr) ||
-                el.getAttribute(actionsAttr) ||
-                '';
-              val.split(';').forEach((pair) => {
-                const trigger = pair
-                  .split(':')[0]
-                  ?.trim()
-                  .replace(/\(.*\)$/, '');
-                if (trigger && !KNOWN_TRIGGERS.includes(trigger)) {
+              [actionAttr, actionsAttr].forEach((attr) => {
+                const triggers = Object.keys(
+                  getTriggerActions(el.getAttribute(attr) || ''),
+                );
+                triggers.forEach((trigger) => {
+                  if (KNOWN_TRIGGERS.includes(trigger)) return;
                   warnings.push({
                     check: 'unknown_trigger',
                     message: `Unknown trigger "${trigger}" (known: ${KNOWN_TRIGGERS.join(', ')})`,
                     element: snip(el),
                   });
-                }
+                });
               });
             });
 

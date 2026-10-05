@@ -11,11 +11,13 @@ import type { ToolClient } from '../tool-client.js';
 export const NO_DEFAULT_PROJECT_ERROR =
   'No project selected and no projectId given. Pass projectId on this call, or call project_manage action "set_default" to select one. project_manage action "list" returns the available ids.';
 
-/** Resolves the project for actions that fall back to the CLI default when
- *  `projectId` is omitted. Returns the resolved id, or undefined when there is
- *  no default to fall back to (the no-project-at-all case). An explicit
- *  `projectId` is always honoured as-is so the app's genuine NOT_FOUND still
- *  surfaces for an explicit-but-wrong id. */
+/** Resolves the project for actions that fall back to the door's default
+ *  when `projectId` is omitted. Returns the resolved id, or undefined when
+ *  there is no default to fall back to (the no-project-at-all case). An
+ *  explicit `projectId` is always honoured as-is so the app's genuine
+ *  NOT_FOUND still surfaces for an explicit-but-wrong id. The default comes
+ *  from the door only: this shared layer never reads `WALKEROS_PROJECT_ID`,
+ *  because a hosted door runs it in a server process. */
 export function resolveDefaultProject(
   client: ToolClient,
   projectId: string | undefined,

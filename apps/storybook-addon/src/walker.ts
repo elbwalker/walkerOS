@@ -79,7 +79,6 @@ export async function initializeWalker(config?: {
           config: {
             settings: {
               pageview: true,
-              session: false,
               elbLayer: '__storybookElbLayer',
               elb: '__storybookElb',
               prefix: config?.prefix || 'data-elb',

@@ -747,7 +747,7 @@ const config: Config = {
             to: '/docs/comparisons/dataLayer',
           },
           {
-            from: '/docs/apps',
+            from: ['/docs/apps', '/docs/guides/gtm'],
             to: '/docs/apps/walkerjs',
           },
           {

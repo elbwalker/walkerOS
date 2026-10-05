@@ -56,6 +56,8 @@ import {
   createMappingRoot,
   validateStepEntry,
   processEventMapping,
+  getTransformerMapping,
+  getTransformerMappingWarnings,
 } from '@walkeros/core';
 import { journeyFields, stepError, stepState } from './observerEmit';
 import { getCacheStore } from './cache';
@@ -183,9 +185,17 @@ export async function initTransformers(
       ),
     };
 
+    // Declarative mapping: `config.mapping` wins over the step level, like
+    // `state`. Fields that do nothing here, or a mapping next to `code`,
+    // are warned about once per init.
+    const stepMapping = getTransformerMapping(transformerDef);
+    for (const warning of getTransformerMappingWarnings(transformerDef)) {
+      collector.logger.warn(`Transformer ${transformerId}: ${warning}`);
+    }
+
     // Synthesize a passthrough instance when `code` is absent.
     // This makes the entry a "pass" — a named, code-less hop. Two flavors:
-    //   1. mapping-aware: when `mapping` is declared, the synthesized push
+    //   1. mapping-aware: when a mapping is declared, the synthesized push
     //      runs `processEventMapping` and forwards the transformed event
     //      (or drops it when a rule has `ignore: true`).
     //   2. plain passthrough: when only `before` / `next` / `cache` are
@@ -193,40 +203,7 @@ export async function initTransformers(
     const codeFn =
       code ??
       ((ctx: Transformer.Context) => {
-        const stepMapping = transformerDef.mapping;
         if (stepMapping) {
-          // Warn once per init if vendor-payload fields are present at the
-          // transformer position. Only event-mutating fields apply here.
-          // Note: `MappingConfig` has no top-level `silent` field — that
-          // lives on `Rule` only, so the config-level check is `data` only.
-          const meaninglessFields: string[] = [];
-          if (stepMapping.data !== undefined) meaninglessFields.push('data');
-          // Walk rules for per-rule data/silent
-          if (stepMapping.mapping) {
-            for (const [entity, actions] of Object.entries(
-              stepMapping.mapping,
-            )) {
-              if (typeof actions !== 'object' || actions === null) continue;
-              for (const [action, rule] of Object.entries(
-                actions as Record<string, unknown>,
-              )) {
-                if (typeof rule !== 'object' || rule === null) continue;
-                const r = rule as Record<string, unknown>;
-                if (r.data !== undefined)
-                  meaninglessFields.push(`mapping[${entity}][${action}].data`);
-                if (r.silent !== undefined)
-                  meaninglessFields.push(
-                    `mapping[${entity}][${action}].silent`,
-                  );
-              }
-            }
-          }
-          if (meaninglessFields.length > 0) {
-            ctx.collector.logger.warn(
-              `Transformer ${transformerId}: \`${meaninglessFields.join(', ')}\` ignored at transformer position (only event-mutating fields apply).`,
-            );
-          }
-
           return {
             type: 'pass',
             config: ctx.config,

@@ -409,11 +409,12 @@ semantic is disambiguated by where the step sits:
 | Destination | A vendor-shaped payload (the destination consumes `data`) |
 | Transformer | A mutated event that continues through the chain          |
 
-At the transformer position, only event-mutating fields apply: `policy`,
-`mapping[].policy`, `mapping[].name`, `mapping[].ignore`, and `include`.
-`consent` is not enforced at this position. Vendor-payload fields (`data`,
-`mapping[].data`, `silent`) are ignored with a one-time init warning.
-`mapping[].ignore: true` drops the event from the chain (not "skip this
+At the transformer position, only event-mutating fields apply: `policy`, and per
+rule `condition`, `policy`, `name` and `ignore`. `consent`, `include`, `data`
+and per rule `remove`, `batch`, `settings`, `extend`, `silent` do nothing there
+and are named in a one-time init warning. A `config.mapping` wins over the
+step-level `mapping`; next to `code` or `package`, a mapping never runs (warned
+too). `mapping[].ignore: true` drops the event from the chain (not "skip this
 destination", which is the destination-position semantic).
 
 ### Closed schema (unknown keys are errors)
