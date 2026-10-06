@@ -781,7 +781,7 @@ const teaching = {
     level: 'beginner',
     useCases: ['consent', 'privacy-analytics'],
     note: 'An opted-out user (user.optout true) is stopped first: on the server before dedup, so no dedup entry, hash or delivery; on the web first in collector.next, so the browser sends nothing.',
-    docs: [{ page: 'guides/consent', anchor: 'opt-out' }],
+    docs: [{ page: 'guides/consent/index', anchor: 'opt-out' }],
   },
   'value-consent': {
     pointer: '/flows/web/destinations/collect/config/policy/user.email/consent',

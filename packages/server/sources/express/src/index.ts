@@ -155,7 +155,7 @@ export const sourceExpress = async (
   // text/plain;charset=UTF-8 on JSON payloads), raw input otherwise, so a
   // source.before chain can decode it (e.g. batched gtag.js hits).
   // Route-scoped so unmatched paths (scanner noise) fall through to the
-  // default 404 without ever touching a parser.
+  // not-found handler without ever touching a parser.
   const jsonParser = expressLib.json({
     limit: BODY_LIMIT,
     type: 'application/json',
@@ -167,7 +167,7 @@ export const sourceExpress = async (
 
   // Content-Type on some responses is flow-controlled (a cache or asset step
   // can set it through respond({ headers })), so sniffing stays off. Registered
-  // before CORS and unconditionally, so it also covers the default 404 and the
+  // before CORS and unconditionally, so it also covers the 404 and the
   // body-rejection responses.
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -375,6 +375,14 @@ export const sourceExpress = async (
     if (route.methods.includes('GET')) app.get(route.path, push);
     app.options(route.path, push); // Always register OPTIONS for CORS
   }
+
+  // Unmatched path or method. Express's default 404 is an HTML page naming
+  // the framework and echoing the path, so answer in the same JSON shape as
+  // every other rejection. Not logged: on a public endpoint this is scanner
+  // noise.
+  app.use((_req: Request, res: Response) => {
+    res.status(404).json({ success: false, error: 'Not found' });
+  });
 
   // Error boundary for the middleware chain. Client-caused body errors are
   // expected ambient noise on a public endpoint: answer deliberately, count,
