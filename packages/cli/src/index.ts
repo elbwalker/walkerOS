@@ -278,6 +278,7 @@ export {
   resolveAppUrl,
   setDefaultProject,
   getDefaultProject,
+  resolveProjectId,
   setFeedbackPreference,
   getFeedbackPreference,
 } from './lib/config-file.js';

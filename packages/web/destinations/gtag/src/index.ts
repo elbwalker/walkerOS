@@ -109,13 +109,17 @@ export const destinationGtag: Destination = {
       ads,
       collector,
     );
-    const gtmData = await getData(
-      event,
-      data as WalkerOS.AnyObject,
-      config,
-      gtm,
-      collector,
-    );
+    // Without any data mapping, GTM gets no data and pushes the event as-is.
+    const gtmData =
+      data === undefined && gtm?.data === undefined
+        ? undefined
+        : await getData(
+            event,
+            data as WalkerOS.AnyObject,
+            config,
+            gtm,
+            collector,
+          );
 
     // Push to GA4 if configured
     if (ga4?.measurementId) {

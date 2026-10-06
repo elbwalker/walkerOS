@@ -95,6 +95,42 @@ describe('validate_tagging tool', () => {
     expect(unknowns[0].message).toContain('swipe');
   });
 
+  it.each([
+    ['a quoted action param with a semicolon', "click:add('a;b')"],
+    ['scroll with a depth', 'scroll(50):read'],
+    ['custom', 'custom:open'],
+    ['several triggers', 'load:view;hover:peek;visible:seen'],
+  ])('knows every browser source trigger: %s', async (_, value) => {
+    const tool = server.getTool('validate_tagging');
+    const result = await tool.handler({
+      html: `<div data-elb="product" data-elbaction="${value}"></div>`,
+    });
+    expect(result.structuredContent.warnings).toEqual([]);
+  });
+
+  it('checks data-elbaction and data-elbactions on the same element', async () => {
+    const tool = server.getTool('validate_tagging');
+    const result = await tool.handler({
+      html: `<div data-elb="product" data-elbaction="click" data-elbactions="swipe:dismiss"></div>`,
+    });
+    expect(result.structuredContent.warnings).toEqual([
+      expect.objectContaining({
+        check: 'unknown_trigger',
+        message: expect.stringContaining('"swipe"'),
+      }),
+    ]);
+  });
+
+  it('lists the browser source triggers as known', async () => {
+    const tool = server.getTool('validate_tagging');
+    const result = await tool.handler({
+      html: `<div data-elb="product" data-elbaction="swipe:dismiss"></div>`,
+    });
+    const [warning] = result.structuredContent.warnings;
+    expect(warning.message).toContain('scroll');
+    expect(warning.message).toContain('custom');
+  });
+
   it('returns error for empty html', async () => {
     const tool = server.getTool('validate_tagging');
     const result = await tool.handler({ html: '  ' });

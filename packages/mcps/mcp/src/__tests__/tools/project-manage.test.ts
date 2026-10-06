@@ -27,6 +27,8 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { createProjectManageToolSpec } from '../../tools/project-manage.js';
+import { AUTH_HINT } from '../../types.js';
+import { CodedError } from '../support/coded-error.js';
 import { stubClient } from '../support/stub-client.js';
 import { structured, record, hintsOf, textOf } from '../support/tool-result.js';
 
@@ -233,20 +235,73 @@ describe('project_manage tool', () => {
         expect.arrayContaining([expect.stringContaining('flow_manage')]),
       );
     });
+
+    it('reports a door refusal as an error, never as a selected default', async () => {
+      const setDefaultProject = jest.fn(() => {
+        throw new Error(
+          'WALKEROS_PROJECT_ID is set to proj_env and takes precedence over the default project',
+        );
+      });
+      const spec = createProjectManageToolSpec(
+        stubClient({ setDefaultProject }),
+      );
+      const result = await spec.handler({
+        action: 'set_default',
+        projectId: 'proj_other',
+      });
+
+      expect(record(result).isError).toBe(true);
+      expect(textOf(result)).toContain('WALKEROS_PROJECT_ID');
+      expect(textOf(result)).not.toContain('defaultProjectId');
+    });
   });
 
   describe('error handling', () => {
-    it('catches errors and returns mcpError with auth hint', async () => {
-      const listProjects = jest
-        .fn()
-        .mockRejectedValue(new Error('Unauthorized'));
+    async function listFailingWith(error: Error) {
+      const listProjects = jest.fn().mockRejectedValue(error);
       const spec = createProjectManageToolSpec(stubClient({ listProjects }));
       const result = await spec.handler({ action: 'list' });
-
       expect(record(result).isError).toBe(true);
-      const parsed = record(JSON.parse(textOf(result)));
-      expect(parsed.error).toBe('Unauthorized');
-      expect(parsed.hint).toContain('logged in');
+      return record(JSON.parse(textOf(result)));
+    }
+
+    it.each([
+      ['a 401', new CodedError('Unauthorized', 'UNAUTHORIZED', 401)],
+      [
+        'an invalid or expired token',
+        new CodedError('Invalid or expired API token', 'UNAUTHORIZED', 401),
+      ],
+      [
+        'a missing stored login',
+        new CodedError(
+          'Not authenticated. Run `walkeros auth login` first.',
+          'UNAUTHORIZED',
+        ),
+      ],
+    ])('adds the auth hint for %s', async (_label, error) => {
+      const parsed = await listFailingWith(error);
+      expect(parsed.error).toBe(error.message);
+      expect(parsed.hint).toBe(AUTH_HINT);
+    });
+
+    it.each([
+      [
+        'a role refusal',
+        new CodedError('Requires member role or higher', 'FORBIDDEN', 403),
+      ],
+      [
+        'a role refusal from the hosted door',
+        new CodedError('Requires member role or higher', 'FORBIDDEN'),
+      ],
+      [
+        'a scope refusal',
+        new CodedError('This token cannot write', 'INSUFFICIENT_SCOPE', 403),
+      ],
+      ['a plain error', new Error('boom')],
+    ])('adds no hint for %s', async (_label, error) => {
+      const parsed = await listFailingWith(error);
+      expect(parsed.error).toBe(error.message);
+      expect(parsed).not.toHaveProperty('hint');
     });
   });
 });

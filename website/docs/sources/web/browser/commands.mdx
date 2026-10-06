@@ -45,7 +45,7 @@ Usage options:
 
 <CodeSnippet
   code={`elb("entity action", data, ...);
-elb({event: "entity action", data: { foo: "bar"}});`}
+elb({name: "entity action", data: { foo: "bar"}});`}
   language="javascript"
 />
 
@@ -73,7 +73,8 @@ Processing order:
 * `walker` commands apply as soon as the source is initialized, so a queued
   `walker consent` takes effect before any queued events.
 * Events are processed once the source has started (after the first
-  `walker run`), in the order they were pushed.
+  `walker run`), in the order they were pushed, and before that run's
+  `page view`.
 * From then on, all entries are processed strictly in push order.
 
 One named layer belongs to one source, because a queue is drained once. The

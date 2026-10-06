@@ -73,6 +73,21 @@ export function isFunction(value: unknown): value is Function {
 }
 
 /**
+ * Checks if a value is a thenable (a promise, from any realm).
+ *
+ * @param value The value to check.
+ * @returns True if the value is an object with a callable `then`.
+ */
+export function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'then' in value &&
+    typeof value.then === 'function'
+  );
+}
+
+/**
  * Checks if a value is a number.
  *
  * @param value The value to check.

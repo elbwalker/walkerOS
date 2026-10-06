@@ -605,7 +605,6 @@ const sidebars: SidebarsConfig = {
       },
       items: [
         'guides/debugging',
-        'guides/gtm',
         'guides/consent/index',
         'guides/session',
         'guides/user-stitching',

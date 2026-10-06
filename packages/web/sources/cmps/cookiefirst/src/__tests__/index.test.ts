@@ -54,7 +54,6 @@ describe('CookieFirst Source', () => {
       const source = await createCookieFirstSource(mockWindow, mockElb);
 
       expect(source.config.settings?.categoryMap).toEqual(DEFAULT_CATEGORY_MAP);
-      expect(source.config.settings?.explicitOnly).toBe(true);
       expect(source.config.settings?.globalName).toBe('CookieFirst');
     });
 
@@ -63,7 +62,6 @@ describe('CookieFirst Source', () => {
       const source = await createCookieFirstSource(mockWindow, mockElb, {
         settings: {
           categoryMap: { performance: 'statistics' },
-          explicitOnly: false,
         },
       });
 
@@ -75,7 +73,6 @@ describe('CookieFirst Source', () => {
       expect(source.config.settings?.categoryMap?.advertising).toBe(
         'marketing',
       );
-      expect(source.config.settings?.explicitOnly).toBe(false);
     });
   });
 
@@ -89,22 +86,11 @@ describe('CookieFirst Source', () => {
       expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
     });
 
-    test('does not process null consent with explicitOnly=true', async () => {
+    test('does not process null consent', async () => {
       const { window: mockWindow } = createMockWindow(null);
 
       await createCookieFirstSource(mockWindow, mockElb);
 
-      expect(consentCalls).toHaveLength(0);
-    });
-
-    test('does not process null consent with explicitOnly=false either', async () => {
-      const { window: mockWindow } = createMockWindow(null);
-
-      await createCookieFirstSource(mockWindow, mockElb, {
-        settings: { explicitOnly: false },
-      });
-
-      // Still no calls because null has no categories to map
       expect(consentCalls).toHaveLength(0);
     });
   });
@@ -352,7 +338,7 @@ describe('CookieFirst Source', () => {
 
       const source = await sourceCookieFirst({
         collector,
-        config: { settings: { explicitOnly: false } },
+        config: {},
         env,
         id: 'test-cookiefirst',
         logger: createMockLogger(),

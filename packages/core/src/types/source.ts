@@ -11,6 +11,7 @@ import type { Ingest } from './ingest';
 import type { DestroyFn, SetupFn } from './lifecycle';
 import type { RespondFn } from '../respond';
 import type { Route } from './transformer';
+import type { ConfigTypes, EntryTypes, TypedStepEntry } from './util';
 
 /**
  * Base Env interface for dependency injection into sources.
@@ -326,6 +327,18 @@ export type InitSource<T extends TypesGeneric = Types> = {
 export interface InitSources {
   [sourceId: string]: InitSource<any>;
 }
+
+/** One typed source entry for `startFlow`; the rules are in `types/util.ts`. */
+export type InitSourceEntry<T extends TypesGeneric> = TypedStepEntry<
+  InitSource<T>,
+  InitSource<ConfigTypes<T>>,
+  InitSource<TypesGeneric>
+>;
+
+/** Typed counterpart of `InitSources` for `startFlow`; the rules are in `types/util.ts`. */
+export type InitSourcesOf<S> = {
+  [K in keyof S]: InitSourceEntry<EntryTypes<S[K], TypesGeneric, Types>>;
+};
 
 /**
  * Renderer hint for source simulation UI.

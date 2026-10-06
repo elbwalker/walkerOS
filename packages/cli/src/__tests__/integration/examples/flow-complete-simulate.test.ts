@@ -18,7 +18,7 @@ import http from 'http';
 import os from 'os';
 import path from 'path';
 import { generateKeyPairSync } from 'crypto';
-import type { Flow, Simulation } from '@walkeros/core';
+import type { Flow, FlowState, Simulation } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { bundleCore } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/loader.js';
@@ -124,6 +124,37 @@ const SOURCE_CONSENT: Record<string, Record<string, boolean>> = {
 };
 
 type Kind = 'sources' | 'transformers' | 'destinations';
+
+/** Waits until `done` holds, a bounded number of rounds. */
+async function until(done: () => boolean): Promise<void> {
+  for (let round = 0; !done() && round < 500; round++)
+    await new Promise((resolve) => setTimeout(resolve, 10));
+}
+
+/**
+ * Serves the HTTP handler of the source that exposes one (express) on a free
+ * port, as the deploy wrapper does.
+ */
+async function serve(
+  sources: unknown,
+): Promise<{ url: string; close: () => Promise<void> }> {
+  const handler: unknown = isObject(sources)
+    ? Object.values(sources)
+        .map((source) => (isObject(source) ? source.httpHandler : undefined))
+        .find((candidate) => typeof candidate === 'function')
+    : undefined;
+  if (typeof handler !== 'function') throw new Error('no httpHandler');
+  const server = http.createServer((req, res) => {
+    handler(req, res);
+  });
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('no port');
+  return {
+    url: `http://127.0.0.1:${address.port}`,
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+  };
+}
 
 interface Case {
   id: string;
@@ -572,25 +603,7 @@ describe('flow-complete.json', () => {
           };
 
           const flow = await module.startFlow(flowConfig);
-          // As the deploy wrapper does: the HTTP handler of the source that
-          // exposes one (express).
-          const sources: unknown = flow.collector.sources;
-          const handler: unknown = isObject(sources)
-            ? Object.values(sources)
-                .map((source) =>
-                  isObject(source) ? source.httpHandler : undefined,
-                )
-                .find((candidate) => typeof candidate === 'function')
-            : undefined;
-          if (typeof handler !== 'function') throw new Error('no httpHandler');
-          const server = http.createServer((req, res) => {
-            handler(req, res);
-          });
-          await new Promise<void>((resolve) => server.listen(0, resolve));
-          const address = server.address();
-          if (!address || typeof address === 'string')
-            throw new Error('no port');
-          const url = `http://127.0.0.1:${address.port}`;
+          const { url, close } = await serve(flow.collector.sources);
           const post = (body: unknown) =>
             fetch(`${url}/collect`, {
               method: 'POST',
@@ -675,7 +688,7 @@ describe('flow-complete.json', () => {
             expect(first.source).toMatchObject({ valid: true });
             expect(metaBodies).toHaveLength(1);
           } finally {
-            await new Promise((resolve) => server.close(resolve));
+            await close();
             await flow.collector.command('shutdown');
           }
           return { success: true, duration: 0 };
@@ -683,6 +696,162 @@ describe('flow-complete.json', () => {
       );
       expect(result.error).toBeUndefined();
       expect(result.success).toBe(true);
+    }, 60000);
+  });
+
+  describe('user.optout', () => {
+    /** Collector-level drops (`collector.push` skip records): event id and where. */
+    const recordDrops = () => {
+      const drops: { eventId: string; at: unknown }[] = [];
+      const observer = (state: FlowState): void => {
+        if (
+          state.stepId === 'collector.push' &&
+          state.phase === 'skip' &&
+          state.skipReason === 'dropped'
+        )
+          drops.push({ eventId: state.eventId, at: state.meta?.at });
+      };
+      return { drops, observer };
+    };
+
+    it('stops an opted-out user first: the web flow sends nothing, the server flow keeps the event from dedup and every destination', async () => {
+      // Web: the site sets the flag before walker.js loads, so even the first
+      // page view stays in the browser. One spy without a consent gate stands
+      // in for every destination: whatever passes collector.next reaches it.
+      const webSeen: Record<string, unknown>[] = [];
+      const webDrops = recordDrops();
+      const web = await withFlowContext(
+        { esmPath: bundles.web, platform: 'web', logger },
+        async (module) => {
+          const flowConfig = module.wireConfig(module.__configData);
+          flowConfig.observers = [webDrops.observer];
+          flowConfig.destinations = {
+            spy: {
+              code: {
+                type: 'spy',
+                config: {},
+                push: (event: Record<string, unknown>) => {
+                  webSeen.push(event);
+                },
+              },
+            },
+          };
+          const win: unknown = Reflect.get(globalThis, 'window');
+          if (typeof win !== 'object' || win === null)
+            throw new Error('no window');
+          const elbLayer: unknown[][] = [['walker user', { optout: true }]];
+          Reflect.set(win, 'elbLayer', elbLayer);
+
+          const flow = await module.startFlow(flowConfig);
+          try {
+            await until(() => webDrops.drops.length > 0);
+            // The control: the flag lifted, the next event reaches the spy.
+            elbLayer.push(['walker user', { optout: false }]);
+            elbLayer.push(['product view', { id: 'SKU-1' }]);
+            await until(() => webSeen.length > 0);
+
+            expect(webDrops.drops.map((drop) => drop.at)).toEqual([
+              'collector.next',
+            ]);
+            expect(webSeen.map((event) => event.name)).toEqual([
+              'product view',
+            ]);
+          } finally {
+            await flow.collector.command('shutdown');
+          }
+          return { success: true, duration: 0 };
+        },
+      );
+      expect(web.error).toBeUndefined();
+      expect(web.success).toBe(true);
+
+      // Server: one request carries the opted-out order, then the same order
+      // (same event id) without the flag, delivered in this order. The control
+      // passing dedup proves the opted-out event left no dedup entry.
+      const reached: [string, unknown, unknown][] = [];
+      const serverDrops = recordDrops();
+      const server = await withFlowContext(
+        { esmPath: bundles.server, platform: 'server', logger },
+        async (module) => {
+          const flowConfig = module.wireConfig(module.__configData);
+          delete flowConfig.sources.express.config.settings.port;
+          flowConfig.observers = [serverDrops.observer];
+          // Every destination records what reaches it; before routes stay.
+          const destinations: Record<string, { code: unknown }> =
+            flowConfig.destinations;
+          for (const [id, destination] of Object.entries(destinations)) {
+            destination.code = {
+              type: 'spy',
+              config: {},
+              push: (event: Record<string, unknown>) => {
+                const user = isObject(event.user) ? event.user : {};
+                reached.push([id, event.id, user.optout]);
+              },
+            };
+          }
+
+          const flow = await module.startFlow(flowConfig);
+          const { url, close } = await serve(flow.collector.sources);
+          const order = (optout: boolean) => ({
+            id: 'ev-optout',
+            name: 'order complete',
+            entity: 'order',
+            action: 'complete',
+            data: { id: 'ORD-9', total: 129.9, currency: 'EUR' },
+            nested: [
+              {
+                entity: 'product',
+                data: { id: 'SKU-1', name: 'Trail Runner', price: 129.9 },
+              },
+            ],
+            consent: { functional: true, marketing: true },
+            globals: { language: 'en' },
+            user: {
+              device: 'd3v1c3',
+              session: 's3ss10n',
+              id: 'cust-42',
+              optout,
+            },
+            source: {
+              type: 'browser',
+              platform: 'web',
+              url: 'https://www.example.com/checkout/thanks',
+            },
+            timestamp: 1700000000000,
+            trigger: 'load',
+          });
+          try {
+            await fetch(`${url}/collect`, {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+                'user-agent': CHROME.userAgent,
+                'accept-language': CHROME.acceptLanguage,
+                origin: CHROME.origin,
+              },
+              body: JSON.stringify([order(true), order(false)]),
+            });
+            await until(() => reached.length >= 4);
+
+            expect(serverDrops.drops).toEqual([
+              { eventId: 'ev-optout', at: 'source.express.next' },
+            ]);
+            // Meta's rule policy sets the event id to the order id.
+            expect([...reached].sort()).toEqual([
+              ['datamanager', 'ev-optout', false],
+              ['meta', 'ORD-9', false],
+              ['piwikpro', 'ev-optout', false],
+              ['pubsub', 'ev-optout', false],
+            ]);
+          } finally {
+            await close();
+            await flow.collector.command('shutdown');
+          }
+          return { success: true, duration: 0 };
+        },
+      );
+      expect(server.error).toBeUndefined();
+      expect(server.success).toBe(true);
     }, 60000);
   });
 });

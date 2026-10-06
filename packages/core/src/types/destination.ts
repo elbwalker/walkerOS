@@ -10,6 +10,7 @@ import type {
 } from '.';
 import type { DestroyFn, SetupFn } from './lifecycle';
 import type { Ingest } from './ingest';
+import type { ConfigTypes, EntryTypes, TypedStepEntry } from './util';
 
 /**
  * Base environment requirements interface for walkerOS destinations
@@ -273,6 +274,18 @@ export type Init<T extends TypesGeneric = Types> = {
 export interface InitDestinations {
   [key: string]: Init<any>;
 }
+
+/** One typed destination entry for `startFlow`; the rules are in `types/util.ts`. */
+export type InitDestinationEntry<T extends TypesGeneric> = TypedStepEntry<
+  Init<T>,
+  Init<ConfigTypes<T>>,
+  Init<TypesGeneric>
+>;
+
+/** Typed counterpart of `InitDestinations` for `startFlow`; the rules are in `types/util.ts`. */
+export type InitDestinationsOf<D> = {
+  [K in keyof D]: InitDestinationEntry<EntryTypes<D[K], TypesGeneric, Types>>;
+};
 
 export interface Destinations {
   [key: string]: Instance;

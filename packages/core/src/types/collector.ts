@@ -149,6 +149,30 @@ export interface InitConfig extends Partial<Config> {
   observers?: ObserverFn[];
 }
 
+/**
+ * Typed authoring form of `InitConfig`, taken by `startFlow`.
+ *
+ * Each entry of `sources`, `destinations`, `transformers` and `stores` is
+ * checked against the Types inferred from its own `code`, so its `config`
+ * (settings, mapping rule settings, ...) autocompletes and type-checks. An
+ * entry without inferable Types stays as loose as `InitConfig`, alone, and
+ * an `InitConfig` value is accepted as is. `startFlow` infers the four maps
+ * and owns their defaults.
+ */
+export interface InitConfigOf<S, D, T, St> extends Omit<
+  InitConfig,
+  'sources' | 'destinations' | 'transformers' | 'stores'
+> {
+  /** Source configurations */
+  sources?: Source.InitSourcesOf<S>;
+  /** Destination configurations */
+  destinations?: Destination.InitDestinationsOf<D>;
+  /** Transformer configurations */
+  transformers?: Transformer.InitTransformersOf<T>;
+  /** Store configurations */
+  stores?: Store.InitStoresOf<St>;
+}
+
 export interface SessionData extends WalkerOS.Properties {
   isStart: boolean;
   storage: boolean;

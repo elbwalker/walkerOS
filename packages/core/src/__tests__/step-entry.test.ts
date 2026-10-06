@@ -228,6 +228,22 @@ describe('isPathStepEntry', () => {
       ),
     ).toBe(true);
   });
+  it('returns true for Transformer with config.mapping only', () => {
+    expect(
+      isPathStepEntry(
+        { config: { mapping: { policy: { 'user.email': { value: '' } } } } },
+        'Transformer',
+      ),
+    ).toBe(true);
+  });
+  it('returns true for Transformer with config.state only', () => {
+    expect(
+      isPathStepEntry(
+        { config: { state: { mode: 'get', key: 'a', value: 'b' } } },
+        'Transformer',
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('STEP_OPERATIVE_FIELDS', () => {

@@ -13,7 +13,7 @@ jest.mock('@walkeros/cli', () => ({
   updateProject: jest.fn(),
   deleteProject: jest.fn(),
   setDefaultProject: jest.fn(),
-  getDefaultProject: jest.fn(),
+  resolveProjectId: jest.fn(),
   listAllFlows: jest.fn(),
   listFlows: jest.fn(),
   getFlow: jest.fn(),

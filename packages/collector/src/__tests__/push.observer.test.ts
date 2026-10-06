@@ -148,4 +148,48 @@ describe('collector.push self-emission', () => {
     expect(collector.status.in).toBe(1);
     expect(collector.status.out).toBe(0);
   });
+
+  test('a source consent drop emits one collector skip / consent', async () => {
+    const states: FlowState[] = [];
+    const push = jest.fn();
+
+    const { collector } = await startFlow({
+      run: true,
+      consent: { functional: true },
+      destinations: { spy: { code: { type: 'spy', config: {}, push } } },
+    });
+    collector.observers.add((state) => states.push(state));
+
+    const result = await collector.push(
+      { name: 'page view', data: {}, consent: { analytics: false } },
+      { id: 'web', mapping: { consent: { marketing: true } } },
+    );
+
+    expect(result).toMatchObject({ ok: true, dropped: true });
+    expect(push).not.toHaveBeenCalled();
+    const drops = states.filter(
+      (s) => s.stepId === 'collector.push' && s.phase === 'skip',
+    );
+    expect(drops).toEqual([
+      expect.objectContaining({
+        stepType: 'collector',
+        skipReason: 'consent',
+        consent: { functional: true, analytics: false },
+        meta: { at: 'source.web', required: { marketing: true } },
+      }),
+    ]);
+    // Counted as received, no out.
+    expect(collector.status.in).toBe(1);
+    expect(collector.status.out).toBe(0);
+
+    // Granted: the same push is delivered, with no skip.
+    states.length = 0;
+    const granted = await collector.push(
+      { name: 'page view', data: {}, consent: { marketing: true } },
+      { id: 'web', mapping: { consent: { marketing: true } } },
+    );
+    expect(granted.dropped).toBeUndefined();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(states.some((s) => s.phase === 'skip')).toBe(false);
+  });
 });

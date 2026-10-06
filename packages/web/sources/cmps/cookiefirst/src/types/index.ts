@@ -54,15 +54,6 @@ export interface Settings {
   categoryMap?: Record<string, string>;
 
   /**
-   * Has no effect in this source: it skips CookieFirst.consent while it is
-   * null (no choice made yet) and processes every consent object after that,
-   * whether this is true or false.
-   *
-   * Default: true
-   */
-  explicitOnly?: boolean;
-
-  /**
    * Custom name for window.CookieFirst object.
    * Some implementations use a different global name.
    *

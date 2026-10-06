@@ -299,7 +299,7 @@ export const RuleSchema = z
       .optional()
       .describe('Condition function as string: return true to process event'),
     consent: ConsentSchema.optional().describe(
-      'Required consent states to process this event',
+      'Not enforced yet. To require consent for a destination, set consent in its config.',
     ),
     policy: PolicySchema.optional().describe(
       'Event-level policy overrides (applied after config-level policy)',

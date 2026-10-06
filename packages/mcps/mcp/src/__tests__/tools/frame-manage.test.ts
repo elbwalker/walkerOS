@@ -16,16 +16,8 @@ import type {
   FrameLeanWire,
 } from '../../tool-client.js';
 
+import { CodedError } from '../support/coded-error.js';
 import { structured, record, rows, hintsOf } from '../support/tool-result.js';
-
-class CodedError extends Error {
-  constructor(
-    message: string,
-    readonly code: string,
-  ) {
-    super(message);
-  }
-}
 
 /**
  * A frame with one placement, one screenshot and one tag. The tag's

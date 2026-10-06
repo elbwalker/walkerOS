@@ -227,6 +227,58 @@ describe('express input hygiene', () => {
     }
   });
 
+  it('answers an unknown path with a JSON 404 that names neither framework nor path', async () => {
+    const logger = createMockLogger();
+    const { url, close } = await startServer(liveContext(logger));
+    try {
+      const response = await fetch(`${url}/.git/config`, {
+        headers: { origin: 'https://shop.example' },
+      });
+      expect(response.status).toBe(404);
+      expect(response.headers.get('content-type')).toContain(
+        'application/json',
+      );
+      expect(response.headers.get('access-control-allow-origin')).toBe('*');
+      const text = await response.text();
+      expect(text).not.toContain('Cannot GET');
+      expect(text).not.toContain('.git/config');
+      expect(JSON.parse(text)).toEqual({ success: false, error: 'Not found' });
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(logger.warn).not.toHaveBeenCalled();
+      expect(logger.debug).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
+    } finally {
+      await close();
+    }
+  });
+
+  it('answers a method the route does not serve with the same JSON 404', async () => {
+    const context = createSourceContext(
+      {
+        settings: { port: 0, paths: [{ path: '/ingest', methods: ['POST'] }] },
+      },
+      {
+        push: mockPush as never,
+        command: jest.fn() as never,
+        elb: jest.fn() as never,
+        logger: createMockLogger(),
+      },
+    );
+    const { url, close } = await startServer(context);
+    try {
+      const response = await fetch(`${url}/ingest`);
+      expect(response.status).toBe(404);
+      expect(response.headers.get('content-type')).toContain(
+        'application/json',
+      );
+      const body: { success: boolean; error: string } = await response.json();
+      expect(body).toEqual({ success: false, error: 'Not found' });
+      expect(mockPush).not.toHaveBeenCalled();
+    } finally {
+      await close();
+    }
+  });
+
   it('counts rejected requests on collector.status.sources', async () => {
     const { collector } = await startFlow({
       sources: {
@@ -301,7 +353,7 @@ describe('express input hygiene', () => {
     }
   });
 
-  it('sets nosniff on a routed response and on the default 404', async () => {
+  it('sets nosniff on a routed response and on the 404', async () => {
     const { collector } = await startFlow({
       sources: {
         express: {
@@ -332,6 +384,7 @@ describe('express input hygiene', () => {
 
       const missing = await fetch(`${base}/adminer.php`);
       expect(missing.status).toBe(404);
+      expect(missing.headers.get('content-type')).toContain('application/json');
       expect(missing.headers.get('x-content-type-options')).toBe('nosniff');
       expect(missing.headers.get('x-powered-by')).toBeNull();
     } finally {

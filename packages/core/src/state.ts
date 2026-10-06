@@ -1,5 +1,6 @@
 import type { Collector, Mapping, State, Store, WalkerOS } from './types';
-import { getMappingValue, resolveMappingValue } from './mapping';
+import { getMappingValue } from './mapping';
+import { resolveMappingValue } from './mappingValue';
 import { FatalError } from './fatalError';
 import { getByPath, setByPath } from './byPath';
 import { createMappingRoot } from './cache';

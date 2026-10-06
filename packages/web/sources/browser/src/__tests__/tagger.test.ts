@@ -357,23 +357,54 @@ describe('Tagger', () => {
       });
     });
 
-    test('object with multiple links', () => {
-      const result = createTagger()()
-        .link({ details: 'parent', modal: 'child', sidebar: 'child' })
-        .get();
-      expect(result).toMatchObject({
-        'data-elblink': 'details:parent;modal:child;sidebar:child',
-      });
+    test('object with one link', () => {
+      const result = createTagger()().link({ details: 'parent' }).get();
+      expect(result).toMatchObject({ 'data-elblink': 'details:parent' });
     });
 
-    test('accumulates multiple link calls', () => {
+    test('repeating the same link keeps it', () => {
       const result = createTagger()()
         .link('details', 'parent')
-        .link({ modal: 'child' })
-        .link('sidebar', 'child')
+        .link({ details: 'parent' })
         .get();
+      expect(result).toMatchObject({ 'data-elblink': 'details:parent' });
+    });
+
+    test('an object with several links throws', () => {
+      expect(() =>
+        createTagger()().link({
+          details: 'parent',
+          modal: 'child',
+          sidebar: 'child',
+        }),
+      ).toThrow(
+        'One link per element: data-elblink holds one id and type, got 3 (details, modal, sidebar)',
+      );
+    });
+
+    test.each([
+      ['another id', 'modal', 'child'],
+      ['another type', 'details', 'child'],
+    ])('a second link with %s throws', (_, id, type) => {
+      expect(() =>
+        createTagger()().link('details', 'parent').link(id, type),
+      ).toThrow(
+        `One link per element: data-elblink already holds "details:parent", got "${id}:${type}"`,
+      );
+    });
+
+    test('the rule names the custom prefix', () => {
+      expect(() =>
+        createTagger({ prefix: 'data-track' })()
+          .link('details', 'parent')
+          .link({ modal: 'child' }),
+      ).toThrow('data-tracklink already holds');
+    });
+
+    test('escapes link ids like keys', () => {
+      const result = createTagger()().link("a;b:c'd\\e", 'parent').get();
       expect(result).toMatchObject({
-        'data-elblink': 'details:parent;modal:child;sidebar:child',
+        'data-elblink': "a\\;b\\:c\\'d\\\\e:parent",
       });
     });
   });

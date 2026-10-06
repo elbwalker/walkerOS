@@ -73,7 +73,7 @@ Everything in this loop runs locally, no account:
 | Variable | Used by | Required | Default | Purpose |
 |----------|---------|----------|---------|---------|
 | `WALKEROS_TOKEN` | mcp | No | none | An automation token (`wos_pat_...`) from Account, Automation tokens. An alternative to the `auth` tool login, for a machine with no browser |
-| `WALKEROS_PROJECT_ID` | mcp | No | none | Active project ID (`proj_...`) |
+| `WALKEROS_PROJECT_ID` | mcp | No | none | Project (`proj_...`) a call uses when it names no `projectId`, ahead of a `set_default` selection. Local door only: the hosted door ignores it |
 | `WALKEROS_APP_URL` | mcp | No | `https://app.walkeros.io` | Base URL override |
 
 `@walkeros/mcp-source-browser` works without any environment variables.
@@ -143,6 +143,14 @@ binary stays available via `@walkeros/mcp/stdio` and the `walkeros-mcp` bin
 entry.
 
 ### Tools
+
+Every tool answers with an object in `structuredContent`, and its text block
+carries the same object as JSON. A list sits under a named key (`projects`,
+`flows`), or under `items` when the tool has no name for it, and a bare value
+under `value`. Text that people write and the assistant should only read
+(project names, flow names, a flow's summary) comes back wrapped in
+`<user_data>...</user_data>`. IDs and settings names stay literal, so they can
+be passed back as they are.
 
 #### Local tools (no account)
 
@@ -370,8 +378,9 @@ that results refreshes itself, and it shows up under Account, Connected apps,
 where disconnecting it takes effect on the next call.
 
 On the hosted door there is nothing to log in to, because every request carries
-its own bearer: `auth` reports `authenticated: false` there and
-`action: "login"` fails.
+its own bearer: `auth` reports `authenticated: false` there,
+`action: "login"` fails, and `action: "logout"` answers that you are already
+logged out. Disconnect under Account, Connected apps instead.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -385,7 +394,7 @@ Manage walkerOS projects in the cloud.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"set_default"` | Yes | Project action |
-| `projectId` | string | No | Project ID (`proj_...`). Required for: get, update, delete, set_default. Falls back to `WALKEROS_PROJECT_ID` env. |
+| `projectId` | string | No | Project ID (`proj_...`). Required for: get, update, delete, set_default. On the local door, `set_default` refuses while `WALKEROS_PROJECT_ID` names another project. |
 | `name` | string | No | Name for create/update operations |
 
 ##### `flow_manage`
@@ -395,7 +404,7 @@ Manage walkerOS flow configurations and previews in the cloud.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `action` | `"list"` \| `"get"` \| `"create"` \| `"update"` \| `"delete"` \| `"duplicate"` \| `"preview_list"` \| `"preview_get"` \| `"preview_create"` \| `"preview_delete"` \| `"preview_regrant"` | Yes | Flow action |
-| `projectId` | string | No | Project ID (`proj_...`). Optional filter for list. Required for create if no default project set. Falls back to `WALKEROS_PROJECT_ID` env. |
+| `projectId` | string | No | Project ID (`proj_...`). Optional filter for list; without it, list answers one `{ project, flows }` group per project. Every other action falls back to the selected project (see [Two doors, one tool set](#two-doors-one-tool-set)). |
 | `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: get, update, delete, duplicate, preview_list, preview_get, preview_create, preview_delete, preview_regrant. |
 | `name` | string | No | Flow name. Required for create. Optional for update (to rename) and duplicate. |
 | `content` | object | No | Flow.Json content. Used for create and update. |
@@ -596,7 +605,7 @@ Needs the `frames` feature.
 | `walkeros://reference/flow-schema` | Flow.Json structure and connection rules |
 | `walkeros://reference/event-model` | Event naming, properties, auto-populated fields |
 | `walkeros://reference/mapping` | Mapping syntax (data/map/loop/set/condition/consent/policy) |
-| `walkeros://reference/consent` | Consent model (destination/rule/field level) |
+| `walkeros://reference/consent` | Consent model (destination and field level) |
 | `walkeros://reference/variables` | Variable patterns ($var/$env/$code/$store) |
 | `walkeros://reference/contract` | Event schemas, wildcards, inheritance |
 | `walkeros://reference/openapi` | The live OpenAPI 3.1 document of the app the door talks to |
@@ -684,6 +693,13 @@ lasts, and a reconnect starts with no project selected. Passing `projectId` on
 the call always works and is the form to prefer on the hosted door. A call with
 no project names both remedies in its error, so an assistant can recover without
 guessing.
+
+On the local door, `WALKEROS_PROJECT_ID` comes first: a call without
+`projectId` uses it ahead of the `set_default` selection, and `set_default`
+refuses while the variable names another project instead of storing a selection
+nothing would use. `set_default` needs a credential, a login or
+`WALKEROS_TOKEN`; with only the token set, it creates the CLI config file to
+hold the selection. The hosted door ignores `WALKEROS_PROJECT_ID`.
 
 ## Connect Claude Desktop, claude.ai or Cursor
 
@@ -798,7 +814,7 @@ attribute key-value pairs and an example HTML snippet.
 | `actions` | object | No | Trigger:action pairs for `data-elbactions` (all entities) |
 | `context` | object | No | Context properties for `data-elbcontext` |
 | `globals` | object | No | Global properties for `data-elbglobals` |
-| `link` | object | No | Link relationships for `data-elblink` |
+| `link` | object | No | The one link for `data-elblink`, as `{"id": "type"}`, for example `{"details": "parent"}`. An element carries one link, so more than one entry is refused. |
 | `prefix` | string | No | Custom prefix (default: `data-elb`) |
 
 At least one parameter must be provided.

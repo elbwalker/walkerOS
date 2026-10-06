@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { DeploymentStatus, DeploymentType } from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
-import { isAuthError, AUTH_HINT } from '../types.js';
+import { isAuthenticationError, AUTH_HINT } from '../types.js';
 import { redactDisplayNames } from '../user-data.js';
 import { links } from '../links.js';
 
@@ -329,7 +329,10 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
         );
     }
   } catch (error) {
-    return mcpError(error, isAuthError(error) ? AUTH_HINT : undefined);
+    return mcpError(
+      error,
+      isAuthenticationError(error) ? AUTH_HINT : undefined,
+    );
   }
 }
 

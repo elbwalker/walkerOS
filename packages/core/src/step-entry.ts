@@ -1,4 +1,6 @@
 import type { Flow } from './types/flow';
+import { isObject } from './is';
+import { getTransformerMapping } from './transformer-mapping';
 
 /**
  * Single source of truth for step-entry validation across all four kinds.
@@ -306,9 +308,20 @@ export function isPathStepEntry(
   ) {
     return false;
   }
-  return STEP_OPERATIVE_FIELDS.Transformer.some(
-    (field) =>
-      getStepFieldRole('Transformer', field) !== 'reference' &&
-      entry[field] !== undefined,
+  if (
+    STEP_OPERATIVE_FIELDS.Transformer.some(
+      (field) =>
+        getStepFieldRole('Transformer', field) !== 'reference' &&
+        entry[field] !== undefined,
+    )
+  ) {
+    return true;
+  }
+  // `config.mapping` and `config.state` win over their step-level fields, so
+  // either one alone makes a code-less transformer operative.
+  const config = isObject(entry.config) ? entry.config : undefined;
+  return (
+    getTransformerMapping({ mapping: entry.mapping, config }) !== undefined ||
+    config?.state !== undefined
   );
 }

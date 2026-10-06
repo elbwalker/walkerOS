@@ -117,7 +117,7 @@ export function registerReferenceResources(
     'walkeros://reference/consent',
     {
       description:
-        'JSON Schema for walkerOS consent: destination-level, rule-level, and field-level consent gating',
+        'JSON Schema for walkerOS consent: destination-level and field-level consent gating',
       mimeType: 'application/json',
     },
     async () => ({

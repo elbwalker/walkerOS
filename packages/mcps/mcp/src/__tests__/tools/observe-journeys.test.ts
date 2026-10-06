@@ -29,6 +29,7 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { createObserveJourneysToolSpec } from '../../tools/observe-journeys.js';
+import { CodedError } from '../support/coded-error.js';
 import { stubClient } from '../support/stub-client.js';
 import type { JourneysResult } from '../../tool-client.js';
 import {
@@ -297,7 +298,9 @@ describe('observe_journeys tool', () => {
   });
 
   it('catches errors and returns mcpError with an auth hint on auth failure', async () => {
-    const listJourneys = jest.fn().mockRejectedValue(new Error('Unauthorized'));
+    const listJourneys = jest
+      .fn()
+      .mockRejectedValue(new CodedError('Unauthorized', 'UNAUTHORIZED', 401));
     const tool = createObserveJourneysToolSpec(stubClient({ listJourneys }));
     const result = await tool.handler({ flowId: 'flow_1' });
 
@@ -305,5 +308,20 @@ describe('observe_journeys tool', () => {
     const parsed = record(parse(textOf(result)));
     expect(parsed.error).toBe('Unauthorized');
     expect(parsed.hint).toContain('logged in');
+  });
+
+  it('adds no auth hint when the caller lacks the role', async () => {
+    const listJourneys = jest
+      .fn()
+      .mockRejectedValue(
+        new CodedError('Requires member role or higher', 'FORBIDDEN', 403),
+      );
+    const tool = createObserveJourneysToolSpec(stubClient({ listJourneys }));
+    const result = await tool.handler({ flowId: 'flow_1' });
+
+    expect(isErrorResult(result)).toBe(true);
+    const parsed = record(parse(textOf(result)));
+    expect(parsed.error).toBe('Requires member role or higher');
+    expect(parsed).not.toHaveProperty('hint');
   });
 });

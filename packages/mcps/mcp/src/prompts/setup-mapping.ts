@@ -38,7 +38,7 @@ export function registerSetupMappingPrompt(server: McpServer) {
               'Policy and consent in mapping:',
               '- config.policy runs BEFORE mapping rules — use it to inject or redact fields on the event.',
               '- rule.policy runs after config.policy but before data transformation — use for event-specific pre-processing.',
-              '- config.consent gates ALL events to this destination. rule.consent gates specific event types.',
+              '- config.consent gates ALL events to this destination. rule.consent is not enforced yet.',
               '- Individual value configs support consent: { marketing: true } for field-level gating.',
             ].join('\n'),
           },

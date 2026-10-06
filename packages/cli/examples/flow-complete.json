@@ -241,25 +241,25 @@
         "bundle": {
           "packages": {
             "@walkeros/collector": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/web-source-cmp-usercentrics": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/web-source-session": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/web-source-datalayer": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/web-source-browser": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/web-destination-gtag": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/web-destination-api": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             }
           },
           "env": {
@@ -277,7 +277,17 @@
         "custom": {
           "environment": "$env.ENVIRONMENT"
         },
-        "next": "pageGroup"
+        "next": [
+          {
+            "match": {
+              "key": "event.user.optout",
+              "operator": "eq",
+              "value": "true"
+            },
+            "stop": true
+          },
+          "pageGroup"
+        ]
       },
       "sources": {
         "usercentrics": {
@@ -991,9 +1001,6 @@
                         ]
                       }
                     }
-                  },
-                  "consent": {
-                    "functional": true
                   }
                 }
               }
@@ -1041,9 +1048,6 @@
                       ]
                     }
                   }
-                },
-                "consent": {
-                  "functional": true
                 }
               },
               "in": {
@@ -1181,9 +1185,6 @@
                       ]
                     }
                   }
-                },
-                "consent": {
-                  "functional": true
                 }
               },
               "in": {
@@ -1764,40 +1765,40 @@
         "bundle": {
           "packages": {
             "@walkeros/collector": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-source-express": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/transformer-ga4": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/transformer-validate": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-transformer-bot": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-transformer-fingerprint": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-transformer-file": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-store-fs": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-destination-gcp": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-destination-meta": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-destination-piwikpro": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-destination-datamanager": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             }
           }
         }
@@ -1932,7 +1933,17 @@
               }
             ]
           },
-          "next": "dedup",
+          "next": [
+            {
+              "match": {
+                "key": "event.user.optout",
+                "operator": "eq",
+                "value": "true"
+              },
+              "stop": true
+            },
+            "dedup"
+          ],
           "examples": {
             "postCollect": {
               "title": "Event from the web flow",
@@ -4499,7 +4510,10 @@
                 "event.user.device",
                 "event.user.session",
                 "event.user.hash"
-              ]
+              ],
+              "customDimensions": {
+                "1": "user.segment"
+              }
             },
             "mapping": {
               "page": {
@@ -4594,7 +4608,7 @@
           "examples": {
             "orderWithGoal": {
               "title": "Order with goal",
-              "description": "order complete becomes an ecommerce order plus a goal hit with the order value; the visitor id falls back to the cookieless hash.",
+              "description": "order complete becomes an ecommerce order plus a goal hit with the order value; the visitor id falls back to the cookieless hash, and both hits carry the customer segment as custom dimension 1.",
               "public": true,
               "mapping": {
                 "name": "ecommerceOrder",
@@ -4658,7 +4672,8 @@
                   "hash": "5f1c0a9e7d3b2c41",
                   "botScore": 0,
                   "botCategory": "human",
-                  "ltv": 420
+                  "ltv": 420,
+                  "segment": "loyal"
                 },
                 "source": {
                   "type": "express",
@@ -4691,7 +4706,7 @@
                 [
                   "sendServer",
                   "https://example.piwik.pro/ppms.php",
-                  "{\"requests\":[\"?idsite=e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b&rec=1&send_image=0&ts_n=walkerOS&ts_v=4.6.1&e_t=order&ec_id=ORD-100&revenue=149.8&ec_products=%5B%5B%22SKU-1%22%2C%22Trail+Runner%22%2Cnull%2C129.9%2C1%2Cnull%2Cnull%2Cnull%5D%2C%5B%22SKU-2%22%2C%22Running+Socks%22%2Cnull%2C9.95%2C2%2Cnull%2Cnull%2Cnull%5D%5D&url=https%3A%2F%2Fwww.example.com%2Fcheckout%2Fthanks&cip=203.0.113.42&ua=Mozilla%2F5.0+%28Macintosh%3B+Intel+Mac+OS+X+10_15_7%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F128.0.0.0+Safari%2F537.36&_id=174c88fbd5a4b357&uid=cust-42&cdt=1700000000\",\"?idsite=e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b&rec=1&send_image=0&ts_n=walkerOS&ts_v=4.6.1&idgoal=6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c&revenue=149.8&url=https%3A%2F%2Fwww.example.com%2Fcheckout%2Fthanks&cip=203.0.113.42&ua=Mozilla%2F5.0+%28Macintosh%3B+Intel+Mac+OS+X+10_15_7%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F128.0.0.0+Safari%2F537.36&_id=174c88fbd5a4b357&uid=cust-42&cdt=1700000000\"]}",
+                  "{\"requests\":[\"?idsite=e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b&rec=1&send_image=0&ts_n=walkerOS&ts_v=4.6.1&e_t=order&ec_id=ORD-100&revenue=149.8&ec_products=%5B%5B%22SKU-1%22%2C%22Trail+Runner%22%2Cnull%2C129.9%2C1%2Cnull%2Cnull%2Cnull%5D%2C%5B%22SKU-2%22%2C%22Running+Socks%22%2Cnull%2C9.95%2C2%2Cnull%2Cnull%2Cnull%5D%5D&dimension1=loyal&url=https%3A%2F%2Fwww.example.com%2Fcheckout%2Fthanks&cip=203.0.113.42&ua=Mozilla%2F5.0+%28Macintosh%3B+Intel+Mac+OS+X+10_15_7%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F128.0.0.0+Safari%2F537.36&_id=174c88fbd5a4b357&uid=cust-42&cdt=1700000000\",\"?idsite=e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b&rec=1&send_image=0&ts_n=walkerOS&ts_v=4.6.1&idgoal=6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c&revenue=149.8&dimension1=loyal&url=https%3A%2F%2Fwww.example.com%2Fcheckout%2Fthanks&cip=203.0.113.42&ua=Mozilla%2F5.0+%28Macintosh%3B+Intel+Mac+OS+X+10_15_7%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F128.0.0.0+Safari%2F537.36&_id=174c88fbd5a4b357&uid=cust-42&cdt=1700000000\"]}",
                   {
                     "timeout": 5000
                   }
@@ -4858,13 +4873,13 @@
         "bundle": {
           "packages": {
             "@walkeros/collector": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-source-gcp": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             },
             "@walkeros/server-destination-gcp": {
-              "version": "4.7.1"
+              "version": "4.7.2"
             }
           }
         }

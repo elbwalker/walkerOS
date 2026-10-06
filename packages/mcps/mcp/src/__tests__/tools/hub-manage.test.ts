@@ -22,16 +22,8 @@ import type {
   KnowledgeEntryWire,
   ToolClient,
 } from '../../tool-client.js';
+import { CodedError } from '../support/coded-error.js';
 import { structured, record, rows, hintsOf } from '../support/tool-result.js';
-
-class CodedError extends Error {
-  constructor(
-    message: string,
-    readonly code: string,
-  ) {
-    super(message);
-  }
-}
 
 function release(overrides: Partial<FlowReleaseWire> = {}): FlowReleaseWire {
   return {

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
-import { isAuthError, AUTH_HINT } from '../types.js';
+import { isAuthenticationError, AUTH_HINT } from '../types.js';
 
 import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
@@ -164,7 +164,10 @@ async function secretManageHandlerBody(client: ToolClient, input: unknown) {
         );
     }
   } catch (error) {
-    return mcpError(error, isAuthError(error) ? AUTH_HINT : undefined);
+    return mcpError(
+      error,
+      isAuthenticationError(error) ? AUTH_HINT : undefined,
+    );
   }
 }
 

@@ -1,5 +1,24 @@
 # @walkeros/mcp-source-browser
 
+## 4.7.2
+
+### Patch Changes
+
+- 98398fe: `validate_tagging` reads actions with the browser source's own parser
+  and knows every trigger it handles, so `scroll(50):read`, `custom` and quoted
+  action params no longer warn, and it checks both `data-elbaction` and
+  `data-elbactions` on one element. `generate_tagging` refuses a `link` with
+  more than one entry.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/web-source-browser@4.7.2
+
 ## 4.7.1
 
 ### Patch Changes

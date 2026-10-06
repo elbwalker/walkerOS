@@ -384,13 +384,15 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
 
   // 10a. The bundler's own structural preflight (identifier names, package
   //      xor code, per-flow $store targets), so a valid result implies the
-  //      bundle preflight passes.
+  //      bundle preflight passes. Its warnings (a transformer mapping that
+  //      does nothing) stay warnings: the runtime keeps the step.
   perFlow(['flow:structure'], (name, flow, file) => {
     const structure = validateFlowStructure({
       ...file,
       flows: { [name]: flow },
     });
     errors.push(...structure.errors);
+    warnings.push(...structure.warnings);
   });
 
   // 10b. Route checks on every chain field, read through core's

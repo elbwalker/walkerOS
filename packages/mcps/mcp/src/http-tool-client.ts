@@ -5,7 +5,7 @@ import {
   updateProject,
   deleteProject,
   setDefaultProject,
-  getDefaultProject,
+  resolveProjectId,
   listAllFlows,
   listFlows,
   getFlow,
@@ -129,11 +129,18 @@ export class HttpToolClient implements ToolClient {
   async deleteProject(options: { projectId?: string }): Promise<unknown> {
     return deleteProject(options);
   }
+  /** Refuses while `WALKEROS_PROJECT_ID` names another project (see the CLI). */
   setDefaultProject(projectId: string): void {
     setDefaultProject(projectId);
   }
+  /**
+   * `WALKEROS_PROJECT_ID`, then the CLI config's default, through the same
+   * resolution the CLI's own commands use. Read here, at the door that owns
+   * this process's environment, never in the shared tool layer: a hosted door
+   * runs in a server process whose variables are no person's selection.
+   */
   getDefaultProject(): string | null {
-    return getDefaultProject();
+    return resolveProjectId();
   }
 
   async listAllFlows(options?: {
@@ -251,8 +258,8 @@ export class HttpToolClient implements ToolClient {
   /**
    * Observe session lifecycle over the CLI's authenticated boundary. The trio
    * routes through the same `apiFetch` as every other method here, so token
-   * resolution, base URL, and `ApiError` shaping (which `isAuthError` reads)
-   * stay identical to the rest of the client.
+   * resolution, base URL, and `ApiError` shaping (which
+   * `isAuthenticationError` reads) stay identical to the rest of the client.
    */
   async startObserveSession(
     options: StartObserveSessionOptions,
@@ -371,8 +378,20 @@ export class HttpToolClient implements ToolClient {
   credentialSource(): 'env' | 'config' | null {
     return credentialSource();
   }
-  async logout(): Promise<{ deleted: boolean }> {
-    return logout();
+  /**
+   * Revoke and drop the stored session, then clear a `WALKEROS_TOKEN` from
+   * this process: the local door owns its environment, so a later call in the
+   * same session no longer authenticates with it.
+   */
+  async logout(): Promise<{
+    deleted: boolean;
+    superseded: boolean;
+    envCleared: boolean;
+  }> {
+    const result = await logout();
+    const envCleared = Boolean(process.env.WALKEROS_TOKEN);
+    delete process.env.WALKEROS_TOKEN;
+    return { ...result, envCleared };
   }
 
   /**

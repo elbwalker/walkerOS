@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-clickhouse",
   "description": "ClickHouse server destination for walkerOS (bulk JSONEachRow inserts, bounded retry, insert deduplication)",
-  "version": "4.7.1",
+  "version": "4.7.2",
   "license": "MIT",
   "exports": {
     ".": {
@@ -36,8 +36,8 @@
   },
   "dependencies": {
     "@clickhouse/client": "1.23.1",
-    "@walkeros/core": "4.7.1",
-    "@walkeros/server-core": "4.7.1"
+    "@walkeros/core": "4.7.2",
+    "@walkeros/server-core": "4.7.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

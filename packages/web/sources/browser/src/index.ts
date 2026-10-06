@@ -42,7 +42,11 @@ export {
   getUser,
   getElbAttributeName,
   getElbValues,
+  getTriggerActions,
 } from './walker';
+
+// The trigger names the browser source handles
+export { Triggers } from './trigger';
 
 // Export tagger functionality
 export { createTagger } from './tagger';

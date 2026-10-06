@@ -12,13 +12,6 @@ export const SettingsSchema = z
       )
       .optional(),
 
-    explicitOnly: z
-      .boolean()
-      .describe(
-        'Has no effect in this source: it skips CookieFirst.consent while it is null (no choice made yet) and reports every consent CookieFirst provides after that, whether explicitOnly is true or false. Default: true.',
-      )
-      .optional(),
-
     globalName: z
       .string()
       .describe(

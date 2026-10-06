@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch';
 import type { paths } from '../types/api.gen.js';
+import { notAuthenticatedError } from './api-error.js';
 import { resolveAccessToken } from './auth.js';
 import { resolveAppUrl } from '../lib/config-file.js';
 import { requireSecureUrl } from '../lib/secure-url.js';
@@ -23,8 +24,7 @@ export function createApiClient() {
     // here would go stale and never pick up a refresh.
     async onRequest({ request }) {
       const token = await resolveAccessToken();
-      if (!token)
-        throw new Error('Not authenticated. Run `walkeros auth login` first.');
+      if (!token) throw notAuthenticatedError();
       // Checked against the outgoing URL rather than the base one, so a path
       // that resolved somewhere else still cannot take the bearer with it.
       requireSecureUrl(request.url);

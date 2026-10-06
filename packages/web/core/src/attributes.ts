@@ -20,10 +20,11 @@ export function getAttribute(element: Element, name: string): string {
 export function splitAttribute(str: string, separator = ';'): string[] {
   if (!str) return [];
   // An escape pair, a quote group, or any other non-separator char. A quote
-  // group only closes before a separator, a colon or the end, so a quote that
-  // closes none, like the apostrophe in "Men's", is a plain character.
+  // followed by an ASCII letter, a digit, `_` or any non-ASCII character never
+  // closes a group, so a quote that closes none, like the apostrophe in
+  // "Men's", is a plain character.
   const reg = new RegExp(
-    `(?:\\\\[\\s\\S]?|'(?:\\\\[\\s\\S]|[^'\\\\])*'(?=\\s*(?:[${separator}:]|$))|[^${separator}\\\\])+`,
+    `(?:\\\\[\\s\\S]?|'(?:\\\\[\\s\\S]|[^'\\\\])*'(?![\\w\\u0080-\\uffff])|[^${separator}\\\\])+`,
     'g',
   );
   return str.match(reg) || [];

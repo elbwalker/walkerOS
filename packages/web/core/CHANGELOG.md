@@ -1,5 +1,19 @@
 # @walkeros/web-core
 
+## 4.7.2
+
+### Patch Changes
+
+- ff23953: Quoted action parameters that contain a semicolon, like `add('x;y')`,
+  parse as one parameter again. An apostrophe inside a word, like `Men's` or
+  `l'été`, stays part of the value.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+
 ## 4.7.1
 
 ### Patch Changes
