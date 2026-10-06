@@ -1,5 +1,32 @@
 # @walkeros/collector
 
+## 4.7.2
+
+### Patch Changes
+
+- 98398fe: An event a source drops because its `config.consent` is not granted
+  is no longer silent: the push result says `dropped: true`, a debug log names
+  the source, and observers see a `skip` with the reason `consent`.
+- 98398fe: A code-less transformer now runs its `config.mapping` (it wins over
+  the step-level `mapping`), and a flow bundle keeps a code-less transformer
+  whose only mapping or state sits in `config`. Init warns about every mapping
+  field that does nothing in a transformer, rules in array form included, about
+  a mapping next to `code` or `package`, which never runs, and about a
+  step-level `mapping` that `config.mapping` overrides; `validateFlowStructure`
+  reports the same warnings. New exports: `getTransformerMapping`,
+  `getTransformerMappingWarnings`.
+- 98398fe: `startFlow` now types each step by the package passed as `code`, so
+  settings, mapping rule settings and `env` keys autocomplete and an unknown
+  setting is a type error; steps without typed code stay as loose as before. The
+  Storybook addon no longer passes a `session` setting the browser source never
+  had.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+
 ## 4.7.1
 
 ### Patch Changes

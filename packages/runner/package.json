@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/runner",
-  "version": "4.7.1",
+  "version": "4.7.2",
   "description": "walkerOS runner - runs prebuilt walkerOS flow artifacts",
   "license": "MIT",
   "type": "module",
@@ -31,13 +31,13 @@
     "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage"
   },
   "dependencies": {
-    "@walkeros/core": "4.7.1",
+    "@walkeros/core": "4.7.2",
     "chalk": "^5.6.2",
     "commander": "^15.0.0",
     "tar": "^7.4.0"
   },
   "devDependencies": {
-    "@walkeros/config": "4.7.1"
+    "@walkeros/config": "4.7.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

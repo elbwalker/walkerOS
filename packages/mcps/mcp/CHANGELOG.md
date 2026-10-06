@@ -1,5 +1,49 @@
 # @walkeros/mcp
 
+## 4.7.2
+
+### Patch Changes
+
+- 98398fe: `setDefaultProject` (MCP `project_manage set_default`) now needs a
+  credential instead of just a config file, works with only `WALKEROS_TOKEN`
+  set, and refuses while `WALKEROS_PROJECT_ID` names another project. The local
+  MCP server now uses `WALKEROS_PROJECT_ID` when a call names no project. New
+  export: `resolveProjectId()`.
+- ff23953: A tool refused for a missing role, scope or feature no longer
+  suggests logging in; that hint now appears only when the login is rejected or
+  missing. Project commands now report error codes such as `FORBIDDEN` in the
+  machine-readable error line and show upgrade instructions when the app needs a
+  newer CLI.
+- 98398fe: `flow_manage list` without a `projectId` now wraps project and flow
+  names in `<user_data>`, like the list of one project, and both lists wrap a
+  flow's summary. Settings names stay literal.
+- 98398fe: `ToolClient.credentialSource()` can return `'host'` for a door the
+  host authenticates per request. There, `auth` reports the connection as logged
+  in, answers `login` with "no login needed" and refuses `logout`. The `auth`
+  tool no longer changes `process.env`; the local door clears `WALKEROS_TOKEN`
+  itself. `auth logout` answers `loggedOut: false` when a credential is still
+  there afterwards, such as a session stored by a parallel login.
+- 98398fe: MCP tool results are always an object: `mcpResult` answers a list as
+  `{ items }` and a bare value as `{ value }` instead of a bare or spread array,
+  and `project_manage list` always answers `{ projects }`.
+- 98398fe: The MCP server instructions now name exactly which mapping fields
+  apply at a transformer and which do nothing there.
+- ff23953: The MCP setup-mapping prompt, the MCP instructions, the schema
+  descriptions and the flow-complete example no longer claim that a mapping
+  rule's `consent` gates events. A rule's `consent` is not enforced yet; to
+  require consent for a destination, set `consent` in the destination's config.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/cli@4.7.2
+
 ## 4.7.1
 
 ### Patch Changes

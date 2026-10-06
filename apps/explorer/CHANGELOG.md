@@ -1,5 +1,25 @@
 # @walkeros/explorer
 
+## 4.7.2
+
+### Patch Changes
+
+- 98398fe: Importing explorer no longer downloads the Monaco editor. Monaco now
+  loads when the first code editor appears on a page, so pages without an editor
+  stay light. Editors keep their themes, type checking and autocompletion.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/web-core@4.7.2
+  - @walkeros/web-source-browser@4.7.2
+  - @walkeros/collector@4.7.2
+
 ## 4.7.1
 
 ### Patch Changes

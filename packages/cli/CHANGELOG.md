@@ -1,5 +1,43 @@
 # @walkeros/cli
 
+## 4.7.2
+
+### Patch Changes
+
+- 98398fe: `setDefaultProject` (MCP `project_manage set_default`) now needs a
+  credential instead of just a config file, works with only `WALKEROS_TOKEN`
+  set, and refuses while `WALKEROS_PROJECT_ID` names another project. The local
+  MCP server now uses `WALKEROS_PROJECT_ID` when a call names no project. New
+  export: `resolveProjectId()`.
+- 98398fe: The `flow-complete.json` example stops an opted-out user
+  (`user.optout`) first: on the web nothing is sent, on the server the event
+  stops before dedup. Piwik PRO now gets the customer segment as custom
+  dimension 1, and the GA4 purchase rule drops its `consent`, which only
+  repeated the destination consent.
+- ff23953: A tool refused for a missing role, scope or feature no longer
+  suggests logging in; that hint now appears only when the login is rejected or
+  missing. Project commands now report error codes such as `FORBIDDEN` in the
+  machine-readable error line and show upgrade instructions when the app needs a
+  newer CLI.
+- ff23953: The MCP setup-mapping prompt, the MCP instructions, the schema
+  descriptions and the flow-complete example no longer claim that a mapping
+  rule's `consent` gates events. A rule's `consent` is not enforced yet; to
+  require consent for a destination, set `consent` in the destination's config.
+- 98398fe: `walkeros validate` and MCP `flow_validate` now show the structural
+  warnings of a flow, such as a transformer mapping field that does nothing
+  (`TRANSFORMER_MAPPING_NO_OP`), as warnings, not errors.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/collector@4.7.2
+  - @walkeros/server-core@4.7.2
+  - @walkeros/server-destination-api@4.7.2
+  - @walkeros/transformer-validate@4.7.2
+
 ## 4.7.1
 
 ### Patch Changes

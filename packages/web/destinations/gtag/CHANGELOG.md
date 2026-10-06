@@ -1,5 +1,22 @@
 # @walkeros/web-destination-gtag
 
+## 4.7.2
+
+### Patch Changes
+
+- 98398fe: The GTM destination pushes the whole walkerOS event to the dataLayer
+  when no data mapping is configured, with `event` set to its name. Before, such
+  a push carried only the event name. Pushes with a mapping are unchanged and
+  still carry only the mapped values.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/web-core@4.7.2
+
 ## 4.7.1
 
 ### Patch Changes

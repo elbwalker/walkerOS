@@ -1,5 +1,17 @@
 # @walkeros/server-destination-hubspot
 
+## 4.7.2
+
+### Patch Changes
+
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/server-core@4.7.2
+
 ## 4.7.1
 
 ### Patch Changes

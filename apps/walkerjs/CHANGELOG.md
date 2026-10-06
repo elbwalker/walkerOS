@@ -1,5 +1,13 @@
 # @walkeros/walker.js
 
+## 4.7.2
+
+### Patch Changes
+
+- ff23953: Quoted action parameters that contain a semicolon, like `add('x;y')`,
+  parse as one parameter again. An apostrophe inside a word, like `Men's` or
+  `l'été`, stays part of the value.
+
 ## 4.7.1
 
 ### Patch Changes
