@@ -14,18 +14,28 @@ export const SettingsSchema = z.object({
   disablePageviewAutocapture: z
     .boolean()
     .describe(
-      'Disable Heap automatic pageview tracking. Default: true (walkerOS sources handle pageviews).',
+      'Disable Heap automatic pageview tracking. Default: true (walkerOS sources handle pageviews). Passed to heap.load(); the classic Heap SDK that loadScript loads ignores it.',
     )
     .optional(),
   disableSessionReplay: z
     .boolean()
-    .describe('Disable Heap session replay.')
+    .describe(
+      'Disable Heap session replay. Passed to heap.load(); the classic Heap SDK that loadScript loads ignores it.',
+    )
     .optional(),
   secureCookie: z.boolean().describe('SSL-only cookies.').optional(),
   ingestServer: z
     .string()
     .url()
-    .describe('Custom server endpoint for proxying Heap data.')
+    .describe(
+      'Custom server endpoint for proxying Heap data. Passed to heap.load(); the classic Heap SDK that loadScript loads ignores it.',
+    )
+    .optional(),
+  heapConfig: z
+    .record(z.string(), z.unknown())
+    .describe(
+      'Additional heap.load() options, merged over the options above. Example: { "trackingServer": "https://heap.example.com" }.',
+    )
     .optional(),
   identify: z
     .unknown()

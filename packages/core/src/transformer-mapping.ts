@@ -93,16 +93,21 @@ export function getTransformerMappingWarnings(
   if (mapping === undefined) return [];
   const field =
     entry.config?.mapping !== undefined ? 'config.mapping' : 'mapping';
+  // Both declared: `config.mapping` wins over the step-level `mapping`.
+  const both = field === 'config.mapping' && entry.mapping !== undefined;
 
   if (entry.code !== undefined || entry.package !== undefined) {
     const by = entry.code !== undefined ? 'code' : 'package';
+    const ignored = both
+      ? '`config.mapping` and `mapping` are'
+      : `\`${field}\` is`;
     return [
-      `\`${field}\` is ignored: a transformer with \`${by}\` never runs it; a mapping applies only to a transformer without code.`,
+      `${ignored} ignored: a transformer with \`${by}\` never runs ${both ? 'them' : 'it'}; a mapping applies only to a transformer without code.`,
     ];
   }
 
   const warnings: string[] = [];
-  if (field === 'config.mapping' && entry.mapping !== undefined) {
+  if (both) {
     warnings.push(
       '`mapping` is overridden: `config.mapping` wins; remove one.',
     );

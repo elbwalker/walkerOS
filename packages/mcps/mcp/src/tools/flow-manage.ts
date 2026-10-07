@@ -112,7 +112,7 @@ function safeDetail(flow: unknown): SafeFlowDetail {
 
 const TITLE = 'Flow Management';
 const DESCRIPTION =
-  'Manage walkerOS flows and their previews. List/get/create/update/delete/duplicate flows, or create/inspect/delete preview bundles and mint activation grants (preview_regrant) for testing flow changes on live sites.';
+  'Manage walkerOS flows and their previews. List/get/create/update/delete/duplicate flows (deleting a flow deletes its frames too), or create/inspect/delete preview bundles and mint activation grants (preview_regrant) for testing flow changes on live sites.';
 
 const inputSchema = {
   action: z

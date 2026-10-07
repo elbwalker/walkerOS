@@ -24,6 +24,10 @@ export interface FlowHandle {
   collector: {
     command?: (cmd: string) => Promise<unknown>;
     status?: Collector.Status;
+    /** Flow name the bundle baked onto its collector. */
+    name?: string;
+    /** Release the bundle baked onto its collector. */
+    release?: string;
   };
   file: string;
   httpHandler?: (...args: unknown[]) => void;
@@ -76,12 +80,14 @@ export async function loadFlow(
   };
 
   const result = await loadBundle(absolutePath, flowContext, logger);
-  const status = result.collector.status;
+  const { status, name, release } = result.collector;
 
   const handle: FlowHandle = {
     collector: {
       command: result.collector.command,
       ...(isCollectorStatus(status) ? { status } : {}),
+      ...(typeof name === 'string' ? { name } : {}),
+      ...(typeof release === 'string' ? { release } : {}),
     },
     file,
     httpHandler: result.httpHandler,

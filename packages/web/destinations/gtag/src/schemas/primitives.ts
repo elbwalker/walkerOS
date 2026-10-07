@@ -18,9 +18,22 @@ export const GA4SettingsSchema = z.object({
     .boolean()
     .describe('Enable debug mode for GA4 (like true)')
     .optional(),
+  init: z
+    .boolean()
+    .describe(
+      'Set to false when an external tag manager already configures this measurement ID: walkerOS then skips the gtag bootstrap (js, config and the script load) and only sends events, routed via send_to (default: true)',
+    )
+    .optional(),
   pageview: z
     .boolean()
     .describe('Enable automatic pageview tracking (like true)')
+    .optional(),
+  scriptSrc: z
+    .string()
+    .url()
+    .describe(
+      'Full URL to load gtag.js first-party from a tagging server, used verbatim without the measurement ID (like https://example.com/metrics/tag_serving_path/). Needs a tag serving path configured in the server container; falls back to googletagmanager.com if it fails to load',
+    )
     .optional(),
   server_container_url: z
     .string()

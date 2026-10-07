@@ -33,7 +33,11 @@ npm install @walkeros/web-destination-amplitude
       "destinations": {
         "amplitude": {
           "package": "@walkeros/web-destination-amplitude",
-          "config": {}
+          "config": {
+            "settings": {
+              "apiKey": "YOUR_AMPLITUDE_API_KEY"
+            }
+          }
         }
       }
     }

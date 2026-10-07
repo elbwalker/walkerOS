@@ -39,13 +39,13 @@ export const wildcardIgnored: MixpanelStepExample = {
 };
 
 /**
- * Destination-level settings.include flattens the walkerOS `data` section
- * into prefixed track() properties on every push.
+ * Destination-level include (config.include) flattens the walkerOS `data`
+ * section into prefixed track() properties on every push.
  */
 export const destinationLevelInclude: MixpanelStepExample = {
   title: 'Include data',
   description:
-    'Destination-level include flattens the event data section into prefixed Mixpanel track properties.',
+    "With include: ['data'] in the destination config, the event data section is flattened into prefixed Mixpanel track properties.",
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
@@ -64,14 +64,14 @@ export const destinationLevelInclude: MixpanelStepExample = {
 };
 
 /**
- * Per-rule settings.include REPLACES destination-level include for the
+ * Per-rule include REPLACES the destination-level config.include for the
  * matched rule. Here destination-level sends `data`, but the rule
  * overrides it with `globals` only.
  */
 export const ruleIncludeReplaces: MixpanelStepExample = {
   title: 'Rule include overrides',
   description:
-    'A per-rule include replaces the destination-level include for this event, forwarding only globals here.',
+    "With include: ['data'] in the destination config, the rule's include: ['globals'] replaces it, so this event forwards only globals.",
   in: getEvent('order complete', { timestamp: 1700000103 }),
   configInclude: ['data'],
   mapping: {
@@ -97,7 +97,7 @@ export const ruleIncludeReplaces: MixpanelStepExample = {
 export const destinationLevelIdentify: MixpanelStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify calls mixpanel.identify with a resolved distinctId before firing the default track.',
+    "With settings.identify mapping distinctId to 'user.id', the destination calls mixpanel.identify before the default track.",
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -122,7 +122,7 @@ export const userLoginIdentifyAndPeople: MixpanelStepExample = {
   description:
     'A user login identifies the user and fires Mixpanel people set, set_once, and increment operations.',
   in: getEvent('user login', {
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     data: {
       user_id: 'new-user-123',
       plan: 'premium',
@@ -174,7 +174,7 @@ export const userLoginIdentifyAndPeople: MixpanelStepExample = {
     [
       'mixpanel.people.set_once',
       {
-        first_login: 1700000105,
+        first_login: 1700000105000,
       },
     ],
     [
@@ -329,6 +329,27 @@ export const userGroupAssociation: MixpanelStepExample = {
 };
 
 /**
+ * Destination-level settings.group is resolved on every push, not at init:
+ * mixpanel.set_group fires before each track call.
+ */
+export const destinationLevelGroup: MixpanelStepExample = {
+  public: false,
+  in: getEvent('page view', { timestamp: 1700000111000 }),
+  settings: {
+    group: {
+      map: {
+        key: { value: 'company_id' },
+        id: 'user.id',
+      },
+    },
+  },
+  out: [
+    ['mixpanel.set_group', 'company_id', 'us3r'],
+    ['mixpanel.track', 'page view', {}],
+  ],
+};
+
+/**
  * Group profile properties - settings.groupProfile resolves to
  * { key, id, set?, set_once?, ... } and calls
  * mixpanel.get_group(key, id).set(...), .set_once(...), etc.
@@ -396,7 +417,7 @@ export const companyUpdateGroupProfile: MixpanelStepExample = {
 export const consentRevokeOptOut: MixpanelStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent command with analytics denied calls mixpanel.opt_out_tracking to stop event capture.',
+    'With consent: { analytics: true } in the destination config, a walker consent command that denies analytics calls mixpanel.opt_out_tracking to stop event capture.',
   command: 'consent',
   before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
@@ -410,7 +431,7 @@ export const consentRevokeOptOut: MixpanelStepExample = {
 export const consentGrantOptIn: MixpanelStepExample = {
   title: 'Consent granted',
   description:
-    'A walker consent command with analytics granted calls mixpanel.opt_in_tracking to resume event capture.',
+    'With consent: { analytics: true } in the destination config, a walker consent command that grants analytics calls mixpanel.opt_in_tracking.',
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,

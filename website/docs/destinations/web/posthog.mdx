@@ -95,16 +95,21 @@ Add to your `flow.json` destinations:
 ## Built-in features
 
 All these PostHog features work via standard `posthog-js` init options, with no
-destination wiring required:
+destination wiring required. Session replay, surveys, heatmaps, and exception
+capture also follow the settings of your PostHog project: when the project turns
+one on, `posthog-js` runs it unless an option below turns it off.
 
 - **Session replay**: `settings.session_recording: { maskAllInputs: true, ... }`
+  configures it, `settings.disable_session_recording: true` turns it off
 - **Feature flags**: `settings.bootstrap: { featureFlags: { ... } }` for SSR
 - **Surveys**: automatic; `settings.disable_surveys: true` to opt out
-- **Heatmaps**: `settings.capture_heatmaps: true`
-- **Exception capture**: `settings.capture_exceptions: true`
+- **Heatmaps**: `settings.capture_heatmaps: true` or `false` overrides the
+  project setting
+- **Exception capture**: `settings.capture_exceptions: true` or `false`
+  overrides the project setting
 - **Cookieless mode**: `settings.cookieless_mode: 'always' | 'on_reject'`
 - **Person profiles**: `settings.person_profiles: 'identified_only'`
-  (PostHog default, privacy-friendly) or `'always'`
+  (PostHog default, creates profiles only for identified users) or `'always'`
 
 walkerOS sets three defaults that differ from PostHog's built-ins:
 `autocapture: false`, `capture_pageview: false`, `capture_pageleave: false`,

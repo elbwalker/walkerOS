@@ -31,7 +31,7 @@ export const SettingsSchema = z.object({
   identified: z
     .union([z.boolean(), z.record(z.string(), z.boolean())])
     .describe(
-      'Identified or anonymous tracking. true (default) identifies every hit, false switches the tracker to anonymous mode without cookies (disableCookies, deleteCookies, setUserIsAnonymous) at init. A consent object like { marketing: true } identifies only while that consent is granted and calls enableCookies and deanonymizeUser once it is. Do not repeat these states in config.consent, or events are queued and never reach the destination.',
+      'Identified or anonymous tracking. true (default) identifies every hit, false switches the tracker to anonymous mode without cookies (disableCookies, deleteCookies, setUserIsAnonymous) at init. A consent object like { marketing: true } identifies only while that consent is granted and calls enableCookies and deanonymizeUser once it is. Do not repeat these states in config.consent: a destination needs only one of its config.consent states granted, so next to another state the repeated one lets events through on its own, and as the only state it queues every event until granted, so no anonymous hit is sent.',
     )
     .optional(),
   customDimensions: CustomDimensionsSchema.describe(

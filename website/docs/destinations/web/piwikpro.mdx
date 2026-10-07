@@ -230,9 +230,12 @@ for the states that gate identification:
 />
 
 :::caution
-Do not repeat the `identified` states in `config.consent`. Events without that
-consent are then queued and never reach the destination, so the tracker never
-sees the anonymous hits.
+Do not repeat the `identified` states in `config.consent`. A destination needs
+only one of its `config.consent` states granted, so
+`{ "analytics": true, "marketing": true }` sends events to Piwik PRO when only
+`marketing` is granted. With `{ "marketing": true }` alone, events wait in the
+queue until `marketing` is granted, and the tracker never sends an anonymous
+hit.
 :::
 
 ## Link tracking

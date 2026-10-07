@@ -363,7 +363,7 @@ export interface FrameLeanWire {
   extends: string | null;
   source: FrameSourceWire | null;
   origin: 'drawn' | 'imported' | 'observed';
-  flowId: string | null;
+  flowId: string;
   screenshot: FrameScreenshotWire | null;
   version: number;
   createdAt: string;
@@ -557,13 +557,21 @@ export interface ToolClient {
     limit?: number;
   }): Promise<ListKnowledgeWire>;
 
-  // Frames: read-only.
-  listFrames(options: { projectId: string }): Promise<FrameLeanListWire>;
+  // Frames: read-only, each within the flow it belongs to.
+  listFrames(options: {
+    projectId: string;
+    flowId: string;
+  }): Promise<FrameLeanListWire>;
   listPageFrames(options: {
     projectId: string;
+    flowId: string;
     pageKey: string;
   }): Promise<FrameListWire>;
-  getFrame(options: { projectId: string; frameId: string }): Promise<FrameWire>;
+  getFrame(options: {
+    projectId: string;
+    flowId: string;
+    frameId: string;
+  }): Promise<FrameWire>;
 
   // Auth
   requestDeviceCode(): Promise<DeviceAuthorization>;

@@ -32,7 +32,13 @@ npm install @walkeros/web-destination-piwikpro
       "destinations": {
         "piwikpro": {
           "package": "@walkeros/web-destination-piwikpro",
-          "config": {}
+          "config": {
+            "loadScript": true,
+            "settings": {
+              "appId": "XXX-XXX-XXX-XXX-XXX",
+              "url": "https://your_account_name.piwik.pro/"
+            }
+          }
         }
       }
     }

@@ -4,7 +4,7 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import type { Hit, Rule, Settings } from '../types';
-import { getEvent, isObject } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
 
 // Build-time version define, sent as ts_v on every hit.
 declare const __VERSION__: string;
@@ -103,7 +103,10 @@ const nestedProducts: WalkerOSMapping.ValueConfig = {
     'nested',
     {
       condition: (entity: unknown) =>
-        isObject(entity) && entity.entity === 'product',
+        typeof entity === 'object' &&
+        entity !== null &&
+        'entity' in entity &&
+        entity.entity === 'product',
       ...productMap,
     },
   ],

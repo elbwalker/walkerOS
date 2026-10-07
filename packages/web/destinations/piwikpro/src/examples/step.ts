@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
 
 /**
  * Destination bootstrap.
@@ -54,7 +54,10 @@ export const ecommerceOrder: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 sku: 'data.id',
                 name: 'data.name',
@@ -219,7 +222,10 @@ export const cartUpdate: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 sku: 'data.id',
                 name: 'data.name',

@@ -347,17 +347,22 @@ export class HttpToolClient implements ToolClient {
     return listKnowledge(options);
   }
 
-  async listFrames(options: { projectId: string }): Promise<FrameLeanListWire> {
+  async listFrames(options: {
+    projectId: string;
+    flowId: string;
+  }): Promise<FrameLeanListWire> {
     return listFrames(options);
   }
   async listPageFrames(options: {
     projectId: string;
+    flowId: string;
     pageKey: string;
   }): Promise<FrameListWire> {
     return listPageFrames(options);
   }
   async getFrame(options: {
     projectId: string;
+    flowId: string;
     frameId: string;
   }): Promise<FrameWire> {
     return getFrame(options);

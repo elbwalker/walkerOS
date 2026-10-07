@@ -25,13 +25,13 @@ npm install @walkeros/destination-demo
 import { startFlow } from '@walkeros/collector';
 import { destinationDemo } from '@walkeros/destination-demo';
 
-const { collector } = await startFlow({
+const { elb } = await startFlow({
   destinations: {
-    demo: destinationDemo,
+    demo: { code: destinationDemo },
   },
 });
 
-await collector.push('page view', { title: 'Home' });
+await elb('page view', { title: 'Home' });
 ```
 
 ## Documentation

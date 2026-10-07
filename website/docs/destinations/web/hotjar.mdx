@@ -91,7 +91,7 @@ Add to your `flow.json` destinations:
 
 ## Consent
 
-Hotjar has no runtime consent API. Consent is gated at the walkerOS level via
+The Hotjar SDK has no consent API. Consent is gated at the walkerOS level via
 `config.consent`:
 
 <CodeSnippet
@@ -107,5 +107,8 @@ Hotjar has no runtime consent API. Consent is gated at the walkerOS level via
   language="typescript"
 />
 
-Unconsented events are blocked by the collector before reaching the
-destination.
+Until a listed consent state is granted, the destination does not load Hotjar
+and the collector holds its events in a queue. They are sent once consent is
+granted, see [consent management](/docs/guides/consent). After a revocation, no
+further events reach Hotjar, but the Hotjar script loaded before stays on the
+page until the next page load.

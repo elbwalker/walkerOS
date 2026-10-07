@@ -52,19 +52,19 @@ export const SettingsSchema = z.object({
   sessionReplay: z
     .unknown()
     .describe(
-      'Session Replay options. When present, session replay is enabled via @amplitude/unified with the provided options.',
+      'Session Replay options, passed to the Session Replay plugin. @amplitude/unified sets up the plugin on every init, whether or not this is set; it records a sampled share of sessions, set by the project sampling settings in Amplitude when present, else by sampleRate (default 0).',
     )
     .optional(),
   experiment: z
     .unknown()
     .describe(
-      'Feature Experiment config. Must include `deploymentKey`. When present, the experiment plugin from @amplitude/unified is configured with the provided options.',
+      'Feature Experiment options. Passed to the Experiment plugin only when they include `deploymentKey`. @amplitude/unified sets up the plugin on every init; without a deploymentKey it uses the API key.',
     )
     .optional(),
   engagement: z
     .unknown()
     .describe(
-      'Guides & Surveys config. Pass `true` for defaults, or an options object for custom configuration. Enabled via @amplitude/unified.',
+      'Guides & Surveys options object. @amplitude/unified loads the Guides & Surveys SDK from cdn.amplitude.com on every init, whether or not this is set; `true` passes no options.',
     )
     .optional(),
 });

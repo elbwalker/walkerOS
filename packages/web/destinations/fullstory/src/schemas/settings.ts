@@ -27,7 +27,7 @@ export const SettingsSchema = z.object({
   startCaptureManually: z
     .boolean()
     .describe(
-      'Delay capture until FullStory("start") is called. Recommended for GDPR: init the SDK immediately but wait for consent before recording.',
+      'Delay capture until FullStory("start") is called. The SDK script still loads at init. With settings.consent mapping a key to "capture", recording starts when that consent is granted.',
     )
     .optional(),
   namespace: z

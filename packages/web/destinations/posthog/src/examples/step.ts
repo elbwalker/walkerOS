@@ -39,13 +39,13 @@ export const wildcardIgnored: PostHogStepExample = {
 };
 
 /**
- * Destination-level settings.include flattens the walkerOS `data` section
+ * Destination-level include (config.include) flattens the walkerOS `data` section
  * into prefixed capture() properties on every push.
  */
 export const destinationLevelInclude: PostHogStepExample = {
   title: 'Include data',
   description:
-    'Destination-level include flattens the event data section into prefixed PostHog capture properties.',
+    "With include: ['data'] in the destination config, the event data section is flattened into prefixed PostHog capture properties.",
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
@@ -64,14 +64,14 @@ export const destinationLevelInclude: PostHogStepExample = {
 };
 
 /**
- * Per-rule settings.include REPLACES destination-level include for the
+ * Per-rule include REPLACES the destination-level config.include for the
  * matched rule. Here destination-level sends `data`, but the rule
  * overrides it with `globals` only.
  */
 export const ruleIncludeReplaces: PostHogStepExample = {
   title: 'Rule include overrides',
   description:
-    'A per-rule include replaces the destination-level include so this event forwards only globals.',
+    "With include: ['data'] in the destination config, the rule's include: ['globals'] replaces it, so this event forwards only globals.",
   in: getEvent('order complete', { timestamp: 1700000103 }),
   configInclude: ['data'],
   mapping: {
@@ -100,7 +100,7 @@ export const ruleIncludeReplaces: PostHogStepExample = {
 export const destinationLevelIdentify: PostHogStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify calls posthog.identify with the user id before firing the default capture.',
+    "With settings.identify mapping distinctId to 'user.id', the destination calls posthog.identify before the default capture.",
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -129,7 +129,7 @@ export const userLoginIdentify: PostHogStepExample = {
   description:
     'A user login fires PostHog identify with $set and $set_once person properties, skipping the capture.',
   in: getEvent('user login', {
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     data: {
       user_id: 'new-user-123',
       email: 'user@acme.com',
@@ -171,7 +171,7 @@ export const userLoginIdentify: PostHogStepExample = {
         company: 'Acme',
       },
       {
-        first_login: 1700000105,
+        first_login: 1700000105000,
         signup_source: 'organic',
       },
     ],
@@ -340,7 +340,7 @@ export const orderCompleteWithInclude: PostHogStepExample = {
 export const consentRevokeOptOut: PostHogStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent command with analytics denied calls posthog.opt_out_capturing to stop capture and replay.',
+    'With consent: { analytics: true } in the destination config, a walker consent command that denies analytics calls posthog.opt_out_capturing to stop capture and replay.',
   command: 'consent',
   before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
@@ -355,7 +355,7 @@ export const consentRevokeOptOut: PostHogStepExample = {
 export const consentGrantOptIn: PostHogStepExample = {
   title: 'Consent granted',
   description:
-    'A walker consent command with analytics granted calls posthog.opt_in_capturing to resume capture.',
+    'With consent: { analytics: true } in the destination config, a walker consent command that grants analytics calls posthog.opt_in_capturing.',
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,

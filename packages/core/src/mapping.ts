@@ -116,7 +116,12 @@ export async function getMappingEvent(
     eventMapping = isThenable(found) ? await found : found;
   }
 
-  if (!eventMapping) {
+  // The * * fallback, unless the lookup above already tried exactly those
+  // rules (each condition runs once).
+  if (
+    !eventMapping &&
+    !(entityMapping && entityKey === '*' && actionKey === '*')
+  ) {
     entityKey = '*';
     actionKey = '*';
     const found = resolveEventMapping('* *', mapping[entityKey]?.[actionKey]);

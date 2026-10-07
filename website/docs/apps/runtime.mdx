@@ -173,6 +173,8 @@ fails to import with a syntax error. Either way nothing is bundled.
 | `WALKEROS_FLOW_ID` | none | Flow ID in the walkerOS app (same as `--flow-id`) |
 | `WALKEROS_PROJECT_ID` | none | Project ID (same as `--project`) |
 | `WALKEROS_DEPLOYMENT_ID` | none | Deployment ID, sent with every heartbeat and used for telemetry |
+| `WALKEROS_FLOW_RELEASE` | none | Release the loaded flow must carry, or the runtime refuses to start. The walkerOS app sets it when it deploys a flow |
+| `WALKEROS_FLOW_NAME` | none | Flow name the loaded flow must carry, checked only together with `WALKEROS_FLOW_RELEASE`. The walkerOS app sets it |
 | `WALKEROS_DEPLOY_TOKEN` | none | Runner token. Takes precedence over `WALKEROS_TOKEN` |
 | `WALKEROS_TOKEN` | none | Runner token (`wos_run_...`) or automation token (`wos_pat_...`) |
 | `WALKEROS_APP_URL` | `https://app.walkeros.io` | App API base URL |
@@ -181,6 +183,11 @@ fails to import with a syntax error. Either way nothing is bundled.
 | `WALKEROS_OBSERVE_LEVEL` | unset (`standard`) | Baseline telemetry level: `off`, `standard` or `trace`. See [Observe](/docs/getting-started/observe#server) |
 | `WALKEROS_OBSERVER_URL`, `WALKEROS_INGEST_TOKEN` | none | Observer connection. With `WALKEROS_DEPLOYMENT_ID`, all three enable telemetry |
 | `NODE_OPTIONS` | `--max-old-space-size=384` in the image | Heap cap sized for a 512 MB container. Raise it with the container's memory |
+
+Every start logs the loaded flow as `Flow: <name> release <release>`. With
+`WALKEROS_FLOW_RELEASE` set, a runtime that loaded any other artifact, or one
+without a release, never reports ready: it exits with
+`Artifact mismatch: expected <name>@<release>, loaded <name>@<release>`.
 
 Credentials come from the environment only. The runtime reads no config file
 and no CLI login, so a token in `~/.walkeros/config.json` does not reach it:

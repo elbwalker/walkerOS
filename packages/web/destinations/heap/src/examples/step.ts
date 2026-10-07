@@ -60,7 +60,7 @@ export const destinationLevelInclude: HeapStepExample = {
 export const destinationLevelIdentify: HeapStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify calls heap.identify with the user id before firing the default track.',
+    "With settings.identify set to 'user.id', the destination calls heap.identify before the default track.",
   in: getEvent('page view', { timestamp: 1700000102 }),
   settings: {
     identify: 'user.id',
@@ -191,7 +191,7 @@ export const globalEventProperties: HeapStepExample = {
 export const consentRevokeStopTracking: HeapStepExample = {
   title: 'Consent revoked',
   description:
-    'After analytics consent is granted (Heap loads and starts tracking), revoking it calls heap.stopTracking to pause event capture.',
+    'With consent: { analytics: true } in the destination config, the destination calls heap.startTracking once analytics is granted and heap.stopTracking when it is revoked. The classic Heap SDK that loadScript loads has neither method.',
   command: 'consent',
   before: { analytics: true },
   in: { analytics: false },
@@ -205,7 +205,7 @@ export const consentRevokeStopTracking: HeapStepExample = {
 export const consentGrantStartTracking: HeapStepExample = {
   title: 'Consent granted',
   description:
-    'A walker consent grant for analytics calls heap.startTracking to resume event capture.',
+    'With consent: { analytics: true } in the destination config, a walker consent grant for analytics calls heap.startTracking.',
   command: 'consent',
   in: { analytics: true },
   out: [['heap.startTracking']],

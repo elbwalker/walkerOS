@@ -4110,7 +4110,8 @@
                   "hash": "5f1c0a9e7d3b2c41",
                   "botScore": 0,
                   "botCategory": "human",
-                  "ltv": 420
+                  "ltv": 420,
+                  "segment": "loyal"
                 },
                 "source": {
                   "type": "express",
@@ -4172,7 +4173,8 @@
                         "hash": "5f1c0a9e7d3b2c41",
                         "botScore": 0,
                         "botCategory": "human",
-                        "ltv": 420
+                        "ltv": 420,
+                        "segment": "loyal"
                       },
                       "source": {
                         "type": "express",
@@ -4276,7 +4278,8 @@
                   "hash": "5f1c0a9e7d3b2c41",
                   "botScore": 0,
                   "botCategory": "human",
-                  "ltv": 420
+                  "ltv": 420,
+                  "segment": "loyal"
                 },
                 "source": {
                   "type": "express",
@@ -4911,7 +4914,7 @@
               "public": true,
               "in": {
                 "id": "msg-1",
-                "dataString": "{\"name\":\"order complete\",\"entity\":\"order\",\"action\":\"complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"timestamp\":1700000000000,\"consent\":{\"functional\":true,\"marketing\":true},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"31b4ae339b671c9e81adbe27e74b38f09a4756300de6b81998c83a3964cbb849\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420},\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}]}",
+                "dataString": "{\"name\":\"order complete\",\"entity\":\"order\",\"action\":\"complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"timestamp\":1700000000000,\"consent\":{\"functional\":true,\"marketing\":true},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"31b4ae339b671c9e81adbe27e74b38f09a4756300de6b81998c83a3964cbb849\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420,\"segment\":\"loyal\"},\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}]}",
                 "attributes": {}
               },
               "out": [
@@ -4945,7 +4948,8 @@
                       "hash": "5f1c0a9e7d3b2c41",
                       "botScore": 0,
                       "botCategory": "human",
-                      "ltv": 420
+                      "ltv": 420,
+                      "segment": "loyal"
                     },
                     "source": {
                       "type": "express",
@@ -5036,7 +5040,8 @@
                   "hash": "5f1c0a9e7d3b2c41",
                   "botScore": 0,
                   "botCategory": "human",
-                  "ltv": 420
+                  "ltv": 420,
+                  "segment": "loyal"
                 },
                 "source": {
                   "type": "express",
@@ -5075,7 +5080,7 @@
                       "context": null,
                       "globals": "{\"language\":\"en\",\"pageGroup\":\"checkout\"}",
                       "custom": null,
-                      "user": "{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420}",
+                      "user": "{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420,\"segment\":\"loyal\"}",
                       "nested": "[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}]",
                       "consent": "{\"functional\":true,\"marketing\":true}",
                       "id": "ev-order-complete",

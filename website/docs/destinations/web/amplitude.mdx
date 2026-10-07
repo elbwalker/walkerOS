@@ -25,9 +25,7 @@ experiments, and guides & surveys. This destination forwards walkerOS events
 to Amplitude via the official
 [`@amplitude/unified`](https://www.npmjs.com/package/@amplitude/unified)
 SDK, translating events into `amplitude.track(...)`, `identify(...)`,
-`revenue(...)`, `setGroup(...)`, and `setOptOut(...)` calls. Loads the
-Amplitude Analytics SDK, forwards every walkerOS event, and lets you layer
-on identity, revenue, groups, consent toggling, and optional plugins.
+`revenue(...)`, `setGroup(...)`, and `setOptOut(...)` calls.
 
 <WhereThisFits
   pre={<>Amplitude is a <strong>web destination</strong> in the walkerOS flow:</>}
@@ -93,18 +91,36 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+## Defaults
+
+walkerOS sets two defaults that differ from Amplitude's: `autocapture: false`,
+because walkerOS sources capture events, and `identityStorage: 'none'`, so the
+SDK sets no identity cookies. It still writes its event queue and plugin state
+to `localStorage`. Without stored identity, Amplitude starts a new
+device ID and session on every page load. To keep them across page loads, map
+`device` and `session` in `settings.identify` (see the Destination identify
+example above), or set `identityStorage` yourself.
+
 ## Plugins
 
-All three plugin packages are npm-bundled with the destination (~135 KB
-for Session Replay plus Experiment and Engagement payloads). Enable them
-via destination settings:
+`@amplitude/unified` sets up Session Replay, Experiment, and Guides & Surveys
+on every init, whether or not the settings below are present; the settings
+only pass options to them. With just `apiKey` set, the SDK fetches the Session
+Replay remote configuration from Amplitude and loads the Guides & Surveys SDK
+from `cdn.amplitude.com`. Session Replay and Experiment ship in the
+destination's bundle.
+
+Session Replay records a sampled share of sessions. The share is
+`sessionReplay.sampleRate` (default 0) unless the project's Session Replay
+sampling settings in Amplitude set it; those take precedence and also decide
+whether capture is on. Experiment uses `experiment.deploymentKey`, or the API key
+when it is missing.
 
 ```typescript
 settings: {
   apiKey: 'YOUR_KEY',
   sessionReplay: { sampleRate: 1 },
   experiment: { deploymentKey: 'DEPLOYMENT_KEY' },
-  engagement: true,
 }
 ```
 

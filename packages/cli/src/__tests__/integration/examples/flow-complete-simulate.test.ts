@@ -684,7 +684,7 @@ describe('flow-complete.json', () => {
             expect(first.data).toMatchObject({
               session: { gclid: 'gclid-abc123' },
             });
-            expect(first.user).toMatchObject({ ltv: 420 });
+            expect(first.user).toMatchObject({ ltv: 420, segment: 'loyal' });
             expect(first.source).toMatchObject({ valid: true });
             expect(metaBodies).toHaveLength(1);
           } finally {

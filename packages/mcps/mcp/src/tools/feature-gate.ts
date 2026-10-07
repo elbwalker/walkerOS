@@ -6,7 +6,8 @@ export const FEATURE_NOT_AVAILABLE = 'FEATURE_NOT_AVAILABLE';
 /** The features a door can refuse a whole tool for. */
 export type GatedFeature = 'hub' | 'frames';
 
-function codeOf(error: unknown): string | undefined {
+/** The structured code an error carries, if any. */
+export function codeOf(error: unknown): string | undefined {
   if (!(error instanceof Error) || !('code' in error)) return undefined;
   const code = error.code;
   return typeof code === 'string' ? code : undefined;

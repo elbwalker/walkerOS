@@ -299,6 +299,34 @@ describe('storeCache', () => {
       process.off('unhandledRejection', onRejection);
     }
   });
+
+  it('handles a rejected async set when the page replaced the global Promise', async () => {
+    const NativePromise = Promise;
+    const pending: Promise<void> = NativePromise.reject(
+      new Error('backend down'),
+    );
+    const then = jest.spyOn(pending, 'then');
+    const store: Store.Instance = {
+      type: 'rejecting-mock',
+      config: {},
+      get: async () => undefined,
+      set: () => pending,
+      delete: async () => undefined,
+    };
+
+    // A page polyfill: the store's native promise is no instance of it.
+    class PagePromise<T> extends NativePromise<T> {}
+    globalThis.Promise = PagePromise;
+    try {
+      storeCache(store, 'k', { status: 200 }, 60);
+    } finally {
+      globalThis.Promise = NativePromise;
+    }
+    // A rejection handler is attached all the same (an unhandled rejection
+    // would crash the test process).
+    for (let i = 0; i < 5; i++) await NativePromise.resolve();
+    expect(then).toHaveBeenCalled();
+  });
 });
 
 describe('applyUpdate', () => {

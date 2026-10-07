@@ -20,9 +20,9 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 />
 
 [Piano Analytics](https://piano.io/product/analytics/) is an enterprise
-analytics and audience platform. The destination loads the official Piano
-`pa` SDK, configures it with your site id and collection domain, and forwards
-events via `pa.sendEvent`.
+analytics and audience platform. The destination configures the official Piano
+`pa` SDK with your site id and collection domain, and forwards events via
+`pa.sendEvent`. With `loadScript: true` it also loads the SDK.
 
 <WhereThisFits
   pre={<>Piano is a <strong>web destination</strong> in the walkerOS flow:</>}
@@ -89,3 +89,22 @@ Add to your `flow.json` destinations:
 </Tabs>
 
 <Configuration type="destination" data={data} />
+
+## Loading the SDK
+
+With `loadScript: true`, the destination adds the SDK script
+`https://tag.aticdn.net/piano-analytics.js` and configures `pa` with `site`,
+`collectDomain` and `options` once the script has loaded. If the script fails
+to load, it logs a warning. Until the SDK has loaded, the destination drops
+every event it receives and counts it as delivered. That includes the page
+view a browser source sends when the flow starts.
+
+To keep the first events, load the Piano SDK on your page before walkerOS
+starts and leave `loadScript` unset. The destination then configures `pa` at
+init.
+
+## Event names
+
+Each rule's `name` becomes the Piano event name and its `data` object the event
+properties, as in the examples above. Without a rule, the destination sends the
+walkerOS event name, like `page view`, with no properties.

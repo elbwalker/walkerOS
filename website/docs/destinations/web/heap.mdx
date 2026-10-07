@@ -22,9 +22,9 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 [Heap](https://www.heap.io/) (now part of Contentsquare) is a product
 analytics platform with auto-capture and retroactive event definitions.
-This destination loads the Heap snippet from Heap's CDN and forwards
-walkerOS events through `heap.track(name, properties)`, plus identity,
-user properties, persistent event properties, and runtime consent.
+With `loadScript: true`, this destination loads the Heap script from Heap's
+CDN. It forwards walkerOS events through `heap.track(name, properties)`, plus
+identity, user properties, persistent event properties, and runtime consent.
 
 <WhereThisFits
   pre={<>Heap is a <strong>web destination</strong> in the walkerOS flow:</>}
@@ -88,19 +88,42 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
+:::caution
+`loadScript: true` loads the classic Heap SDK
+(`https://cdn.heapanalytics.com/js/heap-<appId>.js`). That SDK does not replay
+the calls the destination queues before it finishes loading, so events pushed
+earlier (such as the first page view) do not reach Heap. It also ignores
+`disablePageviewAutocapture`, `disableSessionReplay`, and `ingestServer`, and
+has no `startTracking()` or `stopTracking()`, so any consent command after it
+has loaded stops all further Heap events (see Consent).
+:::
+
 <Configuration type="destination" data={data} />
 
 ## Consent
 
-The destination wires walkerOS `config.consent` to Heap's runtime consent
-API. `heap.startTracking()` fires when all required consent keys are
-granted; `heap.stopTracking()` fires otherwise.
+With `config.consent` declared, the destination is not loaded before the
+required consent keys are granted (see
+[consent management](/docs/guides/consent)). On each consent command it calls
+`heap.startTracking()` when all required keys are granted and
+`heap.stopTracking()` otherwise.
+
+The classic SDK that `loadScript: true` loads has neither method. The grant
+that loads Heap works, but once the script has loaded, every later
+`walker consent` command, even one that repeats the current state, makes the
+destination's `on('consent')` handler fail. The collector logs
+`on callback failed` and holds the destination's events in its queue, so Heap
+receives nothing for the rest of the page view, while `elb` still returns
+`ok`. A revocation also does not stop Heap's own capture. This setup keeps
+sending events only when your consent source sends no further consent command
+after the grant that loads Heap.
 
 <CodeSnippet
   code={`destinations: {
   heap: {
     code: destinationHeap,
     config: {
+      loadScript: true,
       consent: { analytics: true },
       settings: { appId: 'YOUR_HEAP_APP_ID' },
     },

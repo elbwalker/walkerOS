@@ -2909,7 +2909,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/frames': {
+  '/api/projects/{projectId}/flows/{flowId}/frames': {
     parameters: {
       query?: never;
       header?: never;
@@ -2925,6 +2925,7 @@ export interface paths {
         header?: never;
         path: {
           projectId: string;
+          flowId: string;
         };
         cookie?: never;
       };
@@ -2990,7 +2991,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/frames/{frameId}': {
+  '/api/projects/{projectId}/flows/{flowId}/frames/{frameId}': {
     parameters: {
       query?: never;
       header?: never;
@@ -3003,6 +3004,7 @@ export interface paths {
         header?: never;
         path: {
           projectId: string;
+          flowId: string;
           frameId: string;
         };
         cookie?: never;
@@ -4075,9 +4077,12 @@ export interface components {
       source: components['schemas']['FrameSource'];
       /** @enum {string} */
       origin: 'drawn' | 'imported' | 'observed';
-      flowId: string | null;
+      flowId: string;
       screenshot: components['schemas']['FrameScreenshot'] | null;
+      markupAssetId: string | null;
       version: number;
+      lastSavedVersion: number | null;
+      lastSavedNumber: number | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -4106,9 +4111,12 @@ export interface components {
       source: components['schemas']['FrameSource'];
       /** @enum {string} */
       origin: 'drawn' | 'imported' | 'observed';
-      flowId: string | null;
+      flowId: string;
       screenshot: components['schemas']['FrameScreenshot'] | null;
+      markupAssetId: string | null;
       version: number;
+      lastSavedVersion: number | null;
+      lastSavedNumber: number | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */

@@ -1,6 +1,6 @@
 import type { Flow } from '@walkeros/core';
 import type { Settings } from '../types';
-import { getEvent, isObject } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
 
 /**
  * Matomo step example. The test runner registers the destination with the
@@ -99,11 +99,15 @@ export const customEvent: StepExample = {
 
 /**
  * Ecommerce order -- one call with cart items array and order totals.
+ * Not public: Matomo records an order's products only after an
+ * addEcommerceItem call per product, which one rule cannot send, so this
+ * shows mapping mechanics only.
  */
 export const ecommerceOrder: StepExample = {
+  public: false,
   title: 'Ecommerce order',
   description:
-    'A completed order calls Matomo trackEcommerceOrder with line items and order totals.',
+    "Test fixture for nested product mapping, not a valid Matomo call: Matomo records an order's products only after an addEcommerceItem call per product.",
   in: getEvent('order complete', { timestamp: 1700000402 }),
   mapping: {
     name: 'trackEcommerceOrder',
@@ -114,7 +118,10 @@ export const ecommerceOrder: StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 sku: 'data.id',
                 name: 'data.name',
@@ -169,13 +176,15 @@ export const ecommerceOrder: StepExample = {
 };
 
 /**
- * Ecommerce cart update -- addEcommerceItem per nested product,
- * then trackEcommerceCartUpdate with cart total.
+ * Ecommerce cart update -- nested products and the cart total in one call.
+ * Not public: Matomo takes trackEcommerceCartUpdate(grandTotal) after an
+ * addEcommerceItem call per product, which one rule cannot send.
  */
 export const ecommerceCartUpdate: StepExample = {
+  public: false,
   title: 'Cart update',
   description:
-    'A cart view calls Matomo trackEcommerceCartUpdate with the nested product items and cart total.',
+    'Test fixture for nested product mapping, not a valid Matomo call: Matomo takes trackEcommerceCartUpdate(grandTotal) after an addEcommerceItem call per product.',
   in: getEvent('cart view', { timestamp: 1700000403 }),
   mapping: {
     name: 'trackEcommerceCartUpdate',
@@ -186,7 +195,10 @@ export const ecommerceCartUpdate: StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 sku: 'data.id',
                 name: 'data.name',
@@ -222,12 +234,15 @@ export const ecommerceCartUpdate: StepExample = {
 };
 
 /**
- * Product detail view -- setEcommerceView equivalent with a single product array.
+ * Product detail view with a single product array.
+ * Not public: Matomo has no ecommerceProductDetailView; it tracks a product
+ * view with setEcommerceView followed by trackPageView, two commands.
  */
 export const productDetailView: StepExample = {
+  public: false,
   title: 'Product detail view',
   description:
-    'A product view fires Matomo ecommerceProductDetailView with a single-product array.',
+    'Test fixture for a single-product mapping, not a valid Matomo call: Matomo tracks a product view with setEcommerceView followed by trackPageView.',
   in: getEvent('product view', { timestamp: 1700000404 }),
   mapping: {
     name: 'ecommerceProductDetailView',

@@ -41,13 +41,13 @@ export const wildcardIgnored: AmplitudeStepExample = {
 };
 
 /**
- * Destination-level settings.include flattens the walkerOS `data` section
- * into prefixed event_properties on every push.
+ * Destination-level include (config.include) flattens the walkerOS `data`
+ * section into prefixed event_properties on every push.
  */
 export const destinationLevelInclude: AmplitudeStepExample = {
   title: 'Include data',
   description:
-    'Destination-level include flattens the event data section into prefixed event_properties on every track call.',
+    "With include: ['data'] in the destination config, the event data section is flattened into prefixed event_properties on every track call.",
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
@@ -66,14 +66,14 @@ export const destinationLevelInclude: AmplitudeStepExample = {
 };
 
 /**
- * Per-rule settings.include REPLACES destination-level include for the
+ * Per-rule include REPLACES the destination-level config.include for the
  * matched rule. Here destination-level sends `data`, but the rule
  * overrides it with `globals` only.
  */
 export const ruleIncludeReplaces: AmplitudeStepExample = {
   title: 'Rule include overrides',
   description:
-    'A per-rule include replaces the destination-level include for the matched event, here using only globals.',
+    "With include: ['data'] in the destination config, the rule's include: ['globals'] replaces it, so this event forwards only globals.",
   in: getEvent('order complete', { timestamp: 1700000103 }),
   configInclude: ['data'],
   mapping: {
@@ -107,7 +107,7 @@ export const ruleIncludeReplaces: AmplitudeStepExample = {
 export const destinationLevelIdentify: AmplitudeStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify sets userId, deviceId, and sessionId on the Amplitude client before sending events; setters only re-fire when the resolved values change (cached values are not re-applied on subsequent pushes).',
+    "With settings.identify mapping user, device, and session to 'user.id', 'user.device', and 'user.session', the destination sets userId, deviceId, and sessionId before the track call. A non-numeric session string is hashed to a stable number. Setters only re-fire when the resolved values change.",
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -137,7 +137,7 @@ export const userLoginIdentify: AmplitudeStepExample = {
   description:
     'A user login sets the Amplitude userId and runs identify with set, setOnce, and add operations.',
   in: getEvent('user login', {
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     data: {
       user_id: 'new-user-123',
       plan: 'premium',
@@ -183,7 +183,7 @@ export const userLoginIdentify: AmplitudeStepExample = {
           email: 'user@acme.com',
         },
         setOnce: {
-          first_login: 1700000105,
+          first_login: 1700000105000,
         },
         add: {
           login_count: 1,
@@ -409,7 +409,7 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
 export const consentRevokeOptOut: AmplitudeStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent command with analytics denied opts out of Amplitude tracking via setOptOut(true).',
+    'With consent: { analytics: true } in the destination config, a walker consent command that denies analytics opts out of Amplitude tracking via setOptOut(true).',
   command: 'consent',
   before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
@@ -426,7 +426,7 @@ export const consentRevokeOptOut: AmplitudeStepExample = {
 export const consentGrantOptIn: AmplitudeStepExample = {
   title: 'Consent granted',
   description:
-    'A walker consent command with analytics granted opts back into Amplitude tracking via setOptOut(false).',
+    'With consent: { analytics: true } in the destination config, a walker consent command that grants analytics opts into Amplitude tracking via setOptOut(false).',
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,

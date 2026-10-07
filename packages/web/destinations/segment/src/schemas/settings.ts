@@ -10,13 +10,13 @@ export const SettingsSchema = z.object({
   cdnURL: z
     .string()
     .describe(
-      'Override the CDN URL used for settings fetch. Default: https://cdn.segment.com. Useful for self-hosted Segment proxies.',
+      'Not applied: the destination passes it in the load() options, where Analytics.js does not read it, so settings are always fetched from https://cdn.segment.com.',
     )
     .optional(),
   initialPageview: z
     .boolean()
     .describe(
-      'When true, the SDK fires an automatic initial page() call on load. Default: false — walkerOS sources handle page tracking, so this is disabled to avoid duplicate page views.',
+      'When true, the SDK fires an automatic initial page() call on load. Default: false (walkerOS sources handle page tracking, so this is disabled to avoid duplicate page views).',
     )
     .optional(),
   disableClientPersistence: z
@@ -46,7 +46,7 @@ export const SettingsSchema = z.object({
   identify: z
     .unknown()
     .describe(
-      'Destination-level identity mapping. Resolves to an object with any of: userId, traits, anonymousId. Fires on the first push and re-fires when the resolved value changes.',
+      'Destination-level identity mapping. Resolves to an object with any of: userId, traits, anonymousId. Resolved on every push: analytics.identify fires on the first push and when userId or traits change, and on every push while anonymousId is set.',
     )
     .optional(),
   group: z
@@ -58,7 +58,7 @@ export const SettingsSchema = z.object({
   consent: z
     .record(z.string(), z.string())
     .describe(
-      'Mapping from walkerOS consent keys → Segment `categoryPreferences` keys. Example: { "marketing": "Advertising", "analytics": "Analytics" }. When omitted, walkerOS keys are forwarded 1:1 to Segment.',
+      'Mapping from walkerOS consent keys → Segment `categoryPreferences` keys. Example: { "marketing": "Advertising", "analytics": "Analytics" }. Only mapped keys are forwarded; when omitted, no consent context is sent.',
     )
     .optional(),
 });

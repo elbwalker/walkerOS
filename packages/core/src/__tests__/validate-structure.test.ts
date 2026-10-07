@@ -236,6 +236,34 @@ describe('validateFlowStructure', () => {
     ]);
   });
 
+  it('names both mappings a transformer with a package ignores', () => {
+    const result = validateFlowStructure(
+      flow({
+        default: {
+          config: { platform: 'web' },
+          transformers: {
+            packaged: {
+              package: '@walkeros/transformer-noop',
+              mapping: { policy: { 'user.id': { value: 'x' } } },
+              config: {
+                mapping: { policy: { 'user.email': { value: '' } } },
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    expect(result.warnings).toEqual([
+      {
+        path: 'flows.default.transformers.packaged',
+        message:
+          '`config.mapping` and `mapping` are ignored: a transformer with `package` never runs them; a mapping applies only to a transformer without code.',
+        code: 'TRANSFORMER_MAPPING_NO_OP',
+      },
+    ]);
+  });
+
   it('runs synchronously and returns without building', () => {
     // Synchronous: the return value is a plain object, not a Promise.
     const result = validateFlowStructure(
