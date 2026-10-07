@@ -1,13 +1,29 @@
 import { requireProjectId } from '../../core/auth.js';
-import { apiFetch } from '../../core/http.js';
+import { apiRequest } from '../../core/api-request.js';
+import type { ApiRequestInit, ResponseJson } from '../../core/api-request.js';
 import { throwApiResponseError } from '../../core/api-error.js';
 import type { components } from '../../types/api.gen.js';
 
-type VersionAnnotation = components['schemas']['VersionAnnotation'];
-type StepHistoryResponse = components['schemas']['StepHistoryResponse'];
-type ListHubThreadsResponse = components['schemas']['ListHubThreadsResponse'];
-type HubThreadResponse = components['schemas']['HubThreadResponse'];
-type ListKnowledgeResponse = components['schemas']['ListKnowledgeResponse'];
+type VersionAnnotation = ResponseJson<
+  'PUT /api/projects/{projectId}/flows/{flowId}/releases/annotations',
+  200
+>;
+type StepHistoryResponse = ResponseJson<
+  'GET /api/projects/{projectId}/flows/{flowId}/releases/step-history',
+  200
+>;
+type ListHubThreadsResponse = ResponseJson<
+  'GET /api/projects/{projectId}/flows/{flowId}/threads',
+  200
+>;
+type HubThreadResponse = ResponseJson<
+  'POST /api/projects/{projectId}/flows/{flowId}/threads',
+  201
+>;
+type ListKnowledgeResponse = ResponseJson<
+  'GET /api/projects/{projectId}/knowledge',
+  200
+>;
 
 // === Release wire shapes, aliased onto the generated components ===
 
@@ -16,15 +32,19 @@ export type ReleaseRationaleSummary =
   components['schemas']['ReleaseRationaleSummary'];
 
 /** The release index. Each row carries `rationale` when one was asked for. */
-export type ReleaseIndexResponse =
-  components['schemas']['ListFlowReleasesResponse'];
+export type ReleaseIndexResponse = ResponseJson<
+  'GET /api/projects/{projectId}/flows/{flowId}/releases',
+  200
+>;
 
 /** The diff a release carries against its spine predecessor. */
 export type ReleaseDiffResponse = components['schemas']['ReleaseDiff'];
 
 /** One release in full: rationale plus the diff the server computed. */
-export type ReleaseDetailResponse =
-  components['schemas']['ReleaseDetailResponse'];
+export type ReleaseDetailResponse = ResponseJson<
+  'GET /api/projects/{projectId}/flows/{flowId}/releases/{versionId}',
+  200
+>;
 
 // === Programmatic API ===
 
@@ -48,12 +68,16 @@ export async function listReleases(
   options: ListReleasesOptions,
 ): Promise<ReleaseIndexResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const params = new URLSearchParams({ rationale: 'true' });
-  if (options.limit !== undefined) params.set('limit', String(options.limit));
-  if (options.offset !== undefined)
-    params.set('offset', String(options.offset));
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/releases?${params.toString()}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/flows/{flowId}/releases',
+    {
+      path: { projectId: pid, flowId: options.flowId },
+      query: {
+        rationale: 'true',
+        limit: options.limit,
+        offset: options.offset,
+      },
+    },
   );
   return readJson(response, 'Failed to list releases');
 }
@@ -80,8 +104,9 @@ export async function getRelease(
     'versionId' in options.ref
       ? options.ref.versionId
       : String(options.ref.versionNumber);
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/releases/${encodeURIComponent(segment)}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/flows/{flowId}/releases/{versionId}',
+    { path: { projectId: pid, flowId: options.flowId, versionId: segment } },
   );
   return readJson(response, 'Failed to read release');
 }
@@ -98,11 +123,12 @@ export async function listStepHistory(
   options: ListStepHistoryOptions,
 ): Promise<StepHistoryResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const params = new URLSearchParams({ step: options.step });
-  if (options.flow !== undefined) params.set('flow', options.flow);
-  if (options.limit !== undefined) params.set('limit', String(options.limit));
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/releases/step-history?${params.toString()}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/flows/{flowId}/releases/step-history',
+    {
+      path: { projectId: pid, flowId: options.flowId },
+      query: { step: options.step, flow: options.flow, limit: options.limit },
+    },
   );
   return readJson(response, 'Failed to read step history');
 }
@@ -124,27 +150,23 @@ export async function setReleaseRationale(
   options: SetReleaseRationaleOptions,
 ): Promise<VersionAnnotation> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/releases/annotations`,
+  const response = await apiRequest(
+    'PUT /api/projects/{projectId}/flows/{flowId}/releases/annotations',
     {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        versionId: options.versionId,
-        humanText: options.text,
-      }),
+      path: { projectId: pid, flowId: options.flowId },
+      body: { versionId: options.versionId, humanText: options.text },
     },
   );
   return readJson(response, 'Failed to write release rationale');
 }
 
-export type ThreadAnchorType =
-  | 'step'
-  | 'entity_action'
-  | 'release'
-  | 'contract'
-  | 'tag';
-export type ThreadStatus = 'open' | 'resolved';
+type ListThreadsQuery = NonNullable<
+  ApiRequestInit<'GET /api/projects/{projectId}/flows/{flowId}/threads'>['query']
+>;
+/** What a thread anchors to, as the contract declares it. */
+export type ThreadAnchorType = NonNullable<ListThreadsQuery['anchorType']>;
+/** A thread's status, as the contract declares it. */
+export type ThreadStatus = NonNullable<ListThreadsQuery['status']>;
 
 export interface ListThreadsOptions {
   projectId?: string;
@@ -160,16 +182,18 @@ export async function listThreads(
   options: ListThreadsOptions,
 ): Promise<ListHubThreadsResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const params = new URLSearchParams();
-  if (options.anchorType !== undefined)
-    params.set('anchorType', options.anchorType);
-  if (options.anchorKey !== undefined)
-    params.set('anchorKey', options.anchorKey);
-  if (options.status !== undefined) params.set('status', options.status);
-  params.set('includeMessages', options.includeMessages ? 'true' : 'false');
-  if (options.limit !== undefined) params.set('limit', String(options.limit));
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/threads?${params.toString()}`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/flows/{flowId}/threads',
+    {
+      path: { projectId: pid, flowId: options.flowId },
+      query: {
+        anchorType: options.anchorType,
+        anchorKey: options.anchorKey,
+        status: options.status,
+        includeMessages: options.includeMessages ? 'true' : 'false',
+        limit: options.limit,
+      },
+    },
   );
   return readJson(response, 'Failed to list threads');
 }
@@ -187,19 +211,18 @@ export async function createThread(
   options: CreateThreadOptions,
 ): Promise<HubThreadResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/threads`,
+  const response = await apiRequest(
+    'POST /api/projects/{projectId}/flows/{flowId}/threads',
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      path: { projectId: pid, flowId: options.flowId },
+      body: {
         anchorType: options.anchorType,
         anchorKey: options.anchorKey,
         ...(options.anchorLabel !== undefined
           ? { anchorLabel: options.anchorLabel }
           : {}),
         text: options.text,
-      }),
+      },
     },
   );
   return readJson(response, 'Failed to open thread');
@@ -216,12 +239,15 @@ export async function addThreadMessage(
   options: AddThreadMessageOptions,
 ): Promise<HubThreadResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/threads/${encodeURIComponent(options.threadId)}/messages`,
+  const response = await apiRequest(
+    'POST /api/projects/{projectId}/flows/{flowId}/threads/{threadId}/messages',
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: options.text }),
+      path: {
+        projectId: pid,
+        flowId: options.flowId,
+        threadId: options.threadId,
+      },
+      body: { text: options.text },
     },
   );
   return readJson(response, 'Failed to add message');
@@ -240,14 +266,15 @@ export async function listKnowledge(
   options: ListKnowledgeOptions,
 ): Promise<ListKnowledgeResponse> {
   const pid = options.projectId ?? requireProjectId();
-  const params = new URLSearchParams();
-  if (options.pageKey !== undefined) params.set('pageKey', options.pageKey);
-  if (options.frameId !== undefined) params.set('frameId', options.frameId);
-  if (options.markId !== undefined) params.set('markId', options.markId);
-  params.set('includeMessages', options.includeMessages ? 'true' : 'false');
-  if (options.limit !== undefined) params.set('limit', String(options.limit));
-  const response = await apiFetch(
-    `/api/projects/${pid}/knowledge?${params.toString()}`,
-  );
+  const response = await apiRequest('GET /api/projects/{projectId}/knowledge', {
+    path: { projectId: pid },
+    query: {
+      pageKey: options.pageKey,
+      frameId: options.frameId,
+      markId: options.markId,
+      includeMessages: options.includeMessages ? 'true' : 'false',
+      limit: options.limit,
+    },
+  });
   return readJson(response, 'Failed to read knowledge');
 }

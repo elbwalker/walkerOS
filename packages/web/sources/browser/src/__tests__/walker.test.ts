@@ -1,6 +1,7 @@
 import { getAllEvents, getEvents, getGlobals, getUser } from '../walker';
 import { Triggers } from '../trigger';
 import { createTagger } from '../tagger';
+import { splitKeyVal } from '@walkeros/web-core';
 import fs from 'fs';
 
 describe('Walker', () => {
@@ -511,9 +512,9 @@ describe('Walker', () => {
       events = getEvents(getElem('scoped-empty'), Triggers.Click);
     }).not.toThrow();
     expect(events).toMatchObject([{ entity: 'emp' }]);
-    // Same parse pipeline as blanket data-elb-: empty value is inert, a bare
-    // ":" collapses to an empty-string key (no real property, no error).
-    expect(events[0].data).toEqual({ '': '' });
+    // Same parse pipeline as blanket data-elb-: an empty value and a bare ":"
+    // (empty key) are inert, no property and no error.
+    expect(events[0].data).toEqual({});
     expect(events[0].data).not.toHaveProperty('ghost');
   });
 
@@ -537,6 +538,131 @@ describe('Walker', () => {
 
     expect(getEvents(el, Triggers.Click)).toMatchObject([
       { entity: 'product', action: 'click', data: { name: 'A', size: 'L' } },
+    ]);
+  });
+
+  test('Escaped values in hand-written HTML', () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      String.raw`<div id="escaped" data-elb="product"
+        data-elb-product="name:Men\'s shirt;note:a\;b;path:C:\\temp;title:'it\'s'"
+        data-elbaction="click"></div>`,
+    );
+
+    expect(getEvents(getElem('escaped'), Triggers.Click)).toMatchObject([
+      {
+        entity: 'product',
+        data: {
+          name: "Men's shirt",
+          note: 'a;b',
+          path: 'C:\\temp',
+          title: "it's",
+        },
+      },
+    ]);
+  });
+
+  test('A single backslash in hand-written HTML escapes the next character', () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      String.raw`<div id="backslash" data-elb="file" data-elb-file="path:C:\temp"
+        data-elbaction="click"></div>`,
+    );
+
+    expect(getEvents(getElem('backslash'), Triggers.Click)).toMatchObject([
+      { entity: 'file', data: { path: 'C:temp' } },
+    ]);
+  });
+
+  test('Tagger link ids with escapes pair parent and child', () => {
+    const tagger = createTagger();
+    const entity = document.createElement('div');
+    const parent = document.createElement('div');
+    const child = document.createElement('div');
+    const button = document.createElement('button');
+    const set = (el: Element, attrs: Record<string, string>) =>
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+
+    set(entity, tagger().entity('shirt').data('size', 'L').get());
+    set(parent, tagger().link("it's", 'parent').get());
+    set(child, tagger().link("it's", 'child').get());
+    set(button, tagger().action('click').get());
+    entity.appendChild(parent);
+    child.appendChild(button);
+    document.body.append(entity, child);
+
+    expect(getEvents(button, Triggers.Click)).toMatchObject([
+      { entity: 'shirt', data: { size: 'L' } },
+    ]);
+  });
+
+  test.each([
+    ['a separator', 'a;b'],
+    ['a colon', 'a:b'],
+    ['a backslash', 'a\\b'],
+    ['every escape', "a;b:c'd\\e"],
+  ])('Tagger link round trip with %s', (_, id) => {
+    const tagger = createTagger();
+    const entity = document.createElement('div');
+    const parent = document.createElement('div');
+    const decoy = document.createElement('div');
+    const decoyLink = document.createElement('div');
+    const child = document.createElement('div');
+    const button = document.createElement('button');
+    const set = (el: Element, attrs: Record<string, string>) =>
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+
+    const parentAttrs = tagger().link(id, 'parent').get();
+    const childAttrs = tagger()
+      .link({ [id]: 'child' })
+      .get();
+    // The walker reads data-elblink as one [id, state] pair
+    expect(splitKeyVal(parentAttrs['data-elblink'])).toEqual([id, 'parent']);
+    expect(splitKeyVal(childAttrs['data-elblink'])).toEqual([id, 'child']);
+
+    set(entity, tagger().entity('shirt').data('size', 'L').get());
+    set(parent, parentAttrs);
+    // Same leading id characters, other entity: must not pair
+    set(decoy, tagger().entity('hat').get());
+    set(decoyLink, tagger().link('a', 'parent').get());
+    decoy.appendChild(decoyLink);
+    set(child, childAttrs);
+    set(button, tagger().action('click').get());
+    entity.appendChild(parent);
+    child.appendChild(button);
+    document.body.append(decoy, entity, child);
+
+    expect(getEvents(button, Triggers.Click)).toEqual([
+      expect.objectContaining({ entity: 'shirt', data: { size: 'L' } }),
+    ]);
+  });
+
+  test('A quoted action param may contain a semicolon', () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div data-elb="product" data-elb-product="id:1">
+        <button id="quoted-param" data-elbaction="click:add('a;b', product)"></button>
+      </div>`,
+    );
+
+    expect(getEvents(getElem('quoted-param'), Triggers.Click)).toMatchObject([
+      { entity: 'product', action: 'add', data: { id: 1 } },
+    ]);
+  });
+
+  test('Hand-written link ids with escapes pair parent and child', () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      String.raw`<div data-elb="shirt" data-elb-shirt="size:L">
+        <div data-elblink="men\'s:parent"></div>
+      </div>
+      <div data-elblink="men\'s:child">
+        <button id="escaped-link" data-elbaction="click"></button>
+      </div>`,
+    );
+
+    expect(getEvents(getElem('escaped-link'), Triggers.Click)).toMatchObject([
+      { entity: 'shirt', data: { size: 'L' } },
     ]);
   });
 });

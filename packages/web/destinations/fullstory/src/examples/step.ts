@@ -95,7 +95,7 @@ export const userLoginIdentify: FullStoryStepExample = {
 export const destinationLevelIdentify: FullStoryStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify fires FullStory setIdentity with the user id before every track call.',
+    "With settings.identify mapping uid to 'user.id', the destination fires FullStory setIdentity before every track call.",
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -240,7 +240,7 @@ export const silentWithIdentify: FullStoryStepExample = {
 export const consentGrantCapture: FullStoryStepExample = {
   title: 'Start capture',
   description:
-    'A walker consent grant for analytics calls FullStory start to resume session recording.',
+    "With settings.consent mapping analytics to 'capture', a walker consent grant for analytics calls FullStory start to begin session recording.",
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   settings: {
@@ -260,7 +260,7 @@ export const consentGrantCapture: FullStoryStepExample = {
 export const consentRevokeCapture: FullStoryStepExample = {
   title: 'Shutdown capture',
   description:
-    'A walker consent revoke for analytics calls FullStory shutdown to stop session recording.',
+    "With settings.consent mapping analytics to 'capture', a walker consent revoke for analytics calls FullStory shutdown to stop session recording.",
   command: 'consent',
   before: { analytics: true },
   in: { analytics: false } as WalkerOS.Consent,
@@ -279,7 +279,7 @@ export const consentRevokeCapture: FullStoryStepExample = {
 export const consentGrantFlag: FullStoryStepExample = {
   title: 'Consent flag granted',
   description:
-    'A walker consent grant with action consent sets the FullStory identity consent flag to true.',
+    "With settings.consent mapping marketing to 'consent', a walker consent grant for marketing sets the FullStory identity consent flag to true.",
   command: 'consent',
   in: { marketing: true } as WalkerOS.Consent,
   settings: {
@@ -299,7 +299,7 @@ export const consentGrantFlag: FullStoryStepExample = {
 export const consentRevokeFlag: FullStoryStepExample = {
   title: 'Consent flag revoked',
   description:
-    'A walker consent revoke with action consent sets the FullStory identity consent flag to false.',
+    "With settings.consent mapping marketing to 'consent', a walker consent revoke for marketing sets the FullStory identity consent flag to false.",
   command: 'consent',
   before: { marketing: true },
   in: { marketing: false } as WalkerOS.Consent,

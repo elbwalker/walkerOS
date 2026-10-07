@@ -55,6 +55,17 @@ export class ApiError extends Error {
 }
 
 /**
+ * The refusal for a request that needs a login when none is stored. It carries
+ * `UNAUTHORIZED`, the code the app answers an unauthenticated request with, so
+ * a caller handles both the same way.
+ */
+export function notAuthenticatedError(): ApiError {
+  return new ApiError('Not authenticated. Run `walkeros auth login` first.', {
+    code: 'UNAUTHORIZED',
+  });
+}
+
+/**
  * Build ApiError options from an openapi-style error body.
  * The error shape is: { error: { code, message, details: { errors: [] } } }
  * Returns `null` when the body has no recognizable `error` object.

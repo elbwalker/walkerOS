@@ -32,7 +32,15 @@ npm install @walkeros/web-destination-clarity
       "destinations": {
         "clarity": {
           "package": "@walkeros/web-destination-clarity",
-          "config": {}
+          "config": {
+            "settings": {
+              "apiKey": "3t0wlogvdz",
+              "consent": {
+                "analytics": "analytics_Storage",
+                "marketing": "ad_Storage"
+              }
+            }
+          }
         }
       }
     }

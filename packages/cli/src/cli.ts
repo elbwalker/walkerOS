@@ -42,6 +42,7 @@ import {
   getDeploymentBySlugCommand,
 } from './commands/deployments/index.js';
 import { feedbackCommand } from './commands/feedback/index.js';
+import { diagnosticsCommand } from './commands/diagnostics/index.js';
 import {
   telemetryStatusCommand,
   telemetryEnableCommand,
@@ -461,7 +462,7 @@ flowsCmd
 
 flowsCmd
   .command('delete <flowId>')
-  .description('Delete a flow')
+  .description('Delete a flow and its frames')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
@@ -703,6 +704,17 @@ observeCmd
       timeout: options.timeout,
       json: options.json,
     });
+  });
+
+// Diagnostics command
+program
+  .command('diagnostics')
+  .description(
+    'Show the CLI version, the app URL and its source, app health, and the API contract verdict against that app',
+  )
+  .option('--json', 'output as JSON')
+  .action(async (options) => {
+    await diagnosticsCommand({ json: options.json });
   });
 
 // Feedback command

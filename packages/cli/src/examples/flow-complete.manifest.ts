@@ -351,7 +351,7 @@ const teaching = {
     chapter: 'chains-routing',
     level: 'intermediate',
     useCases: [],
-    note: 'On the web collector.next runs the inline pageGroup step once per event.',
+    note: 'On the web collector.next stops an opted-out user first, then runs the inline pageGroup step once per event.',
     docs: [{ page: 'getting-started/flow/routing' }],
     example: { step: 'pageGroup', name: 'checkout' },
   },
@@ -373,14 +373,6 @@ const teaching = {
     note: 'One route per job, each with its own methods: /collect, /g/collect, /walker.js.',
     docs: [],
     example: { step: 'express', name: 'postCollect' },
-  },
-  'express-port': {
-    pointer: '/flows/server/sources/express/config/settings/port',
-    chapter: 'server-entry',
-    level: 'beginner',
-    useCases: [],
-    note: 'port lets push --simulate start the source; runneros mounts the handler on its own port.',
-    docs: [],
   },
   'express-cors': {
     pointer: '/flows/server/sources/express/config/settings/cors',
@@ -775,14 +767,13 @@ const teaching = {
     note: 'Destination consent: Meta only gets events with marketing consent.',
     docs: [],
   },
-  'rule-consent': {
-    pointer:
-      '/flows/web/destinations/ga4/config/mapping/order/complete/consent',
+  'user-optout': {
+    pointer: '/flows/server/sources/express/next/0',
     chapter: 'consent-privacy',
-    level: 'intermediate',
-    useCases: ['consent'],
-    note: 'Rule consent on purchases: functional, like the destination; marketing consent belongs to Meta and Data Manager.',
-    docs: [],
+    level: 'beginner',
+    useCases: ['consent', 'privacy-analytics'],
+    note: 'An opted-out user (user.optout true) is stopped first: on the server before dedup, so no dedup entry, hash or delivery; on the web first in collector.next, so the browser sends nothing.',
+    docs: [{ page: 'guides/consent/index', anchor: 'opt-out' }],
   },
   'value-consent': {
     pointer: '/flows/web/destinations/collect/config/policy/user.email/consent',
@@ -1087,7 +1078,7 @@ const teaching = {
     chapter: 'chains-routing',
     level: 'beginner',
     useCases: [],
-    note: 'source.next names the hop after the source, here dedup.',
+    note: 'source.next names the hops after the source: the opt-out stop, then dedup.',
     docs: [{ page: 'getting-started/flow/routing' }],
   },
   'collector-next': {
@@ -1489,6 +1480,16 @@ const teaching = {
     note: 'loadUser puts the customer lifetime value and segment on logged-in events.',
     docs: [{ page: 'collector/state' }],
     example: { step: 'loadUser', name: 'knownCustomer' },
+  },
+  'piwik-segment': {
+    pointer:
+      '/flows/server/destinations/piwikpro/config/settings/customDimensions',
+    chapter: 'state-stores',
+    level: 'intermediate',
+    useCases: ['privacy-analytics'],
+    note: 'Piwik PRO gets the loaded segment as custom dimension 1; the path is relative to the event, so user.segment.',
+    docs: [],
+    example: { step: 'piwikpro', name: 'orderWithGoal' },
   },
   'store-fs': {
     pointer: '/flows/server/stores/assets',
@@ -2089,7 +2090,10 @@ export const flowCompleteCoverage = {
   mappingRule: {
     batch: 'rule-batch',
     condition: 'rule-condition',
-    consent: 'rule-consent',
+    consent: {
+      excluded:
+        'rule consent is not enforced yet; destination consent is the gate in this file',
+    },
     settings: 'rule-settings',
     data: 'rule-data',
     include: {
@@ -2160,7 +2164,7 @@ export const flowCompleteCoverage = {
     stop: 'route-stop',
     gate: { excluded: ROUTE_CASES },
     sequence: 'route-sequence',
-    id: 'source-next',
+    id: 'destination-before',
   } satisfies Coverage<RouteKind>,
   combinator: {
     and: 'match-and',

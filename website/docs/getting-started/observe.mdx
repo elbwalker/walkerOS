@@ -223,7 +223,7 @@ Every FlowState record carries correlation fields so a single observer can stitc
 Correlation crosses the wire via the W3C `traceparent` header:
 
 - **Emit.** The web `api` destination adds `traceparent: 00-<traceId>-<eventId>-01` to each non-batched send when the event carries both ids. A `traceparent` you configure yourself always wins (matched case-insensitively). Batched sends carry no `traceparent`, since one batch may aggregate distinct upstream traces.
-- **Adopt.** Any server source with a request header bag (for example an Express or fetch handler) reads a valid inbound `traceparent` and threads its trace and parent span into the ingest context, so the receiving flow's records share the caller's `traceId` and link back via `parentEventId`. An absent or malformed header is ignored. The AWS and GCP handlers do not yet adopt inbound request identity.
+- **Adopt.** Any server source with a request header bag (for example an Express or fetch handler) reads a valid inbound `traceparent` and threads its trace and parent span into the ingest context, so the receiving flow's records share the caller's `traceId` and link back via `parentEventId`. An absent or malformed header is ignored.
 
 ### Journey status
 

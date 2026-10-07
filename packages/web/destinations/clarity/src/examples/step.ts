@@ -81,7 +81,7 @@ export const userLoginIdentify: ClarityStepExample = {
 export const destinationLevelIdentify: ClarityStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify calls Clarity.identify with the user id on every push as Clarity recommends.',
+    "With settings.identify mapping customId to 'user.id', the destination calls Clarity.identify on every push, as Clarity recommends, before the event.",
   in: getEvent('page view', { timestamp: 1700000103 }),
   settings: {
     identify: {
@@ -181,7 +181,8 @@ export const orderCompleteUpgrade: ClarityStepExample = {
 };
 
 /**
- * settings.include flattens a walkerOS event section into Clarity.setTag calls.
+ * A rule's include (or config.include, for every event) flattens a walkerOS
+ * event section into Clarity.setTag calls.
  * Primitives coerce to strings; arrays pass through as string[].
  * The example includes `data` only; keys become `data_<field>`.
  */
@@ -265,7 +266,7 @@ export const pageViewSilent: ClarityStepExample = {
 export const consentGrantBoth: ClarityStepExample = {
   title: 'Consent granted',
   description:
-    'A walker consent command translates analytics and marketing grants into a Clarity.consentV2 call.',
+    'With settings.consent mapping analytics to analytics_Storage and marketing to ad_Storage, a walker consent command granting both calls Clarity.consentV2 with both granted.',
   command: 'consent',
   in: { analytics: true, marketing: true } as WalkerOS.Consent,
   settings: {
@@ -293,7 +294,7 @@ export const consentGrantBoth: ClarityStepExample = {
 export const consentRevoke: ClarityStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent command with analytics and marketing denied calls Clarity.consentV2 with denied flags.',
+    'With settings.consent mapping analytics to analytics_Storage and marketing to ad_Storage, a grant of both and then a walker consent command denying both call Clarity.consentV2 twice, the second time with denied flags.',
   command: 'consent',
   before: { analytics: true, marketing: true },
   in: { analytics: false, marketing: false } as WalkerOS.Consent,

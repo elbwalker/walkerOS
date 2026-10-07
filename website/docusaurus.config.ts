@@ -2,6 +2,7 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config, Plugin } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plugin-llms-txt';
+import { version as coreVersion } from '../packages/core/package.json';
 // The site's own version, kept in lockstep with every @walkeros/* package by
 // the changesets "fixed" group. Reading it here rather than from core keeps
 // the version in the same file that triggers the website deploy, whose push
@@ -9,6 +10,7 @@ import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plu
 import { version as walkerosVersion } from './package.json';
 import restoreExpressionIndent from './src/remark/restore-expression-indent';
 import flowSnippets from './src/remark/flow-snippets';
+import exportDropComments from './src/rehype/export-drop-comments';
 import exportFlowSnippets from './src/rehype/export-flow-snippets';
 import normalizeExportLinks from './src/remark/normalize-export-links';
 import prependExportContext from './src/remark/prepend-export-context';
@@ -73,6 +75,7 @@ const config: Config = {
   onBrokenLinks: 'throw',
 
   customFields: {
+    coreVersion,
     walkerosVersion,
   },
 
@@ -215,9 +218,8 @@ const config: Config = {
 
   themeConfig: {
     colorMode: {
-      defaultMode: 'light',
+      defaultMode: 'dark',
       disableSwitch: false,
-      respectPrefersColorScheme: true,
     },
     autoCollapsedSidebar: true,
     docs: {
@@ -234,85 +236,74 @@ const config: Config = {
       },
       items: [
         {
-          type: 'dropdown',
-          label: 'walkerOS for ...',
-          position: 'left',
-          items: [
-            { to: '/for/tracking-specialists/', label: 'Tracking specialists' },
-            { to: '/for/developers/', label: 'Developers' },
-            { to: '/for/data-analysts/', label: 'Data analysts' },
-            { to: '/for/data-leads/', label: 'Data leads' },
-          ],
-        },
-        {
-          to: '/#tagging',
-          label: 'Features',
-          position: 'left',
-          // Anchor on the home page, never an active section.
-          activeBaseRegex: '^$',
-        },
-        {
-          href: 'https://www.elbwalker.com/services',
-          label: 'Services',
-          position: 'left',
-        },
-        {
           type: 'docSidebar',
           sidebarId: 'docsSidebar',
           position: 'left',
-          label: 'Docs',
+          label: 'Documentation',
         },
+        { to: '/playground/', label: 'Playground', position: 'left' },
         {
-          to: '/#faq',
-          label: 'FAQ',
+          type: 'docSidebar',
+          sidebarId: 'skillsSidebar',
+          docsPluginId: 'skills',
           position: 'left',
-          // Anchor on the home page, never an active section.
-          activeBaseRegex: '^$',
+          label: 'Skills',
         },
         {
           href: vars.github,
           label: 'GitHub',
           position: 'right',
         },
-        {
-          type: 'html',
-          position: 'right',
-          value:
-            '<a class="elb-oa-btn elb-oa-btn--pill" href="/docs/getting-started/quickstart/">npx walkeros init</a>',
-        },
       ],
     },
     footer: {
-      style: 'light',
+      style: 'dark',
       links: [
         {
-          title: 'Product',
+          title: 'Learn',
           items: [
-            { label: 'Docs', to: '/docs/' },
-            { label: 'Quickstart', to: '/docs/getting-started/quickstart/' },
-            { label: 'Destinations', to: '/docs/destinations/' },
-            { label: 'Changelog', href: `${vars.github}releases` },
-            { label: 'Playground', to: '/playground/' },
-            { label: 'Skills', to: '/skills/' },
+            {
+              label: 'Documentation',
+              to: '/docs/',
+            },
+            {
+              label: 'Playground',
+              to: '/playground/',
+            },
+            {
+              label: 'Comparisons',
+              to: '/docs/comparisons/',
+            },
+            {
+              label: 'Storybook demo',
+              href: 'https://storybook.walkeros.io/',
+            },
           ],
         },
         {
-          title: 'Journey',
+          title: 'Community',
           items: [
-            { label: 'Plan', to: '/docs/getting-started/event-model/' },
-            { label: 'Tag', to: '/docs/sources/web/browser/' },
-            { label: 'Collect', to: '/docs/collector/' },
-            { label: 'Deploy', to: '/docs/getting-started/deploy/' },
-            { label: 'Observe', to: '/docs/getting-started/observe/' },
+            {
+              label: 'GitHub',
+              href: `${vars.github}discussions`,
+            },
+            {
+              label: 'LinkedIn',
+              href: `${vars.linkedin}`,
+            },
           ],
         },
         {
           title: 'Company',
           items: [
-            { label: 'Services', href: 'https://www.elbwalker.com/services' },
-            { label: 'Workshops', to: '/#workshop' },
-            { label: 'About', href: 'https://www.elbwalker.com/company' },
-            { label: 'Contact', href: 'mailto:hello@elbwalker.com' },
+            {
+              label: 'About us',
+              href: 'https://www.elbwalker.com/company',
+            },
+            {
+              label: 'Services',
+              href: 'https://www.elbwalker.com/services',
+            },
             {
               label: 'Privacy Policy',
               href: 'https://www.elbwalker.com/legal/privacy',
@@ -325,15 +316,6 @@ const config: Config = {
               label: 'Imprint',
               href: 'https://www.elbwalker.com/legal/imprint',
             },
-          ],
-        },
-        {
-          title: 'Open source',
-          items: [
-            { label: 'GitHub', href: vars.github },
-            { label: 'npm', href: 'https://www.npmjs.com/org/walkeros' },
-            { label: 'Discussions', href: `${vars.github}discussions` },
-            { label: 'License', href: `${vars.github}blob/main/LICENSE` },
           ],
         },
       ],
@@ -765,7 +747,7 @@ const config: Config = {
             to: '/docs/comparisons/dataLayer',
           },
           {
-            from: '/docs/apps',
+            from: ['/docs/apps', '/docs/guides/gtm'],
             to: '/docs/apps/walkerjs',
           },
           {
@@ -827,9 +809,12 @@ const config: Config = {
           // non-root baseUrl.
           relativePaths: Boolean(process.env.DOCUSAURUS_BASEURL),
           excludeRoutes: ['/search', '/404', '/tags/**'],
-          // Runs on the page hast before the Markdown conversion: restores the
-          // code languages Shiki dropped from the flow-complete snippets.
-          beforeDefaultRehypePlugins: [exportFlowSnippets],
+          // These run on the page hast before the Markdown conversion:
+          // - React's server render leaves `<!-- -->` between adjacent text
+          //   nodes; drop every comment so none reaches the Markdown.
+          // - Caption the flow-complete snippets and check their code blocks
+          //   name a language.
+          beforeDefaultRehypePlugins: [exportDropComments, exportFlowSnippets],
           // These run on the mdast of the per-page exports only, so neither
           // touches llms.txt:
           // - The export appends `.md` to the route path, so a trailing-slash

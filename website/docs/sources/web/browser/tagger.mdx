@@ -20,8 +20,8 @@ The tagger solves several challenges when working with walkerOS data attributes:
 
 * **Consistent formatting** - Ensures data attributes follow walkerOS
   conventions
-* **Automatic escaping** - Handles special characters in values (semicolons,
-  colons, quotes, backslashes)
+* **Automatic escaping** - Escapes semicolons, single quotes and backslashes in
+  values, plus colons in keys, so the browser source reads them back as passed
 * **Type safety** - Provides TypeScript support for better development
   experience
 * **Fluent API** - Chainable methods for building complex attribute sets
@@ -122,7 +122,8 @@ const attributes = tagger()
 ### Context and global properties
 
 <CodeSnippet
-  code={`const attributes = tagger('product')
+  code={`const attributes = tagger()
+.entity('product')
 .data('id', 123)
 .context('test', 'engagement')
 .globals('lang', 'en')
@@ -201,17 +202,26 @@ const attributes = tagger('product')
 
 ### Value escaping
 
+The tagger puts a backslash before every semicolon, single quote and backslash
+in keys and values, and before colons in keys. These are the
+[escapes](/docs/sources/web/browser/tagging/html-attributes#escaping)
+the browser source reads, so the value arrives as passed.
+
 <CodeSnippet
   code={`const attributes = tagger()
-.data('description', 'Product with: special; chars & "quotes"')
+.data('description', "Men's shirt: size L; blue")
 .get();
 
 // Result:
 // {
-//   'data-elb-': 'description:Product with\\\\: special\\\\; chars & \\\\"quotes\\\\"'
+//   'data-elb-': "description:Men\\\\'s shirt: size L\\\\; blue"
 // }`}
   language="typescript"
 />
+
+Like any attribute value, it is still cast to a number or boolean where it
+looks like one, trimmed of surrounding whitespace, and read from the element
+when it starts with `#`.
 
 ## Available methods (API reference)
 
@@ -279,26 +289,28 @@ tagger().action({ load: 'view', click: 'select', impression: 'view' });`}
 
 ##### `actions(trigger: string, action?: string)` | `actions(object: Record<string, string>)`
 
-Adds action mappings for event triggers. Creates a `data-elbactions` attribute.
+Adds action mappings that apply to the nearest entity and every entity above
+it. Creates a `data-elbactions` attribute, which on its own works for the
+`click` and `submit` triggers only. Use `action()` for every other trigger.
 
 <CodeSnippet
   code={`// Single action
-tagger().actions('load', 'view');
+tagger().actions('click', 'select');
 
 // Combined trigger:action
-tagger().actions('load:view');
+tagger().actions('click:select');
 
 // Multiple actions
-tagger().actions({ load: 'view', click: 'select', visible: 'visible' });
+tagger().actions({ click: 'select', submit: 'send' });
 
 // Can be combined with action() method
-tagger().action('click', 'select').actions('load', 'view');`}
+tagger().action('load', 'view').actions('click', 'select');`}
   language="typescript"
 />
 
 ##### `context(key: string, value: Property)` | `context(object: Properties)`
 
-Adds context properties that apply to all events.
+Adds context properties for events triggered inside the element.
 
 <CodeSnippet
   code={`// Single context
@@ -311,7 +323,7 @@ tagger().context({ test: 'engagement', position: 'header', type: 'promo' });`}
 
 ##### `globals(key: string, value: Property)` | `globals(object: Properties)`
 
-Adds global properties that persist across page views.
+Adds global properties that apply to every event on the page.
 
 <CodeSnippet
   code={`// Single global
@@ -340,14 +352,15 @@ tagger().scoped({ size: 'L', color: 'red' });
 
 ##### `link(id: string, type: string)` | `link(object: Record<string, string>)`
 
-Adds link relationships between elements.
+Sets the element's link to another element. An element carries one link: a
+second, different link or an object with more than one entry throws an error.
 
 <CodeSnippet
-  code={`// Single link
-tagger().link('details', 'parent');
+  code={`tagger().link('details', 'parent');
+// Creates: data-elblink="details:parent"
 
-// Multiple links
-tagger().link({ details: 'parent', modal: 'child', sidebar: 'child' });`}
+// Same link as an object with one entry
+tagger().link({ details: 'parent' });`}
   language="typescript"
 />
 

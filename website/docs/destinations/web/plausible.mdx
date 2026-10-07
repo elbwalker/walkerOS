@@ -20,8 +20,9 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 />
 
 [Plausible Analytics](https://plausible.io/) is a simple, privacy-friendly
-Google Analytics alternative. The destination loads the Plausible script,
-initializes the `plausible` function, and sends page views and custom events.
+Google Analytics alternative. With `loadScript: true` the destination loads
+Plausible's manual script (`script.manual.js`) for your `domain`. It installs
+the `plausible` queue function and sends each event as `plausible(name, data)`.
 
 <WhereThisFits
   pre={<>Plausible is a <strong>web destination</strong> in the walkerOS flow:</>}
@@ -49,8 +50,12 @@ await startFlow({
     plausible: {
       code: destinationPlausible,
       config: {
+        loadScript: true,
         settings: {
           domain: 'walkeros.io',
+        },
+        mapping: {
+          page: { view: { name: 'pageview' } },
         },
       },
     },
@@ -69,8 +74,12 @@ Add to your `flow.json` destinations:
   "plausible": {
     "package": "@walkeros/web-destination-plausible",
     "config": {
+      "loadScript": true,
       "settings": {
         "domain": "walkeros.io"
+      },
+      "mapping": {
+        "page": { "view": { "name": "pageview" } }
       }
     }
   }
@@ -84,3 +93,18 @@ Add to your `flow.json` destinations:
 </Tabs>
 
 <Configuration type="destination" data={data} />
+
+## Page views and custom events
+
+The manual script records no page view by itself. Plausible counts a page view
+for an event named `pageview`, so the example above maps `page view` to it.
+Without that rule, a walkerOS `page view` reaches Plausible as a custom event
+named `page view`.
+
+Every other event is a custom event named after the rule's `name`, or the
+walkerOS event name. Plausible accepts custom properties with scalar values
+only (strings, numbers, booleans) under `props`, and revenue as
+`{ currency, amount }`, as the examples above show.
+
+Without `loadScript`, the calls wait in the `plausible` queue until a Plausible
+script on your page processes them.

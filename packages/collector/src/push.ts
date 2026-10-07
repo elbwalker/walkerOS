@@ -10,14 +10,20 @@ import {
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
-import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
+import {
+  pushBounded,
+  resetOverflowFlag,
+  seededQueueMax,
+  warnOverflowOnce,
+} from './buffers';
 import { bumpDropped, errorMeta } from './report-error';
 import { createEvent, enrichEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
 import {
-  buildBaseState,
   emitCollectorDrop,
   journeyFields,
+  stepError,
+  stepState,
 } from './observerEmit';
 import { runTransformerChain } from './transformer';
 
@@ -63,12 +69,7 @@ export function createPush<T extends Collector.Instance>(
           // by runCollector, so the pipeline (mapping, chains, enrichment)
           // runs exactly once, with post-run state. See prerun-hold.test.ts.
           if (!collector.allowed) {
-            const max = collector.config.queueMax;
-            if (max === undefined) {
-              throw new Error(
-                'Collector.Config.queueMax is undefined; defaults must be seeded by collector()',
-              );
-            }
+            const max = seededQueueMax(collector.config.queueMax);
             const held = pushBounded(
               collector.preRunQueue,
               { event, options },
@@ -139,14 +140,30 @@ export function createPush<T extends Collector.Instance>(
 
             // Check consent requirements
             if (mapping.consent) {
+              const eventConsent = processed.event.consent as
+                | WalkerOS.Consent
+                | undefined;
               const grantedConsent = getGrantedConsent(
                 mapping.consent,
                 collector.consent,
-                processed.event.consent as WalkerOS.Consent | undefined,
+                eventConsent,
               );
 
+              // Denied: the event never reaches the collector. Recorded
+              // like a chain drop, with the consent gate as its reason.
               if (!grantedConsent) {
-                return createPushResult({ ok: true });
+                const at = id ? `source.${id}` : 'collector.push';
+                collector.logger.debug('Event dropped by source consent', {
+                  at,
+                  required: mapping.consent,
+                });
+                emitCollectorDrop(collector, processed.event, pipelineIngest, {
+                  reason: 'consent',
+                  at,
+                  required: mapping.consent,
+                  consent: { ...collector.consent, ...eventConsent },
+                });
+                return createPushResult({ ok: true, dropped: true });
               }
             }
 
@@ -175,13 +192,11 @@ export function createPush<T extends Collector.Instance>(
                   chainResult.droppedBy ? ` (${chainResult.droppedBy})` : ''
                 }`,
               );
-              emitCollectorDrop(
-                collector,
-                partialEvent,
-                pipelineIngest,
-                chainResult.droppedBy,
-                chainPath ?? 'collector.push.preChain',
-              );
+              emitCollectorDrop(collector, partialEvent, pipelineIngest, {
+                reason: 'dropped',
+                by: chainResult.droppedBy,
+                at: chainPath ?? 'collector.push.preChain',
+              });
               return createPushResult({ ok: true, dropped: true });
             }
 
@@ -335,63 +350,53 @@ export function createPush<T extends Collector.Instance>(
     // run trace, plus the source context threaded through `options.ingest`.
     // The processed full event is not visible here, so out/error reuse the
     // same incoming-event trace (identical value in the common case).
-    const { traceId, sourceId, parentEventId } = journeyFields(
-      identified,
-      options?.ingest,
-      collector,
-    );
+    const journey = journeyFields(identified, options?.ingest, collector);
     const started = Date.now();
-    const inState = buildBaseState(collector, {
-      stepId: 'collector.push',
-      stepType: 'collector',
-      phase: 'in',
+    const inState = stepState(
+      collector,
+      'collector.push',
+      'collector',
+      'in',
       eventId,
-      now: started,
-      traceId,
-      sourceId,
-      parentEventId,
-    });
+      started,
+      journey,
+    );
     inState.inEvent = identified;
     emitStep(collector, inState);
 
     try {
       const result = await innerPush(identified, options);
       const finished = Date.now();
-      const outState = buildBaseState(collector, {
-        stepId: 'collector.push',
-        stepType: 'collector',
-        phase: 'out',
+      const outState = stepState(
+        collector,
+        'collector.push',
+        'collector',
+        'out',
         // The same id as the in record. Reading it off the result instead
         // would split the wrap's own pair across two journeys whenever the
         // result reports a different event: a fan-out reporting its first
         // child, or a `prePush` hook that swapped the event.
         eventId,
-        now: finished,
-        traceId,
-        sourceId,
-        parentEventId,
-      });
+        finished,
+        journey,
+      );
       outState.durationMs = finished - started;
       outState.outEvent = result;
       emitStep(collector, outState);
       return result;
     } catch (err) {
       const finished = Date.now();
-      const errState = buildBaseState(collector, {
-        stepId: 'collector.push',
-        stepType: 'collector',
-        phase: 'error',
+      const errState = stepState(
+        collector,
+        'collector.push',
+        'collector',
+        'error',
         eventId,
-        now: finished,
-        traceId,
-        sourceId,
-        parentEventId,
-      });
+        finished,
+        journey,
+      );
       errState.durationMs = finished - started;
-      errState.error =
-        err instanceof Error
-          ? { name: err.name, message: err.message }
-          : { message: String(err) };
+      errState.error = stepError(err);
       emitStep(collector, errState);
       throw err;
     }

@@ -12,13 +12,6 @@ export const SettingsSchema = z
       )
       .optional(),
 
-    explicitOnly: z
-      .boolean()
-      .describe(
-        'Only process consent after the user made an explicit choice. Ignores default/implicit states. Default: true.',
-      )
-      .optional(),
-
     globalName: z
       .string()
       .describe(

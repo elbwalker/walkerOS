@@ -175,7 +175,10 @@ the destinations. Before the check, each queued event is updated:
 The queues belong to the current run. A `walker run` command starts a new run
 and clears the destination queues along with the replay buffer, so events still
 waiting for consent are lost. The collector already runs by default, so do not
-send `walker run` in reaction to a consent change.
+send `walker run` in reaction to a consent change. Only a bundle you build with
+`run: false` needs one `elb('walker run')`: call it once, from your CMP's first
+consent callback, not from an `on consent` handler, which is not called before
+the collector runs.
 
 ## Revoke consent
 
@@ -190,6 +193,59 @@ Once none of a destination's required keys is granted, new events are queued
 for it instead of delivered. If consent is granted again during the same run,
 those queued events are delivered. Events that were already sent are not
 affected.
+
+## Opt-out
+
+An opt-out beats consent: when a user opts out, no event of theirs is sent,
+whatever consent they granted. Mark the user with `optout: true` and stop the
+event at the first step of the chain with a gated stop:
+
+<CodeSnippet
+  code={`{
+  "match": { "key": "event.user.optout", "operator": "eq", "value": "true" },
+  "stop": true
+}`}
+  language="json"
+/>
+
+- **Web:** put the stop first in your bundle's `collector.next`. An opted-out
+  browser sends nothing. Sources still run, for example the session source keeps its ids in
+  storage.
+- **Server:** put the stop first in the source's `next`, before deduplication.
+  An opted-out event leaves no dedup entry and no fingerprint hash, and reaches
+  no destination.
+
+`eq` compares as strings, so a boolean `true` and the string `"true"` both
+match.
+
+Set the flag before the first event. A `walker user` command queued in
+`elbLayer` before your bundle loads applies before anything is sent:
+
+<CodeSnippet
+  code={`// Before your bundle loads
+window.elbLayer = window.elbLayer || [];
+window.elbLayer.push(['walker user', { optout: true }]);`}
+  language="javascript"
+/>
+
+`data-elbuser` is read right before the page view, so it keeps the page view in
+the browser. Events sent before it is read, such as `session start` and events
+queued in `elbLayer` before your bundle loaded, are sent.
+
+<CodeSnippet
+  code={`<body data-elbuser="optout:true">`}
+  language="html"
+/>
+
+A `walker user` command after your bundle loaded stops every later event, but
+the page view of that page has already been sent.
+
+The server flow of
+[`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json),
+the tested example flow, stops opted-out events before `dedup`; its web flow
+uses the same stop first in `collector.next`:
+
+<FlowSlice feature="user-optout" />
 
 ## Consent on a single event
 

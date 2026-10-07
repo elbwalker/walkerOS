@@ -19,9 +19,9 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
   npm="@walkeros/web-destination-clarity"
 />
 
-[Microsoft Clarity](https://clarity.microsoft.com/) provides session replays,
-heatmaps and behavioural insights for web products, free and without sampling
-caps. This destination forwards walkerOS events to Clarity via the official
+[Microsoft Clarity](https://clarity.microsoft.com/) provides free session
+replays, heatmaps and behavioural insights for web products. This destination
+forwards walkerOS events to Clarity via the official
 [`@microsoft/clarity`](https://www.npmjs.com/package/@microsoft/clarity) SDK,
 translating events into `Clarity.event(...)` calls, resolving custom tags,
 identities, session priority, and consent state.
@@ -99,8 +99,13 @@ Add to your `flow.json` destinations:
 ## Consent translation
 
 Clarity expects its own category names (`analytics_Storage`, `ad_Storage`).
-walkerOS uses arbitrary consent keys, so translation is **explicit**: configure
+walkerOS uses arbitrary consent keys, so the translation is explicit: configure
 `settings.consent` once and the destination maps every `walker consent` event
-into `Clarity.consentV2({ ... })`. When all mapped keys are revoked, the
-destination additionally calls `Clarity.consent(false)` (the legacy v1 API
-that erases cookies and ends the session).
+into `Clarity.consentV2({ ... })`. A granted key becomes `granted`, any other
+value `denied`, and a mapped key missing from the consent event is left out.
+Without `settings.consent`, the destination takes no action on consent changes.
+
+`settings.consent` only tells Clarity the consent state. The destination loads
+the Clarity script when the flow starts. To load Clarity only after consent is
+granted, also set `config.consent`, see
+[consent management](/docs/guides/consent).

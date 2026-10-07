@@ -119,3 +119,32 @@ export function injectLocalPaths(
   };
   for (const name of Object.keys(packages)) add(name);
 }
+
+/**
+ * A copy of a flow config whose @walkeros packages (its steps' packages and
+ * the collector) all come from the monorepo, so a test bundles this working
+ * tree instead of the published release.
+ */
+export function withLocalPackages(config: Flow.Json): Flow.Json {
+  const copy = structuredClone(config);
+  for (const flow of Object.values(copy.flows)) {
+    const config = flow.config;
+    if (!config) continue;
+    const packages = { ...config.bundle?.packages };
+    const steps = [
+      ...Object.values(flow.sources ?? {}),
+      ...Object.values(flow.transformers ?? {}),
+      ...Object.values(flow.destinations ?? {}),
+      ...Object.values(flow.stores ?? {}),
+    ];
+    for (const name of [
+      '@walkeros/collector',
+      ...steps.map((step) => step.package),
+    ]) {
+      if (name) packages[name] ??= {};
+    }
+    config.bundle = { ...config.bundle, packages };
+    injectLocalPaths(flow);
+  }
+  return copy;
+}

@@ -4,15 +4,7 @@ import {
   isFeatureDenial,
 } from '../../tools/feature-gate.js';
 import { AUTH_HINT } from '../../types.js';
-
-class CodedError extends Error {
-  constructor(
-    message: string,
-    readonly code?: string,
-  ) {
-    super(message);
-  }
-}
+import { CodedError } from '../support/coded-error.js';
 
 describe('feature gate', () => {
   it('recognises a denial by its code, not its wording', () => {
@@ -20,9 +12,7 @@ describe('feature gate', () => {
       isFeatureDenial(new CodedError('anything', 'FEATURE_NOT_AVAILABLE')),
     ).toBe(true);
     expect(
-      isFeatureDenial(
-        new CodedError('hub is not available on your current plan'),
-      ),
+      isFeatureDenial(new Error('hub is not available on your current plan')),
     ).toBe(false);
     expect(isFeatureDenial('FEATURE_NOT_AVAILABLE')).toBe(false);
   });
@@ -34,9 +24,8 @@ describe('feature gate', () => {
     },
   );
 
-  // The second message is the one that proves the ordering: `isAuthError`
-  // answers to the word "forbidden" anywhere in a message, so a denial worded
-  // that way reaches the auth hint the moment the two checks swap places.
+  // The second message reads like a login failure: the hint follows the code,
+  // so its wording never sends a denied caller to log in again.
   it.each([
     ['reads as a plan limit', 'frames is not available on your current plan'],
     ['also reads as an auth failure', 'Forbidden'],
@@ -60,6 +49,20 @@ describe('feature gate', () => {
     ).toBe(AUTH_HINT);
   });
 
+  it.each([
+    ['a role refusal', 'Requires member role or higher', 'FORBIDDEN'],
+    [
+      'a scope refusal',
+      'This token lacks the write scope',
+      'INSUFFICIENT_SCOPE',
+    ],
+    ['a role refusal worded as a login failure', 'Forbidden', 'FORBIDDEN'],
+  ])('adds no hint for %s', (_label, message, code) => {
+    expect(
+      errorHint(new CodedError(message, code), 'hub', 'find ids'),
+    ).toBeUndefined();
+  });
+
   it('adds the discovery hint on NOT_FOUND and nothing otherwise', () => {
     expect(
       errorHint(
@@ -68,8 +71,6 @@ describe('feature gate', () => {
         'find ids',
       ),
     ).toBe('find ids');
-    expect(
-      errorHint(new CodedError('boom'), 'hub', 'find ids'),
-    ).toBeUndefined();
+    expect(errorHint(new Error('boom'), 'hub', 'find ids')).toBeUndefined();
   });
 });

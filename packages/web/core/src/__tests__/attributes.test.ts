@@ -45,6 +45,108 @@ describe('attributes', () => {
     it('should handle whitespace', () => {
       expect(splitAttribute('a; b ; c')).toEqual(['a', ' b ', ' c']);
     });
+
+    it.each([
+      ['escaped separator', String.raw`a\;b;c`, [String.raw`a\;b`, 'c']],
+      [
+        'escaped quote',
+        String.raw`a\'b;c\'d`,
+        [String.raw`a\'b`, String.raw`c\'d`],
+      ],
+      ['escaped backslash', String.raw`a\\;b`, [String.raw`a\\`, 'b']],
+      [
+        'escape inside quotes',
+        String.raw`'a\';b';c`,
+        [String.raw`'a\';b'`, 'c'],
+      ],
+      ['unclosed quote', "k:Men's shirt;s:L", ["k:Men's shirt", 's:L']],
+      ['lone trailing backslash', 'a\\', ['a\\']],
+    ])('should keep %s in its part', (_, str, expected) => {
+      expect(splitAttribute(str)).toEqual(expected);
+    });
+
+    it.each([
+      [
+        'apostrophes in text',
+        "name:Men's shirt;brand:Levi's",
+        ';',
+        ["name:Men's shirt", "brand:Levi's"],
+      ],
+      [
+        'apostrophes before non-ASCII letters',
+        "title:l'été;city:l'île",
+        ';',
+        ["title:l'été", "city:l'île"],
+      ],
+      [
+        'an apostrophe in a quoted value',
+        "k:'it's';b:1",
+        ';',
+        ["k:'it's'", 'b:1'],
+      ],
+      ['a quoted key', "'k;x':v;b:1", ';', ["'k;x':v", 'b:1']],
+      [
+        'spaces around a quoted value',
+        "k: 'a;b' ;c:1",
+        ';',
+        ["k: 'a;b' ", 'c:1'],
+      ],
+      ['a quoted action param', "click:add('x;y')", ';', ["click:add('x;y')"]],
+      [
+        'a quoted action param before another action',
+        "click:add('x;y');load:view",
+        ';',
+        ["click:add('x;y')", 'load:view'],
+      ],
+      [
+        'several quoted action params',
+        "click:add('x;y', 'z')",
+        ';',
+        ["click:add('x;y', 'z')"],
+      ],
+      [
+        'quoted action params split on commas',
+        "'x;y', 'z'",
+        ',',
+        ["'x;y'", " 'z'"],
+      ],
+      [
+        'a quoted colon in an action param',
+        "click:add('a:b');load:view",
+        ';',
+        ["click:add('a:b')", 'load:view'],
+      ],
+      [
+        'whitespace between a quoted param and the parenthesis',
+        "click:add('x;y' );load:view",
+        ';',
+        ["click:add('x;y' )", 'load:view'],
+      ],
+      [
+        'nested parentheses',
+        "click:add(fn('x;y'));load:view",
+        ';',
+        ["click:add(fn('x;y'))", 'load:view'],
+      ],
+      [
+        'double quotes, kept as written',
+        'quote:say "hi";b:1',
+        ';',
+        ['quote:say "hi"', 'b:1'],
+      ],
+    ])(
+      'should close a quote unless a word or non-ASCII character follows: %s',
+      (_, str, separator, expected) => {
+        expect(splitAttribute(str, separator)).toEqual(expected);
+      },
+    );
+
+    it('should honor escapes with a custom separator', () => {
+      expect(splitAttribute(String.raw`a\,b,c`, ',')).toEqual([
+        String.raw`a\,b`,
+        'c',
+      ]);
+    });
   });
 
   describe('splitKeyVal', () => {
@@ -77,9 +179,46 @@ describe('attributes', () => {
         'quoted value',
       ]);
     });
+
+    it.each([
+      ['an empty value', 'key:', ['key', '']],
+      ['an escaped colon in the key', String.raw`a\:b:c`, ['a:b', 'c']],
+      ['an escaped colon in the value', String.raw`k:a\:b`, ['k', 'a:b']],
+      ['an escaped separator', String.raw`k:a\;b`, ['k', 'a;b']],
+      ['an escaped quote', String.raw`k:Men\'s`, ['k', "Men's"]],
+      ['an escaped backslash', String.raw`k:a\\b`, ['k', 'a\\b']],
+      [
+        'a backslash before any character',
+        String.raw`k:C:\temp`,
+        ['k', 'C:temp'],
+      ],
+      ['escaped surrounding quotes', String.raw`k:\'q\'`, ['k', "'q'"]],
+      ['an escaped quote inside quotes', String.raw`k:'it\'s'`, ['k', "it's"]],
+      ['a quote after an escaped backslash', String.raw`k:'a\\'`, ['k', 'a\\']],
+      ['a lone trailing backslash', 'k:a\\', ['k', 'a\\']],
+      ['an escaped trailing space', 'k:x\\ ', ['k', 'x']],
+      ['an apostrophe in a quoted value', "k:'it's'", ['k', "it's"]],
+      ['a multi-line value', 'k:a\nb', ['k', 'a\nb']],
+      [
+        'a quoted colon in an action param',
+        "click:add('a:b')",
+        ['click', "add('a:b')"],
+      ],
+    ])('should read %s', (_, str, expected) => {
+      expect(splitKeyVal(str)).toEqual(expected);
+    });
   });
 
   describe('parseInlineConfig', () => {
+    // The example in website/docs/core/web.mdx
+    it('should parse the documented example', () => {
+      expect(parseInlineConfig('tracking:true;debug:false;port:3000')).toEqual({
+        tracking: true,
+        debug: false,
+        port: 3000,
+      });
+    });
+
     it('should parse boolean values', () => {
       const config = parseInlineConfig('enabled:true;disabled:false');
       expect(config).toEqual({
@@ -152,6 +291,11 @@ describe('attributes', () => {
         message: 'hello world',
         code: 200,
       });
+    });
+
+    it('should handle escaped values', () => {
+      const config = parseInlineConfig(String.raw`name:Men\'s;path:a\;b`);
+      expect(config).toEqual({ name: "Men's", path: 'a;b' });
     });
   });
 });

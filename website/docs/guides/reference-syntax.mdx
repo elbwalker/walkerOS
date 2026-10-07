@@ -12,6 +12,9 @@ values. They let you pull in variables, environment values, contract fragments,
 store instances, secrets, and inline JavaScript without duplicating
 configuration.
 
+Snippets on this page show only the keys a reference needs; a complete
+flow.json also has `"version": 4` and its steps.
+
 ## The one rule
 
 walkerOS uses **two separator characters**, each with a clear meaning:
@@ -340,8 +343,9 @@ resolve:
   ship as literal text. Use the reference as the entire value, or compose the
   string with `$var` or `$env`.
 
-`$code:` values and values under `title`, `description` and `$comment` are not
-checked.
+`$code:` values, `$comment` values, the root `contract` block, a step's
+`config.settings.contract`, and the `title` and `description` of the config, a
+flow, a step or a step example are not checked.
 
 ## What else to read
 

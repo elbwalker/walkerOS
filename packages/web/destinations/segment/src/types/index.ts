@@ -15,12 +15,11 @@ import type {
  * walkerOS's own `group` mapping) so every passthrough option (cookie,
  * storage, integrations, plan, etc.) keeps IntelliSense intact. walkerOS
  * adds:
- *  - `apiKey` (required) — maps to `writeKey` in `AnalyticsBrowser.load()`
- *  - `identify` — destination-level identity mapping (Segment `identify()`)
- *  - `group` — destination-level group mapping (Segment `group()`)
- *  - `include` — event sections flattened into track `properties`
- *  - `consent` — walkerOS consent key → Segment category name mapping
- *  - `_state` — runtime state (not user-facing, mutated by init/push)
+ *  - `apiKey` (required): maps to `writeKey` in `AnalyticsBrowser.load()`
+ *  - `identify`: destination-level identity mapping (Segment `identify()`)
+ *  - `group`: destination-level group mapping (Segment `group()`)
+ *  - `consent`: walkerOS consent key → Segment category name mapping
+ *  - `_state`: runtime state (not user-facing, mutated by init/push)
  */
 export interface Settings extends Omit<InitOptions, 'group'> {
   /** Segment write key. Maps to `writeKey` in the load() settings arg. */
@@ -32,10 +31,10 @@ export interface Settings extends Omit<InitOptions, 'group'> {
   /**
    * Mapping from walkerOS consent keys → Segment `categoryPreferences` keys.
    * Example: { marketing: "Advertising", analytics: "Analytics" }
-   * If omitted, walkerOS keys are forwarded 1:1.
+   * Only mapped keys are forwarded. If omitted, no consent context is sent.
    */
   consent?: Record<string, string>;
-  /** Runtime state — populated by init() and mutated by push(). Not user-facing. */
+  /** Runtime state: populated by init() and mutated by push(). Not user-facing. */
   _state?: RuntimeState;
 }
 
@@ -72,7 +71,7 @@ export interface Mapping {
 }
 
 /**
- * Segment SDK surface — the subset of @segment/analytics-next the
+ * Segment SDK surface: the subset of @segment/analytics-next the
  * destination actually uses. Mirrors the AnalyticsBrowser instance shape
  * so tests can mock each method individually via env.analytics.
  */
@@ -108,7 +107,7 @@ export interface SegmentAnalytics {
 }
 
 /**
- * Segment event options — the fourth argument to track/identify/group/page
+ * Segment event options: the fourth argument to track/identify/group/page
  * that carries context and integration overrides. The destination uses
  * this to stamp consent context on every event.
  */
@@ -139,7 +138,7 @@ export interface SegmentSDK {
 }
 
 /**
- * Env — optional SDK override. Production leaves this undefined and the
+ * Env: optional SDK override. Production leaves this undefined and the
  * destination falls back to the real @segment/analytics-next module.
  * Tests provide a mock via env.analytics = { ... }.
  */

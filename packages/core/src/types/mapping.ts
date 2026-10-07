@@ -30,7 +30,7 @@ export interface Rule<Settings = unknown> {
    */
   batch?: number | Destination.BatchOptions;
   condition?: Condition; // Added condition
-  consent?: WalkerOS.Consent; // Required consent states process the event
+  consent?: WalkerOS.Consent; // Not enforced yet; config.consent gates a destination
   settings?: Settings; // Arbitrary but protected configurations for custom event config
   data?: Data; // Mapping of event data
   include?: string[]; // Event sections to flatten into context.data
@@ -55,17 +55,33 @@ export interface Rule<Settings = unknown> {
 }
 
 /**
+ * A deep partial of T as `mergeMappingRule` applies it: every object key is
+ * optional and a `null` clears the inherited key (JSON merge-patch delete);
+ * arrays and functions replace as a whole.
+ */
+type Patch<T> = T extends readonly unknown[]
+  ? T
+  : T extends (...args: never[]) => unknown
+    ? T
+    : T extends object
+      ? { [K in keyof T]?: Patch<T[K]> | null }
+      : T;
+
+/**
  * A partial Rule used by `Rule.extend`. Every field is optional, and a
- * `null` value clears the inherited field (JSON merge-patch delete). The
- * control fields `extend` and `remove` are excluded: a patch models only
- * direct rule fields, matching what the runtime patch schema accepts.
+ * `null` at any object key clears the inherited key, for example
+ * `{ data: { map: { tax: null } } }`. The control fields `extend` and
+ * `remove` are excluded: a patch models only direct rule fields, matching
+ * what the runtime patch schema accepts.
  */
 type RulePatchFields<Settings = unknown> = Omit<
   Rule<Settings>,
   'extend' | 'remove'
 >;
 export type RulePatch<Settings = unknown> = {
-  [K in keyof RulePatchFields<Settings>]?: RulePatchFields<Settings>[K] | null;
+  [K in keyof RulePatchFields<Settings>]?: Patch<
+    RulePatchFields<Settings>[K]
+  > | null;
 };
 
 export interface Result {

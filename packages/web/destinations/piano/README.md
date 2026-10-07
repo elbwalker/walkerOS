@@ -51,8 +51,10 @@ npm install @walkeros/web-destination-piano
 ```
 
 With `loadScript: true` the destination loads the Piano SDK script and calls
-`pa.setConfigurations({ site, collectDomain })` on init. If you load the SDK
-yourself, omit `loadScript` and make sure `pa` is available on `window`.
+`pa.setConfigurations({ site, collectDomain })` once the script has loaded.
+Events that arrive before that are dropped, so the page view at start is lost.
+If you load the SDK yourself before walkerOS starts, omit `loadScript`; the
+destination then configures `window.pa` on init.
 
 ## Settings
 
@@ -60,12 +62,13 @@ yourself, omit `loadScript` and make sure `pa` is available on `window`.
 | --------------- | -------- | -------- | ------------------------------------------------------------ |
 | `site`          | `number` | yes      | Piano Analytics site id, from your collection settings.      |
 | `collectDomain` | `string` | yes      | Collection domain endpoint, like `https://xxxxxxx.pa-cd.com` |
-| `options`       | `object` | no       | Additional Piano `setConfigurations` options merged on init. |
+| `options`       | `object` | no       | Additional Piano `setConfigurations` options.                |
 
 ## Mapping
 
-Each event is mapped to a Piano event name and a property object, then sent with
-`pa.sendEvent(name, data)`. Piano uses dot-notation event names like
+Map each event to a Piano event name and a property object; the destination
+sends it with `pa.sendEvent(name, data)`. Without a rule, the walkerOS event
+name is sent as is, with no properties. Piano uses dot-notation event names like
 `page.display`.
 
 | walkerOS event   | Piano event                | Notes                       |

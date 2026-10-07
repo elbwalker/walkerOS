@@ -1,4 +1,5 @@
 import type {
+  ContractComparison,
   DeviceAuthorization,
   DeviceLoginResult,
   ListFlowsOptions,
@@ -97,12 +98,18 @@ export interface ObserveSessionResult {
   flowId: string;
   status: string;
   errorMessage: string | null;
+  /** The flow config the session was opened on, as the app snapshotted it. */
+  configSnapshot: Record<string, unknown>;
   observedFlowName: string | null;
   serverFlowName: string | null;
+  /** Legacy mirror of `server.endpoint`, kept for published readers; read `server.endpoint`. */
+  serverEndpoint: string | null;
   web: ObserveSessionWebPart | null;
   server: ObserveSessionServerPart | null;
   expiresAt: string;
   recordsReceived: number;
+  /** Id of the user who opened the session. */
+  createdBy: string;
   createdAt: string;
 }
 
@@ -356,7 +363,7 @@ export interface FrameLeanWire {
   extends: string | null;
   source: FrameSourceWire | null;
   origin: 'drawn' | 'imported' | 'observed';
-  flowId: string | null;
+  flowId: string;
   screenshot: FrameScreenshotWire | null;
   version: number;
   createdAt: string;
@@ -397,6 +404,8 @@ export interface ToolClient {
   getDefaultProject(): string | null;
 
   // Flows
+  /** Every project's flows, as an array of `{ project: { id, name }, flows }`
+   *  groups whose `flows` are the rows `listFlows` answers for that project. */
   listAllFlows(options?: {
     sort?: string;
     order?: 'asc' | 'desc';
@@ -548,13 +557,21 @@ export interface ToolClient {
     limit?: number;
   }): Promise<ListKnowledgeWire>;
 
-  // Frames: read-only.
-  listFrames(options: { projectId: string }): Promise<FrameLeanListWire>;
+  // Frames: read-only, each within the flow it belongs to.
+  listFrames(options: {
+    projectId: string;
+    flowId: string;
+  }): Promise<FrameLeanListWire>;
   listPageFrames(options: {
     projectId: string;
+    flowId: string;
     pageKey: string;
   }): Promise<FrameListWire>;
-  getFrame(options: { projectId: string; frameId: string }): Promise<FrameWire>;
+  getFrame(options: {
+    projectId: string;
+    flowId: string;
+    frameId: string;
+  }): Promise<FrameWire>;
 
   // Auth
   requestDeviceCode(): Promise<DeviceAuthorization>;
@@ -568,14 +585,22 @@ export interface ToolClient {
     options?: { timeoutMs?: number },
   ): Promise<DeviceLoginResult>;
   whoami(): Promise<unknown>;
-  /** Where a credential would come from, without resolving or refreshing it. */
-  credentialSource(): 'env' | 'config' | null;
+  /**
+   * Where a credential would come from, without resolving or refreshing it:
+   * `'env'` (`WALKEROS_TOKEN`), `'config'` (a stored login), `'host'` (the
+   * door is served inside a host that authenticates every request itself, so
+   * this process holds no login to start or end), or null (none).
+   */
+  credentialSource(): 'env' | 'config' | 'host' | null;
   /**
    * Retire the session. Where the credential was issued to this process, that
    * means revoking it with the server before dropping it locally; a plane
-   * holding a bearer it did not issue reports nothing deleted.
+   * holding a bearer it did not issue reports nothing deleted. `envCleared`
+   * reports that the door also dropped a `WALKEROS_TOKEN` from its own process
+   * environment, which only a door that owns its process does. The `auth`
+   * tool never calls this on a `'host'` door.
    */
-  logout(): Promise<{ deleted: boolean }>;
+  logout(): Promise<{ deleted: boolean; envCleared?: boolean }>;
 
   /**
    * The base URL of the walkerOS app this door talks to, without a trailing
@@ -592,15 +617,32 @@ export interface ToolClient {
   appBaseUrl(): string;
 
   // Diagnostics: unauthenticated reachability probe of the app's public
-  // `/api/health` route. Resolves `{ reachable: false }` only on a real
-  // network/timeout failure, never on "not authenticated". Optional: clients
-  // that cannot probe reachability (e.g. in-process hosts) may omit it, and
-  // diagnostics degrades to `app.reachable: false`.
+  // health route. Resolves `{ reachable: false, error }` only on a real
+  // network/timeout failure, never on "not authenticated"; `version` is the
+  // app's version. Optional: clients that cannot probe reachability (e.g.
+  // in-process hosts) may omit it, and diagnostics degrades to
+  // `app.reachable: false`.
   checkHealth?(): Promise<{
     reachable: boolean;
     status?: string;
     version?: string;
+    error?: string;
   }>;
+
+  /**
+   * The API contract verdict for this door against the app it talks to
+   * (`appBaseUrl()`). A door that calls the app over HTTP compares per
+   * operation; a door served inside the app answers `in-process`. Optional:
+   * without it, diagnostics reports `unknown`.
+   */
+  checkContract?(): Promise<ContractComparison>;
+
+  /**
+   * The live OpenAPI document of the app this door talks to, served as the
+   * `walkeros://reference/openapi` resource. Rejects when it cannot be read.
+   * Optional: without it, the resource states that it is unavailable.
+   */
+  openapiDocument?(): Promise<unknown>;
 
   // Feedback
   submitFeedback(text: string, options?: FeedbackOptions): Promise<void>;

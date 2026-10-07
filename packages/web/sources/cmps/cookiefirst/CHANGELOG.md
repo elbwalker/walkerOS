@@ -1,5 +1,31 @@
 # @walkeros/web-source-cmp-cookiefirst
 
+## 4.7.2
+
+### Patch Changes
+
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/collector@4.7.2
+
+## 4.7.1
+
+### Patch Changes
+
+- 91e9aeb: The `explicitOnly` setting description now says what the source does:
+  it has no effect here, since the source always waits for the user's first
+  choice and reports every consent CookieFirst provides after that.
+- Updated dependencies [0635330]
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+  - @walkeros/collector@4.7.1
+  - @walkeros/core@4.7.1
+
 ## 4.7.0
 
 ### Patch Changes

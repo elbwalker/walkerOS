@@ -33,9 +33,10 @@ a machine-checked artifact, not a demo.
 
 ## 4. Break it on purpose
 
-Define a [contract](/docs/getting-started/flow/contract), give a step example
-an event that violates it, and watch `walkeros validate --strict` fail with the
-exact path and message, at design time, before anything ships. See
+Define a [contract](/docs/getting-started/flow/contract), give a validate step
+an example whose event violates it while its `out` shows the event passing, and
+watch `walkeros validate --strict` fail with the exact path and message, at
+design time, before anything ships. See
 [validate](/docs/getting-started/flow/validate).
 Compare that with a tag manager silently dropping fields in production.
 

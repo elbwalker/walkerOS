@@ -7,11 +7,12 @@ sidebar_position: 5
 import { schemas } from '@walkeros/core/dev';
 import { omitSchemaProperties } from '@site/src/utils/schema';
 
-export const destinationConfig = omitSchemaProperties(
-
-  schemas.DestinationSchemas.configJsonSchema,
-  ['settings', 'init', 'mock', 'onError', 'onLog'],
-);
+export const destinationConfig = (({ definitions }) =>
+  omitSchemaProperties({ ...definitions.DestinationConfig, definitions }, [
+    'settings',
+    'init',
+    'mock',
+  ]))(schemas.DestinationSchemas.configJsonSchema);
 
 # Destinations
 

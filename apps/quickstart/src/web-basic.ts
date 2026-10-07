@@ -19,14 +19,13 @@ export async function setupWebBasic(): Promise<{
   elb: WalkerOS.Elb;
 }> {
   const { collector, elb } = await startFlow({
-    // Browser source captures DOM events, handles sessions and pageviews
+    // Browser source captures DOM events and pageviews
     sources: {
       browser: {
         code: sourceBrowser,
         config: {
           settings: {
             pageview: true,
-            session: true,
             elb: 'elb', // Makes window.elb available globally
             prefix: 'data-elb',
           },

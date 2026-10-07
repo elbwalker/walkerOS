@@ -29,7 +29,6 @@ This server flow turns raw request signals into a privacy-friendly identifier be
           "package": "@walkeros/server-source-express",
           "next": "fingerprint",
           "config": {
-            "settings": { "port": 8080 },
             "ingest": {
               "map": {
                 "ip": { "key": "ip" },
@@ -69,18 +68,22 @@ This server flow turns raw request signals into a privacy-friendly identifier be
 
 ## Run it
 
-Save the config as `flow.json` and push an event through the built flow with the destination mocked. The salt comes from the environment. Nothing is written to BigQuery:
+Save the config as `flow.json` and run the fingerprint transformer of the built flow on an event. `--ingest` passes the request context the Express source extracts, the client IP and user agent, and the salt comes from the environment. Nothing is written to BigQuery:
 
 <CodeSnippet
-  code={`FINGERPRINT_SALT=change-me npx walkeros push flow.json -e '{"name":"page view"}' --simulate destination.bigquery`}
+  code={`FINGERPRINT_SALT=change-me npx walkeros push flow.json -e '{"name":"page view"}' --simulate transformer.fingerprint \\
+  --ingest '{"ip":"203.0.113.7","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"}'`}
   language="bash"
 />
 
-You should see:
+You should see, besides an `Output:` line naming the built bundle before each `Simulating` line (your hash differs, as it depends on the salt and the day):
 
 <CodeSnippet
-  code={`success: true
-  Duration: 42ms`}
+  code={`Simulating transformer: fingerprint
+success: true
+  transformer.fingerprint
+    event {"name":"page view","user":{"hash":"8015a6ca3b754e5e"}}
+  Duration: 58621ms`}
   language="bash"
 />
 

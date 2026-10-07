@@ -60,13 +60,13 @@ export const wildcardIgnored: SegmentStepExample = {
 };
 
 /**
- * Destination-level settings.include flattens the walkerOS `data` section
- * into prefixed properties on every push.
+ * Destination-level include (config.include) flattens the walkerOS `data`
+ * section into prefixed properties on every push.
  */
 export const destinationLevelInclude: SegmentStepExample = {
   title: 'Include data',
   description:
-    'Destination-level include flattens the event data section into prefixed Segment track properties.',
+    "With include: ['data'] in the destination config, the event data section is flattened into prefixed Segment track properties.",
   in: getEvent('product view', { timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
@@ -85,14 +85,14 @@ export const destinationLevelInclude: SegmentStepExample = {
 };
 
 /**
- * Per-rule settings.include REPLACES destination-level include for the
+ * Per-rule include REPLACES the destination-level config.include for the
  * matched rule. Here destination-level sends `data`, but the rule
  * overrides it with `globals` only.
  */
 export const ruleIncludeReplaces: SegmentStepExample = {
   title: 'Rule include overrides',
   description:
-    'A per-rule include replaces the destination-level include so this event forwards only globals.',
+    "With include: ['data'] in the destination config, the rule's include: ['globals'] replaces it, so this event forwards only globals.",
   in: getEvent('order complete', { timestamp: 1700000103 }),
   configInclude: ['data'],
   mapping: {
@@ -118,7 +118,7 @@ export const ruleIncludeReplaces: SegmentStepExample = {
 export const destinationLevelIdentify: SegmentStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify calls analytics.identify with the resolved userId before firing the default track.',
+    "With settings.identify mapping userId to 'user.id', the destination calls analytics.identify before the default track.",
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {
@@ -357,7 +357,7 @@ export const pageViewAsPage: SegmentStepExample = {
 export const pageViewMinimal: SegmentStepExample = {
   title: 'Page view minimal',
   description:
-    'A mapping with page: true fires an empty analytics.page call relying on Segments auto-collection.',
+    "A mapping with page: true fires an empty analytics.page call relying on Segment's auto-collection.",
   in: getEvent('page view', { timestamp: 1700000110 }),
   mapping: {
     silent: true,
@@ -449,7 +449,7 @@ export const orderCompletedEcommerce: SegmentStepExample = {
 export const consentContextForwarded: SegmentStepExample = {
   title: 'Consent context',
   description:
-    'Walker consent is stamped on every Segment call via context.consent.categoryPreferences for downstream filtering.',
+    'With settings.consent mapping analytics to Analytics and marketing to Advertising, the event consent is stamped on every Segment call via context.consent.categoryPreferences for downstream filtering.',
   in: getEvent('product view', {
     timestamp: 1700000112,
     consent: { analytics: true, marketing: true },
@@ -480,6 +480,19 @@ export const consentContextForwarded: SegmentStepExample = {
 };
 
 /**
+ * No settings.consent: the event's consent state is not forwarded, so the
+ * track call carries no options (consent stamping is opt-in).
+ */
+export const consentContextOmitted: SegmentStepExample = {
+  public: false,
+  in: getEvent('product view', {
+    timestamp: 1700000113000,
+    consent: { analytics: true, marketing: false },
+  }),
+  out: [['analytics.track', 'product view', {}]],
+};
+
+/**
  * Consent granted → deferred load fires for the first time. The
  * destination was initialized with consent requirement; on the walker
  * consent command it calls analytics.load(writeKey, initOptions).
@@ -490,7 +503,7 @@ export const consentContextForwarded: SegmentStepExample = {
 export const consentGrantDeferredLoad: SegmentStepExample = {
   title: 'Consent deferred load',
   description:
-    'A walker consent grant triggers the deferred Segment analytics.load with the configured writeKey.',
+    'With consent: { analytics: true } in the destination config, a walker consent grant triggers the deferred Segment analytics.load with the configured writeKey.',
   command: 'consent',
   in: { analytics: true } as WalkerOS.Consent,
   out: [

@@ -19,6 +19,19 @@ import type { Logger } from '@walkeros/core';
  * coupling, no collector reference.
  */
 
+/**
+ * The collector queue bound. `collector()` seeds `config.queueMax`, so a
+ * missing one is a wiring bug, never a user setting.
+ */
+export function seededQueueMax(max: number | undefined): number {
+  if (max === undefined) {
+    throw new Error(
+      'Collector.Config.queueMax is undefined; defaults must be seeded by collector()',
+    );
+  }
+  return max;
+}
+
 export type BufferOverflowPolicy = 'dropOldest' | 'dropNewest';
 
 export interface BufferBound {

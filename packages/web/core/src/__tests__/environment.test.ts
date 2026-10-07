@@ -175,3 +175,23 @@ describe('getEnv observe wrapping', () => {
     expect(records).toEqual([{ fn: 'sdk.Client.send', args: [{ n: 1 }] }]);
   });
 });
+
+describe('getEnv with __WALKEROS_OBSERVE__ false', () => {
+  afterEach(() => {
+    globalThis.__WALKEROS_OBSERVE__ = undefined;
+    Reflect.deleteProperty(window, 'gtag');
+  });
+
+  it('skips the recorder and hands out the real globals', () => {
+    globalThis.__WALKEROS_OBSERVE__ = false;
+    const { records, record } = makeRecorder();
+    const originalGtag = () => undefined;
+    Reflect.set(window, 'gtag', originalGtag);
+
+    const env = getEnv<Env>({ observe: { paths: ['window.gtag'], record } });
+
+    expect(env.window).toBe(window);
+    expect(Reflect.get(env.window, 'gtag')).toBe(originalGtag);
+    expect(records).toEqual([]);
+  });
+});

@@ -49,6 +49,18 @@
     }
   }
 
+  // `columns`: --grid-columns boxes per row, the rest wrap. With as many boxes
+  // as columns this matches the default one-row flow track for track.
+  &.elb-explorer-grid--columns {
+    @container grid-container (min-width: 800px) {
+      grid-auto-flow: row;
+      grid-template-columns: repeat(
+        var(--grid-columns),
+        minmax(var(--grid-min-box-width), 1fr)
+      );
+    }
+  }
+
   // Row height modifiers
   &.elb-explorer-grid--row-auto {
     @container grid-container (min-width: 800px) {

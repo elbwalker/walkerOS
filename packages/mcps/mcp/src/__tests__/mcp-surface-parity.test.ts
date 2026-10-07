@@ -46,6 +46,7 @@ import {
 import {
   createFrameManageToolSpec,
   FRAME_NOT_FOUND_HINT,
+  FRAME_FLOW_NOT_FOUND_HINT,
   FRAME_HINT_OPEN_PAGE_OR_GET,
   FRAME_HINT_NAMES_ARE_DOCUMENTATION,
   FRAME_HINT_NONE_YET,
@@ -57,7 +58,7 @@ import {
 import { featureDenialHint } from '../tools/feature-gate.js';
 import { stubClient } from './support/stub-client.js';
 import { hintsOf } from './support/tool-result.js';
-import fixture from './fixtures/mcp-surface-parity.json';
+import fixture from '../surface.json';
 import type {
   ToolClient,
   ObserveSessionResult,
@@ -81,13 +82,12 @@ import type {
  * package: the app calls `createWalkerOSMcpServer` (or `createToolHandlers`)
  * with its own `ToolClient`, and the client is the only part that differs. A
  * green run here is therefore NOT evidence that two independent
- * implementations agree, and the identical fixture committed on the app side
- * is a second copy of one contract, not a second opinion about it.
+ * implementations agree.
  *
- * NOTHING VERIFIES THE TWO COPIES ARE IDENTICAL. Each repository's test reads
- * only its own copy and no script or CI step compares them, so editing one
- * copy alone leaves both suites green while the two fixtures describe
- * different surfaces. Keeping them in step is a manual diff at edit time.
+ * ONE FILE HOLDS THE ROSTER. `src/surface.json` ships as
+ * `@walkeros/mcp/surface.json`; the app reads that shipped file to assert its
+ * hosted server registers this roster, so the package's code and its roster
+ * travel in one version.
  *
  * WHAT IT DOES DO, and why it belongs at the source. It fails an unreviewed
  * change to the published tool surface here, before publish, instead of
@@ -187,8 +187,10 @@ function session(
     flowId: 'flow_1',
     status: 'live',
     errorMessage: null,
+    configSnapshot: {},
     observedFlowName: 'web',
     serverFlowName: 'server',
+    serverEndpoint: 'https://container.example.com',
     web: {
       activationUrl: 'https://shop.example.com?elbPreview=gr_x',
       credential: 'obsw_pb1.ses_1.tok',
@@ -205,6 +207,7 @@ function session(
     },
     expiresAt: '2026-07-18T01:00:00.000Z',
     recordsReceived: 7,
+    createdBy: 'user_1',
     createdAt: '2026-07-18T00:00:00.000Z',
     ...overrides,
   };
@@ -389,6 +392,7 @@ describe('MCP surface parity', () => {
  */
 
 const FRAME_ID = 'frm_V1StGXR8Z5jdHi6BmyT7K';
+const FLOW_ID = 'flow_1';
 
 function releaseRow(): FlowReleaseWire {
   return {
@@ -825,6 +829,9 @@ describe('MCP surface parity: frame_manage', () => {
   it('pins the two hints a refusal turns into', () => {
     expect(featureDenialHint('frames')).toBe(fixture.frameManage.denialHint);
     expect(FRAME_NOT_FOUND_HINT).toBe(fixture.frameManage.notFoundHint);
+    expect(FRAME_FLOW_NOT_FOUND_HINT).toBe(
+      fixture.frameManage.flowNotFoundHint,
+    );
   });
 
   it('emits exactly the pinned orderings, one per path the fixture names', async () => {
@@ -833,27 +840,35 @@ describe('MCP surface parity: frame_manage', () => {
     const emitted: Record<string, string[]> = {
       list: await frameHintKeysFor(
         { listFrames: async () => ({ frames: [leanFrame()] }) },
-        { action: 'list' },
+        { action: 'list', flowId: FLOW_ID },
       ),
       listEmpty: await frameHintKeysFor(
         { listFrames: async () => ({ frames: [] }) },
-        { action: 'list' },
+        { action: 'list', flowId: FLOW_ID },
       ),
       page: await frameHintKeysFor(
         { listPageFrames: async () => ({ frames: [fullFrame()] }) },
-        { action: 'page', pageKey: 'https://shop.example/cart' },
+        {
+          action: 'page',
+          flowId: FLOW_ID,
+          pageKey: 'https://shop.example/cart',
+        },
       ),
       pageEmpty: await frameHintKeysFor(
         { listPageFrames: async () => ({ frames: [] }) },
-        { action: 'page', pageKey: 'https://shop.example/cart' },
+        {
+          action: 'page',
+          flowId: FLOW_ID,
+          pageKey: 'https://shop.example/cart',
+        },
       ),
       getVariation: await frameHintKeysFor(
         { getFrame: async () => fullFrame({ extends: 'frm_base' }) },
-        { action: 'get', frameId: FRAME_ID },
+        { action: 'get', flowId: FLOW_ID, frameId: FRAME_ID },
       ),
       getBase: await frameHintKeysFor(
         { getFrame: async () => fullFrame() },
-        { action: 'get', frameId: FRAME_ID },
+        { action: 'get', flowId: FLOW_ID, frameId: FRAME_ID },
       ),
     };
 

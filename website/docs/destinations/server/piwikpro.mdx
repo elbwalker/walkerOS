@@ -95,7 +95,6 @@ In the browser, the Piwik PRO tracker sends the visitor's IP address, user agent
   "express": {
     "package": "@walkeros/server-source-express",
     "config": {
-      "settings": { "port": 8080 },
       "ingest": {
         "map": {
           "ip": { "key": "ip" },
@@ -229,7 +228,7 @@ A rule without `name` on an event that is not a page view sends only the goal wh
   language="json"
 />
 
-When the goal value resolves to something other than a number or a numeric string, the goal hit is invalid and the whole event is skipped. The method hit is not sent either. The same applies to any invalid hit: an event is sent completely or not at all.
+When the goal value resolves to something other than a number or a numeric string, the goal hit is invalid and the whole event is skipped. The method hit is not sent either. The same applies to any invalid hit: an event is sent completely or not at all. A goal value that resolves to nothing only leaves out `revenue`.
 
 ## Custom dimensions
 
@@ -266,7 +265,7 @@ The consent check reads the collector's consent state and the event's own consen
 />
 
 :::caution
-Do not repeat the `identified` states in `config.consent`. Events without that consent are then queued and never reach the destination, so no anonymous hit is sent.
+Do not repeat the `identified` states in `config.consent`. A destination needs only one of its `config.consent` states granted, so `{ "analytics": true, "marketing": true }` sends events to Piwik PRO when only `marketing` is granted. With `{ "marketing": true }` alone, events without `marketing` consent stay in the destination's queue, and no anonymous hit is sent.
 :::
 
 An anonymous hit carries `uia=1` and `dda=1` and leaves out `_id` and `uid`. It keeps `cip`, so Piwik PRO can still locate the visitor by country. Each hit is decided on its own. Only the web destination can merge an earlier anonymous session into the identified visitor, with `deanonymizeUser`.

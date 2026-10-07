@@ -11,12 +11,11 @@
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
-          "code": "sourceBrowser",
+          "import": "sourceBrowser",
           "config": {
             "settings": {
               "elb": "elb",
-              "pageview": true,
-              "session": true
+              "pageview": true
             }
           }
         }
@@ -24,7 +23,7 @@
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
-          "code": "destinationDemo",
+          "import": "destinationDemo",
           "config": {
             "settings": {
               "name": "console",
@@ -34,7 +33,7 @@
         },
         "api": {
           "package": "@walkeros/web-destination-api",
-          "code": "destinationAPI",
+          "import": "destinationAPI",
           "config": {
             "settings": {
               "url": "$ENDPOINT/collect"
@@ -50,7 +49,7 @@
         },
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
-          "code": "destinationGtag",
+          "import": "destinationGtag",
           "config": {
             "loadScript": true,
             "settings": {

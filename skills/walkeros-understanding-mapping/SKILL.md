@@ -95,7 +95,7 @@ interface Rule {
   silent?: boolean; // Process settings side effects, skip destination default push
   policy?: Policy; // Event-specific pre-processing
   condition?: Function; // Match condition (for arrays)
-  consent?: Consent; // Required consent for this rule
+  consent?: Consent; // Not enforced yet; config.consent gates a destination
   settings?: unknown; // Custom event configuration
   batch?: number; // Batch size for grouping
   extend?: RulePatch; // Config-layer merge onto a package-shipped default rule
@@ -266,7 +266,8 @@ Common patterns shown below. For detailed examples of all 12 strategies, see
 // Fallback chain: Value[] at any value position (first defined value wins)
 [{ key: 'data.sku' }, { key: 'data.id' }, { value: 'unknown' }]
 
-// Consent-gated
+// Consent-gated (the event's consent decides, in a loop too: a `consent`
+// key on a loop item is plain data)
 { key: 'user.email', consent: { marketing: true } }
 
 // Validate
@@ -456,7 +457,7 @@ TypeScript ignores the unused second arg.
 | `silent`    | Run settings side effects, skip default forwarding                      |
 | `policy`    | Pre-process event                                                       |
 | `condition` | Match condition (arrays)                                                |
-| `consent`   | Required consent                                                        |
+| `consent`   | Not enforced yet; `config.consent` gates a destination                  |
 | `settings`  | Custom configuration                                                    |
 | `batch`     | Batch size                                                              |
 | `extend`    | Config-layer merge onto a package-shipped default (null clears a field) |
@@ -493,6 +494,8 @@ semantic differs by position:
 
 When a transformer step declares only a `mapping` (no `code`, no `package`), the
 collector synthesizes a push that runs `processEventMapping` against each event.
+A `config.mapping` wins over the step-level `mapping`. Next to `code` or
+`package`, a mapping never runs; init and `validateFlowStructure` warn about it.
 Same keyword as the destination field, different semantic at this step position.
 See
 [walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
@@ -500,19 +503,18 @@ for the pass-through-step model.
 
 ### Which fields apply at the transformer position
 
-Only **event-mutating** fields run; vendor-payload fields are no-ops with a
-one-time init warning:
+Only **event-mutating** fields run; every other field is a no-op, named in a
+one-time init warning (rules in array form included):
 
-| Field                    | Transformer position                                                              |
-| ------------------------ | --------------------------------------------------------------------------------- |
-| `policy`                 | Applies, pre-processes the event before rule matching                             |
-| `include`                | Applies, flattens event sections into mapping context                             |
-| `mapping[].policy`       | Applies, per-event policy                                                         |
-| `mapping[].name`         | Applies, **renames** the event (mutation is observable downstream)                |
-| `mapping[].ignore`       | Applies, drops the event **from the chain entirely** (no downstream step sees it) |
-| `mapping[].consent`      | Applies, consent gate                                                             |
-| `data`, `mapping[].data` | Ignored at this position (event mutation does not produce a vendor payload)       |
-| `mapping[].silent`       | Ignored at this position (destination-only concept)                               |
+| Field                                                                                     | Transformer position                                                              |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `policy`                                                                                  | Applies, pre-processes the event before rule matching                             |
+| `mapping[].condition`                                                                     | Applies, picks the rule (awaited in order, first match wins)                      |
+| `mapping[].policy`                                                                        | Applies, per-event policy                                                         |
+| `mapping[].name`                                                                          | Applies, **renames** the event (mutation is observable downstream)                |
+| `mapping[].ignore`                                                                        | Applies, drops the event **from the chain entirely** (no downstream step sees it) |
+| `consent`, `include`, `data`                                                              | No-op (no vendor payload, no destination to gate)                                 |
+| `mapping[].consent`, `include`, `remove`, `batch`, `settings`, `extend`, `data`, `silent` | No-op (destination-only concepts)                                                 |
 
 Note the `ignore: true` semantic shift: at a **destination** it skips delivery
 to that destination only; at a **transformer step** it drops the event from the

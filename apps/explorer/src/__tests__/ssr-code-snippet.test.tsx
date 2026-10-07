@@ -15,4 +15,6 @@ it('CodeSnippet renders code server-side (no Monaco Loading)', () => {
   expect(html).toContain('@walkeros/web-destination-amplitude');
   expect(html).toMatch(/<pre[^>]*class="[^"]*shiki/);
   expect(html).not.toContain('Loading');
+  // Header-less, so the copy action must not depend on a header to render.
+  expect(html).toContain('title="Copy to clipboard"');
 });

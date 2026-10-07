@@ -114,7 +114,7 @@ the chapters `mapping` and `consent-privacy`.
 | Rules per entity and action           | `destination-mapping`, `rule-name`, `rule-data`, `mapping-wildcard-ignore`     |
 | Values                                | `value-key`, `value-map`, `value-loop`, `value-set`, `value-fn`, `value-value` |
 | Conditions and fallbacks              | `value-condition`, `value-fallback`, `rule-condition`                          |
-| Consent and policy                    | `rule-consent`, `value-consent`, `rule-policy`, `value-validate`               |
+| Consent and policy                    | `value-consent`, `rule-policy`, `value-validate`                               |
 | Per-event settings, batching, include | `rule-settings`, `rule-batch`, `destination-include`                           |
 | Patching a package default rule       | `rule-extend`, `rule-remove`                                                   |
 | A whole rule: order complete to GA4   | `ga4-purchase`                                                                 |

@@ -6,7 +6,7 @@
 
 # @walkeros/web-destination-segment
 
-Segment CDP, routing events to 400+ downstream destinations.
+Segment CDP, routing events to downstream destinations.
 
 [Documentation](https://www.walkeros.io/docs/destinations/web/segment) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-segment)
@@ -32,7 +32,11 @@ npm install @walkeros/web-destination-segment
       "destinations": {
         "segment": {
           "package": "@walkeros/web-destination-segment",
-          "config": {}
+          "config": {
+            "settings": {
+              "apiKey": "YOUR_SEGMENT_WRITE_KEY"
+            }
+          }
         }
       }
     }

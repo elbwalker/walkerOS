@@ -112,3 +112,20 @@ export const NoScrollButtons: Story = {
     ),
   },
 };
+
+/**
+ * More boxes than columns: two per row, the rest wrap to a new row.
+ */
+export const WrappingColumns: Story = {
+  args: {
+    columns: 2,
+    children: (
+      <>
+        <Box header="Row 1, left">Content</Box>
+        <Box header="Row 1, right">Content</Box>
+        <Box header="Row 2, left">Content</Box>
+        <Box header="Row 2, right">Content</Box>
+      </>
+    ),
+  },
+};

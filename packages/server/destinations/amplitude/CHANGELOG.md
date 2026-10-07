@@ -1,5 +1,26 @@
 # @walkeros/server-destination-amplitude
 
+## 4.7.2
+
+### Patch Changes
+
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/server-core@4.7.2
+
+## 4.7.1
+
+### Patch Changes
+
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+  - @walkeros/core@4.7.1
+  - @walkeros/server-core@4.7.1
+
 ## 4.7.0
 
 ### Patch Changes

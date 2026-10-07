@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Box } from '../atoms/box';
 import { CodeStatic } from '../atoms/code-static';
+import { useGridHeight } from '../../contexts/GridHeightContext';
 
 /**
  * Tab with code content for CodeView
@@ -75,6 +76,7 @@ export function CodeView({
   style,
 }: CodeViewProps) {
   const [copied, setCopied] = useState(false);
+  const gridContext = useGridHeight();
 
   // Track active tab so the copy button copies the right code
   const [currentTabId, setCurrentTabId] = useState(
@@ -152,6 +154,16 @@ export function CodeView({
     content: <CodeStatic code={tab.code} language={tab.language ?? language} />,
   }));
 
+  // Box shows actions only in a header or tab bar, so without either they
+  // float over the code's top-right corner instead.
+  const floatingActions = !showHeader && !tabs ? actions : undefined;
+
+  // Static code has an intrinsic height, unlike Monaco, so the box sizes to
+  // its code up to a cap, unless a height is given or a Grid sizes the row.
+  const fitClassName =
+    height === undefined && !gridContext ? 'elb-code-view--fit' : '';
+  const boxClassName = `${fitClassName} ${className || ''}`.trim();
+
   return (
     <Box
       header={boxHeader}
@@ -165,9 +177,12 @@ export function CodeView({
       footer={footer}
       height={height}
       style={style}
-      className={className}
+      className={boxClassName}
     >
       {!tabs && <CodeStatic code={code ?? ''} language={currentLanguage} />}
+      {floatingActions && (
+        <div className="elb-code-view-actions">{floatingActions}</div>
+      )}
     </Box>
   );
 }

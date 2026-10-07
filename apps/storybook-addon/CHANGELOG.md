@@ -1,5 +1,41 @@
 # @walkeros/storybook-addon
 
+## 4.7.2
+
+### Patch Changes
+
+- 98398fe: `startFlow` now types each step by the package passed as `code`, so
+  settings, mapping rule settings and `env` keys autocomplete and an unknown
+  setting is a type error; steps without typed code stay as loose as before. The
+  Storybook addon no longer passes a `session` setting the browser source never
+  had.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/web-core@4.7.2
+  - @walkeros/web-source-browser@4.7.2
+  - @walkeros/collector@4.7.2
+
+## 4.7.1
+
+### Patch Changes
+
+- Updated dependencies [91e9aeb]
+- Updated dependencies [0635330]
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+- Updated dependencies [0635330]
+  - @walkeros/web-core@4.7.1
+  - @walkeros/web-source-browser@4.7.1
+  - @walkeros/collector@4.7.1
+  - @walkeros/core@4.7.1
+
 ## 4.7.0
 
 ### Patch Changes

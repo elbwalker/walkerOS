@@ -62,7 +62,6 @@ export const sourceCookieFirst: Source.Init<Types> = async (context) => {
   // Merge user settings with defaults
   const settings: Settings = {
     categoryMap: { ...DEFAULT_CATEGORY_MAP, ...config?.settings?.categoryMap },
-    explicitOnly: config?.settings?.explicitOnly ?? true,
     globalName: config?.settings?.globalName ?? 'CookieFirst',
   };
 
@@ -87,8 +86,7 @@ export const sourceCookieFirst: Source.Init<Types> = async (context) => {
      * uses OR logic: if ANY category is true, the group is true.
      */
     const handleConsent = (consent: CookieFirstConsent | null) => {
-      // Skip if explicitOnly and no explicit consent given
-      if (settings.explicitOnly && !consent) return;
+      // A null consent means no choice yet
       if (!consent) return;
 
       // Map CookieFirst categories to walkerOS consent groups

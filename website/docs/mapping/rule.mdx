@@ -23,7 +23,7 @@ export const logEvent = async (input, config, log) => {
 
 A `Mapping.Rule` is the object that sits at
 `config.mapping[entity][action]` on a source or destination. It decides whether
-an event applies, renames it, reshapes its data, gates it by consent, and can
+an event applies, renames it, reshapes its data, and can
 emit side effects (batching, custom settings). The shape is defined in
 [`packages/core/src/types/mapping.ts`](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/types/mapping.ts).
 
@@ -71,9 +71,13 @@ await getMappingEvent(
   fn={logEvent}
 />
 
-Once a rule matches, the collector runs `policy` (event-level), resolves `data`,
-checks `consent` and `condition`, then hands the result to the destination's
-`push` (or buffers it when `batch` is set).
+A rule's `condition` is checked while matching: the first rule whose
+`condition` passes is used; if none passes, the `*` → `*` rule applies, if there
+is one. A condition may be async: conditions are awaited one by one, in rule
+order. A condition that throws is logged and counts as no match. Once a rule matches, the collector runs `policy` (event-level), resolves
+`data`, then hands the result to the destination's `push` (or buffers it when
+`batch` is set). A rule-level `consent` is not checked: gate a destination with
+`config.consent`, or a single value with a `consent` entry.
 
 A `policy` entry that resolves to nothing removes the field. That is how a
 consent-gated entry redacts a value when consent is denied.

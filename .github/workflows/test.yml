@@ -75,6 +75,30 @@ jobs:
           npm --prefix packages/cli run generate:types
           git diff --exit-code packages/cli/openapi/spec.json packages/cli/src/types/api.gen.d.ts \
           || (echo "::error ::CLI generated API types are stale. Run 'cd packages/cli && npm run generate:types' and commit the result." && exit 1)
+      # The contract label's floor never goes backwards against the base: the
+      # target branch on a pull request, the previous tip on a push. Skipped
+      # without a base (a dispatch, a new branch) or when the base has no
+      # client spec.
+      - name: Verify the contract label floor
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE="origin/${BASE_REF}"
+          else
+            BASE="${BEFORE}"
+          fi
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "No base commit; contract label check skipped."
+            exit 0
+          fi
+          if ! git show "$BASE:packages/cli/openapi/spec.json" > "$RUNNER_TEMP/base-spec.json" 2>/dev/null; then
+            echo "No packages/cli/openapi/spec.json at $BASE; contract label check skipped."
+            exit 0
+          fi
+          node packages/cli/scripts/check-client-contract.mjs --label-base "$RUNNER_TEMP/base-spec.json"
       - name: Validate documentation
         run: npm run validate:links
       - name: Verify (PR, affected only)

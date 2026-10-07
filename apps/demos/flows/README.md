@@ -29,7 +29,7 @@ The simplest possible flow: receive events and log them.
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "server": {
       "server": {},
@@ -41,7 +41,7 @@ The simplest possible flow: receive events and log them.
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
-          "code": "sourceExpress",
+          "import": "sourceExpress",
           "config": {
             "settings": {
               "path": "/collect",
@@ -54,7 +54,7 @@ The simplest possible flow: receive events and log them.
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
-          "code": "destinationDemo",
+          "import": "destinationDemo",
           "config": {
             "settings": {
               "name": "server",
@@ -112,7 +112,7 @@ Add the BigQuery destination to your flow.json:
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "server": {
       "server": {},
@@ -125,7 +125,7 @@ Add the BigQuery destination to your flow.json:
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
-          "code": "sourceExpress",
+          "import": "sourceExpress",
           "config": {
             "settings": {
               "path": "/collect",
@@ -138,7 +138,7 @@ Add the BigQuery destination to your flow.json:
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
-          "code": "destinationDemo",
+          "import": "destinationDemo",
           "config": {
             "settings": {
               "name": "server",
@@ -148,7 +148,7 @@ Add the BigQuery destination to your flow.json:
         },
         "bigquery": {
           "package": "@walkeros/server-destination-gcp",
-          "code": "destinationBigQuery",
+          "import": "destinationBigQuery",
           "config": {
             "settings": {
               "projectId": "$PROJECT_ID",
@@ -208,7 +208,7 @@ Add the `web` flow to your flow.json:
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "flows": {
     "server": {
       // ... same as Step 2
@@ -228,11 +228,10 @@ Add the `web` flow to your flow.json:
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
-          "code": "sourceBrowser",
+          "import": "sourceBrowser",
           "config": {
             "settings": {
-              "pageview": true,
-              "session": true
+              "pageview": true
             }
           }
         }
@@ -240,7 +239,7 @@ Add the `web` flow to your flow.json:
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
-          "code": "destinationDemo",
+          "import": "destinationDemo",
           "config": {
             "settings": {
               "name": "console",
@@ -250,7 +249,7 @@ Add the `web` flow to your flow.json:
         },
         "api": {
           "package": "@walkeros/web-destination-api",
-          "code": "destinationAPI",
+          "import": "destinationAPI",
           "config": {
             "settings": {
               "url": "$ENDPOINT/collect"
@@ -259,7 +258,7 @@ Add the `web` flow to your flow.json:
         },
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
-          "code": "destinationGtag",
+          "import": "destinationGtag",
           "config": {
             "loadScript": true,
             "settings": {
@@ -280,7 +279,7 @@ Add the `web` flow to your flow.json:
 
 **What this adds:**
 
-- Browser source captures page views and sessions
+- Browser source captures page views and tagged DOM events
 - Demo destination logs to browser console
 - API destination sends to YOUR Cloud Run endpoint
 - GA4 destination sends to Google Analytics (optional)

@@ -32,7 +32,11 @@ npm install @walkeros/web-destination-fullstory
       "destinations": {
         "fullstory": {
           "package": "@walkeros/web-destination-fullstory",
-          "config": {}
+          "config": {
+            "settings": {
+              "orgId": "o-XXXXXX-na1"
+            }
+          }
         }
       }
     }

@@ -423,6 +423,60 @@ describe('Unified Gtag Destination', () => {
       );
     });
 
+    // No data mapping anywhere: pushGTMEvent gets no data and pushes the
+    // event as-is.
+    it('should pass no data to GTM when nothing is mapped', async () => {
+      const settings: Settings = {
+        gtm: { containerId: 'GTM-XXXXXXX' },
+      };
+      const config = { settings };
+
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
+
+      expect(pushGTMEvent).toHaveBeenCalledWith(
+        mockEvent,
+        settings.gtm,
+        undefined,
+        undefined,
+        mockEnv,
+        mockLogger,
+      );
+    });
+
+    it('should map GTM data from settings.gtm.data alone', async () => {
+      const settings: Settings = {
+        gtm: { containerId: 'GTM-XXXXXXX', data: { map: { id: 'data.id' } } },
+      };
+      const config = { settings };
+
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
+
+      expect(pushGTMEvent).toHaveBeenCalledWith(
+        mockEvent,
+        settings.gtm,
+        undefined,
+        { id: mockEvent.data.id },
+        mockEnv,
+        mockLogger,
+      );
+    });
+
     it('should push to all tools when configured', async () => {
       const settings: Settings = {
         ga4: { measurementId: 'G-XXXXXXXXXX' },

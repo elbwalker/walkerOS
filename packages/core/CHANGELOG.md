@@ -1,5 +1,43 @@
 # @walkeros/core
 
+## 4.7.2
+
+### Patch Changes
+
+- 98398fe: An async mapping rule `condition` is now awaited, in rule order, so a
+  condition that resolves to `false` no longer matches. A condition that throws
+  is logged and counts as no match. New `isThenable` helper export.
+- 98398fe: MCP tool results are always an object: `mcpResult` answers a list as
+  `{ items }` and a bare value as `{ value }` instead of a bare or spread array,
+  and `project_manage list` always answers `{ projects }`.
+- ff23953: The MCP setup-mapping prompt, the MCP instructions, the schema
+  descriptions and the flow-complete example no longer claim that a mapping
+  rule's `consent` gates events. A rule's `consent` is not enforced yet; to
+  require consent for a destination, set `consent` in the destination's config.
+- 98398fe: A code-less transformer now runs its `config.mapping` (it wins over
+  the step-level `mapping`), and a flow bundle keeps a code-less transformer
+  whose only mapping or state sits in `config`. Init warns about every mapping
+  field that does nothing in a transformer, rules in array form included, about
+  a mapping next to `code` or `package`, which never runs, and about a
+  step-level `mapping` that `config.mapping` overrides; `validateFlowStructure`
+  reports the same warnings. New exports: `getTransformerMapping`,
+  `getTransformerMappingWarnings`.
+- 98398fe: `startFlow` now types each step by the package passed as `code`, so
+  settings, mapping rule settings and `env` keys autocomplete and an unknown
+  setting is a type error; steps without typed code stay as loose as before. The
+  Storybook addon no longer passes a `session` setting the browser source never
+  had.
+
+## 4.7.1
+
+### Patch Changes
+
+- 0635330: Adds build-time flags that let a bundler leave unused features out of
+  a browser bundle. Nothing changes when they are not set.
+- 91e9aeb: A `consent` key on a `loop` item neither unlocks nor holds back a
+  value inside that loop; the event's consent decides. This applies to
+  destination, source and state mappings alike.
+
 ## 4.7.0
 
 ### Minor Changes

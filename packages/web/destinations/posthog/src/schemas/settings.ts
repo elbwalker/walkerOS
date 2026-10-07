@@ -55,11 +55,15 @@ export const SettingsSchema = z.object({
     .optional(),
   capture_heatmaps: z
     .boolean()
-    .describe('Enable heatmap data capture. Default: true (PostHog default).')
+    .describe(
+      'Enable heatmap data capture. Default: unset, which follows the heatmaps setting of the PostHog project.',
+    )
     .optional(),
   capture_exceptions: z
     .boolean()
-    .describe('Enable automatic exception capture. Default: false.')
+    .describe(
+      'Enable automatic exception capture. Default: unset, which follows the exception autocapture setting of the PostHog project.',
+    )
     .optional(),
   disable_surveys: z
     .boolean()
@@ -92,19 +96,19 @@ export const SettingsSchema = z.object({
   bootstrap: z
     .unknown()
     .describe(
-      'SSR bootstrap data. { distinctID?, featureFlags? } — pre-populates identity and flag values to avoid first-render flicker.',
+      'SSR bootstrap data. { distinctID?, featureFlags? } pre-populates identity and flag values to avoid first-render flicker.',
     )
     .optional(),
   identify: z
     .unknown()
     .describe(
-      'walkerOS mapping value resolving to an identity object. Keys: distinctId, $set, $set_once. Resolved on first push and re-fired when distinctId changes.',
+      'walkerOS mapping value resolving to an identity object. Keys: distinctId, $set, $set_once. Resolved on every push: posthog.identify fires when distinctId changes, and on every push while $set or $set_once are present.',
     )
     .optional(),
   group: z
     .unknown()
     .describe(
-      'walkerOS mapping value resolving to a group object. Keys: type, key, properties. Resolved on first push and re-fired when type/key changes.',
+      'walkerOS mapping value resolving to a group object. Keys: type, key, properties. Resolved on every push: posthog.group fires when type or key changes, and on every push while properties are present.',
     )
     .optional(),
 });

@@ -10,8 +10,7 @@ import {
 const globalName = 'Walkerjs';
 
 export default defineConfig([
-  buildModules({ format: ['cjs'] }),
-  buildModules({ format: ['esm'], noExternal: [/(.*)/] }),
+  buildModules(),
   buildExamples(),
   buildBrowser({ globalName }),
   buildES5({ globalName }),

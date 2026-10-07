@@ -34,8 +34,13 @@ export function getEnv<E extends Env = Env>(env?: E) {
     ...env,
   };
 
+  // Build flag (see @walkeros/core build-flags): a lean bundle without
+  // observe folds the recorder out; its collector never injects the key.
   const observe = env && env[OBSERVE_ENV_KEY];
-  if (isEnvObserve(observe)) {
+  if (
+    (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__) &&
+    isEnvObserve(observe)
+  ) {
     // Strip the recorder so it never reaches the destination (mirrors wrapEnv
     // stripping `simulation`).
     delete merged[OBSERVE_ENV_KEY];

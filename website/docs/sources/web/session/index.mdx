@@ -86,21 +86,27 @@ The session source uses two complementary methods:
 
 ### Window-based detection
 
-Without storage, session detection relies on browser signals:
+Without storage, session detection relies on browser signals. A session starts
+on a page load that is a plain navigation, not a reload or back and forward, and
+that either carries marketing parameters or arrives from another host:
 
-**Navigation type:**
 <CodeSnippet
-  code={`// Session starts when navigation type indicates new visit
+  code={`// Simplified: when a page load starts a session
+const [navigation] = performance.getEntriesByType('navigation');
 const isNewSession =
-  performance.navigation.type === 0 || // Navigate (new page load)
-  document.referrer === '' ||          // No referrer (direct visit)
-  !isSameHost(document.referrer);      // External referrer`}
+  navigation?.type === 'navigate' &&            // a plain navigation
+  (hasMarketingParameters(location.href) ||     // UTM parameters or a click ID
+    referrerHostname !== location.hostname);    // another site or subdomain, or no referrer (direct)`}
   language="typescript"
 />
 
+Reloads, back and forward, internal links and single-page-app route changes
+start no session, and neither does a browser without Navigation Timing.
+
 **Marketing parameters:**
 
-UTM and other marketing parameters trigger session start. The following are recognized by default:
+UTM and other marketing parameters trigger session start, even with an internal
+referrer. The following are recognized by default:
 
 <CodeSnippet
   code={`// UTM parameters → mapped to short names

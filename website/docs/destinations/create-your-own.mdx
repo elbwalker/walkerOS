@@ -8,29 +8,29 @@ sidebar_position: 99
 
 This guide provides the essentials for building a custom walkerOS destination.
 
-## What is a destination?
-
-A destination is a function that receives events from walkerOS and sends them to
-an external service, such as an analytics platform, an API, or a database.
-
 ## The destination interface
 
-A destination is an object that implements the `Destination` interface. The most
-important property is the `push` function, which is called for every event.
+A destination is an object that implements the `Destination.Instance` interface
+from `@walkeros/core`. The most important property is the `push` function,
+which is called for every event.
 
 <CodeSnippet
-  code={`interface Destination<Settings = unknown> {
-config: {};
-push: PushFn<Settings>;
-type?: string;
-init?: InitFn<Settings>;
-on?(
-event: 'consent' | 'session' | 'ready' | 'run',
-context?: unknown,
-): void | Promise<void>;
+  code={`interface Instance<T extends TypesGeneric = Types> {
+  config: Config<T>;
+  push: PushFn<T>;
+  type?: string;
+  env?: Env<T>;
+  init?: InitFn<T>;
+  pushBatch?: PushBatchFn<T>;
+  on?: On.OnFn;
+  setup?: SetupFn<Config<T>, Env<T>>;
+  destroy?: DestroyFn<Config<T>, Env<T>>;
 }`}
   language="typescript"
 />
+
+`T` bundles the destination's own types:
+`Destination.Types<Settings, Mapping, Env>`.
 
 ## The `push` function
 
@@ -38,10 +38,10 @@ The `push` function is where you'll implement the logic to send the event to
 your desired service. It receives the `event` and a `context` object.
 
 <CodeSnippet
-  code={`type PushFn<Settings> = (
+  code={`type PushFn<T extends TypesGeneric = Types> = (
   event: WalkerOS.Event,
-  context: Destination.PushContext<Settings>,
-) => void;`}
+  context: Destination.PushContext<T>,
+) => WalkerOS.PromiseOrValue<void | unknown>;`}
   language="typescript"
 />
 
@@ -54,6 +54,9 @@ The push context contains:
 * **`data`**: Pre-computed data from mapping
 * **`rule`**: The matching mapping rule for this event
 * **`ingest`**: Optional request metadata from source
+* **`collector`**: The collector instance
+* **`reportError`**: Reports an error raised outside `push`, such as an SDK
+  client's `'error'` event, optionally for one event
 
 ## Example: A simple webhook destination
 
@@ -62,99 +65,109 @@ Here is an example of a simple destination that sends events to a webhook URL.
 <CodeSnippet
   code={`import type { Destination } from '@walkeros/core';
 
-// 1. Define your settings interface
+// 1. Define your settings and bundle your types
 interface WebhookSettings {
-url: string;
+  url: string;
 }
 
+type Types = Destination.Types<WebhookSettings>;
+
 // 2. Create the destination object
-export const destinationWebhook: Destination<WebhookSettings> = {
-type: 'webhook',
-config: {},
+export const destinationWebhook: Destination.Instance<Types> = {
+  type: 'webhook',
+  config: {},
 
-push(event, { config }) {
-const { settings } = config;
+  async push(event, { config }) {
+    const { settings } = config;
 
-// 3. Access your settings
-if (!settings?.url) return;
+    // 3. Access your settings
+    if (!settings?.url) return;
 
-// 4. Send the event
-fetch(settings.url, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(event),
-}).catch(console.error);
-},
+    // 4. Send the event; a rejection marks the push as failed
+    await fetch(settings.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    });
+  },
 };`}
   language="typescript"
 />
 
-## Schema validation (optional)
+## The `pushBatch` function (optional)
 
-Destinations can export Zod schemas to provide runtime validation and TypeScript
-IDE support for configuration options. Export a `schemas` namespace containing
-`SettingsSchema` and `MappingSchema` to enable validation, autocomplete, and
-JSON Schema generation for tools like MCP and Explorer.
+When the destination's config sets `batch` (see
+[Batch scheduling](/docs/mapping/rule#batch-scheduling)), the collector buffers
+events and calls `pushBatch` once per flush instead of `push` per event.
+`batch.entries` holds one entry per event with its `event`, mapped `data`,
+`rule`, `ingest` and `respond`. Without `pushBatch`, every event goes to `push` and the
+`batch` setting has no effect.
 
-See the
-[Destination Schemas Guide](https://github.com/elbwalker/walkerOS/blob/main/DESTINATION_SCHEMAS.md)
-for implementation details, or reference existing destinations like
+If `pushBatch` throws or rejects, every entry goes to the destination's
+dead-letter queue and counts as failed. To report single rows, resolve
+`{ failed: [{ index, error }] }` with indices into `batch.entries`: only those
+entries fail. A batch flushes after the `elb` calls that filled it have
+resolved, so its outcome shows only in the destination's status and logs.
+Pending batches are flushed at shutdown: the collector waits up to 5 seconds
+per flush and logs one that takes longer as failed.
+
+## Schemas {#schema-validation-optional}
+
+A published destination exports JSON Schemas of its `settings` and `mapping`
+from `src/dev.ts`, usually written with Zod and converted with `zodToSchema`
+from `@walkeros/core/dev`. `walkeros validate`, the MCP tools and the docs read
+them from the package's `walkerOS.json` (see
+[Package convention](#package-convention)). The
 [Meta Pixel](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/meta)
-for complete examples.
+destination is a complete example.
 
 ## The `on` method (Optional)
 
-The optional `on` method allows your destination to respond to collector
-lifecycle events. This is useful for handling consent changes, session
-management, or cleanup tasks.
+The optional `on` method lets your destination respond to collector lifecycle
+events, for example to handle consent changes or session management. Cleanup
+belongs in `destroy`.
+
+The collector calls `on` only after `init` has run. A destination with `on`
+needs an `init` method, even an empty `init() {}`, or `on` is never called.
 
 ### Available Events
 
-* **`consent`** - Called when user consent changes, with consent state as
-  context
-* **`session`** - Called when a new session starts, with session data as context
-* **`ready`** - Called when the collector is ready to process events
-* **`run`** - Called when the collector starts or resumes processing
+* **`consent`**, **`user`**, **`globals`**, **`custom`**, **`config`** - The
+  matching `walker` command changed collector state; `context.data` holds the
+  values the command set
+* **`run`** - The collector started or received `walker run`
+* **`ready`**, **`session`** - A `walker ready` or `walker session` command
+  (the session source sends `session`); they carry no data
 
-The handler may be async. The collector awaits every call, lifecycle events
-such as `run` included, bounded by `config.timeout` (10 seconds by default).
-For `consent`, `user`, `globals` and `custom`, the destination receives the
-current state before its first push, and the collector waits for the handler to
-settle before it pushes events to the destination. If such a handler does not
-settle in that time, or rejects, the destination receives no events until a
-later delivery of the state settles; its events stay queued meanwhile and are
-discarded at the next `walker run`. State updates reach a handler one at a
-time: one that arrives while the handler is still busy, even past its timeout,
-is applied as the current state once the handler finishes, before any held
-event, so the newest state is always applied last. Lifecycle events such as
-`run`, `ready` and `session` still reach a handler that is busy with a state
-update. A lifecycle handler that does not settle holds no events. Handlers of different destinations run independently, so a
-slow handler in one destination does not delay events to other destinations.
-
-An async state handler must settle: until it settles or reaches
-`config.timeout`, that destination receives no events. `elb` commands and
-`startFlow` resolve only after the destinations' `on()` handlers for that
-command have settled or timed out; a command sent while a handler is still
-busy with an earlier state update resolves at once, and its update is applied
-right after the running one, while that destination's events wait for it.
+The handler may be async. For `consent`, `user`, `globals` and `custom`, the
+collector waits for the handler to settle, up to `config.timeout` (10 seconds
+by default), before it pushes events to the destination. If the handler does
+not settle in that time, or rejects, the destination's events stay queued
+until a later delivery of the state settles, and are discarded at the next
+`walker run`. Lifecycle events are awaited too but hold no events, and they can
+reach the handler while it is still busy with a state update. The full rules
+are in [State delivery](/docs/collector/commands#state-delivery).
 
 ### Example: Consent-Aware Destination
 
 <CodeSnippet
-  code={`export const destinationWithConsent: Destination<WebhookSettings> = {
-type: 'webhook-consent',
-config: {},
+  code={`export const destinationWithConsent: Destination.Instance<Types> = {
+  type: 'webhook-consent',
+  config: {},
 
-on(event, context) {
-if (event === 'consent') {
-console.log('Consent updated:', context);
-// React to consent changes - maybe clear cookies if consent withdrawn
-}
-},
+  // Required for on() to be called
+  init() {},
 
-push(event, { config }) {
-console.log('Event:', event);
-},
+  on(type, context) {
+    if (type === 'consent') {
+      // context.data holds the consent values the command set
+      console.log('Consent updated:', context.data);
+    }
+  },
+
+  push(event) {
+    console.log('Event:', event);
+  },
 };`}
   language="typescript"
 />
@@ -169,9 +182,9 @@ The same lifecycle applies to sources, destinations, and stores. Transformers ar
 
 ### Behavior
 
-- Triggered only by `walkeros setup <kind>.<name>` (per-component, explicit). Never by `push`, `simulate`, `deploy`, or the runtime.
 - Setup is opt-in via `config.setup` in the flow config. The CLI invocation requires it to be `true` or an object; `false` or omitted means the operator's setup invocation is a narrated skip.
 - Idempotency is the package's responsibility. Re-running setup against a fully provisioned environment is a safe no-op.
+- `walkeros setup` runs `init` first and gives `setup` the config `init` returns, if any; when `init` returns `false`, setup is skipped. `destroy` runs after `setup`.
 - Structured JSON output is opt-in via `--json` (e.g. `walkeros setup <kind>.<name> --json`). In normal mode the CLI narrates the action and never splices a JSON envelope into the output, even if `setup()` returns a value. The opt-in setup behavior and idempotency are independent of `--json`.
 
 ### Example: a destination with setup
@@ -185,7 +198,9 @@ interface BigQuerySettings {
   tableId: string;
 }
 
-export const destinationBigquery: Destination<BigQuerySettings> = {
+export const destinationBigquery: Destination.Instance<
+  Destination.Types<BigQuerySettings>
+> = {
   type: 'bigquery',
   config: {},
 
@@ -204,13 +219,13 @@ export const destinationBigquery: Destination<BigQuerySettings> = {
   language="typescript"
 />
 
-The corresponding flow config opts in via `config.setup`:
+A flow config opts in via `config.setup`, here for the BigQuery destination of `@walkeros/server-destination-gcp`:
 
 <CodeSnippet
   code={`{
   "destinations": {
     "bigquery": {
-      "package": "@walkeros/server-destination-bigquery",
+      "package": "@walkeros/server-destination-gcp",
       "config": {
         "setup": true,
         "settings": { "projectId": "my-proj", "datasetId": "events", "tableId": "raw" }
@@ -234,27 +249,6 @@ Then the operator runs:
 - [Create your own source](/docs/sources/create-your-own) for source setup.
 - [Stores](/docs/stores) for store setup and lifecycle ordering.
 
-## Conditional activation with `require`
-
-Destinations can use `require` to delay registration until specific events fire. This prevents SDK loading and network requests before conditions are met:
-
-<CodeSnippet
-  code={`await startFlow({
-  destinations: {
-    ga4: {
-      code: ga4Destination,
-      config: {
-        require: ['session'],
-        consent: { marketing: true },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-`require` and `consent` compose: `require` gates initialization before session information is available, `consent` gates every push (filter events by consent state).
-
 ## Using your destination
 
 To use your custom destination, add it to the `destinations` object in your
@@ -265,102 +259,27 @@ collector configuration.
 import { destinationWebhook } from './destinationWebhook';
 
 const { elb } = await startFlow({
-destinations: {
-myWebhook: {
-destination: destinationWebhook,
-config: {
-  settings: {
-    url: 'https://api.example.com/events',
+  destinations: {
+    myWebhook: {
+      code: destinationWebhook,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+        },
+      },
+    },
   },
-},
-},
-},
 });`}
-  language="typescript"
-/>
-
-## Advanced example: Session management
-
-Here's a more advanced example that demonstrates session handling and cleanup:
-
-<CodeSnippet
-  code={`export const destinationWithSession: Destination<WebhookSettings> = {
-type: 'webhook-session',
-config: {},
-
-on(event, context) {
-switch (event) {
-case 'session':
-  // Session detected: on every run, or on every consent change when the
-  // session source is consent-gated. Carries no payload, read the session
-  // from event.user or the session start event instead.
-  console.log('Session detected');
-  // Could initialize session-specific tracking
-  break;
-
-case 'consent':
-  // Handle consent changes
-  const consent = context as { marketing?: boolean; analytics?: boolean };
-  if (!consent?.marketing) {
-    // Clear marketing-related data if consent withdrawn
-    console.log('Marketing consent withdrawn, clearing data');
-  }
-  break;
-
-case 'ready':
-  // Collector is ready
-  console.log('Starting destination services');
-  break;
-
-case 'run':
-  // Collector resumed processing
-  console.log('Collector resumed, processing queued events');
-  break;
-}
-},
-
-push(event, { config }) {
-// Regular event processing
-const { settings } = config;
-if (!settings?.url) return;
-
-fetch(settings.url, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(event),
-}).catch(console.error);
-},
-};`}
-  language="typescript"
-/>
-
-## TypeScript integration
-
-To get full TypeScript support for your destination's configuration, you can
-extend the `WalkerOS.Destinations` interface.
-
-<CodeSnippet
-  code={`// types.ts
-import type { Destination } from '@walkeros/core';
-import type { WebhookSettings } from './destinationWebhook';
-
-declare global {
-namespace WalkerOS {
-interface Destinations {
-webhook: Destination.Config<WebhookSettings>;
-}
-}
-}`}
   language="typescript"
 />
 
 ## Environment dependencies (testing)
 
-The `env` parameter enables dependency injection for external APIs and SDKs.
-This allows you to test your destination logic without making actual API calls
-or requiring real browser globals.
+The `env` parameter injects external APIs and SDKs into your destination, so
+you can test its logic without making actual API calls or requiring real
+browser globals.
 
-**Use Cases:**
+Use cases:
 
 * Mock external SDKs (Google Analytics, Facebook Pixel, AWS SDK)
 * Test without network requests
@@ -376,9 +295,9 @@ Define the external dependencies your destination needs:
 import type { DestinationWeb } from '@walkeros/web-core';
 
 export interface Env extends DestinationWeb.Env {
-window: {
-gtag: (command: string, ...args: unknown[]) => void;
-};
+  window: {
+    gtag: (command: string, ...args: unknown[]) => void;
+  };
 }
 
 // types.ts - Server destination
@@ -386,46 +305,49 @@ import type { DestinationServer } from '@walkeros/server-core';
 import type { BigQuery } from '@google-cloud/bigquery';
 
 export interface Env extends DestinationServer.Env {
-BigQuery?: typeof BigQuery;
+  BigQuery?: typeof BigQuery;
 }`}
   language="typescript"
 />
 
 ### Using Environment in Your Destination
 
-Use the 3rd generic parameter for type safety, then access env in `init` or
-`push`:
+Add `Env` as the third type of your `Types` bundle for type safety, then
+access env in `init` or `push`:
 
 <CodeSnippet
-  code={`import type { DestinationWeb } from '@walkeros/web-core';
+  code={`import type { Destination } from '@walkeros/core';
+import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv } from '@walkeros/web-core';
 
 interface Settings {
-/* ... */
+  /* ... */
 }
 interface Mapping {
-/* ... */
+  /* ... */
 }
 interface Env extends DestinationWeb.Env {
-window: { customAPI: (event: string) => void };
+  window: { customAPI: (event: string) => void };
 }
 
-// Add Env as 3rd generic parameter for proper typing
-export const destination: DestinationWeb.Destination<Settings, Mapping, Env> = {
-type: 'custom',
-config: {},
+// Env is the third type of the bundle
+type Types = Destination.Types<Settings, Mapping, Env>;
 
-async init({ config, env }) {
-// Initialize SDK using env, falls back to real APIs
-const { window } = getEnv<Env>(env);
-window.customAPI('init');
-return config;
-},
+export const destination: DestinationWeb.Destination<Types> = {
+  type: 'custom',
+  config: {},
 
-push(event, { config, env }) {
-const { window } = getEnv<Env>(env);
-window.customAPI(event.name);
-},
+  async init({ config, env }) {
+    // Initialize SDK using env, falls back to real APIs
+    const { window } = getEnv<Env>(env);
+    window.customAPI('init');
+    return config;
+  },
+
+  push(event, { config, env }) {
+    const { window } = getEnv<Env>(env);
+    window.customAPI(event.name);
+  },
 };`}
   language="typescript"
 />
@@ -438,11 +360,16 @@ Create reusable mock environments in an `examples/env.ts` file:
   code={`// examples/env.ts
 import type { Env } from '../types';
 
+const noop = () => {};
+
 export const push: Env = {
-window: {
-customAPI: jest.fn(),
-},
-};`}
+  window: {
+    customAPI: noop,
+  },
+};
+
+// Call paths that simulate records
+export const simulation = ['call:window.customAPI'];`}
   language="typescript"
 />
 
@@ -456,52 +383,19 @@ export * as env from './env';`}
 
 ### Using in Tests
 
-<CodeSnippet
-  code={`import { clone } from '@walkeros/core';
-import type { Destination, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
-import { examples } from './index';
+Tests push events through `startFlow` with this env and compare the recorded
+calls with your step examples, as in
+[Using examples in tests](/docs/getting-started/flow/step-examples#using-examples-in-tests).
 
-// Helper to create push context for testing
-function createPushContext(
-  overrides: Partial<Destination.PushContext<Settings>> = {},
-): Destination.PushContext<Settings> {
-  return {
-    config: {},
-    env: examples.env.push,
-    logger: createMockLogger(),
-    id: 'test-destination',
-    collector: {} as Collector.Instance,
-    data: {},
-    rule: undefined,
-    ...overrides,
-  };
-}
-
-describe('My Destination', () => {
-  it('calls custom API', async () => {
-    // Clone the example env to avoid mutations
-    const testEnv = clone(examples.env.push);
-
-    const context = createPushContext({ env: testEnv });
-    await destination.push(event, context);
-
-    expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
-  });
-});`}
-  language="typescript"
-/>
-
-**Key Points:**
+Key points:
 
 * **Production**: No `env` needed, uses real APIs (window, fetch, SDKs)
 * **Testing**: Provide `env` with mocks for isolated testing
-* **Type Safety**: 3rd generic parameter gives full autocomplete
+* **Type Safety**: `Env` in your `Types` bundle types `env` in `init` and `push`
 * **Fallback**: `getEnv(env)` automatically uses real APIs if env not provided
 * **Reusable**: Store mock environments in `examples/env.ts` for consistency
 * **Simulate**: `walkeros push --simulate` runs the destination with `examples.env.push` and refuses a destination that has none, so it never calls the real vendor. Next to it, export `simulation`, the call paths that carry the vendor request (for example `['sendServer']` or `['call:PubSub.topic.publishMessage']`), which simulate records and prints
 * **Keep injected clients**: when `init` builds an SDK client, reach it through `env` and create one only when none is injected, so the mock env reaches the request call
-* **Context helper**: Use `createPushContext()` to standardize test context with `id` and `rule`
 
 ## Package convention
 
@@ -512,7 +406,7 @@ Every walkerOS package includes machine-readable metadata for tooling and discov
 <CodeSnippet
   code={`{
   "walkerOS": { "type": "destination", "platform": "web" },
-  "keywords": ["walkeros", "walkeros-destination"]
+  "keywords": ["walkerOS", "walkerOS-destination"]
 }`}
   language="json"
 />
@@ -530,18 +424,18 @@ Use `buildDev()` from the shared tsup config to auto-generate `walkerOS.json`:
   language="typescript"
 />
 
-This file contains your package's JSON Schemas and examples, enabling MCP tools and the CLI to validate configurations without installing your package.
+This file contains your package's JSON Schemas and examples, so MCP tools and the CLI can validate configurations without installing your package.
 
 `buildDev()` fails the build when the package publishes no `schemas.settings`. A package with two or more `walkerOS.exports` also exports `exportExamples` and `exportSchemas` from `src/dev.ts`, each listing exactly those exports, the default included, with `settings` in every `exportSchemas` entry; a package with fewer exports sets neither.
 
 ### Optional: Hints
 
-Packages can export a `hints` record from `src/dev.ts` to provide lightweight, actionable context beyond schemas and examples, such as authentication methods, storage behavior, or troubleshooting tips. Hints are serialized into `walkerOS.json` and surfaced via MCP tools. See the `walkeros-create-destination` skill for details.
+Packages can export a `hints` record from `src/dev.ts` with short notes that schemas and examples do not cover, such as authentication methods, storage behavior, or troubleshooting tips. Hints are serialized into `walkerOS.json` and surfaced via MCP tools. See the `walkeros-create-destination` skill for details.
 
 ## Publishing checklist
 
 - [ ] `walkerOS` field in package.json
-- [ ] Keywords include `walkeros` and `walkeros-destination`
+- [ ] Keywords include `walkerOS` and `walkerOS-destination`
 - [ ] `buildDev()` in tsup.config.ts
 - [ ] `schemas.settings` exported from `src/dev.ts` (per export for multi-export packages)
 - [ ] `dist/walkerOS.json` generated on build

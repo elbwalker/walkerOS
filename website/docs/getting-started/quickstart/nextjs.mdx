@@ -48,9 +48,7 @@ export function initializeWalker(): Promise<void> {
 }
 
 async function startWalker(): Promise<void> {
-  // run: false, the app sends \`walker run\` once per page
   const { collector } = await startFlow({
-    run: false,
     consent: { functional: true },
     sources: {
       browser: {
@@ -58,6 +56,7 @@ async function startWalker(): Promise<void> {
         config: {
           settings: {
             pageview: true,
+            history: true, // a page view on every route change
             elb: 'elb',
           },
         },
@@ -90,69 +89,47 @@ export function tagger(entity?: string) {
 
 ### 2. App integration
 
-The collector starts with `run: false`, so nothing is sent until the first
-`walker run`. Send it for the initial page and on every route change, once the
-flow has started. With the Pages Router, use the Next.js router events:
+The collector sends the first page view when it starts. With `history: true`
+the browser source sends one on every route change and picks up the tagged
+elements the new route renders, so the app only starts the walker once.
+Some routers set the new page title after the route change, so its page view
+can carry the previous title. For exact titles, see
+[single-page apps](/docs/sources/web/browser/#single-page-apps).
+
+With the Pages Router, start it in `_app.tsx`:
 
 <CodeSnippet
   code={`// pages/_app.tsx
 import type { AppProps } from 'next/app';
-import { useRouter } from 'next/router';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { initializeWalker } from '../walker';
 
 export default function App({ Component, pageProps }: AppProps) {
-  const router = useRouter();
-  const initialRun = useRef(false);
-
   useEffect(() => {
-    // walker run sends the page view and scans the page for load triggers
-    const run = () => {
-      initializeWalker().then(() => window.elb('walker run'));
-    };
-
-    // Initial page, once: React StrictMode runs effects twice in development
-    if (!initialRun.current) {
-      initialRun.current = true;
-      run();
-    }
-
-    // Next.js route events
-    router.events.on('routeChangeComplete', run);
-
-    return () => {
-      router.events.off('routeChangeComplete', run);
-    };
-  }, [router.events]);
+    // Starts once, also when React StrictMode runs effects twice
+    initializeWalker();
+  }, []);
 
   return <Component {...pageProps} />;
 }`}
   language="tsx"
 />
 
-For Next.js 13+ with App Router, `usePathname` only works in a Client
-Component, so put the tracking in one and render it from the root layout:
+With the App Router, effects only run in a Client Component, so start it from
+one and render that from the root layout:
 
 <CodeSnippet
   code={`// app/walker-tracker.tsx
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { initializeWalker } from '../walker';
 
 export function WalkerTracker() {
-  const pathname = usePathname();
-  const lastPathname = useRef('');
-
   useEffect(() => {
-    // React StrictMode runs effects twice in development, run once per path
-    if (lastPathname.current === pathname) return;
-    lastPathname.current = pathname;
-
-    // walker run sends the page view and scans the new page for load triggers
-    initializeWalker().then(() => window.elb('walker run'));
-  }, [pathname]);
+    // Starts once, also when React StrictMode runs effects twice
+    initializeWalker();
+  }, []);
 
   return null;
 }`}
@@ -180,12 +157,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 ## Component usage
 
 Component usage is identical to React. Use the tagger helper and manual events.
-Here the tagger sends `product view` when `walker run` scans the page, and the
+Here the tagger sends `product view` when the product is on the page, and the
 button sends `product add` manually. With the App Router, the `onClick` handler
 makes this a Client Component, so its file starts with `'use client'`:
 
 <CodeSnippet
-  code={`import { tagger } from '../walker';
+  code={`'use client';
+
+import { tagger } from '../walker';
 
 function ProductPage({ product }: { product: { id: number; name: string } }) {
   return (
@@ -218,11 +197,13 @@ chain.
 
 During walker initialization, we added a console destination. It logs each
 event's name to the console. Open your browser's developer console and navigate
-to a product page to see tracked events:
+from the home page to a product page to see tracked events. The first page view
+is the home page, the second the product page, then the product's view:
 
 ```
-Event: product view
 Event: page view
+Event: page view
+Event: product view
 ```
 
 ## Best practices
@@ -245,10 +226,12 @@ Event: page view
 
 ### Route changes not tracked
 
-1. Check that `walker run` is called on route changes
-2. Ensure the initial-run or pathname check sends one `walker run` per page,
-   also under React StrictMode
-3. Verify router event listeners are working correctly
+1. Check that the browser source has `history: true`
+2. Remove route-change `walker run` calls: with `history` on they send a second
+   page view
+3. A route that reuses its component when only a parameter changes does not
+   fire its tagged elements again: remount it per route, for example with a
+   `template.tsx` or a `key`
 
 ### TypeScript errors
 

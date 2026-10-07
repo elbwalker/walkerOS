@@ -1,5 +1,30 @@
 # @walkeros/runner
 
+## 4.7.2
+
+### Patch Changes
+
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+
+## 4.7.1
+
+### Patch Changes
+
+- 91e9aeb: New `walkeros diagnostics` command shows the CLI version, app URL,
+  app health and an API compatibility verdict checked per operation against the
+  live app; the MCP `diagnostics` tool reports it too and
+  `walkeros://reference/openapi` serves the live document. `compareContract` and
+  `ContractComparison` are reshaped, `annotateErrorWithDrift` is removed, and
+  deployment listing rejects an unknown `status` or `type`.
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+  - @walkeros/core@4.7.1
+
 ## 4.7.0
 
 ### Minor Changes

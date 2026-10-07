@@ -131,6 +131,17 @@ describe('flow-complete manifest', () => {
     expect(isObject(clause) && clause.key).toBe(key);
   });
 
+  // A step `next` is never resolved, so no $var can share the opt-out stop:
+  // web and server keep two copies, held equal here.
+  it('stops opted-out users with the same route on web and server', () => {
+    const optout = byId('user-optout');
+    expect(at('/flows/web/collector/next/0')).toEqual(optout);
+    expect(optout).toEqual({
+      match: { key: 'event.user.optout', operator: 'eq', value: 'true' },
+      stop: true,
+    });
+  });
+
   it('points route-next-match at the conditional next to enrich', () => {
     const route = byId('route-next-match');
     expect(isObject(route) && route.next).toBe('enrich');

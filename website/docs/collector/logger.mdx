@@ -92,7 +92,7 @@ The logger is automatically available in destination and source contexts:
 ### In sources
 
 <CodeSnippet
-  code={`const mySource = async (config, env) => {
+  code={`const mySource = async ({ config, env }) => {
   const { logger } = env;
 
   logger.info('Source initialized');
@@ -181,13 +181,13 @@ Scoped loggers prefix log messages with context information, making it easier to
 trace logs to their origin:
 
 <CodeSnippet
-  code={`// In a destination, the logger is already scoped: [google-gtag:myGtag]
+  code={`// In a destination, the logger is already scoped to its type: [google-gtag]
 push(event, { logger }) {
-  logger.info('Processing'); // Output: [google-gtag:myGtag] Processing
+  logger.info('Processing'); // Output: INFO [google-gtag] Processing
 
   // Create nested scope
   const ga4Logger = logger.scope('ga4');
-  ga4Logger.debug('Sending to GA4'); // Output: [google-gtag:myGtag:ga4] Sending to GA4
+  ga4Logger.debug('Sending to GA4'); // Output: DEBUG [google-gtag:ga4] Sending to GA4
 }`}
   language="typescript"
 />

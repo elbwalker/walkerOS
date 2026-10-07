@@ -53,6 +53,14 @@ describe('mergeMappingRule', () => {
     const result = mergeMappingRule(base, { extend: { consent: null } });
     expect('consent' in result).toBe(false);
   });
+  it('clears a nested inherited key when extend sets it to null', () => {
+    const result = mergeMappingRule(base, {
+      extend: { data: { map: { currency: null } } },
+    });
+    expect(result.data).toEqual({
+      map: { id: 'params.ep.transaction_id', total: 'params.epn.value' },
+    });
+  });
   it('carries remove onto the merged rule', () => {
     const result = mergeMappingRule(base, { remove: ['currency'] });
     expect(result.remove).toEqual(['currency']);

@@ -1,4 +1,4 @@
-import { isAuthError, AUTH_HINT } from '../types.js';
+import { isAuthenticationError, AUTH_HINT } from '../types.js';
 
 /** The code every door answers a plan or project gate with. */
 export const FEATURE_NOT_AVAILABLE = 'FEATURE_NOT_AVAILABLE';
@@ -6,7 +6,8 @@ export const FEATURE_NOT_AVAILABLE = 'FEATURE_NOT_AVAILABLE';
 /** The features a door can refuse a whole tool for. */
 export type GatedFeature = 'hub' | 'frames';
 
-function codeOf(error: unknown): string | undefined {
+/** The structured code an error carries, if any. */
+export function codeOf(error: unknown): string | undefined {
   if (!(error instanceof Error) || !('code' in error)) return undefined;
   const code = error.code;
   return typeof code === 'string' ? code : undefined;
@@ -31,15 +32,9 @@ export function featureDenialHint(feature: GatedFeature): string {
 
 /**
  * One hint rule for the gated tools: a feature denial names the feature, an
- * auth failure points at the auth tool, a NOT_FOUND points at discovery, and
- * anything else carries no hint.
- *
- * Order matters, though not because of the HTTP status: `isAuthError` reads the
- * error's code and the words in its message, never a status. A denial carries
- * its own code, but its MESSAGE is a door's free choice, and one worded
- * "Forbidden" is a message `isAuthError` answers to. Reading the specific
- * reason first is what keeps such a denial from being reported as a login
- * problem the person could fix by logging in again.
+ * authentication failure points at the auth tool, a NOT_FOUND points at
+ * discovery, and anything else carries no hint. Each reads the error's
+ * structured code or status, so a denial's wording never decides its hint.
  */
 export function errorHint(
   error: unknown,
@@ -47,7 +42,7 @@ export function errorHint(
   notFoundHint: string,
 ): string | undefined {
   if (isFeatureDenial(error)) return featureDenialHint(feature);
-  if (isAuthError(error)) return AUTH_HINT;
+  if (isAuthenticationError(error)) return AUTH_HINT;
   if (codeOf(error) === 'NOT_FOUND') return notFoundHint;
   return undefined;
 }

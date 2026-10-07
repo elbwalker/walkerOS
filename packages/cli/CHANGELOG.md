@@ -1,5 +1,70 @@
 # @walkeros/cli
 
+## 4.7.2
+
+### Patch Changes
+
+- 98398fe: `setDefaultProject` (MCP `project_manage set_default`) now needs a
+  credential instead of just a config file, works with only `WALKEROS_TOKEN`
+  set, and refuses while `WALKEROS_PROJECT_ID` names another project. The local
+  MCP server now uses `WALKEROS_PROJECT_ID` when a call names no project. New
+  export: `resolveProjectId()`.
+- 98398fe: The `flow-complete.json` example stops an opted-out user
+  (`user.optout`) first: on the web nothing is sent, on the server the event
+  stops before dedup. Piwik PRO now gets the customer segment as custom
+  dimension 1, and the GA4 purchase rule drops its `consent`, which only
+  repeated the destination consent.
+- ff23953: A tool refused for a missing role, scope or feature no longer
+  suggests logging in; that hint now appears only when the login is rejected or
+  missing. Project commands now report error codes such as `FORBIDDEN` in the
+  machine-readable error line and show upgrade instructions when the app needs a
+  newer CLI.
+- ff23953: The MCP setup-mapping prompt, the MCP instructions, the schema
+  descriptions and the flow-complete example no longer claim that a mapping
+  rule's `consent` gates events. A rule's `consent` is not enforced yet; to
+  require consent for a destination, set `consent` in the destination's config.
+- 98398fe: `walkeros validate` and MCP `flow_validate` now show the structural
+  warnings of a flow, such as a transformer mapping field that does nothing
+  (`TRANSFORMER_MAPPING_NO_OP`), as warnings, not errors.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/collector@4.7.2
+  - @walkeros/server-core@4.7.2
+  - @walkeros/server-destination-api@4.7.2
+  - @walkeros/transformer-validate@4.7.2
+
+## 4.7.1
+
+### Patch Changes
+
+- 91e9aeb: New `walkeros diagnostics` command shows the CLI version, app URL,
+  app health and an API compatibility verdict checked per operation against the
+  live app; the MCP `diagnostics` tool reports it too and
+  `walkeros://reference/openapi` serves the live document. `compareContract` and
+  `ContractComparison` are reshaped, `annotateErrorWithDrift` is removed, and
+  deployment listing rejects an unknown `status` or `type`.
+- 0635330: Web bundles now leave out features the flow does not use. The minimal
+  web flow drops from about 115 KB to 93 KB (40 KB to 32 KB gzipped). Skeletons
+  built by older CLI versions still wrap with every feature.
+- bd511d0: Web flows with the Mixpanel or PostHog destination can now be pushed
+  and simulated. Simulating a web flow no longer loads vendor scripts, and
+  simulating a source no longer starts the flow's destinations. A web push
+  records XMLHttpRequest calls like fetch and sendBeacon, listed as
+  `networkCalls` in `--json`.
+- Updated dependencies [0635330]
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+  - @walkeros/collector@4.7.1
+  - @walkeros/core@4.7.1
+  - @walkeros/server-core@4.7.1
+  - @walkeros/server-destination-api@4.7.1
+  - @walkeros/transformer-validate@4.7.1
+
 ## 4.7.0
 
 ### Minor Changes

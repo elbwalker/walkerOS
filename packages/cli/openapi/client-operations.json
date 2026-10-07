@@ -1,0 +1,250 @@
+[
+  {
+    "op": "GET /api/auth/whoami",
+    "usedBy": ["mcp auth", "walkeros auth login", "walkeros auth whoami"]
+  },
+  {
+    "op": "POST /api/feedback",
+    "usedBy": ["mcp feedback", "walkeros feedback"]
+  },
+  {
+    "op": "GET /api/health",
+    "usedBy": ["mcp diagnostics", "walkeros diagnostics"]
+  },
+  {
+    "op": "POST /api/oauth/device_authorization",
+    "usedBy": ["mcp auth", "walkeros auth login"]
+  },
+  {
+    "op": "POST /api/oauth/revoke",
+    "usedBy": ["mcp auth", "walkeros auth logout"]
+  },
+  {
+    "op": "POST /api/oauth/token",
+    "usedBy": [
+      "@walkeros/cli resolveAccessToken",
+      "mcp auth",
+      "walkeros auth login"
+    ]
+  },
+  {
+    "op": "GET /api/openapi.json",
+    "usedBy": [
+      "mcp diagnostics",
+      "mcp resource walkeros://reference/openapi",
+      "walkeros diagnostics"
+    ]
+  },
+  {
+    "op": "GET /api/packages",
+    "usedBy": [
+      "mcp package_search",
+      "mcp resource walkeros://reference/packages",
+      "mcp resource walkeros://schema/{packageName}"
+    ]
+  },
+  {
+    "op": "GET /api/projects",
+    "usedBy": [
+      "mcp flow_manage",
+      "mcp project_manage",
+      "walkeros projects list"
+    ]
+  },
+  {
+    "op": "POST /api/projects",
+    "usedBy": ["mcp project_manage", "walkeros projects create"]
+  },
+  {
+    "op": "DELETE /api/projects/{projectId}",
+    "usedBy": ["mcp project_manage", "walkeros projects delete"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}",
+    "usedBy": ["mcp project_manage", "walkeros projects get"]
+  },
+  {
+    "op": "PATCH /api/projects/{projectId}",
+    "usedBy": ["mcp project_manage", "walkeros projects update"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/deployments",
+    "usedBy": ["mcp deploy_manage", "walkeros deploy list"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/deployments",
+    "usedBy": ["walkeros deploy create"]
+  },
+  {
+    "op": "DELETE /api/projects/{projectId}/deployments/{deploymentId}",
+    "usedBy": ["mcp deploy_manage", "walkeros deploy delete"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/deployments/{deploymentId}",
+    "usedBy": ["mcp deploy_manage", "walkeros deploy status"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/deployments/{deploymentId}/stream",
+    "usedBy": ["mcp deploy_manage", "walkeros deploy start"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows",
+    "usedBy": ["mcp flow_manage", "walkeros flows list"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows",
+    "usedBy": ["mcp flow_manage", "walkeros flows create"]
+  },
+  {
+    "op": "DELETE /api/projects/{projectId}/flows/{flowId}",
+    "usedBy": ["mcp flow_manage", "walkeros flows delete"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}",
+    "usedBy": [
+      "mcp deploy_manage",
+      "mcp flow_bundle",
+      "mcp flow_load",
+      "mcp flow_manage",
+      "mcp flow_simulate",
+      "mcp observe_session",
+      "walkeros deploy create",
+      "walkeros deploy start",
+      "walkeros flows get",
+      "walkeros observe start",
+      "walkeros previews create"
+    ]
+  },
+  {
+    "op": "PATCH /api/projects/{projectId}/flows/{flowId}",
+    "usedBy": ["mcp flow_manage", "walkeros flows update"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/deploy",
+    "usedBy": ["@walkeros/cli getDeployment"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/deploy",
+    "usedBy": ["mcp deploy_manage", "walkeros deploy start"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/duplicate",
+    "usedBy": ["mcp flow_manage", "walkeros flows duplicate"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/frames",
+    "usedBy": ["mcp frame_manage"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/frames/{frameId}",
+    "usedBy": ["mcp frame_manage"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/journeys",
+    "usedBy": ["mcp flow_manage", "mcp observe_journeys", "mcp observe_session"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/observe-sessions",
+    "usedBy": ["mcp observe_session", "walkeros observe start"]
+  },
+  {
+    "op": "DELETE /api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}",
+    "usedBy": ["mcp observe_session"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}",
+    "usedBy": ["mcp observe_session", "walkeros observe start"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/observe-sessions/{sessionId}/heartbeat",
+    "usedBy": ["walkeros observe start"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/previews",
+    "usedBy": ["mcp flow_manage", "walkeros previews list"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/previews",
+    "usedBy": ["mcp flow_manage", "walkeros previews create"]
+  },
+  {
+    "op": "DELETE /api/projects/{projectId}/flows/{flowId}/previews/{previewId}",
+    "usedBy": ["mcp flow_manage", "walkeros previews delete"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/previews/{previewId}",
+    "usedBy": ["mcp flow_manage", "walkeros previews get"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/previews/{previewId}/grant",
+    "usedBy": ["mcp flow_manage", "walkeros previews create"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/releases",
+    "usedBy": ["mcp hub_manage"]
+  },
+  {
+    "op": "PUT /api/projects/{projectId}/flows/{flowId}/releases/annotations",
+    "usedBy": ["mcp hub_manage"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/releases/step-history",
+    "usedBy": ["mcp hub_manage"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/releases/{versionId}",
+    "usedBy": ["mcp hub_manage"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/secrets",
+    "usedBy": ["mcp secret_manage"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/secrets",
+    "usedBy": ["mcp secret_manage"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/secrets/values",
+    "usedBy": ["runner"]
+  },
+  {
+    "op": "DELETE /api/projects/{projectId}/flows/{flowId}/secrets/{secretId}",
+    "usedBy": ["mcp secret_manage"]
+  },
+  {
+    "op": "PUT /api/projects/{projectId}/flows/{flowId}/secrets/{secretId}",
+    "usedBy": ["mcp secret_manage"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy",
+    "usedBy": ["@walkeros/cli getDeployment"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy",
+    "usedBy": ["mcp deploy_manage", "walkeros deploy start"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/threads",
+    "usedBy": ["mcp hub_manage"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/threads",
+    "usedBy": ["mcp hub_manage"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/flows/{flowId}/threads/{threadId}/messages",
+    "usedBy": ["mcp hub_manage"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/knowledge",
+    "usedBy": ["mcp hub_manage"]
+  },
+  {
+    "op": "POST /api/projects/{projectId}/runners/heartbeat",
+    "usedBy": ["runner"]
+  },
+  {
+    "op": "POST /api/telemetry",
+    "usedBy": ["@walkeros/cli telemetry"]
+  }
+]

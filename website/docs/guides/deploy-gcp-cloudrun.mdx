@@ -18,10 +18,10 @@ This guide deploys a walkerOS flow to Google Cloud Run, forwarding events to Big
 Follow the <Link to="/docs/destinations/server/gcp#gcp-setup">GCP BigQuery setup</Link> to:
 
 - Create a BigQuery dataset
-- <Link to="/docs/destinations/server/gcp#create-service-account">Create a service account</Link> with write permissions
-- <Link to="/docs/destinations/server/gcp#create-table-query">Create the events table</Link>
+- <Link to="/docs/destinations/server/gcp#create-service-accounts">Create a service account</Link> with write permissions
+- <Link to="/docs/destinations/server/gcp#setup-lifecycle">Create the events table</Link>
 
-For local testing, <Link to="/docs/destinations/server/gcp#service-account-key">download a service account key</Link>. Production uses <Link to="/docs/destinations/server/gcp#workload-identity">Workload Identity</Link>.
+For local testing, <Link to="/docs/destinations/server/gcp#authentication">download a service account key</Link>. Production uses <Link to="/docs/destinations/server/gcp#authentication">Workload Identity</Link>.
 
 ### Enable Cloud Run API
 
@@ -43,7 +43,7 @@ The example flow at `https://www.walkeros.io/flows/gcp-bigquery.json` receives e
         "express": {
           "package": "@walkeros/server-source-express",
           "config": {
-            "settings": { "paths": ["/collect"], "port": 8080 }
+            "settings": { "paths": ["/collect"] }
           }
         }
       },

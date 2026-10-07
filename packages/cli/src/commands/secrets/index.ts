@@ -1,7 +1,7 @@
 import { requireProjectId } from '../../core/auth.js';
-import { apiFetch } from '../../core/http.js';
+import { apiRequest } from '../../core/api-request.js';
+import type { ResponseJson } from '../../core/api-request.js';
 import { throwApiError } from '../../core/api-error.js';
-import type { components } from '../../types/api.gen.js';
 
 // === Programmatic API ===
 
@@ -12,10 +12,13 @@ export interface ListSecretsOptions {
 
 export async function listSecrets(
   options: ListSecretsOptions,
-): Promise<components['schemas']['SecretListResponse']> {
+): Promise<
+  ResponseJson<'GET /api/projects/{projectId}/flows/{flowId}/secrets', 200>
+> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/secrets`,
+  const response = await apiRequest(
+    'GET /api/projects/{projectId}/flows/{flowId}/secrets',
+    { path: { projectId: pid, flowId: options.flowId } },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
@@ -33,14 +36,15 @@ export interface CreateSecretOptions {
 
 export async function createSecret(
   options: CreateSecretOptions,
-): Promise<components['schemas']['SecretSummary']> {
+): Promise<
+  ResponseJson<'POST /api/projects/{projectId}/flows/{flowId}/secrets', 201>
+> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/secrets`,
+  const response = await apiRequest(
+    'POST /api/projects/{projectId}/flows/{flowId}/secrets',
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: options.name, value: options.value }),
+      path: { projectId: pid, flowId: options.flowId },
+      body: { name: options.name, value: options.value },
     },
   );
   if (!response.ok) {
@@ -59,14 +63,22 @@ export interface UpdateSecretOptions {
 
 export async function updateSecret(
   options: UpdateSecretOptions,
-): Promise<components['schemas']['SecretSummary']> {
+): Promise<
+  ResponseJson<
+    'PUT /api/projects/{projectId}/flows/{flowId}/secrets/{secretId}',
+    200
+  >
+> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/secrets/${options.secretId}`,
+  const response = await apiRequest(
+    'PUT /api/projects/{projectId}/flows/{flowId}/secrets/{secretId}',
     {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: options.value }),
+      path: {
+        projectId: pid,
+        flowId: options.flowId,
+        secretId: options.secretId,
+      },
+      body: { value: options.value },
     },
   );
   if (!response.ok) {
@@ -86,9 +98,15 @@ export async function deleteSecret(
   options: DeleteSecretOptions,
 ): Promise<{ success: true }> {
   const pid = options.projectId ?? requireProjectId();
-  const response = await apiFetch(
-    `/api/projects/${pid}/flows/${options.flowId}/secrets/${options.secretId}`,
-    { method: 'DELETE' },
+  const response = await apiRequest(
+    'DELETE /api/projects/{projectId}/flows/{flowId}/secrets/{secretId}',
+    {
+      path: {
+        projectId: pid,
+        flowId: options.flowId,
+        secretId: options.secretId,
+      },
+    },
   );
   // App returns 204 No Content (and 204 even when the secret is missing).
   if (!response.ok) {

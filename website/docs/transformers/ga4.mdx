@@ -16,7 +16,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
   npm="@walkeros/transformer-ga4"
 />
 
-Decoder transformer that turns Google Analytics 4 Measurement Protocol v2 hits (`/g/collect`, `/mp/collect`) into walkerOS events. Drop it in a server source's `before` chain to ingest traffic from an existing `gtag`/Google Tag setup: you point the tag at your own collector, and your `gtag('event', ...)` calls stay as they are. One HTTP request can carry many GA4 events; the transformer returns one walkerOS event per GA4 event in the hit.
+Decoder transformer that turns Google Analytics 4 v2 hits sent by gtag.js (`/g/collect`) into walkerOS events. Drop it in a server source's `before` chain to ingest traffic from an existing `gtag`/Google Tag setup: you point the tag's transport URL at your own collector, and your `gtag('event', ...)` calls stay as they are. One HTTP request can carry many GA4 events; the transformer returns one walkerOS event per GA4 event in the hit.
 
 The scope: server-side decoding in front of a server source, GA4 v2 only. See [Caveats](#caveats) and [Roadmap](#roadmap) for the boundaries.
 
@@ -68,7 +68,6 @@ The example below uses the express source. It listens on `/collect` by default, 
           "package": "@walkeros/server-source-express",
           "config": {
             "settings": {
-              "port": 8080,
               "paths": ["/g/collect"]
             },
             "ingest": {
@@ -158,7 +157,7 @@ With `before: "ga4"` every request on the source runs through the decoder, and a
 "http": {
   "package": "@walkeros/server-source-express",
   "config": {
-    "settings": { "port": 8080, "paths": ["/collect", "/g/collect"] },
+    "settings": { "paths": ["/collect", "/g/collect"] },
     "ingest": {
       "map": {
         "url": { "key": "url" },
@@ -238,7 +237,7 @@ Because decoded events now carry `source.url`, the [fingerprint transformer](/do
 
 ## Default mappings
 
-`transformer-ga4` ships with default mappings for 33 standard GA4 event names. Out of the box, you get pageviews, ecommerce, list/promotion, engagement, and auth events mapped to walkerOS's [entity-action naming](/docs/getting-started/event-model).
+`transformer-ga4` ships with default mappings for 32 standard GA4 event names, plus a fallback for all others. Out of the box, you get pageviews, ecommerce, list/promotion, engagement, and auth events mapped to walkerOS's [entity-action naming](/docs/getting-started/event-model).
 
 ### Page / scroll / click
 
@@ -342,7 +341,7 @@ User config applies per event name; other events keep their defaults. A rule wit
 }
 ```
 
-`id`, `total`, `tax`, `shipping`, and `coupon` stay as the default defines them. A `null` value in `extend` clears an inherited field, for example `"extend": { "name": null }`.
+`id`, `total`, `tax`, `shipping`, and `coupon` stay as the default defines them. A `null` value in `extend` clears an inherited field, for example `"extend": { "data": { "map": { "tax": null } } }`.
 
 ### Replace a default rule
 
@@ -451,7 +450,7 @@ Every decoded event continues through the pipeline as its own push, and a source
 - **Basic `gcs` only.** Maps `G1XX` to `marketing`/`analytics` booleans. Functional/preferences flags and the newer `gcd` parameter are not decoded.
 - **Body must be raw text.** The transformer parses POST bodies as URL-encoded form lines. Pre-parsed JSON bodies will not decode.
 - **Batched POST hits need a raw body.** The source must keep a `text/plain` body that is not JSON as `ingest.body`. The express, fetch, Cloud Function, and Lambda sources do; the Lambda source rejects a POST without a body. See [Batched POST hits](#batched-post-hits).
-- **At most 100 events per request by default.** A POST body with more lines than `settings.maxEvents` is dropped whole. See [Batch size limit](#batch-size-limit).
+- **At most 100 events per request by default.** A POST body with more lines than `settings.maxEvents` is dropped whole, and no event from it is decoded. See [Batch size limit](#batch-size-limit).
 - **Ingest contract is required.** Source wiring must populate `ctx.ingest.url` (required) and `ctx.ingest.body` (optional) for batched hits.
 
 ## Roadmap

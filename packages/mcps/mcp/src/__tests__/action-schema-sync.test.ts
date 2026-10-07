@@ -147,6 +147,7 @@ const mapDrivenTools: MapDrivenTool[] = [
     spec: createFrameManageToolSpec(stubClient()),
     map: FRAME_MANAGE_REQUIREMENTS,
     satisfied: {
+      flowId: 'flow_1',
       pageKey: 'https://shop.example/cart',
       frameId: 'frm_V1StGXR8Z5jdHi6BmyT7K',
     },

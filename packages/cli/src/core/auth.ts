@@ -3,7 +3,8 @@ import {
   writeConfig,
   clearAuthFields,
   resolveAppUrl,
-  getDefaultProject,
+  resolveProjectId,
+  hasStoredCredential,
   type WalkerOSConfig,
 } from '../lib/config-file.js';
 import { withConfigLock } from '../lib/config-lock.js';
@@ -147,13 +148,12 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
  */
 export function credentialSource(): 'env' | 'config' | null {
   if (process.env.WALKEROS_TOKEN) return 'env';
-  const config = readConfig();
-  if (config?.token || config?.accessToken) return 'config';
+  if (hasStoredCredential(readConfig())) return 'config';
   return null;
 }
 
 export function requireProjectId(): string {
-  const projectId = process.env.WALKEROS_PROJECT_ID || getDefaultProject();
+  const projectId = resolveProjectId();
   if (!projectId)
     throw new Error(
       'No project selected. Set WALKEROS_PROJECT_ID or configure a default project.',

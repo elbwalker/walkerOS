@@ -103,19 +103,17 @@ elb('product view', { id: 'abc' });`,
 };
 
 const nestedCode = `{
+  "version": 4,
   "flows": {
     "default": {
+      "config": { "platform": "web" },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
           "config": {
             "settings": {
               "pageview": true,
-              "session": true,
-              "globals": {
-                "language": "en",
-                "currency": "USD"
-              }
+              "prefix": "data-elb"
             }
           }
         }
@@ -125,9 +123,15 @@ const nestedCode = `{
           "package": "@walkeros/web-destination-gtag",
           "config": {
             "settings": {
-              "measurementId": "G-XXXXXXXXXX"
+              "ga4": { "measurementId": "G-XXXXXXXXXX" }
             }
           }
+        }
+      },
+      "collector": {
+        "globals": {
+          "language": "en",
+          "currency": "USD"
         }
       }
     }

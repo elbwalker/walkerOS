@@ -64,7 +64,7 @@ With the default mapping, `functional` is granted whenever CookieFirst reports
 `necessary: true`, even if the visitor denied the `functional` category.
 Categories missing from `categoryMap` are reported under their CookieFirst
 name. The source reports nothing while `window.CookieFirst.consent` is `null`,
-so `explicitOnly` has no effect for CookieFirst.
+that is until the visitor has made a choice.
 
 ### Custom mapping example
 
@@ -78,7 +78,6 @@ await startFlow({
           categoryMap: {
             performance: 'statistics', // Use 'statistics' instead of 'analytics'
           },
-          explicitOnly: true,
         },
       },
     },

@@ -31,6 +31,7 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { createDeployManageToolSpec } from '../../tools/deploy-manage.js';
+import { CodedError } from '../support/coded-error.js';
 import { stubClient } from '../support/stub-client.js';
 import {
   structured,
@@ -254,6 +255,16 @@ describe('deploy_manage tool', () => {
         cursor: undefined,
         limit: undefined,
       });
+    });
+
+    it('refuses a status the contract does not declare, before any request', async () => {
+      const listDeployments = jest.fn().mockResolvedValue({ deployments: [] });
+      const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
+      const result = await tool.handler({ action: 'list', status: 'running' });
+
+      expect(isErrorResult(result)).toBe(true);
+      expect(textOf(result)).toContain('status');
+      expect(listDeployments).not.toHaveBeenCalled();
     });
   });
 
@@ -585,7 +596,7 @@ describe('deploy_manage tool', () => {
     it('catches errors and returns mcpError with auth hint', async () => {
       const listDeployments = jest
         .fn()
-        .mockRejectedValue(new Error('Unauthorized'));
+        .mockRejectedValue(new CodedError('Unauthorized', 'UNAUTHORIZED', 401));
       const tool = createDeployManageToolSpec(stubClient({ listDeployments }));
       const result = await tool.handler({ action: 'list' });
 

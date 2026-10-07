@@ -8,8 +8,8 @@ export type DataLayerPush = Record<string, unknown> & {
 
 // Keys left out while empty: with _clear an empty object would wipe a site's
 // own key of that name, and sites often set their own `user`. Every other key
-// is always pushed, so an empty `data` wipes the previous event's values.
-const OMIT_WHEN_EMPTY = ['user', 'globals', 'consent'];
+// is always pushed, so an empty `data` or `globals` wipes the previous values.
+const OMIT_WHEN_EMPTY = ['user', 'consent'];
 
 const isEmptyObject = (value: unknown): boolean =>
   isObject(value) && Object.keys(value).length === 0;

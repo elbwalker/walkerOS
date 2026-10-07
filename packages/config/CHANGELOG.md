@@ -1,5 +1,9 @@
 # @walkeros/config
 
+## 4.7.2
+
+## 4.7.1
+
 ## 4.7.0
 
 ### Minor Changes

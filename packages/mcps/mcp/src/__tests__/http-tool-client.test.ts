@@ -5,7 +5,7 @@ jest.mock('@walkeros/cli', () => ({
   updateProject: jest.fn(),
   deleteProject: jest.fn(),
   setDefaultProject: jest.fn(),
-  getDefaultProject: jest.fn(),
+  resolveProjectId: jest.fn(),
   listAllFlows: jest.fn(),
   listFlows: jest.fn(),
   getFlow: jest.fn(),
@@ -50,8 +50,12 @@ jest.mock('@walkeros/cli', () => ({
   feedback: jest.fn(),
   getFeedbackPreference: jest.fn(),
   setFeedbackPreference: jest.fn(),
+  fetchHealth: jest.fn(),
+  fetchOpenApi: jest.fn(),
+  compareContract: jest.fn(),
 }));
 
+import './support/version.js';
 import * as cli from '@walkeros/cli';
 import { HttpToolClient } from '../http-tool-client.js';
 import { record } from './support/tool-result.js';
@@ -63,8 +67,10 @@ const observeSession: ObserveSessionResult = {
   flowId: 'fl_1',
   status: 'live',
   errorMessage: null,
+  configSnapshot: {},
   observedFlowName: 'web',
   serverFlowName: 'server',
+  serverEndpoint: 'https://obs-ses-1.containers.test',
   web: {
     activationUrl: 'https://shop.example/?elbObserve=obsw_pb1.ses_1.tok',
     credential: 'obsw_pb1.ses_1.tok',
@@ -81,19 +87,16 @@ const observeSession: ObserveSessionResult = {
   },
   expiresAt: '2026-07-21T00:00:00.000Z',
   recordsReceived: 7,
+  createdBy: 'user_1',
   createdAt: '2026-07-20T00:00:00.000Z',
 };
 
 /**
- * What the CLI returns for the same session: the MCP `ObserveSessionResult`
- * plus the app fields the client passes through untouched.
+ * What the CLI returns for the same session. Typing the MCP fixture as the
+ * CLI's contract type keeps `ObserveSessionResult` and the contract in step.
  */
-const cliObserveSession: Awaited<ReturnType<typeof cli.startObserveSession>> = {
-  ...observeSession,
-  configSnapshot: {},
-  serverEndpoint: 'https://obs-ses-1.containers.test',
-  createdBy: 'user_1',
-};
+const cliObserveSession: Awaited<ReturnType<typeof cli.startObserveSession>> =
+  observeSession;
 
 const projectList: Awaited<ReturnType<typeof cli.listProjects>> = {
   projects: [],
@@ -203,6 +206,7 @@ describe('HttpToolClient', () => {
       sessionId: 'ses_1',
     });
     expect(result.recordsReceived).toBe(7);
+    expect(result.createdBy).toBe('user_1');
   });
 
   it('delegates endObserveSession with the session ref', async () => {
@@ -282,41 +286,113 @@ describe('HttpToolClient', () => {
     expect(cli.feedback).toHaveBeenCalledWith('hello', { anonymous: true });
   });
 
-  it('checkHealth returns reachable true with NO token set (tokenless probe)', async () => {
-    // credentialSource returns null → logged out; checkHealth must not require auth.
-    jest.mocked(cli.credentialSource).mockReturnValue(null);
-    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
-    const mockFetch = jest
-      .fn()
-      .mockResolvedValue({ json: async () => ({ status: 'ok' }) });
-    global.fetch = mockFetch;
+  it('checkHealth probes appBaseUrl through the tokenless fetchHealth', async () => {
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test/');
+    jest.mocked(cli.fetchHealth).mockResolvedValue({
+      reachable: true,
+      status: 'ok',
+      appVersion: 'abc1234',
+      contractVersion: '4.7.0+80fb4d79',
+      minSupportedClient: '4.7.0',
+    });
 
-    const client = new HttpToolClient();
-    const result = await client.checkHealth();
+    const result = await new HttpToolClient().checkHealth();
 
-    expect(result.reachable).toBe(true);
-    expect(result.status).toBe('ok');
-    // Probes the public /api/health route with a plain fetch (no Authorization).
-    const [url, init] = mockFetch.mock.calls[0];
-    expect(url).toBe('https://app.test/api/health');
-    expect(init.headers).toBeUndefined();
+    expect(cli.fetchHealth).toHaveBeenCalledWith('https://app.test');
+    expect(result).toEqual({
+      reachable: true,
+      status: 'ok',
+      version: 'abc1234',
+    });
   });
 
-  it('checkHealth returns reachable false on a network/timeout failure', async () => {
+  it('checkHealth passes the failure reason on', async () => {
     jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
-    global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
+    jest.mocked(cli.fetchHealth).mockResolvedValue({
+      reachable: false,
+      error: 'timeout after 5000 ms',
+    });
 
-    const client = new HttpToolClient();
-    const result = await client.checkHealth();
-    expect(result.reachable).toBe(false);
+    expect(await new HttpToolClient().checkHealth()).toEqual({
+      reachable: false,
+      error: 'timeout after 5000 ms',
+    });
+  });
+
+  it('checkContract compares appBaseUrl, naming this MCP as the client', async () => {
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://stage.test/');
+    const comparison: cli.ContractComparison = {
+      verdict: 'in-sync',
+      appUrl: 'https://stage.test',
+      client: {
+        package: '@walkeros/mcp',
+        version: '0.0.0-test',
+        contract: '4.7.0+80fb4d79',
+      },
+      operations: 55,
+      missing: [],
+      changed: [],
+    };
+    jest.mocked(cli.compareContract).mockResolvedValue(comparison);
+
+    expect(await new HttpToolClient().checkContract()).toBe(comparison);
+    expect(cli.compareContract).toHaveBeenCalledWith({
+      baseUrl: 'https://stage.test',
+      client: { type: 'mcp', version: '0.0.0-test' },
+    });
+  });
+
+  it('openapiDocument returns the live document of appBaseUrl', async () => {
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
+    const document = { openapi: '3.1.0', paths: {} };
+    jest.mocked(cli.fetchOpenApi).mockResolvedValue({
+      ok: true,
+      url: 'https://app.test/api/openapi.json',
+      document,
+    });
+
+    expect(await new HttpToolClient().openapiDocument()).toBe(document);
+    expect(cli.fetchOpenApi).toHaveBeenCalledWith('https://app.test');
+  });
+
+  it('openapiDocument rejects with the request and its reason', async () => {
+    jest.mocked(cli.resolveAppUrl).mockReturnValue('https://app.test');
+    jest.mocked(cli.fetchOpenApi).mockResolvedValue({
+      ok: false,
+      url: 'https://app.test/api/openapi.json',
+      error: 'HTTP 503',
+    });
+
+    await expect(new HttpToolClient().openapiDocument()).rejects.toThrow(
+      'GET https://app.test/api/openapi.json: HTTP 503',
+    );
   });
 
   it('delegates sync config helpers without awaiting', () => {
     jest.mocked(cli.credentialSource).mockReturnValue('env');
-    jest.mocked(cli.getDefaultProject).mockReturnValue('proj_1');
+    jest.mocked(cli.resolveProjectId).mockReturnValue('proj_1');
     const client = new HttpToolClient();
     expect(client.credentialSource()).toBe('env');
     expect(client.getDefaultProject()).toBe('proj_1');
+  });
+
+  it('resolves the default project the way the CLI does, WALKEROS_PROJECT_ID first', () => {
+    // The CLI's resolver owns the order (env, then config); the door must
+    // reach it rather than the config-only default, or an env-only setup
+    // answers "no project selected".
+    jest.mocked(cli.resolveProjectId).mockReturnValue('proj_env');
+    expect(new HttpToolClient().getDefaultProject()).toBe('proj_env');
+    expect(cli.resolveProjectId).toHaveBeenCalled();
+  });
+
+  it('lets the CLI refuse a set_default that WALKEROS_PROJECT_ID would override', () => {
+    jest.mocked(cli.setDefaultProject).mockImplementation(() => {
+      throw new Error('WALKEROS_PROJECT_ID is set to proj_env');
+    });
+    expect(() => new HttpToolClient().setDefaultProject('proj_other')).toThrow(
+      'WALKEROS_PROJECT_ID is set to proj_env',
+    );
+    expect(cli.setDefaultProject).toHaveBeenCalledWith('proj_other');
   });
 
   it('starts a device authorization against the resolved app URL', async () => {
@@ -352,11 +428,37 @@ describe('HttpToolClient', () => {
     expect(result).toEqual({ status: 'pending' });
   });
 
-  it('logs out through the revoking cli logout, not a bare config delete', async () => {
-    jest.mocked(cli.logout).mockResolvedValue(logoutResult);
+  describe('logout', () => {
+    const origEnvToken = process.env.WALKEROS_TOKEN;
 
-    await expect(new HttpToolClient().logout()).resolves.toEqual(logoutResult);
-    expect(cli.logout).toHaveBeenCalled();
+    afterEach(() => {
+      if (origEnvToken !== undefined) {
+        process.env.WALKEROS_TOKEN = origEnvToken;
+      } else {
+        delete process.env.WALKEROS_TOKEN;
+      }
+    });
+
+    it('logs out through the revoking cli logout, not a bare config delete', async () => {
+      delete process.env.WALKEROS_TOKEN;
+      jest.mocked(cli.logout).mockResolvedValue(logoutResult);
+
+      await expect(new HttpToolClient().logout()).resolves.toEqual({
+        ...logoutResult,
+        envCleared: false,
+      });
+      expect(cli.logout).toHaveBeenCalled();
+    });
+
+    it('clears WALKEROS_TOKEN from its own process and reports it', async () => {
+      process.env.WALKEROS_TOKEN = 'tok_env_abc';
+      jest.mocked(cli.logout).mockResolvedValue(logoutResult);
+
+      const result = await new HttpToolClient().logout();
+
+      expect(result.envCleared).toBe(true);
+      expect(process.env.WALKEROS_TOKEN).toBeUndefined();
+    });
   });
 
   it('names the app through the same resolution every other method uses', () => {
@@ -569,29 +671,35 @@ describe('HttpToolClient hub and frames delegation', () => {
     jest.mocked(cli.listFrames).mockResolvedValue({ frames: [] });
     jest.mocked(cli.listPageFrames).mockResolvedValue({ frames: [] });
     const client = new HttpToolClient();
-    await expect(client.listFrames({ projectId: 'proj_1' })).resolves.toEqual({
-      frames: [],
-    });
+    await expect(
+      client.listFrames({ projectId: 'proj_1', flowId: 'flow_1' }),
+    ).resolves.toEqual({ frames: [] });
     await expect(
       client.listPageFrames({
         projectId: 'proj_1',
+        flowId: 'flow_1',
         pageKey: 'https://shop.example/',
       }),
     ).resolves.toEqual({ frames: [] });
-    expect(cli.listFrames).toHaveBeenCalledWith({ projectId: 'proj_1' });
+    expect(cli.listFrames).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+    });
     expect(cli.listPageFrames).toHaveBeenCalledWith({
       projectId: 'proj_1',
+      flowId: 'flow_1',
       pageKey: 'https://shop.example/',
     });
 
     // The client adds nothing to a failure: the tool layer reads the code.
     const refused = Object.assign(new Error('Frame not found'), {
-      code: 'NOT_FOUND',
+      code: 'FRAME_NOT_FOUND',
     });
     jest.mocked(cli.getFrame).mockRejectedValue(refused);
     await expect(
       client.getFrame({
         projectId: 'proj_1',
+        flowId: 'flow_1',
         frameId: 'frm_V1StGXR8Z5jdHi6BmyT7K',
       }),
     ).rejects.toBe(refused);

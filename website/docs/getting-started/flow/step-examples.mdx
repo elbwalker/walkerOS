@@ -80,7 +80,7 @@ Each example has a human-readable name and two fields:
 | `mapping` | object | The mapping rule applied to this event (destinations only) |
 | `out` | array | The effects the step produces, in order. Each entry is a tuple `[callable, ...args]`: a vendor call such as `["gtag", ...]` for a destination, `["elb", event]` for a source, `["return", value]` for a transformer. `[]` means no observable effect |
 | `out: [["return", false]]` | array | The transformer rejects or filters this event |
-| `trigger` | object | Sources only: how the example fires (`type`, such as `click` or `POST`, and `options`) |
+| `trigger` | object | Sources only: how the example fires the source (`type`, such as `load`, `click` or `POST`, and `options`). This is simulation and test input, not the event's `trigger` field, which is a string |
 | `command` | string | Route `in` through a walker command instead of pushing it as an event (`config`, `consent`, `user`, `run`) |
 | `title`, `description` | string | Labels shown in docs and MCP output |
 | `public` | boolean | `false` hides a test-only example from docs, UI and default MCP output (default `true`) |
@@ -141,19 +141,16 @@ Here is a complete flow config with examples on a source, transformer, and desti
         "browser": {
           "package": "@walkeros/web-source-browser",
           "examples": {
-            "cta click": {
-              "trigger": { "type": "click", "options": "button" },
-              "in": "<button data-elb='cta' data-elb-cta='label:Sign Up' data-elbaction='click:click'>Sign Up</button>",
+            "page view": {
+              "trigger": { "type": "load", "options": { "url": "https://example.com/", "title": "Home" } },
+              "in": "",
               "out": [["elb", {
-                "name": "cta click",
-                "entity": "cta",
-                "action": "click",
-                "data": { "label": "Sign Up" },
+                "name": "page view",
+                "data": { "domain": "example.com", "title": "Home", "referrer": "", "id": "/" },
                 "context": {},
                 "globals": {},
-                "nested": [],
-                "source": { "type": "browser", "platform": "web", "url": "https://example.com/", "referrer": "" },
-                "trigger": "click"
+                "trigger": "load",
+                "source": { "type": "browser", "platform": "web", "url": "https://example.com/", "referrer": "" }
               }]]
             }
           }
@@ -183,6 +180,7 @@ Here is a complete flow config with examples on a source, transformer, and desti
           "config": {
             "settings": { "ga4": { "measurementId": "G-DEMO123456" } }
           },
+          "before": "validate",
           "examples": {
             "page view": {
               "in": { "name": "page view", "data": { "title": "Home" } },
@@ -200,6 +198,8 @@ Here is a complete flow config with examples on a source, transformer, and desti
 }`}
   language="json"
 />
+
+The `ga4` destination runs `validate` in its `before` chain, so [cross-step validation](#validate-examples) checks the transformer's `out` against the destination's `in`.
 
 Examples are stripped by the bundler at build time. They never appear in your production bundle.
 
@@ -231,7 +231,7 @@ For steps connected through `next` (source to transformer, transformer to transf
 - No compatible pair is an error.
 - A connection is only checked when both steps declare `examples`. If either step has no `examples` key, nothing is checked and no warning is produced.
 - When both steps declare `examples` but one side has no usable value, the connection produces a warning. An upstream `out` counts when it passes on at least one event; empty values such as `out: []` are skipped. A downstream `in` counts unless its example sets `command`.
-- Steps without `next` or `before` are not checked.
+- Other chains, such as a source's or transformer's `before`, a destination's `next` or `collector.next`, and steps without these fields are not checked.
 - Each `@walkeros/transformer-validate` step's own examples agree with its linked contract and settings (see [Validate](/docs/getting-started/flow/validate#design-time-checks)); examples of other steps are not checked against contracts.
 
 ## Using examples in tests
@@ -245,17 +245,16 @@ import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const flow = JSON.parse(readFileSync('flow.json', 'utf-8'));
 const ga4 = flow.flows.default.destinations.ga4;
+const examples: Record<string, { in: { name: string }; mapping?: unknown; out: unknown[][] }> = ga4.examples;
 
-it.each(Object.entries(ga4.examples))('ga4 destination: %s', async (name, example) => {
+it.each(Object.entries(examples))('ga4 destination: %s', async (name, example) => {
   // Record every gtag() call instead of loading the real gtag.js
   const calls: unknown[][] = [];
   const env = { window: { dataLayer: [], gtag: (...args: unknown[]) => calls.push(['gtag', ...args]) } };
   const [entity, action] = example.in.name.split(' ');
 
-  const { elb } = await startFlow();
-  await elb('walker destination', {
-    code: { ...destinationGtag, env },
-    config: { ...ga4.config, mapping: { [entity]: { [action]: example.mapping } } },
+  const { elb } = await startFlow({
+    destinations: { ga4: { code: destinationGtag, config: { ...ga4.config, mapping: { [entity]: { [action]: example.mapping } } }, env } },
   });
   await elb(example.in);
 

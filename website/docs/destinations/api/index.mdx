@@ -9,30 +9,22 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 # API Destination
 
 Send walkerOS events to any HTTP(S) endpoint with customizable data
-transformation and flexible transport options.
+transformation.
 
 <WhereThisFits
   pre={<>API is a <strong>destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'API', highlight: true } },
   }}
-  post={<>Sends events to any HTTP endpoint with customizable headers, data transformation, and multiple transport options.</>}
+  post={<>Sends events to any HTTP endpoint with customizable headers and data transformation.</>}
 />
 
 ## Environments
 
 | Environment  | Package                            | Use Case                       |
 | ------------ | ---------------------------------- | ------------------------------ |
-| **Web**      | `@walkeros/web-destination-api`    | Browser-side with fetch/beacon |
+| **Web**      | `@walkeros/web-destination-api`    | Browser-side with fetch/XHR/beacon |
 | **Server**   | `@walkeros/server-destination-api` | Node.js with native HTTP       |
-
-## Features
-
-- **Flexible URL Configuration** - Send events to any HTTP(S) endpoint
-- **Custom Headers** - Add authentication tokens, API keys, or custom headers
-- **Data Transformation** - Transform event data before sending
-- **Multiple Transports** - Web: fetch, XHR, beacon; Server: native HTTP/HTTPS
-- **Batching** - Set `config.batch` to send many events in one request
 
 ## Quick Start
 
@@ -40,10 +32,3 @@ Choose your environment:
 
 - [Web (Browser)](/docs/destinations/api/web) - fetch, XHR, beacon transports
 - [Server (Node.js)](/docs/destinations/api/server) - native HTTP/HTTPS
-
-## Common Use Cases
-
-- Sending events to custom analytics backends
-- Integrating with internal APIs
-- Forwarding events to webhooks
-- Building custom data pipelines

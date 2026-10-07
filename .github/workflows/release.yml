@@ -78,6 +78,29 @@ jobs:
           echo "No completed green push or dispatch \"Build and test\" run on $SHA; the release runs the full suite on the bumped build."
           echo "tested=false" >> "$GITHUB_OUTPUT"
 
+      # Client contract preflight: the operations the released clients call,
+      # compared per operation with what stage serves. Public request, no
+      # credential, no install: the script runs on plain node from a sparse
+      # checkout. An unreachable stage warns and never blocks. A stable
+      # release blocks on a mismatch; a pre-release only warns.
+      - name: Checkout CLI contract files
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: packages/cli
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.15.0'
+          package-manager-cache: false
+      - name: Client contract against stage
+        env:
+          PRE_RELEASE_WARN_ONLY: ${{ inputs.release_type != 'stable release' && '--warn-only' || '' }}
+        run: |
+          node packages/cli/scripts/check-client-contract.mjs \
+            --live https://stage.app.walkeros.io/api/openapi.json \
+            $PRE_RELEASE_WARN_ONLY
+
   # Needs only the gate, so the npm-publish approval is requested once, at the
   # start. The reviewer rule stays on npm-publish; no other job carries it.
   #
@@ -338,6 +361,8 @@ jobs:
           PACKAGES: ${{ steps.changesets.outputs.packages }}
         run: |
           VERSION="v$(node -p "require('./packages/collector/package.json').version")"
+          # Tag the pushed version commit (the published tree), never the default branch tip.
+          TARGET="$(git rev-parse HEAD)"
 
           printf '## Changes\n\n%s\n\n## Published Packages\n\n%s\n' \
             "$CHANGES" "$PACKAGES" > /tmp/release-notes.md
@@ -346,9 +371,17 @@ jobs:
           # die here just because the tag already landed.
           if gh release view "$VERSION" >/dev/null 2>&1; then
             echo "Release $VERSION already exists, refreshing notes"
+            if git fetch --quiet origin "refs/tags/$VERSION:refs/tags/$VERSION" && TAGGED="$(git rev-list -n1 "$VERSION")"; then
+              if [ "$TAGGED" != "$TARGET" ]; then
+                echo "::warning::Tag $VERSION is at $TAGGED, not at the version commit $TARGET. It is not moved; retag by hand if needed."
+              fi
+            else
+              echo "::warning::Could not read tag $VERSION to check it against the version commit $TARGET."
+            fi
             gh release edit "$VERSION" --notes-file /tmp/release-notes.md
           else
             gh release create "$VERSION" \
+              --target "$TARGET" \
               --title "walkerOS $VERSION" \
               --notes-file /tmp/release-notes.md
           fi
@@ -801,3 +834,23 @@ jobs:
             done
             echo "- moving tags: ${MOVED:-none}"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # walker.js on https://static.walkeros.io/, from the published tarball:
+      # the moving vN.M slot and the immutable vN.M.P copy, stable versions
+      # only. Last on purpose: a missing secret, a wrong zone password or a
+      # storage outage turns the run red here without costing the GitHub
+      # Release or the images. An images_only re-dispatch of the same version
+      # retries it: the image steps find their tags, skip the build, and the
+      # run reaches this step.
+      - name: Upload walker.js to static.walkeros.io (stable only)
+        if: >-
+          (inputs.images_only == '' && inputs.release_type == 'stable release') ||
+          (inputs.images_only != '' && !contains(inputs.images_only, '-'))
+        env:
+          BUNNY_STATIC_STORAGE_PASSWORD: ${{ secrets.BUNNY_STATIC_STORAGE_PASSWORD }}
+          BUNNY_STATIC_STORAGE_ZONE: ${{ vars.BUNNY_STATIC_STORAGE_ZONE }}
+          # Dispatch text stays in env, never spliced into the script body.
+          IMAGES_ONLY: ${{ inputs.images_only }}
+        run: |
+          VERSION="${IMAGES_ONLY:-$(node -p "require('./apps/walkerjs/package.json').version")}"
+          bash scripts/cdn-upload.sh "$VERSION"

@@ -32,7 +32,12 @@ npm install @walkeros/web-destination-heap
       "destinations": {
         "heap": {
           "package": "@walkeros/web-destination-heap",
-          "config": {}
+          "config": {
+            "loadScript": true,
+            "settings": {
+              "appId": "YOUR_HEAP_APP_ID"
+            }
+          }
         }
       }
     }

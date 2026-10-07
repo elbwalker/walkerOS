@@ -59,23 +59,27 @@ it('pushes a fresh object, not the collector event reference', async () => {
   expect(lastPush()).not.toBe(seen[seen.length - 1]);
 });
 
-it('omits user, globals and consent while they are empty (D1)', async () => {
+it('omits user and consent while they are empty (D1)', async () => {
   const { elb } = await startFlow({
     destinations: { dataLayer: { code: dataLayerDestination() } },
   });
   await elb('product view', { name: 'Cotton Tee' });
   const last = lastPush();
   expect(last).not.toHaveProperty('user'); // window mode, no walker user set
-  expect(last).not.toHaveProperty('globals');
   expect(last).not.toHaveProperty('consent');
 });
 
-it('pushes empty data, context and custom, so _clear wipes the last values', async () => {
+it('pushes empty data, context, custom and globals, so _clear wipes the last values', async () => {
   const { elb } = await startFlow({
     destinations: { dataLayer: { code: dataLayerDestination() } },
   });
   await elb('order complete');
-  expect(lastPush()).toMatchObject({ data: {}, context: {}, custom: {} });
+  expect(lastPush()).toMatchObject({
+    data: {},
+    context: {},
+    custom: {},
+    globals: {},
+  });
 });
 
 it('pushes user once it has content', async () => {

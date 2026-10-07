@@ -10,7 +10,7 @@
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
-          "code": "sourceExpress",
+          "import": "sourceExpress",
           "config": {
             "settings": {
               "path": "/collect",
@@ -23,7 +23,7 @@
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
-          "code": "destinationDemo",
+          "import": "destinationDemo",
           "config": {
             "settings": {
               "name": "server",
@@ -33,7 +33,7 @@
         },
         "bigquery": {
           "package": "@walkeros/server-destination-gcp",
-          "code": "destinationBigQuery",
+          "import": "destinationBigQuery",
           "config": {
             "settings": {
               "projectId": "$PROJECT_ID",

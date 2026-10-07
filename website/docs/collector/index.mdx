@@ -81,11 +81,10 @@ browser: {
 },
 destinations: {
 console: {
-  code: true, // Built-in code destination
-  config: {
-    settings: {
-      push: "console.log('Event:', event)",
-    },
+  code: {
+    type: 'console',
+    config: {},
+    push: (event) => console.log('Event:', event),
   },
 },
 },

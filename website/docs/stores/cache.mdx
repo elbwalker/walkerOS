@@ -18,7 +18,7 @@ Store-level cache is different from the [event-level Cache](../collector/cache.m
 
 Stores hold one canonical value type: structured data (`StoreValue`), with binary (`Uint8Array`) as a first-class leaf. A shared core serialization codec round-trips that value to and from each backing, so any store can hold structured HTTP responses, events, push results, and binary bodies. JSON-shaped data (strings, numbers, booleans, `null`, arrays, objects) and `Uint8Array` survive a round-trip exactly; a `Date` becomes a string and an `Error` loses its fields.
 
-The cache layer owns TTL, not the store. The store persists values; the cache wraps a store and manages expiry. An expired entry is treated as a miss and re-fetched from the backing. The supported cache backends are the filesystem, S3, GCS, and the in-memory tier. The Sheets store is not a cache backend: it stores a single JSON cell per key and cannot persist the cache envelope, so wiring it as a cache backing throws.
+The cache layer owns TTL, not the store. The store persists values; the cache wraps a store and manages expiry. An expired entry is treated as a miss and re-fetched from the backing. The supported cache backends are the filesystem, S3, GCS, and the in-memory tier. The Sheets store cannot be a cache tier (a `cache.store` target); a cache can still wrap it.
 
 A store's byte-native [`file` mode](./index.mdx) (`config.file: true`) is for serving raw assets byte-exact, not for caching. The cache wraps structured stores; a store in `file` mode and a `cache` on the same store is flagged by `flow_validate`.
 
@@ -91,7 +91,7 @@ First rule caches only keys starting with `session:` for five minutes. The secon
     "crmLookup": {
       "code": {
         "type": "crm-lookup",
-        "push": "$code:async (event, context) => { if (!event.user.id) return; const crm = await context.env.store.get(event.user.id); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
+        "push": "$code:async (event, context) => { const userId = event.user?.id; if (!userId) return; const crm = await context.env.store.get(userId); if (crm) return { event: { ...event, data: { ...event.data, crm } } }; }"
       },
       "env": { "store": "$store.crm" }
     }
@@ -150,29 +150,29 @@ This eliminates the thundering-herd failure mode that motivates store-level cach
 
 ## Observability
 
-Each wrapped store exposes counters via the collector telemetry channel. Per-store keys are `walkeros.store_cache.<store_id>.<counter>`:
+Each wrapped store keeps counters:
 
 | Counter             | Meaning                                         |
 | ------------------- | ----------------------------------------------- |
 | `hits`              | Reads served by the cache tier                  |
 | `misses`            | Reads that fell through to the backing          |
 | `populates`         | Cache writes triggered by successful backing reads |
-| `writes`            | Successful `set` calls                          |
-| `deletes`           | Successful `delete` calls                       |
-| `evictions_entries` | Entries evicted because the tier hit `maxEntries` |
-| `evictions_ttl`     | Entries evicted by the active TTL sweep         |
+| `writes`            | `set` calls, counted whether or not the backing write succeeds |
+| `deletes`           | `delete` calls, counted whether or not the backing delete succeeds |
 | `inflight_dedups`   | Concurrent calls dedup-merged into one inflight |
 
-Counters surface through the same telemetry hook the collector uses for flow events. Wire your own logger or telemetry destination to consume them.
+The eviction counters (`evictions_entries` for entries dropped at `maxEntries`, `evictions_ttl` for expired entries) belong to the built-in `__cache` tier and are read from `collector.stores.__cache.counters`.
+
+Each read through a wrapped store also emits a flow record to the collector's observers, with `meta.op` set to `cache` and `meta.status` set to `hit` or `miss`.
 
 For interactive debugging, the wrapped store instance exposes a `counters` accessor:
 
 <CodeSnippet
   code={`const { collector } = await startFlow({ /* ... */ });
-const snapshot = collector.stores.sessions.counters;
-console.log(snapshot);
+const sessions = collector.stores.sessions;
+if ('counters' in sessions) console.log(sessions.counters);
 // { hits: 412, misses: 18, populates: 18, writes: 0, deletes: 0,
-//   evictions_entries: 0, evictions_ttl: 0, inflight_dedups: 7 }`}
+//   inflight_dedups: 7 }`}
   language="typescript"
 />
 

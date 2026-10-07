@@ -166,6 +166,104 @@ describe('validateFlowStructure', () => {
     expect(error?.path).toBe('flows.default.transformers.enrich');
   });
 
+  it('warns, without rejecting, on a transformer mapping that never runs or does nothing', () => {
+    const result = validateFlowStructure(
+      flow({
+        default: {
+          config: { platform: 'web' },
+          transformers: {
+            packaged: {
+              package: '@walkeros/transformer-noop',
+              mapping: { policy: { 'user.id': { value: 'x' } } },
+            },
+            shaped: {
+              config: {
+                mapping: {
+                  mapping: { order: { complete: [{ consent: { a: true } }] } },
+                },
+              },
+            },
+            clean: {
+              mapping: { mapping: { page: { view: { name: 'pv' } } } },
+            },
+          },
+        },
+      }),
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([
+      {
+        path: 'flows.default.transformers.packaged',
+        message:
+          '`mapping` is ignored: a transformer with `package` never runs it; a mapping applies only to a transformer without code.',
+        code: 'TRANSFORMER_MAPPING_NO_OP',
+      },
+      {
+        path: 'flows.default.transformers.shaped',
+        message:
+          "`config.mapping.mapping.order.complete[0].consent` does nothing at the transformer position; only `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply.",
+        code: 'TRANSFORMER_MAPPING_NO_OP',
+      },
+    ]);
+  });
+
+  it('warns that config.mapping overrides a step-level mapping', () => {
+    const result = validateFlowStructure(
+      flow({
+        default: {
+          config: { platform: 'web' },
+          transformers: {
+            both: {
+              mapping: { policy: { 'user.id': { value: 'x' } } },
+              config: {
+                mapping: { policy: { 'user.email': { value: '' } } },
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings).toEqual([
+      {
+        path: 'flows.default.transformers.both',
+        message: '`mapping` is overridden: `config.mapping` wins; remove one.',
+        code: 'TRANSFORMER_MAPPING_NO_OP',
+      },
+    ]);
+  });
+
+  it('names both mappings a transformer with a package ignores', () => {
+    const result = validateFlowStructure(
+      flow({
+        default: {
+          config: { platform: 'web' },
+          transformers: {
+            packaged: {
+              package: '@walkeros/transformer-noop',
+              mapping: { policy: { 'user.id': { value: 'x' } } },
+              config: {
+                mapping: { policy: { 'user.email': { value: '' } } },
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    expect(result.warnings).toEqual([
+      {
+        path: 'flows.default.transformers.packaged',
+        message:
+          '`config.mapping` and `mapping` are ignored: a transformer with `package` never runs them; a mapping applies only to a transformer without code.',
+        code: 'TRANSFORMER_MAPPING_NO_OP',
+      },
+    ]);
+  });
+
   it('runs synchronously and returns without building', () => {
     // Synchronous: the return value is a plain object, not a Promise.
     const result = validateFlowStructure(

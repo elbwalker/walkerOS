@@ -82,16 +82,32 @@ export default async function() {
     expect(typeof handle.collector.command).toBe('function');
   });
 
-  it('omits a status that is not a collector status object', async () => {
+  it('exposes the flow name and release baked onto the collector', async () => {
     const file = writeBundle(`
 export default async function() {
   return {
-    collector: { status: 'running', push: async () => {}, command: async () => {} },
+    collector: { name: 'default', release: '41', push: async () => {}, command: async () => {} },
+  };
+}`);
+
+    const handle = await loadFlow(file, {}, logger);
+
+    expect(handle.collector.name).toBe('default');
+    expect(handle.collector.release).toBe('41');
+  });
+
+  it('omits a status, name or release of the wrong shape', async () => {
+    const file = writeBundle(`
+export default async function() {
+  return {
+    collector: { status: 'running', name: 7, release: 41, push: async () => {}, command: async () => {} },
   };
 }`);
 
     const handle = await loadFlow(file, {}, logger);
 
     expect(handle.collector.status).toBeUndefined();
+    expect(handle.collector.name).toBeUndefined();
+    expect(handle.collector.release).toBeUndefined();
   });
 });

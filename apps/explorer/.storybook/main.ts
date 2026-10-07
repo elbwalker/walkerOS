@@ -34,7 +34,6 @@ const config: StorybookConfig = {
   stories: [
     '../.storybook/Introduction.mdx',
     '../src/components/**/*.stories.@(ts|tsx)',
-    '../src/site/**/*.stories.@(ts|tsx)',
     '../src/**/*.mdx',
   ],
   addons: ['@storybook/addon-docs'],

@@ -21,16 +21,16 @@ import {
   storeCache,
   applyUpdate,
   createMappingRoot,
-  compileState,
-  applyState,
+  stepId,
 } from '@walkeros/core';
 import { runTransformerChain } from './transformer';
+import { compileStepState, runStepState, warnStateOff } from './state';
 import { buildReportError, errorMeta } from './report-error';
 import { isStateDelivery, shouldDeliver, setMark } from './on';
 import { reconcilePending } from './pending';
 import { createPushResult } from './destination';
 import { emitCollectorDrop } from './observerEmit';
-import { getCacheStore, getStateStore } from './cache';
+import { getCacheStore } from './cache';
 import {
   DEFAULT_DESTINATION_TIMEOUT_MS,
   DestinationTimeoutError,
@@ -139,7 +139,8 @@ export async function initSource(
   // array order. A config-level `state` takes precedence over the
   // definition-level one.
   const sourceState = config.state ?? sourceDefinition.state;
-  const stateEntries = sourceState ? compileState(sourceState) : undefined;
+  const stateEntries = compileStepState(sourceState);
+  warnStateOff(collector, stepId('source', sourceId), sourceState);
 
   // Compile source cache config (if configured).
   // Source caches operate on events (request-scoped HIT/MISS keyed by event
@@ -216,13 +217,11 @@ export async function initSource(
       );
       if (beforeResult.copies.length === 0) {
         // Dropped or stopped: the event never reaches the collector.
-        emitCollectorDrop(
-          collector,
-          identified,
-          scope.ingest,
-          beforeResult.droppedBy,
-          chainPath,
-        );
+        emitCollectorDrop(collector, identified, scope.ingest, {
+          reason: 'dropped',
+          by: beforeResult.droppedBy,
+          at: chainPath,
+        });
         return createPushResult({ ok: true, dropped: true });
       }
       // Pipeline-halt signal from a `cache.stop: true` HIT inside the
@@ -329,11 +328,10 @@ export async function initSource(
     if (stateEntries && stateEntries.length > 0) {
       copies = await Promise.all(
         copies.map(async (copy) => ({
-          event: await applyState(
-            stateEntries,
-            (id) => getStateStore(id, collector),
-            copy.event,
+          event: await runStepState(
             collector,
+            stateEntries,
+            copy.event,
             copy.ingest,
           ),
           ingest: copy.ingest,
@@ -495,7 +493,11 @@ export async function initSource(
 }
 
 /**
- * Initialize sources. Sources with `require` are deferred to collector.pending.
+ * Initialize sources. Every source whose factory succeeds is registered and
+ * its init runs, `require` or not (a factory that throws is logged and the
+ * source skipped); sources never go to collector.pending (that holds
+ * destinations only). A source with `require` stays unstarted: its `on()`
+ * deliveries wait in `queueOn` until every required event has occurred.
  */
 export async function initSources(
   collector: Collector.Instance,

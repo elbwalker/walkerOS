@@ -1,3 +1,4 @@
+import { ApiError } from '../../../core/api-error.js';
 import { requireProjectId } from '../../../core/auth.js';
 import {
   getDefaultProject,
@@ -65,6 +66,23 @@ describe('projects', () => {
         error: { error: { message: 'Unauthorized' } },
       });
       await expect(listProjects()).rejects.toThrow('Unauthorized');
+    });
+
+    it('carries the code of the refusal', async () => {
+      mockGet.mockResolvedValue({
+        error: {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Requires member role or higher',
+          },
+        },
+      });
+      const refusal = listProjects();
+      await expect(refusal).rejects.toBeInstanceOf(ApiError);
+      await expect(refusal).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'Requires member role or higher',
+      });
     });
   });
 

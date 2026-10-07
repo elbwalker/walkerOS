@@ -157,7 +157,9 @@ By default, cache uses a shared in-memory store. Reference a custom store for pe
 }
 ```
 
-The filesystem store keeps entries on the local disk of one instance. To share cache entries across instances, use `@walkeros/server-store-s3` or `@walkeros/server-store-gcs` instead. The Sheets store cannot hold cache entries.
+The filesystem store keeps entries on the local disk of one instance. To share cache entries across instances, use `@walkeros/server-store-s3` or `@walkeros/server-store-gcs` instead. The Sheets store cannot be a cache tier (a `cache.store` target); a cache can still wrap it.
+
+The filesystem store rejects a key that begins with `/`, so start `key` with a field such as `ingest.method`, or set `namespace`.
 
 A store can carry a cache of its own. In the complete example, reads from the
 `customers` store are memoized for five minutes:

@@ -187,8 +187,7 @@ Sources capture events from various inputs. Each source needs:
       "package": "@walkeros/server-source-express",
       "config": {
         "settings": {
-          "path": "/collect",
-          "port": 8080,
+          "paths": ["/collect"],
           "cors": true
         }
       }
@@ -245,7 +244,7 @@ Destinations receive processed events and send them to analytics tools, database
 
 **Consent gating:**
 
-Gate a destination on consent with `config.consent`. The destination initializes once the listed consent is granted; until then its events wait in a queue and are delivered after the grant. A denial keeps them waiting:
+Gate a destination on consent with `config.consent`. The destination initializes once one of the listed consent keys is granted; until then its events wait in a queue and are delivered after the grant, during the same run. A denial keeps them waiting:
 
 <CodeSnippet
   code={`{
@@ -376,7 +375,7 @@ Sources, transformers, the collector and destinations connect through chain fiel
 
 Sources and destinations support `require` to wait until specific collector events have fired:
 
-- A **destination** with `require` is not initialized and receives no events until then. Its events are queued and delivered once `require` is met.
+- A **destination** with `require` is not initialized and receives no events until then. Its events are queued and delivered once `require` is met, unless the destination sets `queue: false`: then it receives only the events pushed after that.
 - A **source** with `require` initializes and pushes events right away. `require` only holds back the collector events its `on()` handler receives (such as `consent` or `run`).
 
 For the browser source, `require: ["consent"]` holds back the page view and element triggers such as `load`, `impression` or `visible` until the first consent choice, granted or denied. `click` and `submit` triggers are captured from the start.
@@ -533,7 +532,7 @@ Flows in the same file can reference each other's `config` block via `$flow.<nam
 
 <FlowSlice feature="ref-flow" />
 
-Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to the server flow's `config.url` at build time. Validate resolves the reference the same way the bundle does: an unknown flow or a missing key is an error in both. An empty `config.url` fails the schema check in both; an empty value under `settings` resolves to an empty string.
+Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to the server flow's `config.url` at build time. Validate resolves the reference the same way the bundle does: an unknown flow or a missing key is an error in both. An empty `config.url` fails the schema check in `bundle` and in `validate` without `--flow`; `validate --flow web` does not check the server flow and passes. An empty value under `settings` resolves to an empty string.
 
 ## Dynamic patterns
 
@@ -563,7 +562,7 @@ Reference environment variables with optional defaults:
 <FlowSlice feature="ref-env" />
 
 **Syntax:**
-- `$env.GA4_ID` - Required. A web flow reads the value at bundle time, and the bundle fails if it is not set. A server flow reads `process.env` when the bundle runs; an unset variable resolves to `undefined`.
+- `$env.GA4_ID` - Required. A web flow reads the value at bundle time, and the bundle fails if it is not set. A server flow reads `process.env` when the bundle runs; an unset variable resolves to `undefined`. Inside a longer string, it becomes the text `undefined`.
 - `$env.GA4_ID:default` - Uses "default" if not set
 
 :::note Why only `$env` supports defaults
@@ -612,8 +611,9 @@ The `$code:` prefix is stripped during bundling, outputting raw JavaScript:
   language="typescript"
 />
 
-A `fn` receives the whole event and returns the value, so it reads the field
-itself. A `fn` next to a `key` never runs: each value has one producer.
+A `fn` receives the value being mapped (here the whole event, inside a `loop`
+the item) and returns the result, so it reads the field itself. A `fn` next to a
+`key` never runs: each value has one producer.
 
 **Use cases:**
 - **`fn:` callbacks** - Transform values in mapping
@@ -695,7 +695,7 @@ const { collector, elb } = await startFlow({
     http: {
       code: sourceExpress,
       config: {
-        settings: { path: '/collect', port: 8080 }
+        settings: { paths: ['/collect'], port: 8080 }
       }
     }
   },

@@ -20,12 +20,11 @@ export interface Settings {
 export type InitSettings = Partial<Settings>;
 
 /**
- * Mapping (rule.settings) — per-event overrides.
+ * Mapping (rule.settings): per-event overrides.
  *
- * identify — mapping value resolving to { customId, customSessionId?, customPageId?, friendlyName? }
- * include  — overrides destination-level include for this rule
- * set      — explicit custom tag mapping; resolves to Record<string, string | string[]>
- * upgrade  — mapping value resolving to a string reason for Clarity.upgrade(...)
+ * identify: mapping value resolving to { customId, customSessionId?, customPageId?, friendlyName? }
+ * set: explicit custom tag mapping; resolves to Record<string, string | string[]>
+ * upgrade: mapping value resolving to a string reason for Clarity.upgrade(...)
  */
 export interface Mapping {
   identify?: WalkerOSMapping.Value;
@@ -34,10 +33,10 @@ export interface Mapping {
 }
 
 /**
- * Clarity SDK surface — the subset of @microsoft/clarity methods this
+ * Clarity SDK surface: the subset of @microsoft/clarity methods this
  * destination actually uses. Mirrors the default export so tests can mock
  * each method individually. The legacy `consent()` API is intentionally
- * not exposed here — this destination only uses `consentV2`.
+ * not exposed here: this destination only uses `consentV2`.
  */
 export interface ClaritySDK {
   init: (projectId: string) => void;
@@ -57,7 +56,7 @@ export interface ClaritySDK {
 }
 
 /**
- * Env — optional override for the vendor SDK. Production leaves this
+ * Env: optional override for the vendor SDK. Production leaves this
  * undefined and the destination falls back to the real `@microsoft/clarity`
  * default export. Tests provide a mock via `env.clarity = { ... }`.
  */

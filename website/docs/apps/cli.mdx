@@ -40,7 +40,7 @@ npx walkeros --version`}
 | Command | Purpose | Use Case |
 |---------|---------|----------|
 | `bundle` | Build production-ready bundle from flow config | Create deployable JavaScript from configuration |
-| `push` | Execute event with real API calls (or `--simulate` for mocked) | Testing and production validation |
+| `push` | Execute event with real API calls (a web flow records them), or `--simulate` for mocked | Testing and production validation |
 | `setup` | Run the optional `setup()` lifecycle on one component | Provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook registrations) |
 | `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
@@ -50,6 +50,7 @@ npx walkeros --version`}
 | `deploy` | Create and manage deployments | Deploy flows to walkerOS cloud or self-hosted |
 | `previews` | Manage preview bundles | Test flow changes on live sites before deploying |
 | `observe` | Open an Observe session on a flow | Watch a running flow's live events from the terminal |
+| `diagnostics` | Show the CLI version, the app URL, app health, and the API contract verdict | See which backend you are on and whether this CLI matches it |
 
 The `push` command accepts either a config JSON or a pre-built bundle as input.
 
@@ -286,7 +287,7 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
         "http": {
           "package": "@walkeros/server-source-express",
           "config": {
-            "settings": { "path": "/collect", "port": 8080 }
+            "settings": { "paths": ["/collect"] }
           }
         }
       },
@@ -358,8 +359,7 @@ Create `server-collect.json`:
           "package": "@walkeros/server-source-express",
           "config": {
             "settings": {
-              "path": "/collect",
-              "port": 8080,
+              "paths": ["/collect"],
               "cors": true
             }
           }
@@ -553,7 +553,7 @@ schemas are exported from `@walkeros/cli` as `BuildManifestSchema` and
 
 ## Push command
 
-The `push` command executes your flow with a real event. By default it makes actual API calls to your configured destinations. Use `--simulate` to mock specific steps for safe testing. It accepts either a config JSON (which gets bundled) or a pre-built bundle.
+The `push` command executes your flow with a real event. By default a server flow makes actual API calls to your configured destinations. A web flow runs in a simulated page, so its network requests (fetch, sendBeacon, XMLHttpRequest with `@walkeros/cli` 4.7.1 or later) are recorded instead of sent, and `--json` lists them as `networkCalls`. Scripts, iframes and stylesheets the page loads are still fetched. Use `--simulate` to mock specific steps for safe testing. It accepts either a config JSON (which gets bundled) or a pre-built bundle.
 
 ### Use Case
 
@@ -720,7 +720,7 @@ The `--event` parameter accepts three formats:
 
 | Mode | Flag | API Calls | Use Case |
 |------|------|-----------|----------|
-| Real | (none) | Real HTTP requests | Integration testing, production validation |
+| Real | (none) | Real HTTP requests (server), recorded requests (web) | Integration testing, production validation |
 | Simulate | `--simulate` | Mocked (captured) | Safe local testing |
 | Mock | `--mock` | Returns mock value | Controlled testing |
 
@@ -827,7 +827,7 @@ Three settings decide whether a destination receives an event. They are easy to 
 | Setting | Where | What it does | In a simulation |
 |---|---|---|---|
 | `require: ["consent"]` | Destination `config` | The destination stays pending (not initialized, events queued) until the collector has any consent state | Starts once `--consent` is passed. Without it: `pending: waits for consent (require)` |
-| `consent: { marketing: true }` | Destination `config` | Each event is checked against the collector's consent plus the event's own consent; a denied event is skipped (or queued with `queue: true`) | Grant it with `--consent` or in the event's `consent`. Otherwise: `skipped: consent (...)` |
+| `consent: { marketing: true }` | Destination `config` | Each event is checked against the collector's consent plus the event's own consent; a denied event is skipped and held in the destination's queue until the consent is granted | Grant it with `--consent` or in the event's `consent`. Otherwise: `skipped: consent (...)` |
 | `consent` on the event | The event (`-e`) | Consent of this one event, counted on top of the collector's consent | Part of the event you pass |
 | `consent` in a source's settings | Source `config.settings` (for example the session source) | The source waits for that consent before it emits | A consent-gated source starts from `--consent`. Without it, it emits nothing |
 
@@ -1185,7 +1185,7 @@ The `--type` option accepts four validation types. Default is `flow`:
 | Type | What it validates |
 |------|-------------------|
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
-| `flow` (default) | Flow.Json config: schema, references, routes, the root `contract`, the bundle preflight and resolver, each step's settings against its package schema, cross-step example compatibility, and the examples of `@walkeros/transformer-validate` steps against their linked contracts, plus a `PACKAGE_VERSION_MISSING` warning for each `config.bundle.packages` entry without a version |
+| `flow` (default) | Flow.Json config: schema, references, routes, the root `contract`, the bundle preflight and resolver, each step's settings against its package schema, cross-step example compatibility, and the examples of `@walkeros/transformer-validate` steps against their linked contracts, plus a `PACKAGE_VERSION_MISSING` warning for each `config.bundle.packages` entry without a `version` or `path` |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
 | `contract` | Contract structure: named entries with optional `extend`, `tagging`, `description`, `events`, and `schema` fields. On a flow file it validates the file's `contract` section (`NO_CONTRACT_SECTION` if there is none) |
 
@@ -1417,7 +1417,7 @@ Codes group as follows (the full list is exported as `VALIDATE_CODES` from `@wal
 | Group | Codes |
 |-------|-------|
 | Scope and options | `FLOW_NOT_FOUND`, `ENTRY_NOT_FOUND`, `AMBIGUOUS_ENTRY`, `OPTION_NOT_APPLICABLE` |
-| Structure and resolution | `SCHEMA_VALIDATION`, `INVALID_COMPONENT_NAME`, `INVALID_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `UNRESOLVED_REFERENCE`, `FLOW_CYCLE`, `VAR_CYCLE`, `UNKNOWN_KEY`, `DEPRECATED_PACKAGE` |
+| Structure and resolution | `SCHEMA_VALIDATION`, `INVALID_COMPONENT_NAME`, `INVALID_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `STATE_STORE_UNKNOWN`, `STATE_STORE_FILE`, `UNRESOLVED_REFERENCE`, `FLOW_CYCLE`, `VAR_CYCLE`, `UNKNOWN_KEY`, `DEPRECATED_PACKAGE`, `TRANSFORMER_MAPPING_NO_OP` (a warning: a transformer mapping field that does nothing there) |
 | Settings | `ENTRY_SCHEMA` |
 | Contracts | `NO_CONTRACT_SECTION`, `INVALID_EXTENDS`, `CIRCULAR_EXTENDS`, `UNRESOLVED_CONTRACT` |
 | Skips | `GATED_BY_ERRORS`, `CONTRACT_NOT_STATIC`, `NO_PACKAGE`, `NO_SETTINGS_SCHEMA`, `SCHEMA_UNAVAILABLE` |
@@ -2184,7 +2184,7 @@ Create `server-collect.json`:
         "http": {
           "package": "@walkeros/server-source-express",
           "config": {
-            "settings": { "path": "/collect", "port": 8080, "cors": true }
+            "settings": { "paths": ["/collect"], "cors": true }
           }
         }
       },
@@ -2278,26 +2278,29 @@ Create `demo.html`:
   <script src="http://localhost:3000/walker.js"></script>
 </head>
 <body>
-  <h1 data-elb="promotion" data-elb-promotion="name:Get Started">
-    Welcome to walkerOS
-  </h1>
-  <button data-elbaction="click:cta">Start Tracking</button>
+  <div data-elb="promotion" data-elb-promotion="name:Get Started" data-elbaction="load:view">
+    <h1>Welcome to walkerOS</h1>
+    <button data-elbaction="click:cta">Start Tracking</button>
+  </div>
 
   <script>
-    // Manual tracking
-    track('custom event', { action: 'demo', value: 42 });
+    // Manual tracking, once the page has loaded and track() exists
+    window.addEventListener('load', function () {
+      track('custom event', { action: 'demo', value: 42 });
+    });
   </script>
 </body>
 </html>`}
   language="html"
 />
 
-Open in browser. Terminal 1 shows:
+Open it in the browser and click the button. Terminal 1 logs `promotion view`,
+`page view` and `custom event` on load, and `promotion cta` on the click:
 ```
-[Server Logger] page view
 [Server Logger] promotion view
-[Server Logger] promotion cta
+[Server Logger] page view
 [Server Logger] custom event
+[Server Logger] promotion cta
 ```
 
 ## Cache command
@@ -2439,7 +2442,50 @@ These options work with all commands:
 
 The runtime reads its own variables, see the [runtime environment variables](/docs/apps/runtime#environment-variables).
 
+## Diagnostics command
+
+`walkeros diagnostics` reports the CLI version, the app URL and where it comes
+from (`env`, `config` or `default`), the app's public health route, and the API
+contract verdict against that app. It sends no credential, so it works logged
+out, and it exits 0 whatever the verdict.
+
+<CodeSnippet
+  code={`walkeros diagnostics
+walkeros diagnostics --json`}
+  language="bash"
+/>
+
+```
+cli 4.8.0
+app https://app.walkeros.io (default)
+health reachable, status ok, app 3f2a91c
+contract: in-sync (server 4.7.0+5e6f7a8b, client 4.7.0+1a2b3c4d, 55 operations)
+```
+
+`--json` prints the same report as one object, `{ cli, appUrl, app, contract }`,
+where `contract` carries the verdict with every operation it names. The MCP
+`diagnostics` tool reports the same verdict in its `contract` block.
+
 ## API version compatibility
+
+The app labels its API contract `<floor>+<hash>`, for example `4.7.0+1a2b3c4d`.
+The floor is the lowest client release the contract works with; the hash names
+the exact document. Each CLI and MCP release carries the operations it calls
+and their shape, and compares them one by one with the live app's
+`/api/openapi.json`. Operations no walkerOS client calls never count, and
+neither do the documentation keywords `description`, `summary`, `title`,
+`example`, `examples` and `externalDocs` or an operation's `tags`. Two labels
+with the same floor can therefore differ in their hash while the verdict is
+`in-sync`.
+
+| Verdict | Line | Means |
+|---------|------|-------|
+| `in-sync` | `contract: in-sync (server 4.7.0+5e6f7a8b, client 4.7.0+1a2b3c4d, 55 operations)` | Every operation this client calls has the shape it was built with. |
+| `changed` | `contract: changed (server 4.7.0+9f8e7d6c, client 4.7.0+1a2b3c4d); changed: GET /api/projects/{projectId}/frames` | Operations this client calls differ from the server's, and the server's `<floor>+<hash>` label names a floor not below the client's, usually the same one. The direction is not determined: the server may be a newer or an older deploy. |
+| `server-older` | `contract: server-older (server 4.6.1, client 4.7.0+1a2b3c4d); not offered (1): GET /api/projects/{projectId}/frames (mcp frame_manage)` | The server lacks operations this client calls, listed with the commands and tools that call them, or changed some and names a lower floor or none. A label without `+<hash>`, such as `4.7.1`, predates floors. |
+| `client-outdated` | `contract: client-outdated (https://app.walkeros.io requires @walkeros/cli >= 4.9.0; this is 4.8.0)` | The server's `minSupportedClient` is above this client's version. |
+| `unknown` | `contract: unknown (GET https://app.walkeros.io/api/health: timeout after 5000 ms)` | The health route or the OpenAPI document could not be read. |
+| `in-process` | `contract: in-process (server 4.7.0+1a2b3c4d)` | The MCP tool runs inside the app it reports (the hosted door). |
 
 Official clients (CLI, MCP) send three headers on every request
 to the walkerOS app so the server can tell them apart and enforce minimum

@@ -69,10 +69,13 @@ rather than by the plan itself.
 
 ## Your existing setup keeps working
 
-You do not have to switch GTM off or replace everything at once.
+You do not have to switch GTM off or replace everything at once. The quickest
+start is [walker.js](/docs/apps/walkerjs): one script tag that turns `data-elb`
+attributes into dataLayer pushes for your existing GTM triggers and tags, no
+build step.
 
-walkerOS becomes the collection layer, and GTM becomes one of many destinations,
-fed the same typed events through the
+With a flow you build yourself, walkerOS becomes the collection layer, and GTM
+becomes one of many destinations, fed the same typed events through the
 [GTM destination](/docs/destinations/web/gtag/gtm). Marketing keeps adding tags
 in the interface it already knows. GTM just no longer carries the collection
 logic: the custom scripts, hand-rolled consent checks, and schema workarounds

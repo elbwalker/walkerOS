@@ -1,0 +1,23 @@
+{
+  "event": "product add",
+  "_clear": true,
+  "name": "product add",
+  "data": {
+    "id": "tee",
+    "name": "Cotton Tee",
+    "price": 25
+  },
+  "context": {},
+  "globals": {
+    "pagetype": "product"
+  },
+  "custom": {},
+  "nested": [],
+  "id": "<id>",
+  "trigger": "click",
+  "entity": "product",
+  "action": "add",
+  "timestamp": "<timestamp>",
+  "timing": "<timing>",
+  "source": "<source>"
+}

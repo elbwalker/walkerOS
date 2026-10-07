@@ -23,8 +23,8 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 [Matomo](https://matomo.org/) is an open-source, privacy-focused web analytics
 platform that works self-hosted or in Matomo Cloud. This destination forwards
 walkerOS events to Matomo via the `_paq` command queue with support for page
-views, custom events, ecommerce, goals, site search, content tracking, and
-custom dimensions.
+views, custom events, goals, site search, content tracking, and custom
+dimensions.
 
 <WhereThisFits
   pre={<>Matomo is a <strong>web destination</strong> in the walkerOS flow:</>}
@@ -100,9 +100,16 @@ when the rule has `settings.goalId`, so a goal-only rule needs no name. Without
 a goal, such an event is skipped: the destination logs a warning once per event
 name, then repeats at debug level.
 
-A `goalId` must be a Matomo goal ID, a positive integer like `1` or `"1"`.
-Matomo drops any other conversion, so the destination skips that goal with a
-warning and still sends the event's own hit.
+A `goalId` must be a Matomo goal ID, a positive integer like `1` or `"1"`. The
+destination skips any other goal with a warning and still sends the event's own
+hit, if it has one.
+
+## Ecommerce
+
+Matomo needs an `addEcommerceItem` call for each product before a cart update,
+and before an order to record the order's products. A product view is
+`setEcommerceView` followed by `trackPageView`. A rule sends one command per
+event, so the destination cannot send these sequences.
 
 ## Custom dimensions
 

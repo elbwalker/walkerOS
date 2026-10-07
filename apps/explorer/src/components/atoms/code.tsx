@@ -5,7 +5,7 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { Editor, loader } from '@monaco-editor/react';
+import { Editor, loader, type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import {
   registerAllThemes,
@@ -43,7 +43,8 @@ import { isMonacoCancellation } from '../../utils/is-monaco-cancellation';
 
 // Monaco Editor configuration
 // NOTE: MonacoEnvironment.getWorker and loader.config() should be configured
-// by the consuming application. See examples in the explorer app's main.tsx
+// by the consuming application before the first editor mounts. See the
+// example in .storybook/monaco-setup.ts
 import type * as monaco from 'monaco-editor';
 import type { IntelliSenseContext } from '../../types/intellisense';
 
@@ -60,22 +61,43 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// Run Monaco base setup exactly once at module load — before any <Editor>
-// mounts. Doing this during `beforeMount` of an editor invalidates any
-// in-flight TypeScript worker operations from sibling editors mounted in
-// parallel, which leak as `{ type: 'cancelation' }` unhandled rejections.
-if (typeof window !== 'undefined') {
-  loader
+function warnInDev(message: string, err: unknown): void {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(`[walkerOS] ${message}`, err);
+  }
+}
+
+/**
+ * Setup shared by every editor: TypeScript compiler options and the walkerOS
+ * ambient globals. Both invalidate running TypeScript workers and cancel their
+ * pending work (leaking `{ type: 'cancelation' }` unhandled rejections), so
+ * they must land before the first editor exists. The WeakSet guards inside
+ * make every call after the first a no-op. A failure, such as a Monaco build
+ * without TypeScript, is only reported, so the rest of an editor's setup
+ * still runs.
+ */
+export function prepareMonaco(monaco: Monaco): void {
+  try {
+    configureMonacoTypeScript(monaco);
+    registerWalkerOSAmbients(monaco);
+  } catch (err) {
+    warnInDev('Monaco setup failed:', err);
+  }
+}
+
+// One promise shared by every Code, created on the first mount, never on
+// import. The library's Editor already calls loader.init() itself and the
+// loader loads Monaco once, so this only chains the one-time setup onto that
+// load: editors that are not a Code, such as a consumer's own editor mounted
+// alongside or after one, get the setup as soon as Monaco exists.
+let monacoStart: Promise<void> | undefined;
+
+function startMonaco(): void {
+  if (monacoStart) return;
+  monacoStart = loader
     .init()
-    .then((m) => {
-      configureMonacoTypeScript(m);
-      registerWalkerOSAmbients(m);
-    })
-    .catch((err) => {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('[walkerOS] Monaco loader.init() failed:', err);
-      }
-    });
+    .then(prepareMonaco)
+    .catch((err) => warnInDev('Monaco loader.init() failed:', err));
 }
 
 export interface CodeProps {
@@ -235,6 +257,11 @@ export function Code({
     onHeightChange: handleHeightChange,
   });
 
+  // Start Monaco on the first editor mount (effects never run during SSR)
+  useEffect(() => {
+    startMonaco();
+  }, []);
+
   // Register data-elb styles on mount
   useEffect(() => {
     registerDataElbStyles();
@@ -393,16 +420,16 @@ export function Code({
   const handleBeforeMount = async (monaco: typeof import('monaco-editor')) => {
     monacoRef.current = monaco;
 
+    // This hook runs right before the editor is created, so the shared setup
+    // is in place for it even if the shared start has not settled yet.
+    prepareMonaco(monaco);
+
     // Initialize JSON schema registry with this monaco instance
     initMonacoJson(monaco);
 
     // Always run built-in setup
     registerAllThemes(monaco);
     registerFormatters(monaco);
-
-    // Monaco base setup (compiler options + ambient globals) runs once at
-    // module load via `loader.init()`. The WeakSet guards inside those
-    // functions make them no-ops here even if called again.
 
     if (packages && packages.length > 0) {
       registerWalkerOSTypes(monaco);

@@ -66,13 +66,13 @@ export const SettingsSchema = z.object({
   track_pageview: z
     .union([z.boolean(), z.string()])
     .describe(
-      'Enable Mixpanel auto-pageview tracking. walkerOS default: false — walkerOS sources handle page views.',
+      'Enable Mixpanel auto-pageview tracking. walkerOS default: false (walkerOS sources handle page views).',
     )
     .optional(),
   autocapture: z
     .unknown()
     .describe(
-      'Enable Mixpanel web autocapture. walkerOS default: false — walkerOS sources handle event capture.',
+      'Enable Mixpanel web autocapture. walkerOS default: false (walkerOS sources handle event capture).',
     )
     .optional(),
   record_sessions_percent: z
@@ -96,7 +96,7 @@ export const SettingsSchema = z.object({
   group: z
     .unknown()
     .describe(
-      'walkerOS mapping value resolving to { key, id } → mixpanel.set_group(key, id). Runs on destination init or per-event.',
+      'walkerOS mapping value resolving to { key, id } → mixpanel.set_group(key, id). Resolved and sent with set_group on every push (set_group also updates the user profile). A rule-level group replaces it for that event.',
     )
     .optional(),
 });

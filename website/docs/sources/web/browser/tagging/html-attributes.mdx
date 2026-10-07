@@ -157,7 +157,7 @@ listeners or mutation observers yourself.
 | visible       | like impression, but re-arms and fires again each time the element re-qualifies                  |
 | hover         | each time the mouse enters the corresponding element                                             |
 | submit        | on valid form submission                                                                         |
-| scroll(depth) | once, when `depth` percent of the element (50 by default) is above the bottom of the viewport     |
+| scroll(depth) | once, on scroll, when `depth` percent of the element (50 by default) is above the bottom of the viewport |
 | wait(ms)      | once, after `ms` milliseconds (15000 by default)                                                 |
 | pulse(ms)     | every `ms` milliseconds (15000 by default) while the page is not hidden                          |
 
@@ -204,8 +204,8 @@ shorten the attribute:
 ### Parameters
 
 The `scroll`, `wait`, and `pulse` triggers accept a parameter in brackets after
-the trigger name. `scroll` takes a percentage from 0 to 100 (default 50) and
-ignores values outside that range. `wait` and `pulse` take a number of
+the trigger name. `scroll` takes a percentage up to 100 (default 50, which `0` also gives); with a
+value below 0 or above 100 the trigger never fires. `wait` and `pulse` take a number of
 milliseconds (default 15000).
 
 <CodeSnippet
@@ -284,7 +284,8 @@ elements, and each element is either the parent or a child.
 
 The first element is the parent. The second element is its child and carries
 the visible action, which fires the `info visible` event. An ID can have
-multiple children but only one parent element.
+multiple children but only one parent element. An element holds one link: a
+single `id:state` pair per `data-elblink`.
 
 :::note
 
@@ -307,8 +308,8 @@ inside it goes to the next entity above it, or to `page`. Use `shopping_cart`
 instead.
 
 Follow the same rule for action names, e.g. `add_to_cart`. Mapping rules and
-`elb('entity action')` read entity and action from the event name split at the
-first space, so `add to cart` would be matched as `add`.
+`elb('entity action')` read entity and action as the first two words of the
+event name, so `add to cart` would be matched as `add`.
 
 :::
 
@@ -403,9 +404,42 @@ below, gets an empty string.
   language="html"
 />
 
-A single quote cannot be part of a value, and backslash escaping is not
-supported. Double quotes are kept as written, so write the attribute itself in
-single quotes when a value needs them:
+### Escaping
+
+A backslash makes the next character plain text, so it is not read as a
+separator or a quote. Write `\'` for a single quote, `\;` for a semicolon, and
+`\\` for a backslash. Escapes work inside single quotes and in keys too, where
+`\:` keeps a colon in the key. A colon in a value needs no escape, since only
+the first colon splits key and value.
+
+<CodeSnippet
+  code={`<!-- backslash escapes -->
+<p data-elb="foo" data-elb-foo="name:Men\\'s shirt;brand:Levi\\'s">{ "name": "Men's shirt", "brand": "Levi's" }</p>
+<p data-elb="foo" data-elb-foo="b:a\\;r">{ "b": "a;r" }</p>
+<p data-elb="foo" data-elb-foo="title:'it\\'s'">{ "title": "it's" }</p>
+<p data-elb="foo" data-elb-foo="path:C:\\\\temp">{ "path": "C:\\\\temp" }</p>`}
+  language="html"
+/>
+
+An unescaped `'` directly followed by an ASCII letter, a digit, `_`, or any
+non-ASCII character (such as `é`, `€`, `’`, or a non-breaking space) never
+closes a quoted part, so an apostrophe in text like
+`name:Men's shirt;brand:Levi's` reads as written. Together with other single
+quotes in the same attribute it can still be misread, so escape every
+apostrophe in text to be safe, as in the first line above.
+
+An escape does not turn off dynamic values: `\#x` still reads the property `x`
+from the element, see [dynamic field values](#dynamic-field-values).
+
+:::warning
+
+A single backslash escapes the next character, so `path:C:\temp` reads as
+`C:temp`. Write `\\` wherever a value needs a backslash.
+
+:::
+
+Double quotes are kept as written, so write the attribute itself in single
+quotes when a value needs them:
 
 <CodeSnippet
   code={`<p data-elb="foo" data-elb-foo='quote:say "hi"'>{ quote: 'say "hi"' }</p>`}

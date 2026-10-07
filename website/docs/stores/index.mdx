@@ -28,8 +28,8 @@ Stores are initialized **before** any other component in the flow. Once running,
 ```
 Flow startup order:
   1. Stores        ← initialized first
-  2. Transformers  ← can reference stores via $store.id
-  3. Destinations  ← can reference stores via $store.id
+  2. Destinations  ← can reference stores via $store.id
+  3. Transformers  ← can reference stores via $store.id
   4. Sources       ← start pushing events
 ```
 

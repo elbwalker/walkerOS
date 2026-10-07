@@ -100,15 +100,21 @@ export async function collector(
   // Attach the elb adapter so it exists before any source init
   collector.elb = createElb(collector);
 
-  // Initialize stores (first - other components may depend on them)
+  // Initialize stores (first - other components may depend on them).
+  // Build flag (see @walkeros/core build-flags): a lean bundle without
+  // declared stores folds this out; the default `__cache` below always stays.
   const rawStores = initConfig.stores || {};
-  collector.stores = await initStores(collector, rawStores);
+  if (typeof __WALKEROS_STORES__ === 'undefined' || __WALKEROS_STORES__) {
+    collector.stores = await initStores(collector, rawStores);
 
-  // Resolve store references in component env values.
-  // The bundler emits `$store.gcs` as a direct reference to `stores.gcs`
-  // (the raw {code, config} definition). After initialization, replace
-  // these raw references with the actual Store.Instance objects.
-  resolveStoreReferences(rawStores, collector.stores, initConfig);
+    // Resolve store references in component env values.
+    // The bundler emits `$store.gcs` as a direct reference to `stores.gcs`
+    // (the raw {code, config} definition). After initialization, replace
+    // these raw references with the actual Store.Instance objects.
+    resolveStoreReferences(rawStores, collector.stores, initConfig);
+  } else if (Object.keys(rawStores).length > 0) {
+    logger.warn('stores: not in this build, config ignored');
+  }
 
   // Create default cache store for steps that use cache without explicit store.
   // Uses LRU + entry cap + batched eviction + active TTL sweep. See

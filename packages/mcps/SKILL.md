@@ -44,7 +44,7 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 | `walkeros://reference/flow-schema` | Flow.Json structure and connection rules                    |
 | `walkeros://reference/event-model` | Event naming, properties, auto-populated fields             |
 | `walkeros://reference/mapping`     | Mapping syntax (data/map/loop/set/condition/consent/policy) |
-| `walkeros://reference/consent`     | Consent model (destination/rule/field level)                |
+| `walkeros://reference/consent`     | Consent model (destination and field level)                 |
 | `walkeros://reference/variables`   | Variable patterns ($var/$env/$code/$store)                  |
 | `walkeros://reference/contract`    | Event schemas, wildcards, inheritance                       |
 | `walkeros://reference/openapi`     | OpenAPI 3.1 specification                                   |

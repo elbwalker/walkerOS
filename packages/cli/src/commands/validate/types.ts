@@ -56,6 +56,9 @@ export const VALIDATE_CODES = [
   'INVALID_COMPONENT_NAME',
   'INVALID_REFERENCE',
   'STORE_REFERENCE_NOT_FOUND',
+  'STATE_STORE_UNKNOWN',
+  'STATE_STORE_FILE',
+  'TRANSFORMER_MAPPING_NO_OP',
   // Resolution (getFlowSettings, as the bundler resolves the flow)
   'UNRESOLVED_REFERENCE',
   'MISSING_ENV',

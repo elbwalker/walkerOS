@@ -32,7 +32,11 @@ npm install @walkeros/web-destination-hotjar
       "destinations": {
         "hotjar": {
           "package": "@walkeros/web-destination-hotjar",
-          "config": {}
+          "config": {
+            "settings": {
+              "siteId": 1234567
+            }
+          }
         }
       }
     }

@@ -36,12 +36,12 @@ export GCP_SA="$(node -e "const { generateKeyPairSync } = require('crypto'); con
 
 ```text
 web      usercentrics, session, dataLayer, browser
-           -> collector.next: pageGroup
+           -> collector.next: opt-out stop, pageGroup
            -> ga4 (to Google, main property)  gtm (dataLayer)  collect (to server)
 
 server   express /collect  /g/collect  /walker.js
            before: one [ G-SUBSITE hit -> ga4Decode -> ga4Consent | *.js -> file (stop) | other /g/collect (stop) ]
-           next: dedup
+           next: opt-out stop, dedup
            -> collector.next: fingerprint, bot, not impression -> enrich [ loadUser, sessionSave, sessionLoad, validate ]
            -> pubsub (every event, email pseudonymized)
            -> meta, piwikpro, datamanager (each behind eventFilter)
@@ -145,9 +145,6 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"page 
   - `express-paths` at `/flows/server/sources/express/config/settings/paths`:
     One route per job, each with its own methods: /collect, /g/collect,
     /walker.js.
-  - `express-port` at `/flows/server/sources/express/config/settings/port`: port
-    lets push --simulate start the source; runneros mounts the handler on its
-    own port.
   - `express-cors` at `/flows/server/sources/express/config/settings/cors`: CORS
     response headers for the shop origin; express adds X-Content-Type-Options
     itself.
@@ -347,8 +344,8 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
 
 ## consent-privacy: Consent and personal data
 
-- **Purpose:** consent at the destination, the rule and the field; `policy`
-  before mapping; what happens to the email and the IP address.
+- **Purpose:** consent at the destination and the field; `policy` before
+  mapping; what happens to the email and the IP address.
 - **Features:**
   - `cmp-category-map` at
     `/flows/web/sources/usercentrics/config/settings/categoryMap`: categoryMap
@@ -365,10 +362,10 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
     refused pings stay functional false and fail the contract.
   - `destination-consent` at `/flows/server/destinations/meta/config/consent`:
     Destination consent: Meta only gets events with marketing consent.
-  - `rule-consent` at
-    `/flows/web/destinations/ga4/config/mapping/order/complete/consent`: Rule
-    consent on purchases: functional, like the destination; marketing consent
-    belongs to Meta and Data Manager.
+  - `user-optout` at `/flows/server/sources/express/next/0`: An opted-out user
+    (user.optout true) is stopped first: on the server before dedup, so no dedup
+    entry, hash or delivery; on the web first in collector.next, so the browser
+    sends nothing.
   - `value-consent` at
     `/flows/web/destinations/collect/config/policy/user.email/consent`: Field
     consent: the email is only kept with marketing consent.
@@ -397,6 +394,12 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
 - **Consent keys:** there are no collector consent defaults, only granted keys
   travel. `consent.functional` is set only by Usercentrics with `explicitOnly`,
   so its presence means the user decided.
+- **Opt-out beats consent:** the site sets the flag before the first event. With
+  `elbLayer.push(['walker user', { optout: true }])` before walker.js loads, the
+  browser sends nothing. `data-elbuser="optout:true"` holds back the page view
+  and every later event, but events queued in `elbLayer` before walker.js loads
+  are still sent. An opted-out event that reaches the server from another client
+  stops before dedup.
 - **Meta hashes `user_data` itself:** `em` is the raw email; the Meta package
   normalizes and hashes it before sending, the flow never builds a hash for
   Meta.
@@ -514,7 +517,8 @@ runneros start dist/server.mjs -p 8080 --env-file .env
   per destination (London prompt 3).
 - **Features:**
   - `web-collector-next` at `/flows/web/collector/next`: On the web
-    collector.next runs the inline pageGroup step once per event.
+    collector.next stops an opted-out user first, then runs the inline pageGroup
+    step once per event.
   - `ga4-other-dropped` at `/flows/server/sources/express/before/one/2`: GA4
     hits for any other property stop at the route instead of reaching the
     collector undecoded.
@@ -533,7 +537,7 @@ runneros start dist/server.mjs -p 8080 --env-file .env
   - `op-suffix` at `/flows/server/sources/express/before/one/1/match/operator`:
     suffix matches the end of a value: script requests end in .js.
   - `source-next` at `/flows/server/sources/express/next`: source.next names the
-    hop after the source, here dedup.
+    hops after the source: the opt-out stop, then dedup.
   - `collector-next` at `/flows/server/collector/next`: collector.next runs once
     per event before the fan-out: fingerprint and bot for all, enrich for all
     but impressions.
@@ -713,6 +717,10 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
     mapping picks fields from the stored row and merges them into the target.
   - `load-user` at `/flows/server/transformers/loadUser`: loadUser puts the
     customer lifetime value and segment on logged-in events.
+  - `piwik-segment` at
+    `/flows/server/destinations/piwikpro/config/settings/customDimensions`:
+    Piwik PRO gets the loaded segment as custom dimension 1; the path is
+    relative to the event, so user.segment.
   - `store-fs` at `/flows/server/stores/assets`: An fs store serves files from a
     folder.
   - `store-file` at `/flows/server/stores/assets/config/file`: file: true

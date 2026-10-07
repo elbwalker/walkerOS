@@ -1,5 +1,31 @@
 # @walkeros/web-destination-api
 
+## 4.7.2
+
+### Patch Changes
+
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/web-core@4.7.2
+
+## 4.7.1
+
+### Patch Changes
+
+- 0635330: The ESM build no longer contains its own copy of `@walkeros/core` and
+  `@walkeros/web-core`, so bundles that use it are smaller.
+- Updated dependencies [91e9aeb]
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+- Updated dependencies [0635330]
+  - @walkeros/web-core@4.7.1
+  - @walkeros/core@4.7.1
+
 ## 4.7.0
 
 ### Patch Changes

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import type { Journey, JourneyHop, JourneyBranch } from '@walkeros/core';
-import { isAuthError, AUTH_HINT } from '../types.js';
+import { isAuthenticationError, AUTH_HINT } from '../types.js';
 import { redactNestedStrings } from '../user-data.js';
 
 import type { ToolClient } from '../tool-client.js';
@@ -172,7 +172,10 @@ async function observeJourneysHandlerBody(client: ToolClient, input: unknown) {
             ],
     });
   } catch (error) {
-    return mcpError(error, isAuthError(error) ? AUTH_HINT : undefined);
+    return mcpError(
+      error,
+      isAuthenticationError(error) ? AUTH_HINT : undefined,
+    );
   }
 }
 

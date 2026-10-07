@@ -92,15 +92,17 @@ Add to your `flow.json` destinations:
 
 ## Intentionally not supported
 
-Mixpanel features that are deferred or not in scope for v1:
+These Mixpanel methods have no setting in this destination:
 
-- **`alias()`**: anonymous-to-identified merging is handled by walkerOS
-  identity (the source resolves the user before pushing).
-- **`register()` / super properties**: use destination-level
-  `settings.include` to attach properties on every event instead. Mixpanel's
-  super-property pattern overlaps with walkerOS's mapping model.
-- **`people.track_charge`**: deprecated by Mixpanel since v2.78. Send
-  revenue events as regular `track()` calls with a `revenue` property.
+- **`alias()`**: in a project with Mixpanel ID Merge, `mixpanel.identify`
+  (called through the `identify` setting) connects events from before and
+  after login. Without ID Merge, Mixpanel uses `alias()` for this.
+- **`register()` / super properties**: set `include` in the destination
+  config (next to `settings`, for example `include: ['globals']`) to attach
+  event sections to every event instead.
+- **`people.track_charge`**: deprecated in `mixpanel-browser` and has no
+  effect. Send revenue events as regular `track()` calls with a `revenue`
+  property.
 - **`time_event` / page view auto-tracking**: walkerOS sources handle event
   capture and timing.
 

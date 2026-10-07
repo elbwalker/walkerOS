@@ -1,14 +1,16 @@
 import type { Mapping, WalkerOS } from '../types';
-import {
+import * as core from '..';
+import { resolveMappingValue } from '../mappingValue';
+import { createMockCollector } from './helpers/mocks';
+
+const {
   createEvent,
   getEvent,
   getMappingEvent,
   getMappingValue,
   isObject,
   isString,
-} from '..';
-import { resolveMappingValue } from '../mapping';
-import { createMockCollector } from './helpers/mocks';
+} = core;
 
 describe('getMappingEvent', () => {
   test('basic', async () => {
@@ -86,6 +88,26 @@ describe('getMappingEvent', () => {
     });
   });
 
+  test('an unmatched * * rule runs its condition once', async () => {
+    const condition = jest.fn(() => false);
+    const mapping: Mapping.Rules = { '*': { '*': { condition } } };
+
+    // The lookup resolves to * * itself, so the * * fallback has nothing new.
+    expect(
+      await getMappingEvent({ name: 'order complete' }, mapping),
+    ).toStrictEqual({ eventMapping: undefined, mappingKey: '' });
+    expect(condition).toHaveBeenCalledTimes(1);
+
+    // A specific entity without a match still falls back to * *.
+    condition.mockClear();
+    const fallback = await getMappingEvent(
+      { name: 'order complete' },
+      { order: { complete: { condition } }, '*': { '*': { condition } } },
+    );
+    expect(fallback.eventMapping).toBeUndefined();
+    expect(condition).toHaveBeenCalledTimes(2);
+  });
+
   test('condition', async () => {
     const mapping: Mapping.Rules = {
       order: {
@@ -141,6 +163,173 @@ describe('getMappingEvent', () => {
         logger: collector.logger,
       }),
     );
+  });
+
+  describe('async rule conditions', () => {
+    const event = { name: 'order complete' };
+
+    test('an async false is no match: the next rule wins', async () => {
+      const collector = createMockCollector();
+      const fallback: Mapping.Rule = { name: 'fallback' };
+      const mapping: Mapping.Rules = {
+        order: {
+          complete: [{ condition: async () => false, name: 'gated' }, fallback],
+        },
+      };
+
+      const result = await getMappingEvent(event, mapping, collector);
+      expect(result.eventMapping).toBe(fallback);
+    });
+
+    test('rules are awaited in order: an async true beats a later sync true', async () => {
+      const collector = createMockCollector();
+      const later = jest.fn(() => true);
+      const first: Mapping.Rule = {
+        condition: () => Promise.resolve().then(() => true),
+        name: 'first',
+      };
+      const mapping: Mapping.Rules = {
+        order: { complete: [first, { condition: later, name: 'later' }] },
+      };
+
+      const result = await getMappingEvent(event, mapping, collector);
+      expect(result).toStrictEqual({
+        eventMapping: first,
+        mappingKey: 'order complete',
+      });
+      expect(later).not.toHaveBeenCalled();
+    });
+
+    const boom = new Error('boom');
+    const throwing: Array<[string, Mapping.Condition]> = [
+      [
+        'sync',
+        () => {
+          throw boom;
+        },
+      ],
+      [
+        'async',
+        async () => {
+          throw boom;
+        },
+      ],
+    ];
+
+    test.each(throwing)(
+      'a %s throwing condition is logged and counts as no match',
+      async (_, condition) => {
+        const collector = createMockCollector();
+        const fallback: Mapping.Rule = { name: 'fallback' };
+        const mapping: Mapping.Rules = {
+          order: { complete: [{ condition, name: 'broken' }, fallback] },
+        };
+
+        const result = await getMappingEvent(event, mapping, collector);
+        expect(result.eventMapping).toBe(fallback);
+        expect(collector.logger.error).toHaveBeenCalledWith(
+          'mapping rule condition failed',
+          { event, mappingKey: 'order complete', error: boom },
+        );
+      },
+    );
+
+    test('without async conditions, resolution adds no ticks', async () => {
+      // A mapped call (sync condition, then a condition-less rule) settles in
+      // the same tick as an unmapped one started after it, so a mapped
+      // destination is never overtaken by an unmapped sibling.
+      const collector = createMockCollector();
+      const order: string[] = [];
+      const mapping: Mapping.Rules = {
+        order: {
+          complete: [{ condition: () => false }, { name: 'purchase' }],
+        },
+      };
+
+      await Promise.all([
+        getMappingEvent(event, mapping, collector).then(() =>
+          order.push('mapped'),
+        ),
+        getMappingEvent(event, undefined, collector).then(() =>
+          order.push('unmapped'),
+        ),
+      ]);
+      expect(order).toEqual(['mapped', 'unmapped']);
+    });
+
+    const fatal: Array<[string, Mapping.Condition]> = [
+      [
+        'sync',
+        () => {
+          throw new core.FatalError('stop');
+        },
+      ],
+      [
+        'async',
+        async () => {
+          throw new core.FatalError('stop');
+        },
+      ],
+    ];
+
+    test.each(fatal)(
+      'a %s FatalError in a condition propagates',
+      async (_, condition) => {
+        const collector = createMockCollector();
+        const mapping: Mapping.Rules = {
+          order: { complete: [{ condition }, { name: 'fallback' }] },
+        };
+
+        await expect(
+          getMappingEvent(event, mapping, collector),
+        ).rejects.toThrow(core.FatalError);
+        expect(collector.logger.error).not.toHaveBeenCalled();
+      },
+    );
+
+    test('a sync false, then an async condition, is resolved in order', async () => {
+      const collector = createMockCollector();
+      const asyncRule: Mapping.Rule = {
+        condition: async () => true,
+        name: 'async',
+      };
+      const mapping: Mapping.Rules = {
+        order: {
+          complete: [
+            { condition: () => false, name: 'sync' },
+            asyncRule,
+            { name: 'fallback' },
+          ],
+        },
+      };
+
+      const result = await getMappingEvent(event, mapping, collector);
+      expect(result).toStrictEqual({
+        eventMapping: asyncRule,
+        mappingKey: 'order complete',
+      });
+    });
+
+    test('without a collector a condition is awaited and a throw propagates', async () => {
+      const fallback: Mapping.Rule = { name: 'fallback' };
+      const gated: Mapping.Rules = {
+        order: {
+          complete: [{ condition: async () => false, name: 'gated' }, fallback],
+        },
+      };
+      expect((await getMappingEvent(event, gated)).eventMapping).toBe(fallback);
+
+      const broken: Mapping.Rules = {
+        order: {
+          complete: {
+            condition: async () => {
+              throw new Error('boom');
+            },
+          },
+        },
+      };
+      await expect(getMappingEvent(event, broken)).rejects.toThrow('boom');
+    });
   });
 });
 
@@ -1121,6 +1310,10 @@ describe('processEventMapping', () => {
 describe('resolveMappingValue', () => {
   const collector = createMockCollector();
 
+  test('stays package-internal', () => {
+    expect('resolveMappingValue' in core).toBe(false);
+  });
+
   test('runs for an undefined source, so a fallback applies', async () => {
     expect(
       await resolveMappingValue(
@@ -1203,5 +1396,64 @@ describe('getMappingValue keeps its guard and inference', () => {
         { collector },
       ),
     ).toBe('loyal');
+  });
+});
+
+describe('loop items never supply their own consent', () => {
+  const cases: Array<{
+    name: string;
+    event?: WalkerOS.Consent;
+    collector: WalkerOS.Consent;
+    item: WalkerOS.Consent;
+    expected: string[];
+  }> = [
+    {
+      name: 'event consent denies, the item claims a grant',
+      event: { marketing: false },
+      collector: {},
+      item: { marketing: true },
+      expected: [],
+    },
+    {
+      name: 'event consent grants',
+      event: { marketing: true },
+      collector: {},
+      item: { marketing: true },
+      expected: ['a'],
+    },
+    {
+      name: 'event consent grants, the item claims a denial',
+      event: { marketing: true },
+      collector: {},
+      item: { marketing: false },
+      expected: ['a'],
+    },
+    {
+      name: 'collector consent denies, the item claims a grant',
+      event: undefined,
+      collector: { marketing: false },
+      item: { marketing: true },
+      expected: [],
+    },
+    {
+      name: 'collector consent grants',
+      event: undefined,
+      collector: { marketing: true },
+      item: { marketing: true },
+      expected: ['a'],
+    },
+  ];
+
+  test.each(cases)('$name', async ({ event, collector, item, expected }) => {
+    expect(
+      await getMappingValue(
+        {
+          ...(event ? { consent: event } : {}),
+          items: [{ consent: item, id: 'a' }],
+        },
+        { loop: ['items', { key: 'id', consent: { marketing: true } }] },
+        { collector: createMockCollector({ consent: collector }) },
+      ),
+    ).toEqual(expected);
   });
 });

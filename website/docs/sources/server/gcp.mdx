@@ -69,7 +69,7 @@ Add to your `flow.json` sources:
     "package": "@walkeros/server-source-gcp",
     "config": {
       "settings": {
-        "cors": true,
+        "cors": true
       }
     }
   }
@@ -167,7 +167,11 @@ Extract request metadata and forward it through the pipeline.
 | `ip` | Client IP address |
 | `headers.*` | HTTP headers (user-agent, origin, etc.) |
 | `method` | HTTP method |
-| `hostname` | Request hostname |
+| `path` | Pathname, no query string |
+| `query.*` | Query parameter, repeated keys joined with `,` |
+| `url` | Absolute request URL, or `''` when there is no `host` header |
+| `body` | Request body, parsed as JSON when it parses, otherwise the raw string |
+| `raw` | The Functions Framework request itself |
 
 ## Pub/Sub
 

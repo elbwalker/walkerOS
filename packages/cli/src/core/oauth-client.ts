@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { requireSecureUrl } from '../lib/secure-url.js';
+import { apiRequest } from './api-request.js';
+import type { ApiTransport } from './api-request.js';
 
 /**
  * OAuth 2.1 client for the walkerOS authorization server.
@@ -40,11 +42,6 @@ const REVOKE_TIMEOUT_MS = 5_000;
  * says nothing would otherwise hold it for the HTTP client's own default.
  */
 const DEVICE_AUTHORIZATION_TIMEOUT_MS = 10_000;
-
-const FORM_HEADERS = {
-  'Content-Type': 'application/x-www-form-urlencoded',
-  Accept: 'application/json',
-} as const;
 
 const DeviceAuthorizationSchema = z.object({
   device_code: z.string().min(1),
@@ -124,19 +121,19 @@ function describe(response: Response, body: unknown): string {
  * rather than a hop, because following one would hand the token (or the code
  * that buys it) to whichever host the answer named.
  */
-function post(
+function credentialTransport(
+  appUrl: string,
   fetchFn: typeof fetch,
-  url: string,
-  form: Record<string, string>,
   signal?: AbortSignal,
-): Promise<Response> {
-  return fetchFn(requireSecureUrl(url), {
-    method: 'POST',
-    headers: { ...FORM_HEADERS },
-    body: new URLSearchParams(form).toString(),
+): ApiTransport {
+  return {
+    auth: 'none',
+    baseUrl: requireSecureUrl(appUrl),
+    fetch: fetchFn,
+    headers: { Accept: 'application/json' },
     redirect: 'error',
     ...(signal ? { signal } : {}),
-  });
+  };
 }
 
 function toTokenSet(body: unknown): TokenSet {
@@ -160,18 +157,20 @@ export async function startDeviceAuthorization(
   appUrl: string,
   fetchFn: typeof fetch = globalThis.fetch,
 ): Promise<DeviceAuthorization> {
-  const response = await post(
-    fetchFn,
-    `${appUrl}/api/oauth/device_authorization`,
-    {
+  const response = await apiRequest('POST /api/oauth/device_authorization', {
+    ...credentialTransport(
+      appUrl,
+      fetchFn,
+      AbortSignal.timeout(DEVICE_AUTHORIZATION_TIMEOUT_MS),
+    ),
+    form: {
       client_id: CLI_CLIENT_ID,
       scope: CLI_SCOPE,
       // RFC 8707. The token comes back bound to the API, so a leaked CLI token
       // cannot be replayed against the MCP resource.
       resource: `${appUrl}/api`,
     },
-    AbortSignal.timeout(DEVICE_AUTHORIZATION_TIMEOUT_MS),
-  );
+  });
 
   const body = await readJson(response);
   if (!response.ok) throw new Error(describe(response, body));
@@ -208,16 +207,14 @@ export async function pollDeviceToken(
 ): Promise<DevicePoll> {
   let response: Response;
   try {
-    response = await post(
-      fetchFn,
-      `${appUrl}/api/oauth/token`,
-      {
+    response = await apiRequest('POST /api/oauth/token', {
+      ...credentialTransport(appUrl, fetchFn, signal),
+      form: {
         grant_type: DEVICE_CODE_GRANT,
         device_code: deviceCode,
         client_id: CLI_CLIENT_ID,
       },
-      signal,
-    );
+    });
   } catch (error) {
     // Only an abort of the caller's own signal is an outcome rather than a
     // fault: the authorization is untouched, so it is still pending and the
@@ -266,16 +263,18 @@ export async function refreshTokens(
   refreshToken: string,
   fetchFn: typeof fetch = globalThis.fetch,
 ): Promise<TokenSet | null> {
-  const response = await post(
-    fetchFn,
-    `${appUrl}/api/oauth/token`,
-    {
+  const response = await apiRequest('POST /api/oauth/token', {
+    ...credentialTransport(
+      appUrl,
+      fetchFn,
+      AbortSignal.timeout(REFRESH_TIMEOUT_MS),
+    ),
+    form: {
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
       client_id: CLI_CLIENT_ID,
     },
-    AbortSignal.timeout(REFRESH_TIMEOUT_MS),
-  );
+  });
 
   const body = await readJson(response);
 
@@ -298,16 +297,18 @@ export async function revokeRefreshToken(
   fetchFn: typeof fetch = globalThis.fetch,
 ): Promise<void> {
   try {
-    await post(
-      fetchFn,
-      `${appUrl}/api/oauth/revoke`,
-      {
+    await apiRequest('POST /api/oauth/revoke', {
+      ...credentialTransport(
+        appUrl,
+        fetchFn,
+        AbortSignal.timeout(REVOKE_TIMEOUT_MS),
+      ),
+      form: {
         token: refreshToken,
         token_type_hint: 'refresh_token',
         client_id: CLI_CLIENT_ID,
       },
-      AbortSignal.timeout(REVOKE_TIMEOUT_MS),
-    );
+    });
   } catch {
     // Offline, or the server is down. The local credential is still cleared.
   }

@@ -7,6 +7,7 @@ import {
   deleteDeployment,
   deleteDeploymentByFlowId,
   createDeployCommand,
+  listDeploymentsCommand,
   selfHostServerHint,
   DeploymentAmbiguityError,
 } from '../../../commands/deployments/index.js';
@@ -116,6 +117,29 @@ describe('deployments', () => {
       expect(mockApiFetch).toHaveBeenCalledWith(
         '/api/projects/proj_default/deployments',
       );
+    });
+  });
+
+  describe('listDeploymentsCommand', () => {
+    it('refuses a --status the contract does not declare, before any request', async () => {
+      const errorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => undefined);
+      const exitSpy = jest.spyOn(process, 'exit').mockImplementation((code) => {
+        throw new Error(`process.exit(${String(code)})`);
+      });
+      try {
+        await expect(
+          listDeploymentsCommand({ project: 'proj_123', status: 'running' }),
+        ).rejects.toThrow('process.exit(1)');
+        expect(errorSpy).toHaveBeenCalledWith(
+          '--status must be one of: idle, deploying, published, active, stopped, failed',
+        );
+        expect(mockApiFetch).not.toHaveBeenCalled();
+      } finally {
+        errorSpy.mockRestore();
+        exitSpy.mockRestore();
+      }
     });
   });
 

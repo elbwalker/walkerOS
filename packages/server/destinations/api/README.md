@@ -28,7 +28,12 @@ npm install @walkeros/server-destination-api
     "default": {
       "config": { "platform": "server" },
       "destinations": {
-        "api": { "package": "@walkeros/server-destination-api", "config": {} }
+        "api": {
+          "package": "@walkeros/server-destination-api",
+          "config": {
+            "settings": { "url": "https://api.example.com/events" }
+          }
+        }
       }
     }
   }

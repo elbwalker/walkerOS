@@ -7,9 +7,6 @@ import { createRequire } from 'module';
 export default defineConfig([
   // JS/TS build using shared config base
   buildModules({
-    // Root entry is the tool library; ./site is the Open Air page layer, kept
-    // separate so marketing pages do not pull Monaco/RJSF through a bundler.
-    entry: ['src/index.ts', 'src/site/index.ts'],
     platform: 'browser',
     external: [
       'react',
@@ -68,14 +65,7 @@ export default defineConfig([
 
   // SCSS build (explorer-specific)
   {
-    entry: {
-      // Tool scale: explorer's own component styles, scoped under .elb-explorer.
-      styles: 'src/styles/index.scss',
-      // Site scale: Open Air tokens only, written to :root under --oa-*.
-      tokens: 'src/styles/site/tokens.scss',
-      // Site scale: tokens plus Open Air component styles.
-      site: 'src/styles/site/index.scss',
-    },
+    entry: { styles: 'src/styles/index.scss' },
     outDir: 'dist',
     clean: false,
     esbuildPlugins: [

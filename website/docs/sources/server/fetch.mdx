@@ -113,7 +113,7 @@ error with a stack trace.
 
 Extract request metadata and forward it through the pipeline.
 
-`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the `Request` (no `req.` prefix), or `{ fn }` for header access via `.get()`. A bare object like `{ url: 'url' }` is silently inert: without the `map` operator the source passes the whole request through and no field is extracted.
+`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the request scope (no `req.` prefix). A bare object like `{ url: 'url' }` is silently inert: without the `map` operator the source passes the whole request through and no field is extracted.
 
 <CodeSnippet
   code={`const { collector } = await startFlow({

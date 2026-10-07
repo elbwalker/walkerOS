@@ -113,9 +113,10 @@ export async function initializeWalker() {
 Add consent requirements to your destinations. This replaces `initializeWalker`
 from step 3 and keeps its imports. Until a destination's required consent is
 granted, its events wait in the destination's queue and are sent once the
-consent arrives. The consent handlers wait for the flow to start, so your banner
-can call them at any time, also right after `initializeWalker()` to restore a
-stored choice.
+consent arrives, unless a new `walker run` starts first, which empties the
+queue. The consent handlers wait for the flow to start, so your banner can call
+them at any time, also right after `initializeWalker()` to restore a stored
+choice.
 
 <CodeSnippet
   code={`let walkerReady;
@@ -174,7 +175,7 @@ async function startWalker() {
 // Call these from your consent banner when the user accepts or denies
 export async function handleConsentAccept() {
   await initializeWalker();
-  window.elb('walker consent', {
+  return window.elb('walker consent', {
     functional: true,
     analytics: true,
     marketing: true,
@@ -183,7 +184,7 @@ export async function handleConsentAccept() {
 
 export async function handleConsentDeny() {
   await initializeWalker();
-  window.elb('walker consent', {
+  return window.elb('walker consent', {
     functional: true,
     analytics: false,
     marketing: false,

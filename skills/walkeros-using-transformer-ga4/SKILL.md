@@ -163,7 +163,8 @@ The `purchase` default ships `id`, `currency`, `total`, `tax`, `shipping`, and
 `extend.data.map` is deep-merged onto the default `data.map`, leaving `id`,
 `total`, `tax`, `shipping`, and `coupon` intact. `remove: ["currency"]` strips
 that field from the final payload. A `null` value in `extend` clears an
-inherited field entirely (e.g. `"extend": { "name": null }`).
+inherited field, for example `"extend": { "data": { "map": { "tax": null } } }`
+drops `tax` from the default `data.map`.
 
 **Full replace:** if you need to rewrite a rule from scratch (no merge), omit
 `extend` and `remove` and supply the complete rule directly. A rule with neither

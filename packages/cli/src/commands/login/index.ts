@@ -12,6 +12,7 @@ import {
   getConfigPath,
 } from '../../lib/config-file.js';
 import { requireSecureUrl } from '../../lib/secure-url.js';
+import { apiRequest } from '../../core/api-request.js';
 import type { GlobalOptions } from '../../types/global.js';
 
 /**
@@ -174,8 +175,10 @@ async function fetchEmail(
   fetchFn: typeof globalThis.fetch,
 ): Promise<string | undefined> {
   try {
-    const response = await fetchFn(`${appUrl}/api/auth/whoami`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    const response = await apiRequest('GET /api/auth/whoami', {
+      auth: { token: accessToken },
+      baseUrl: appUrl,
+      fetch: fetchFn,
       signal: AbortSignal.timeout(WHOAMI_TIMEOUT_MS),
     });
     if (!response.ok) return undefined;

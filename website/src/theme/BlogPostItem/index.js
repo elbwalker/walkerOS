@@ -8,16 +8,14 @@ export default function BlogPostItemWrapper(props) {
   return (
     <>
       <span
-        {...tagger()
-          .entity('post')
-          .action('load', 'view')
-          .action('scroll(50)', 'interest')
-          .data({
-            id: post?.metadata?.permalink || unknown,
-            title: post?.frontMatter?.title || unknown,
-            readingTime: post?.metadata?.readingTime || unknown,
-          })
-          .get()}
+        {...tagger.entity('post')}
+        {...tagger.action('load', 'view')}
+        {...tagger.action('scroll(50)', 'interest')}
+        {...tagger.property('post', {
+          id: post?.metadata?.permalink || unknown,
+          title: post?.frontMatter?.title || unknown,
+          readingTime: post?.metadata?.readingTime || unknown,
+        })}
       >
         <BlogPostItem {...props} />
       </span>

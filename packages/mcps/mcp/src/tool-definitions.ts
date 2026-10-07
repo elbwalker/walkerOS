@@ -79,7 +79,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: 'flow_manage',
     title: 'Flow Management',
     description:
-      'Manage walkerOS flows and their previews. List/get/create/update/delete/duplicate flows, or create/inspect/delete preview bundles for testing flow changes on live sites.',
+      'Manage walkerOS flows and their previews. List/get/create/update/delete/duplicate flows (deleting a flow deletes its frames too), or create/inspect/delete preview bundles for testing flow changes on live sites.',
     inputSchema: {
       action: z.enum([
         'list',

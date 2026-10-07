@@ -41,6 +41,10 @@ import { fetchPackage } from '@walkeros/core';
 import { mergeConfigSchema } from '@walkeros/core/dev';
 const mockFetchPackage = jest.mocked(fetchPackage);
 
+// The catalog module reaches the app through the CLI's typed client; this
+// suite mocks fetchCatalog itself, so the client is never called.
+jest.mock('@walkeros/cli', () => ({ apiRequest: jest.fn() }));
+
 jest.mock('../../catalog.js', () => ({
   fetchCatalog: jest.fn(),
   normalizePlatform: jest.requireActual('../../catalog.js').normalizePlatform,

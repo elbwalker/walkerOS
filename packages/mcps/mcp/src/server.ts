@@ -158,7 +158,7 @@ export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   registerGetPackageSchemaTool(server);
 
   registerPackageSchemaResources(server);
-  registerReferenceResources(server);
+  registerReferenceResources(server, opts.client);
   registerAddStepPrompt(server);
   registerSetupMappingPrompt(server);
   registerManageContractPrompt(server);

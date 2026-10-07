@@ -93,6 +93,18 @@ describe('generate_tagging tool', () => {
     );
   });
 
+  it('refuses more than one link', async () => {
+    const tool = server.getTool('generate_tagging');
+    const result = await tool.handler({
+      entity: 'product',
+      link: { details: 'parent', modal: 'child' },
+    });
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content[0].text).error).toBe(
+      'One link per element: data-elblink holds one id and type, got 2 (details, modal)',
+    );
+  });
+
   it('handles custom prefix', async () => {
     const tool = server.getTool('generate_tagging');
     const result = await tool.handler({

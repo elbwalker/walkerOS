@@ -196,11 +196,6 @@ export type { SpinnerProps } from './components/atoms/spinner';
 
 ## CSS Variables
 
-Two scales live in this package. They cannot collide: they use different
-selectors and different names.
-
-### Tool scale (explorer components)
-
 Scoped under `.elb-explorer`, never `:root`. Dark is
 `[data-theme='dark'] .elb-explorer`. Names are **unprefixed**:
 
@@ -215,39 +210,11 @@ Scoped under `.elb-explorer`, never `:root`. Dark is
 --color-button-primary
 --radius-box
 --spacing-md
---font-size-base      // 14px, tool scale
+--font-size-base      // 14px
 ```
 
-Full reference: [STYLE.md](STYLE.md). Sizes are tool scale: type 11-16px, radii
-3-6px, sized for code boxes and dropdowns rather than pages.
-
-### Site scale (Open Air page components)
-
-Written to `:root`, prefixed `--oa-`, imported separately:
-
-```scss
---oa-ground      --oa-surface     --oa-surface-2
---oa-ink         --oa-ink-2       --oa-ink-3
---oa-rule        --oa-flag
---oa-signal      --oa-signal-ink  --oa-signal-soft  --oa-glow  --oa-on-signal
---oa-shadow-sm   --oa-shadow-lg
---oa-sans        --oa-mono
---oa-r  --oa-r-lg  --oa-r-xl  --oa-r-pill
-```
-
-```tsx
-import { SectionHead, LimitsBlock } from '@walkeros/explorer/site';
-import '@walkeros/explorer/site.css'; // tokens + site components
-import '@walkeros/explorer/tokens.css'; // tokens only
-```
-
-The prefix is not decoration: these land on the consumer's `:root`, and Tailwind
-v4 defines `--shadow-sm` and `--shadow-lg` in `@theme default`, so an unprefixed
-token would silently corrupt every `shadow-sm` utility in the consuming site.
-
-**The rule people get wrong:** text on `--oa-signal` is always `--oa-on-signal`.
-White on the brand blue is 2.4:1 and fails. On light grounds the blue appears as
-text only via `--oa-signal-ink`.
+Full reference: [STYLE.md](STYLE.md). Sizes: type 11-16px, radii 3-6px, sized
+for code boxes and dropdowns rather than pages.
 
 ## Checklist
 

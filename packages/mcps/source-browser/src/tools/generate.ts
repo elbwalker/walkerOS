@@ -51,7 +51,7 @@ export function registerGenerateTool(server: McpServer) {
           .record(z.string(), z.string())
           .optional()
           .describe(
-            'Link relationships for data-elblink (id:type, e.g. {"details":"parent"})',
+            'The one link for data-elblink as {"id":"type"}, e.g. {"details":"parent"}. An element carries one link; more than one entry is refused.',
           ),
         prefix: z
           .string()

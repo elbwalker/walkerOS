@@ -1,5 +1,46 @@
 # @walkeros/web-source-browser
 
+## 4.7.2
+
+### Patch Changes
+
+- ff23953: Quoted action parameters that contain a semicolon, like `add('x;y')`,
+  parse as one parameter again. An apostrophe inside a word, like `Men's` or
+  `l'été`, stays part of the value.
+- 98398fe: `tagger.link()` sets the one link an element carries and throws on a
+  second, different link or an object with several entries. Before, it joined
+  several links into one `data-elblink` that the browser source could not read,
+  so every link on the element was lost. `getTriggerActions` and `Triggers` are
+  now exported.
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [ff23953]
+- Updated dependencies [ff23953]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+- Updated dependencies [98398fe]
+  - @walkeros/core@4.7.2
+  - @walkeros/web-core@4.7.2
+  - @walkeros/collector@4.7.2
+
+## 4.7.1
+
+### Patch Changes
+
+- 91e9aeb: Attribute values now support backslash escapes: `\'`, `\;` and `\\`
+  keep a quote, semicolon or backslash in the value, so `name:Men\'s shirt`
+  works and tagger output is read back as passed. The tagger no longer escapes
+  colons in values. A single backslash in existing markup now escapes the next
+  character, so write `\\` for a literal backslash.
+- Updated dependencies [91e9aeb]
+- Updated dependencies [0635330]
+- Updated dependencies [0635330]
+- Updated dependencies [91e9aeb]
+- Updated dependencies [0635330]
+  - @walkeros/web-core@4.7.1
+  - @walkeros/collector@4.7.1
+  - @walkeros/core@4.7.1
+
 ## 4.7.0
 
 ### Minor Changes

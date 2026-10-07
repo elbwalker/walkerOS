@@ -162,15 +162,42 @@ elb('order complete', { total: 99.99, currency: 'USD' });
 
 ### Type safety
 
-Integrated mode gives you full TypeScript support:
+Each step is typed by the package you pass as `code`. Its settings, the
+settings of its mapping rules and its `env` keys autocomplete, and a setting
+the package does not have is a type error:
 
 ```typescript
-import type { WalkerOS } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { elb } = await startFlow<WalkerOS.Elb>({
-  // Full autocomplete and type checking
+const { elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: { settings: { pageview: true, prefix: 'data-elb' } },
+    },
+  },
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        // `measurementID` instead of `measurementId` would be a type error
+        settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } },
+        mapping: {
+          order: { complete: { name: 'purchase', settings: { ga4: {} } } },
+        },
+      },
+    },
+  },
 });
 ```
+
+Write the config inline in the `startFlow` call. A config kept in a separate
+variable still compiles and is checked, but not for unknown keys. To declare a
+config on its own, annotate it as `Collector.InitConfig`; its settings then stay
+unchecked. An explicit type argument such as `startFlow<WalkerOS.Elb>(...)`
+turns the checking off for the whole call.
 
 ---
 

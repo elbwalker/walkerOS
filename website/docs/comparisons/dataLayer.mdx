@@ -15,10 +15,10 @@ Manager, but every event needs manual work.
 | ---------------------- | ---------------------------------- | ------------------------------------ |
 | Tagging approach       | Manual JavaScript calls            | HTML attributes (data-elb)           |
 | Event state management | Manual updates required            | Automatic, real-time                 |
-| Consent handling       | Manual setup in GTM                | Built-in                             |
+| Consent handling       | Manual setup in GTM                | Consent Mode in GTM with walker.js, consent rules per destination in your own bundle |
 | Version control        | Hard to track changes              | In your codebase                     |
 | Component reusability  | Copy-paste code                    | Tag once, use everywhere             |
-| Metadata enrichment    | Manual                             | Automatic (timing, session, etc.)    |
+| Metadata enrichment    | Manual                             | Automatic (timing, trigger, page URL) |
 
 ## Who should use what?
 
@@ -32,7 +32,7 @@ Manager, but every event needs manual work.
 - You want to keep GTM without writing pushes by hand
 - You want tracking integrated into your components
 - You're tired of manual event management
-- You need automatic consent handling
+- You want consent rules applied before events leave the page (your own bundle)
 - You want version-controlled, reviewable tracking
 - You're building with modern component frameworks
 
@@ -58,12 +58,14 @@ You gather all values yourself and make sure the push happens after DOM ready
 and after consent is granted.
 
 **walkerOS tagging:** You add HTML attributes to your components. walkerOS reads
-the DOM, detects interactions, checks consent, and pushes events automatically.
+the DOM, detects interactions, and pushes events automatically.
 
 <PromotionPlayground />
 
-You tag the button once, and walkerOS listens for clicks, collects data from the
-attributes, checks consent, and pushes to any destination.
+You tag the button once, and walkerOS listens for clicks and collects data from
+the attributes. [walker.js](/docs/apps/walkerjs) pushes the result to the
+`dataLayer` for your GTM tags; your own bundle sends it to any destination, with
+consent rules per destination.
 
 ### Component integration
 
@@ -83,15 +85,15 @@ file.
 
 **walkerOS tagging:** Global attributes apply everywhere automatically, and
 because tagging happens at the component level, one change updates all
-instances. walkerOS also adds event metadata (timing, session, consent state)
-on its own.
+instances. walkerOS also adds event metadata such as timing and the trigger on
+its own.
 
 ## Can they work together?
 
 Yes. Keeping GTM no longer means hand-written pushes:
 [walker.js](/docs/apps/walkerjs) is one script tag that turns `data-elb`
-attributes into dataLayer pushes for your existing GTM tags, see
-[Use walkerOS events in GTM](/docs/guides/gtm). For pushes shaped by a flow you
+attributes into dataLayer pushes for your existing GTM tags, with a complete
+[GTM setup](/docs/apps/walkerjs#use-it-in-gtm). For pushes shaped by a flow you
 build yourself, use the [GTM destination](/docs/destinations/web/gtag/gtm).
 
 ## Getting started

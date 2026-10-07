@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
-import { isAuthError, AUTH_HINT } from '../types.js';
+import { isAccessRefusal, isAuthenticationError, AUTH_HINT } from '../types.js';
+import { isFeatureDenial } from './feature-gate.js';
 
 import type {
   ToolClient,
@@ -11,6 +12,10 @@ import type {
 import type { ToolSpec } from '../tool-spec.js';
 import { isRecord, stringField } from './narrow.js';
 import { parseToolInput } from './parse-input.js';
+import {
+  NO_DEFAULT_PROJECT_ERROR,
+  resolveDefaultProject,
+} from './project-context.js';
 
 const TITLE = 'Observe Session';
 /**
@@ -284,9 +289,16 @@ async function resolveSessionId(
     });
     return result.sessionId;
   } catch (error) {
-    // An auth failure is about the caller, not the lookup: let it through
-    // unwrapped so the handler still attaches AUTH_HINT.
-    if (isAuthError(error)) throw error;
+    // A refused caller is refused by the session read and end as well, so
+    // passing sessionId would not help: let the refusal through unwrapped. The
+    // handler reports it as is and attaches AUTH_HINT to an authentication
+    // failure.
+    if (
+      isAuthenticationError(error) ||
+      isAccessRefusal(error) ||
+      isFeatureDenial(error)
+    )
+      throw error;
     const detail = error instanceof Error ? error.message : String(error);
     // Carry the structured fields across: `mcpError` reads `code` and
     // `details` off the thrown error, so a bare `new Error` would strip the
@@ -297,16 +309,6 @@ async function resolveSessionId(
     );
   }
 }
-
-function resolveProjectId(
-  client: ToolClient,
-  projectId: string | undefined,
-): string | null {
-  return projectId ?? client.getDefaultProject();
-}
-
-const NO_DEFAULT_PROJECT_ERROR =
-  'No project ID given and no default project set. Pass projectId or set one with project_manage set_default.';
 
 export function createObserveSessionToolSpec(client: ToolClient): ToolSpec {
   return {
@@ -336,7 +338,7 @@ async function observeSessionHandlerBody(client: ToolClient, input: unknown) {
   if (!flowId) {
     return mcpError(new Error('flowId is required for observe_session.'));
   }
-  const resolvedProjectId = resolveProjectId(client, projectId);
+  const resolvedProjectId = resolveDefaultProject(client, projectId);
   if (!resolvedProjectId) {
     return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
   }
@@ -438,7 +440,10 @@ async function observeSessionHandlerBody(client: ToolClient, input: unknown) {
         );
     }
   } catch (error) {
-    return mcpError(error, isAuthError(error) ? AUTH_HINT : undefined);
+    return mcpError(
+      error,
+      isAuthenticationError(error) ? AUTH_HINT : undefined,
+    );
   }
 }
 

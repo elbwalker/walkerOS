@@ -1,6 +1,6 @@
 import { createInterface } from 'readline';
 import { readConfig, writeConfig } from '../../lib/config-file.js';
-import { publicFetch } from '../../core/http.js';
+import { apiRequest } from '../../core/api-request.js';
 import { handleCliError } from '../../core/api-error.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 
@@ -38,10 +38,9 @@ export async function feedback(
     }
   }
 
-  const response = await publicFetch('/api/feedback', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+  const response = await apiRequest('POST /api/feedback', {
+    auth: 'none',
+    body: payload,
   });
 
   if (!response.ok) {

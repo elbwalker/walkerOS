@@ -52,9 +52,7 @@ export function initializeWalker(): Promise<void> {
 }
 
 async function startWalker(): Promise<void> {
-  // run: false, the App sends \`walker run\` once per page
   const { collector } = await startFlow({
-    run: false,
     consent: { functional: true },
     sources: {
       browser: {
@@ -62,6 +60,7 @@ async function startWalker(): Promise<void> {
         config: {
           settings: {
             pageview: true,
+            history: true, // a page view on every route change
             elb: 'elb',
           },
         },
@@ -93,29 +92,25 @@ export function tagger(entity?: string) {
 
 ### 2. App integration
 
-Integrate directly in your main App component. The collector starts with
-`run: false`, so nothing is sent until the first `walker run`: the effect below
-sends it on the first render and on every route change, once the flow has
-started.
+Integrate directly in your main App component. The collector sends the first
+page view when it starts. With `history: true` the browser source sends one on
+every route change and picks up the tagged elements the new route renders, so
+the App only starts the walker once.
+Some routers set the new page title after the route change, so its page view
+can carry the previous title. For exact titles, see
+[single-page apps](/docs/sources/web/browser/#single-page-apps).
 
 <CodeSnippet
   code={`// src/App.tsx
-import { Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect, useRef } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import { initializeWalker } from './walker';
 
 function App() {
-  const location = useLocation();
-  const lastKey = useRef('');
-
   useEffect(() => {
-    // React StrictMode runs effects twice in development, run once per location
-    if (lastKey.current === location.key) return;
-    lastKey.current = location.key;
-
-    // walker run sends the page view and scans the new page for load triggers
-    initializeWalker().then(() => window.elb('walker run'));
-  }, [location]);
+    // Starts once, also when React StrictMode runs effects twice
+    initializeWalker();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -233,11 +228,14 @@ function CheckoutForm({ total, itemCount }: { total: number; itemCount: number }
 
 In [step 1](#1-walker-initialization), we added a console destination. It
 logs each event's name to the console. Open your browser's developer console
-and navigate to a product page to see tracked events:
+and navigate from the home page to a product page to see tracked events. The
+first page view is the home page, the second the product page, then the
+product's view:
 
 ```
-Event: product view
 Event: page view
+Event: page view
+Event: product view
 ```
 
 ## Best practices
@@ -260,10 +258,12 @@ Event: page view
 
 ### Route changes not tracked
 
-1. Check that `walker run` is called on route changes in `window.elbLayer`
-2. Ensure the `location.key` check sends one `walker run` per location, also
-   under React StrictMode
-3. Verify location/pathname dependency is working correctly
+1. Check that the browser source has `history: true`
+2. Remove route-change `walker run` calls: with `history` on they send a second
+   page view
+3. A route that reuses its component when only a parameter changes does not
+   fire its tagged elements again: remount it per route, for example with
+   `key={id}`
 
 ## Next steps
 

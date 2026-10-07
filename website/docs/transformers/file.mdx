@@ -103,12 +103,35 @@ Add to your `flow.json`:
 
 ## Cache and file chain
 
-Use native cache on the file transformer to serve cached files from memory, avoiding repeated store reads:
+Put a cache on the source to answer repeated file requests from memory, without reading the store again. A cache on the file transformer itself never stores an entry, because the transformer stops the chain once it responds:
 
 <CodeSnippet
   code={`"sources": {
   "http": {
     "package": "@walkeros/server-source-express",
+    "config": {
+      "settings": { "paths": ["/collect", "/static/*path"] },
+      "ingest": {
+        "map": {
+          "method": { "key": "method" },
+          "path": { "key": "path" }
+        }
+      }
+    },
+    "cache": {
+      "rules": [
+        {
+          "match": {
+            "and": [
+              { "key": "ingest.method", "operator": "eq", "value": "GET" },
+              { "key": "ingest.path", "operator": "prefix", "value": "/static" }
+            ]
+          },
+          "key": ["ingest.method", "ingest.path"],
+          "ttl": 300
+        }
+      ]
+    },
     "next": [
       {
         "match": { "key": "ingest.method", "operator": "eq", "value": "GET" },
@@ -121,12 +144,7 @@ Use native cache on the file transformer to serve cached files from memory, avoi
   "file": {
     "package": "@walkeros/server-transformer-file",
     "config": { "settings": { "prefix": "/static" } },
-    "env": { "store": "$store.files" },
-    "cache": {
-      "rules": [
-        { "match": "*", "key": ["ingest.method", "ingest.path"], "ttl": 300 }
-      ]
-    }
+    "env": { "store": "$store.files" }
   }
 }`}
   language="json"

@@ -120,17 +120,31 @@ export {
   mergeAuthHeaders,
 } from './core/http.js';
 export { createApiClient } from './core/api-client.js';
+export { apiRequest, operationUrl } from './core/api-request.js';
+export type {
+  ApiAuth,
+  ApiRequestInit,
+  ApiTransport,
+  OperationKey,
+  ResponseJson,
+} from './core/api-request.js';
 export {
   fetchHealth,
+  fetchOpenApi,
   compareContract,
-  annotateErrorWithDrift,
+  formatContract,
   canonicalContractHash,
   bakedContractVersion,
   bakedContractHash,
+  bakedClientOperations,
 } from './core/contract.js';
 export type {
   HealthResult,
+  OpenApiResult,
+  ClientOperation,
   ContractVerdict,
+  ContractClient,
+  MissingOperation,
   ContractComparison,
   CompareContractInput,
 } from './core/contract.js';
@@ -170,8 +184,15 @@ export {
   deleteDeployment,
   deleteDeploymentByFlowId,
   DeploymentAmbiguityError,
+  DEPLOYMENT_STATUSES,
+  DEPLOYMENT_TYPES,
+  isDeploymentStatus,
 } from './commands/deployments/index.js';
-export type { DeploymentSummaryForFlow } from './commands/deployments/index.js';
+export type {
+  DeploymentSummaryForFlow,
+  DeploymentStatus,
+  DeploymentType,
+} from './commands/deployments/index.js';
 export {
   listPreviews,
   getPreview,
@@ -257,6 +278,7 @@ export {
   resolveAppUrl,
   setDefaultProject,
   getDefaultProject,
+  resolveProjectId,
   setFeedbackPreference,
   getFeedbackPreference,
 } from './lib/config-file.js';

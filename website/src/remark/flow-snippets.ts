@@ -9,9 +9,8 @@
  * - FlowExample becomes a `figure.flow-example` holding a `StepExample` and a
  *   caption naming the example and its step.
  *
- * Both figures carry `data-export-lang`, one language per rendered code block,
- * for website/src/rehype/export-flow-snippets.ts: Shiki drops the language
- * before HTML, and the Markdown export is converted from that HTML.
+ * website/src/rehype/export-flow-snippets.ts finds both figures by class in
+ * the Markdown export, which is converted from the rendered HTML.
  *
  * An unknown feature id, a pointer that does not resolve, a missing example, a
  * bad attribute or an inline usage fails the build with file and line.
@@ -48,10 +47,6 @@ interface File {
 }
 
 type Component = 'FlowSlice' | 'FlowExample';
-
-/** Past this many lines a slice gets a fixed, scrolling height. */
-const TALL = 30;
-const TALL_HEIGHT = '480px';
 
 // Nodes this plugin emits. Local shapes rather than `mdast` and
 // `mdast-util-mdx-jsx` types, which are transitive dependencies only.
@@ -329,22 +324,17 @@ function sliceNode(
       ],
     };
 
-  const code = renderSlice(value, depth);
+  // No height: CodeView sizes a slice to its code and scrolls past its cap.
   const attributes = [
     attribute('label', entry.pointer),
-    attribute('code', code),
+    attribute('code', renderSlice(value, depth)),
     attribute('language', 'json'),
   ];
-  if (code.split('\n').length > TALL)
-    attributes.push(attribute('height', TALL_HEIGHT));
 
   return {
     type: 'mdxJsxFlowElement',
     name: 'figure',
-    attributes: [
-      attribute('className', 'flow-slice'),
-      attribute('data-export-lang', 'json'),
-    ],
+    attributes: [attribute('className', 'flow-slice')],
     children: [
       {
         type: 'mdxJsxFlowElement',
@@ -372,15 +362,6 @@ function exampleNode(entry: FeatureEntry, flow: unknown): JsxElement {
   if (found.mapping !== undefined) example.mapping = found.mapping;
   example.out = found.out;
 
-  // One language per CodeView, in StepExample's DOM order: Event, [Mapping],
-  // Out. Out is a call list (javascript) when it is an array, as
-  // website/src/components/snippets/StepExample.tsx formats it.
-  const langs = [
-    'json',
-    ...(found.mapping !== undefined ? ['json'] : []),
-    Array.isArray(found.out) ? 'javascript' : 'json',
-  ];
-
   const expression: ExpressionValue = {
     type: 'mdxJsxAttributeValueExpression',
     value: JSON.stringify(example),
@@ -399,10 +380,7 @@ function exampleNode(entry: FeatureEntry, flow: unknown): JsxElement {
   return {
     type: 'mdxJsxFlowElement',
     name: 'figure',
-    attributes: [
-      attribute('className', 'flow-example'),
-      attribute('data-export-lang', langs.join(',')),
-    ],
+    attributes: [attribute('className', 'flow-example')],
     children: [
       {
         type: 'mdxJsxFlowElement',

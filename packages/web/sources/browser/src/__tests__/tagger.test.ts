@@ -1,4 +1,5 @@
 import { createTagger } from '../tagger';
+import { getElbValues } from '../walker';
 import { untypedInput } from './test-utils';
 import type { WalkerOS, Collector } from '@walkeros/core';
 
@@ -344,7 +345,7 @@ describe('Tagger', () => {
 
     test('escapes special characters like other methods', () => {
       const result = createTagger()().scoped('k', "a;b:c'd\\e").get();
-      expect(result).toMatchObject({ 'data-elb_': "k:a\\;b\\:c\\'d\\\\e" });
+      expect(result).toMatchObject({ 'data-elb_': "k:a\\;b:c\\'d\\\\e" });
     });
   });
 
@@ -356,23 +357,54 @@ describe('Tagger', () => {
       });
     });
 
-    test('object with multiple links', () => {
-      const result = createTagger()()
-        .link({ details: 'parent', modal: 'child', sidebar: 'child' })
-        .get();
-      expect(result).toMatchObject({
-        'data-elblink': 'details:parent;modal:child;sidebar:child',
-      });
+    test('object with one link', () => {
+      const result = createTagger()().link({ details: 'parent' }).get();
+      expect(result).toMatchObject({ 'data-elblink': 'details:parent' });
     });
 
-    test('accumulates multiple link calls', () => {
+    test('repeating the same link keeps it', () => {
       const result = createTagger()()
         .link('details', 'parent')
-        .link({ modal: 'child' })
-        .link('sidebar', 'child')
+        .link({ details: 'parent' })
         .get();
+      expect(result).toMatchObject({ 'data-elblink': 'details:parent' });
+    });
+
+    test('an object with several links throws', () => {
+      expect(() =>
+        createTagger()().link({
+          details: 'parent',
+          modal: 'child',
+          sidebar: 'child',
+        }),
+      ).toThrow(
+        'One link per element: data-elblink holds one id and type, got 3 (details, modal, sidebar)',
+      );
+    });
+
+    test.each([
+      ['another id', 'modal', 'child'],
+      ['another type', 'details', 'child'],
+    ])('a second link with %s throws', (_, id, type) => {
+      expect(() =>
+        createTagger()().link('details', 'parent').link(id, type),
+      ).toThrow(
+        `One link per element: data-elblink already holds "details:parent", got "${id}:${type}"`,
+      );
+    });
+
+    test('the rule names the custom prefix', () => {
+      expect(() =>
+        createTagger({ prefix: 'data-track' })()
+          .link('details', 'parent')
+          .link({ modal: 'child' }),
+      ).toThrow('data-tracklink already holds');
+    });
+
+    test('escapes link ids like keys', () => {
+      const result = createTagger()().link("a;b:c'd\\e", 'parent').get();
       expect(result).toMatchObject({
-        'data-elblink': 'details:parent;modal:child;sidebar:child',
+        'data-elblink': "a\\;b\\:c\\'d\\\\e:parent",
       });
     });
   });
@@ -387,10 +419,17 @@ describe('Tagger', () => {
       });
     });
 
-    test('escapes colons in values', () => {
+    test('keeps colons in values unescaped', () => {
       const result = createTagger()().data('key', 'value:with:colons').get();
       expect(result).toMatchObject({
-        'data-elb-': 'key:value\\:with\\:colons',
+        'data-elb-': 'key:value:with:colons',
+      });
+    });
+
+    test('escapes special characters in keys', () => {
+      const result = createTagger()().data("a:b;c'd\\e", 'v').get();
+      expect(result).toMatchObject({
+        'data-elb-': "a\\:b\\;c\\'d\\\\e:v",
       });
     });
 
@@ -413,7 +452,42 @@ describe('Tagger', () => {
     test('escapes complex values', () => {
       const result = createTagger()().context('test', "a;b:c'd\\e").get();
       expect(result).toMatchObject({
-        'data-elbcontext': "test:a\\;b\\:c\\'d\\\\e",
+        'data-elbcontext': "test:a\\;b:c\\'d\\\\e",
+      });
+    });
+  });
+
+  describe('Round-trip through the browser source', () => {
+    function read(attributes: Record<string, string>): WalkerOS.Properties {
+      const el = document.createElement('div');
+      Object.entries(attributes).forEach(([k, v]) => el.setAttribute(k, v));
+      return getElbValues('data-elb', el, '');
+    }
+
+    test.each<[string, WalkerOS.PropertyType]>([
+      ['apostrophe', "Men's shirt"],
+      ['semicolon', 'a;b'],
+      ['colon', 'a:b'],
+      ['backslash', 'back\\slash'],
+      ['surrounding quotes', "'quoted'"],
+      ['only semicolons', ';;'],
+      ['literal escape sequence', 'a\\;b'],
+      ['empty string', ''],
+      ['integer', 42],
+      ['float', 3.14],
+      ['true', true],
+      ['false', false],
+      ['unicode', 'Grüße, 日本 👋'],
+    ])('reads back a value with %s', (_, value) => {
+      expect(read(createTagger()().data('key', value).get())).toEqual({
+        key: value,
+      });
+    });
+
+    test('reads back a key with special characters', () => {
+      const key = "a:b;c'd\\e";
+      expect(read(createTagger()().data(key, 'v').get())).toEqual({
+        [key]: 'v',
       });
     });
   });

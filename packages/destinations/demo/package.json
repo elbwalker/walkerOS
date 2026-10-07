@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/destination-demo",
   "description": "Demo destination for walkerOS - logs events to console",
-  "version": "4.7.0",
+  "version": "4.7.2",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -12,7 +12,7 @@
       "web",
       "server"
     ],
-    "docs": "https://www.walkeros.io/docs/destinations/demo"
+    "docs": "https://www.walkeros.io/docs/destinations"
   },
   "exports": {
     ".": {
@@ -40,7 +40,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@walkeros/core": "4.7.0"
+    "@walkeros/core": "4.7.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

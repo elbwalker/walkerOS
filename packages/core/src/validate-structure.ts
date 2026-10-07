@@ -1,6 +1,7 @@
 import type { Flow } from './types/flow';
 import { isObject } from './is';
 import { validateStepEntry } from './step-entry';
+import { getTransformerMappingWarnings } from './transformer-mapping';
 import {
   validateComponentNames,
   validateReference,
@@ -153,6 +154,7 @@ export function validateStateStores(
  */
 export function validateFlowStructure(flowConfig: Flow.Json): ValidateResult {
   const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
   const details: Record<string, unknown> = {};
 
   const flows = flowConfig.flows;
@@ -219,13 +221,23 @@ export function validateFlowStructure(flowConfig: Flow.Json): ValidateResult {
     const transformers = flow.transformers;
     if (transformers) {
       for (const [name, transformer] of Object.entries(transformers)) {
+        const path = `flows.${flowName}.transformers.${name}`;
         const result = validateStepEntry({ ...transformer }, 'Transformer');
         if (!result.ok) {
           errors.push({
-            path: `flows.${flowName}.transformers.${name}`,
+            path,
             message: result.reason || 'Invalid transformer entry.',
             code: result.code,
           });
+        }
+        // A mapping that never runs, or fields in it that do nothing at
+        // the transformer position, warn: rejecting would skip the step.
+        const { config } = transformer;
+        for (const message of getTransformerMappingWarnings({
+          ...transformer,
+          config: isObject(config) ? config : undefined,
+        })) {
+          warnings.push({ path, message, code: 'TRANSFORMER_MAPPING_NO_OP' });
         }
       }
     }
@@ -250,7 +262,7 @@ export function validateFlowStructure(flowConfig: Flow.Json): ValidateResult {
     valid: errors.length === 0,
     type: 'flow',
     errors,
-    warnings: [],
+    warnings,
     details,
   };
 }

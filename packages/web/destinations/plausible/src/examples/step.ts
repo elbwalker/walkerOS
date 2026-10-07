@@ -62,14 +62,19 @@ export const purchase: Flow.StepExample = {
 export const customEvent: Flow.StepExample = {
   title: 'Custom event',
   description:
-    'A generic entity action fires a Plausible custom event with mapped props and a revenue field.',
+    'A generic entity action fires a Plausible custom event with mapped scalar props.',
   in: getEvent('entity action', { timestamp: 1700000201 }),
   mapping: {
     name: 'Custom Event',
     data: {
       map: {
-        props: 'data',
-        revenue: 'data.number',
+        props: {
+          map: {
+            string: 'data.string',
+            number: 'data.number',
+            boolean: 'data.boolean',
+          },
+        },
       },
     },
   },
@@ -82,9 +87,7 @@ export const customEvent: Flow.StepExample = {
           string: 'foo',
           number: 1,
           boolean: true,
-          array: [0, 'text', false],
         },
-        revenue: 1,
       },
     ],
   ],

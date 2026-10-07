@@ -39,6 +39,19 @@ function spyEnv(env: Env): {
 }
 
 describe('hotjar destination -- step examples', () => {
+  // StepExample renders the description, in, mapping and out, not the
+  // settings an example merges in, so a public example names them.
+  it('public examples name the settings they run with', () => {
+    const unnamed = Object.entries(examples.step).flatMap(([name, example]) =>
+      example.public === false
+        ? []
+        : Object.keys(example.settings ?? {})
+            .filter((key) => !example.description?.includes(`settings.${key}`))
+            .map((key) => `${name}: settings.${key}`),
+    );
+    expect(unnamed).toEqual([]);
+  });
+
   it.each(Object.entries(examples.step))('%s', async (name, rawExample) => {
     const example = rawExample as {
       in?: unknown;

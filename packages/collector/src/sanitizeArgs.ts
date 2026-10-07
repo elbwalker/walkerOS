@@ -1,4 +1,4 @@
-import type { Simulation } from '@walkeros/core';
+import type { FlowState, Simulation } from '@walkeros/core';
 
 /** Depth beyond which sanitizeArgs stops descending and emits a marker. */
 const SANITIZE_MAX_DEPTH = 6;
@@ -107,4 +107,22 @@ export function sanitizeCalls(calls: Simulation.Call[]): Simulation.Call[] {
     args: sanitizeArgs(call.args),
     ts: call.ts,
   }));
+}
+
+/**
+ * Attach the vendor calls recorded during a push to its out or error record,
+ * sanitized. Only when trace capture ran and something was recorded. Build
+ * flag (see @walkeros/core build-flags): a bundle without observe folds this
+ * out.
+ */
+export function attachCalls(
+  state: FlowState,
+  calls: Simulation.Call[] | undefined,
+): void {
+  if (
+    (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__) &&
+    calls &&
+    calls.length > 0
+  )
+    state.calls = sanitizeCalls(calls);
 }
