@@ -46,6 +46,7 @@ import {
 import {
   createFrameManageToolSpec,
   FRAME_NOT_FOUND_HINT,
+  FRAME_FLOW_NOT_FOUND_HINT,
   FRAME_HINT_OPEN_PAGE_OR_GET,
   FRAME_HINT_NAMES_ARE_DOCUMENTATION,
   FRAME_HINT_NONE_YET,
@@ -391,6 +392,7 @@ describe('MCP surface parity', () => {
  */
 
 const FRAME_ID = 'frm_V1StGXR8Z5jdHi6BmyT7K';
+const FLOW_ID = 'flow_1';
 
 function releaseRow(): FlowReleaseWire {
   return {
@@ -827,6 +829,9 @@ describe('MCP surface parity: frame_manage', () => {
   it('pins the two hints a refusal turns into', () => {
     expect(featureDenialHint('frames')).toBe(fixture.frameManage.denialHint);
     expect(FRAME_NOT_FOUND_HINT).toBe(fixture.frameManage.notFoundHint);
+    expect(FRAME_FLOW_NOT_FOUND_HINT).toBe(
+      fixture.frameManage.flowNotFoundHint,
+    );
   });
 
   it('emits exactly the pinned orderings, one per path the fixture names', async () => {
@@ -835,27 +840,35 @@ describe('MCP surface parity: frame_manage', () => {
     const emitted: Record<string, string[]> = {
       list: await frameHintKeysFor(
         { listFrames: async () => ({ frames: [leanFrame()] }) },
-        { action: 'list' },
+        { action: 'list', flowId: FLOW_ID },
       ),
       listEmpty: await frameHintKeysFor(
         { listFrames: async () => ({ frames: [] }) },
-        { action: 'list' },
+        { action: 'list', flowId: FLOW_ID },
       ),
       page: await frameHintKeysFor(
         { listPageFrames: async () => ({ frames: [fullFrame()] }) },
-        { action: 'page', pageKey: 'https://shop.example/cart' },
+        {
+          action: 'page',
+          flowId: FLOW_ID,
+          pageKey: 'https://shop.example/cart',
+        },
       ),
       pageEmpty: await frameHintKeysFor(
         { listPageFrames: async () => ({ frames: [] }) },
-        { action: 'page', pageKey: 'https://shop.example/cart' },
+        {
+          action: 'page',
+          flowId: FLOW_ID,
+          pageKey: 'https://shop.example/cart',
+        },
       ),
       getVariation: await frameHintKeysFor(
         { getFrame: async () => fullFrame({ extends: 'frm_base' }) },
-        { action: 'get', frameId: FRAME_ID },
+        { action: 'get', flowId: FLOW_ID, frameId: FRAME_ID },
       ),
       getBase: await frameHintKeysFor(
         { getFrame: async () => fullFrame() },
-        { action: 'get', frameId: FRAME_ID },
+        { action: 'get', flowId: FLOW_ID, frameId: FRAME_ID },
       ),
     };
 

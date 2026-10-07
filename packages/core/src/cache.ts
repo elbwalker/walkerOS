@@ -7,6 +7,7 @@ import { getByPath, setByPath } from './byPath';
 import { getMappingValue } from './mapping';
 import { wrapCacheEnvelope, readCacheEnvelope } from './cache-envelope';
 import { isStoreValue } from './store/codec';
+import { isThenable } from './is';
 
 interface CompiledCacheRule {
   match: CompiledMatcher;
@@ -119,8 +120,11 @@ export function storeCache(
   // (network error, EACCES) would otherwise surface as an unhandled rejection
   // and crash the process. Swallow it: a failed cache persist must never crash
   // the request path. Matches the best-effort silent catch on the checkCache purge.
+  // A thenable check, not `instanceof Promise`: pages may replace the global
+  // Promise. Promise.resolve adopts a foreign thenable, so a `then` that throws
+  // is swallowed too.
   const result = store.set(key, wrapCacheEnvelope(value, ttlMs), ttlMs);
-  if (result instanceof Promise) result.catch(() => {});
+  if (isThenable(result)) Promise.resolve(result).catch(() => {});
 }
 
 export async function applyUpdate(

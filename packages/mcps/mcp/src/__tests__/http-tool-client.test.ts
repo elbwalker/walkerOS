@@ -671,29 +671,35 @@ describe('HttpToolClient hub and frames delegation', () => {
     jest.mocked(cli.listFrames).mockResolvedValue({ frames: [] });
     jest.mocked(cli.listPageFrames).mockResolvedValue({ frames: [] });
     const client = new HttpToolClient();
-    await expect(client.listFrames({ projectId: 'proj_1' })).resolves.toEqual({
-      frames: [],
-    });
+    await expect(
+      client.listFrames({ projectId: 'proj_1', flowId: 'flow_1' }),
+    ).resolves.toEqual({ frames: [] });
     await expect(
       client.listPageFrames({
         projectId: 'proj_1',
+        flowId: 'flow_1',
         pageKey: 'https://shop.example/',
       }),
     ).resolves.toEqual({ frames: [] });
-    expect(cli.listFrames).toHaveBeenCalledWith({ projectId: 'proj_1' });
+    expect(cli.listFrames).toHaveBeenCalledWith({
+      projectId: 'proj_1',
+      flowId: 'flow_1',
+    });
     expect(cli.listPageFrames).toHaveBeenCalledWith({
       projectId: 'proj_1',
+      flowId: 'flow_1',
       pageKey: 'https://shop.example/',
     });
 
     // The client adds nothing to a failure: the tool layer reads the code.
     const refused = Object.assign(new Error('Frame not found'), {
-      code: 'NOT_FOUND',
+      code: 'FRAME_NOT_FOUND',
     });
     jest.mocked(cli.getFrame).mockRejectedValue(refused);
     await expect(
       client.getFrame({
         projectId: 'proj_1',
+        flowId: 'flow_1',
         frameId: 'frm_V1StGXR8Z5jdHi6BmyT7K',
       }),
     ).rejects.toBe(refused);

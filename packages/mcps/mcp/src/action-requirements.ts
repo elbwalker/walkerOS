@@ -158,12 +158,16 @@ export const PROJECT_MANAGE_REQUIREMENTS: ActionRequirementMap = {
 };
 
 export const FRAME_MANAGE_REQUIREMENTS: ActionRequirementMap = {
+  list: {
+    required: ['flowId'],
+    hint: 'Use flow_manage action "list" to find the flow the frames belong to.',
+  },
   page: {
-    required: ['pageKey'],
-    hint: 'Use action "list" to see the source keys of the project’s frames.',
+    required: ['flowId', 'pageKey'],
+    hint: 'Use flow_manage action "list" to find the flow, and action "list" to see the source keys of its frames.',
   },
   get: {
-    required: ['frameId'],
-    hint: 'Use action "list" or "page" to find a frameId.',
+    required: ['flowId', 'frameId'],
+    hint: 'Use flow_manage action "list" to find the flow, and action "list" or "page" to find a frameId.',
   },
 };

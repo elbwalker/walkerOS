@@ -88,6 +88,26 @@ describe('getMappingEvent', () => {
     });
   });
 
+  test('an unmatched * * rule runs its condition once', async () => {
+    const condition = jest.fn(() => false);
+    const mapping: Mapping.Rules = { '*': { '*': { condition } } };
+
+    // The lookup resolves to * * itself, so the * * fallback has nothing new.
+    expect(
+      await getMappingEvent({ name: 'order complete' }, mapping),
+    ).toStrictEqual({ eventMapping: undefined, mappingKey: '' });
+    expect(condition).toHaveBeenCalledTimes(1);
+
+    // A specific entity without a match still falls back to * *.
+    condition.mockClear();
+    const fallback = await getMappingEvent(
+      { name: 'order complete' },
+      { order: { complete: { condition } }, '*': { '*': { condition } } },
+    );
+    expect(fallback.eventMapping).toBeUndefined();
+    expect(condition).toHaveBeenCalledTimes(2);
+  });
+
   test('condition', async () => {
     const mapping: Mapping.Rules = {
       order: {

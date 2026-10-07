@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "4.7.0+80fb4d79",
+    "version": "4.7.0+338d4329",
     "contact": {
       "name": "elbwalker",
       "url": "https://www.elbwalker.com"
@@ -3740,7 +3740,7 @@
         }
       }
     },
-    "/api/projects/{projectId}/frames": {
+    "/api/projects/{projectId}/flows/{flowId}/frames": {
       "get": {
         "parameters": [
           {
@@ -3750,6 +3750,15 @@
             },
             "required": true,
             "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$"
+            },
+            "required": true,
+            "name": "flowId",
             "in": "path"
           },
           {
@@ -3843,7 +3852,7 @@
         }
       }
     },
-    "/api/projects/{projectId}/frames/{frameId}": {
+    "/api/projects/{projectId}/flows/{flowId}/frames/{frameId}": {
       "get": {
         "parameters": [
           {
@@ -3853,6 +3862,15 @@
             },
             "required": true,
             "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$"
+            },
+            "required": true,
+            "name": "flowId",
             "in": "path"
           },
           {
@@ -6317,7 +6335,8 @@
             "enum": ["drawn", "imported", "observed"]
           },
           "flowId": {
-            "type": ["string", "null"]
+            "type": "string",
+            "pattern": "^flow_[a-zA-Z0-9_-]+$"
           },
           "screenshot": {
             "anyOf": [
@@ -6329,8 +6348,18 @@
               }
             ]
           },
+          "markupAssetId": {
+            "type": ["string", "null"],
+            "pattern": "^fas_[A-Za-z0-9_-]{21}$"
+          },
           "version": {
             "type": "integer"
+          },
+          "lastSavedVersion": {
+            "type": ["integer", "null"]
+          },
+          "lastSavedNumber": {
+            "type": ["integer", "null"]
           },
           "createdAt": {
             "type": "string",
@@ -6364,7 +6393,10 @@
           "origin",
           "flowId",
           "screenshot",
+          "markupAssetId",
           "version",
+          "lastSavedVersion",
+          "lastSavedNumber",
           "createdAt",
           "updatedAt",
           "createdBy",
@@ -6431,7 +6463,8 @@
             "enum": ["drawn", "imported", "observed"]
           },
           "flowId": {
-            "type": ["string", "null"]
+            "type": "string",
+            "pattern": "^flow_[a-zA-Z0-9_-]+$"
           },
           "screenshot": {
             "anyOf": [
@@ -6443,8 +6476,18 @@
               }
             ]
           },
+          "markupAssetId": {
+            "type": ["string", "null"],
+            "pattern": "^fas_[A-Za-z0-9_-]{21}$"
+          },
           "version": {
             "type": "integer"
+          },
+          "lastSavedVersion": {
+            "type": ["integer", "null"]
+          },
+          "lastSavedNumber": {
+            "type": ["integer", "null"]
           },
           "createdAt": {
             "type": "string",
@@ -6477,7 +6520,10 @@
           "origin",
           "flowId",
           "screenshot",
+          "markupAssetId",
           "version",
+          "lastSavedVersion",
+          "lastSavedNumber",
           "createdAt",
           "updatedAt",
           "createdBy",

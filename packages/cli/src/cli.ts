@@ -462,7 +462,7 @@ flowsCmd
 
 flowsCmd
   .command('delete <flowId>')
-  .description('Delete a flow')
+  .description('Delete a flow and its frames')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')

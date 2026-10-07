@@ -113,11 +113,13 @@ export async function initTransformers(
   )) {
     const { code, env = {} } = transformerDef;
 
-    // Validate the entry via the shared predicate. A code-less entry must
-    // declare at least one operative field (package, before, next, cache,
-    // state, mapping). Unknown keys and code+package conflicts are also
-    // rejected. Build flag (see @walkeros/core build-flags): CLI bundles
-    // validate at build time and fold this out.
+    // Validate the entry via the shared predicate: unknown keys, `code` next
+    // to `package` or `import`, `import` without `package` and a malformed
+    // `code` or `import` are rejected. A code-less entry needs no operative
+    // field: it becomes the pass-through below, which runs the mapping
+    // `getTransformerMapping` resolves (`config.mapping`, else `mapping`), if
+    // any. Build flag (see @walkeros/core build-flags): CLI bundles validate
+    // at build time and fold this out.
     if (typeof __WALKEROS_VALIDATE__ === 'undefined' || __WALKEROS_VALIDATE__) {
       const validation = validateStepEntry(
         transformerDef as Record<string, unknown>,

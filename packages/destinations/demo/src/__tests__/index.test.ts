@@ -223,5 +223,22 @@ describe('Demo Destination', () => {
   });
 });
 
+describe('Step Examples', () => {
+  it.each(Object.entries(examples.step))('%s', (name, example) => {
+    const calls: unknown[][] = [];
+
+    destinationDemo.push(
+      example.in,
+      createMockContext({
+        config: {},
+        env: { log: (msg: string) => calls.push(['log', msg]) },
+        id: 'test-destination',
+      }),
+    );
+
+    expect(calls).toEqual(example.out);
+  });
+});
+
 it('declares simulation paths that resolve', () =>
   expectSimulationResolves(examples.env));

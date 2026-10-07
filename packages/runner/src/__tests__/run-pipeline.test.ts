@@ -1,6 +1,7 @@
 import http from 'http';
 import type { PipelineOptions } from '../pipeline.js';
 import type { HealthServer } from '../health-server.js';
+import type { FlowHandle } from '../runner.js';
 
 // Mock all runtime modules
 jest.mock('../health-server.js', () => ({
@@ -305,5 +306,148 @@ describe('runPipeline', () => {
     ).rejects.toBeInstanceOf(RunnerAuthError);
     expect(loadFlow).not.toHaveBeenCalled();
     expect(createHeartbeat).not.toHaveBeenCalled();
+  });
+
+  describe('artifact release check', () => {
+    type Identity = Pick<FlowHandle['collector'], 'name' | 'release'>;
+
+    afterEach(() => {
+      delete process.env.WALKEROS_FLOW_RELEASE;
+      delete process.env.WALKEROS_FLOW_NAME;
+    });
+
+    /**
+     * Boot with `env` set and a bundle that baked `identity` onto its
+     * collector, until the pipeline reports ready or fails. runPipeline never
+     * returns once ready, so readiness is observed through setReady(true).
+     */
+    async function boot(
+      env: Record<string, string>,
+      identity: Identity,
+      options: PipelineOptions = baseOptions,
+    ) {
+      Object.assign(process.env, env);
+      let reportReady = () => {};
+      const ready = new Promise<string>((resolve) => {
+        reportReady = () => resolve('ready');
+      });
+      const setReady = jest.fn((value: boolean) => {
+        if (value) reportReady();
+      });
+      const setFailed = jest.fn();
+      const close = jest.fn().mockResolvedValue(undefined);
+      jest
+        .mocked(createHealthServer)
+        .mockResolvedValueOnce(
+          fakeHealthServer({ setReady, setFailed, close }),
+        );
+      jest.mocked(loadFlow).mockResolvedValueOnce({
+        collector: { command: jest.fn(), ...identity },
+        file: '/tmp/bundle.mjs',
+      });
+
+      const failed = runPipeline(options).catch((error: unknown) => error);
+      const outcome = await Promise.race([ready, failed]);
+      return { outcome, setReady, setFailed, close };
+    }
+
+    it.each<[string, Record<string, string>, Identity, string]>([
+      [
+        'another release',
+        { WALKEROS_FLOW_RELEASE: '42', WALKEROS_FLOW_NAME: 'default' },
+        { name: 'default', release: '41' },
+        'Artifact mismatch: expected default@42, loaded default@41',
+      ],
+      [
+        'another flow name',
+        { WALKEROS_FLOW_RELEASE: '42', WALKEROS_FLOW_NAME: 'web' },
+        { name: 'default', release: '42' },
+        'Artifact mismatch: expected web@42, loaded default@42',
+      ],
+      [
+        'no release',
+        { WALKEROS_FLOW_RELEASE: '42' },
+        { name: 'default' },
+        'Artifact mismatch: expected default@42, loaded default@(none)',
+      ],
+    ])(
+      'refuses an artifact with %s and never reports ready',
+      async (_case, env, identity, message) => {
+        const { outcome, setReady, setFailed, close } = await boot(
+          env,
+          identity,
+        );
+
+        expect(outcome).toEqual(new Error(message));
+        expect(setFailed).toHaveBeenCalledWith(message);
+        expect(setReady).not.toHaveBeenCalledWith(true);
+        expect(close).toHaveBeenCalled();
+      },
+    );
+
+    it.each<[string, Record<string, string>, Identity]>([
+      [
+        'its release and flow name match',
+        { WALKEROS_FLOW_RELEASE: '42', WALKEROS_FLOW_NAME: 'default' },
+        { name: 'default', release: '42' },
+      ],
+      [
+        'no release is expected, whatever the flow name',
+        { WALKEROS_FLOW_NAME: 'web' },
+        { name: 'default', release: '41' },
+      ],
+      [
+        'the expected release is empty',
+        { WALKEROS_FLOW_RELEASE: '' },
+        { name: 'default', release: '41' },
+      ],
+    ])('becomes ready when %s', async (_case, env, identity) => {
+      const { outcome, setFailed } = await boot(env, identity);
+
+      expect(outcome).toBe('ready');
+      expect(setFailed).not.toHaveBeenCalled();
+    });
+
+    it('keeps the deployed release when a secret of the same name is injected', async () => {
+      jest
+        .mocked(fetchSecrets)
+        .mockResolvedValueOnce({ WALKEROS_FLOW_RELEASE: '41' });
+
+      const { outcome } = await boot(
+        { WALKEROS_FLOW_RELEASE: '42' },
+        { name: 'default', release: '41' },
+        {
+          ...baseOptions,
+          api: {
+            appUrl: 'https://app.walkeros.io',
+            token: 'test-token',
+            projectId: 'proj_123',
+            flowId: 'flow_456',
+            heartbeatIntervalMs: 60000,
+            cacheDir: '/tmp/cache',
+          },
+        },
+      );
+
+      expect(outcome).toEqual(
+        new Error('Artifact mismatch: expected default@42, loaded default@41'),
+      );
+    });
+
+    it.each<[Record<string, string>, Identity, string]>([
+      [
+        { WALKEROS_FLOW_RELEASE: '42' },
+        { name: 'default', release: '41' },
+        'Flow: default release 41',
+      ],
+      [{}, {}, 'Flow: (unnamed) release (none)'],
+    ])(
+      'logs the loaded flow at every boot, checked or not',
+      async (env, identity, line) => {
+        await boot(env, identity);
+
+        expect(mockLogger.info).toHaveBeenCalledWith(line);
+      },
+    );
   });
 });

@@ -132,6 +132,14 @@
     "usedBy": ["mcp flow_manage", "walkeros flows duplicate"]
   },
   {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/frames",
+    "usedBy": ["mcp frame_manage"]
+  },
+  {
+    "op": "GET /api/projects/{projectId}/flows/{flowId}/frames/{frameId}",
+    "usedBy": ["mcp frame_manage"]
+  },
+  {
     "op": "GET /api/projects/{projectId}/flows/{flowId}/journeys",
     "usedBy": ["mcp flow_manage", "mcp observe_journeys", "mcp observe_session"]
   },
@@ -226,14 +234,6 @@
   {
     "op": "POST /api/projects/{projectId}/flows/{flowId}/threads/{threadId}/messages",
     "usedBy": ["mcp hub_manage"]
-  },
-  {
-    "op": "GET /api/projects/{projectId}/frames",
-    "usedBy": ["mcp frame_manage"]
-  },
-  {
-    "op": "GET /api/projects/{projectId}/frames/{frameId}",
-    "usedBy": ["mcp frame_manage"]
   },
   {
     "op": "GET /api/projects/{projectId}/knowledge",

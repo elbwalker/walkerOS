@@ -14,7 +14,7 @@ import {
   NO_DEFAULT_PROJECT_ERROR,
   resolveDefaultProject,
 } from './project-context.js';
-import { errorHint } from './feature-gate.js';
+import { codeOf, errorHint } from './feature-gate.js';
 
 /**
  * `frame_manage`: the place dimension of a measurement plan over MCP.
@@ -29,11 +29,11 @@ import { errorHint } from './feature-gate.js';
  * A tool that cannot see the page cannot place a rectangle on it, so writing
  * one from here would be guessing. Editing happens in Tag Mode or the app.
  *
- * Reads are progressive, the same ladder `hub_manage` uses. `list` is the lean
- * project index and never carries marks, because the marks of a whole project
- * are the largest thing this tool could return and are almost never what a
- * caller wanted. `page` opens one page's frames with their marks, and `get`
- * opens exactly one frame.
+ * Frames belong to a flow, so every read names one. Reads are progressive, the
+ * same ladder `hub_manage` uses. `list` is the lean index of the flow and never
+ * carries marks, because the marks of a whole flow are the largest thing this
+ * tool could return and are almost never what a caller wanted. `page` opens
+ * one page's frames with their marks, and `get` opens exactly one frame.
  *
  * It composes with `hub_manage` through ids: a tag id read here is the
  * `markId` that tool's "knowledge" action takes, which is why tag ids stay
@@ -53,7 +53,8 @@ const TITLE = 'Frames';
  */
 export const FRAME_MANAGE_DESCRIPTION =
   'Read the frames of a measurement plan: named rectangles with marks inside them, drawn in Tag Mode or in the app. ' +
-  'Actions: list (every frame of the project, without marks), page (the frames of one page at any depth, with marks), get (one frame with its marks). ' +
+  'Frames belong to a flow: every action takes the flowId of the flow they live in; use flow_manage action "list" to find one. ' +
+  'Actions: list (every frame of the flow, without marks), page (the flow’s frames on one page at any depth, with marks), get (one frame with its marks). ' +
   'Read-only: frames are drawn and edited in Tag Mode or the app, never here. ' +
   'A frame name is documentation; the marks inside it carry the meaning. A frame that extends another stores only what it adds, so its tags may carry only the fields they change. ' +
   'Marks are { tags, note }: tags is one flat list of tags, each with an id, a kind such as entity, property or action, a name, and a parentId naming the tag it sits under; note is the frame’s own description and thread. ' +
@@ -68,13 +69,19 @@ export const FRAME_MANAGE_INPUT_SCHEMA = {
   action: z
     .enum(['list', 'page', 'get'])
     .describe(
-      'list the project’s frames, read one page with marks, or read one frame',
+      'list the flow’s frames, read one page with marks, or read one frame',
     ),
   projectId: z
     .string()
     .optional()
     .describe(
       'Project ID. Optional: falls back to the default project when omitted.',
+    ),
+  flowId: z
+    .string()
+    .optional()
+    .describe(
+      'Flow ID (flow_...). Required for list, page and get: frames belong to a flow. Use flow_manage action "list" to find one.',
     ),
   pageKey: z
     .string()
@@ -110,7 +117,7 @@ export const FRAME_HINT_OPEN_PAGE_OR_GET =
 export const FRAME_HINT_NAMES_ARE_DOCUMENTATION =
   'Frame names are documentation; the marks inside a frame carry the meaning.';
 export const FRAME_HINT_NONE_YET =
-  'This project has no frames yet. Frames are drawn in Tag Mode or the app, not through this tool.';
+  'This flow has no frames yet. Frames are drawn in Tag Mode or the app, not through this tool.';
 export const FRAME_HINT_MARK_SPACE =
   'Tag geometry is fractional: a rect is 0..1 of its frame, and an at is 0..1 of its parent tag’s box, or of the frame for a root tag; a child frame sits inside its parent through placements[].rect.';
 export const FRAME_HINT_READ_KNOWLEDGE =
@@ -121,6 +128,25 @@ export const FRAME_HINT_EXTENDS_BASE =
   'This frame extends another and stores only what it adds; read the base frame (extends) for the rest.';
 export const FRAME_NOT_FOUND_HINT =
   'Use action "list" or "page" to find frame ids.';
+export const FRAME_FLOW_NOT_FOUND_HINT =
+  'Use flow_manage action "list" to find a live flow of the project.';
+
+/**
+ * The hint a refusal carries. The app answers a frame the flow does not hold
+ * with `FRAME_NOT_FOUND` and a flow that is not live with `FLOW_NOT_FOUND`, and
+ * each points at where to find a real one; every other refusal takes the hint
+ * the gated tools share.
+ */
+function frameRefusalHint(error: unknown): string | undefined {
+  switch (codeOf(error)) {
+    case 'FLOW_NOT_FOUND':
+      return FRAME_FLOW_NOT_FOUND_HINT;
+    case 'FRAME_NOT_FOUND':
+      return FRAME_NOT_FOUND_HINT;
+    default:
+      return errorHint(error, 'frames', FRAME_NOT_FOUND_HINT);
+  }
+}
 
 /**
  * The two source keys that stay literal, and only those. `kind` is the
@@ -138,9 +164,9 @@ const keepSourceAddress = (key: string): boolean =>
  * live page, of unbounded size: page content a reader gains nothing from and
  * this tool would otherwise have to wrap. Only the rectangle is kept.
  *
- * `projectId` and `deletedAt` are dropped for a different reason: the caller
- * named the project, and a listing only ever carries live frames, so both
- * would be noise on every row.
+ * `projectId`, `flowId` and `deletedAt` are dropped for a different reason: the
+ * caller named the project and the flow, and a listing only ever carries live
+ * frames, so all three would be noise on every row.
  */
 function serializeLean(frame: FrameLeanWire) {
   return {
@@ -150,7 +176,6 @@ function serializeLean(frame: FrameLeanWire) {
     extends: frame.extends,
     source: redactNestedStrings(frame.source, { skip: keepSourceAddress }),
     origin: frame.origin,
-    flowId: frame.flowId,
     placements: frame.placements.map((placement) => ({
       id: placement.id,
       rect: placement.rect,
@@ -357,11 +382,11 @@ async function frameManageHandler(
   if (!parsed.success) {
     return mcpError(new Error(inputIssuesMessage(parsed.error)));
   }
-  const { action, projectId, pageKey, frameId } = parsed.data;
+  const { action, projectId, flowId, pageKey, frameId } = parsed.data;
   const validationError = validateActionInput(
     'frame_manage',
     action,
-    { pageKey, frameId },
+    { flowId, pageKey, frameId },
     FRAME_MANAGE_REQUIREMENTS,
   );
   if (validationError) return mcpError(new Error(validationError));
@@ -374,8 +399,10 @@ async function frameManageHandler(
 
     switch (action) {
       case 'list': {
+        assertParam(flowId, 'flowId', 'list');
         const { frames } = await client.listFrames({
           projectId: resolvedProjectId,
+          flowId,
         });
         return mcpResult(
           { frames: frames.map(serializeLean) },
@@ -391,9 +418,11 @@ async function frameManageHandler(
         );
       }
       case 'page': {
+        assertParam(flowId, 'flowId', 'page');
         assertParam(pageKey, 'pageKey', 'page');
         const { frames } = await client.listPageFrames({
           projectId: resolvedProjectId,
+          flowId,
           pageKey,
         });
         return mcpResult(
@@ -407,9 +436,11 @@ async function frameManageHandler(
         );
       }
       case 'get': {
+        assertParam(flowId, 'flowId', 'get');
         assertParam(frameId, 'frameId', 'get');
         const frame = await client.getFrame({
           projectId: resolvedProjectId,
+          flowId,
           frameId,
         });
         return mcpResult(
@@ -426,7 +457,7 @@ async function frameManageHandler(
   } catch (error) {
     // `mcpError` lifts a `code` property off the error, so whatever the client
     // raises surfaces its code without a branch here.
-    return mcpError(error, errorHint(error, 'frames', FRAME_NOT_FOUND_HINT));
+    return mcpError(error, frameRefusalHint(error));
   }
 }
 

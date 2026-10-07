@@ -69,11 +69,14 @@ describe('apiRequest', () => {
   });
 
   it('fills the template with each path parameter encoded once', async () => {
-    await apiRequest('GET /api/projects/{projectId}/frames/{frameId}', {
-      path: { projectId: 'proj 1', frameId: 'frm/a%20b' },
-    });
+    await apiRequest(
+      'GET /api/projects/{projectId}/flows/{flowId}/frames/{frameId}',
+      {
+        path: { projectId: 'proj 1', flowId: 'flow?1', frameId: 'frm/a%20b' },
+      },
+    );
     expect(globalSent[0]?.url).toBe(
-      'https://app.test/api/projects/proj%201/frames/frm%2Fa%2520b',
+      'https://app.test/api/projects/proj%201/flows/flow%3F1/frames/frm%2Fa%2520b',
     );
   });
 
