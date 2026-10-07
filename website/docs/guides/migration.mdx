@@ -161,10 +161,10 @@ config: {
 
 **Benefits:**
 
-* Single configuration describing entire tracking setup
-* Full type safety with proper config linking
-* No manual destination registration needed
-* Clean separation between code and configuration
+* One configuration describes the entire tracking setup
+* Full type safety, with configs linked to their packages
+* No manual destination registration
+* Code and configuration stay separate
 
 ## Migration checklist
 
@@ -240,7 +240,7 @@ element takes precedence and applies to all entities.
 
 #### Option 2: use new behavior (recommended for new projects)
 
-Use `data-elbaction` for more precise, performance-optimized tracking:
+Use `data-elbaction` for more precise tracking that fires fewer events:
 
 <CodeSnippet
   code={`<!-- @walkeros - New behavior -->

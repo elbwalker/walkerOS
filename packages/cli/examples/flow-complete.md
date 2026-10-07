@@ -145,9 +145,6 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"page 
   - `express-paths` at `/flows/server/sources/express/config/settings/paths`:
     One route per job, each with its own methods: /collect, /g/collect,
     /walker.js.
-  - `express-port` at `/flows/server/sources/express/config/settings/port`: port
-    lets push --simulate start the source; runneros mounts the handler on its
-    own port.
   - `express-cors` at `/flows/server/sources/express/config/settings/cors`: CORS
     response headers for the shop origin; express adds X-Content-Type-Options
     itself.

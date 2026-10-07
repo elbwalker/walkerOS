@@ -7,7 +7,7 @@ sidebar_position: 3
 
 # Bundled mode
 
-In Bundled mode, you configure walkerOS with JSON files and build standalone bundles using the CLI. The output is a separate file that can be deployed independently of your application.
+In Bundled mode, you configure walkerOS with JSON files and build standalone bundles using the CLI. The output is a separate artifact (one script for web, a directory for server) that can be deployed independently of your application.
 
 ## Quickstart
 
@@ -37,8 +37,8 @@ Create `flow.json`:
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/web-source-browser": {}
+            "@walkeros/collector": { "version": "^4" },
+            "@walkeros/web-source-browser": { "version": "^4" }
           }
         }
       },
@@ -71,9 +71,9 @@ Create `flow.json`:
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/server-source-express": {},
-            "@walkeros/destination-demo": {}
+            "@walkeros/collector": { "version": "^4" },
+            "@walkeros/server-source-express": { "version": "^4" },
+            "@walkeros/destination-demo": { "version": "^4" }
           }
         }
       },
@@ -81,7 +81,7 @@ Create `flow.json`:
         "http": {
           "package": "@walkeros/server-source-express",
           "config": {
-            "settings": { "paths": ["/collect"], "port": 8080 }
+            "settings": { "paths": ["/collect"] }
           }
         }
       },
@@ -110,9 +110,9 @@ Create `flow.json`:
   language="bash"
 />
 
-This writes the bundle to stdout. Use `-o` to write to a file:
+This writes the bundle to stdout. Use `-o` to write to disk:
 - **Web**: `-o ./dist/walker.js` (IIFE format, loadable via script tag)
-- **Server**: `-o ./dist/` (a directory: ESM `flow.mjs`, `package.json` and the traced `node_modules/`)
+- **Server**: `-o ./dist/` (writes `dist/flow.mjs` in ESM format plus `dist/package.json` and `dist/node_modules/`; ship the whole directory)
 
 ### 4. Deploy
 
@@ -128,7 +128,7 @@ Add to your HTML:
   </TabItem>
   <TabItem value="server" label="Server">
 
-Start the artifact with the runtime:
+Start the bundle with the runtime (`flow.mjs` exports a start function, so plain `node` does not start it):
 
 ```bash
 npx --package=@walkeros/runner runneros start dist/flow.mjs
@@ -139,6 +139,8 @@ Or with Docker, mounting the whole directory:
 ```bash
 docker run -p 8080:8080 -v "$PWD/dist:/app/flow:ro" walkeros/flow:<version>
 ```
+
+For containers, see [Docker deployment](#docker-deployment) below.
 
   </TabItem>
 </Tabs>
@@ -158,10 +160,10 @@ Add destinations to your `flow.json`:
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/collector": {},
-            "@walkeros/web-source-browser": {},
-            "@walkeros/web-destination-api": {},
-            "@walkeros/web-destination-gtag": {}
+            "@walkeros/collector": { "version": "^4" },
+            "@walkeros/web-source-browser": { "version": "^4" },
+            "@walkeros/web-destination-api": { "version": "^4" },
+            "@walkeros/web-destination-gtag": { "version": "^4" }
           }
         }
       },
@@ -228,6 +230,8 @@ Set consent at runtime:
 // After loading walker.js
 elb('walker consent', { functional: true, analytics: true });
 ```
+
+Until a destination's required consent is granted, its events wait in an in-memory queue and are delivered once `walker consent` grants it. The queue holds up to 1000 events per destination by default; when it is full, the oldest events are dropped. Change the limit with `config.queueMax` on the destination, see [buffer bounds](/docs/collector#buffer-bounds).
 
 ---
 
@@ -311,7 +315,7 @@ Build specific flow: `walkeros bundle flow.json --flow production`
 | Command | Purpose |
 |---------|---------|
 | `walkeros bundle` | Build production bundle |
-| `walkeros push --simulate` | Test with mocked events |
+| `walkeros push --simulate` | Test with mocked destinations |
 | `walkeros push` | Test with real API calls |
 | `runneros start` | Run a built server flow (the separate `@walkeros/runner` package) |
 
@@ -324,10 +328,10 @@ See [CLI documentation](/docs/apps/cli) for full details.
 For production server deployments:
 
 <CodeSnippet
-  code={`# Build the artifact directory
-walkeros bundle flow.json -o dist/
+  code={`# Build the bundle directory
+walkeros bundle flow.json -o ./dist/
 
-# Run with Docker
+# Run with Docker (the image expects flow.mjs in /app/flow)
 docker run -d -p 8080:8080 \\
   -v "$PWD/dist:/app/flow:ro" \\
   walkeros/flow:<version>`}

@@ -4,9 +4,8 @@ sidebar_position: 6
 description: Compare walkerOS and Snowplow to understand which solution fits your needs.
 ---
 
-[Snowplow](https://snowplow.io/) is a behavioral data platform founded in 2012,
-offering both open-source and enterprise solutions for event data collection.
-Here's how it compares to walkerOS.
+[Snowplow](https://snowplow.io/) is a behavioral data platform founded in 2012
+that offers both open-source and enterprise solutions for event data collection.
 
 ## Quick comparison
 
@@ -37,22 +36,21 @@ Here's how it compares to walkerOS.
 
 - You want something lightweight and quick to set up
 - You're a developer or small team without dedicated data engineers
-- You need flexibility beyond just data warehouse destinations
-- You prefer truly open-source (MIT license) over restricted licenses
+- You need destinations beyond data warehouses
+- You prefer an MIT license over restricted licenses
 - You want to start free and scale as needed
 
 ## Key differences
 
 ### Complexity and setup
 
-**Snowplow:** Enterprise-grade infrastructure designed for large-scale data
-operations. Requires significant setup time and often dedicated data engineering
-resources. The open-source version needs self-hosting expertise; the managed BDP
-starts at $800/month.
+**Snowplow:** Infrastructure built for large-scale data operations. Setup takes
+significant time and often dedicated data engineering resources. The open-source
+version needs self-hosting expertise, and the managed BDP starts at $800/month.
 
-**walkerOS:** Lightweight and developer-friendly. Get started in hours, not
-weeks. Designed for teams that want tracking infrastructure without the
-complexity of enterprise data platforms.
+**walkerOS:** Lightweight and developer-friendly, with setup measured in hours
+rather than weeks. It is meant for teams that want tracking infrastructure
+without the complexity of an enterprise data platform.
 
 ### Licensing
 
@@ -60,8 +58,8 @@ complexity of enterprise data platforms.
 Agreement (SLULA), which restricts commercial use. Full commercial use requires
 their enterprise offering.
 
-**walkerOS:** MIT licensed. Use it however you want: commercially, modify it,
-fork it. No restrictions.
+**walkerOS:** MIT licensed. You can use it commercially, modify it, and fork it
+without restrictions.
 
 ### Cost
 
@@ -69,20 +67,20 @@ fork it. No restrictions.
 "free" but requires significant infrastructure and engineering investment.
 Enterprise tiers (Basecamp, Ascent, Summit) scale up with custom pricing.
 
-**walkerOS:** The software is free and open-source. You pay for your own
-infrastructure costs. Optional paid services include implementation support
-(setup fees) and SLAs for teams that want help getting started or need
-guaranteed support.
+**walkerOS:** The software is free and open-source, and you pay for your own
+infrastructure. Optional paid services include implementation support (setup
+fees) and SLAs for teams that want help getting started or need guaranteed
+support.
 
 ### Focus and philosophy
 
-**Snowplow:** Built as comprehensive customer data infrastructure (CDI) for
-feeding data warehouses and powering analytics at scale. Designed for data teams
-building sophisticated data products.
+**Snowplow:** Customer data infrastructure (CDI) for feeding data warehouses and
+powering analytics at scale, aimed at data teams building sophisticated data
+products.
 
-**walkerOS:** Built as flexible event collection and routing. Send data anywhere:
-analytics tools, data warehouses, marketing platforms, or your own APIs.
-Designed for developers who want control without complexity.
+**walkerOS:** Event collection and routing that sends data anywhere: analytics
+tools, data warehouses, marketing platforms, or your own APIs. It is aimed at
+developers who want control without that complexity.
 
 ### When they overlap
 
@@ -92,16 +90,16 @@ Both solutions can:
 - Send data to warehouses and other destinations
 - Handle consent management
 
-The difference is scale and complexity. Snowplow is a full data platform;
+Where they differ is scale and complexity: Snowplow is a full data platform, and
 walkerOS is focused event infrastructure.
 
 ## Can they work together?
 
-Yes! You can use walkerOS for event collection and send data to Snowplow as a
-destination. This gives you walkerOS's composable tagging and consent handling
-on the frontend, with Snowplow's data infrastructure on the backend.
+Yes. You can use walkerOS for event collection and send the data to Snowplow as
+a destination. walkerOS then handles composable tagging and consent on the
+frontend, and Snowplow's data infrastructure runs on the backend.
 
-### Using the Snowplow Destination
+### Using the Snowplow destination
 
 The `@walkeros/web-destination-snowplow` package provides full integration:
 
@@ -125,7 +123,7 @@ const { elb } = await startFlow({
 });
 ```
 
-**Features include:**
+It supports:
 
 - Full ecommerce tracking (product views, cart actions, transactions)
 - Cross-session user identity via `setUserId`
@@ -140,5 +138,5 @@ full configuration options.
 
 ## Getting started
 
-Ready to try walkerOS? Check out the [quickstart guide](/docs/) to set up
-lightweight event collection without enterprise complexity.
+The [quickstart guide](/docs/) shows how to set up lightweight event collection
+without enterprise complexity.

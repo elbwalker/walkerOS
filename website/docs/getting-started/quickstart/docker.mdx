@@ -6,41 +6,27 @@ sidebar_position: 3
 
 # Docker
 
-Build a flow with the CLI, then run it in the `walkeros/flow` image. The image
-runs prebuilt artifacts only, so every Docker path starts with
-`walkeros bundle`.
+The `walkeros/flow` image runs a flow bundle you build with the CLI. It runs prebuilt artifacts only, so every Docker path starts with `walkeros bundle`. This quickstart builds a small collector, runs it in a container, and sends it an event.
 
-## 1. Write a flow
+You need [Docker](https://docs.docker.com/get-docker/), Node.js, and network access to npm (the CLI downloads the packages your flow names).
 
-Save as `flow.json`: an HTTP endpoint at `/collect` that logs every event it
-receives.
+## 1. Create a flow
+
+Save this as `flow.json`. The Express source receives events on `/collect`, and the demo destination logs each event's `name` and `data`:
 
 <CodeSnippet
   code={`{
   "version": 4,
   "flows": {
     "default": {
-      "config": {
-        "platform": "server",
-        "bundle": {
-          "packages": {
-            "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
-            "@walkeros/server-source-express": { "version": "latest" },
-            "@walkeros/destination-demo": { "version": "latest" }
-          }
-        }
-      },
+      "config": { "platform": "server" },
       "sources": {
-        "http": {
-          "package": "@walkeros/server-source-express",
-          "primary": true,
-          "config": { "settings": { "paths": ["/collect"], "port": 8080, "cors": true } }
-        }
+        "http": { "package": "@walkeros/server-source-express" }
       },
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
-          "config": { "settings": { "name": "Demo" } }
+          "config": { "settings": { "values": ["name", "data"] } }
         }
       }
     }
@@ -51,12 +37,17 @@ receives.
 
 ## 2. Bundle it
 
-<CodeSnippet code={`npx @walkeros/cli bundle flow.json -o dist/`} language="bash" />
+<CodeSnippet
+  code={`npm install -g @walkeros/cli
+walkeros bundle flow.json -o dist/`}
+  language="bash"
+/>
 
-This writes the artifact directory `dist/`: `flow.mjs`, `package.json` and
-the traced `node_modules/`.
+This writes `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The packages stay in `node_modules/`, so the container needs the whole directory, not `flow.mjs` alone.
 
-## 3. Run it
+## 3. Run the container
+
+Mount the bundle directory at `/app/flow`, where the image expects `flow.mjs`:
 
 <CodeSnippet
   code={`docker run --rm -p 8080:8080 \\
@@ -65,32 +56,52 @@ the traced `node_modules/`.
   language="bash"
 />
 
-Replace `<version>` with a `walkeros/flow` version that ships `runneros`,
-ideally the CLI version you bundled with, see
-[image tags](/docs/apps/runtime#image-tags). The image starts
-`/app/flow/flow.mjs` by default, so the mount is all it needs.
+Replace `<version>` with a `walkeros/flow` version that ships `runneros`, ideally the CLI version you bundled with, see [image tags](/docs/apps/runtime#image-tags). If the runtime exits with `Flow artifact not found`, check the mount path.
 
 ## 4. Send an event
 
-<CodeSnippet
-  code={`curl http://localhost:8080/ready
+In another terminal:
 
-curl -X POST http://localhost:8080/collect \\
+<CodeSnippet
+  code={`curl -X POST http://localhost:8080/collect \\
   -H "Content-Type: application/json" \\
   -d '{"name":"page view","data":{"title":"Home"}}'`}
   language="bash"
 />
 
-`/ready` answers `{"status":"ready"}` once the flow is up, and the container
-log shows the event arriving at the demo destination.
+The response is `{"success":true,"timestamp":...}`, and the container log shows the event:
 
-## Bake it into an image
+<CodeSnippet
+  code={`[demo] {
+  "name": "page view",
+  "data": {
+    "title": "Home"
+  }
+}`}
+  language="bash"
+/>
 
-For deployment, build the artifact inside a multi-stage Dockerfile so the
-image carries it. Use the
-[canonical Dockerfile](/docs/apps/runtime#canonical-dockerfile).
+`GET http://localhost:8080/health` returns `{"status":"ok"}` while the container runs, and `GET http://localhost:8080/ready` returns `{"status":"ready"}` once the flow is up.
 
-## Docker Compose
+## Build a custom image
+
+Bake the bundle into your own image instead of mounting it:
+
+<CodeSnippet
+  code={`FROM walkeros/flow:<version>
+COPY dist/ /app/flow/`}
+  language="docker"
+/>
+
+<CodeSnippet
+  code={`docker build -t my-walker .
+docker run -p 8080:8080 my-walker`}
+  language="bash"
+/>
+
+To build the artifact inside Docker as well, use the [canonical Dockerfile](/docs/apps/runtime#canonical-dockerfile).
+
+## Docker compose
 
 <CodeSnippet
   code={`services:
@@ -103,6 +114,27 @@ image carries it. Use the
     restart: unless-stopped`}
   language="yaml"
 />
+
+## Single-file archive
+
+To ship one file instead of a directory, bundle to an archive and point `BUNDLE` at it. The runtime extracts it into `/app/flow/` at startup, so leave that directory writable:
+
+<CodeSnippet
+  code={`walkeros bundle flow.json -o flow.tar.gz
+
+docker run --rm -p 8080:8080 \\
+  -v "$PWD/flow.tar.gz:/app/bundle/flow.tar.gz:ro" \\
+  -e BUNDLE=/app/bundle/flow.tar.gz \\
+  walkeros/flow:<version>`}
+  language="bash"
+/>
+
+## Environment variables
+
+| Variable | Description                                                 | Default              |
+| -------- | ----------------------------------------------------------- | -------------------- |
+| `BUNDLE` | Artifact path or URL (`.mjs`, `.js`, `.cjs`, `.tar.gz`, `.tgz`) | `/app/flow/flow.mjs` |
+| `PORT`   | Server port                                                 | `8080`               |
 
 ## Next steps
 

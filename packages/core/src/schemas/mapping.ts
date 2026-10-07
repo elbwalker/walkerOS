@@ -231,24 +231,74 @@ export const PolicySchema = z
   .describe('Policy rules for event pre-processing (key → value mapping)');
 
 // ========================================
+// Patch Schemas (Rule.extend)
+// ========================================
+
+// An `extend` patch is deep-merged by mergeMappingRule: a null at any object
+// key clears the inherited key, arrays replace as a whole. These schemas
+// accept null exactly there, so normal mapping values stay null-free.
+
+const ConsentPatchSchema = z.record(z.string(), z.boolean().nullable());
+
+let ValueConfigPatchSchemaLazy: z.ZodTypeAny;
+
+const ValuePatchSchema: z.ZodTypeAny = z
+  .lazy(() =>
+    z.union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+      z.lazy(() => ValueConfigPatchSchemaLazy),
+      z.array(ValueSchema),
+    ]),
+  )
+  .meta({
+    id: 'MappingValuePatch',
+    title: 'Mapping.ValuePatch',
+    description:
+      'A Mapping.Value inside `extend`; a null at an object key clears the inherited key.',
+  });
+
+const MapPatchSchema = z.record(z.string(), ValuePatchSchema.nullable());
+
+ValueConfigPatchSchemaLazy = z
+  .object({
+    key: z.string().nullable().optional(),
+    value: z.union([z.string(), z.number(), z.boolean()]).nullable().optional(),
+    fn: z.string().nullable().optional(),
+    map: MapPatchSchema.nullable().optional(),
+    loop: LoopSchema.nullable().optional(),
+    set: SetSchema.nullable().optional(),
+    consent: ConsentPatchSchema.nullable().optional(),
+    condition: z.string().nullable().optional(),
+    validate: z.string().nullable().optional(),
+  })
+  .meta({
+    id: 'MappingValueConfigPatch',
+    title: 'Mapping.ValueConfigPatch',
+    description:
+      'A Mapping.ValueConfig inside `extend`; a null value clears the inherited field.',
+  });
+
+// ========================================
 // Mapping Rule Schemas
 // ========================================
 
 export const RulePatchSchema = z
   .object({
     name: z.string().nullable().optional(),
-    data: z.union([ValueSchema, ValuesSchema]).nullable().optional(),
+    data: z.union([ValuePatchSchema, ValuesSchema]).nullable().optional(),
     settings: z.unknown().nullable().optional(),
     condition: z.string().nullable().optional(),
-    consent: ConsentSchema.nullable().optional(),
-    policy: PolicySchema.nullable().optional(),
+    consent: ConsentPatchSchema.nullable().optional(),
+    policy: MapPatchSchema.nullable().optional(),
     batch: z
       .union([
         z.number(),
         z.object({
-          wait: z.number().optional(),
-          size: z.number().optional(),
-          age: z.number().optional(),
+          wait: z.number().nullable().optional(),
+          size: z.number().nullable().optional(),
+          age: z.number().nullable().optional(),
         }),
       ])
       .nullable()

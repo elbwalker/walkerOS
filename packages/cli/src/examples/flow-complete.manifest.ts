@@ -374,14 +374,6 @@ const teaching = {
     docs: [],
     example: { step: 'express', name: 'postCollect' },
   },
-  'express-port': {
-    pointer: '/flows/server/sources/express/config/settings/port',
-    chapter: 'server-entry',
-    level: 'beginner',
-    useCases: [],
-    note: 'port lets push --simulate start the source; runneros mounts the handler on its own port.',
-    docs: [],
-  },
   'express-cors': {
     pointer: '/flows/server/sources/express/config/settings/cors',
     chapter: 'server-entry',

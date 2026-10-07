@@ -1,5 +1,5 @@
 ---
-title: Consent management
+title: CMP sources
 description: Automate consent handling with walkerOS CMP source packages
 ---
 
@@ -45,15 +45,6 @@ events:
       "package": "@walkeros/web-source-datalayer",
       "config": { "require": ["consent"] }
     }
-  },
-  "destinations": {
-    "ga4": {
-      "package": "@walkeros/web-destination-gtag",
-      "config": {
-        "require": ["consent"],
-        "consent": { "marketing": true }
-      }
-    }
   }
 }`}
   language="json"
@@ -64,13 +55,14 @@ In this example the CMP source initializes immediately and calls
 dataLayer source holds back its `run` delivery, so the dataLayer entries that
 existed before its `init()` ran are replayed only after a consent state is
 recorded. `require` does not stop a source from capturing: entries pushed to
-the dataLayer after its `init()` ran enter the flow at once. The GA4
-destination stays pending until a consent state is recorded.
+the dataLayer after its `init()` ran enter the flow at once. To drop a source's
+events without consent, set the source's `config.consent` (see the
+[consent guide](/docs/guides/consent#gate-a-source-with-consent)).
 
 ### How `require` works
 
 1. Sources are registered immediately and their `Instance.init()` runs eagerly
-   after registration. `require` does not block init — it gates `on()`
+   after registration. `require` does not block init; it gates `on()`
    delivery. Lifecycle events targeted at a source with unmet `require` are
    buffered in `Instance.queueOn`.
 2. Destinations with `require` are held as **pending** during initialization
@@ -113,6 +105,10 @@ source factory. The factory stays side-effect free; the consent emit happens
 once the collector runs the source's `init()`. Combined with the current-state
 `require` matching above, a `require: ["consent"]` step activates whichever
 source recorded the consent, and whenever it did.
+
+When several CMP categories map to the same walkerOS group, the CookieFirst
+and CookiePro sources grant the group if any of them is granted, and the
+Usercentrics source grants it only if all of them are.
 
 The CookiePro and Usercentrics sources support `explicitOnly` (default:
 `true`) to skip implicit or default consent and report only active user

@@ -42,7 +42,7 @@ await startFlow({
    self-unwraps after the first call.
 
 3. **OneTrustGroupsUpdated event**: Listens for the `OneTrustGroupsUpdated`
-   window event, which fires on every consent change.
+   window event and re-reads `OptanonActiveGroups` each time it fires.
 
 4. **Parsing**: Splits the `OptanonActiveGroups` comma-separated string, maps
    category IDs through `categoryMap`, and calls `elb('walker consent', state)`.
@@ -71,6 +71,10 @@ Category ID comparison is case-insensitive. Unmapped category IDs are ignored
 since CookiePro's opaque IDs are meaningless without a mapping. All mapped
 walkerOS groups receive explicit `true`/`false` values. Absent groups are set
 to `false` so destinations know which consent is denied.
+
+When several category IDs map to the same group, the group is `true` if any of
+them is active. With the default mapping, `C0001` (Strictly Necessary) keeps
+`functional` granted even when the visitor denies `C0003` (Functional).
 
 Custom entries are merged with the default mapping. Specify only the categories
 you want to override. All other defaults remain active.

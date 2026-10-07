@@ -16,6 +16,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createRequire } from 'node:module';
 
 const createJiti = createRequire(import.meta.url)('jiti');
+const { escapeMarkdownHeadingIds } = createRequire(import.meta.url)('@docusaurus/utils');
 
 // Run with tsx: the plugins and the manifest use extensionless imports.
 const WEBSITE = new URL('..', import.meta.url).pathname;
@@ -208,7 +209,7 @@ describe('docs transform: node shapes', () => {
     assert.equal(attrValue(code.node, 'code'), oracle(value));
   });
 
-  for (const id of ['express-port', 'browser-pageview', 'platform']) {
+  for (const id of ['cache-ttl', 'browser-pageview', 'platform']) {
     test(`scalar slice ${id} becomes a plain paragraph, no JSX`, () => {
       const e = entry(id);
       const value = resolvePointer(FLOW, e.pointer);
@@ -577,7 +578,8 @@ describe('real docs', () => {
       tags += (source.match(/<Flow(Slice|Example)\b/g) ?? []).length;
       // Docusaurus strips front matter before MDX; keep line numbers.
       const body = source.replace(/^---\n[\s\S]*?\n---\n/, (m) => '\n'.repeat(m.split('\n').length - 1));
-      const tree = transform(body, { path: relative(WEBSITE, path) });
+      // Its mdx-loader preprocessor also escapes {#id} heading anchors.
+      const tree = transform(escapeMarkdownHeadingIds(body), { path: relative(WEBSITE, path) });
       const left = findAll(tree, (n) => isJsx('FlowSlice')(n) || isJsx('FlowExample')(n));
       assert.equal(left.length, 0, relative(WEBSITE, path));
       const imports = findAll(tree, (n) => n.type === 'mdxjsEsm' && /Flow(Slice|Example)/.test(n.value));
@@ -700,7 +702,7 @@ describe('validate-llms: snippet pages keep a json export', () => {
   });
   test('a page with only scalar slices needs no fence; pages without tags are ignored', async () => {
     const { needsJsonFence } = await llms();
-    assert.equal(needsJsonFence('<FlowSlice feature="express-port" />', FLOW), false);
+    assert.equal(needsJsonFence('<FlowSlice feature="cache-ttl" />', FLOW), false);
     assert.equal(needsJsonFence('<FlowSlice feature="express-paths" />', FLOW), true);
     assert.deepEqual(await run('# no snippets', undefined), []);
   });

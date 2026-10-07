@@ -129,7 +129,7 @@ Build-time configuration lives under `flows.<name>.config.bundle`. The `packages
 />
 
 **`packages` properties:**
-- **`version`** - npm version (semver or "latest", defaults to "latest")
+- **`version`** - An exact npm version, a semver range, or a tag. Defaults to `"latest"`. A major range such as `"^4"` picks up new minor and patch releases without jumping to the next major version. `walkeros validate` warns about packages that set neither `version` nor `path`, and `--strict` turns that warning into a failing exit code.
 - **`imports`** - Array of named exports to import
 - **`path`** - Local filesystem path (takes precedence over `version`)
 
@@ -188,7 +188,6 @@ Sources capture events from various inputs. Each source needs:
       "config": {
         "settings": {
           "paths": ["/collect"],
-          "port": 8080,
           "cors": true
         }
       }
@@ -503,8 +502,9 @@ For browser bundles, you can configure the collector's window variable name via
 
 The `window.elb` function is owned by the browser source: set `elb` in the
 browser source's `config.settings` to change its global name (default:
-`"elb"`). The former `windowElb` setting is deprecated; when set, its value is
-forwarded to the browser source's `settings.elb` with a warning.
+`"elb"`). If the deprecated `config.settings.windowElb` is set, the CLI forwards its value to
+the browser source's `settings.elb` and logs a warning; if that source already
+sets `elb`, `windowElb` is ignored.
 
 ## Multi-flow configuration
 
@@ -521,7 +521,7 @@ walkeros bundle flow.json --flow web
 # Build the server flow
 walkeros bundle flow.json --flow server
 
-# Build all flows (--all needs an output directory)
+# Build all flows (--all needs an output directory, one subfolder per flow)
 walkeros bundle flow.json --all -o dist/all`}
   language="bash"
 />
@@ -638,7 +638,7 @@ walkerOS uses a clear type hierarchy:
 │       └── default: Flow                                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ CLI resolves $var, $env, $flow
+                              │ CLI resolves $var, $env, $flow, $contract, $secret
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  Flow (resolved flow)                                           │

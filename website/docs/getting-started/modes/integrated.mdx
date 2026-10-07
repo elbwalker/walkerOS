@@ -127,6 +127,8 @@ elb('walker consent', { functional: true, analytics: true });`}
   language="typescript"
 />
 
+Until a destination's required consent is granted, its events wait in an in-memory queue and are delivered once `walker consent` grants it. The queue holds up to 1000 events per destination by default; when it is full, the oldest events are dropped. Change the limit with `config.queueMax` on the destination, see [buffer bounds](/docs/collector#buffer-bounds).
+
 ---
 
 ## Key concepts

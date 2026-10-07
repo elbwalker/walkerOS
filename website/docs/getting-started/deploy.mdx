@@ -29,13 +29,15 @@ stages are kept apart.
 
 <CodeSnippet code={`npx @walkeros/cli bundle flow.json -o dist/`} language="bash" />
 
-A server flow builds to a **directory**, `dist/` holding `flow.mjs`,
-`package.json` and `node_modules/`. Always ship the whole directory. A web
-flow builds to a single `dist/walker.js` that any static host can serve.
+For a server flow this writes `dist/flow.mjs`, `dist/package.json`, and
+`dist/node_modules/`. The step packages load from `node_modules/`, so ship the
+whole directory, not `flow.mjs` alone. A web flow builds to a single
+`dist/walker.js` that any static host can serve.
 
 ## Run it yourself
 
-**Docker**, the standard path. Mount the directory where the image expects it:
+**Docker**, the standard path. Mount the bundle directory at `/app/flow`, where
+the image expects `flow.mjs`:
 
 <CodeSnippet
   code={`docker run -d -p 8080:8080 \\
@@ -49,7 +51,8 @@ as the CLI that built the artifact, see [image tags](/docs/apps/runtime#image-ta
 For a self-contained image, use the
 [canonical Dockerfile](/docs/apps/runtime#canonical-dockerfile).
 
-**Node**, without Docker:
+**Node, from the bundle**. `flow.mjs` exports a start function and does not run
+on its own with `node`; `runneros` starts it, without Docker:
 
 <CodeSnippet
   code={`npx --package=@walkeros/runner runneros start dist/flow.mjs`}

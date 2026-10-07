@@ -199,7 +199,7 @@ Here is a complete flow config with examples on a source, transformer, and desti
   language="json"
 />
 
-The `ga4` destination runs `validate` in its `before` chain, so [cross-step validation](#cross-step-validation) checks the transformer's `out` against the destination's `in`.
+The `ga4` destination runs `validate` in its `before` chain, so [cross-step validation](#validate-examples) checks the transformer's `out` against the destination's `in`.
 
 Examples are stripped by the bundler at build time. They never appear in your production bundle.
 
@@ -215,34 +215,24 @@ walkeros push flow.json --simulate destination.ga4 --event '{"name":"page view",
   language="bash"
 />
 
-The CLI runs the event through the flow with the step mocked and prints what the step did: for a destination, the matched mapping rule and every recorded vendor call. See [simulation output](/docs/apps/cli#simulation-output).
+The CLI runs the event through the flow with the step mocked and prints what the step did: for a destination, the matched mapping rule and every recorded vendor call. See [simulation output](/docs/apps/cli#simulation-output). It does not compare anything against the step's `out` and exits with code 1 only when the push fails with an error, so a mapping that produces the wrong output still exits 0. To assert on `out`, run the examples in your own tests (see [Using examples in tests](#using-examples-in-tests)).
 
 ### Validate examples
 
-Check that examples match expected shapes without running the full pipeline:
+`walkeros validate` checks examples statically. It does not run any step:
 
 <CodeSnippet
   code={`walkeros validate flow.json`}
   language="bash"
 />
 
-### Cross-step validation
+For steps connected through `next` (source to transformer, transformer to transformer) or a destination's `before` chain, it checks that at least one `out` of the upstream step is structurally compatible with an `in` of the downstream step. Both values must have the same type. Two objects are compatible when they share at least half of the keys of the object with fewer keys; any two arrays are compatible regardless of their content. This is a shape check, not an equality check. An `out` written as effects is read for the events it passes on: `[["elb", event]]` and `[["return", { "event": ... }]]` pass the event, `[["return", [...]]]` passes each item, and `["return", false]`, `message.ack`, `response` or vendor calls pass nothing.
 
-Cross-step example validation is included automatically when validating a flow. It verifies that connected steps (source → transformer → destination) have structurally compatible `out`/`in` pairs:
-
-<CodeSnippet
-  code={`walkeros validate flow.json`}
-  language="bash"
-/>
-
-Cross-step validation checks that:
-- Source `out` types match transformer `in` types
-- Transformer `out` types match destination `in` types
+- No compatible pair is an error.
 - A connection is only checked when both steps declare `examples`. If either step has no `examples` key, nothing is checked and no warning is produced.
 - When both steps declare `examples` but one side has no usable value, the connection produces a warning. An upstream `out` counts when it passes on at least one event; empty values such as `out: []` are skipped. A downstream `in` counts unless its example sets `command`.
-- Each `@walkeros/transformer-validate` step's own examples agree with its linked contract and settings (see [Validate](/docs/getting-started/flow/validate#design-time-checks)); examples of other steps are not checked against contracts
-
-An `out` written as effects is read for the events it passes on: `[["elb", event]]` and `[["return", { "event": ... }]]` pass the event, `[["return", [...]]]` passes each item, and `["return", false]`, `message.ack`, `response` or vendor calls pass nothing.
+- Other chains, such as a source's or transformer's `before`, a destination's `next` or `collector.next`, and steps without these fields are not checked.
+- Each `@walkeros/transformer-validate` step's own examples agree with its linked contract and settings (see [Validate](/docs/getting-started/flow/validate#design-time-checks)); examples of other steps are not checked against contracts.
 
 ## Using examples in tests
 

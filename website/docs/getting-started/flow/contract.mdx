@@ -38,7 +38,7 @@ A contract is a single, inheritable description of what your events should look 
 - **Inheritance.** Layer additional rules on top with `extend` (for example, `web_loggedin` extend `web` extend `default`) rather than copying.
 - **Versioned.** `tagging` tracks contract revisions alongside the events they govern.
 - **Self-documenting.** Each schema is JSON Schema, so `description` and `examples` annotate fields the same way humans and tools read them.
-- **Decoupled from enforcement.** The contract describes what events should look like; the validate transformer enforces it where you place it in the pipeline.
+- **Decoupled from enforcement.** The validate transformer enforces the contract wherever you place it in the pipeline.
 - **Composable with the rest of the config.** Reference fragments anywhere via `$contract.<name>.<path>` (see [Reference syntax](/docs/guides/reference-syntax#contract--contract-references)).
 
 If your flow has a single throwaway event, you do not need a contract. Reach for one as soon as the same shape needs to hold across more than one flow.
@@ -166,7 +166,7 @@ Mapping wildcards use **fallback matching**: the first match wins.
 
 This difference is intentional. Contracts express cumulative requirements (entity-level rules apply to every action); mappings select a single transformation target.
 
-**Contract:** `product.*` rules AND `product.add` rules both apply to `product add`
+**Contract:** `product.*` rules and `product.add` rules both apply to `product add`
 **Mapping:** `product.add` matches first, so `product.*` is never checked
 :::
 
@@ -264,11 +264,13 @@ Top-level `variables` holds reusable values that any part of the config can pull
 
 Use `variables` when the same JSON Schema fragment shows up in many events. For contract-shaped reuse across flows, prefer `extend`.
 
+`$var` references in a contract resolve at bundle time, so the runtime validate step enforces them.
+
 </details>
 
 ## Complete example
 
-A canonical, tested flow with a multi-entry contract lives at
+A complete example flow with a contract (a full-event `schema` plus per-event rules) lives at
 [`packages/cli/examples/flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json).
 
 Its server flow's `validate` step references `$contract.server` (see

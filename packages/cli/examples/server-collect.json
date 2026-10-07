@@ -9,7 +9,6 @@
           "config": {
             "settings": {
               "path": "/collect",
-              "port": 8080,
               "cors": true,
               "healthCheck": true
             }

@@ -56,9 +56,9 @@ configuration options.
 
 ## consent
 
-Manage consent states for the collector. Names can be defined arbitrarily, but
-common groups are functional, analytics, and marketing. Values are booleans, and
-once a value is set to `true` it's treated as consent being granted.
+Set consent states on the collector. Names are free-form; common groups are
+functional, analytics, and marketing. Values are booleans, and `true` means
+consent is granted. A command only updates the keys it contains.
 
 <CodeSnippet
   code={`elb('walker consent', { marketing: true, analytics: true });`}

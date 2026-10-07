@@ -1856,7 +1856,6 @@
           "primary": true,
           "config": {
             "settings": {
-              "port": 8080,
               "paths": [
                 {
                   "path": "/collect",

@@ -29,7 +29,6 @@ This server flow scores every incoming event for bot and AI-agent traffic before
           "package": "@walkeros/server-source-express",
           "next": "bot",
           "config": {
-            "settings": { "port": 8080 },
             "ingest": {
               "map": {
                 "userAgent": { "key": "headers.user-agent" },
