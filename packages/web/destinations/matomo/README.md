@@ -32,7 +32,13 @@ npm install @walkeros/web-destination-matomo
       "destinations": {
         "matomo": {
           "package": "@walkeros/web-destination-matomo",
-          "config": {}
+          "config": {
+            "loadScript": true,
+            "settings": {
+              "siteId": "1",
+              "url": "https://analytics.example.com/"
+            }
+          }
         }
       }
     }

@@ -32,7 +32,15 @@ npm install @walkeros/web-destination-plausible
       "destinations": {
         "plausible": {
           "package": "@walkeros/web-destination-plausible",
-          "config": {}
+          "config": {
+            "loadScript": true,
+            "settings": {
+              "domain": "walkeros.io"
+            },
+            "mapping": {
+              "page": { "view": { "name": "pageview" } }
+            }
+          }
         }
       }
     }

@@ -715,6 +715,8 @@ flag forbids it. Generate two steps (bundle, then start), never one.
 | `PORT`                                     | Port (default 8080)                                                  |
 | `WALKEROS_FLOW_ID`, `WALKEROS_PROJECT_ID`  | App flow and project; together with a token enable heartbeat+secrets |
 | `WALKEROS_DEPLOYMENT_ID`                   | Deployment ID sent with every heartbeat                              |
+| `WALKEROS_FLOW_RELEASE`                    | Release the loaded flow must carry, or the boot fails                |
+| `WALKEROS_FLOW_NAME`                       | Flow name it must carry; checked only with `WALKEROS_FLOW_RELEASE`   |
 | `WALKEROS_DEPLOY_TOKEN` / `WALKEROS_TOKEN` | Token, deploy token first. Env only, never a config file             |
 | `WALKEROS_APP_URL`                         | App base URL (default `https://app.walkeros.io`)                     |
 | `WALKEROS_HEARTBEAT_INTERVAL`              | Seconds (default 60, minimum 10)                                     |
@@ -723,8 +725,10 @@ flag forbids it. Generate two steps (bundle, then start), never one.
 
 Secrets are fetched ONCE at boot when connected (401/403 is fatal). There is no
 config polling and no hot-swap: a new flow version is a rebuild and a redeploy.
-`/health` is always 200; `/ready` is 200 once the collector is constructed, 503
-otherwise.
+`/health` is always 200; `/ready` is 200 once the collector is constructed and,
+with `WALKEROS_FLOW_RELEASE` set, the loaded flow matches it; 503 otherwise. A
+mismatch exits with
+`Artifact mismatch: expected <name>@<release>, loaded <name>@<release>`.
 
 ### Constraints
 

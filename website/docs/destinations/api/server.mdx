@@ -89,6 +89,10 @@ await startFlow({
   language="typescript"
 />
 
+A request that fails, times out or gets an error status is only logged at
+debug level: the event counts as delivered and does not reach the dead-letter
+queue.
+
 ### With custom transform
 
 <CodeSnippet
@@ -102,13 +106,9 @@ await startFlow({
       config: {
         settings: {
           url: 'https://api.example.com/events',
-          transform: (event, config, mapping) => {
-            return JSON.stringify({
-              timestamp: Date.now(),
-              event_name: event.name,
-              properties: event.data,
-            });
-          },
+          // data is the mapped data, or the event without a mapping
+          transform: (data) =>
+            JSON.stringify({ sent_at: Date.now(), payload: data }),
         },
       },
     },
@@ -119,14 +119,16 @@ await startFlow({
 
 ### With batching
 
-Set `config.batch` to send every event in one shared batch instead of one
-request per event. A bare number is the debounce `wait` window; an object tunes
-`wait`, `size`, and `age`. No `'* *'` wildcard mapping rule is needed.
+Set `config.batch` to send events in one request per flush instead of one
+request per event. The options are in
+[Batch scheduling](/docs/mapping/rule#batch-scheduling).
 
 Each flush is a single request whose body is a JSON array, one element per
 event. Mapping still applies per event, so an element is the event's mapped
 data when a rule produced some and the raw event otherwise. A `transform` runs
-per element, not once for the whole array.
+per element, not once for the whole array, and its return value becomes the
+element as is: a transform that returns a JSON string, like the one above,
+adds that string to the array, not the object it encodes.
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -140,91 +142,6 @@ await startFlow({
         batch: { wait: 1000, size: 100 },
         settings: {
           url: 'https://api.example.com/events',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-## Use cases
-
-### Webhook integration
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationAPI } from '@walkeros/server-destination-api';
-
-await startFlow({
-  destinations: {
-    webhook: {
-      code: destinationAPI,
-      config: {
-        settings: {
-          url: 'https://hooks.example.com/webhook',
-          headers: {
-            'X-Webhook-Secret': process.env.WEBHOOK_SECRET,
-          },
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-### Custom analytics backend
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationAPI } from '@walkeros/server-destination-api';
-
-await startFlow({
-  destinations: {
-    analytics: {
-      code: destinationAPI,
-      config: {
-        settings: {
-          url: 'https://analytics.internal.com/ingest',
-          method: 'PUT',
-          headers: {
-            'X-API-Key': process.env.ANALYTICS_API_KEY,
-          },
-          timeout: 10000,
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-### With event mapping
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationAPI } from '@walkeros/server-destination-api';
-
-await startFlow({
-  destinations: {
-    api: {
-      code: destinationAPI,
-      config: {
-        settings: {
-          url: 'https://api.example.com/events',
-        },
-        mapping: {
-          page: {
-            view: {
-              data: {
-                map: {
-                  pageUrl: 'data.path',
-                  pageTitle: 'data.title',
-                },
-              },
-            },
-          },
         },
       },
     },

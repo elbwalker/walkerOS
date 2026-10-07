@@ -1,6 +1,6 @@
 ---
 title: Segment
-description: Segment CDP, routing events to 400+ downstream destinations
+description: Segment CDP, routing events to downstream destinations
 path: /docs/destinations/web/segment
 sidebar_position: 8
 package: '@walkeros/web-destination-segment'
@@ -20,13 +20,12 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 />
 
 [Segment](https://segment.com/) is a customer data platform that routes your
-event data to 400+ downstream destinations (analytics, marketing,
-warehouses, ...). This destination forwards walkerOS events to Segment via
-the official
+event data to downstream destinations (analytics, marketing, warehouses, ...).
+This destination forwards walkerOS events to Segment via the official
 [`@segment/analytics-next`](https://www.npmjs.com/package/@segment/analytics-next)
-(Analytics.js 2.0) SDK, implementing the full Segment Spec surface: `track`,
-`identify`, `group`, `page`, and `reset`. Automatically stamps consent context
-on every call.
+(Analytics.js 2.0) SDK, calling the Segment Spec methods `track`, `identify`,
+`group`, `page`, and `reset`. With `settings.consent`, it also stamps consent
+context on every call.
 
 <WhereThisFits
   pre={<>Segment is a <strong>web destination</strong> in the walkerOS flow:</>}
@@ -110,11 +109,12 @@ to Segment category names:
   language="typescript"
 />
 
-**Deferred-load consent pattern.** When `config.consent` is declared,
-`AnalyticsBrowser.load()` is held until the first `walker consent` command
-that grants all required keys. This is Segment's primary consent mechanism
-Analytics.js has no `optOut()` method, so the only way to enforce consent
-is to avoid loading the SDK in the first place.
+**Deferred-load consent pattern.** When `config.consent` is declared (see
+[consent management](/docs/guides/consent)), `AnalyticsBrowser.load()` is held until the first `walker consent` command
+that grants all required keys. Analytics.js has no `optOut()` method, so the
+destination enforces consent by not loading the SDK before it is granted. A
+later revocation stops further events at the walkerOS consent gate; the
+loaded SDK stays on the page.
 
 <CodeSnippet
   code={`destinations: {
@@ -131,8 +131,8 @@ is to avoid loading the SDK in the first place.
 
 ## Scope notes
 
-- **`alias()` and `screen()`** are intentionally deferred. `alias()` is a
-  legacy identity-linking method; `screen()` is mobile-only.
-- **Plugins, source middleware, and destination middleware** cannot be
-  serialized in JSON flow configs. Register them programmatically on the
-  returned `AnalyticsBrowser` instance if needed.
+- **`alias()` and `screen()`** have no setting in this destination.
+  `screen()` is for mobile apps.
+- **Plugins, source middleware, and destination middleware** cannot be added
+  through this destination: it creates the `AnalyticsBrowser` instance
+  internally and does not expose it.

@@ -1,9 +1,10 @@
 import type { Logger, WalkerOS } from '@walkeros/core';
 import type { DestinationPiwikPro } from '.';
 import { startFlow } from '@walkeros/collector';
-import { createMockLogger, getEvent, Level } from '@walkeros/core';
+import { createMockLogger, getEvent, isObject, Level } from '@walkeros/core';
 import { destinationPiwikPro } from '.';
-import { MappingSchema, SettingsSchema } from './schemas';
+import { hints } from './hints';
+import { MappingSchema, SettingsSchema, settings } from './schemas';
 
 interface LogEntry {
   level: Logger.Level;
@@ -636,6 +637,19 @@ describe('Destination PiwikPro', () => {
           customDimensions: { '1': { map: { size: 'data.size' } } },
         }).success,
       ).toBe(true);
+    });
+
+    test('identified texts say one config.consent state lets events pass', () => {
+      const properties = settings.properties;
+      const identified =
+        isObject(properties) && isObject(properties.identified)
+          ? properties.identified.description
+          : undefined;
+
+      for (const text of [identified, hints['identified-consent'].text]) {
+        expect(text).toMatch(/only one/);
+        expect(text).not.toMatch(/never reach/);
+      }
     });
 
     test('mapping accepts a rule without goalId (W8)', () => {

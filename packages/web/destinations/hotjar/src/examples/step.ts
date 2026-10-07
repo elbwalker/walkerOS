@@ -87,7 +87,7 @@ export const userLoginIdentify: HotjarStepExample = {
 export const destinationLevelIdentify: HotjarStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify calls Hotjar.identify with the user id on every push as Hotjar recommends.',
+    "With settings.identify mapping userId to 'user.id', the destination calls Hotjar.identify on every push, as Hotjar recommends, before the event.",
   in: getEvent('page view', { timestamp: 1700000104 }),
   settings: {
     identify: {

@@ -19,8 +19,8 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
   npm="@walkeros/web-destination-api"
 />
 
-The web API destination allows you to send events from the browser to any HTTP
-endpoint with customizable data transformation and transport methods.
+The web API destination sends events from the browser to any HTTP endpoint,
+with customizable data transformation and transport methods.
 
 <WhereThisFits
   pre={<>Web API is a <strong>web destination</strong> in the walkerOS flow:</>}
@@ -129,15 +129,9 @@ const { collector, elb } = await startFlow({
         settings: {
           url: 'https://api.example.com/events',
           transport: 'fetch',
-          transform: (event, config, mapping) => {
-            // Custom transformation logic
-            return JSON.stringify({
-              timestamp: Date.now(),
-              event_name: \`\${event.entity}_\${event.action}\`,
-              properties: event.data,
-              context: event.context,
-            });
-          },
+          // data is the mapped data, or the event without a mapping
+          transform: (data) =>
+            JSON.stringify({ sent_at: Date.now(), payload: data }),
         },
       },
     },
@@ -148,9 +142,9 @@ const { collector, elb } = await startFlow({
 
 ### With batching
 
-Set `config.batch` to send every event in one shared batch instead of one
-request per event. A bare number is the debounce `wait` window; an object tunes
-`wait`, `size`, and `age`. No `'* *'` wildcard mapping rule is needed.
+Set `config.batch` to send events in one request per flush instead of one
+request per event. The options are in
+[Batch scheduling](/docs/mapping/rule#batch-scheduling).
 
 Each flush is a single request whose body is a JSON array, one element per
 event. Mapping still applies per event, so an element is the event's mapped
@@ -159,29 +153,11 @@ per element, not once for the whole array. Batched requests carry no
 `traceparent` header: a batch can aggregate events from distinct traces, so
 there is no single identity to stamp.
 
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationAPI } from '@walkeros/web-destination-api';
-
-const { collector, elb } = await startFlow({
-  destinations: {
-    api: {
-      code: destinationAPI,
-      config: {
-        batch: { wait: 1000, size: 100 },
-        settings: {
-          url: 'https://api.example.com/events',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-## Use cases
-
-### Sending to analytics API
+Set `size` explicitly and keep it small: the `fetch` and `beacon` transports
+send with `keepalive`, and browsers reject a `keepalive` request once the bodies
+in flight exceed 64 KiB, while the default `size` is 1000 events. Such a flush
+fails without being reported (see [Transport methods](#transport-methods)). A
+full event is around 0.5 to 1 KiB.
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -192,72 +168,9 @@ const { collector, elb } = await startFlow({
     api: {
       code: destinationAPI,
       config: {
-        settings: {
-          url: 'https://analytics.example.com/track',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': 'your-api-key',
-          },
-          transform: (event) => {
-            return JSON.stringify({
-              event_type: \`\${event.entity}_\${event.action}\`,
-              user_id: event.user?.id,
-              session_id: event.user?.session,
-              properties: event.data,
-              timestamp: event.timing,
-            });
-          },
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-### Using beacon transport
-
-For critical events that need to be sent even when the page is unloading:
-
-<CodeSnippet
-  code={`// Add to existing startFlow config
-const { collector, elb } = await startFlow({
-  destinations: {
-    criticalApi: {
-      code: destinationAPI,
-      config: {
-        settings: {
-          url: 'https://api.example.com/critical-events',
-          transport: 'beacon', // Reliable for page unload scenarios
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-### Custom data mapping
-
-Use mapping rules to control which events are sent:
-
-<CodeSnippet
-  code={`// Add to existing startFlow config
-const { collector, elb } = await startFlow({
-  destinations: {
-    api: {
-      code: destinationAPI,
-      config: {
+        batch: { wait: 1000, size: 25 },
         settings: {
           url: 'https://api.example.com/events',
-        },
-        mapping: {
-          entity: {
-            action: {
-              data: 'data',
-            },
-          },
         },
       },
     },
@@ -268,7 +181,12 @@ const { collector, elb } = await startFlow({
 
 ## Transport methods
 
-- **fetch** (default): Modern, promise-based HTTP requests
-- **xhr**: Traditional XMLHttpRequest for older browser compatibility
-- **beacon**: Uses Navigator.sendBeacon() for reliable data transmission during
-  page unload
+- **fetch** (default): `fetch` with `keepalive`, so the browser completes the
+  request even when the page unloads first
+- **xhr**: a synchronous `XMLHttpRequest`
+- **beacon**: `navigator.sendBeacon()`, always a `POST` without the configured
+  `headers`
+
+The destination ignores the response: a failed request (an error
+status or a network error) is not reported, the event counts as delivered and
+does not reach the dead-letter queue.

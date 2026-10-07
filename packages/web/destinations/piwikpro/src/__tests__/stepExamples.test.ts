@@ -1,4 +1,5 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Flow, WalkerOS } from '@walkeros/core';
+import { runInNewContext } from 'vm';
 import { startFlow } from '@walkeros/collector';
 import { clone, createLogger, isObject } from '@walkeros/core';
 import type { Config, Rule } from '../types';
@@ -27,6 +28,21 @@ function isConfig(value: unknown): value is Config {
 
 function isRule(value: unknown): value is Rule {
   return isObject(value);
+}
+
+// Functions in examples are published as `{ $code: fn.toString() }` in
+// walkerOS.json and evaluated without the module scope they were written in.
+function asPublished(rule: Rule | undefined): Rule | undefined {
+  if (rule === undefined) return rule;
+  return JSON.parse(
+    JSON.stringify(rule, (_, value) =>
+      typeof value === 'function' ? { $code: value.toString() } : value,
+    ),
+    (_, value) =>
+      isObject(value) && typeof value.$code === 'string'
+        ? runInNewContext(`(${value.$code})`)
+        : value,
+  );
 }
 
 const initExample = examples.step.init;
@@ -90,12 +106,15 @@ describe('piwikpro web destination -- step examples', () => {
     expect(calls).toEqual(initOut);
   });
 
-  it.each(stepEntries)('%s', async (name, example) => {
+  async function run(
+    name: string,
+    example: Flow.StepExample,
+    rule: Rule | undefined,
+  ): Promise<CallRecord[]> {
     if (!isEvent(example.in))
       throw new Error(`step example "${name}" has no event input`);
     const event = example.in;
 
-    const rule = isRule(example.mapping) ? example.mapping : undefined;
     const mapping: Config['mapping'] = rule
       ? { [event.entity]: { [event.action]: rule } }
       : undefined;
@@ -115,13 +134,24 @@ describe('piwikpro web destination -- step examples', () => {
 
     await elb(event);
 
-    // Event test: wrap expected as _paq.push records and slice off init calls
-    const expectedRecords = [...(example.out ?? [])].map<CallRecord>((args) => [
-      '_paq.push',
-      args,
-    ]);
-    const actual = calls.slice(initOut.length);
-    expect(actual).toEqual(expectedRecords);
+    // Slice off the init calls
+    return calls.slice(initOut.length);
+  }
+
+  // Wrap expected as _paq.push records
+  const expected = (example: Flow.StepExample) =>
+    [...(example.out ?? [])].map<CallRecord>((args) => ['_paq.push', args]);
+
+  it.each(stepEntries)('%s', async (name, example) => {
+    const rule = isRule(example.mapping) ? example.mapping : undefined;
+    expect(await run(name, example, rule)).toEqual(expected(example));
+  });
+
+  it.each(stepEntries)('%s as published', async (name, example) => {
+    const rule = isRule(example.mapping) ? example.mapping : undefined;
+    expect(await run(name, example, asPublished(rule))).toEqual(
+      expected(example),
+    );
   });
 });
 

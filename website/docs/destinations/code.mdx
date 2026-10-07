@@ -1,6 +1,6 @@
 ---
 title: Code
-description: Built-in destination for executing custom code strings
+description: Run your own code as a destination, without a package
 sidebar_position: 0
 ---
 
@@ -8,62 +8,31 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Code Destination
 
-The code destination is a built-in, platform-agnostic destination that executes
-custom JavaScript code strings. It provides a lightweight alternative to tag
-managers like GTM, allowing you to run arbitrary code in response to events
-without external dependencies.
+A destination does not need a package. Pass an object with a `push` function
+as `code`, and the collector calls it for every event, like any other
+destination. Use it to run a few lines of your own code on events.
 
 <WhereThisFits
-  pre={<>Code is a <strong>built-in destination</strong> in the walkerOS flow:</>}
+  pre={<>Code is a <strong>destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Code', highlight: true } },
   }}
-  post={<>Executes custom JavaScript code strings on events, loads external scripts dynamically, and acts as a lightweight tag manager replacement.</>}
+  post={<>Runs your own <code>push</code> function on each event, without a package.</>}
 />
 
-## Configuration
-
-Use `code: true` to enable the built-in code destination:
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-
-const { collector, elb } = await startFlow({
-  destinations: {
-    analytics: {
-      code: true,
-      config: {
-        settings: {
-          init: "context.logger.info('Analytics ready')",
-          push: "context.logger.debug('Event:', event.name)",
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-## Script Loading
-
-Load external scripts during initialization - useful for tag management:
+## Integrated
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 
 const { elb } = await startFlow({
   destinations: {
-    gtm: {
-      code: true,
-      config: {
-        consent: { marketing: true }, // Scripts only load when consent granted
-        settings: {
-          scripts: [
-            'https://www.googletagmanager.com/gtag/js?id=G-XXXXX',
-            'https://connect.facebook.net/en_US/fbevents.js',
-          ],
-          init: "window.dataLayer = window.dataLayer || [];",
-          push: "dataLayer.push({ event: event.name, ...event.data });",
+    console: {
+      code: {
+        type: 'console',
+        config: {},
+        push: (event) => {
+          console.log('Event:', event.name, event.data);
         },
       },
     },
@@ -72,310 +41,27 @@ const { elb } = await startFlow({
   language="typescript"
 />
 
-Scripts are injected in parallel with `async="true"`. The collector only handles
-injection - loading, errors, and execution are managed by the browser. For
-advanced loading patterns (sequential loading, onload callbacks), use custom
-`init` code.
+## Bundled
 
-## Configuration reference
+In a `flow.json`, write the function as a `$code:` string:
 
-### Settings
-
-| Property    | Type       | Description                                       |
-| ----------- | ---------- | ------------------------------------------------- |
-| `scripts`   | `string[]` | URLs of external scripts to inject on init        |
-| `init`      | `string`   | Code to run once when the destination initializes |
-| `on`        | `string`   | Code to run on lifecycle events (consent, etc.)   |
-| `push`      | `string`   | Default code to run for each event                |
-| `pushBatch` | `string`   | Default code to run for batched events            |
-
-### Mapping
-
-Event-specific code can override settings via mapping:
-
-| Property    | Type     | Description                           |
-| ----------- | -------- | ------------------------------------- |
-| `push`      | `string` | Code to run for this specific event   |
-| `pushBatch` | `string` | Code to run for batched events        |
-
-## Context variables
-
-Each code string has access to specific variables:
-
-### init
-
-- `context.collector` - The collector instance
-- `context.config` - Destination configuration
-- `context.env` - Environment variables
-- `context.logger` - Scoped logger instance
-
-### push
-
-- `event` - The WalkerOS event object
-- `context.collector` - The collector instance
-- `context.config` - Destination configuration
-- `context.data` - Transformed event data (from mapping)
-- `context.env` - Environment variables
-- `context.logger` - Scoped logger instance
-- `context.mapping` - The event mapping rule
-
-### pushBatch
-
-- `batch.key` - The batch key (event name)
-- `batch.events` - Array of events in the batch
-- `batch.data` - Array of transformed data
-- `batch.entries` - Per-event entries, each carrying `{ event, ingest?,
-  respond?, rule?, data? }`. Read this when you need the per-event
-  `ingest` or `respond` (for HTTP responses, per-event request IDs, etc.).
-  `batch.events` and `batch.data` are derived views kept for backward
-  compatibility.
-- `context.collector` - The collector instance
-- `context.config` - Destination configuration
-- `context.env` - Environment variables
-- `context.logger` - Scoped logger instance
-- `context.mapping` - The event mapping rule (representative entry's rule)
-
-#### Batch scheduling
-
-Set `config.batch` to batch **all** of a destination's events into one shared
-buffer. No `'* *'` wildcard mapping rule is needed. A bare number is the
-debounce `wait` window; an object tunes `wait`, `size`, and `age`:
-
-```ts
-{
-  config: {
-    batch: { wait: 1000, size: 1000, age: 30000 },
-    // ...
+<CodeSnippet
+  code={`"destinations": {
+  "console": {
+    "code": {
+      "type": "console",
+      "push": "$code:(event) => { console.log('Event:', event.name, event.data); }"
+    }
   }
-}
-```
-
-- `wait` (ms) - Debounce window. The timer resets on every push.
-- `size` - Hard count cap. Flushes immediately at this many events.
-  Default `1000` when batching is enabled.
-- `age` (ms) - Hard age cap since the first entry of the current window.
-  Forces a flush even when pushes keep arriving. Default `30000`.
-
-Without `size`/`age` the batch can grow unbounded under sustained load
-(the debounce timer keeps resetting). Defaults are conservative; raise
-them only when you understand your destination's batch-size limits.
-
-**Batch all vs. batch selectively.** With `config.batch` set, every event of
-the destination joins the shared default buffer, including events matched by
-data-only mapping rules. A mapping rule's own `batch` splits that entity-action
-into its own buffer and overrides `config.batch` per field
-(`rule ?? config ?? default`). To batch only specific events, omit
-`config.batch` and set `batch` on those rules:
-
-```ts
-{
-  config: {
-    // no config.batch: batching stays off for everything else
-    mapping: {
-      order: { complete: { batch: { wait: 1000, size: 100 } } },
-    },
-  },
-}
-```
-
-Pending batches flush automatically on shutdown, so buffered events are not lost.
-
-#### Failure handling
-
-If `pushBatch` throws (or returns a rejected Promise), the entire batch
-is routed to the destination's `dlq` (dead-letter queue) and
-`status.destinations[id].failed` is incremented by the batch size.
-Per-item retry logic is the destination SDK's responsibility (BigQuery,
-Kafka, HubSpot each have their own backoff semantics). The collector
-never drops batch failures silently. Batched delivery is asynchronous,
-so the originating `elb()` call's result cannot reflect a later
-batch-flush outcome; failures appear in the destination's `failed` count,
-dead-letter buffer, and logs.
-
-### on
-
-- `type` - The event type (`'consent'`, `'ready'`, etc.)
-- `context.collector` - The collector instance
-- `context.config` - Destination configuration
-- `context.data` - Event-specific data
-- `context.env` - Environment variables
-- `context.logger` - Scoped logger instance
-
-## Examples
-
-### Basic logging
-
-<CodeSnippet
-  code={`const { elb } = await startFlow({
-  destinations: {
-    logger: {
-      code: true,
-      config: {
-        settings: {
-          push: "console.log('Event:', event.name, event.data)",
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-### API calls
-
-<CodeSnippet
-  code={`const { elb } = await startFlow({
-  destinations: {
-    api: {
-      code: true,
-      config: {
-        settings: {
-          push: \`
-            fetch('https://api.example.com/track', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                name: event.name,
-                data: event.data,
-                timestamp: event.timestamp
-              })
-            })
-          \`,
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-### Consent handling
-
-<CodeSnippet
-  code={`const { elb } = await startFlow({
-  destinations: {
-    tracking: {
-      code: true,
-      config: {
-        settings: {
-          on: \`
-            if (type === 'consent' && context.data?.marketing) {
-              context.logger.info('Marketing consent granted');
-              // Initialize third-party scripts
-            }
-          \`,
-          push: "context.logger.debug(event.name)",
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-### Event-specific overrides
-
-Use mapping to override the default push code for specific events:
-
-<CodeSnippet
-  code={`const { elb } = await startFlow({
-  destinations: {
-    analytics: {
-      code: true,
-      config: {
-        settings: {
-          // Default handler for all events
-          push: "context.logger.debug('Event:', event.name)",
-        },
-        mapping: {
-          product: {
-            view: {
-              // Custom handler for product view events
-              push: \`
-                fetch('/api/product-view', {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    productId: event.data.id,
-                    name: event.data.name
-                  })
-                })
-              \`,
-            },
-          },
-          order: {
-            complete: {
-              // Custom handler for purchase events
-              push: \`
-                window.dataLayer?.push({
-                  event: 'purchase',
-                  value: event.data.total,
-                  transaction_id: event.data.id
-                })
-              \`,
-            },
-          },
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-### Batched events
-
-<CodeSnippet
-  code={`const { elb } = await startFlow({
-  destinations: {
-    batchApi: {
-      code: true,
-      config: {
-        settings: {
-          pushBatch: \`
-            fetch('/api/batch', {
-              method: 'POST',
-              body: JSON.stringify({
-                events: batch.events.map(e => ({
-                  name: e.name,
-                  data: e.data
-                }))
-              })
-            })
-          \`,
-        },
-        batch: 1000, // Batch all events with 1 second debounce
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-## Error handling
-
-All code execution is wrapped in try-catch blocks. Errors are logged using the
-destination's scoped logger and don't affect other destinations or event
-processing.
-
-<CodeSnippet
-  code={`// Errors are caught and logged automatically
-settings: {
-  push: \`
-    // This error will be logged but won't crash the app
-    throw new Error('Something went wrong');
-  \`,
 }`}
-  language="typescript"
+  language="json"
 />
 
-## Security considerations
+The rules for `code` in a flow file are in
+[Inline code](/docs/getting-started/flow#inline-code-without-packages).
 
-The code destination uses `new Function()` to execute code strings. This is
-similar to `eval()` and should only be used with trusted code. Never execute
-user-provided code strings directly.
-
-For production environments, consider:
-
-- Only using code strings defined in your source code
-- Validating and sanitizing any dynamic configuration
-- Using Content Security Policy headers where appropriate
+Set `consent`, `mapping` and the other destination options in `config` beside
+`code`, as for any destination. In integrated mode the object can implement the
+whole [destination interface](/docs/destinations/create-your-own). `batch`
+needs a `pushBatch` function, which only the integrated form can provide: a
+flow file's `code` takes only `type`, `init` and `push`.

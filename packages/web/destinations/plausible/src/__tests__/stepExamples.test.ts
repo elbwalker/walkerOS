@@ -3,7 +3,7 @@ import type {
   WalkerOS,
   Mapping as WalkerOSMapping,
 } from '@walkeros/core';
-import { createLogger } from '@walkeros/core';
+import { createLogger, isObject } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type { Config, Env } from '../types';
@@ -63,7 +63,7 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
   return { env, collected: () => calls };
 }
 
-describe('plausible destination — step examples', () => {
+describe('plausible destination -- step examples', () => {
   const stepEntries = Object.entries(examples.step).filter(
     ([name]) => name !== 'init',
   );
@@ -86,6 +86,29 @@ describe('plausible destination — step examples', () => {
     });
 
     expect(collected()).toEqual(initOut);
+  });
+
+  // Plausible takes scalar custom props and revenue as { currency, amount }
+  it('sends scalar props and a { currency, amount } revenue', () => {
+    const invalid = Object.entries(examples.step).flatMap(([name, example]) =>
+      (example.out ?? []).flatMap(([callable, , options]) => {
+        if (callable !== 'plausible' || !isObject(options)) return [];
+        const { props, revenue } = options;
+        const scalarProps =
+          props === undefined ||
+          (isObject(props) &&
+            Object.values(props).every((value) =>
+              ['string', 'number', 'boolean'].includes(typeof value),
+            ));
+        const revenueObject =
+          revenue === undefined ||
+          (isObject(revenue) &&
+            typeof revenue.currency === 'string' &&
+            typeof revenue.amount === 'number');
+        return scalarProps && revenueObject ? [] : [name];
+      }),
+    );
+    expect(invalid).toEqual([]);
   });
 
   it.each(stepEntries)('%s', async (name, rawExample) => {

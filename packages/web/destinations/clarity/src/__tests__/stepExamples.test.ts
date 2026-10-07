@@ -1,6 +1,6 @@
 // The real @microsoft/clarity package is ESM and can't be parsed by Jest's
 // default CommonJS transformer. Tests always wire their own mock via
-// `env.clarity`, so the real module is never touched — we stub the import
+// `env.clarity`, so the real module is never touched; we stub the import
 // with an empty default export to let Jest load the destination file.
 jest.mock('@microsoft/clarity', () => ({
   __esModule: true,
@@ -43,7 +43,20 @@ function spyEnv(env: Env): {
   return { env, collected: () => calls };
 }
 
-describe('clarity destination — step examples', () => {
+describe('clarity destination -- step examples', () => {
+  // StepExample renders the description, in, mapping and out, not the
+  // settings an example merges in, so a public example names them.
+  it('public examples name the settings they run with', () => {
+    const unnamed = Object.entries(examples.step).flatMap(([name, example]) =>
+      example.public === false
+        ? []
+        : Object.keys(example.settings ?? {})
+            .filter((key) => !example.description?.includes(`settings.${key}`))
+            .map((key) => `${name}: settings.${key}`),
+    );
+    expect(unnamed).toEqual([]);
+  });
+
   it.each<[string, ClarityStepExample]>(Object.entries(examples.step))(
     '%s',
     async (name, example) => {
@@ -94,7 +107,7 @@ describe('clarity destination — step examples', () => {
         await elb(event);
       }
 
-      // Drop the init call — every example triggers init once, it is not part
+      // Drop the init call: every example triggers init once, it is not part
       // of the declared `out`.
       const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
       const actual = collected().filter(([path]) => path !== 'clarity.init');

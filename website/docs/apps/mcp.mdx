@@ -377,10 +377,10 @@ with the same `deviceCode` resumes polling until the approval lands. The session
 that results refreshes itself, and it shows up under Account, Connected apps,
 where disconnecting it takes effect on the next call.
 
-On the hosted door there is nothing to log in to, because every request carries
-its own bearer: `auth` reports `authenticated: false` there,
-`action: "login"` fails, and `action: "logout"` answers that you are already
-logged out. Disconnect under Account, Connected apps instead.
+On the hosted door the connection is the login, because the host checks the
+bearer of every request: `status` reports `authenticated: true` with your
+projects, `login` answers that no login is needed, and `logout` refuses and
+points to Account, Connected apps, where disconnecting ends the connection.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -683,8 +683,9 @@ Give the hosted door inline JSON or a flow ID instead of a path.
 
 **Login.** `auth` runs the device authorization grant on the local door. The
 hosted door authenticates every request with its own bearer instead, so there is
-nothing to log in to: `auth` reports `authenticated: false` there and
-`action: "login"` fails. Skip the tool on that door.
+nothing to log in to or out of: `auth` reports `authenticated: true` with your
+projects, `login` answers that no login is needed, and `logout` refuses and
+names Account, Connected apps, where you disconnect.
 
 **The selected project.** `project_manage` action `set_default` is remembered
 differently by each door. The local door writes it to your CLI config file, so it

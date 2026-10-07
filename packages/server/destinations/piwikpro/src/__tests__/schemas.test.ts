@@ -1,4 +1,6 @@
-import { MappingSchema, SettingsSchema } from '../schemas';
+import { isObject } from '@walkeros/core';
+import { hints } from '../hints';
+import { MappingSchema, SettingsSchema, settings } from '../schemas';
 
 const base = { url: 'https://acc.piwik.pro/', appId: 'site-1' };
 
@@ -19,6 +21,19 @@ describe('schemas', () => {
     expect(SettingsSchema.safeParse({ ...base, ...settings }).success).toBe(
       true,
     );
+  });
+
+  it('identified texts say one config.consent state lets events pass', () => {
+    const properties = settings.properties;
+    const identified =
+      isObject(properties) && isObject(properties.identified)
+        ? properties.identified.description
+        : undefined;
+
+    for (const text of [identified, hints['identified-consent'].text]) {
+      expect(text).toMatch(/only one/);
+      expect(text).not.toMatch(/never reach/);
+    }
   });
 
   it('rejects a dimension key that is not a bare id', () => {
