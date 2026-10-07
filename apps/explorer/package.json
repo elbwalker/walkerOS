@@ -7,6 +7,9 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "walkeros-design-check": "./dist/design/check.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -14,7 +17,15 @@
       "require": "./dist/index.js"
     },
     "./styles.css": "./dist/styles.css",
-    "./styles": "./dist/styles.css"
+    "./styles": "./dist/styles.css",
+    "./design": {
+      "types": "./dist/design/index.d.ts",
+      "import": "./dist/design/index.mjs",
+      "require": "./dist/design/index.cjs"
+    },
+    "./design/tokens.css": "./dist/design/tokens.css",
+    "./design/base.css": "./dist/design/base.css",
+    "./design/tailwind.css": "./dist/design/tailwind.css"
   },
   "files": [
     "dist/**",

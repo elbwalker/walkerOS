@@ -10,6 +10,45 @@ Entry point for working with the walkerOS explorer component library.
 | [STYLE.md](STYLE.md)   | Complete CSS variable reference (colors, spacing, typography) |
 | [README.md](README.md) | Usage guidelines, component patterns                          |
 
+## Design area
+
+`design/` holds the walkerOS design system in the Claude Design artifact's file
+layout. `design/tokens.json` is the only source of colour, type, spacing, radius
+and layer values.
+
+- Change a token in `design/tokens.json` only. The explorer build parses it
+  (`src/design/tokens.ts`; a malformed token fails the build with its JSON
+  path), regenerates `src/design/index.ts` and writes `dist/design/tokens.css`,
+  `tailwind.css` and `base.css`. Never edit generated files.
+- If the drift test in `src/design/__tests__/generate.test.ts` reports a stale
+  `src/design/index.ts`, run `npm run build` in `apps/explorer`. A turbo cache
+  hit restores `dist/` without running the generator, so a turbo build does not
+  refresh it.
+- Every new or changed colour passes `src/design/__tests__/contrast.test.ts` in
+  both themes. The test fails for a colour that is in no contrast row and not on
+  its `UNPAIRED` list, which names the reason for each colour left out.
+- Exports: `@walkeros/explorer/design/tokens.css`,
+  `@walkeros/explorer/design/base.css`,
+  `@walkeros/explorer/design/tailwind.css`, and colour and font constants from
+  `@walkeros/explorer/design` for engines that cannot read CSS variables.
+- A Tailwind `text-<style>` class from `tailwind.css` sets size, line height,
+  weight and tracking, not the style's font family. Pair it with `font-<family>`
+  (`font-mono`, `font-viz`, `font-viz-mono`) when the style's family is not
+  `sans`.
+- `walkeros-design-check [--allow [<rule>:]<glob>]... [--allow-var <prefix>]... <path>...`
+  lints a consuming package for colour literals, palette and `dark:` classes,
+  `var()` fallbacks on design tokens and undeclared variables. Exit 1 means
+  findings, exit 2 a misconfiguration.
+- The checker cannot tell a bare `shadow` or `font-serif` class from prose, so
+  it does not flag them. Both render nothing once `tailwind.css` resets
+  Tailwind's shadows and fonts; use the design shadow and font classes instead.
+- Importing `tokens.css` alone into a Tailwind page re-scales Tailwind's
+  `rounded-*` (`--radius-*` share Tailwind's names; `rounded-lg` becomes 12px)
+  and re-fonts `font-sans` and `font-mono`. Move radius classes to the design
+  scale in the same change.
+- Keep `design/` in the artifact's format and out of prettier: Claude Design
+  syncs it from the repo.
+
 ## Core Principles
 
 ### 1. Controlled Components Only

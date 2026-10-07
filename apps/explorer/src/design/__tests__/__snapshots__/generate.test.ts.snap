@@ -1,0 +1,109 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`renders tokens.css, tailwind.css and the constants for the fixture 1`] = `
+"/* walkerOS design tokens, generated from design/tokens.json by src/design/generate.ts. Edit the JSON, never this file. */
+
+:root, :host, [data-theme] {
+  --primary: #01b5e2;
+  --code-bg: rgba(41, 45, 62, 1);
+  --edge: 0 0 0 1px rgba(0, 0, 0, 0.2);
+  --gutter: 24px;
+  --radius-md: 8px;
+  --z-modal: 50;
+  --font-sans: system-ui, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, monospace;
+}
+
+:root, :host, [data-theme="dark"] {
+  --bg: #111827;
+  --link: #4fb3e0;
+  --info: var(--link);
+  --focus: var(--primary);
+  --accent: var(--primary);
+  --ring: 0 0 0 4px rgba(1, 181, 226, 0.16);
+}
+
+[data-theme="light"] {
+  --bg: #ffffff;
+  --link: #0076a0;
+  --info: var(--link);
+  --focus: var(--link);
+  --accent: var(--primary);
+  --ring: 0 0 0 4px rgba(1, 181, 226, 0.14);
+}
+
+/* ---- */
+/* walkerOS design tokens, generated from design/tokens.json by src/design/generate.ts. Edit the JSON, never this file. */
+
+@import "./tokens.css";
+
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+  --spacing: 4px;
+  --radius-md: 8px;
+  --font-sans: system-ui, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --text-body: 16px;
+  --text-body--line-height: 1.65;
+  --text-body--font-weight: 400;
+  --text-eyebrow: 13px;
+  --text-eyebrow--line-height: 1.5;
+  --text-eyebrow--font-weight: 600;
+  --text-eyebrow--letter-spacing: 0.12em;
+  --text-code: 0.88em;
+  --text-code--line-height: 1.5;
+  --text-code--font-weight: 400;
+  --shadow-edge: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-primary: var(--primary);
+  --color-link: var(--link);
+  --color-info: var(--info);
+  --color-focus: var(--focus);
+  --color-code-bg: var(--code-bg);
+  --color-accent: var(--accent);
+  --shadow-ring: var(--ring);
+}
+
+/* ---- */
+/* walkerOS design constants, generated from design/tokens.json by src/design/generate.ts. Edit the JSON and run the explorer build, never this file. */
+
+export type Theme = 'dark' | 'light';
+
+/** Page ground. */
+export const bg = { dark: "#111827", light: "#ffffff" } as const;
+
+/** Brand fill. */
+export const primary = "#01b5e2";
+
+/** Links. */
+export const link = { dark: "#4fb3e0", light: "#0076a0" } as const;
+
+/** A single alias of a themed colour. */
+export const info = { dark: "#4fb3e0", light: "#0076a0" } as const;
+
+/** A per-theme alias. */
+export const focus = { dark: "#01b5e2", light: "#0076a0" } as const;
+
+/** An invariant rgba() colour. */
+export const codeBg = "rgba(41, 45, 62, 1)";
+
+/** A single alias of a single literal. */
+export const accent = "#01b5e2";
+
+/** Font family \`sans\`. */
+export const fontSans = "system-ui, 'Segoe UI', sans-serif";
+
+/** Font family \`mono\`. */
+export const fontMono = "ui-monospace, monospace";
+"
+`;

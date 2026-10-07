@@ -1,0 +1,28 @@
+<!-- @dsCard height=288 -->
+<div class="cover">
+<svg class="art" width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+<!--
+blocks: primary 412x196 (bleeds top/right) · elbwalker-700 176x104 · code-bg 304x104 (both bleed bottom) · elbwalker-200 68x88
+arrangement: one tall primary slab with three satellites below and left, flush on a 12px seam, x >= 480
+pattern: slanted stripes cut from the primary slab in bg, 21deg like the walkerOS mark's bars — the brand's own slant, read as motion, not the mark
+scales: pitch 56 (bars 12 wide = space-3, gap 44 = heading-gap), seam 12 = space-3; corners radius-lg; corners radius-lg
+-->
+<defs><clipPath id="a"><rect x="560" y="-12" width="412" height="196" class="r"/></clipPath></defs>
+<rect class="primary r" x="560" y="-12" width="412" height="196"/>
+<g clip-path="url(#a)"><polygon class="cut" points="664,-12 676,-12 600,184 588,184"/><polygon class="cut" points="720,-12 732,-12 656,184 644,184"/><polygon class="cut" points="776,-12 788,-12 712,184 700,184"/><polygon class="cut" points="832,-12 844,-12 768,184 756,184"/><polygon class="cut" points="888,-12 900,-12 824,184 812,184"/><polygon class="cut" points="944,-12 956,-12 880,184 868,184"/><polygon class="cut" points="1000,-12 1012,-12 936,184 924,184"/><polygon class="cut" points="1056,-12 1068,-12 992,184 980,184"/></g>
+<rect class="tint r" x="480" y="96" width="68" height="88"/>
+<rect class="deep r" x="480" y="196" width="176" height="104"/>
+<rect class="ink r" x="668" y="196" width="304" height="104"/>
+</svg>
+<div class="text"><div class="name">walkerOS</div><div class="tag">Event data collection that ships with the component.</div></div>
+</div>
+<style>
+html,body{margin:0}
+.cover{position:relative;width:960px;height:288px;background:var(--bg);overflow:hidden;font-family:var(--font-sans)}
+.art{position:absolute;inset:0}
+.r{rx:var(--radius-lg)}
+.primary{fill:var(--primary)} .cut{fill:var(--bg)} .tint{fill:var(--elbwalker-200)} .deep{fill:var(--elbwalker-700)} .ink{fill:var(--code-bg)}
+.text{position:absolute;left:48px;bottom:44px;max-width:420px}
+.name{font-size:88px;line-height:.92;font-weight:700;letter-spacing:-.025em;color:var(--fg)}
+.tag{margin-top:16px;font-size:14px;line-height:1.5;color:var(--fg-2)}
+</style>

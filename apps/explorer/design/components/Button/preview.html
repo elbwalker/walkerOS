@@ -1,0 +1,6 @@
+<!-- @dsCard group="Actions" height=110 -->
+<div id="root" class="wos-root" style="background:var(--bg);padding:24px;min-height:100%"></div>
+<script>
+var h = React.createElement, W = window.WalkerOS;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', { style: { display: 'flex', gap: 12, flexWrap: 'wrap' } }, h(W.Button, { href: '#', arrow: true }, 'Set up with your agent'), h(W.Button, { variant: 'secondary', href: '#' }, 'About us'), h(W.Button, { href: '#' }, 'Talk to us')));
+</script>

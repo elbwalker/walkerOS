@@ -3,6 +3,12 @@ import * as sass from 'sass';
 import * as path from 'path';
 import * as fs from 'fs';
 import { createRequire } from 'module';
+import { writeDesign } from './src/design/generate';
+
+// The design generator runs before any block below. It parses design/tokens.json
+// (a malformed token throws with its JSON path and fails the build), refreshes
+// the generated src/design/index.ts and writes dist/design/{tokens,tailwind,base}.css.
+writeDesign(process.cwd());
 
 export default defineConfig([
   // JS/TS build using shared config base
@@ -84,5 +90,33 @@ export default defineConfig([
         },
       },
     ],
+  },
+
+  // Design constants (@walkeros/explorer/design): an own block, so no "use client"
+  // banner; server code such as an email builder imports these values. The
+  // package is "type": "module", so the CommonJS build needs the .cjs extension
+  // for require() to load it.
+  buildModules({
+    entry: { 'design/index': 'src/design/index.ts' },
+    platform: 'neutral',
+    minify: false,
+    outExtension: ({ format }) => ({ js: format === 'esm' ? '.mjs' : '.cjs' }),
+  }),
+
+  // walkeros-design-check: plain Node ESM with a shebang and no runtime dependency.
+  {
+    entry: { 'design/check': 'src/design/check/bin.ts' },
+    outDir: 'dist',
+    format: ['esm'],
+    platform: 'node',
+    target: 'node20',
+    outExtension: () => ({ js: '.mjs' }),
+    banner: { js: '#!/usr/bin/env node' },
+    clean: false,
+    dts: false,
+    minify: false,
+    sourcemap: false,
+    // Keep `node:` on the built-in imports, so the bin visibly reads Node only.
+    removeNodeProtocol: false,
   },
 ]);

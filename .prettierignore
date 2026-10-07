@@ -33,3 +33,8 @@ logs/
 # MDX docs are not formatted by any tool: both prettier and remark rewrite the
 # `code={`...`}` template literals that carry the documentation snippets.
 website/docs/**/*.mdx
+
+# walkerOS design system: design/ mirrors the Claude Design artifact file for
+# file, and src/design/index.ts is generated from design/tokens.json.
+apps/explorer/design/
+apps/explorer/src/design/index.ts
