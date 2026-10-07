@@ -56,8 +56,8 @@ export function OpenAIMark({ className }: MarkProps): React.JSX.Element {
 
 /**
  * Claude mark, served by Anthropic at https://claude.ai/favicon.svg
- * The source artwork is filled with Anthropic's #D97757; it is redrawn in
- * `currentColor` here so all three marks share one tone.
+ * The source artwork is filled with Anthropic's own brand colour; it is redrawn
+ * in `currentColor` here so all three marks share one tone.
  */
 export function ClaudeMark({ className }: MarkProps): React.JSX.Element {
   return (

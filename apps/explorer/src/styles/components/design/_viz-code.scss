@@ -1,0 +1,121 @@
+// CodeTokens and CodeLine (@walkeros/explorer/design/components, internal):
+// code in the demos, coloured by role; marks tint in an event part's colour.
+@layer components {
+  .elb-viz-tok {
+    border-radius: var(--radius-xs);
+    transition: background var(--motion) var(--ease);
+  }
+
+  .elb-viz-tok--tag {
+    color: var(--viz-tag);
+  }
+
+  .elb-viz-tok--attr,
+  .elb-viz-tok--key {
+    color: var(--event-globals);
+  }
+
+  .elb-viz-tok--punct {
+    color: var(--viz-punct);
+  }
+
+  .elb-viz-tok--str {
+    color: var(--viz-string);
+  }
+
+  .elb-viz-tok--text {
+    color: var(--viz-fg);
+  }
+
+  .elb-viz-tok--kw,
+  .elb-viz-tok--fn {
+    color: var(--event-action);
+  }
+
+  .elb-viz-tok--num {
+    color: var(--viz-number);
+  }
+
+  .elb-viz-tok--value {
+    color: var(--event-entity);
+  }
+
+  .elb-viz-tok--mark-entity {
+    background: color-mix(in srgb, var(--event-entity) 16%, transparent);
+  }
+
+  .elb-viz-tok--mark-action {
+    background: color-mix(in srgb, var(--event-action) 16%, transparent);
+  }
+
+  .elb-viz-tok--mark-property {
+    background: color-mix(in srgb, var(--event-property) 16%, transparent);
+  }
+
+  .elb-viz-tok--mark-context {
+    background: color-mix(in srgb, var(--event-context) 16%, transparent);
+  }
+
+  .elb-viz-tok--mark-globals {
+    background: color-mix(in srgb, var(--event-globals) 16%, transparent);
+  }
+
+  .elb-viz-line {
+    display: flex;
+    align-items: stretch;
+    transition: background var(--motion) var(--ease);
+  }
+
+  .elb-viz-line__bar {
+    flex: none;
+    width: 3px;
+    background: transparent;
+    transition: background var(--motion) var(--ease);
+  }
+
+  .elb-viz-line__bar--entity {
+    background: var(--event-entity);
+  }
+
+  .elb-viz-line__bar--action {
+    background: var(--event-action);
+  }
+
+  .elb-viz-line__bar--property {
+    background: var(--event-property);
+  }
+
+  .elb-viz-line__bar--context {
+    background: var(--event-context);
+  }
+
+  .elb-viz-line__bar--globals {
+    background: var(--event-globals);
+  }
+
+  .elb-viz-line__number {
+    flex: none;
+    width: 30px;
+    padding-right: 14px;
+    color: var(--viz-line-number);
+    text-align: right;
+  }
+
+  .elb-viz-line__code {
+    min-width: 0;
+    padding-right: 16px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .elb-viz-caret {
+    --elb-viz-caret: 1;
+    display: inline-block;
+    width: 2px;
+    height: 1.15em;
+    margin-left: 1px;
+    vertical-align: -0.2em;
+    background: var(--primary);
+    opacity: var(--elb-viz-caret);
+  }
+}

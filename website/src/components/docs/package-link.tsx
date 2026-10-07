@@ -27,20 +27,25 @@ export function PackageButton({
 }: PackageButtonProps): React.JSX.Element {
   const classes = clsx(
     'inline-flex items-center justify-center h-9 mr-3 px-3 mb-6 gap-x-2',
-    'text-xs font-medium text-black',
-    'border border-gray-600 rounded-lg',
-    to && 'hover:bg-gray-500',
+    'text-product-caption font-medium text-fg',
+    'border border-border-strong rounded-md',
+    to && 'hover:bg-surface-2',
     style,
   );
 
   const inner = (
     <>
-      <Icon icon={icon} className="h-6 w-6 fill-gray-400" /> {text}
+      <Icon icon={icon} className="h-6 w-6 fill-fg-3" /> {text}
     </>
   );
 
+  // Infima's unlayered link colour and hover underline beat utility classes.
   return to ? (
-    <Link to={to} className={classes}>
+    <Link
+      to={to}
+      className={classes}
+      style={{ color: 'var(--fg)', textDecoration: 'none' }}
+    >
       {inner}
     </Link>
   ) : (

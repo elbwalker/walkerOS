@@ -1,0 +1,29 @@
+// CaseCard (@walkeros/explorer/design/components): a customer story on a Card,
+// laying out its own stat tiles (a molecule does not import layout).
+@layer components {
+  .elb-case-card__title {
+    margin: 0;
+    color: var(--fg);
+    font-family: var(--type-title-plan-family);
+    font-size: var(--type-title-plan-size);
+    line-height: var(--type-title-plan-line-height);
+    font-weight: var(--type-title-plan-weight);
+    letter-spacing: var(--type-title-plan-tracking);
+    text-wrap: balance;
+  }
+
+  .elb-case-card__text {
+    margin: 0;
+    color: var(--fg-2);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+    font-weight: var(--type-body-weight);
+  }
+
+  .elb-case-card__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+    gap: 10px;
+  }
+}

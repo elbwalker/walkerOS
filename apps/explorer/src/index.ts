@@ -4,10 +4,8 @@ export type { PromotionPlaygroundProps } from './components/demos/PromotionPlayg
 
 // Organisms
 export { LiveCode } from './components/organisms/live-code';
-export { CollectorBox } from './components/organisms/collector-box';
 export { BrowserBox } from './components/organisms/browser-box';
 export type { LiveCodeProps } from './components/organisms/live-code';
-export type { CollectorBoxProps } from './components/organisms/collector-box';
 export type { BrowserBoxProps } from './components/organisms/browser-box';
 
 // Molecules
@@ -19,11 +17,6 @@ export { CodeSnippet } from './components/molecules/code-snippet';
 export { FlowMap } from './components/molecules/flow-map';
 export { PropertyTable } from './components/molecules/property-table';
 export { StepExample } from './components/molecules/step-example';
-export {
-  Dropdown,
-  DropdownItem,
-  DropdownDivider,
-} from './components/molecules/dropdown';
 export type {
   ArchitectureFlowProps,
   FlowColumn,
@@ -43,13 +36,8 @@ export type {
 } from './components/molecules/flow-map';
 export type { PropertyTableProps } from './components/molecules/property-table';
 export type { StepExampleProps } from './components/molecules/step-example';
-export type {
-  DropdownProps,
-  DropdownItemProps,
-  DropdownDividerProps,
-} from './components/molecules/dropdown';
 
-export { Preview, DEFAULT_FALLBACK_HTML } from './components/molecules/preview';
+export { Preview } from './components/molecules/preview';
 export type { PreviewProps } from './components/molecules/preview';
 
 // Atoms
@@ -59,11 +47,8 @@ export { CodeStatic } from './components/atoms/code-static';
 export { Box } from './components/atoms/box';
 export { Grid } from './components/atoms/grid';
 export { Header } from './components/atoms/header';
-export { Footer } from './components/atoms/footer';
 export { Button } from './components/atoms/button';
 export { ButtonGroup } from './components/atoms/button-group';
-export { ButtonLink } from './components/atoms/button-link';
-export { Spinner } from './components/atoms/spinner';
 
 export { Icon } from './components/atoms/icons';
 export type { CodeProps } from './components/atoms/code';
@@ -75,11 +60,8 @@ export type { CodeStaticProps } from './components/atoms/code-static';
 export type { BoxProps, BoxTab } from './components/atoms/box';
 export type { GridProps } from './components/atoms/grid';
 export type { HeaderProps } from './components/atoms/header';
-export type { FooterProps } from './components/atoms/footer';
 export type { ButtonProps } from './components/atoms/button';
 export type { ButtonGroupProps } from './components/atoms/button-group';
-export type { ButtonLinkProps } from './components/atoms/button-link';
-export type { SpinnerProps } from './components/atoms/spinner';
 
 // Utils
 export { isMonacoCancellation } from './utils/is-monaco-cancellation';
@@ -101,17 +83,6 @@ export type { CompletionEntry } from './utils/monaco-walkeros-completions';
 export { allowedRefKinds } from './utils/allowed-ref-kinds';
 export type { RefKind } from './utils/allowed-ref-kinds';
 export { getJsonPathAtOffset } from './utils/monaco-json-path';
-
-// MDX Integration
-export { MDXProvider } from './providers/MDXProvider';
-export { MDXCode } from './components/atoms/mdx-code';
-
-// Utility
-export { cn } from './lib/utils';
-
-// Hooks
-export { useDropdown } from './hooks/useDropdown';
-export type { UseDropdownReturn } from './hooks/useDropdown';
 
 // Monaco Editor themes
 export {
@@ -175,10 +146,3 @@ export {
 } from './utils/monaco-walkeros-providers';
 export { validateWalkerOSReferences } from './utils/monaco-walkeros-markers';
 export { extractFlowIntelliSenseContext } from './utils/monaco-intellisense-flow-extractor';
-
-// Destination helpers
-export {
-  createGtagDestination,
-  createFbqDestination,
-  createPlausibleDestination,
-} from './helpers/destinations';

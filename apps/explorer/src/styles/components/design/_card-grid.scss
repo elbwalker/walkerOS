@@ -1,0 +1,32 @@
+// CardGrid (@walkeros/explorer/design/components): an auto-fit card grid.
+@layer components {
+  .elb-card-grid {
+    --elb-card-grid-min: 280px;
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, var(--elb-card-grid-min)), 1fr)
+    );
+    gap: var(--space-5);
+  }
+
+  .elb-card-grid--min-280 {
+    --elb-card-grid-min: 280px;
+  }
+
+  .elb-card-grid--min-300 {
+    --elb-card-grid-min: 300px;
+  }
+
+  .elb-card-grid--min-420 {
+    --elb-card-grid-min: 420px;
+  }
+
+  .elb-card-grid--min-440 {
+    --elb-card-grid-min: 440px;
+  }
+
+  .elb-card-grid--features {
+    gap: var(--heading-gap) 48px;
+  }
+}

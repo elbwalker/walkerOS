@@ -1,0 +1,56 @@
+// VizFrame (@walkeros/explorer/design/components, internal): a demo's dark
+// island. The frame is the container; its body answers the 640px query.
+@layer components {
+  .elb-viz {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    color: var(--viz-fg);
+    background: var(--viz-bg);
+    border-radius: var(--radius-xl);
+    font-family: var(--type-viz-body-family);
+    font-size: var(--type-viz-body-size);
+    line-height: var(--type-viz-body-line-height);
+    font-weight: var(--type-viz-body-weight);
+    text-align: left;
+    container-type: inline-size;
+    -webkit-font-smoothing: antialiased;
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+  }
+
+  .elb-viz--hero {
+    border: 1px solid var(--border);
+  }
+
+  .elb-viz--mapping {
+    overflow: hidden;
+    border: 1px solid var(--viz-border);
+  }
+
+  .elb-viz__body {
+    min-width: 0;
+  }
+
+  .elb-viz--hero > .elb-viz__body {
+    padding: 16px;
+  }
+
+  .elb-viz--teaser > .elb-viz__body {
+    padding: 24px;
+  }
+
+  @container (max-width: 639px) {
+    .elb-viz--hero > .elb-viz__body {
+      padding: 12px;
+    }
+
+    .elb-viz--teaser > .elb-viz__body {
+      padding: 16px;
+    }
+  }
+}

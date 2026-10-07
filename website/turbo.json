@@ -8,7 +8,23 @@
         "scripts/**",
         "docs/**",
         "docusaurus.config.ts",
+        "src/css/custom.css",
+        "static/fonts/**",
+        "$TURBO_ROOT$/skills/INDEX.json",
         "$TURBO_ROOT$/apps/scripts/validate-llms.ts"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "src/**/*.jsx",
+        "src/**/*.cjs",
+        "src/**/*.css",
+        "src/**/*.scss",
+        "src/**/*.mdx",
+        "src/**/*.html",
+        "src/**/*.svg"
       ]
     }
   }

@@ -4,7 +4,7 @@ export default function LegalPrivacyContentEN() {
   return (
     <div className="relative overflow-hidden">
       <div className="relative px-4 sm:px-6 lg:px-8">
-        <div className="prose-elbwalker prose prose-lg mx-auto mt-6 text-gray-400">
+        <div className="mx-auto mt-6 text-fg-2">
           <div>
             We appreciate your visit to our website. This data protection
             declaration also applies to our other services and online presences,
@@ -21,7 +21,7 @@ export default function LegalPrivacyContentEN() {
             Regulation (GDPR).
           </div>
           <div>
-            <h3 className="text-gray-50">
+            <h3 className="text-fg">
               I. Name and address of the person responsible
             </h3>
             The person responsible within the meaning of the EU General Data
@@ -40,17 +40,17 @@ export default function LegalPrivacyContentEN() {
             </p>
           </div>
           <div>
-            <h3 className="text-gray-50">
+            <h3 className="text-fg">
               II. General information on data processing
             </h3>
-            <h4 className="text-gray-50">1. Scope of processing</h4>
+            <h4 className="text-fg">1. Scope of processing</h4>
             <p>
               We only collect and use personal data insofar as this is necessary
               for the provision of a functional website and our content and
               services, you have given your consent or the processing of the
               data is permitted by a legal regulation.
             </p>
-            <h4 className="text-gray-50">
+            <h4 className="text-fg">
               2. Legal basis for processing personal data
             </h4>
             <p>
@@ -68,9 +68,7 @@ export default function LegalPrivacyContentEN() {
               freedoms do not outweigh the first-mentioned interest, Article 6
               (1) (f) GDPR serves as the legal basis for processing.
             </p>
-            <h4 className="text-gray-50">
-              3. Legitimate interests in processing
-            </h4>
+            <h4 className="text-fg">3. Legitimate interests in processing</h4>
             <p>
               If the processing of your personal data is based on Article 6 (1)
               (f) GDPR, our legitimate interest, unless otherwise stated, is the
@@ -78,9 +76,7 @@ export default function LegalPrivacyContentEN() {
               our purposes and interests in the context of the above list of
               processing.
             </p>
-            <h4 className="text-gray-50">
-              4. Data deletion and storage duration
-            </h4>
+            <h4 className="text-fg">4. Data deletion and storage duration</h4>
             <p>
               Your personal data will be deleted or blocked as soon as the
               purpose of storage no longer applies or you revoke your consent.
@@ -94,7 +90,7 @@ export default function LegalPrivacyContentEN() {
               statutory provisions, unless there is a need for further storage
               the data exists for the conclusion or fulfillment of a contract.
             </p>
-            <h4 className="text-gray-50">
+            <h4 className="text-fg">
               5. Recipient of the data collected / data transmission
             </h4>
             <p>
@@ -107,20 +103,20 @@ export default function LegalPrivacyContentEN() {
               transferred to so-called third countries outside the EU if and to
               the extent that this is indicated below.
             </p>
-            <h4 className="text-gray-50">6. Need to provide personal data</h4>
+            <h4 className="text-fg">6. Need to provide personal data</h4>
             <p>
               You can visit our website without personal data being collected.
               However, if you would like to use our services, you must provide
               personal data in order to carry out the contract.
             </p>
-            <h4 className="text-gray-50">
+            <h4 className="text-fg">
               7. Existence of automated decision-making
             </h4>
             <p>
               We do not carry out any automatic decision-making or profiling
               within the meaning of Art. 22 GDPR.
             </p>
-            <h4 className="text-gray-50">8. Data security</h4>
+            <h4 className="text-fg">8. Data security</h4>
             <p>
               We use comprehensive technical and organizational measures to
               secure our website and other systems against loss, destruction,
@@ -130,11 +126,11 @@ export default function LegalPrivacyContentEN() {
             </p>
           </div>
           <div>
-            <h3 className="text-gray-50">
+            <h3 className="text-fg">
               III. Data processing when using our website
             </h3>
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 1. Data collection and use when registering and using our
                 services
               </h4>
@@ -190,7 +186,7 @@ export default function LegalPrivacyContentEN() {
               </p>
             </div>
             <div>
-              <h4 className="text-gray-50">2. Social Media</h4>
+              <h4 className="text-fg">2. Social Media</h4>
               <p>
                 In addition to this website, we also maintain a presence in
                 various social networks. If you visit such a site, personal data
@@ -236,7 +232,7 @@ export default function LegalPrivacyContentEN() {
                 provisions of the respective network:
               </p>
               <div>
-                <h5 className="text-gray-50">Facebook</h5>
+                <h5 className="text-fg">Facebook</h5>
                 <p>
                   Facebook is operated by Meta Platforms, Inc., 1601 Willow
                   Road, Menlo Park, CA, 94025, USA. We have concluded an
@@ -247,7 +243,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Privacy policy:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://www.facebook.com/about/privacy/"
                     rel="nofollow"
                     target="_blank"
@@ -258,7 +254,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Opt-Out:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://www.facebook.com/settings?tab=ads"
                     rel="nofollow"
                     target="_blank"
@@ -268,7 +264,7 @@ export default function LegalPrivacyContentEN() {
                 </p>
               </div>
               <div>
-                <h5 className="text-gray-50">Instagram</h5>
+                <h5 className="text-fg">Instagram</h5>
                 <p>
                   Instagram is operated by Meta Platforms, Inc., 1601 Willow
                   Road, Menlo Park, CA, 94025, USA.
@@ -276,7 +272,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Privacy policy and opt-out:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="http://instagram.com/about/legal/privacy/"
                     rel="nofollow"
                     target="_blank"
@@ -286,7 +282,7 @@ export default function LegalPrivacyContentEN() {
                 </p>
               </div>
               <div>
-                <h5 className="text-gray-50">LinkedIn</h5>
+                <h5 className="text-fg">LinkedIn</h5>
                 <p>
                   LinkedIn is operated by LinkedIn Ireland Unlimited Company
                   Wilton Place, Dublin 2, Ireland.
@@ -294,7 +290,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Privacy Policy:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://www.linkedin.com/legal/privacy-policy"
                     rel="nofollow"
                     target="_blank"
@@ -305,7 +301,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Opt-Out:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://www.linkedin.com/psettings/guest-controls/retargeting-opt-out"
                     rel="nofollow"
                     target="_blank"
@@ -315,7 +311,7 @@ export default function LegalPrivacyContentEN() {
                 </p>
               </div>
               <div>
-                <h5 className="text-gray-50">Xing</h5>
+                <h5 className="text-fg">Xing</h5>
                 <p>
                   Xing is operated by XING AG, Dammtorstrasse 29-32, 20354
                   Hamburg, Germany.
@@ -323,7 +319,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Privacy policy and opt-out:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://privacy.xing.com/de/datenschutzerklaerung"
                     rel="nofollow"
                     target="_blank"
@@ -333,7 +329,7 @@ export default function LegalPrivacyContentEN() {
                 </p>
               </div>
               <div>
-                <h4 className="text-gray-50">3. Email and contact form</h4>
+                <h4 className="text-fg">3. Email and contact form</h4>
                 <p>
                   We have an email address and a contact form available on our
                   website. If you contact us by email or using our contact form,
@@ -375,7 +371,7 @@ export default function LegalPrivacyContentEN() {
                 </p>
               </div>
               <div>
-                <h4 className="text-gray-50">4. Statistics by elbwalker</h4>
+                <h4 className="text-fg">4. Statistics by elbwalker</h4>
                 <p>
                   In order to be able to understand which contents of our
                   website are interesting for users, we integrate the "Walker"
@@ -427,13 +423,13 @@ export default function LegalPrivacyContentEN() {
             </div>
           </div>
           <div>
-            <h3 className="text-gray-50">IV. Rights of affected persons</h3>
+            <h3 className="text-fg">IV. Rights of affected persons</h3>
             <div>
               <p>
                 If your personal data is processed, you as the person concerned
                 within the meaning of the GDPR the following rights:
               </p>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 1. Right to information (Art. 15 GDPR)
               </h4>
               <p>
@@ -485,9 +481,7 @@ export default function LegalPrivacyContentEN() {
               </p>
             </div>
             <div>
-              <h4 className="text-gray-50">
-                2. Right to correction (Art. 16 GDPR)
-              </h4>
+              <h4 className="text-fg">2. Right to correction (Art. 16 GDPR)</h4>
               <p>
                 You have the right to request the immediate correction and / or
                 completion of incorrect or incomplete personal data concerning
@@ -495,7 +489,7 @@ export default function LegalPrivacyContentEN() {
               </p>
             </div>
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 3. Right to restriction of processing (Art. 18 GDPR)
               </h4>
               <p>
@@ -533,9 +527,7 @@ export default function LegalPrivacyContentEN() {
               </p>
             </div>
             <div>
-              <h4 className="text-gray-50">
-                4. Right to deletion (Art. 17 GDPR)
-              </h4>
+              <h4 className="text-fg">4. Right to deletion (Art. 17 GDPR)</h4>
               <p>
                 You have the right to request that we delete your personal data
                 immediately if one of the following reasons applies and if
@@ -614,7 +606,7 @@ export default function LegalPrivacyContentEN() {
             </div>
 
             <div>
-              <h4 className="text-gray-50">5. Right to be informed</h4>
+              <h4 className="text-fg">5. Right to be informed</h4>
               <p>
                 If you have asserted the right to correction, deletion or
                 restriction of processing against us, we are obliged to notify
@@ -630,7 +622,7 @@ export default function LegalPrivacyContentEN() {
             </div>
 
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 6. Right to data portability (Art. 20 GDPR)
               </h4>
               <p>
@@ -665,10 +657,8 @@ export default function LegalPrivacyContentEN() {
             </div>
 
             <div>
-              <h4 className="text-gray-50">
-                7. Right to object (Art. 21 GDPR)
-              </h4>
-              <div className="border">
+              <h4 className="text-fg">7. Right to object (Art. 21 GDPR)</h4>
+              <div className="border border-border">
                 <p>
                   You have the right, for reasons that arise from your
                   particular situation, to object at any time to the processing
@@ -697,7 +687,7 @@ export default function LegalPrivacyContentEN() {
             </div>
 
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 8. Right to complain to a supervisory authority
               </h4>
               <p>
@@ -714,7 +704,7 @@ export default function LegalPrivacyContentEN() {
               </p>
             </div>
           </div>
-          <h4 className="text-gray-50">
+          <h4 className="text-fg">
             <b>Status February 2022</b>
           </h4>
         </div>

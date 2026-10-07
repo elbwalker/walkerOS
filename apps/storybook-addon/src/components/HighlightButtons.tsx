@@ -2,17 +2,21 @@ import type { WalkerOSAddon } from '../types';
 import React from 'react';
 import { Button } from 'storybook/internal/components';
 import { useTheme } from 'storybook/theming';
+import { vizBg } from '@walkeros/explorer/design';
+import { highlightColors, type HighlightKind } from '../utils/eventColors';
 
 interface HighlightButtonsProps {
-  highlights: {
-    context: boolean;
-    entity: boolean;
-    property: boolean;
-    action: boolean;
-    globals: boolean;
-  };
-  toggleHighlight: (type: keyof HighlightButtonsProps['highlights']) => void;
+  highlights: Record<HighlightKind, boolean>;
+  toggleHighlight: (type: HighlightKind) => void;
 }
+
+const BUTTONS: Array<{ kind: HighlightKind; label: string }> = [
+  { kind: 'globals', label: 'Globals' },
+  { kind: 'context', label: 'Context' },
+  { kind: 'entity', label: 'Entity' },
+  { kind: 'property', label: 'Property' },
+  { kind: 'action', label: 'Action' },
+];
 
 export const HighlightButtons: React.FC<HighlightButtonsProps> = ({
   highlights,
@@ -39,76 +43,29 @@ export const HighlightButtons: React.FC<HighlightButtonsProps> = ({
       >
         Highlight:
       </span>
-      <Button
-        size="small"
-        variant={highlights.globals ? 'solid' : 'outline'}
-        onClick={() => toggleHighlight('globals')}
-        style={{
-          fontSize: '11px',
-          padding: '4px 8px',
-          backgroundColor: highlights.globals ? '#4fc3f7cc' : 'transparent',
-          color: highlights.globals ? '#fff' : theme.color.mediumdark,
-          border: `1px solid ${highlights.globals ? '#4fc3f7' : theme.color.border}`,
-        }}
-      >
-        Globals
-      </Button>
-      <Button
-        size="small"
-        variant={highlights.context ? 'solid' : 'outline'}
-        onClick={() => toggleHighlight('context')}
-        style={{
-          fontSize: '11px',
-          padding: '4px 8px',
-          backgroundColor: highlights.context ? '#ffbd44cc' : 'transparent',
-          color: highlights.context ? '#000' : theme.color.mediumdark,
-          border: `1px solid ${highlights.context ? '#ffbd44' : theme.color.border}`,
-        }}
-      >
-        Context
-      </Button>
-      <Button
-        size="small"
-        variant={highlights.entity ? 'solid' : 'outline'}
-        onClick={() => toggleHighlight('entity')}
-        style={{
-          fontSize: '11px',
-          padding: '4px 8px',
-          backgroundColor: highlights.entity ? '#00ca4ecc' : 'transparent',
-          color: highlights.entity ? '#fff' : theme.color.mediumdark,
-          border: `1px solid ${highlights.entity ? '#00ca4e' : theme.color.border}`,
-        }}
-      >
-        Entity
-      </Button>
-      <Button
-        size="small"
-        variant={highlights.property ? 'solid' : 'outline'}
-        onClick={() => toggleHighlight('property')}
-        style={{
-          fontSize: '11px',
-          padding: '4px 8px',
-          backgroundColor: highlights.property ? '#ff605ccc' : 'transparent',
-          color: highlights.property ? '#fff' : theme.color.mediumdark,
-          border: `1px solid ${highlights.property ? '#ff605c' : theme.color.border}`,
-        }}
-      >
-        Property
-      </Button>
-      <Button
-        size="small"
-        variant={highlights.action ? 'solid' : 'outline'}
-        onClick={() => toggleHighlight('action')}
-        style={{
-          fontSize: '11px',
-          padding: '4px 8px',
-          backgroundColor: highlights.action ? '#9900ffcc' : 'transparent',
-          color: highlights.action ? '#fff' : theme.color.mediumdark,
-          border: `1px solid ${highlights.action ? '#9900ff' : theme.color.border}`,
-        }}
-      >
-        Action
-      </Button>
+      {BUTTONS.map(({ kind, label }) => {
+        const active = highlights[kind];
+        const color = highlightColors[kind];
+
+        return (
+          <Button
+            key={kind}
+            size="small"
+            variant={active ? 'solid' : 'outline'}
+            onClick={() => toggleHighlight(kind)}
+            style={{
+              fontSize: '11px',
+              padding: '4px 8px',
+              // Active: the event colour on the dark visualisation ground.
+              backgroundColor: active ? vizBg : 'transparent',
+              color: active ? color : theme.color.mediumdark,
+              border: `1px solid ${active ? color : theme.color.border}`,
+            }}
+          >
+            {label}
+          </Button>
+        );
+      })}
     </div>
   );
 };

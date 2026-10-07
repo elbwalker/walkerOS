@@ -194,6 +194,13 @@ describe('scanFile', () => {
       "const c = 'font-(--font-weight-medium) tracking-(--tracking-wide) max-w-(--container-md)';",
       [],
     ],
+    // The type style variables are design names: the checker reads them from tokens.css.
+    [
+      'undeclared-var',
+      'a.css',
+      '.a { font-size: var(--type-body-size); } .b { font-size: clamp(38px, 6vw, var(--type-display-size)); top: var(--type-nowhere-size); }',
+      ['var(--type-nowhere-size'],
+    ],
     // Built in from the shared Tailwind namespace list: kept namespaces count, reset ones do not.
     [
       'undeclared-var',

@@ -41,6 +41,32 @@ it('declares every colour and shadow of design/tokens.json in both themes', () =
   expect(missing).toEqual([]);
 });
 
+it('declares size, line height, weight, family and (only when set) tracking for every type style of design/tokens.json', () => {
+  const tokens = loadDesignTokens(packageDir);
+  const [, invariant] = renderTokensCss(tokens).split('\n\n');
+  const styles = tokens.groups.flatMap((group) => group.styles);
+  const expected = styles.flatMap((style) =>
+    [
+      'size',
+      'line-height',
+      'weight',
+      ...(style.letterSpacing === undefined ? [] : ['tracking']),
+      'family',
+    ].map((property) => `type-${style.name}-${property}`),
+  );
+  const declared = [...collectDeclaredNames(invariant)].filter((name) =>
+    name.startsWith('type-'),
+  );
+  expect(declared).toEqual(expected);
+  // Both tracking branches occur in the real tokens.
+  expect(styles.some((style) => style.letterSpacing === undefined)).toBe(true);
+  expect(styles.some((style) => style.letterSpacing !== undefined)).toBe(true);
+  for (const style of styles)
+    expect(invariant).toContain(
+      `--type-${style.name}-family: var(--font-${style.family});`,
+    );
+});
+
 it('src/design/index.ts is the generator output for design/tokens.json (run `npm run build` in apps/explorer to refresh it)', () => {
   expect(readFileSync(resolve(packageDir, 'src/design/index.ts'), 'utf8')).toBe(
     renderConstants(loadDesignTokens(packageDir)),

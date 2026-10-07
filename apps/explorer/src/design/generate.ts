@@ -8,6 +8,7 @@ import {
   parseDesignTokens,
   resolveColor,
   THEMES,
+  TYPE_VARIABLE_PREFIX,
   type DesignTokens,
   type ThemedValue,
   type ThemeId,
@@ -74,6 +75,18 @@ export function renderTokensCss(tokens: DesignTokens): string {
   }
   for (const [key, stack] of Object.entries(tokens.families))
     invariant.push(declaration(`font-${key}`, stack));
+  for (const style of tokens.groups.flatMap((group) => group.styles)) {
+    const name = (property: string): string =>
+      `${TYPE_VARIABLE_PREFIX}${style.name}-${property}`;
+    invariant.push(
+      declaration(name('size'), style.fontSize),
+      declaration(name('line-height'), String(style.lineHeight)),
+      declaration(name('weight'), String(style.fontWeight)),
+    );
+    if (style.letterSpacing !== undefined)
+      invariant.push(declaration(name('tracking'), style.letterSpacing));
+    invariant.push(declaration(name('family'), `var(--font-${style.family})`));
+  }
   const themeBlocks = THEMES.map((theme, index) =>
     block(
       index === 0

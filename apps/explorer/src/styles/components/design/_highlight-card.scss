@@ -1,0 +1,43 @@
+// HighlightCard (@walkeros/explorer/design/components): a large glowing card.
+// Its CTA class adjusts Button; molecules load after atoms, so it wins at rest.
+// The atom's hover rule is more specific, so the CTA class repeats `&:hover`
+// for every property `.elb-btn--secondary:hover` sets, and wins on hover too.
+@layer components {
+  .elb-highlight-card__title {
+    margin: 0;
+    color: var(--fg);
+    font-family: var(--type-kicker-lg-family);
+    font-size: clamp(22px, 2.4vw, var(--type-kicker-lg-size));
+    line-height: var(--type-kicker-lg-line-height);
+    font-weight: var(--type-kicker-lg-weight);
+    letter-spacing: var(--type-kicker-lg-tracking);
+    text-wrap: balance;
+  }
+
+  .elb-highlight-card__text {
+    flex: 1;
+    margin: 0;
+    color: var(--fg-2);
+    font-family: var(--type-body-lg-family);
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line-height);
+    font-weight: var(--type-body-lg-weight);
+    text-wrap: pretty;
+  }
+
+  .elb-highlight-card__cta {
+    align-self: flex-start;
+    margin-top: 6px;
+    padding: 10px 18px;
+    background: var(--surface-2);
+    font-family: var(--type-ui-family);
+    font-size: var(--type-ui-size);
+    line-height: var(--type-ui-line-height);
+    font-weight: 600;
+
+    &:hover {
+      border-color: var(--primary);
+      color: var(--fg);
+    }
+  }
+}

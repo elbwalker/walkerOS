@@ -1,0 +1,19 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "src/**/*.jsx",
+        "src/**/*.cjs",
+        "src/**/*.css",
+        "src/**/*.scss",
+        "src/**/*.mdx",
+        "src/**/*.html",
+        "src/**/*.svg"
+      ]
+    }
+  }
+}

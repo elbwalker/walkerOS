@@ -4,7 +4,7 @@ export default function LegalPrivacyContentDE() {
   return (
     <div className="relative overflow-hidden">
       <div className="relative px-4 sm:px-6 lg:px-8">
-        <div className="prose-elbwalker prose prose-lg mx-auto mt-6 text-gray-400">
+        <div className="mx-auto mt-6 text-fg-2">
           <div>
             Wir freuen uns über Ihren Besuch auf unserer Website. Diese
             Datenschutzerklärung gilt auch für unsere sonstigen Leistungen und
@@ -23,7 +23,7 @@ export default function LegalPrivacyContentDE() {
             Datenschutzgrundverordnung (DSGVO).
           </div>
           <div>
-            <h3 className="text-gray-50">
+            <h3 className="text-fg">
               I. Name und Anschrift des Verantwortlichen
             </h3>
             Verantwortliche im Sinne der EU-Datenschutzgrundverordnung (DSGVO)
@@ -41,10 +41,8 @@ export default function LegalPrivacyContentDE() {
             </p>
           </div>
           <div>
-            <h3 className="text-gray-50">
-              II. Allgemeines zur Datenverarbeitung
-            </h3>
-            <h4 className="text-gray-50">1. Umfang der Verarbeitung</h4>
+            <h3 className="text-fg">II. Allgemeines zur Datenverarbeitung</h3>
+            <h4 className="text-fg">1. Umfang der Verarbeitung</h4>
             <p>
               Wir erheben und verwenden personenbezogene Daten grundsätzlich
               nur, soweit dies zur Bereitstellung einer funktionsfähigen Website
@@ -52,7 +50,7 @@ export default function LegalPrivacyContentDE() {
               Einwilligung erteilt haben oder die Verarbeitung der Daten durch
               eine gesetzliche Regelung erlaubt ist.
             </p>
-            <h4 className="text-gray-50">
+            <h4 className="text-fg">
               2. Rechtsgrundlage der Verarbeitung personenbezogener Daten
             </h4>
             <p>
@@ -73,7 +71,7 @@ export default function LegalPrivacyContentDE() {
               Grundfreiheiten das erstgenannte Interesse nicht, so dient Art. 6
               Abs. 1 lit. f DSGVO als Rechtsgrundlage für die Verarbeitung.
             </p>
-            <h4 className="text-gray-50">
+            <h4 className="text-fg">
               3. Berechtigte Interessen an der Verarbeitung
             </h4>
             <p>
@@ -84,7 +82,7 @@ export default function LegalPrivacyContentDE() {
               Interessen im Rahmen der vorstehenden Aufzählung der Verarbeitung
               jeweils angegeben.
             </p>
-            <h4 className="text-gray-50">4. Datenlöschung und Speicherdauer</h4>
+            <h4 className="text-fg">4. Datenlöschung und Speicherdauer</h4>
             <p>
               Ihre personenbezogenen Daten werden gelöscht oder gesperrt, sobald
               der Zweck der Speicherung entfällt oder Sie Ihre Einwilligung
@@ -101,7 +99,7 @@ export default function LegalPrivacyContentDE() {
               zur weiteren Speicherung der Daten für einen Vertragsabschluss
               oder eine Vertragserfüllung besteht.
             </p>
-            <h4 className="text-gray-50">
+            <h4 className="text-fg">
               5. Empfänger der erhobenen Daten / Datenübermittlung
             </h4>
             <p>
@@ -116,7 +114,7 @@ export default function LegalPrivacyContentDE() {
               ausschließlich, wenn und soweit nachfolgend darauf hingewiesen
               wurde.
             </p>
-            <h4 className="text-gray-50">
+            <h4 className="text-fg">
               6. Notwendigkeit der Herausgabe von personenbezogenen Daten
             </h4>
             <p>
@@ -125,14 +123,14 @@ export default function LegalPrivacyContentDE() {
               Anspruch nehmen möchten, ist die Angabe von personenbezogenen
               Daten zwingend zur Durchführung des Vertrags notwendig.
             </p>
-            <h4 className="text-gray-50">
+            <h4 className="text-fg">
               7. Bestehen einer automatisierten Entscheidungsfindung
             </h4>
             <p>
               Wir führen keine automatische Entscheidungsfindung oder ein
               Profiling im Sinne von Art. 22 DSGVO durch.
             </p>
-            <h4 className="text-gray-50">8. Datensicherheit</h4>
+            <h4 className="text-fg">8. Datensicherheit</h4>
             <p>
               Wir sichern unsere Website und sonstigen Systeme durch umfassende
               technische und organisatorische Maßnahmen gegen Verlust,
@@ -143,11 +141,11 @@ export default function LegalPrivacyContentDE() {
             </p>
           </div>
           <div>
-            <h3 className="text-gray-50">
+            <h3 className="text-fg">
               III. Datenverarbeitung bei Nutzung unserer Website
             </h3>
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 1. Datenerhebung und -verwendung bei Registrierung und
                 Inanspruchnahme unserer Leistungen
               </h4>
@@ -223,7 +221,7 @@ export default function LegalPrivacyContentDE() {
               </p>
             </div>
             <div>
-              <h4 className="text-gray-50">2. Social Media</h4>
+              <h4 className="text-fg">2. Social Media</h4>
               <p>
                 Wir unterhalten neben dieser Website auch Präsenzen in
                 unterschiedlichen sozialen Netzwerken. Soweit Sie eine solche
@@ -272,7 +270,7 @@ export default function LegalPrivacyContentDE() {
                 Datenschutzbestimmungen des jeweiligen Netzwerkes:
               </p>
               <div>
-                <h5 className="text-gray-50">Facebook</h5>
+                <h5 className="text-fg">Facebook</h5>
                 <p>
                   Facebook wird betrieben von der Meta Platforms, Inc., 1601
                   Willow Road, Menlo Park, CA, 94025, USA. Wir haben mit
@@ -284,7 +282,7 @@ export default function LegalPrivacyContentDE() {
                 <p>
                   Datenschutzerklärung:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://www.facebook.com/about/privacy/"
                     rel="nofollow"
                     target="_blank"
@@ -295,7 +293,7 @@ export default function LegalPrivacyContentDE() {
                 <p>
                   Opt-Out:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://www.facebook.com/settings?tab=ads"
                     rel="nofollow"
                     target="_blank"
@@ -305,7 +303,7 @@ export default function LegalPrivacyContentDE() {
                 </p>
               </div>
               <div>
-                <h5 className="text-gray-50">Instagram</h5>
+                <h5 className="text-fg">Instagram</h5>
                 <p>
                   Instagram wird betrieben von der Meta Platforms, Inc., 1601
                   Willow Road, Menlo Park, CA, 94025, USA.
@@ -313,7 +311,7 @@ export default function LegalPrivacyContentDE() {
                 <p>
                   Datenschutzerklärung und Opt-Out:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="http://instagram.com/about/legal/privacy/"
                     rel="nofollow"
                     target="_blank"
@@ -323,7 +321,7 @@ export default function LegalPrivacyContentDE() {
                 </p>
               </div>
               <div>
-                <h5 className="text-gray-50">LinkedIn</h5>
+                <h5 className="text-fg">LinkedIn</h5>
                 <p>
                   LinkedIn wird betrieben von der LinkedIn Ireland Unlimited
                   Company Wilton Place, Dublin 2, Irland.
@@ -331,7 +329,7 @@ export default function LegalPrivacyContentDE() {
                 <p>
                   Datenschutzerklärung:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://www.linkedin.com/legal/privacy-policy"
                     rel="nofollow"
                     target="_blank"
@@ -342,7 +340,7 @@ export default function LegalPrivacyContentDE() {
                 <p>
                   Opt-Out:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://www.linkedin.com/psettings/guest-controls/retargeting-opt-out"
                     rel="nofollow"
                     target="_blank"
@@ -352,7 +350,7 @@ export default function LegalPrivacyContentDE() {
                 </p>
               </div>
               <div>
-                <h5 className="text-gray-50">Xing</h5>
+                <h5 className="text-fg">Xing</h5>
                 <p>
                   Xing wird betrieben von der XING AG, Dammtorstraße 29-32,
                   20354 Hamburg, Deutschland.
@@ -360,7 +358,7 @@ export default function LegalPrivacyContentDE() {
                 <p>
                   Datenschutzerklärung und Opt-Out:{' '}
                   <a
-                    className="text-elbwalker"
+                    className="text-link"
                     href="https://privacy.xing.com/de/datenschutzerklaerung"
                     rel="nofollow"
                     target="_blank"
@@ -370,7 +368,7 @@ export default function LegalPrivacyContentDE() {
                 </p>
               </div>
               <div>
-                <h4 className="text-gray-50">3. E-Mail und Kontaktformular</h4>
+                <h4 className="text-fg">3. E-Mail und Kontaktformular</h4>
                 <p>
                   Auf unserer Website halten wir eine E-Mail-Adresse und ein
                   Kontaktformular bereit. Soweit Sie uns per E-Mail oder über
@@ -419,7 +417,7 @@ export default function LegalPrivacyContentDE() {
                 </p>
               </div>
               <div>
-                <h4 className="text-gray-50">4. Statistiken über elbwalker</h4>
+                <h4 className="text-fg">4. Statistiken über elbwalker</h4>
                 <p>
                   Um nachvollziehen zu können, welche Inhalte unserer Website
                   für Nutzer interessant sind, binden wir den „Walker“ der
@@ -474,15 +472,13 @@ export default function LegalPrivacyContentDE() {
             </div>
           </div>
           <div>
-            <h3 className="text-gray-50">IV. Betroffenenrechte</h3>
+            <h3 className="text-fg">IV. Betroffenenrechte</h3>
             <div>
               <p>
                 Werden Ihre personenbezogenen Daten verarbeitet, stehen Ihnen
                 als Betroffener i.S. DSGVO folgende Rechte zu:
               </p>
-              <h4 className="text-gray-50">
-                1. Recht auf Auskunft (Art. 15 DSGVO)
-              </h4>
+              <h4 className="text-fg">1. Recht auf Auskunft (Art. 15 DSGVO)</h4>
               <p>
                 Sie haben zudem das Recht, jederzeit von uns unentgeltliche
                 Auskunft über die zu Ihrer Person gespeicherten
@@ -539,7 +535,7 @@ export default function LegalPrivacyContentDE() {
               </p>
             </div>
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 2. Recht auf Berichtigung (Art. 16 DSGVO)
               </h4>
               <p>
@@ -550,7 +546,7 @@ export default function LegalPrivacyContentDE() {
               </p>
             </div>
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 3. Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)
               </h4>
               <p>
@@ -598,9 +594,7 @@ export default function LegalPrivacyContentDE() {
               </p>
             </div>
             <div>
-              <h4 className="text-gray-50">
-                4. Recht auf Löschung (Art. 17 DSGVO)
-              </h4>
+              <h4 className="text-fg">4. Recht auf Löschung (Art. 17 DSGVO)</h4>
               <p>
                 Sie haben das Recht, von uns zu verlangen, dass die Sie
                 betreffenden personenbezogenen Daten unverzüglich gelöscht
@@ -689,7 +683,7 @@ export default function LegalPrivacyContentDE() {
             </div>
 
             <div>
-              <h4 className="text-gray-50">5. Recht auf Unterrichtung</h4>
+              <h4 className="text-fg">5. Recht auf Unterrichtung</h4>
               <p>
                 Haben Sie das Recht auf Berichtigung, Löschung oder
                 Einschränkung der Verarbeitung gegenüber uns geltend gemacht,
@@ -707,7 +701,7 @@ export default function LegalPrivacyContentDE() {
             </div>
 
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 6. Recht auf Datenübertragbarkeit (Art. 20 DSGVO)
               </h4>
               <p>
@@ -743,10 +737,10 @@ export default function LegalPrivacyContentDE() {
             </div>
 
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 7. Recht auf Widerspruch (Art. 21 DSGVO)
               </h4>
-              <div className="border">
+              <div className="border border-border">
                 <p>
                   Sie haben das Recht, aus Gründen, die sich aus Ihrer
                   besonderen Situation ergeben, jederzeit gegen die Verarbeitung
@@ -779,7 +773,7 @@ export default function LegalPrivacyContentDE() {
             </div>
 
             <div>
-              <h4 className="text-gray-50">
+              <h4 className="text-fg">
                 8. Recht auf Beschwerde bei einer Aufsichtsbehörde
               </h4>
               <p>
@@ -799,7 +793,7 @@ export default function LegalPrivacyContentDE() {
               </p>
             </div>
           </div>
-          <h4 className="text-gray-50">
+          <h4 className="text-fg">
             <b>Stand Februar 2022</b>
           </h4>
         </div>

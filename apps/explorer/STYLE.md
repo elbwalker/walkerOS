@@ -676,10 +676,36 @@ src/styles/
 │   ├── _spacing.scss
 │   └── _responsive.scss    # Breakpoint mixins
 └── components/
-    ├── atoms/              # _button.scss, _toggle.scss, etc.
-    ├── molecules/          # _code-panel.scss, _tree-sidebar.scss
-    └── organisms/          # _box.scss, _grid.scss, _live-code.scss
+    ├── atoms/              # _button.scss, _code.scss, etc.
+    ├── molecules/          # _code-box.scss, _flow-map.scss, etc.
+    ├── organisms/          # _box.scss
+    └── design/             # Design components: _atoms, _molecules, _layout, _viz aggregators and one partial each
 ```
+
+### Design component styles
+
+The partials in `components/design/` follow the design system, not the explorer
+theme:
+
+- Colours, radii, fonts and spacings come from the design tokens
+  (`@walkeros/explorer/design/tokens.css`); text takes the `--type-<style>-*`
+  variables, and a fluid heading composes
+  `clamp(<min>, <vw>, var(--type-<style>-size))`. Tints are
+  `color-mix(in srgb, var(--token) N%, transparent)`; no drop shadows;
+  transitions use `var(--motion) var(--ease)`.
+- Everything sits in `@layer components` with `elb-` BEM classes.
+- Each partial is added to its folder's aggregator (`_atoms.scss`,
+  `_molecules.scss`, `_layout.scss`, `_viz.scss`); `index.scss` loads the four
+  in that order, so a molecule's class that adjusts an atom wins at equal
+  specificity. An atom's `:hover` rule is more specific, so such a class also
+  repeats, under `&:hover`, every property the atom's hover rule sets.
+- A demo's per-frame values are `--elb-viz-*` custom properties set from React
+  with literal names; the demo's partial declares each one's default.
+  Breakpoints inside a demo are container queries
+  (`@container (max-width: 639px)`), so a demo follows its own width, not the
+  viewport's.
+- `npx walkeros-design-check src/design/components src/styles/components/design`
+  (from `apps/explorer`) must pass with no allow.
 
 ### SCSS Compliance Rules (MANDATORY)
 

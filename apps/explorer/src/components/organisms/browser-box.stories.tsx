@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { BrowserBox } from './browser-box';
 
@@ -90,19 +91,28 @@ const sampleCss = `
 `;
 
 /**
- * Default browser box with HTML and CSS
- *
- * Shows a product card with:
- * - Preview tab (live render)
- * - HTML tab (editable source)
- * - CSS tab (editable styles)
+ * Editable HTML/CSS/JS code panel without the preview tab, as the
+ * PromotionPlayground uses it next to a separate Preview.
  */
 export const Default: Story = {
-  args: {
-    html: sampleHtml,
-    css: sampleCss,
-    showPreview: true,
-    label: 'Code',
-    initialTab: 'preview',
+  render: () => {
+    const [html, setHtml] = useState(sampleHtml);
+    const [css, setCss] = useState(sampleCss);
+    const [js, setJs] = useState('');
+    return (
+      <BrowserBox
+        label="Code"
+        html={html}
+        css={css}
+        js={js}
+        onHtmlChange={setHtml}
+        onCssChange={setCss}
+        onJsChange={setJs}
+        showPreview={false}
+        initialTab="html"
+        lineNumbers={false}
+        wordWrap
+      />
+    );
   },
 };

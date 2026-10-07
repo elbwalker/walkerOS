@@ -1,4 +1,3 @@
-import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config, Plugin } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import type { PluginOptions as LlmsTxtOptions } from '@signalwire/docusaurus-plugin-llms-txt';
@@ -14,6 +13,18 @@ import exportDropComments from './src/rehype/export-drop-comments';
 import exportFlowSnippets from './src/rehype/export-flow-snippets';
 import normalizeExportLinks from './src/remark/normalize-export-links';
 import prependExportContext from './src/remark/prepend-export-context';
+import { prismTheme } from './src/prism-theme';
+import { EXTERNAL, ROUTES } from './src/components/landing/links';
+import { releaseLine } from './src/components/landing/release';
+import {
+  fontSans,
+  vizBg,
+  vizBorder,
+  vizCodeBg,
+  vizFg,
+  vizFg2,
+  vizSurface,
+} from '@walkeros/explorer/design';
 
 const vars = {
   github: 'https://github.com/elbwalker/walkerOS/',
@@ -21,6 +32,10 @@ const vars = {
   site: 'https://www.walkeros.io',
   npm: 'https://www.npmjs.com/org/walkeros',
 };
+
+// The announcement bar names the release line; each new minor shows it again
+// (the bar's id changes), patches do not.
+const release = releaseLine(walkerosVersion);
 
 // The llms.txt header is a single blockquote: the plugin writes one `> ` in
 // front of `siteDescription` and nothing else, so a multi-paragraph preamble
@@ -229,6 +244,11 @@ const config: Config = {
       },
     },
     image: 'img/elbwalker_socialcard.png',
+    announcementBar: {
+      id: `release-v${release}`,
+      content: `What's new: walkerOS v${release} is out · <a href="${EXTERNAL.releases}">Read the release notes</a>`,
+      isCloseable: true,
+    },
     navbar: {
       logo: {
         alt: 'walkerOS logo',
@@ -241,7 +261,7 @@ const config: Config = {
           position: 'left',
           label: 'Documentation',
         },
-        { to: '/playground/', label: 'Playground', position: 'left' },
+        { to: ROUTES.playground, label: 'Playground', position: 'left' },
         {
           type: 'docSidebar',
           sidebarId: 'skillsSidebar',
@@ -249,11 +269,10 @@ const config: Config = {
           position: 'left',
           label: 'Skills',
         },
-        {
-          href: vars.github,
-          label: 'GitHub',
-          position: 'right',
-        },
+        // href, not to: a `to` item is a router NavLink, and '/' (the path of
+        // '/#plans') would mark it active on every page.
+        { href: ROUTES.services, label: 'Services', position: 'left' },
+        { href: EXTERNAL.github, label: 'GitHub', position: 'right' },
       ],
     },
     footer: {
@@ -262,71 +281,62 @@ const config: Config = {
         {
           title: 'Learn',
           items: [
-            {
-              label: 'Documentation',
-              to: '/docs/',
-            },
-            {
-              label: 'Playground',
-              to: '/playground/',
-            },
-            {
-              label: 'Comparisons',
-              to: '/docs/comparisons/',
-            },
-            {
-              label: 'Storybook demo',
-              href: 'https://storybook.walkeros.io/',
-            },
+            { label: 'Documentation', to: ROUTES.docs },
+            { label: 'Playground', to: ROUTES.playground },
+            { label: 'Storybook demo', href: EXTERNAL.storybook },
+          ],
+        },
+        {
+          title: 'Open source',
+          items: [
+            { label: 'GitHub', href: EXTERNAL.github },
+            { label: 'npm', href: EXTERNAL.npm },
+            { label: 'Changelog', href: EXTERNAL.releases },
+            { label: 'License', href: EXTERNAL.license },
           ],
         },
         {
           title: 'Community',
           items: [
-            {
-              label: 'GitHub',
-              href: `${vars.github}discussions`,
-            },
-            {
-              label: 'LinkedIn',
-              href: `${vars.linkedin}`,
-            },
+            { label: 'GitHub Discussions', href: EXTERNAL.discussions },
+            { label: 'LinkedIn', href: EXTERNAL.linkedin },
           ],
         },
         {
           title: 'Company',
           items: [
-            {
-              label: 'About us',
-              href: 'https://www.elbwalker.com/company',
-            },
-            {
-              label: 'Services',
-              href: 'https://www.elbwalker.com/services',
-            },
-            {
-              label: 'Privacy Policy',
-              href: 'https://www.elbwalker.com/legal/privacy',
-            },
-            {
-              label: 'Terms of Services',
-              href: 'https://www.elbwalker.com/legal/terms',
-            },
-            {
-              label: 'Imprint',
-              href: 'https://www.elbwalker.com/legal/imprint',
-            },
+            { label: 'About us', href: EXTERNAL.about },
+            { label: 'Services', href: EXTERNAL.services },
+            { label: 'Privacy Policy', to: ROUTES.privacy },
+            { label: 'Imprint', to: ROUTES.imprint },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} elbwalker GmbH, Hamburg`,
+      copyright: `Copyright © ${new Date().getFullYear()} elbwalker GmbH, Hamburg · hello@elbwalker.com`,
     },
+    // Diagrams are visualisations: one dark palette in both colour modes.
     mermaid: {
-      theme: { light: 'neutral', dark: 'dark' },
+      theme: { light: 'base', dark: 'base' },
+      options: {
+        themeVariables: {
+          darkMode: true,
+          background: vizBg,
+          primaryColor: vizSurface,
+          primaryTextColor: vizFg,
+          primaryBorderColor: vizBorder,
+          lineColor: vizFg2,
+          secondaryColor: vizCodeBg,
+          tertiaryColor: vizBg,
+          tertiaryBorderColor: vizBorder,
+          noteBkgColor: vizSurface,
+          noteTextColor: vizFg,
+          fontFamily: fontSans,
+        },
+      },
     },
     prism: {
-      theme: prismThemes.oneLight,
-      darkTheme: prismThemes.palenight,
+      theme: prismTheme,
+      darkTheme: prismTheme,
     },
   } satisfies Preset.ThemeConfig,
 

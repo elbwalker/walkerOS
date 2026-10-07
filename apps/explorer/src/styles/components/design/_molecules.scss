@@ -1,0 +1,10 @@
+// Design molecules (@walkeros/explorer/design/components). Loaded after the
+// atoms, so a molecule's mix class wins over the atom class it adjusts.
+@use './check-list' as design-check-list;
+@use './section-heading' as design-section-heading;
+@use './problem-card' as design-problem-card;
+@use './feature-item' as design-feature-item;
+@use './faq-item' as design-faq-item;
+@use './plan-card' as design-plan-card;
+@use './case-card' as design-case-card;
+@use './highlight-card' as design-highlight-card;

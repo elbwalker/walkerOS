@@ -1,0 +1,31 @@
+// Split (@walkeros/explorer/design/components): two columns that stack.
+@layer components {
+  .elb-split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    row-gap: 24px;
+    column-gap: var(--split-gap);
+    align-items: start;
+  }
+
+  .elb-split__start,
+  .elb-split__end {
+    min-width: 0;
+  }
+
+  .elb-split--aside {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 48px;
+    align-items: flex-start;
+
+    > .elb-split__start {
+      flex: 1 1 320px;
+      max-width: 440px;
+    }
+
+    > .elb-split__end {
+      flex: 2 1 600px;
+    }
+  }
+}

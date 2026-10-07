@@ -1,0 +1,69 @@
+// SectionHeading (@walkeros/explorer/design/components): eyebrow, heading and
+// lead of a section, or the hero.
+@layer components {
+  .elb-sh {
+    display: flex;
+    flex-direction: column;
+    max-width: 760px;
+    margin: 0;
+
+    > .elb-eyebrow {
+      margin-bottom: 16px;
+    }
+  }
+
+  .elb-sh--center {
+    align-items: center;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .elb-sh__title {
+    margin: 0;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+
+  .elb-sh__title--display {
+    max-width: 20ch;
+    font-family: var(--type-display-family);
+    font-size: clamp(38px, 6vw, var(--type-display-size));
+    line-height: var(--type-display-line-height);
+    font-weight: var(--type-display-weight);
+    letter-spacing: var(--type-display-tracking);
+  }
+
+  .elb-sh__title--lg {
+    font-family: var(--type-heading-lg-family);
+    font-size: clamp(28px, 3.6vw, var(--type-heading-lg-size));
+    line-height: var(--type-heading-lg-line-height);
+    font-weight: var(--type-heading-lg-weight);
+    letter-spacing: var(--type-heading-lg-tracking);
+  }
+
+  .elb-sh__title--md {
+    font-family: var(--type-heading-md-family);
+    font-size: clamp(26px, 3.2vw, var(--type-heading-md-size));
+    line-height: var(--type-heading-md-line-height);
+    font-weight: var(--type-heading-md-weight);
+    letter-spacing: var(--type-heading-md-tracking);
+  }
+
+  .elb-sh__highlight {
+    color: var(--primary);
+  }
+
+  .elb-sh__lead {
+    margin: 14px 0 0;
+    color: var(--fg-2);
+    font-family: var(--type-lead-family);
+    font-size: 18px;
+    line-height: var(--type-lead-line-height);
+    font-weight: var(--type-lead-weight);
+  }
+
+  .elb-sh__lead--hero {
+    max-width: 58ch;
+    font-size: clamp(18px, 2vw, var(--type-lead-size));
+  }
+}

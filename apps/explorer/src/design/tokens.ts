@@ -11,6 +11,9 @@ import { tailwindNamespace } from './tailwind-namespaces';
 export const THEMES = ['dark', 'light'] as const;
 export type ThemeId = (typeof THEMES)[number];
 
+/** The prefix of the type style variables in tokens.css (`--type-body-size`); no token name may start with it. */
+export const TYPE_VARIABLE_PREFIX = 'type-';
+
 export interface ThemedValue {
   readonly dark: string;
   readonly light: string;
@@ -508,9 +511,16 @@ function checkNamespace(tokens: DesignTokens): void {
   // Every family but type shares one --name namespace (format.md), outside
   // Tailwind's own: tokens.css is unlayered, so a token such as container-xl
   // would override Tailwind's --container-xl and re-size max-w-xl. Radius
-  // tokens and font families sit in --radius-* and --font-* on purpose.
+  // tokens and font families sit in --radius-* and --font-* on purpose. The
+  // type styles own --type-*.
   const names = new Map<string, string>();
   const claimName = (name: string, path: string, own?: string): void => {
+    if (name.startsWith(TYPE_VARIABLE_PREFIX)) {
+      fail(
+        path,
+        `"${name}" starts with ${TYPE_VARIABLE_PREFIX}, reserved for the type style variables --${TYPE_VARIABLE_PREFIX}<style>-*`,
+      );
+    }
     const namespace = tailwindNamespace(name);
     if (namespace !== undefined && namespace !== own) {
       fail(

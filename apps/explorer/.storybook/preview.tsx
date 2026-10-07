@@ -1,26 +1,29 @@
+import React from 'react';
 import type { Preview, Decorator } from '@storybook/react-vite';
+// Layer order follows first appearance: tokens, then the base layer, then the
+// component styles, so the base layer never beats a component rule.
+import '@walkeros/explorer/design/tokens.css';
+import '@walkeros/explorer/design/base.css';
 import '../src/styles/index.scss';
 import './monaco-setup';
 
-// Theme decorator - wraps all stories with proper theme container
+// The theme sits on <html>, as on every product page. Design stories render
+// bare; the older component stories keep the .elb-explorer wrapper until the
+// explorer components move onto the design tokens.
 const withTheme: Decorator = (Story, context) => {
-  const theme = context.globals.theme || 'light';
-
-  // data-theme must sit on an ancestor of .elb-explorer: the dark rules are
-  // `[data-theme='dark'] .elb-explorer`, so theme vars only flip when the
-  // attribute is on a parent (this mirrors how the app/website apply it).
+  const theme = context.globals.theme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  if (context.title.startsWith('Design/')) return <Story />;
   return (
-    <div data-theme={theme}>
-      <div
-        className="elb-explorer"
-        style={{
-          background: 'var(--bg-header)',
-          minHeight: '100vh',
-          padding: 24,
-        }}
-      >
-        <Story />
-      </div>
+    <div
+      className="elb-explorer"
+      style={{
+        background: 'var(--bg-header)',
+        minHeight: '100vh',
+        padding: 24,
+      }}
+    >
+      <Story />
     </div>
   );
 };
@@ -38,11 +41,11 @@ const preview: Preview = {
   globalTypes: {
     theme: {
       description: 'Global theme for components',
-      defaultValue: 'light',
+      defaultValue: 'dark',
       toolbar: {
         title: 'Theme',
         icon: 'circlehollow',
-        items: ['light', 'dark'],
+        items: ['dark', 'light'],
         dynamicTitle: true,
       },
     },

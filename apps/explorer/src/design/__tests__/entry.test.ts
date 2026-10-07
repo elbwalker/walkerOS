@@ -92,17 +92,25 @@ it.each(['dist/design/index.mjs', 'dist/design/index.cjs'])(
   },
 );
 
-it('ships walkeros-design-check as an executable Node script', () => {
-  const bin = packageJson().bin;
+// npm links a bin only when its target exists at install time, and CI installs
+// before it builds: the bin is a committed launcher that loads the built checker.
+it('links walkeros-design-check to a committed, executable launcher', () => {
+  const json = packageJson();
+  const bin = json.bin;
   expect(isRecord(bin) ? bin['walkeros-design-check'] : undefined).toBe(
-    './dist/design/check.mjs',
+    './bin/walkeros-design-check.mjs',
   );
-  expect(read('dist/design/check.mjs').startsWith('#!/usr/bin/env node')).toBe(
-    true,
-  );
+  expect(json.files).toContain('bin/**');
   expect(
-    statSync(resolve(packageDir, 'dist/design/check.mjs')).mode & 0o111,
+    read('bin/walkeros-design-check.mjs').startsWith('#!/usr/bin/env node'),
+  ).toBe(true);
+  expect(
+    statSync(resolve(packageDir, 'bin/walkeros-design-check.mjs')).mode & 0o111,
   ).not.toBe(0);
+});
+
+it('builds the checker the launcher loads', () => {
+  expect(existsSync(resolve(packageDir, 'dist/design/check.mjs'))).toBe(true);
 });
 
 it('walkeros-design-check imports only node: built-ins', () => {

@@ -92,19 +92,6 @@ export const WithMapping: Story = {
 };
 
 /**
- * Short code: boxes shrink to their content instead of a fixed height.
- */
-export const Short: Story = {
-  args: {
-    example: {
-      in: { name: 'page view', data: { title: 'Home' } },
-      mapping: { name: 'page_view' },
-      out: [['gtag', 'event', 'page_view']],
-    },
-  },
-};
-
-/**
  * No mapping: two boxes, Event and Out.
  */
 export const WithoutMapping: Story = {

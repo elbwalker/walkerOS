@@ -35,6 +35,11 @@ and layer values.
   weight and tracking, not the style's font family. Pair it with `font-<family>`
   (`font-mono`, `font-viz`, `font-viz-mono`) when the style's family is not
   `sans`.
+- Component CSS reads type from `tokens.css`, never a hard-coded size or weight:
+  every style declares `--type-<style>-size`, `-line-height`, `-weight`,
+  `-family` and, when the style sets one, `-tracking` (token names starting with
+  `type-` are reserved). A fluid display heading composes them:
+  `.hero h1 { font-size: clamp(38px, 6vw, var(--type-display-size)); font-weight: var(--type-display-weight); }`.
 - `walkeros-design-check [--allow [<rule>:]<glob>]... [--allow-var <prefix>]... <path>...`
   lints a consuming package for colour literals, palette and `dark:` classes,
   `var()` fallbacks on design tokens and undeclared variables. Exit 1 means
@@ -73,6 +78,10 @@ export function FormInput() {
 }
 ```
 
+Design components (`src/design/components/`) are page building blocks, not form
+controls: they may keep presentation state such as a copy confirmation or the
+step a demo shows.
+
 ### 2. Atomic Design Hierarchy
 
 ```
@@ -81,6 +90,10 @@ molecules/  → Compositions (FormCard, Dropdown)
 organisms/  → Complex layouts (Header, Sidebar)
 demos/      → Full page examples
 ```
+
+The design components use the same order with a `layout/` level for page
+structure and `viz/` for the demos: `atoms/`, `molecules/`, `layout/`, `viz/`
+(AGENT.md, "Design components").
 
 ### 3. BEM Naming
 
@@ -110,31 +123,45 @@ Never use hardcoded values. Import from theme:
 }
 ```
 
+Design component partials take the design tokens instead of the theme variables
+(STYLE.md, "Design component styles").
+
 ## File Structure
 
-```
+```text
 src/
-├── components/
+├── components/                # Product components (CodeBox, FlowMap, ...)
 │   ├── atoms/
 │   │   ├── button.tsx
 │   │   ├── button.stories.tsx
 │   │   └── ...
 │   └── molecules/
-│       ├── dropdown.tsx
+│       ├── code-box.tsx
 │       └── ...
+├── design/
+│   └── components/            # @walkeros/explorer/design/components (React only)
+│       ├── index.ts           # Re-exports the four folders
+│       ├── atoms/  molecules/  layout/  viz/   # Each with its own index.ts
+│       └── viz/parts/  viz/data/              # Internal demo parts and data
 ├── styles/
 │   ├── theme/
 │   │   └── _variables.scss    # All CSS variables
 │   ├── components/
 │   │   ├── atoms/
 │   │   │   └── _button.scss
-│   │   └── molecules/
-│   │       └── _dropdown.scss
+│   │   ├── molecules/
+│   │   │   └── _code-box.scss
+│   │   └── design/            # One partial per design component
 │   └── index.scss             # Import order matters
 └── index.ts                   # Public exports
 ```
 
 ## Creating Components
+
+The steps below are for product components in `src/components/`. A design
+component follows AGENT.md "Design components" and STYLE.md "Design component
+styles": its folder's `index.ts`, one partial in `src/styles/components/design/`
+added to that folder's aggregator, a `Design/...` story and a pass-through test.
 
 ### 1. Component File
 

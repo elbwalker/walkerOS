@@ -1,0 +1,62 @@
+// Card (@walkeros/explorer/design/components): the flat card frame shared by
+// the problem, case, highlight and plan cards.
+@layer components {
+  .elb-card {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3-5);
+    min-width: 0;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    transition: border-color var(--motion) var(--ease);
+  }
+
+  .elb-card--pad-sm {
+    padding: var(--card-pad-sm);
+  }
+
+  .elb-card--pad-md {
+    padding: var(--card-pad);
+  }
+
+  .elb-card--pad-lg {
+    padding: 32px;
+  }
+
+  .elb-card--radius-xl {
+    border-radius: var(--radius-xl);
+  }
+
+  .elb-card--hover:not(.elb-card--highlight):hover {
+    border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
+  }
+
+  .elb-card--highlight {
+    border-color: var(--primary);
+    box-shadow: var(--plan-highlight);
+  }
+
+  .elb-card--glow {
+    overflow: hidden;
+
+    &::after {
+      content: '';
+      position: absolute;
+      right: -120px;
+      top: -160px;
+      width: 360px;
+      height: 360px;
+      background: radial-gradient(closest-side, var(--glow), transparent 72%);
+      pointer-events: none;
+    }
+
+    > * {
+      position: relative;
+      z-index: var(--z-raised);
+    }
+  }
+}

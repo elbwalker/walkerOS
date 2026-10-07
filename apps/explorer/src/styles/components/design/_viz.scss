@@ -1,0 +1,10 @@
+// Design demos (@walkeros/explorer/design/components): the shared parts, then
+// one partial per demo.
+@use './viz-frame' as design-viz-frame;
+@use './viz-code' as design-viz-code;
+@use './viz-pill' as design-viz-pill;
+@use './viz-thumb' as design-viz-thumb;
+@use './viz-table' as design-viz-table;
+@use './destination-mapping-viz' as design-destination-mapping-viz;
+@use './hero-tagging-viz' as design-hero-tagging-viz;
+@use './article-teaser-tracking' as design-article-teaser-tracking;

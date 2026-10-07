@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { getMappingValue } from '@walkeros/core';
 import { LiveCode } from './live-code';
 
 /**
  * LiveCode - Generic live code execution component
  *
- * Three-panel interactive component with:
- * - Input panel (editable JSON)
- * - Config panel (editable JSON)
+ * Interactive panels with:
+ * - Input panel (editable code)
+ * - Config panel (optional, editable JSON)
  * - Output panel (function result)
  *
- * Executes a custom transformation function with debounced updates.
- * Perfect for demonstrating data transformations and API interactions.
+ * Executes a custom function with debounced updates.
  */
 const meta: Meta<typeof LiveCode> = {
   component: LiveCode,
@@ -25,36 +25,26 @@ export default meta;
 type Story = StoryObj<typeof LiveCode>;
 
 /**
- * Default live code with simple data transformation
- *
- * Shows a transformation that combines input data with config,
- * demonstrating how the component executes and displays results.
+ * A TypeScript call evaluated live, as the mapping value docs use it: the
+ * input runs with `getMappingValue` in scope and the result is logged.
+ * No config panel, synced row height.
  */
 export const Default: Story = {
   args: {
-    input: {
-      name: 'John Doe',
-      email: 'john@example.com',
-    },
-    config: {
-      includeTimestamp: true,
-      prefix: 'User:',
-    },
-    labelInput: 'User Data',
-    labelConfig: 'Options',
-    labelOutput: 'Transformed',
-    fn: async (input, config, log) => {
-      const inputData = JSON.parse(input as string);
-      const configData = JSON.parse(config as string);
-
-      const result = {
-        ...inputData,
-        displayName: `${configData.prefix} ${inputData.name}`,
-        ...(configData.includeTimestamp && {
-          timestamp: new Date().toISOString(),
-        }),
-      };
-
+    language: 'typescript',
+    labelInput: 'Configuration',
+    rowHeight: 'synced',
+    input: `await getMappingValue(
+  { user: { id: '12345', name: 'John' } },
+  'user.id'
+);`,
+    output: `"12345"`,
+    fn: async (input, _config, log) => {
+      const run = new Function(
+        'getMappingValue',
+        `"use strict"; return (async () => { return ${String(input)} })()`,
+      );
+      const result: unknown = await run(getMappingValue);
       log(result);
     },
   },

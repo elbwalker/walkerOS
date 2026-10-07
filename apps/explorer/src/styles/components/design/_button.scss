@@ -1,0 +1,52 @@
+// Button (@walkeros/explorer/design/components): the walkerOS call-to-action.
+// In the components layer, so a consumer's utilities can override it.
+@layer components {
+  .elb-btn {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: var(--type-body-family);
+    font-weight: 600;
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+      border-color var(--motion) var(--ease),
+      filter var(--motion) var(--ease);
+
+    &:hover {
+      text-decoration: none;
+    }
+  }
+
+  .elb-btn--primary {
+    background: var(--primary);
+    color: var(--on-primary);
+
+    &:hover {
+      filter: brightness(1.08);
+      color: var(--on-primary);
+    }
+  }
+
+  .elb-btn--secondary {
+    background: var(--surface);
+    color: var(--fg);
+    border-color: var(--border);
+
+    &:hover {
+      border-color: var(--primary);
+      color: var(--fg);
+    }
+  }
+
+  .elb-btn--block {
+    width: 100%;
+  }
+}

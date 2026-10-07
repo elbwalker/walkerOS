@@ -217,6 +217,13 @@ it.each<readonly [string, (tokens: FixtureTokens) => void, string]>([
     'type.groups[0].styles[0].name',
   ],
   [
+    'a colour in the type- prefix the type style variables own',
+    (t) => {
+      t.color.tokens[1].name = 'type-primary';
+    },
+    'color.tokens[1].name',
+  ],
+  [
     'a type style named like a key Tailwind keeps apart from --text-* sizes',
     (t) => {
       t.type.groups[0].styles[0].name = 'indent';
@@ -236,6 +243,14 @@ it('says a name must start with a lowercase letter', () => {
   tokens.spacing.tokens[0].name = '2-gutter';
   expect(() => parseDesignTokens(tokens)).toThrow(
     'spacing.tokens[0].name: "2-gutter" is not a token name: a name must start with a lowercase letter',
+  );
+});
+
+it('says the type- prefix is reserved for the type style variables', () => {
+  const tokens = fixture();
+  tokens.zIndex.tokens[0].name = 'type-modal';
+  expect(() => parseDesignTokens(tokens)).toThrow(
+    'zIndex.tokens[0].name: "type-modal" starts with type-, reserved for the type style variables',
   );
 });
 

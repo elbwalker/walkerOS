@@ -103,6 +103,20 @@ export default defineConfig([
     outExtension: ({ format }) => ({ js: format === 'esm' ? '.mjs' : '.cjs' }),
   }),
 
+  // Design components (@walkeros/explorer/design/components): React client
+  // components, so the same "use client" banner as the root entry. An own block
+  // for the .cjs extension; the entry imports nothing but react.
+  buildModules({
+    entry: { 'design/components/index': 'src/design/components/index.ts' },
+    platform: 'browser',
+    external: ['react', 'react-dom'],
+    minify: false,
+    outExtension: ({ format }) => ({ js: format === 'esm' ? '.mjs' : '.cjs' }),
+    esbuildOptions(options) {
+      options.banner = { js: '"use client"' };
+    },
+  }),
+
   // walkeros-design-check: plain Node ESM with a shebang and no runtime dependency.
   {
     entry: { 'design/check': 'src/design/check/bin.ts' },

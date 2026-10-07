@@ -1,0 +1,27 @@
+// Section (@walkeros/explorer/design/components): a page band.
+@layer components {
+  .elb-section {
+    box-sizing: border-box;
+    padding: var(--section-y) 0;
+    color: var(--fg);
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+  }
+
+  .elb-section--alt {
+    background: var(--bg-2);
+  }
+
+  .elb-section__inner {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--heading-gap);
+    max-width: var(--container);
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+  }
+}

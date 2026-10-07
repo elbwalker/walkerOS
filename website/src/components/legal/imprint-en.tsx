@@ -4,8 +4,8 @@ export default function LegalImprintContentEN() {
   return (
     <div className="relative overflow-hidden py-16">
       <div className="relative px-4 sm:px-6 lg:px-8">
-        <div className="prose-elbwalker prose prose-lg mx-auto mt-6 text-gray-400">
-          <h3 className="text-gray-50">Information according to &sect;5 TMG</h3>
+        <div className="mx-auto mt-6 text-fg-2">
+          <h3 className="text-fg">Information according to &sect;5 TMG</h3>
           <p>
             <b>elbwalker GmbH</b>
             <br />
@@ -25,7 +25,7 @@ export default function LegalImprintContentEN() {
             <br />
             <b>VAT identification number:</b> DE323724455
           </p>
-          <h3 className="text-gray-50">Disclaimer of liability</h3>
+          <h3 className="text-fg">Disclaimer of liability</h3>
           <p>
             <b>Liability for links</b>
             <br />

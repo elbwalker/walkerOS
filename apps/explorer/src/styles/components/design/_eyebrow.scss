@@ -1,0 +1,26 @@
+// Eyebrow (@walkeros/explorer/design/components): the uppercase line above a
+// heading, or a card's tier label.
+@layer components {
+  .elb-eyebrow {
+    margin: 0;
+    color: var(--link);
+    font-family: var(--type-eyebrow-family);
+    font-size: var(--type-eyebrow-size);
+    line-height: var(--type-eyebrow-line-height);
+    font-weight: var(--type-eyebrow-weight);
+    letter-spacing: var(--type-eyebrow-tracking);
+    text-transform: uppercase;
+  }
+
+  .elb-eyebrow--label {
+    font-family: var(--type-label-family);
+    font-size: var(--type-label-size);
+    line-height: var(--type-label-line-height);
+    font-weight: var(--type-label-weight);
+    letter-spacing: var(--type-label-tracking);
+  }
+
+  .elb-eyebrow--muted {
+    color: var(--fg-3);
+  }
+}

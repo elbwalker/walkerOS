@@ -12,6 +12,19 @@ exports[`renders tokens.css, tailwind.css and the constants for the fixture 1`] 
   --z-modal: 50;
   --font-sans: system-ui, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, monospace;
+  --type-body-size: 16px;
+  --type-body-line-height: 1.65;
+  --type-body-weight: 400;
+  --type-body-family: var(--font-sans);
+  --type-eyebrow-size: 13px;
+  --type-eyebrow-line-height: 1.5;
+  --type-eyebrow-weight: 600;
+  --type-eyebrow-tracking: 0.12em;
+  --type-eyebrow-family: var(--font-sans);
+  --type-code-size: 0.88em;
+  --type-code-line-height: 1.5;
+  --type-code-weight: 400;
+  --type-code-family: var(--font-mono);
 }
 
 :root, :host, [data-theme="dark"] {

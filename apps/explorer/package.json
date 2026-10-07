@@ -8,7 +8,7 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "bin": {
-    "walkeros-design-check": "./dist/design/check.mjs"
+    "walkeros-design-check": "./bin/walkeros-design-check.mjs"
   },
   "exports": {
     ".": {
@@ -23,12 +23,18 @@
       "import": "./dist/design/index.mjs",
       "require": "./dist/design/index.cjs"
     },
+    "./design/components": {
+      "types": "./dist/design/components/index.d.ts",
+      "import": "./dist/design/components/index.mjs",
+      "require": "./dist/design/components/index.cjs"
+    },
     "./design/tokens.css": "./dist/design/tokens.css",
     "./design/base.css": "./dist/design/base.css",
     "./design/tailwind.css": "./dist/design/tailwind.css"
   },
   "files": [
     "dist/**",
+    "bin/**",
     "CHANGELOG.md"
   ],
   "scripts": {
