@@ -86,22 +86,22 @@ export const vizNumber = "#f78c6c";
 /** Syntax: punctuation and plain code text; visualisation captions. */
 export const vizPunct = "#9aa3b8";
 
-/** Event part: entity (e.g. `product`). Used for syntax highlight, legend chip and the highlighted DOM region in tagging demos. */
-export const eventEntity = "#c5e478";
+/** Event part: entity (e.g. `product`). Used for syntax highlight, legend chip and the highlighted DOM region in tagging demos. The dark value is for dark grounds (islands, visualisations, mark layers); the light value reads 4.5:1 or more as text on `bg`, `bg-2`, `surface` and `surface-2`. */
+export const eventEntity = { dark: "#c5e478", light: "#537a01" } as const;
 
-/** Event part: action (e.g. `view`, `add`). */
-export const eventAction = "#c792ea";
+/** Event part: action (e.g. `view`, `add`). The dark value is for dark grounds (islands, visualisations, mark layers); the light value reads 4.5:1 or more as text on `bg`, `bg-2`, `surface` and `surface-2`. */
+export const eventAction = { dark: "#c792ea", light: "#8c59ac" } as const;
 
-/** Event part: entity property (`data-elb-product="name"`). */
-export const eventProperty = "#f0717f";
+/** Event part: entity property (`data-elb-product="name"`). The dark value is for dark grounds (islands, visualisations, mark layers); the light value reads 4.5:1 or more as text on `bg`, `bg-2`, `surface` and `surface-2`. */
+export const eventProperty = { dark: "#f0717f", light: "#be4456" } as const;
 
-/** Event part: context. */
-export const eventContext = "#f2a65a";
+/** Event part: context. The dark value is for dark grounds (islands, visualisations, mark layers); the light value reads 4.5:1 or more as text on `bg`, `bg-2`, `surface` and `surface-2`. */
+export const eventContext = { dark: "#f2a65a", light: "#a25f06" } as const;
 
-/** Event part: globals. */
-export const eventGlobals = "#7fc4ea";
+/** Event part: globals. The dark value is for dark grounds (islands, visualisations, mark layers); the light value reads 4.5:1 or more as text on `bg`, `bg-2`, `surface` and `surface-2`. */
+export const eventGlobals = { dark: "#7fc4ea", light: "#317699" } as const;
 
-/** Tag kind: user (who the visitor is). Like the five event parts it sits only on dark grounds (`viz-bg`, legends, chips, mark layers) and always pairs with its word. 5.2:1 on `viz-bg`; kept apart from `event-property`, `event-action` and `danger`. */
+/** Tag kind: user (who the visitor is). Unlike the five event parts it has no light value: it sits only on dark grounds (`viz-bg`, legends, chips, mark layers) and always pairs with its word. 5.2:1 on `viz-bg`; kept apart from `event-property`, `event-action` and `danger`. */
 export const eventUser = "#e65fc4";
 
 /** Tag kind: consent (consent states and requirements). Dark grounds only, always with its word. 10.7:1 on `viz-bg`. */

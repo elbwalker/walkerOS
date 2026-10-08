@@ -24,6 +24,7 @@ const names: IconName[] = [
   'cart',
   'globe',
   'shield-check',
+  'chevron-down',
   'search',
   'profile',
   'slash',

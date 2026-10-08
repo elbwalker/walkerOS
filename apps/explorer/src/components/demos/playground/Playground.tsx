@@ -235,8 +235,14 @@ function Panel({
   bar?: ReactNode;
   children: ReactNode;
 }) {
+  // A panel is a dark code surface whatever the page theme: an island, so the
+  // event colours inside it take their dark values.
   return (
-    <section className={`elb-pg-panel elb-pg-panel--${area}`} aria-label={name}>
+    <section
+      className={`elb-pg-panel elb-pg-panel--${area}`}
+      aria-label={name}
+      data-theme="dark"
+    >
       <div className="elb-pg-bar">
         <span className="elb-pg-step" aria-hidden="true">
           {step}

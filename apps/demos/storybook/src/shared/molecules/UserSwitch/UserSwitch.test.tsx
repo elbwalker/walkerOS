@@ -25,11 +25,52 @@ test.each(tagged)('%s tags their user', (persona, user) => {
   expect(elements[0].getAttribute('data-elbuser')).toBe(user);
 });
 
-test('choosing a persona calls back with its key', () => {
+test('opens a menu of the personas, the current one checked', () => {
+  const { getByRole, getAllByRole } = render(
+    <UserSwitch persona="lisa" onSwitch={noop} />,
+  );
+  const button = getByRole('button', { name: 'Demo user: Lisa Loyal' });
+  expect(button.getAttribute('aria-expanded')).toBe('false');
+
+  fireEvent.click(button);
+
+  expect(button.getAttribute('aria-expanded')).toBe('true');
+  expect(
+    getAllByRole('menuitemradio').map((item) => [
+      item.textContent,
+      item.getAttribute('aria-checked'),
+    ]),
+  ).toEqual([
+    ['Anonymous', 'false'],
+    ['Lisa Loyal', 'true'],
+    ['Sam Sales', 'false'],
+  ]);
+});
+
+test('a choice calls back with its key and closes the menu', () => {
   const onSwitch = jest.fn();
-  const { getByRole } = render(
+  const { getByRole, queryByRole } = render(
     <UserSwitch persona="anonymous" onSwitch={onSwitch} />,
   );
-  fireEvent.change(getByRole('combobox'), { target: { value: 'sam' } });
+  fireEvent.click(getByRole('button', { name: 'Demo user: Anonymous' }));
+
+  fireEvent.click(getByRole('menuitemradio', { name: 'Sam Sales' }));
+
   expect(onSwitch).toHaveBeenCalledWith('sam');
+  expect(queryByRole('menu')).toBeNull();
+});
+
+test('Escape closes the menu and returns to the button', () => {
+  const onSwitch = jest.fn();
+  const { getByRole, queryByRole } = render(
+    <UserSwitch persona="anonymous" onSwitch={onSwitch} />,
+  );
+  const button = getByRole('button', { name: 'Demo user: Anonymous' });
+  fireEvent.click(button);
+
+  fireEvent.keyDown(getByRole('menu'), { key: 'Escape' });
+
+  expect(queryByRole('menu')).toBeNull();
+  expect(button.ownerDocument.activeElement).toBe(button);
+  expect(onSwitch).not.toHaveBeenCalled();
 });

@@ -40,7 +40,8 @@ export const DEFAULT_FALLBACK_HTML =
 
 /**
  * Highlight rings, one per event part, innermost first. Each ring is edged
- * with the visualisation ground, so it reads on any page colour.
+ * with the visualisation ground, so it reads on any page colour. The preview
+ * is a dark island, so the rings take the event colours' dark values.
  */
 function rings(...colors: string[]): string {
   return colors
@@ -81,36 +82,36 @@ export function previewStyles(css: string): string {
 
     /* Highlights */
     body.elb-highlight.highlight-globals [data-elbglobals] {
-      box-shadow: ${rings(eventGlobals)};
+      box-shadow: ${rings(eventGlobals.dark)};
     }
 
     body.elb-highlight.highlight-entity [data-elb] {
-      box-shadow: ${rings(eventEntity)};
+      box-shadow: ${rings(eventEntity.dark)};
     }
 
     body.elb-highlight.highlight-context [data-elbcontext] {
-      box-shadow: ${rings(eventContext)};
+      box-shadow: ${rings(eventContext.dark)};
     }
 
     body.elb-highlight.highlight-property [data-elbproperty] {
-      box-shadow: ${rings(eventProperty)};
+      box-shadow: ${rings(eventProperty.dark)};
     }
 
     body.elb-highlight.highlight-action [data-elbaction] {
-      box-shadow: ${rings(eventAction)};
+      box-shadow: ${rings(eventAction.dark)};
     }
 
     /* Combined highlights */
     body.elb-highlight.highlight-entity.highlight-action [data-elb][data-elbaction] {
-      box-shadow: ${rings(eventAction, eventEntity)};
+      box-shadow: ${rings(eventAction.dark, eventEntity.dark)};
     }
 
     body.elb-highlight.highlight-entity.highlight-context [data-elb][data-elbcontext] {
-      box-shadow: ${rings(eventEntity, eventContext)};
+      box-shadow: ${rings(eventEntity.dark, eventContext.dark)};
     }
 
     body.elb-highlight.highlight-action.highlight-context [data-elbaction][data-elbcontext] {
-      box-shadow: ${rings(eventAction, eventContext)};
+      box-shadow: ${rings(eventAction.dark, eventContext.dark)};
     }
   `;
 }

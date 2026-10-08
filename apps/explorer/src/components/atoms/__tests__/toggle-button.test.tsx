@@ -53,6 +53,34 @@ describe('ToggleButton', () => {
     expect(onChange).toHaveBeenLastCalledWith('visual');
   });
 
+  it('with shows="current", shows the selected option and still switches to the next', () => {
+    const onChange = jest.fn();
+    const { getByRole, rerender } = render(
+      <ToggleButton
+        options={modes}
+        value="visual"
+        onChange={onChange}
+        shows="current"
+      />,
+    );
+
+    expect(shownLabels(getByRole('button'))).toEqual(['Visual']);
+    fireEvent.click(getByRole('button'));
+    expect(onChange).toHaveBeenLastCalledWith('code');
+
+    rerender(
+      <ToggleButton
+        options={modes}
+        value="code"
+        onChange={onChange}
+        shows="current"
+      />,
+    );
+    expect(shownLabels(getByRole('button'))).toEqual(['Code']);
+    fireEvent.click(getByRole('button'));
+    expect(onChange).toHaveBeenLastCalledWith('visual');
+  });
+
   it('treats an unknown value as the first option', () => {
     const onChange = jest.fn();
     const { getByRole } = render(

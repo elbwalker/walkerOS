@@ -52,10 +52,10 @@ describe('Preview document', () => {
     const styles = previewStyles('');
 
     expect(styles).toContain(
-      `box-shadow: 0 0 0 2px ${eventEntity}, 0 0 0 3px ${vizBg};`,
+      `box-shadow: 0 0 0 2px ${eventEntity.dark}, 0 0 0 3px ${vizBg};`,
     );
     expect(styles).toContain(
-      `box-shadow: 0 0 0 2px ${eventAction}, 0 0 0 3px ${vizBg}, 0 0 0 5px ${eventEntity}, 0 0 0 6px ${vizBg};`,
+      `box-shadow: 0 0 0 2px ${eventAction.dark}, 0 0 0 3px ${vizBg}, 0 0 0 5px ${eventEntity.dark}, 0 0 0 6px ${vizBg};`,
     );
   });
 

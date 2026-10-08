@@ -1,6 +1,12 @@
 import { fireEvent, render } from '@testing-library/react';
 import { LanguageToggle } from './LanguageToggle';
 
+const shownLabel = (button: HTMLElement) =>
+  Array.from(
+    button.querySelectorAll('.elb-explorer-toggle__label:not([aria-hidden])'),
+    (label) => label.textContent,
+  );
+
 test('the root carries the language global', () => {
   const noop = () => {};
   const { container, rerender } = render(
@@ -16,23 +22,30 @@ test('the root carries the language global', () => {
   expect(globals()).toEqual(['language:elbish']);
 });
 
-test('the pressed button names the language, in English either way', () => {
-  const { getByRole } = render(
-    <LanguageToggle language="elbish" onToggle={() => {}} />,
-  );
-  expect(
-    getByRole('button', { name: 'English' }).getAttribute('aria-pressed'),
-  ).toBe('false');
-  expect(
-    getByRole('button', { name: 'Elbish' }).getAttribute('aria-pressed'),
-  ).toBe('true');
-});
-
-test('a click calls back with the language', () => {
+test('English shows English, and a click switches to Elbish', () => {
   const onToggle = jest.fn();
   const { getByRole } = render(
     <LanguageToggle language="en" onToggle={onToggle} />,
   );
-  fireEvent.click(getByRole('button', { name: 'Elbish' }));
+  const button = getByRole('button', {
+    name: 'Language: English. Switch to Elbish.',
+  });
+
+  expect(shownLabel(button)).toEqual(['English']);
+  fireEvent.click(button);
   expect(onToggle).toHaveBeenCalledWith('elbish');
+});
+
+test('Elbish shows Elbish, and a click switches to English', () => {
+  const onToggle = jest.fn();
+  const { getByRole } = render(
+    <LanguageToggle language="elbish" onToggle={onToggle} />,
+  );
+  const button = getByRole('button', {
+    name: 'Language: Elbish. Switch to English.',
+  });
+
+  expect(shownLabel(button)).toEqual(['Elbish']);
+  fireEvent.click(button);
+  expect(onToggle).toHaveBeenCalledWith('en');
 });

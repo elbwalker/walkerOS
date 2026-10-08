@@ -18,11 +18,11 @@ describe('originLabel', () => {
 
 describe('attribute badge colours', () => {
   const cases: Array<[AttributeKind, string]> = [
-    ['entity', eventEntity],
-    ['action', eventAction],
-    ['context', eventContext],
-    ['globals', eventGlobals],
-    ['data', eventProperty],
+    ['entity', eventEntity.dark],
+    ['action', eventAction.dark],
+    ['context', eventContext.dark],
+    ['globals', eventGlobals.dark],
+    ['data', eventProperty.dark],
   ];
 
   it.each(cases)('%s uses its design event colour', (kind, colour) => {

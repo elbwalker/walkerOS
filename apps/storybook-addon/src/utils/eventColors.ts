@@ -15,14 +15,14 @@ export type AttributeKind =
   | 'globals'
   | 'data';
 
-// Event colours of the walkerOS design system. They are made for dark
-// grounds, so every use pairs them with the dark visualisation ground vizBg.
+// Event colours of the walkerOS design system, their dark values: every use
+// pairs them with the dark visualisation ground vizBg.
 export const highlightColors: Record<HighlightKind, string> = {
-  globals: eventGlobals,
-  context: eventContext,
-  entity: eventEntity,
-  property: eventProperty,
-  action: eventAction,
+  globals: eventGlobals.dark,
+  context: eventContext.dark,
+  entity: eventEntity.dark,
+  property: eventProperty.dark,
+  action: eventAction.dark,
 };
 
 // Attribute badges name the property kind "data".

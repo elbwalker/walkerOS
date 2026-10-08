@@ -1,8 +1,5 @@
-import { useId } from 'react';
-import { Icon } from '../../atoms/Icon';
-import { Select } from '../../atoms/Select';
+import { Dropdown } from '../Dropdown';
 import {
-  isPersonaKey,
   personaFor,
   personas,
   userAttribute,
@@ -22,27 +19,16 @@ const options = personas.map(({ key, label }) => ({ value: key, label }));
  * names are never translated, so the way back always reads.
  */
 export const UserSwitch = ({ persona, onSwitch }: UserSwitchProps) => {
-  const id = useId();
   const { user } = personaFor(persona);
 
   return (
-    <div
-      {...(user ? { 'data-elbuser': userAttribute(user) } : {})}
-      className="flex items-center gap-2"
-    >
-      <Icon name="profile" className="size-5 text-fg-2" />
-      <label htmlFor={id} className="sr-only">
-        Demo user
-      </label>
-      <Select
-        id={id}
+    <div {...(user ? { 'data-elbuser': userAttribute(user) } : {})}>
+      <Dropdown
         value={persona}
         options={options}
-        className="w-auto"
-        onChange={(event) => {
-          const key = event.target.value;
-          if (isPersonaKey(key)) onSwitch(key);
-        }}
+        onChange={onSwitch}
+        label="Demo user"
+        icon="profile"
       />
     </div>
   );

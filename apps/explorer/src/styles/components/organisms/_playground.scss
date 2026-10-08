@@ -1,6 +1,7 @@
 // Playground (@walkeros/explorer): component, event, mapping and result
-// panels. The panels are always dark code surfaces, so they use the fixed viz,
-// event and syntax tokens; the page around them follows the theme.
+// panels. The panels are always dark code surfaces and dark islands
+// (`data-theme="dark"`), so the viz, event and syntax tokens in them read their
+// dark values; the page around them follows the theme.
 @layer components {
   .elb-pg {
     --elb-pg-panel: var(--viz-bg);

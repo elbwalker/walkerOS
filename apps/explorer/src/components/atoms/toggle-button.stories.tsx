@@ -3,8 +3,9 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ToggleButton } from './toggle-button';
 
 /**
- * ToggleButton - one button that shows the option a click switches to. It
- * keeps the longest label's width, so it never changes size.
+ * ToggleButton - one button that shows the option a click switches to (or,
+ * with `shows="current"`, the selected one). It keeps the longest label's
+ * width, so it never changes size.
  */
 const meta: Meta<typeof ToggleButton> = {
   component: ToggleButton,
@@ -33,6 +34,31 @@ export const Default: Story = {
         value={mode}
         onChange={setMode}
         aria-label={mode === 'code' ? 'Show visual' : 'Show code'}
+      />
+    );
+  },
+};
+
+// The label names the state: "English" while English.
+export const ShowsCurrent: Story = {
+  render: () => {
+    const [language, setLanguage] = useState('en');
+    const languages = [
+      { label: 'English', value: 'en' },
+      { label: 'Elbish', value: 'elbish' },
+    ];
+
+    return (
+      <ToggleButton
+        options={languages}
+        value={language}
+        onChange={setLanguage}
+        shows="current"
+        aria-label={
+          language === 'en'
+            ? 'Language: English. Switch to Elbish.'
+            : 'Language: Elbish. Switch to English.'
+        }
       />
     );
   },
