@@ -364,14 +364,6 @@ html[data-theme] .theme-announcement-bar a {
   --ifm-alert-foreground-color: var(--fg);
 }
 
-/* walkerOS Cloud admonition (:::cloud). It is an info alert too, so this rule
-   comes after .alert--info. */
-.admonition-cloud {
-  --ifm-alert-background-color: var(--glow);
-  --ifm-alert-border-color: var(--primary);
-  --ifm-alert-foreground-color: var(--fg);
-}
-
 /* Infima's unlayered link rules (colour, hover underline, transition) beat
    the layered button styles: a link rendered as a design Button rolls these
    back to the button's own rules in the components layer. */
@@ -389,6 +381,26 @@ a.elb-btn:hover {
 :is(.elb-hero, .elb-section)
   :is(h1, h2, h3, h4, p, ul, ol, li, a, a:hover, code, strong) {
   all: revert-layer;
+}
+
+/* The playground's code panels also draw their own pre and textarea. */
+.elb-pg :is(h1, h2, p, pre, textarea) {
+  all: revert-layer;
+}
+
+/* Landing CTA row below a section's content. In the components layer, so
+   the section's revert-layer reset above keeps it. */
+@layer components {
+  .landing-cta-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-5);
+    text-align: center;
+  }
+  .landing-cta-stack--after {
+    margin-top: var(--heading-gap);
+  }
 }
 
 /* Sidebar destination badges */

@@ -1,6 +1,8 @@
 // Ready-to-use demos
 export { PromotionPlayground } from './components/demos/PromotionPlayground';
 export type { PromotionPlaygroundProps } from './components/demos/PromotionPlayground';
+export { Playground } from './components/demos/playground/Playground';
+export type { PlaygroundProps } from './components/demos/playground/Playground';
 
 // Organisms
 export { LiveCode } from './components/organisms/live-code';

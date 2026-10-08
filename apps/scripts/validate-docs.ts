@@ -477,8 +477,7 @@ function checkFlowJsonSnippets(): void {
 
 // The getting-started surface (plus the MCP app page) is the open/free
 // onboarding path; walkerOS's own sales register (upgrade prompts, monthly
-// prices, tier names) does not belong there. The paid/cloud story lives behind
-// an explicit `:::cloud` callout instead.
+// prices, tier names) does not belong there.
 //
 // Scope rationale: this is deliberately NOT run over all of docs/**. The live
 // tree has legitimate THIRD-PARTY cost mentions that would false-positive (a
@@ -518,31 +517,17 @@ export function findBoundaryRegisterIssues(content: string): BoundaryFinding[] {
   return findings;
 }
 
-// `:::cloud` marks the paid/cloud boundary. Golden-path onboarding pages must
-// stay free of it (the open path must be fully walkable without the cloud);
-// the pages that document deploying to the cloud must carry it.
-export function findCloudPlacementIssues(
-  content: string,
-  role: 'golden-path' | 'requires-cloud',
-): BoundaryFinding[] {
-  const hasCloud = /:::cloud\b/.test(content);
-  if (role === 'golden-path' && hasCloud) {
-    return [
-      {
-        message:
-          '`:::cloud` callout is not allowed on a golden-path onboarding page (the open path must be walkable without the cloud)',
-      },
-    ];
-  }
-  if (role === 'requires-cloud' && !hasCloud) {
-    return [
-      {
-        message:
-          'page must carry a `:::cloud` callout to mark the paid/cloud boundary, but none was found',
-      },
-    ];
-  }
-  return [];
+// There is no walkerOS Cloud. The `:::cloud` callout type was removed, so any
+// leftover use would render as a raw paragraph; flag it on every docs page.
+export function findCloudCalloutIssues(content: string): BoundaryFinding[] {
+  return /:::cloud\b/.test(content)
+    ? [
+        {
+          message:
+            '`:::cloud` callout is not allowed: there is no walkerOS Cloud',
+        },
+      ]
+    : [];
 }
 
 function checkBoundaryRegister(): void {
@@ -572,45 +557,17 @@ function checkBoundaryRegister(): void {
     }
   }
 
-  // Golden-path pages: `:::cloud` forbidden.
-  const goldenPath = [
-    'website/docs/getting-started/index.mdx',
-    'website/docs/getting-started/quickstart/index.mdx',
-    'website/docs/getting-started/quickstart/react.mdx',
-    'website/docs/getting-started/quickstart/nextjs.mdx',
-    'website/docs/getting-started/ga4-ecommerce.mdx',
-  ];
-  for (const rel of goldenPath) {
-    const abs = join(ROOT, rel);
-    if (!existsSync(abs)) continue;
-    for (const f of findCloudPlacementIssues(
-      readFileSync(abs, 'utf-8'),
-      'golden-path',
-    )) {
-      issues.push({ file: rel, severity: 'error', message: f.message });
-    }
-  }
-
-  // Boundary pages: `:::cloud` required.
-  const requiresCloud = [
-    'website/docs/apps/mcp.mdx',
-    'website/docs/getting-started/deploy.mdx',
-  ];
-  for (const rel of requiresCloud) {
-    const abs = join(ROOT, rel);
-    if (!existsSync(abs)) {
+  for (const abs of glob.sync('website/docs/**/*.{md,mdx}', {
+    cwd: ROOT,
+    ignore: ['**/node_modules/**'],
+    absolute: true,
+  })) {
+    for (const f of findCloudCalloutIssues(readFileSync(abs, 'utf-8'))) {
       issues.push({
-        file: rel,
+        file: relative(ROOT, abs),
         severity: 'error',
-        message: 'required :::cloud boundary page missing',
+        message: f.message,
       });
-      continue;
-    }
-    for (const f of findCloudPlacementIssues(
-      readFileSync(abs, 'utf-8'),
-      'requires-cloud',
-    )) {
-      issues.push({ file: rel, severity: 'error', message: f.message });
     }
   }
 }

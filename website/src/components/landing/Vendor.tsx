@@ -42,7 +42,7 @@ export default function VendorSection() {
           arrow
           linkComponent={Link}
         >
-          Learn more about mapping
+          Mapping docs
         </TextLink>
         <TextLink
           {...actionTags('destinations')}

@@ -249,19 +249,6 @@ The batched poster stamps each record with a monotonic `seq` before sending. A d
 
 ## Starting an Observe session
 
-:::cloud
-Observe sessions with a live feed and minted credentials are part of the
-hosted app; `walkeros observe start <flowId>` mints one from the terminal and
-prints what each attached arm needs, the session expiry, and the
-received-record count. A preview arm prints the web activation link (the
-`?elbObserve=` credential already appended), a container arm prints the server
-environment trio, and which of the two attach follows the settings being
-observed. The session itself lives server-side and idles out when nothing
-keeps it alive. Self-hosting? The `observers` escape hatch above streams the
-same records to any function or endpoint you control.
-[What Cloud adds](https://app.walkeros.io)
-:::
-
 ## Next steps
 
 - [Deploy](/docs/getting-started/deploy): take the flow to production first

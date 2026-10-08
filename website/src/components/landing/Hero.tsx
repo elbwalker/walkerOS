@@ -1,4 +1,3 @@
-import Link from '@docusaurus/Link';
 import {
   Button,
   CheckList,
@@ -6,7 +5,7 @@ import {
   HeroTaggingViz,
   InstallCommand,
 } from '@walkeros/explorer/design/components';
-import { ROUTES } from './links';
+import { SECTION_ID } from './links';
 import { actionTags, sectionTags } from './tags';
 
 export default function HeroSection() {
@@ -20,14 +19,15 @@ export default function HeroSection() {
       actions={
         <>
           <Button
-            {...actionTags('setup')}
-            href={ROUTES.mcp}
-            arrow
-            linkComponent={Link}
+            {...actionTags('quickstart')}
+            href={`#${SECTION_ID.gettingStarted}`}
           >
-            Set up with your agent
+            Quickstart
           </Button>
-          <InstallCommand {...actionTags('copy')} />
+          <InstallCommand
+            {...actionTags('copy')}
+            command="npm i @walkeros/walker.js"
+          />
         </>
       }
       proof={
@@ -36,7 +36,7 @@ export default function HeroSection() {
           items={[
             'MIT-licensed',
             'Works with any framework',
-            'Storybook integration',
+            'Storybook addon',
           ]}
         />
       }

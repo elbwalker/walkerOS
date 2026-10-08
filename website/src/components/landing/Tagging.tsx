@@ -41,7 +41,16 @@ export default function TaggingSection() {
           arrow
           linkComponent={Link}
         >
-          Learn more about tagging
+          Tagging docs
+        </TextLink>
+        <TextLink
+          {...actionTags('mcp')}
+          href={ROUTES.taggingMcp}
+          tone="muted"
+          arrow
+          linkComponent={Link}
+        >
+          Tagging MCP
         </TextLink>
         <TextLink
           {...actionTags('demo')}
@@ -50,7 +59,7 @@ export default function TaggingSection() {
           arrow
           linkComponent={Link}
         >
-          See the Storybook demo
+          Watch the Storybook demo
         </TextLink>
       </Cluster>
     </Section>

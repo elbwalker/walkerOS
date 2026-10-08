@@ -110,9 +110,9 @@ The doc-lint also runs these structural and coherence checks:
 - **Flow.json schema validation** (all docs): every full `version: 4` flow
   snippet is run through `schemas.validateFlowConfig` from `@walkeros/core/dev`;
   fragments and `version: 3` migration "before" snippets are out of scope.
-- **Boundary register + `:::cloud` placement** (getting-started + MCP page): no
-  prices, tier names, or upgrade language; `:::cloud` is forbidden on
-  golden-path pages and required where an app-only capability is documented.
+- **Boundary register** (getting-started + MCP page): no prices, tier names, or
+  upgrade language. **No `:::cloud`** (all docs): there is no walkerOS Cloud,
+  and the callout type no longer exists.
 
 The rule: when you edit a pinned example, edit the Tier-1 `.ts` source and
 re-run the doc-lint. If the docs snippet must change too, update both so the
@@ -130,12 +130,11 @@ only targeting a `<type>.<key>` that a flow.json on the SAME page defines.
 
 **Open/paid boundary (Self-Host Sufficiency Rule).** Every getting-started task
 must reach a working result with MIT packages, the CLI, and reader-controlled
-infrastructure only. The hosted app appears at most once per page, only as a
-marked optional alternative, only via the `:::cloud` admonition, and only on the
-Deploy page and the MCP page. The `:::cloud` template: first sentence names the
-capability, second names the open-source path to the same result, optional third
-links `https://app.walkeros.io`. Never prices, tier names, or upgrade language
-anywhere in open docs. Self-host is always listed first.
+infrastructure only. There is no walkerOS Cloud: never write "Cloud" as a
+walkerOS product, and never add a "What Cloud adds" pointer. Where docs describe
+commands or tools that talk to the hosted app (`auth`, `projects`, `flows`,
+`deploy`), call it "the walkerOS app". Never prices, tier names, or upgrade
+language anywhere in open docs. Self-host is always listed first.
 
 **Examples recipes.** Pages under `getting-started/examples/` are lean proof
 recipes with a fixed shape: exactly one flow.json, one run loop, one
@@ -147,8 +146,7 @@ block shows what actually arrives (the captured destination call or the logged
 event), derived from the package's step examples or the real CLI output; never
 invent config, mappings, or output. Every snippet is derived from validated
 material (package examples, tested sources, existing validated docs snippets).
-No `:::cloud` on recipe pages. The shape is enforced by `checkRecipeProof` in
-`apps/scripts/validate-docs.ts`.
+The shape is enforced by `checkRecipeProof` in `apps/scripts/validate-docs.ts`.
 
 ### Validation Checklist
 

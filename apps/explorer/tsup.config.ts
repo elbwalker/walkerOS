@@ -25,6 +25,7 @@ export default defineConfig([
       '@rjsf/validator-ajv8',
       '@walkeros/collector',
       '@walkeros/web-source-browser',
+      '@walkeros/web-destination-gtag',
     ],
     noExternal: ['clsx', 'tailwind-merge', '@iconify/react'],
     // Explorer ships React client components, so the bundle is marked with a

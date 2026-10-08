@@ -1,7 +1,10 @@
 import Link from '@docusaurus/Link';
 import {
+  Button,
   CardGrid,
+  Cluster,
   HighlightCard,
+  InstallCommand,
   Section,
   SectionHeading,
 } from '@walkeros/explorer/design/components';
@@ -19,12 +22,6 @@ export default function BeyondSection() {
         <HighlightCard
           label="Server-side pipeline"
           title="Replace server-side GTM."
-          cta={{
-            label: 'Explore server-side',
-            href: ROUTES.server,
-            attributes: actionTags('server'),
-          }}
-          linkComponent={Link}
         >
           Run the same events through your own server pipeline on Express, AWS
           Lambda or GCP Functions. Validate, enrich and redact PII before
@@ -32,22 +29,26 @@ export default function BeyondSection() {
           TikTok server-to-server. No tags, triggers and variables to maintain
           per vendor, just one flow in your repo.
         </HighlightCard>
-        <HighlightCard
-          label="Raw data"
-          title="Own your analytics data."
-          cta={{
-            label: 'Explore warehouse destinations',
-            href: ROUTES.warehouse,
-            attributes: actionTags('warehouse'),
-          }}
-          linkComponent={Link}
-        >
+        <HighlightCard label="Raw data" title="Own your analytics data.">
           Send every event raw and structured straight into your warehouse, like
           BigQuery or ClickHouse. No sampling, no vendor-defined schema, no
           export limits. Query your own data directly, and use an analytics
           vendor only where you actually need one, or not at all.
         </HighlightCard>
       </CardGrid>
+      <div className="landing-cta-stack landing-cta-stack--after">
+        <Cluster align="center">
+          <Button
+            {...actionTags('setup')}
+            href={ROUTES.mcpQuickStart}
+            arrow
+            linkComponent={Link}
+          >
+            Set up with your agent
+          </Button>
+          <InstallCommand {...actionTags('copy')} />
+        </Cluster>
+      </div>
     </Section>
   );
 }

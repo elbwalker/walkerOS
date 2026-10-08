@@ -77,7 +77,7 @@ Everything in this loop runs locally, no account:
 | `WALKEROS_APP_URL` | mcp | No | `https://app.walkeros.io` | Base URL override |
 
 `@walkeros/mcp-source-browser` works without any environment variables.
-All tools are always registered. To authenticate with the walkerOS cloud, use
+All tools are always registered. To authenticate with the walkerOS app, use
 the `auth` tool, which runs the device authorization grant and holds a session
 that refreshes itself, or set `WALKEROS_TOKEN` to an automation token when
 nobody is there to approve anything.
@@ -212,7 +212,7 @@ Bundle a walkerOS flow configuration into deployable JavaScript.
 | `stats` | boolean | No | Return bundle statistics (default: `true`) |
 | `output` | string | No | Output file path |
 
-`configPath` accepts a cloud flow id, so you can bundle a saved flow directly
+`configPath` accepts an app flow id, so you can bundle a saved flow directly
 without loading it to a file first. Bundle stats report the real total bundle
 size and the included package names (no per-package size estimate).
 
@@ -270,7 +270,7 @@ explains it. With `command`, `state.consent` still applies first. See
 [consent in simulate](/docs/apps/cli#consent-in-simulate) for the CLI
 equivalent.
 
-When `configPath` is a cloud flow id, you can simulate a saved flow without a
+When `configPath` is an app flow id, you can simulate a saved flow without a
 manual file round-trip. Repeated simulations of the same configuration reuse a
 prebuilt bundle, so successive calls run faster (local file paths always
 rebuild).
@@ -364,15 +364,11 @@ answers `in-process`. Warnings state facts only, such as
 
 This tool has no parameters.
 
-#### Cloud tools
-
-:::cloud
-These tools manage flows in the hosted app: shared projects, deploys, secrets, and live-site previews. Self-hosting? Local `flow.json` files and the CLI cover the same flow-development loop. [What Cloud adds →](https://app.walkeros.io)
-:::
+#### App tools
 
 ##### `auth`
 
-Authenticate with the walkerOS cloud through the RFC 8628 device authorization
+Authenticate with the walkerOS app through the RFC 8628 device authorization
 grant. No terminal and no callback server: the tool answers with a URL, the
 person approves it in a browser they are already signed in to, and a second call
 with the same `deviceCode` resumes polling until the approval lands. The session
@@ -391,7 +387,7 @@ points to Account, Connected apps, where disconnecting ends the connection.
 
 ##### `project_manage`
 
-Manage walkerOS projects in the cloud.
+Manage walkerOS projects in the app.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -401,7 +397,7 @@ Manage walkerOS projects in the cloud.
 
 ##### `flow_manage`
 
-Manage walkerOS flow configurations and previews in the cloud.
+Manage walkerOS flow configurations and previews in the app.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -625,7 +621,7 @@ Needs the `frames` feature.
 
 ### Links back into the app
 
-Cloud tools that answer about something you can look at return a link to that
+App tools that answer about something you can look at return a link to that
 screen, so the answer and the screen arrive together instead of leaving you to
 go find it.
 
@@ -673,7 +669,7 @@ exactly that roster.
 
 | Door | How it runs | Auth |
 |------|-------------|------|
-| Local | `npx @walkeros/mcp` over stdio, or the Claude Code plugin. The local tools run on your own machine, the cloud tools call the app over HTTPS. | `auth` tool login, or `WALKEROS_TOKEN` |
+| Local | `npx @walkeros/mcp` over stdio, or the Claude Code plugin. The local tools run on your own machine, the app tools call the app over HTTPS. | `auth` tool login, or `WALKEROS_TOKEN` |
 | Hosted | `POST https://app.walkeros.io/api/mcp` over Streamable HTTP. Tools run inside the app. | OAuth, discovered from the endpoint itself |
 
 Three things behave differently.
@@ -873,9 +869,7 @@ which destinations received the event.
 
 ### Deploy a flow
 
-:::cloud
 Requires a walkerOS account. The local loop (create, validate, simulate) needs none.
-:::
 
 > "Deploy flow cfg_abc123 and wait for it to finish."
 
@@ -884,9 +878,7 @@ streams progress updates through bundling, publishing, and activation.
 
 ### Preview a flow on a live site
 
-:::cloud
 Requires a walkerOS account. The local loop (create, validate, simulate) needs none.
-:::
 
 > "Create a preview of my demo settings on flow_abc123 and give me the link to
 > open on https://example.com."

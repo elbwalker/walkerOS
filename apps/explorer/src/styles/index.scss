@@ -32,6 +32,7 @@
 
 // Components - Organisms
 @use './components/organisms/box';
+@use './components/organisms/playground';
 
 // Components - Design (@walkeros/explorer/design/components), in dependency
 // order, so a molecule's mix class follows the atom it adjusts

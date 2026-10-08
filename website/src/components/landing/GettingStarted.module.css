@@ -1,0 +1,111 @@
+/* Quickstart steps. In the components layer: the site's revert-layer reset for
+   headings, paragraphs and lists inside .elb-section rolls back to this layer. */
+@layer components {
+  .body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1fr) 84px minmax(0, 1fr) 84px
+      minmax(0, 1fr);
+    gap: 0 16px;
+    align-items: start;
+    align-self: stretch;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3-5);
+    min-width: 0;
+    margin: 0;
+  }
+
+  .stepHead {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .num {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-full);
+    color: var(--link);
+    font-family: var(--font-mono);
+    font-size: var(--type-small-size);
+    font-weight: 600;
+  }
+
+  .stepTitle {
+    margin: 0;
+    color: var(--fg);
+    font-family: var(--type-title-card-family);
+    font-size: var(--type-title-card-size);
+    font-weight: var(--type-title-card-weight);
+    line-height: 1.3;
+  }
+
+  .stepCopy {
+    margin: 0;
+    color: var(--fg-2);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+    text-wrap: pretty;
+  }
+
+  .arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    margin: 0;
+    color: var(--primary);
+  }
+
+  .arrow svg {
+    overflow: visible;
+  }
+
+  .arrowWave svg {
+    transform: rotate(-4deg);
+  }
+
+  .arrowLoop svg {
+    transform: rotate(3deg);
+  }
+
+  @media (max-width: 807px) {
+    .steps {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+    }
+
+    .arrow {
+      height: 64px;
+    }
+
+    .arrowWave svg {
+      transform: rotate(90deg);
+    }
+
+    .arrowLoop svg {
+      transform: rotate(90deg) scaleY(-1);
+    }
+  }
+}

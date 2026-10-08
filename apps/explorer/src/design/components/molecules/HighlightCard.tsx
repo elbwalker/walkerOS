@@ -12,11 +12,12 @@ export interface HighlightCardProps extends Omit<
   label: string;
   title: ReactNode;
   children: ReactNode;
-  cta: CallToAction;
+  /** A secondary button below the text; omit for a card without one. */
+  cta?: CallToAction;
   linkComponent?: LinkComponent;
 }
 
-/** A large card with a corner glow and a secondary CTA: a direction to explore. */
+/** A large card with a corner glow and an optional secondary CTA: a direction to explore. */
 export function HighlightCard({
   label,
   title,
@@ -38,16 +39,18 @@ export function HighlightCard({
       <Eyebrow variant="label">{label}</Eyebrow>
       <h3 className="elb-highlight-card__title">{title}</h3>
       <p className="elb-highlight-card__text">{children}</p>
-      <Button
-        {...cta.attributes}
-        href={cta.href}
-        variant="secondary"
-        arrow
-        linkComponent={linkComponent}
-        className="elb-highlight-card__cta"
-      >
-        {cta.label}
-      </Button>
+      {cta && (
+        <Button
+          {...cta.attributes}
+          href={cta.href}
+          variant="secondary"
+          arrow
+          linkComponent={linkComponent}
+          className="elb-highlight-card__cta"
+        >
+          {cta.label}
+        </Button>
+      )}
     </Card>
   );
 }
