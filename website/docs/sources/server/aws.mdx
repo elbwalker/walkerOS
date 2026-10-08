@@ -35,12 +35,13 @@ AWS Lambda source for walkerOS. Works across API Gateway REST (v1), API Gateway 
   <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
-  code={`import { sourceLambda } from '@walkeros/server-source-aws';
+  code={`import { Source } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
+import { sourceLambda, type SourceLambda } from '@walkeros/server-source-aws';
 
-let handler: any;
+let handler: SourceLambda.Push | undefined;
 
-async function init() {
+async function setup(): Promise<SourceLambda.Push> {
   if (handler) return handler;
 
   const { collector } = await startFlow({
@@ -48,7 +49,7 @@ async function init() {
       lambda: {
         code: sourceLambda,
         config: {
-          settings: { cors: true, healthPath: '/health' },
+          settings: { cors: true, enablePixelTracking: true, healthPath: '/health' },
         },
       },
     },
@@ -57,12 +58,12 @@ async function init() {
     },
   });
 
-  handler = collector.sources.lambda.push;
+  handler = Source.getSource<SourceLambda.Types>(collector, 'lambda').push;
   return handler;
 }
 
-export const main = async (event: any, context: any) => {
-  const h = await init();
+export const main: SourceLambda.Push = async (event, context) => {
+  const h = await setup();
   return h(event, context);
 };
 

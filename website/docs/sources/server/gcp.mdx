@@ -35,7 +35,11 @@ Google Cloud Functions source for walkerOS. Lightweight runtime adapter with plu
   <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
-  code={`import { sourceCloudFunction } from '@walkeros/server-source-gcp';
+  code={`import { Source } from '@walkeros/core';
+import {
+  sourceCloudFunction,
+  type SourceCloudFunction,
+} from '@walkeros/server-source-gcp';
 import { startFlow } from '@walkeros/collector';
 import { http } from '@google-cloud/functions-framework';
 
@@ -54,7 +58,10 @@ const { collector } = await startFlow({
 });
 
 // Plug-and-play: source.push IS the Cloud Function handler
-http('walkerHandler', collector.sources.gcp.push);`}
+http(
+  'walkerHandler',
+  Source.getSource<SourceCloudFunction.Types>(collector, 'gcp').push,
+);`}
   language="typescript"
 />
 

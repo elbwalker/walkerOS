@@ -39,35 +39,37 @@ import type {
   ConfigSchema as CollectorConfigSchema,
   InitConfigSchema as CollectorInitConfigSchema,
 } from '../collector';
-import type { SourceFieldsSchema } from '../walkeros';
+import type { SourceFieldsSchema, UserFieldsSchema } from '../walkeros';
 
-import type { Equal, Expect } from './type-utils';
+import type { IsExactly, Expect } from './type-utils';
 
 // Destination
 type _DestZodKeys = keyof z.infer<typeof DestConfigSchema>;
 type _DestTsKeys = keyof DestinationTypes.Config;
-type _destCheck = Expect<Equal<_DestZodKeys, _DestTsKeys>>;
+type _destCheck = Expect<IsExactly<_DestZodKeys, _DestTsKeys>>;
 
 // Source
 type _SourceZodKeys = keyof z.infer<typeof SourceConfigSchema>;
 type _SourceTsKeys = keyof SourceTypes.Config;
-type _sourceCheck = Expect<Equal<_SourceZodKeys, _SourceTsKeys>>;
+type _sourceCheck = Expect<IsExactly<_SourceZodKeys, _SourceTsKeys>>;
 
 // Transformer
 type _TransformerZodKeys = keyof z.infer<typeof TransformerConfigSchema>;
 type _TransformerTsKeys = keyof TransformerTypes.Config;
-type _transformerCheck = Expect<Equal<_TransformerZodKeys, _TransformerTsKeys>>;
+type _transformerCheck = Expect<
+  IsExactly<_TransformerZodKeys, _TransformerTsKeys>
+>;
 
 // Store
 type _StoreZodKeys = keyof z.infer<typeof StoreConfigSchema>;
 type _StoreTsKeys = keyof StoreTypes.Config;
-type _storeCheck = Expect<Equal<_StoreZodKeys, _StoreTsKeys>>;
+type _storeCheck = Expect<IsExactly<_StoreZodKeys, _StoreTsKeys>>;
 
 // Collector.Config
 type _CollectorConfigZodKeys = keyof z.infer<typeof CollectorConfigSchema>;
 type _CollectorConfigTsKeys = keyof CollectorTypes.Config;
 type _collectorConfigCheck = Expect<
-  Equal<_CollectorConfigZodKeys, _CollectorConfigTsKeys>
+  IsExactly<_CollectorConfigZodKeys, _CollectorConfigTsKeys>
 >;
 
 // Collector.InitConfig
@@ -76,7 +78,7 @@ type _CollectorInitConfigZodKeys = keyof z.infer<
 >;
 type _CollectorInitConfigTsKeys = keyof CollectorTypes.InitConfig;
 type _collectorInitConfigCheck = Expect<
-  Equal<_CollectorInitConfigZodKeys, _CollectorInitConfigTsKeys>
+  IsExactly<_CollectorInitConfigZodKeys, _CollectorInitConfigTsKeys>
 >;
 
 // Event Source (WalkerOS.Source ↔ SourceSchema)
@@ -89,4 +91,12 @@ type _collectorInitConfigCheck = Expect<
 // Guarding those keeps `source.release`/`trace`/etc. from drifting single-sided.
 type _SourceEventZodKeys = keyof z.infer<typeof SourceFieldsSchema>;
 type _SourceEventTsKeys = keyof WalkerOSTypes.SourceFields;
-type _sourceEventCheck = Expect<Equal<_SourceEventZodKeys, _SourceEventTsKeys>>;
+type _sourceEventCheck = Expect<
+  IsExactly<_SourceEventZodKeys, _SourceEventTsKeys>
+>;
+
+// Event User (WalkerOS.User ↔ UserSchema): same index-free carrier pattern as
+// the event Source above (`UserFields` / `UserFieldsSchema`).
+type _UserEventZodKeys = keyof z.infer<typeof UserFieldsSchema>;
+type _UserEventTsKeys = keyof WalkerOSTypes.UserFields;
+type _userEventCheck = Expect<IsExactly<_UserEventZodKeys, _UserEventTsKeys>>;

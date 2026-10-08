@@ -36,7 +36,7 @@ async function purgeCache() {
 }
 
 async function deploy() {
-  const outDir = 'storybook-static';
+  const outDir = process.env.DEPLOY_DIR || 'storybook-static';
   const files = await getFiles(outDir);
   console.log(`Uploading ${files.length} files...`);
 

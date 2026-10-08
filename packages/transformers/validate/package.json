@@ -37,6 +37,7 @@
     "@cfworker/json-schema": "^4.1.1"
   },
   "devDependencies": {
+    "@walkeros/collector": "4.7.2",
     "@walkeros/core": "4.7.2"
   },
   "repository": {

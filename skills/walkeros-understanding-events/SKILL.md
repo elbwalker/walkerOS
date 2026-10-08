@@ -123,9 +123,17 @@ User identification across sessions.
 user: {
   id: "user123",        // Your user ID
   device: "device456",  // Device fingerprint
-  session: "sess789"    // Session ID
+  session: "sess789",   // Session ID
+  hash: "a1b2c3...",    // Hashed identifier (for example a hashed email)
+  optout: false,        // User opted out of tracking (boolean)
+  segment: "vip"        // Custom keys are allowed, each holds a property value
 }
 ```
+
+The declared fields keep their types: `email` must be a valid address, so a
+hashed email goes to `hash`, never to `email`. Any other key is a custom user
+attribute with a property value and passes the validate transformer's
+`format: true` check.
 
 ### source Property
 
@@ -147,6 +155,10 @@ source: {
   command: 'simulate',     // command name (optional)
 }
 ```
+
+Steps may add their own keys to `source` (the validate transformer writes
+`valid`, GA4 decoding adds `pageLoadId` and `hitSequence`); each holds a
+property value.
 
 CMP and other non-page sources do NOT set `source.url`/`source.referrer` -
 that's the responsibility of a web-context transformer.

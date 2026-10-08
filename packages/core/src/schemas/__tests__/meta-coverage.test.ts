@@ -43,14 +43,6 @@ const OPT_OUT: ReadonlySet<string> = new Set<string>([
   'HintsSchema',
   // Marketing - flat click-id table entry, not linked from PropertyTable.
   'ClickIdEntrySchema',
-  // Zod 4 limitation: schemas built via `.and()` composition
-  // (UserSchema / SourceSchema) emit a collapsed `allOf`
-  // without surfacing the wrapper's `.meta()` id/title to the JSON Schema
-  // output. The meta is set on the schema for direct-reference cases, but
-  // docs that render these via PropertyTable see `allOf` directly. Track as
-  // a future Zod / JSON-schema toolchain follow-up.
-  'UserSchema',
-  'SourceSchema',
 ]);
 
 /** Type guard - does `val` look like a Zod schema with usable meta? */

@@ -1,0 +1,51 @@
+name: Deploy Demo Site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/demos/storybook/**'
+      - 'apps/storybook-addon/**'
+      - 'apps/explorer/**'
+      - '.github/workflows/demo.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.15.0'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx turbo run build --filter='@walkeros/storybook-demo...' --filter='@walkeros/storybook-addon...'
+
+      - name: Build Storybook into the site
+        working-directory: apps/demos/storybook
+        run: npx storybook build -o dist/storybook --quiet
+
+      - name: Deploy to Bunny
+        working-directory: apps/demos/storybook
+        run: node scripts/deploy-bunny.mjs
+        env:
+          DEPLOY_DIR: dist
+          BUNNY_STORAGE_ZONE: ${{ secrets.BUNNY_DEMO_STORAGE_ZONE }}
+          BUNNY_STORAGE_PASSWORD: ${{ secrets.BUNNY_DEMO_STORAGE_PASSWORD }}
+          BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+          BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_DEMO_PULLZONE_URL }}

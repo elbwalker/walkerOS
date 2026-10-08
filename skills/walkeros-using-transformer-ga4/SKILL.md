@@ -41,10 +41,20 @@ source must keep a non-JSON body as `ingest.body`. These server sources do:
   any other `text/plain` body reaches the decoder as the raw string.
 - `@walkeros/server-source-fetch`: a `(Request) => Response` handler with no
   `port`, for a runtime that calls it (Cloudflare Workers, Deno, Bun, Node.js
-  18+ with a fetch adapter), e.g.
-  `export default { fetch: collector.sources.http.push }`. `runneros` and the
-  `walkeros/flow` image cannot serve it (they only mount a source's Node
-  `httpHandler`).
+  18+ with a fetch adapter), e.g. with `collector` from `startFlow`:
+
+  ```typescript
+  import { Source } from '@walkeros/core';
+  import type { SourceFetch } from '@walkeros/server-source-fetch';
+
+  export default {
+    fetch: Source.getSource<SourceFetch.Types>(collector, 'http').push,
+  };
+  ```
+
+  `runneros` and the `walkeros/flow` image cannot serve it (they only mount a
+  source's Node `httpHandler`).
+
 - `sourceCloudFunction` from `@walkeros/server-source-gcp` on Google Cloud
   Functions.
 - `sourceLambda` from `@walkeros/server-source-aws` on AWS Lambda. It answers a

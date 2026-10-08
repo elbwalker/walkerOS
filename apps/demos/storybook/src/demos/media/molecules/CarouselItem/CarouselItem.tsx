@@ -1,0 +1,69 @@
+import { Image, type ImageProps } from '../../../../shared/atoms/Image';
+import { Text } from '../../../../shared/atoms/Text';
+import { useText } from '../../../../shared/language';
+import { createTrackingProps, type DataElb } from '../../../../shared/tagger';
+import { assign } from '@walkeros/core';
+
+export interface CarouselItemProps {
+  title: string;
+  style?: number;
+  type?: ImageProps['type'];
+  alt?: string;
+  onClick?: () => void;
+  position?: number;
+  dataElb?: DataElb;
+}
+
+export const CarouselItem = ({
+  title,
+  style = 1,
+  alt,
+  onClick,
+  type = 'thumbnail',
+  position,
+  dataElb,
+}: CarouselItemProps) => {
+  const t = useText();
+  const trackingProps = createTrackingProps(
+    assign(
+      {
+        entity: 'content',
+        action: {
+          visible: 'visible',
+          click: 'click',
+        },
+        data: {
+          title: title,
+          ...(position && { position: position }),
+        },
+      },
+      dataElb,
+    ),
+    'CarouselItem',
+  );
+
+  return (
+    <div
+      {...trackingProps}
+      className="flex-shrink-0 w-64 cursor-pointer group px-2 py-2"
+      onClick={onClick}
+    >
+      <div className="transition-transform group-hover:scale-105">
+        <Image
+          type={type}
+          style={style}
+          alt={alt}
+          title={title}
+          className="mb-3"
+        />
+        <Text
+          variant="ui"
+          tone="fg"
+          className="transition-colors group-hover:text-link"
+        >
+          {t(title)}
+        </Text>
+      </div>
+    </div>
+  );
+};

@@ -15,7 +15,7 @@ declare module '@walkeros/core' {
 export interface Request {
   method: string;
   body?: unknown;
-  headers: Record<string, string | string[]>;
+  headers: Record<string, string | string[] | undefined>;
   get(name: string): string | undefined;
 }
 

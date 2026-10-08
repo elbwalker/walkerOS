@@ -30,8 +30,12 @@ jest.mock('@walkeros/core', () => ({
   }),
 }));
 
-import { createDeployManageToolSpec } from '../../tools/deploy-manage.js';
+import {
+  createDeployManageToolSpec,
+  registerDeployTool,
+} from '../../tools/deploy-manage.js';
 import { CodedError } from '../support/coded-error.js';
+import { connectTool } from '../support/connected-tool.js';
 import { stubClient } from '../support/stub-client.js';
 import {
   structured,
@@ -80,7 +84,8 @@ describe('deploy_manage tool', () => {
 
     // wait is honored, including the budget
     expect(description).toContain('wait');
-    expect(description).toContain('12-minute');
+    expect(description).toContain('up to 12 minutes on the local door');
+    expect(description).toContain('up to 10 minutes on the hosted door');
 
     // delete works; no always-throws disclaimer
     expect(description).toContain('delete');
@@ -107,14 +112,14 @@ describe('deploy_manage tool', () => {
       expect(parsed.error).toContain('flowId is required for deploy action');
     });
 
-    it('calls deploy with correct options', async () => {
+    it('passes settingsName to the client as the settings to deploy', async () => {
       const deployed = { status: 'deployed', url: 'https://example.com' };
       const deploy = jest.fn().mockResolvedValue(deployed);
       const tool = createDeployManageToolSpec(stubClient({ deploy }));
       const result = await tool.handler({
         action: 'deploy',
         flowId: 'flow_1',
-        flowName: 'my-flow',
+        settingsName: 'my-flow',
       });
 
       expect(deploy).toHaveBeenCalledWith({
@@ -162,6 +167,22 @@ describe('deploy_manage tool', () => {
       );
     });
 
+    it('refuses the old flowName key in the handler, naming it, and deploys nothing', async () => {
+      const deploy = jest.fn();
+      const tool = createDeployManageToolSpec(stubClient({ deploy }));
+      const result = await tool.handler({
+        action: 'deploy',
+        flowId: 'flow_1',
+        flowName: 'web',
+      });
+
+      expect(isErrorResult(result)).toBe(true);
+      const parsed = record(parse(textOf(result)));
+      expect(parsed.error).toContain('Unrecognized key');
+      expect(parsed.error).toContain('flowName');
+      expect(deploy).not.toHaveBeenCalled();
+    });
+
     it('respects wait: false', async () => {
       const deploy = jest.fn().mockResolvedValue({ status: 'pending' });
       const tool = createDeployManageToolSpec(stubClient({ deploy }));
@@ -177,6 +198,58 @@ describe('deploy_manage tool', () => {
         wait: false,
         flowName: undefined,
       });
+    });
+  });
+
+  describe('through the MCP transport', () => {
+    it('deploys the settings named by settingsName', async () => {
+      const deploy = jest.fn().mockResolvedValue({ status: 'deployed' });
+      const { mcp, close } = await connectTool(
+        registerDeployTool,
+        stubClient({ deploy }),
+      );
+      try {
+        const result = await mcp.callTool({
+          name: 'deploy_manage',
+          arguments: {
+            action: 'deploy',
+            flowId: 'flow_1',
+            settingsName: 'web',
+          },
+        });
+
+        expect(isErrorResult(result)).toBe(false);
+        expect(deploy).toHaveBeenCalledWith({
+          flowId: 'flow_1',
+          projectId: undefined,
+          wait: true,
+          flowName: 'web',
+        });
+      } finally {
+        await close();
+      }
+    });
+
+    it('answers the old flowName key with an input error naming it, and deploys nothing', async () => {
+      const deploy = jest.fn();
+      const { mcp, close } = await connectTool(
+        registerDeployTool,
+        stubClient({ deploy }),
+      );
+      try {
+        const result = await mcp.callTool({
+          name: 'deploy_manage',
+          arguments: { action: 'deploy', flowId: 'flow_1', flowName: 'web' },
+        });
+
+        expect(isErrorResult(result)).toBe(true);
+        // The registered schema refuses it before the handler runs.
+        expect(textOf(result)).toContain('Input validation error');
+        expect(textOf(result)).toContain('flowName');
+        expect(deploy).not.toHaveBeenCalled();
+      } finally {
+        await close();
+      }
     });
   });
 

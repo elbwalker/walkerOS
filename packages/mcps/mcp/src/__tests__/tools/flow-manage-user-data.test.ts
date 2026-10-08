@@ -110,7 +110,7 @@ describe('flow_manage outputs user_data-delimited strings', () => {
     const [pageFlow] = rows(structured(page).flows);
     expect(groupedFlow).toEqual(pageFlow);
     // The settings name is an identifier the assistant passes back as
-    // flowName, so it stays literal on both paths.
+    // settingsName, so it stays literal on both paths.
     expect(rows(pageFlow.settings)[0].name).toBe('web');
     expect(pageFlow.id).toBe('flow_a');
   });

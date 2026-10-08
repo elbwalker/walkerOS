@@ -262,6 +262,7 @@ const config: Config = {
           label: 'Documentation',
         },
         { to: ROUTES.playground, label: 'Playground', position: 'left' },
+        { to: ROUTES.demos, label: 'Demos', position: 'left' },
         {
           type: 'docSidebar',
           sidebarId: 'skillsSidebar',
@@ -283,6 +284,7 @@ const config: Config = {
           items: [
             { label: 'Documentation', to: ROUTES.docs },
             { label: 'Playground', to: ROUTES.playground },
+            { label: 'Demos', to: ROUTES.demos },
             { label: 'Storybook demo', href: EXTERNAL.storybook },
           ],
         },

@@ -214,7 +214,7 @@ describe('flow_manage tool', () => {
       ['create', { name: 'New flow' }],
       ['preview_list', { flowId: 'flow_1' }],
       ['preview_get', { flowId: 'flow_1', previewId: 'prev_1' }],
-      ['preview_create', { flowId: 'flow_1', flowName: 'My Flow' }],
+      ['preview_create', { flowId: 'flow_1', settingsName: 'web' }],
       ['preview_delete', { flowId: 'flow_1', previewId: 'prev_1' }],
       ['preview_regrant', { flowId: 'flow_1', previewId: 'prev_1' }],
     ])(

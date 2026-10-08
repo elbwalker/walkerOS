@@ -150,7 +150,9 @@ carries the same object as JSON. A list sits under a named key (`projects`,
 under `value`. Text that people write and the assistant should only read
 (project names, flow names, a flow's summary) comes back wrapped in
 `<user_data>...</user_data>`. IDs and settings names stay literal, so they can
-be passed back as they are.
+be passed back as they are. The rule is general: values people write are
+wrapped, while keys and identifiers (config keys, step names, settings names)
+stay literal, so a returned config round-trips unchanged.
 
 #### Local tools (no account)
 
@@ -414,15 +416,16 @@ Manage walkerOS flow configurations and previews in the cloud.
 | `order` | `"asc"` \| `"desc"` | No | Sort order for list. |
 | `includeDeleted` | boolean | No | Include soft-deleted flows in list results. |
 | `previewId` | string | No | Preview ID (`prv_...`). Required for: preview_get, preview_delete, preview_regrant. |
-| `flowName` | string | No | Flow settings name. Used by preview_create as an alternative to `flowSettingsId`. |
-| `flowSettingsId` | string | No | Flow settings ID. Used by preview_create as an alternative to `flowName`. |
+| `settingsName` | string | No | Settings name of a multi-settings flow (the `settings[].name` from `list`). Used by preview_create as an alternative to `flowSettingsId`. |
+| `flowSettingsId` | string | No | Flow settings ID. Used by preview_create as an alternative to `settingsName`. |
 | `source` | object | No | What preview_create should run: `{ "kind": "draft" }` (default) or `{ "kind": "deployment-version", "deploymentVersionId": "..." }` to preview a deployed version's stored config ("preview what's live"). |
 | `siteUrl` | string | No | Optional site URL for preview_create. When provided, an app-signed activation grant is minted for that origin and the response's `activationUrl` works there; otherwise `activationUrl` is `null` until a grant is minted (see preview_regrant). |
 | `origins` | string[] | No | Site origins (bare `https://host[:port]`) to mint a preview activation grant for. Used by preview_regrant; the returned `activationUrl` targets the first origin. |
 
 Configs returned by `get` are round-trip safe: structural values (package
 names, platform, IDs) are returned literally, so a returned config can be edited
-and sent back to `update` unchanged.
+and sent back to `update` unchanged. An input key the tool does not take is
+refused with an input error that names it.
 
 ##### `deploy_manage`
 
@@ -436,12 +439,12 @@ Deploy walkerOS flows and manage deployments.
 | `projectId` | string | No | Project ID. Optional; falls back to the default project. |
 | `type` | `"web"` \| `"server"` | No | Deployment type filter for `list`. |
 | `status` | string | No | Status filter for `list`. |
-| `wait` | boolean | No | Wait for the deployment to reach a terminal status (default: `true`), with a 120-second budget. Set `false` to return the deployment id immediately. Only used with `deploy`. |
-| `flowName` | string | No | Flow name for multi-settings flows. Only used with `deploy`. |
+| `wait` | boolean | No | Wait for the deployment to reach a terminal status (default: `true`): up to 12 minutes on the local door, up to 10 minutes on the hosted door. Set `false` to return the deployment id immediately. Only used with `deploy`. |
+| `settingsName` | string | No | Settings name of a multi-settings flow (the `settings[].name` from `flow_manage` list). Only used with `deploy`. |
 | `cursor` | string | No | Pagination cursor from a previous `list` response. Only used with `list`. |
 | `limit` | number | No | Max items per page (1-100). Only used with `list`. |
 
-A finished `deploy` carries its status and, on failure, an `errorMessage` with the user-facing reason; use the `get` action to re-read it.
+A finished `deploy` carries its status and, on failure, an `errorMessage` with the user-facing reason; use the `get` action to re-read it. An input key the tool does not take is refused with an input error that names it.
 
 When a flow has more than one active deployment and no `slug` is supplied, `get` and `delete` return a `MULTIPLE_DEPLOYMENTS` error with a `details[]` list so the caller can pick a specific deployment. Soft-deleted deployments are always excluded.
 
@@ -889,7 +892,7 @@ Requires a walkerOS account. The local loop (create, validate, simulate) needs n
 > open on https://example.com."
 
 The assistant calls `flow_manage({ action: "preview_create", flowId:
-"flow_abc123", flowName: "demo", siteUrl: "https://example.com" })` and returns
+"flow_abc123", settingsName: "demo", siteUrl: "https://example.com" })` and returns
 the grant-based `activationUrl` the user clicks to activate preview mode on
 their site. To activate on additional origins later, the assistant calls
 `flow_manage({ action: "preview_regrant", flowId: "flow_abc123", previewId:

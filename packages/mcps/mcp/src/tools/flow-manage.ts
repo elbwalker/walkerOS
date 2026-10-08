@@ -190,17 +190,17 @@ const inputSchema = {
     .describe(
       'Preview ID (prv_...). Required for preview_get, preview_delete, and preview_regrant (all also require flowId).',
     ),
-  flowName: z
+  settingsName: z
     .string()
     .optional()
     .describe(
-      'Used by preview_create — provide one of flowName or flowSettingsId (preview_create also requires flowId).',
+      'Settings name of a multi-settings flow (the `settings[].name` from flow_manage list). Used by preview_create: provide one of settingsName or flowSettingsId (preview_create also requires flowId).',
     ),
   flowSettingsId: z
     .string()
     .optional()
     .describe(
-      'Used by preview_create — provide one of flowName or flowSettingsId (preview_create also requires flowId).',
+      'Used by preview_create: provide one of settingsName or flowSettingsId (preview_create also requires flowId).',
     ),
   source: z
     .discriminatedUnion('kind', [
@@ -324,7 +324,7 @@ export function createFlowManageToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function flowManageHandlerBody(client: ToolClient, input: unknown) {
-  const parsed = parseToolInput(inputSchema, input);
+  const parsed = parseToolInput(inputSchema, input, { strict: true });
   if (!parsed.ok) return parsed.error;
   const {
     action,
@@ -340,7 +340,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
     cursor,
     limit,
     previewId,
-    flowName,
+    settingsName,
     flowSettingsId,
     source,
     siteUrl,
@@ -350,7 +350,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
   const validationError = validateActionInput(
     'flow_manage',
     action ?? '',
-    { flowId, projectId, name, previewId, flowName, flowSettingsId },
+    { flowId, projectId, name, previewId, settingsName, flowSettingsId },
     FLOW_MANAGE_REQUIREMENTS,
   );
   if (validationError) return mcpError(new Error(validationError));
@@ -562,7 +562,7 @@ async function flowManageHandlerBody(client: ToolClient, input: unknown) {
         const preview = await client.createPreview({
           projectId: resolvedProjectId,
           flowId,
-          flowName,
+          flowName: settingsName,
           flowSettingsId,
           ...(source ? { source } : {}),
           ...(siteUrl ? { siteUrl } : {}),
@@ -657,7 +657,9 @@ export function registerFlowManageTool(server: McpServer, client: ToolClient) {
     {
       title: spec.title,
       description: spec.description,
-      inputSchema: spec.inputSchema,
+      // Strict, so a key the tool does not take is an input error naming that
+      // key rather than a key dropped without a word.
+      inputSchema: z.strictObject(spec.inputSchema),
       annotations: spec.annotations,
     },
     (args) => flowManageHandlerBody(client, args),

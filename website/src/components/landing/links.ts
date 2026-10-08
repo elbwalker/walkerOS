@@ -14,6 +14,7 @@ export const SECTION_ID = {
 export const ROUTES = {
   docs: '/docs/',
   playground: '/playground/',
+  demos: '/demos/',
   services: `/#${SECTION_ID.plans}`,
   mcp: '/docs/apps/mcp',
   tagging: '/docs/sources/web/browser/tagging/html-attributes',
@@ -39,6 +40,7 @@ export const EXTERNAL = {
   npm: 'https://www.npmjs.com/package/@walkeros/core',
   linkedin: 'https://www.linkedin.com/company/elbwalker/',
   storybook: 'https://storybook.walkeros.io/',
+  demo: 'https://demo.walkeros.io',
   about: 'https://www.elbwalker.com',
   services: 'https://www.elbwalker.com/services',
   contact: 'https://www.elbwalker.com/contact/',

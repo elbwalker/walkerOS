@@ -12,7 +12,7 @@ import type {
   Transformer,
 } from '../types';
 import type { WidenConfig } from '../types/util';
-import type { Equal, Expect } from '../schemas/__tests__/type-utils';
+import type { IsExactly, Expect } from '../schemas/__tests__/type-utils';
 
 type SourceFx = Source.Types<{ mode: 'auto' | 'manual' }>;
 declare const sourceFx: Source.Init<SourceFx>;
@@ -26,7 +26,7 @@ declare const storeFx: Store.Init<StoreFx>;
 // Per entry: an entry with nothing inferable or with the bare default Types
 // falls back to the kind's TypesGeneric, alone; a typed entry keeps its Types.
 type _Sources = Expect<
-  Equal<
+  IsExactly<
     Source.InitSourcesOf<{
       none: unknown;
       bare: Source.Types;
@@ -40,7 +40,7 @@ type _Sources = Expect<
   >
 >;
 type _Destinations = Expect<
-  Equal<
+  IsExactly<
     Destination.InitDestinationsOf<{
       none: unknown;
       bare: Destination.Types;
@@ -54,7 +54,7 @@ type _Destinations = Expect<
   >
 >;
 type _Transformers = Expect<
-  Equal<
+  IsExactly<
     Transformer.InitTransformersOf<{
       none: unknown;
       bare: Transformer.Types;
@@ -68,7 +68,7 @@ type _Transformers = Expect<
   >
 >;
 type _Stores = Expect<
-  Equal<
+  IsExactly<
     Store.InitStoresOf<{ none: unknown; bare: Store.Types; typed: StoreFx }>,
     {
       none: Store.InitStoreEntry<Store.TypesGeneric>;
@@ -90,18 +90,20 @@ interface Wide {
   client: { send: (body: string) => void; mode: 'm' };
 }
 type W = WidenConfig<Wide>;
-type _Literal = Expect<Equal<W['literal'], 'a' | 'b' | (string & {})>>;
-type _Plain = Expect<Equal<W['plain'], string>>;
-type _Count = Expect<Equal<W['count'], 1 | 2 | (number & {}) | undefined>>;
-type _Flag = Expect<Equal<W['flag'], boolean>>;
-type _Format = Expect<Equal<W['format'], (n: number) => string>>;
+type _Literal = Expect<IsExactly<W['literal'], 'a' | 'b' | (string & {})>>;
+type _Plain = Expect<IsExactly<W['plain'], string>>;
+type _Count = Expect<IsExactly<W['count'], 1 | 2 | (number & {}) | undefined>>;
+type _Flag = Expect<IsExactly<W['flag'], boolean>>;
+type _Format = Expect<IsExactly<W['format'], (n: number) => string>>;
 type _Nested = Expect<
-  Equal<W['nested']['level'], 'low' | 'high' | (string & {})>
+  IsExactly<W['nested']['level'], 'low' | 'high' | (string & {})>
 >;
-type _List = Expect<Equal<W['list'], readonly ('x' | 'y' | (string & {}))[]>>;
+type _List = Expect<
+  IsExactly<W['list'], readonly ('x' | 'y' | (string & {}))[]>
+>;
 // An object with a method is a value (client, DOM node), not plain data.
-type _Client = Expect<Equal<W['client'], Wide['client']>>;
-type _Unknown = Expect<Equal<WidenConfig<unknown>, unknown>>;
+type _Client = Expect<IsExactly<W['client'], Wide['client']>>;
+type _Unknown = Expect<IsExactly<WidenConfig<unknown>, unknown>>;
 
 // Inference: each map is inferred per entry from `code`.
 declare function inferConfig<S, D, T, St>(
@@ -114,17 +116,17 @@ const inferred = inferConfig({
   stores: { fx: { code: storeFx, config: { settings: { basePath: '/' } } } },
 });
 type Inferred = typeof inferred;
-type _InferSource = Expect<Equal<Inferred['sources']['fx'], SourceFx>>;
+type _InferSource = Expect<IsExactly<Inferred['sources']['fx'], SourceFx>>;
 type _InferDestination = Expect<
-  Equal<Inferred['destinations']['fx'], DestinationFx>
+  IsExactly<Inferred['destinations']['fx'], DestinationFx>
 >;
 type _InferTransformer = Expect<
-  Equal<Inferred['transformers']['fx'], TransformerFx>
+  IsExactly<Inferred['transformers']['fx'], TransformerFx>
 >;
 type _InferHop = Expect<
-  Equal<
+  IsExactly<
     Transformer.InitTransformersOf<Pick<Inferred['transformers'], 'hop'>>,
     { hop: Transformer.InitTransformerEntry<Transformer.TypesGeneric> }
   >
 >;
-type _InferStore = Expect<Equal<Inferred['stores']['fx'], StoreFx>>;
+type _InferStore = Expect<IsExactly<Inferred['stores']['fx'], StoreFx>>;

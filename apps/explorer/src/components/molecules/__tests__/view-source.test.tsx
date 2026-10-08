@@ -26,14 +26,6 @@ jest.mock('@monaco-editor/react', () => {
   };
 });
 
-// Jest loads prettier's CommonJS plugin build, which marks itself as an ES
-// module but has no default export; bundlers load the ES build, whose default
-// export is the plugin. Hand jest that shape, so the real formatter runs.
-jest.mock('prettier/plugins/html', () => ({
-  __esModule: true,
-  default: jest.requireActual('prettier/plugins/html'),
-}));
-
 import React, { useState } from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import type { Elb } from '@walkeros/core';

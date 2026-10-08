@@ -2,15 +2,16 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { Card, type CardProps } from '../Card';
 import { Eyebrow, type EyebrowProps } from '../Eyebrow';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 import { Stat } from '../Stat';
 import { Text, type TextProps } from '../Text';
 import { TextLink } from '../TextLink';
 
 describe('Icon', () => {
-  it.each<['check' | 'copy', string]>([
+  it.each<[IconName, string]>([
     ['check', '0 0 16 16'],
     ['copy', '0 0 24 24'],
+    ['warning', '0 0 24 24'],
   ])('%s is a hidden glyph on a %s grid', (name, viewBox) => {
     const svg = render(<Icon name={name} />).container.querySelector('svg');
     expect(svg?.getAttribute('viewBox')).toBe(viewBox);

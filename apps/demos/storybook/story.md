@@ -5,133 +5,14 @@ automatically generating component folders, files, and example content. Each
 level (atom, molecule, organism) includes component names and associated example
 props for use in Storybook.
 
-Two libraries follow it: **Media**, a streaming site, and **Shop**, the static
-tagging demo (`apps/demos/tagging`) as components.
+One shared kit (`src/shared`, stories under `Shared/*`) serves every demo. Two
+demos build on it: **Shop**, the static tagging demo (`apps/demos/tagging`) as
+components, and **Media**, a streaming site. Every visible string goes through
+the text function, so each component shows English or Elbish; tags stay English.
 
 ---
 
-# Media
-
-## 🧪 Atoms
-
-### Button
-
-- Variants: Primary, Secondary, CTA
-- Example Texts:
-  - Primary: "Watch now"
-  - Secondary: "Add to backlog"
-  - CTA: "Discover more"
-
-### Typography
-
-- Types: Heading, Subtitle, Body
-- Example Texts:
-  - Heading: "Now Streaming"
-  - Subtitle: "Recommended Series"
-  - Body: "Recommended because you watched similar shows."
-
-### Icon
-
-- Types: Search, Profile (User)
-- Example Usages:
-  - Search icon for search field
-  - User icon for login status
-
-### Image
-
-- Types: Thumbnail, Banner
-- Example Titles:
-  - Thumbnail Examples:
-    - "Debugging Dreams"
-    - "Code Wars"
-    - "API Chronicles"
-    - "Return of the Bug"
-    - "Sleepless in Stack Overflow"
-    - "The Art of Refactoring"
-    - "Inside Silicon Valley"
-    - "A Journey into Agile"
-  - Banner Example:
-    - "Life in Code"
-
----
-
-## ⚙️ Molecules
-
-### NavigationMenu
-
-- Menu Items:
-  - Movies
-  - Series
-  - Documentaries
-  - Sports
-  - Kids
-
-### CarouselItem
-
-- Titles:
-  - "Debugging Dreams"
-  - "Code Wars"
-  - "API Chronicles"
-
-### BannerText
-
-- Headline: "Tonight’s Highlight"
-- Subtitle: "Balancing Work and Passion"
-
-### ActionButton
-
-- Texts:
-  - "Watch Now"
-  - "Learn More"
-
----
-
-## 🧩 Organisms
-
-### HeaderBar
-
-- Components:
-  - Logo
-  - NavigationMenu
-  - Icons (Search & Profile)
-- Example Data:
-  - Greeting: "Hey there, welcome back!"
-  - Search Placeholder: "Search..."
-
-### HeroBanner
-
-- Components:
-  - Image (Banner)
-  - BannerText
-  - ActionButton
-- Example Data:
-  - Title: "Life in Code"
-  - Subtitle: "Balancing Passion and Work"
-  - Button Text: "Explore Now"
-
-### CarouselSection
-
-- Components:
-  - Typography (title)
-  - CarouselItem
-- Section Title: "Recommended for You"
-
-### PromotionBanner
-
-- Components:
-  - BannerText
-  - ActionButton
-- Example Data:
-  - Headline: "Activate Kids Mode"
-  - Subtitle: "Create a safe space for younger viewers."
-  - Button Text: "Activate Now"
-
----
-
-# Shop
-
-Every component reads its content from `src/components/shop/data.ts` and its
-tags carry over from the static tagging demo.
+# Shared
 
 ## 🧪 Atoms
 
@@ -141,7 +22,7 @@ tags carry over from the static tagging demo.
 
 ### Button
 
-- Variants: Primary, Secondary, Link, Icon
+- Variants: Primary, Secondary, Link, Icon; sizes md and sm
 - Example Texts:
   - Primary: "Confirm order"
   - Secondary: "Add to cart"
@@ -150,12 +31,18 @@ tags carry over from the static tagging demo.
 ### Heading
 
 - Levels: 1 to 4, sized by a design type style
-- Example Texts: "Recommendations", "Everyday Ruck Snack"
+- Example Texts: "Recommendations", "Our Top Series"
 
 ### Icon
 
 - Types: Star, Check, Check circle, X circle, Info, Warning, Trash, Cart, Globe,
-  Shield check, Slash, Facebook, Instagram, Twitter, GitHub, YouTube
+  Shield check, Search, Profile, Slash, Facebook, Instagram, Twitter, GitHub,
+  YouTube
+
+### Image
+
+- Types: Thumbnail, Banner, Postcard; an offline placeholder
+- Tags: `img`, `type`, `title`, `alt` as data, context `component:Image`
 
 ### Input
 
@@ -164,16 +51,11 @@ tags carry over from the static tagging demo.
 ### Link
 
 - Variants: Subtle, Primary, Secondary, Link
-- Example Texts: "Solutions", "Get started", "Learn more"
+- Example Texts: "Get started", "Learn more"
 
 ### Price
 
 - Example Amounts: "€140", "€220.00", "€5.52"
-
-### ProductImage
-
-- An offline placeholder: a chart colour fill with the item's name
-- Example Names: "Everyday Ruck Snack", "Cool Cap"
 
 ### Select
 
@@ -194,6 +76,89 @@ tags carry over from the static tagging demo.
 
 ## ⚙️ Molecules
 
+### ConsentControls
+
+- Texts: "Accept", "Reset", "Decline"
+
+### FormField
+
+- Example Labels: "Email address", "Country"
+
+### LanguageToggle
+
+- Buttons: "English", "Elbish" (never translated)
+- Tags: global `language:en` or `language:elbish`
+
+### NavLinks
+
+- The one-pager's anchors, such as "Promotion", "Recommendations"
+
+### SocialLinks
+
+- Links: Facebook, Instagram, Twitter, GitHub, YouTube
+
+### StatusMessage
+
+- Tones: Success, Danger, Warning, Info, each an icon and words
+- Example Texts: "In stock and ready to ship", "Status: unknown"
+
+### UserSwitch
+
+- Personas: Anonymous, Lisa Loyal, Sam Sales (never translated)
+- Tags: `data-elbuser` with the persona's user; none for Anonymous
+
+---
+
+## 🧩 Organisms
+
+### Header
+
+- Components:
+  - Brand (optional)
+  - NavLinks
+  - LanguageToggle and UserSwitch (the controls)
+  - A demo's extras: Shop's CartLink, Media's SearchButton
+
+### Footer
+
+- Components:
+  - Link
+  - SocialLinks
+- Tags: `visible:read`
+
+### ConsentBar
+
+- Components:
+  - StatusMessage (state and notice)
+  - ConsentControls
+- States: unknown, accepted, denied
+
+---
+
+## 🗂️ Templates
+
+### OnePager
+
+- Slots: header, sections, footer, consent bar (pinned to the bottom)
+
+---
+
+# Shop
+
+Every component reads its content from `src/demos/shop/data.ts` and its tags
+carry over from the static tagging demo.
+
+## 🧪 Atoms
+
+### ProductImage
+
+- An offline placeholder named after the item
+- Example Names: "Everyday Ruck Snack", "Cool Cap"
+
+---
+
+## ⚙️ Molecules
+
 ### Breadcrumb
 
 - Example Items: "Travel", "Bags"
@@ -207,22 +172,10 @@ tags carry over from the static tagging demo.
 - Tags: entity `product`, `price;currency`, `quantity:#value`, remove
   `click:remove`
 
-### ConsentControls
+### CartLink
 
-- Texts: "Accept", "Reset", "Decline"
-
-### FormField
-
-- Example Labels: "Email address", "Country"
-
-### HeaderGlobals
-
-- Example Data: language "EN", cart "€249"
-- Tags: globals `language:en`, `cart_value:249`
-
-### NavLinks
-
-- Menu Items: Solutions, Pricing, Docs, Company
+- Example Data: cart "€249"
+- Tags: global `cart_value:249`
 
 ### OrderItem
 
@@ -251,15 +204,6 @@ tags carry over from the static tagging demo.
 - Tags: entity `promotion` with `visible:view`, `category:analytics`,
   `name:#innerText`; `click:start`, `click:more`
 
-### SocialLinks
-
-- Links: Facebook, Instagram, Twitter, GitHub, YouTube
-
-### StatusMessage
-
-- Tones: Success, Danger, Warning, Info, each an icon and words
-- Example Texts: "In stock and ready to ship", "Status: unknown"
-
 ### SummaryRow
 
 - Example Data: "Shipping" €5.00, "Total" €269.52
@@ -268,12 +212,6 @@ tags carry over from the static tagging demo.
 ---
 
 ## 🧩 Organisms
-
-### Header
-
-- Components:
-  - NavLinks
-  - HeaderGlobals
 
 ### PromotionHero
 
@@ -322,38 +260,91 @@ tags carry over from the static tagging demo.
 - Tags: context `shopping:complete`; entity `order` with `visible:complete` and
   `id:0rd3r1d`
 
-### Footer
+---
 
-- Components:
-  - Link
-  - SocialLinks
-- Tags: `visible:read`
+## 📄 Pages
 
-### ConsentBar
+### ShopPage
 
-- Components:
-  - StatusMessage (state and notice)
-  - ConsentControls
-- States: unknown, accepted, denied
+- Story: `Shop/Pages/Shop`
+- Components: Header (with CartLink), PromotionHero, Recommendations,
+  ProductDetail, Checkout, OrderComplete, Footer, ConsentBar in OnePager
+- Anchors: `#promotion`, `#recommendations`, `#product`, `#checkout`, `#order`
 
 ---
 
-## 🗂️ Templates
+# Media
 
-### ShopLayout
+Every section reads its content from `src/demos/media/data.ts`.
 
-- Slots: header, main, footer, consent bar (pinned to the bottom)
+## ⚙️ Molecules
+
+### BannerText
+
+- Headline: "Life in Code"
+- Subtitle: "Balancing Passion and Work"
+
+### CarouselItem
+
+- Titles:
+  - "Debugging Dreams"
+  - "Code Wars"
+  - "Return of the Bug"
+- Tags: entity `content` with `visible` and `click`, `title` and `position`
+
+### SearchButton
+
+- An icon button labelled "Search"
+
+### TaggedButton
+
+- Texts: "Explore Now", "Activate Now"
+- Tags: the button's `type` and action, context `component:TaggedButton`
+
+---
+
+## 🧩 Organisms
+
+### HeroBanner
+
+- Components:
+  - Image (Banner)
+  - BannerText
+  - TaggedButton
+- Example Data:
+  - Title: "Life in Code"
+  - Subtitle: "Balancing Passion and Work"
+  - Button Text: "Explore Now"
+
+### CarouselSection
+
+- Components:
+  - Heading (title)
+  - CarouselItem
+- Section Titles: "Our Top Series", "Movie Recommendations"
+- Tags: context `list:<title>`, in English whatever the page shows
+
+### PromotionBanner
+
+- Components:
+  - BannerText
+  - TaggedButton
+- Example Data:
+  - Headline: "Activate Kids Mode"
+  - Subtitle: "Create a safe space for younger viewers."
+  - Button Text: "Activate Now"
 
 ---
 
 ## 📄 Pages
 
-### TaggingDemo
+### MediaPage
 
-- Story: `Shop/Pages/Tagging demo`
-- Components: Header, PromotionHero, Recommendations, ProductDetail, Checkout,
-  OrderComplete, Footer, ConsentBar in ShopLayout
-- Consent sends `walker user` and `walker consent` as the static demo does
+- Story: `Media/Pages/Media`
+- Components: Header (with the logo and SearchButton), HeroBanner,
+  CarouselSection rows, PromotionBanner, an "Add row" button, Footer, ConsentBar
+  in OnePager
+- Anchors: `#hero`, `#series`, `#films`, `#promotion`, `#documentaries`
 
 # Next steps
 

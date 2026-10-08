@@ -1,8 +1,8 @@
-import * as prettier from 'prettier/standalone';
-import prettierBabel from 'prettier/plugins/babel';
-import prettierEstree from 'prettier/plugins/estree';
-import prettierTypescript from 'prettier/plugins/typescript';
-import prettierHtml from 'prettier/plugins/html';
+import { loadPrettier } from './load-prettier';
+
+// Prettier and its parser plugins load on the first call, and only those the
+// requested language needs (load-prettier): a page that never formats code
+// ships none of them, and formatting HTML loads the HTML plugin alone.
 
 /**
  * Format code using Prettier
@@ -21,14 +21,15 @@ export async function formatCode(
     switch (language) {
       case 'javascript':
       case 'js': {
+        const { format, plugins } = await loadPrettier('babel');
         // Wrap bare objects in parens so Prettier can parse them
         // Skip one-liners — they're intentionally compact
         const isBareObject =
           code.trimStart().startsWith('{') && code.includes('\n');
         const input = isBareObject ? `(${code})` : code;
-        formatted = await prettier.format(input, {
+        formatted = await format(input, {
           parser: 'babel',
-          plugins: [prettierBabel, prettierEstree],
+          plugins,
           semi: true,
           singleQuote: true,
           trailingComma: 'all',
@@ -42,15 +43,17 @@ export async function formatCode(
 
       case 'typescript':
       case 'ts':
-      case 'tsx':
-        formatted = await prettier.format(code, {
+      case 'tsx': {
+        const { format, plugins } = await loadPrettier('typescript');
+        formatted = await format(code, {
           parser: 'typescript',
-          plugins: [prettierTypescript, prettierEstree],
+          plugins,
           semi: true,
           singleQuote: true,
           trailingComma: 'all',
         });
         break;
+      }
 
       case 'json':
         // Use native JSON for simplicity
@@ -58,21 +61,25 @@ export async function formatCode(
         formatted = JSON.stringify(parsed, null, 2);
         break;
 
-      case 'html':
-        formatted = await prettier.format(code, {
+      case 'html': {
+        const { format, plugins } = await loadPrettier('html');
+        formatted = await format(code, {
           parser: 'html',
-          plugins: [prettierHtml],
+          plugins,
           htmlWhitespaceSensitivity: 'css',
         });
         break;
+      }
 
       case 'css':
-      case 'scss':
-        formatted = await prettier.format(code, {
+      case 'scss': {
+        const { format, plugins } = await loadPrettier('css');
+        formatted = await format(code, {
           parser: 'css',
-          plugins: [prettierHtml],
+          plugins,
         });
         break;
+      }
 
       default:
         // Unsupported language, return original

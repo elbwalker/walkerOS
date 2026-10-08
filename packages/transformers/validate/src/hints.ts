@@ -74,7 +74,7 @@ export const hints: Hint.Hints = {
     ],
   },
   'format-vs-contract': {
-    text: 'format:true is a built-in structural check, not an authored schema. It validates the canonical WalkerOS.Event shape (correct field types, no unknown fields). All fields are optional, so it checks structure and types, not presence: a wrong-typed field or malformed structure fails, a missing field does not. It is independent of contract: turn it on to catch malformed events even when you have no contract, or alongside a contract to AND both checks. A contract is the place for your domain rules; format is the place for "is this even a well-formed event".',
+    text: 'format:true is a built-in structural check, not an authored schema. It validates the canonical WalkerOS.Event shape (correct field types; no unknown top-level fields and no unknown keys on a nested entity; `user`, `source`, `data`, `globals`, `custom`, `context` and `consent` accept extra keys of their value type). All fields are optional, so it checks structure and types, not presence: a wrong-typed field or malformed structure fails, a missing field does not. It is independent of contract: turn it on to catch malformed events even when you have no contract, or alongside a contract to AND both checks. A contract is the place for your domain rules; format is the place for "is this even a well-formed event".',
     code: [
       {
         lang: 'json',

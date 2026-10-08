@@ -49,7 +49,8 @@ settings: { paths: ['/events'] }
 ### Cloudflare Workers
 
 <CodeSnippet
-  code={`import { sourceFetch } from '@walkeros/server-source-fetch';
+  code={`import { Source } from '@walkeros/core';
+import { sourceFetch, type SourceFetch } from '@walkeros/server-source-fetch';
 import { startFlow } from '@walkeros/collector';
 
 const { collector } = await startFlow({
@@ -63,7 +64,9 @@ const { collector } = await startFlow({
   },
 });
 
-export default { fetch: collector.sources.fetch.push };`}
+export default {
+  fetch: Source.getSource<SourceFetch.Types>(collector, 'fetch').push,
+};`}
   language="typescript"
 />
 

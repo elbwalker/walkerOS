@@ -115,3 +115,53 @@ export const gtmFilterPasses: Flow.StepExample = {
     ],
   ],
 };
+
+/**
+ * format:true + custom user keys: extra keys on user are part of the event
+ * model (User extends Properties), so the structural check passes.
+ */
+export const formatCustomUserKeys: Flow.StepExample = {
+  title: 'Format check accepts custom user keys',
+  description:
+    'With format:true, extra keys on user (segment, ltv) are part of the event model and pass. The verdict source.valid:true is written to the event.',
+  in: {
+    name: 'page view',
+    entity: 'page',
+    action: 'view',
+    data: { title: 'Home' },
+    user: { id: 'u1', segment: 'vip', ltv: 5 },
+  },
+  out: [
+    [
+      'return',
+      {
+        event: {
+          name: 'page view',
+          entity: 'page',
+          action: 'view',
+          data: { title: 'Home' },
+          user: { id: 'u1', segment: 'vip', ltv: 5 },
+          source: { valid: true },
+        },
+      },
+    ],
+  ],
+};
+
+/**
+ * format:true + a wrong-typed declared field: user.id must be a string. In
+ * strict mode the transformer stops the chain (drops).
+ */
+export const formatWrongUserType: Flow.StepExample = {
+  public: false,
+  title: 'Format check rejects a wrong-typed user field (strict, dropped)',
+  description: 'user.id must be a string. In strict mode the chain stops.',
+  in: {
+    name: 'page view',
+    entity: 'page',
+    action: 'view',
+    data: { title: 'Home' },
+    user: { id: 5 },
+  },
+  out: [['return', false]],
+};

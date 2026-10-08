@@ -127,47 +127,55 @@ export const ConsentSchema = z
   .describe('Consent requirement mapping (group name to state)');
 
 /**
- * User - User identification and attributes
- * Extends Properties with specific optional fields
- * Contains IDs, demographics, device info, and location data
+ * Declared User fields as a standalone object schema. Composed into UserSchema
+ * below and the drift guard's index-free key source (see SourceFieldsSchema).
+ * Not added to the schemas/index.ts curated exports and carries no `.meta` id.
  */
-export const UserSchema = PropertiesSchema.and(
-  z.object({
-    // IDs
-    id: z.string().optional().describe('User identifier'),
-    device: z.string().optional().describe('Device identifier'),
-    session: z.string().optional().describe('Session identifier'),
-    hash: z.string().optional().describe('Hashed identifier'),
-    // User attributes
-    address: z.string().optional().describe('User address'),
-    email: z.string().email().optional().describe('User email address'),
-    phone: z.string().optional().describe('User phone number'),
-    // Technical attributes
-    userAgent: z.string().optional().describe('Browser user agent string'),
-    browser: z.string().optional().describe('Browser name'),
-    browserVersion: z.string().optional().describe('Browser version'),
-    deviceType: z
-      .string()
-      .optional()
-      .describe('Device type (mobile, desktop, tablet)'),
-    os: z.string().optional().describe('Operating system'),
-    osVersion: z.string().optional().describe('Operating system version'),
-    screenSize: z.string().optional().describe('Screen dimensions'),
-    // Location attributes
-    language: z.string().optional().describe('User language'),
-    country: z.string().optional().describe('User country'),
-    region: z.string().optional().describe('User region/state'),
-    city: z.string().optional().describe('User city'),
-    zip: z.string().optional().describe('User postal code'),
-    timezone: z.string().optional().describe('User timezone'),
-    ip: z.string().optional().describe('User IP address'),
-    // Flags
-    internal: z
-      .boolean()
-      .optional()
-      .describe('Internal user flag (employee, test user)'),
-  }),
-)
+export const UserFieldsSchema = z.object({
+  // IDs
+  id: z.string().optional().describe('User identifier'),
+  device: z.string().optional().describe('Device identifier'),
+  session: z.string().optional().describe('Session identifier'),
+  hash: z.string().optional().describe('Hashed identifier'),
+  // User attributes
+  address: z.string().optional().describe('User address'),
+  email: z.string().email().optional().describe('User email address'),
+  phone: z.string().optional().describe('User phone number'),
+  // Technical attributes
+  userAgent: z.string().optional().describe('Browser user agent string'),
+  browser: z.string().optional().describe('Browser name'),
+  browserVersion: z.string().optional().describe('Browser version'),
+  deviceType: z
+    .string()
+    .optional()
+    .describe('Device type (mobile, desktop, tablet)'),
+  os: z.string().optional().describe('Operating system'),
+  osVersion: z.string().optional().describe('Operating system version'),
+  screenSize: z.string().optional().describe('Screen dimensions'),
+  // Location attributes
+  language: z.string().optional().describe('User language'),
+  country: z.string().optional().describe('User country'),
+  region: z.string().optional().describe('User region/state'),
+  city: z.string().optional().describe('User city'),
+  zip: z.string().optional().describe('User postal code'),
+  timezone: z.string().optional().describe('User timezone'),
+  ip: z.string().optional().describe('User IP address'),
+  // Flags
+  internal: z
+    .boolean()
+    .optional()
+    .describe('Internal user flag (employee, test user)'),
+  optout: z.boolean().optional().describe('User opted out of tracking'),
+});
+
+/**
+ * User - User identification and attributes
+ * Declared fields keep their types; any other key holds a Property, like
+ * `User extends Properties`. One object with a catchall (not an intersection),
+ * so the emitted JSON Schema carries the Property index as
+ * `additionalProperties` instead of closing the object.
+ */
+export const UserSchema = UserFieldsSchema.catchall(PropertySchema.optional())
   .meta({
     id: 'WalkerOSUser',
     title: 'WalkerOS.User',
@@ -184,11 +192,11 @@ export const UserSchema = PropertiesSchema.and(
 /**
  * Declared Source fields as a standalone object schema. Composed into
  * SourceSchema below. Also the drift guard's index-free key source: unlike
- * `PropertiesSchema.and(...)`, a plain object schema keeps `keyof z.infer` to
- * the declared field names, so it can be compared against
- * `WalkerOS.SourceFields` (see __tests__/config-drift.test-d.ts). Not added to
- * the schemas/index.ts curated exports and carries no `.meta` id, so it is not
- * registered for JSON-schema/OpenAPI generation.
+ * SourceSchema, whose catchall adds an index signature, a plain object schema
+ * keeps `keyof z.infer` to the declared field names, so it can be compared
+ * against `WalkerOS.SourceFields` (see __tests__/config-drift.test-d.ts). Not
+ * added to the schemas/index.ts curated exports and carries no `.meta` id, so
+ * it is not registered for JSON-schema/OpenAPI generation.
  */
 export const SourceFieldsSchema = z.object({
   type: z.string().describe('Source kind (browser, dataLayer, gtag, ...)'),
@@ -228,7 +236,9 @@ export const SourceFieldsSchema = z.object({
   command: z.string().optional(),
 });
 
-export const SourceSchema = PropertiesSchema.and(SourceFieldsSchema)
+export const SourceSchema = SourceFieldsSchema.catchall(
+  PropertySchema.optional(),
+)
   .meta({
     id: 'WalkerOSSource',
     title: 'WalkerOS.Source',

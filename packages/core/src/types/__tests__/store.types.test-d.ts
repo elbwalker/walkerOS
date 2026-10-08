@@ -7,7 +7,7 @@
  * accepting `undefined` (the reserved miss sentinel must never be a value).
  */
 import type { StoreValue } from '../store';
-import type { Equal, Expect } from '../../schemas/__tests__/type-utils';
+import type { IsExactly, Expect } from '../../schemas/__tests__/type-utils';
 
 // Positive: every intended member is assignable to StoreValue.
 const _str: StoreValue = 'hello';
@@ -29,4 +29,4 @@ void _obj;
 // Negative: `undefined` is NOT a member of StoreValue (it is the miss
 // sentinel). `undefined extends StoreValue` must be false.
 type RejectsUndefined = undefined extends StoreValue ? false : true;
-type _rejectsUndefinedCheck = Expect<Equal<RejectsUndefined, true>>;
+type _rejectsUndefinedCheck = Expect<IsExactly<RejectsUndefined, true>>;

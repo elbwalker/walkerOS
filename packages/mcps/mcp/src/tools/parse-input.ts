@@ -15,6 +15,13 @@ export function inputIssuesMessage(error: z.ZodError): string {
     .join('; ');
 }
 
+export interface ParseToolInputOptions {
+  /** Reject a key the shape does not name instead of dropping it. A tool
+   *  registered with `z.strictObject` parses with this, so a spec driven
+   *  without a transport refuses the same input the transport refuses. */
+  strict?: boolean;
+}
+
 /**
  * Parse, never assert: a tool spec is drivable without a transport, so its
  * handler applies the same input shape the transport validates against.
@@ -23,10 +30,12 @@ export function inputIssuesMessage(error: z.ZodError): string {
 export function parseToolInput<S extends ZodRawShape>(
   shape: S,
   raw: unknown,
+  options: ParseToolInputOptions = {},
 ):
   | { ok: true; data: ToolInput<S> }
   | { ok: false; error: ReturnType<typeof mcpError> } {
-  const parsed = z.object(shape).safeParse(raw ?? {});
+  const schema = options.strict ? z.strictObject(shape) : z.object(shape);
+  const parsed = schema.safeParse(raw ?? {});
   if (!parsed.success) {
     return {
       ok: false,

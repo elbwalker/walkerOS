@@ -8,26 +8,20 @@
  */
 import type { Collector, Ingest, Source } from '../types';
 import type { RespondFn } from '../respond';
-
-type Equal<X, Y> =
-  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
-    ? true
-    : false;
-
-type Expect<T extends true> = T;
+import type { IsExactly, Expect } from '../schemas/__tests__/type-utils';
 
 // ScopeEnv carries a per-scope push, ingest, and optional respond.
-type _ScopePush = Expect<Equal<Source.ScopeEnv['push'], Collector.PushFn>>;
-type _ScopeIngest = Expect<Equal<Source.ScopeEnv['ingest'], Ingest>>;
+type _ScopePush = Expect<IsExactly<Source.ScopeEnv['push'], Collector.PushFn>>;
+type _ScopeIngest = Expect<IsExactly<Source.ScopeEnv['ingest'], Ingest>>;
 type _ScopeRespond = Expect<
-  Equal<Source.ScopeEnv['respond'], RespondFn | undefined>
+  IsExactly<Source.ScopeEnv['respond'], RespondFn | undefined>
 >;
 
 // withScope returns the body's return type as a Promise.
 declare const ctx: Source.Context;
 type WithScopeReturn = ReturnType<typeof ctx.withScope<'sentinel'>>;
 type _WithScopeReturnsPromise = Expect<
-  Equal<WithScopeReturn, Promise<'sentinel'>>
+  IsExactly<WithScopeReturn, Promise<'sentinel'>>
 >;
 
 void (null as unknown as _ScopePush);
