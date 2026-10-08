@@ -7,6 +7,10 @@ const meta: Meta<typeof Image> = {
   parameters: {
     layout: 'centered',
   },
+  // The placeholder fills the box; the story gives it a width.
+  args: {
+    className: 'w-96',
+  },
   tags: ['autodocs'],
   argTypes: {
     type: {
@@ -15,7 +19,7 @@ const meta: Meta<typeof Image> = {
     },
     style: {
       control: { type: 'number', min: 1, max: 8 },
-      description: 'Color style variant (1-8)',
+      description: 'Image id in the tag (img:id-<style>)',
     },
   },
 };
@@ -32,7 +36,7 @@ export const Thumbnail: Story = {
   },
 };
 
-export const ColorfulBanner: Story = {
+export const Banner: Story = {
   args: {
     type: 'banner',
     style: 5,

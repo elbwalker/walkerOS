@@ -1,0 +1,147 @@
+// BrowserFrame (@walkeros/explorer/design/components): a browser window on the
+// site theme, a floating layer around a page. The caller sets its size.
+@layer components {
+  .elb-browser {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+  }
+
+  // The bar is the container, so the root keeps its size from the caller.
+  .elb-browser__bar {
+    container: elb-browser-bar / inline-size;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .elb-browser__dots {
+    display: flex;
+    flex: none;
+    gap: 7px;
+
+    > span {
+      width: 10px;
+      height: 10px;
+      background: var(--border-strong);
+      border-radius: var(--radius-full);
+    }
+  }
+
+  .elb-browser__address {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: 5px 12px;
+    color: var(--fg-2);
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    font-family: var(--type-small-family);
+    font-size: var(--type-small-size);
+    line-height: var(--type-small-line-height);
+  }
+
+  .elb-browser__url {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Reload and the caller's actions share one look.
+  .elb-browser__reload,
+  .elb-browser__actions > :is(a, button),
+  .elb-browser__bookmark {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    color: var(--fg-2);
+    background: transparent;
+    border: 1px solid transparent;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      color var(--motion) var(--ease),
+      background var(--motion) var(--ease),
+      border-color var(--motion) var(--ease);
+
+    &:hover:not(:disabled) {
+      color: var(--fg);
+      background: var(--surface-2);
+    }
+
+    &:disabled {
+      cursor: default;
+    }
+  }
+
+  .elb-browser__reload,
+  .elb-browser__actions > :is(a, button) {
+    justify-content: center;
+    padding: 6px;
+    border-radius: var(--radius-sm);
+  }
+
+  .elb-browser__actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .elb-browser__bookmarks {
+    display: flex;
+    gap: 4px;
+    padding: 6px 12px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .elb-browser__bookmark {
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-family: var(--type-small-family);
+    font-size: var(--type-small-size);
+    line-height: var(--type-small-line-height);
+    white-space: nowrap;
+  }
+
+  // Current: filled and edged, not by colour alone.
+  .elb-browser__bookmark--active {
+    color: var(--fg);
+    background: var(--surface-2);
+    border-color: var(--border-strong);
+  }
+
+  .elb-browser__viewport {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    background: var(--bg);
+
+    > iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  }
+
+  @container elb-browser-bar (max-width: 479px) {
+    .elb-browser__dots {
+      display: none;
+    }
+  }
+}

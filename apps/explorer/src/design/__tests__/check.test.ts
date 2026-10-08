@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { main } from '../check/cli';
 import { globToRegExp } from '../check/glob';
-import { scanFile, type RuleId } from '../check/rules';
+import { localLiteralLengths, scanFile, type RuleId } from '../check/rules';
 import {
   loadDesignTokens,
   renderTailwindCss,
@@ -145,6 +145,53 @@ describe('scanFile', () => {
       "const c = 'text-product-body text-fg-2';",
       [],
     ],
+    // An arbitrary literal size; the match stops before a /line-height.
+    [
+      'text-size-class',
+      'a.tsx',
+      "const c = 'text-[11px] md:text-[0.7rem] text-[13px]/5 text-[length:12px] text-[clamp(1rem,2vw,2rem)]';",
+      [
+        'text-[11px]',
+        'text-[0.7rem]',
+        'text-[13px]',
+        'text-[length:12px]',
+        'text-[clamp(1rem,2vw,2rem)]',
+      ],
+    ],
+    [
+      'text-size-class',
+      'a.tsx',
+      "const c = 'text-product-micro text-[length:var(--type-product-caption-size)] text-[var(--x)] text-[calc(var(--type-product-small-size)*0.9)] text-[color:var(--fg)]';",
+      [],
+    ],
+    [
+      'motion-class',
+      'a.tsx',
+      "const c = 'duration-150 hover:duration-[250ms] ease-in ease-out ease-in-out ease-linear ease-[cubic-bezier(0.4,0,0.2,1)]';",
+      [
+        'duration-150',
+        'duration-[250ms]',
+        'ease-in',
+        'ease-out',
+        'ease-in-out',
+        'ease-linear',
+        'ease-[cubic-bezier(0.4,0,0.2,1)]',
+      ],
+    ],
+    [
+      'motion-class',
+      'a.tsx',
+      "const c = 'transition transition-colors delay-150 animate-spin duration-0 duration-[0ms] duration-(--motion) ease-(--ease) duration-[var(--motion)]'; // duration-150 in a comment",
+      [],
+    ],
+    ['motion-class', 'a.css', '.a { @apply duration-300; }', ['duration-300']],
+    // A CSS transition value is not a class list: motion-literal owns it.
+    [
+      'motion-class',
+      'a.tsx',
+      "<div style={{ transition: 'transform 150ms ease-in-out' }} />",
+      [],
+    ],
     [
       'radius-class',
       'a.tsx',
@@ -234,11 +281,205 @@ describe('scanFile', () => {
       ['z-index: 2147483647'],
     ],
     ['z-index', 'a.tsx', "<div style={{ zIndex: 'var(--z-toast)' }} />", []],
+    [
+      'motion-literal',
+      'a.css',
+      '.a { transition: opacity 150ms ease; } .b { transition-duration: .2s; } .c { transition: all 0.3s; }',
+      ['150ms', 'ease', '.2s', '0.3s'],
+    ],
+    [
+      'motion-literal',
+      'a.scss',
+      '.a {\n  transition:\n    color 0.2s ease-out,\n    background-color var(--motion) var(--ease);\n  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\n}',
+      ['0.2s', 'ease-out', 'cubic-bezier(0.4, 0, 0.2, 1)'],
+    ],
+    [
+      'motion-literal',
+      'a.tsx',
+      "<div style={{ transition: 'transform 150ms ease-in-out', transitionDuration: 150 }} />",
+      ['150ms', 'ease-in-out', '150'],
+    ],
+    [
+      'motion-literal',
+      'a.ts',
+      "const css = `.a { transition: opacity 0.15s; }`; const c = '[transition:opacity_150ms]';",
+      ['0.15s', '150ms'],
+    ],
+    [
+      'motion-literal',
+      'a.css',
+      '.a { transition: none; } .b { transition: opacity var(--motion) var(--ease); transition-delay: 150ms; } .c { animation: spin 1s linear infinite; transition-duration: 0s; } @keyframes spin { from { opacity: 0; } to { opacity: 1; } }',
+      [],
+    ],
+    [
+      'motion-literal',
+      'a.tsx',
+      "<div style={{ transition: 'opacity var(--motion) var(--ease) 150ms', animation: 'spin 1s linear infinite' }} />",
+      [],
+    ],
+    [
+      'font-literal',
+      'a.css',
+      '.a { font-size: 12px; } .b { font-size: 0.8rem; } .c { font-family: system-ui, sans-serif; } .d { font-size: smaller; }',
+      ['12px', '0.8rem', 'system-ui, sans-serif', 'smaller'],
+    ],
+    [
+      'font-literal',
+      'a.tsx',
+      "<p style={{ fontSize: 12, fontFamily: 'Inter' }} /><span style={{ fontSize: '12px' }} /><text fontSize={10} fontFamily=\"system-ui\" />",
+      ['12', "'Inter'", '12px', '10', '"system-ui"'],
+    ],
+    [
+      'font-literal',
+      'a.ts',
+      'const css = `.a { font-size: 11px; font-family: monospace; }`;',
+      ['11px', 'monospace'],
+    ],
+    [
+      'font-literal',
+      'a.css',
+      '.a { font-size: var(--type-product-small-size); } .b { font-size: calc(var(--type-product-caption-size) * var(--tp-label-k, 1)); } .c { font-size: inherit; font-family: var(--font-mono); font-weight: 600; } .d { font-family: inherit; }',
+      [],
+    ],
+    [
+      'font-literal',
+      'a.css',
+      "@font-face { font-family: 'Geist'; src: url(geist.woff2); }",
+      [],
+    ],
+    // A fluid heading: the type style holds the max, the clamp() scales it down.
+    [
+      'font-literal',
+      'a.css',
+      '.a { font-size: clamp(38px, 6vw, var(--type-display-size)); } .b { font-size: clamp(38px, 6vw, 64px); }',
+      ['38px', '6vw', '64px'],
+    ],
+    // A declaration quoted in a comment is not one.
+    [
+      'font-literal',
+      'a.scss',
+      '/* pre and code use font-size: inherit, so they pick\n   this 15px up */\n// transition: all 0.2s ease\n.a {\n  font-size: var(--type-code-command-size);\n}',
+      [],
+    ],
+    [
+      'motion-literal',
+      'a.scss',
+      '// transition: all 0.2s ease\n.a { color: var(--fg); } /* transition: opacity 150ms */',
+      [],
+    ],
+    [
+      'font-literal',
+      'a.tsx',
+      "interface P { fontSize?: number; fontFamily: string } <p style={{ fontSize: 'var(--type-product-small-size)', fontFamily: fontMono }} />",
+      [],
+    ],
+    // A quoted unitless number is a px size too.
+    [
+      'font-literal',
+      'a.tsx',
+      '<text fontSize="10" /><p style={{ fontSize: \'12\' }} /><text fontSize="var(--type-product-micro-size)" />',
+      ['"10"', "'12'"],
+    ],
+    [
+      'motion-literal',
+      'a.tsx',
+      "<div style={{ transitionDuration: '150' }} />",
+      ["'150'"],
+    ],
+    // The font shorthand: its sizes and its family.
+    [
+      'font-literal',
+      'a.css',
+      '.a { font: var(--type-product-small-size) Menlo, monospace; } .b { font: 12px/1.5 system-ui; }',
+      [
+        'var(--type-product-small-size) Menlo, monospace',
+        '12px',
+        '12px/1.5 system-ui',
+      ],
+    ],
+    [
+      'font-literal',
+      'a.css',
+      '.a { font: inherit; } .b { font: italic 600 var(--type-product-small-size)/var(--type-product-small-line-height) var(--font-sans); }',
+      [],
+    ],
+    // In the transition shorthand the first time of each item is its duration; a later one is a delay.
+    [
+      'motion-literal',
+      'a.css',
+      '.a { transition: opacity var(--motion) var(--ease) 150ms; } .b { transition: opacity 150ms var(--ease) 50ms, color var(--motion) var(--ease) 0.1s; }',
+      ['150ms'],
+    ],
+    // A literal after an interpolation in a CSS template is still read.
+    [
+      'motion-literal',
+      'a.ts',
+      'const css = `.a { transition: opacity ${motion} 150ms; }`;',
+      ['150ms'],
+    ],
+    [
+      'motion-literal',
+      'a.ts',
+      'const css = `.a { transition: opacity ${motion} ${ease}; }`;',
+      [],
+    ],
+    [
+      'font-literal',
+      'a.ts',
+      'const css = `.a { font-family: ${fontSans}, monospace; font-size: ${typeProductSmall.size}; }`;',
+      ['${fontSans}, monospace'],
+    ],
+    // A literal size behind a local name is flagged where a font size reads it.
+    [
+      'font-literal',
+      'a.css',
+      '.a { --x-size: 11px; font-size: var(--x-size); } .b { font: 600 var(--x-size)/1.4 var(--font-sans); }',
+      ['var(--x-size', 'var(--x-size'],
+    ],
+    [
+      'font-literal',
+      'a.scss',
+      '$size: 12px;\n.a { font-size: $size; }',
+      ['$size'],
+    ],
+    [
+      'font-literal',
+      'a.tsx',
+      "<p style={{ '--x-size': '11px', fontSize: 'var(--x-size)' }} />",
+      ['var(--x-size'],
+    ],
+    // A local alias of a design variable, and geometry no font size reads, pass.
+    [
+      'font-literal',
+      'a.css',
+      '.a { --x: var(--type-product-small-size); font-size: var(--x); } .b { --grid-min: 350px; width: var(--grid-min); } .c { --tp-label-k: 1.2; font-size: calc(var(--type-product-caption-size) * var(--tp-label-k, 1)); }',
+      [],
+    ],
+    [
+      'font-literal',
+      'a.scss',
+      '$gap: 12px;\n// $note: 12px\n.a { padding: $gap; font-size: var(--type-product-small-size); }',
+      [],
+    ],
+    // Script comments are not scanned; strings that contain // are.
+    [
+      'font-literal',
+      'a.tsx',
+      "// fontSize: 12\nconst url = 'https://x'; /* <p style={{ fontSize: 11 }} /> */ const s = { fontSize: 13 };",
+      ['13'],
+    ],
+    [
+      'motion-literal',
+      'a.ts',
+      "/* { transition: 'all 150ms' } */ // transitionDuration: 150\nconst s = { transition: 'none' };",
+      [],
+    ],
   ])('%s in %s: %s', (rule, file, snippet, expected) => {
     const context = {
       designNames,
       declaredNames: collectDeclaredNames(snippet),
       allowVarPrefixes: [],
+      literalLengths: localLiteralLengths(file, snippet),
     };
     const matches = scanFile(file, snippet, context)
       .filter((finding) => finding.rule === rule)
@@ -251,6 +492,7 @@ describe('scanFile', () => {
       designNames,
       declaredNames: new Set<string>(),
       allowVarPrefixes: [],
+      literalLengths: new Set<string>(),
     };
     expect(scanFile('a.tsx', 'const c = `p-2\n  text-xs`;', context)).toEqual([
       {
@@ -338,6 +580,35 @@ describe('walkeros-design-check', () => {
       ['--allow', 'z-index:src/band.css', 'src'],
       1,
       ['src/band.css:1:34 color-literal #fff'],
+    ],
+    [
+      'a literal size behind an SCSS variable declared in another file',
+      {
+        'src/_vars.scss': '$size: 12px;',
+        'src/a.scss': '.a { font-size: $size; }',
+      },
+      ['src'],
+      1,
+      ['src/a.scss:1:17 font-literal $size'],
+    ],
+    [
+      'a design variable quoted with a literal in another file',
+      {
+        'src/t.ts': "const css = '--type-product-small-size: 13px;';",
+        'src/a.css': '.a { font-size: var(--type-product-small-size); }',
+      },
+      ['src'],
+      0,
+      [],
+    ],
+    [
+      'a rule-scoped allow of a vendor literal',
+      {
+        'src/editor.ts': 'const options = { fontSize: 13, color: "#fff" };',
+      },
+      ['--allow', 'font-literal:src/editor.ts', 'src'],
+      1,
+      ['src/editor.ts:1:41 color-literal #fff'],
     ],
     [
       'a third-party variable without --allow-var',

@@ -310,10 +310,10 @@ export const destinationSnowplow: Destination = {
       event,
       eventMapping,
       data as WalkerOS.AnyObject,
+      collector,
       rule.name,
       config,
       logger,
-      collector,
     );
   },
 

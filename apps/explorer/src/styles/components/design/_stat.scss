@@ -15,7 +15,7 @@
     display: flex;
     color: var(--primary);
     font-family: var(--type-display-family);
-    font-size: 32px;
+    font-size: var(--type-footer-statement-size);
     line-height: 1;
     font-weight: var(--type-display-weight);
     letter-spacing: -0.03em;

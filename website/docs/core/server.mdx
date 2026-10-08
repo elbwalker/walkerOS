@@ -260,9 +260,10 @@ Utilities</Link>:
   code={`import { getMappingValue, anonymizeIP } from '@walkeros/core';
 import { sendServer, getHashServer } from '@walkeros/server-core';
 
-async function processServerSideEvent(rawEvent, clientIP) {
+// collector: the running collector, from startFlow or a step's context
+async function processServerSideEvent(rawEvent, clientIP, collector) {
 // Use core utilities for data processing
-const processedData = await getMappingValue(rawEvent, mappingConfig);
+const processedData = await getMappingValue(rawEvent, mappingConfig, { collector });
 const safeIP = anonymizeIP(clientIP);
 
 // Use server utilities for transmission

@@ -1,4 +1,5 @@
 import React, { type ReactElement } from 'react';
+import { BrowserFrame } from '../BrowserFrame';
 import { CaseCard } from '../CaseCard';
 import { CheckList } from '../CheckList';
 import { FaqItem } from '../FaqItem';
@@ -18,6 +19,13 @@ import {
 // dropped one silently stops tracking.
 it.each<[string, ReactElement, string]>([
   ['CheckList', <CheckList items={['A']} {...PROBE} />, 'ul'],
+  [
+    'BrowserFrame',
+    <BrowserFrame url="https://demo.test" {...PROBE}>
+      Page
+    </BrowserFrame>,
+    'div',
+  ],
   ['SectionHeading', <SectionHeading title="T" {...PROBE} />, 'div'],
   [
     'ProblemCard',

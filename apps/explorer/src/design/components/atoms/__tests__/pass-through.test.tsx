@@ -4,6 +4,7 @@ import { EventLegend } from '../EventLegend';
 import { Eyebrow } from '../Eyebrow';
 import { Icon } from '../Icon';
 import { InlineCode } from '../InlineCode';
+import { PhotoPlaceholder } from '../PhotoPlaceholder';
 import { Stat } from '../Stat';
 import { Text } from '../Text';
 import { TextLink } from '../TextLink';
@@ -37,6 +38,7 @@ it.each<[string, ReactElement, string]>([
   ],
   ['InlineCode', <InlineCode {...PROBE}>elb()</InlineCode>, 'code'],
   ['EventLegend', <EventLegend {...PROBE} />, 'div'],
+  ['PhotoPlaceholder', <PhotoPlaceholder {...PROBE} />, 'div'],
 ])(
   '%s passes every attribute it does not own to its root',
   (_name, element, tagName) => {

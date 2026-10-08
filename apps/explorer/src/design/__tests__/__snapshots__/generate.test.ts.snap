@@ -9,7 +9,10 @@ exports[`renders tokens.css, tailwind.css and the constants for the fixture 1`] 
   --edge: 0 0 0 1px rgba(0, 0, 0, 0.2);
   --gutter: 24px;
   --radius-md: 8px;
+  --container-md: 448px;
   --z-modal: 50;
+  --motion: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
   --font-sans: system-ui, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, monospace;
   --type-body-size: 16px;
@@ -45,6 +48,12 @@ exports[`renders tokens.css, tailwind.css and the constants for the fixture 1`] 
   --ring: 0 0 0 4px rgba(1, 181, 226, 0.14);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  :root, :host, [data-theme] {
+    --motion: 0ms;
+  }
+}
+
 /* ---- */
 /* walkerOS design tokens, generated from design/tokens.json by src/design/generate.ts. Edit the JSON, never this file. */
 
@@ -53,6 +62,7 @@ exports[`renders tokens.css, tailwind.css and the constants for the fixture 1`] 
 @theme {
   --color-*: initial;
   --radius-*: initial;
+  --container-*: initial;
   --font-*: initial;
   --text-*: initial;
   --shadow-*: initial;
@@ -61,6 +71,7 @@ exports[`renders tokens.css, tailwind.css and the constants for the fixture 1`] 
   --text-shadow-*: initial;
   --spacing: 4px;
   --radius-md: 8px;
+  --container-md: 448px;
   --font-sans: system-ui, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, monospace;
   --text-body: 16px;
@@ -77,6 +88,8 @@ exports[`renders tokens.css, tailwind.css and the constants for the fixture 1`] 
 }
 
 @theme inline {
+  --default-transition-duration: var(--motion);
+  --default-transition-timing-function: var(--ease);
   --color-bg: var(--bg);
   --color-primary: var(--primary);
   --color-link: var(--link);
@@ -118,5 +131,20 @@ export const fontSans = "system-ui, 'Segoe UI', sans-serif";
 
 /** Font family \`mono\`. */
 export const fontMono = "ui-monospace, monospace";
+
+/** Duration. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const motion = "180ms";
+
+/** Easing. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const ease = "cubic-bezier(0.2, 0, 0, 1)";
+
+/** Type style \`body\`: Body. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeBody = { size: "16px", lineHeight: 1.65, weight: 400, family: fontSans } as const;
+
+/** Type style \`eyebrow\`: Eyebrow. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeEyebrow = { size: "13px", lineHeight: 1.5, weight: 600, tracking: "0.12em", family: fontSans } as const;
+
+/** Type style \`code\`: Its own family. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeCode = { size: "0.88em", lineHeight: 1.5, weight: 400, family: fontMono } as const;
 "
 `;

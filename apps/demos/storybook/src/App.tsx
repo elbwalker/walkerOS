@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MediathekTemplate } from './components/media/templates/MediathekTemplate';
-import { Button } from './stories/Button';
+import { Button } from './components/media/atoms/Button';
 import { Typography } from './components/media/atoms/Typography/Typography';
 import './App.css';
 
@@ -12,43 +12,22 @@ function App() {
 
   if (currentTemplate === 'landing') {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          textAlign: 'center',
-          padding: '20px',
-        }}
-      >
-        <div style={{ maxWidth: '600px' }}>
-          <Typography
-            variant="h1"
-            style={{ marginBottom: '16px', color: 'white' }}
-          >
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-bg to-bg-2 p-5 text-center text-fg">
+        <div className="max-w-150">
+          <Typography variant="h1" align="center" className="mb-4">
             Component Demo
           </Typography>
           <Typography
             variant="body1"
-            style={{ marginBottom: '32px', color: 'rgba(255,255,255,0.9)' }}
+            color="secondary"
+            align="center"
+            className="mb-8"
           >
             Explore complete application domains built with Atomic Design
             principles
           </Typography>
 
-          <div
-            style={{
-              display: 'flex',
-              gap: '16px',
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-              marginBottom: '32px',
-            }}
-          >
+          <div className="mb-8 flex flex-wrap justify-center gap-4">
             <div data-testid="mediathek-button">
               <Button
                 label="📺 Mediathek Demo"
@@ -58,32 +37,13 @@ function App() {
             </div>
           </div>
 
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              padding: '20px',
-              marginTop: '24px',
-            }}
-          >
-            <Typography
-              variant="h4"
-              style={{ marginBottom: '12px', color: 'white' }}
-            >
+          <div className="mt-6 rounded-md border border-border bg-surface p-5">
+            <Typography variant="h4" align="center" className="mb-3">
               🎯 For the Full Experience
             </Typography>
-            <Typography
-              variant="body2"
-              style={{ color: 'rgba(255,255,255,0.8)' }}
-            >
+            <Typography variant="body2" color="secondary" align="center">
               Run{' '}
-              <code
-                style={{
-                  background: 'rgba(0,0,0,0.2)',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                }}
-              >
+              <code className="rounded-xs bg-surface-2 px-1.5 py-0.5 font-mono">
                 npm run storybook
               </code>{' '}
               to explore all components in detail with interactive documentation
@@ -96,21 +56,7 @@ function App() {
 
   return (
     <div>
-      <div
-        style={{
-          position: 'fixed',
-          top: 10,
-          right: 10,
-          zIndex: 1000,
-          background: 'white',
-          padding: '12px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          display: 'none',
-          gap: '8px',
-          alignItems: 'center',
-        }}
-      >
+      <div className="fixed top-2.5 right-2.5 z-(--z-sticky) hidden items-center gap-2 rounded-md border border-border-strong bg-surface p-3">
         <Button
           label="🏠 Home"
           size="small"

@@ -16,7 +16,7 @@ export const PromotionBanner = ({
   headline,
   subtitle,
   buttonText,
-  backgroundGradient = 'from-primary-700 to-primary-900',
+  backgroundGradient = 'from-surface-2 to-surface',
   onButtonClick,
   dataElb,
 }: PromotionBannerProps) => {
@@ -35,7 +35,7 @@ export const PromotionBanner = ({
   return (
     <div
       {...trackingProps}
-      className={`bg-gradient-to-r ${backgroundGradient} rounded-xl p-8 md:p-12 mx-6 my-8`}
+      className={`bg-gradient-to-r ${backgroundGradient} mx-6 my-8 rounded-xl border border-border p-8 md:p-12`}
     >
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0">
         <div className="text-center md:text-left">

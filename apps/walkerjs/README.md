@@ -9,8 +9,8 @@
 One script tag turns `data-elb` attributes into rich `dataLayer` pushes that
 Google Tag Manager can use. No configuration, no build step.
 
-[Documentation](https://www.walkeros.io/docs/apps/walkerjs) &bull;
-[NPM Package](https://www.npmjs.com/package/@walkeros/walker.js) &bull;
+[Documentation](https://www.walkeros.io/docs/getting-started/quickstart/walkerjs)
+&bull; [NPM Package](https://www.npmjs.com/package/@walkeros/walker.js) &bull;
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/apps/walkerjs)
 
 ## Quick start
@@ -20,7 +20,7 @@ Google Tag Manager can use. No configuration, no build step.
 ```
 
 Replace `vX.Y` with the current release line, shown in the
-[documentation](https://www.walkeros.io/docs/apps/walkerjs).
+[documentation](https://www.walkeros.io/docs/getting-started/quickstart/walkerjs).
 
 Tag what matters:
 
@@ -47,7 +47,7 @@ Download the file and serve it from your own domain.
 Destinations, consent rules and mapping come with your own bundle: write a flow
 file and build it with the walkerOS CLI, or build it in the walkerOS app. Your
 `data-elb` tagging carries over, see
-[Grow with it](https://www.walkeros.io/docs/apps/walkerjs#grow-with-it).
+[Grow with it](https://www.walkeros.io/docs/getting-started/quickstart/walkerjs#grow-with-it).
 
 ## Contribute
 

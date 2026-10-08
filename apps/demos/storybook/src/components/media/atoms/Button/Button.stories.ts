@@ -9,7 +9,6 @@ const meta: Meta<typeof Button> = {
   },
   tags: ['media'],
   argTypes: {
-    backgroundColor: { control: 'color' },
     dataElb: {
       control: { type: 'object' },
       description: 'walkerOS tracking configuration',

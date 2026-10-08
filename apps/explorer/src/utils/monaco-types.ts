@@ -442,6 +442,8 @@ export function registerWalkerOSTypes(monaco: Monaco): void {
  * Globals declared here:
  *  - getMappingEvent, getMappingValue: pure mapping helpers from @walkeros/core
  *  - elb: the walker push function bound by startFlow
+ *  - collector: the collector startFlow returns, the context live examples
+ *    pass to getMappingValue
  */
 export function registerWalkerOSAmbients(monaco: Monaco): void {
   if (ambientsRegistered.has(monaco)) return;
@@ -453,6 +455,7 @@ export function registerWalkerOSAmbients(monaco: Monaco): void {
     import type {
       getMappingEvent as _getMappingEvent,
       getMappingValue as _getMappingValue,
+      Collector,
       WalkerOS,
     } from '@walkeros/core';
 
@@ -460,6 +463,7 @@ export function registerWalkerOSAmbients(monaco: Monaco): void {
       const getMappingEvent: typeof _getMappingEvent;
       const getMappingValue: typeof _getMappingValue;
       const elb: WalkerOS.Elb;
+      const collector: Collector.Instance;
     }
 
     export {};

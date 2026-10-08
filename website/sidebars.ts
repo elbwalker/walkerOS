@@ -13,7 +13,6 @@ const sidebars: SidebarsConfig = {
           id: 'getting-started/index',
           label: 'What is walkerOS',
         },
-        'getting-started/first-checks',
         {
           type: 'category',
           label: 'Quick starts',
@@ -23,8 +22,8 @@ const sidebars: SidebarsConfig = {
           },
           items: [
             {
-              type: 'ref',
-              id: 'apps/walkerjs',
+              type: 'doc',
+              id: 'getting-started/quickstart/walkerjs',
               label: 'Script tag + GTM',
             },
             'getting-started/quickstart/react',
@@ -576,7 +575,6 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Packages',
           items: [
-            'apps/walkerjs',
             'apps/cli',
             'apps/runtime',
             {

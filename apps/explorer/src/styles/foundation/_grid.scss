@@ -6,6 +6,7 @@
 // the component; Grid's props override it on the grid element.
 .elb-explorer-grid-wrapper {
   --grid-min-box-width: 350px;
+  --grid-box-width: 350px;
   --grid-row-min-height: 250px;
   --grid-row-max-height: 450px;
   --grid-box-max-height-mobile: 500px;
@@ -67,6 +68,40 @@
     }
   }
 
+  // `boxWidth`: one row of fixed-width boxes at every container width, never
+  // wider than the row less the edge of the next box, snapping as it scrolls.
+  // Doubled class: it overrides the stack and the wide flow above.
+  &.elb-explorer-grid--fixed {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: min(var(--grid-box-width), calc(100% - 32px));
+    grid-auto-rows: minmax(
+      var(--grid-row-min-height),
+      var(--grid-row-max-height, auto)
+    );
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+
+    > * {
+      min-width: 0;
+      scroll-snap-align: start;
+    }
+
+    > .elb-explorer-box {
+      height: 100%;
+      max-height: none;
+    }
+
+    // Where the chevrons show, they sit in a gutter beside the row, never on
+    // a box's content
+    @container grid-container (min-width: 600px) {
+      width: auto;
+      margin-inline: 48px;
+    }
+  }
+
   // Row height modifiers
   &.elb-explorer-grid--row-auto {
     @container grid-container (min-width: 800px) {
@@ -84,7 +119,7 @@
   }
 }
 
-// Scroll buttons for horizontal navigation
+// Scroll buttons for horizontal navigation: round, a primary edge, a chevron
 .elb-explorer-grid-scroll-button {
   position: absolute;
   top: 50%;
@@ -93,38 +128,37 @@
   width: 40px;
   height: 40px;
   padding: 0;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--primary);
   border-radius: var(--radius-full);
   background: var(--surface);
   color: var(--fg);
-  font-size: 24px;
-  line-height: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: background-color var(--motion) var(--ease);
   user-select: none;
 
-  // Hide in narrow containers (vertical stack mode)
-  @container grid-container (max-width: 799px) {
+  // Narrow containers scroll by swipe and snap; the buttons would cover the
+  // box they sit on
+  @container grid-container (max-width: 599px) {
     display: none;
   }
 
   &:hover {
     background: var(--surface-2);
-    transform: translateY(-50%) scale(1.1);
   }
 
-  &:active {
-    transform: translateY(-50%) scale(0.95);
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
   }
 
   &--left {
-    left: 8px;
+    left: 4px;
   }
 
   &--right {
-    right: 8px;
+    right: 4px;
   }
 }

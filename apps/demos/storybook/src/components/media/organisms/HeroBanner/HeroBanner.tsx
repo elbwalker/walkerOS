@@ -44,8 +44,8 @@ export const HeroBanner = ({
         <Image type="banner" style={style} className="w-full h-full" />
       </div>
 
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/40" />
+      {/* Overlay: the page ground fades into the image, so the text reads in both themes */}
+      <div className="absolute inset-0 bg-gradient-to-r from-bg via-bg/80 to-bg/20" />
 
       {/* Content */}
       <div className="relative h-full max-w-7xl mx-auto px-6 flex items-center">

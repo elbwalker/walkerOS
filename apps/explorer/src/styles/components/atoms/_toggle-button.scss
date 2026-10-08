@@ -1,0 +1,33 @@
+// ToggleButton - one button showing the current option. Every label shares
+// one grid cell, so the button keeps the longest label's width.
+.elb-explorer-toggle {
+  display: inline-grid;
+  place-items: center;
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--type-product-small-size);
+  font-weight: 600;
+  line-height: var(--type-product-small-line-height);
+  cursor: pointer;
+  transition:
+    background-color var(--motion) var(--ease),
+    border-color var(--motion) var(--ease);
+
+  &:hover {
+    background: var(--surface-2);
+  }
+
+  &__label {
+    grid-area: 1 / 1;
+    white-space: nowrap;
+
+    &[aria-hidden='true'] {
+      visibility: hidden;
+    }
+  }
+}

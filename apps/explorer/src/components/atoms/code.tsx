@@ -6,6 +6,7 @@ import React, {
 } from 'react';
 import { Editor, loader, type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
+import { typeCodeStep } from '../../design';
 import { registerTheme, ELB_THEME_DARK } from '../../themes';
 import {
   configureMonacoTypeScript,
@@ -200,7 +201,7 @@ export function Code({
   beforeMount,
   onMount,
   autoHeight,
-  fontSize = 13,
+  fontSize = parseFloat(typeCodeStep.size),
   packages,
   sticky = true,
   ide = false,
@@ -580,7 +581,7 @@ export function Code({
           readOnlyMessage: { value: '' },
           minimap: { enabled: minimap },
           fontSize: fontSize,
-          lineHeight: Math.round(fontSize * 1.5),
+          lineHeight: Math.round(fontSize * typeCodeStep.lineHeight),
           padding: 0,
           lineNumbers: lineNumbers ? 'on' : 'off',
           lineNumbersMinChars: 3,

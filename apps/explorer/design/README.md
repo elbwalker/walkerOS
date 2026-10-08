@@ -13,7 +13,7 @@ walkerOS is an open-source event data collection platform by elbwalker. This sys
 
 ## Color
 
-- Dark is the default theme (walkeros.io and the relaunch open dark); light is a full peer. Every token is per theme — never hard-code a hex.
+- Dark is the default theme (walkeros.io and the relaunch open dark); light is a full peer. Every token is per theme: never hard-code a hex.
 - Grounds: `bg` for the page, `bg-2` for every alternate section band and the footer, `surface` for cards on either, `surface-2` for inline code and hover fills. Separate sections with a 1px `border` top rule, not with shadow.
 - Text: `fg` for headings and body, `fg-2` for supporting copy, `fg-3` only for meta (tier labels, `$` prompt, copyright).
 - `primary` (#01b5e2, elbwalker blue) is the only brand hue. Spend it on: the primary CTA fill, check icons, the highlighted phrase of the H1, the announcement bar, the focus ring and the recommended plan's border. Text on `primary` is always `on-primary`, never white.
@@ -25,7 +25,7 @@ walkerOS is an open-source event data collection platform by elbwalker. This sys
 
 ## Typography
 
-- Site UI is set in the system stack (`sans`) with `mono` for commands and code — the same stacks the Docusaurus docs use, so marketing and docs feel like one product.
+- Site UI is set in the system stack (`sans`) with `mono` for commands and code: the same stacks the Docusaurus docs use, so marketing and docs feel like one product.
 - Product visualisations use **Geist** and **Geist Mono** (`viz`, `viz-mono`, Google Fonts) to read as product UI inside the page.
 - Headings are bold (700) with tight negative tracking (`display` −0.025em, `heading-lg` −0.02em) and `text-wrap: balance`. All display and heading sizes are fluid `clamp()` values; the token holds the max.
 - Body is 16px / 1.65 (`body`); explainers 17px (`body-lg`); leads 18–21px (`lead`) in `fg-2`, max ~58ch.
@@ -52,31 +52,32 @@ walkerOS is an open-source event data collection platform by elbwalker. This sys
 - Secondary button: `surface` fill, `border` outline, `fg` text; border turns `primary` on hover.
 - Links: `link`, underline on hover only.
 - Focus: 2px solid `focus` outline (`primary` in dark, `link` in light), 3px offset, `radius-xs`, on every interactive element.
-- Transitions use `--motion` (180ms) and `--ease` from `base.css` and stay limited to colour and border; reduced motion sets `--motion` to 0.
+- Transitions use `--motion` (180ms) and `--ease` from `tokens.css`, never another duration or easing; Tailwind's `transition` utilities read both by default. Reduced motion sets `--motion` to 0, and `base.css` also stops animations, transitions with their own durations and smooth scrolling.
 
 ## Product UI
 
 The app, the explorer and Tag Mode use these tokens with a few more rules.
 
-- **Type.** Set product text in the `Product` group: `product-body` (14px) for body copy, forms and tables, `product-small` for secondary rows, `product-caption` for meta and badges, `product-title` and `product-heading` for panel and page titles. The marketing styles above stay on walkeros.io.
+- **Type.** Set product text in the `Product` group: `product-body` (14px) for body copy, forms and tables, `product-small` for secondary rows, `product-caption` for meta and badges, `product-micro` (11px) only for dense canvas labels such as node badges, edge labels and mark labels (never body copy, never interactive text), `product-title` and `product-heading` for panel and page titles. Every text size is one of the type styles, and every font is `sans`, `mono`, `viz` or `viz-mono`. The marketing styles above stay on walkeros.io. Where CSS variables cannot reach, such as email HTML, styles injected by script and editor options, read the generated constants from `@walkeros/explorer/design`: `typeProductBody` and the other `type*` styles, `motion` and `ease`.
+- **Widths.** Dialogs, panels and page columns take the `container-*` widths, `container-3xs` (256px) to `container-7xl` (1280px). They are px, so a page's root font size never re-sizes a dialog or a Tag Mode panel.
 - **Controls.** Outline inputs, selects, checkboxes and switch tracks with `border-strong`; `border` stays decorative. Inputs fill with `bg`, placeholders use `fg-3`, invalid fields `danger`. One `primary` button per view.
 - **Layers.** Menus, popovers, dialogs and panels are `surface` with a 1px `border-strong` edge and no shadow. Modal scrims use `backdrop`. Stack layers with the `z-*` tokens, never a raw number.
-- **Status.** `danger`, `success`, `warning` and `info` always come with an icon and a word. On a tinted `*-bg` fill the text is `fg`; the status colour marks the icon and the border. `success` sits on the blue side of green so it stays apart from `danger` with red-green colour blindness.
+- **Status.** `danger`, `success`, `warning` and `info` always come with an icon and a word. On a tinted `*-bg` fill the text is `fg`; the status colour marks the icon and the border. `success` sits on the blue side of green so it stays apart from `danger` with red-green colour blindness. Any other state a hue tells (seen, not seen yet, added, removed) also gets a cue without colour, an edge style, a glyph or a shape, and its word: visible where it fits, otherwise in the tooltip and the accessible name.
 - **Flow steps.** `step-source`, `step-transformer`, `step-collector`, `step-destination` and `step-store` colour step badges, node accents and edges; `platform-web` and `platform-server` mark platforms. Always beside the word.
 - **Charts and notes.** Series take `chart-1` to `chart-6` in order, each labelled. `annotation` marks human notes and comment pins.
-- **Tag kinds.** `event-user` and `event-consent` join the five event parts on the same terms: dark grounds only, always with their word.
+- **Tag kinds.** `event-user` and `event-consent` join the five event parts on the same terms: dark grounds only, always with their word. On light chrome, a key in an event colour (a tool button, a picker tile, a kind label) sits on a small dark island of its own.
 - **Editors.** Monaco, Shiki and Prism use `syntax-*` on `code-bg`, with `code-line-number`, `code-selection`, `code-inserted-bg` and `code-deleted-bg`. Visualisations keep `viz-*`. Code surfaces stay dark in both themes.
-- **Tailwind.** `tokens.css` declares `--radius-*`, `--font-sans` and `--font-mono` under Tailwind's own names, so importing it alone already re-scales Tailwind's `rounded-*` (`rounded-lg` becomes 12px) and re-fonts `font-sans` and `font-mono`. Move radius classes to the design scale in the same change (`rounded-lg` to `rounded-md`, `rounded-xl` to `rounded-lg`). `tailwind.css` then removes the palette, the default radii, sizes and shadows.
+- **Tailwind.** `tokens.css` declares `--radius-*`, `--font-sans` and `--font-mono` under Tailwind's own names, so importing it alone already re-scales Tailwind's `rounded-*` (`rounded-lg` becomes 12px) and re-fonts `font-sans` and `font-mono`. Move radius classes to the design scale in the same change (`rounded-lg` to `rounded-md`, `rounded-xl` to `rounded-lg`). `tailwind.css` then removes the palette, the default radii, sizes and shadows, and maps `max-w-*` to the `container-*` widths.
 
 ## Iconography
 
 - Icons are simple 2px-stroke line glyphs with round caps, drawn in `currentColor`: the check (`M3 8.5l3 3 7-7` on a 16 grid), copy, sun/moon for the theme toggle. Check icons are always `primary`.
 - Source and destination logos on walkeros.io come from Iconify sets (`logos:*`, `simple-icons:*`, `mdi:*`) via the `@walkeros/explorer` Icon component.
-- The walkerOS mark is three slanted bars; never redraw it — use `walkerOS-mark.svg` or `walkerOS-logo.svg` from Logos.
+- The walkerOS mark is three slanted bars; never redraw it; use `walkerOS-mark.svg` or `walkerOS-logo.svg` from Logos.
 
 ## Components
 
-`AnnouncementBar`, `SiteHeader`, `Button`, `InstallCommand`, `CheckList`, `SectionHeading`, `ProblemCard`, `FeatureItem`, `PlanCard`, `FaqItem`, `InlineCode`, `EventLegend`, `SiteFooter` — each card below states what it needs. They are hand-written from the relaunch design and paint only with these tokens.
+`AnnouncementBar`, `SiteHeader`, `Button`, `InstallCommand`, `CheckList`, `SectionHeading`, `ProblemCard`, `FeatureItem`, `PlanCard`, `FaqItem`, `InlineCode`, `EventLegend`, `SiteFooter`. Each card below states what it needs. They are hand-written from the relaunch design and paint only with these tokens.
 
 Three product visualisations show the mechanism instead of describing it: `HeroTaggingViz` under the hero, `ArticleTeaserTracking` in the tagging feature, `DestinationMappingViz` in the mapping feature. Place each full container width directly below its feature's heading/explainer row, 40px gap. They stay dark in both themes, use Geist, and colour every event part with its `event-*` token; syntax uses `viz-tag`, `viz-string`, `viz-number`, `viz-punct`. Give animated ones a static frame (`playing={false}` / `autoplay={false}` with a start point) when the viewer prefers reduced motion.
 

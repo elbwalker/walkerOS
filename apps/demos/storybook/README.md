@@ -15,12 +15,16 @@ visualize and debug event tracking in React components.
 ## Quick Start
 
 ```bash
-# Clone and navigate to the demo
+# Clone and install the monorepo
 git clone https://github.com/elbwalker/walkerOS.git
-cd walkerOS/apps/demos/storybook
-
-# Install dependencies and start
+cd walkerOS
 npm install
+
+# Build the demo's dependencies, explorer's design CSS among them
+npx turbo run build --filter=@walkeros/storybook-demo...
+
+# Start Storybook
+cd apps/demos/storybook
 npm run storybook
 ```
 
@@ -103,12 +107,37 @@ export const Primary = {
 
 ## Demo Components
 
-This demo includes examples of:
+Two example component libraries, each built with atomic design (atoms,
+molecules, organisms, templates, pages) and tagged through the typed tagger in
+`src/utils/tagger.ts`:
 
-- **Simple Components**: Basic buttons with tracking
-- **Complex Components**: Hero banners with nested data
-- **Template Components**: Full page layouts with contextual tracking
-- **Different Patterns**: Various approaches to component tracking
+- **Media** (`src/components/media`, stories under `Media/*`): a streaming site
+  with a header, hero banner, content carousels and a promotion banner.
+- **Shop** (`src/components/shop`, stories under `Shop/*`): the
+  [static tagging demo](../tagging/) rebuilt as components. Header globals,
+  promotion, recommendations (with `data-elbobserve` and "Add product"), product
+  detail, checkout, order complete, footer and a consent bar carry the same tags
+  as the static page. `Shop/Pages/Tagging demo` shows every section on one page;
+  its consent bar sends the static demo's `walker user` and `walker consent`
+  commands to the addon's collector.
+
+[story.md](./story.md) lists every component of both libraries.
+
+## Design System
+
+Both libraries are styled only from the walkerOS design system, which lives in
+`@walkeros/explorer` (a dependency of this package). `src/index.css` imports
+`@walkeros/explorer/design/tailwind.css` and
+`@walkeros/explorer/design/base.css`, and the Storybook toolbar switches between
+the dark (default) and the light theme. `npm run lint` runs
+`walkeros-design-check` over `src` and `.storybook`.
+
+The design CSS is read from explorer's built `dist`. In a fresh clone, build it
+before `npm run storybook`, `npm run build-storybook` or `npm run build`: run
+`npx turbo run build --filter=@walkeros/storybook-demo...` from the repository
+root (or build `apps/explorer`). A job that builds this Storybook does the same.
+A standalone `npm install` of this package, outside the monorepo, needs an
+`@walkeros/explorer` release that ships the design exports.
 
 ## Key Features
 

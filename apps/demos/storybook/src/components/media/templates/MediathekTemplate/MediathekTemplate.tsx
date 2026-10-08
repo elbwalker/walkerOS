@@ -98,7 +98,7 @@ export const MediathekTemplate = ({
   const [extraRows, setExtraRows] = useState(0);
 
   return (
-    <div {...trackingProps} className="min-h-screen bg-background">
+    <div {...trackingProps} className="min-h-screen bg-bg text-fg">
       <HeaderBar
         activeMenuItem={activeMenuItem}
         onMenuItemClick={onMenuItemClick}
@@ -126,7 +126,7 @@ export const MediathekTemplate = ({
           headline="Activate Kids Mode"
           subtitle="Create a safe space for younger viewers."
           buttonText="Activate Now"
-          backgroundGradient="from-primary-600 to-primary-800"
+          backgroundGradient="from-surface-2 to-surface"
         />
 
         <CarouselSection
@@ -162,7 +162,7 @@ export const MediathekTemplate = ({
           <button
             type="button"
             onClick={() => setExtraRows((count) => count + 1)}
-            className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+            className="rounded-md border border-border-strong bg-surface px-4 py-2 text-ui text-fg transition-colors hover:bg-surface-2"
           >
             Add row
           </button>

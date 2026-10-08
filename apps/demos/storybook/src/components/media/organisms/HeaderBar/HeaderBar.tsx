@@ -18,7 +18,7 @@ export const HeaderBar = ({
   onProfileClick,
 }: HeaderBarProps) => {
   return (
-    <header className="bg-background border-b border-surface-200 dark:border-surface-700 px-6 py-4">
+    <header className="border-b border-border bg-bg px-6 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
@@ -35,14 +35,14 @@ export const HeaderBar = ({
         <div className="flex items-center space-x-4">
           <button
             onClick={onSearchClick}
-            className="p-2 text-foreground hover:text-primary-600 transition-colors duration-200"
+            className="p-2 text-fg-2 transition-colors hover:text-fg"
             aria-label={searchPlaceholder}
           >
             <Icon type="search" />
           </button>
           <button
             onClick={onProfileClick}
-            className="p-2 text-foreground hover:text-primary-600 transition-colors duration-200"
+            className="p-2 text-fg-2 transition-colors hover:text-fg"
             aria-label="Profile"
           >
             <Icon type="profile" />

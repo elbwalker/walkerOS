@@ -35,7 +35,7 @@ export const CarouselSection = ({
   return (
     <section {...trackingProps} className="py-6 overflow-visible">
       <div className="max-w-7xl mx-auto px-6 overflow-visible">
-        <Typography variant="h3" className="mb-8 text-foreground">
+        <Typography variant="h3" className="mb-8">
           {title}
         </Typography>
 

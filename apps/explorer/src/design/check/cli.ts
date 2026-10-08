@@ -2,7 +2,13 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve, sep } from 'node:path';
 import { collectDeclaredNames } from '../names';
 import { globToRegExp } from './glob';
-import { RULES, scanFile, type Finding, type RuleId } from './rules';
+import {
+  localLiteralLengths,
+  RULES,
+  scanFile,
+  type Finding,
+  type RuleId,
+} from './rules';
 
 export interface CliIo {
   readonly cwd: string;
@@ -164,6 +170,12 @@ export function main(argv: readonly string[], io: CliIo): number {
       sources.map((source) => source.text).join('\n'),
     ),
     allowVarPrefixes,
+    // A literal behind a local name: scanned files only, never a design name.
+    literalLengths: new Set(
+      scanned
+        .flatMap((source) => [...localLiteralLengths(source.file, source.text)])
+        .filter((name) => !designNames.has(name.replace(/^--/, ''))),
+    ),
   };
   const findings = scanned
     .flatMap((source) => scanFile(source.file, source.text, context))

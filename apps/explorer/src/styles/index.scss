@@ -16,6 +16,7 @@
 @use './components/atoms/code';
 @use './components/atoms/code-static';
 @use './components/atoms/preview-footer';
+@use './components/atoms/toggle-button';
 
 // Components - Molecules
 @use './components/molecules/code-box';
@@ -27,6 +28,7 @@
 @use './components/molecules/architecture-flow';
 @use './components/molecules/flow-map';
 @use './components/molecules/property-table';
+@use './components/molecules/view-source';
 
 // Components - Organisms
 @use './components/organisms/box';

@@ -66,9 +66,13 @@ html[data-theme] {
   --ifm-font-family-base: var(--font-sans);
   --ifm-heading-font-family: var(--font-sans);
   --ifm-font-family-monospace: var(--font-mono);
-  --ifm-h1-font-size: 3rem;
-  --ifm-h2-font-size: 2rem;
-  --ifm-code-font-size: 95%;
+  --ifm-font-size-base: var(--type-body-size);
+  --ifm-line-height-base: var(--type-body-line-height);
+  --ifm-h1-font-size: var(--type-heading-md-size);
+  --ifm-h2-font-size: var(--type-title-plan-size);
+  --ifm-h3-font-size: var(--type-title-card-size);
+  --ifm-h4-font-size: var(--type-body-lg-size);
+  --ifm-code-font-size: var(--type-code-inline-size);
   --ifm-color-danger: var(--danger);
   --ifm-color-success: var(--success);
   --ifm-color-warning: var(--warning);
@@ -90,6 +94,43 @@ html[data-theme] {
   --search-local-highlight-color: var(--link);
   --search-local-hit-active-color: var(--bg);
   --search-local-input-active-border-color: var(--focus);
+}
+
+/* Docs headings, one design type style per level: h1 heading-md, h2
+   title-plan, h3 title-card, h4 body-lg. The block above gives Infima their
+   sizes; Infima has one heading line height and weight for every level, so
+   each level sets its whole style here. :where() keeps the specificity of
+   Infima's own heading rules, so a component's heading class inside docs (a
+   DocCard title, explorer's property modal) keeps its own type. h4 takes the
+   h3 weight: at body-lg's own weight it would read as a paragraph. */
+:where(.markdown) h1 {
+  font-family: var(--type-heading-md-family);
+  font-size: var(--type-heading-md-size);
+  line-height: var(--type-heading-md-line-height);
+  font-weight: var(--type-heading-md-weight);
+  letter-spacing: var(--type-heading-md-tracking);
+}
+
+:where(.markdown) h2 {
+  font-family: var(--type-title-plan-family);
+  font-size: var(--type-title-plan-size);
+  line-height: var(--type-title-plan-line-height);
+  font-weight: var(--type-title-plan-weight);
+  letter-spacing: var(--type-title-plan-tracking);
+}
+
+:where(.markdown) h3 {
+  font-family: var(--type-title-card-family);
+  font-size: var(--type-title-card-size);
+  line-height: var(--type-title-card-line-height);
+  font-weight: var(--type-title-card-weight);
+}
+
+:where(.markdown) h4 {
+  font-family: var(--type-body-lg-family);
+  font-size: var(--type-body-lg-size);
+  line-height: var(--type-body-lg-line-height);
+  font-weight: var(--type-title-card-weight);
 }
 
 /* Docusaurus navbar and footer, styled like the design's site header and
@@ -353,7 +394,7 @@ a.elb-btn:hover {
 /* Sidebar destination badges */
 .sidebar-badge-web .menu__link::after,
 .sidebar-badge-server .menu__link::after {
-  font-size: 0.6rem;
+  font-size: var(--type-product-micro-size);
   font-weight: 600;
   padding: 1px 5px;
   border-radius: var(--radius-xs);
@@ -374,8 +415,12 @@ a.elb-btn:hover {
 }
 
 /* Code blocks are dark in both themes: the Prism theme paints the code, these
-   rules paint the frame Docusaurus draws around it. */
+   rules paint the frame Docusaurus draws around it. Their type is code-step,
+   the size of the product's code panes: Infima's pre and the title bar read
+   these two variables, inline code keeps code-inline. */
 .theme-code-block {
+  --ifm-code-font-size: var(--type-code-step-size);
+  --ifm-pre-line-height: var(--type-code-step-line-height);
   border: 1px solid var(--code-border);
   border-radius: var(--radius-lg);
 }

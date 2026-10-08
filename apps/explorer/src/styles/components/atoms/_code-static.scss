@@ -2,8 +2,6 @@
 // Visual parity with .elb-code (Monaco wrapper) so CodeView matches CodeBox:
 // a dark island that paints the code panel in both page themes.
 .elb-code-static {
-  --monaco-font-size: 13px;
-
   flex: 1;
   min-height: 0;
   width: 100%;
@@ -14,7 +12,7 @@
   background: var(--code-bg);
   color: var(--code-fg);
 
-  font-size: var(--monaco-font-size);
+  font-size: var(--type-code-step-size);
   line-height: 1.5;
   font-family: var(--font-mono);
 

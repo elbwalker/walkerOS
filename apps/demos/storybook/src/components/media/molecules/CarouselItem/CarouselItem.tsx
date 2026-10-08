@@ -46,7 +46,7 @@ export const CarouselItem = ({
       className="flex-shrink-0 w-64 cursor-pointer group px-2 py-2"
       onClick={onClick}
     >
-      <div className="transition-transform duration-200 group-hover:scale-105">
+      <div className="transition-transform group-hover:scale-105">
         <Image
           type={type}
           style={style}
@@ -56,7 +56,7 @@ export const CarouselItem = ({
         />
         <Typography
           variant="body2"
-          className="text-foreground group-hover:text-primary-600 transition-colors duration-200"
+          className="transition-colors group-hover:text-link"
         >
           {title}
         </Typography>

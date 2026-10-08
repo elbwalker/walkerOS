@@ -2,8 +2,8 @@
 // sizes to its code like any CodeView (_code-view.scss). Snippets read a touch
 // larger than the default code view: the nested selector (0,2,0) outranks
 // `.elb-code-static` (0,1,0) in _code-static.scss, and the `pre`/`code` there
-// use `font-size: inherit !important`, so they pick this 15px up by
+// use `font-size: inherit !important`, so they pick this size up by
 // inheritance.
 .elb-code-snippet .elb-code-static {
-  font-size: 15px;
+  font-size: var(--type-code-command-size);
 }

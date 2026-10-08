@@ -76,7 +76,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     font-family: var(--type-viz-code-family);
-    font-size: 12.5px;
+    font-size: var(--type-viz-code-size);
     line-height: 1.6;
     white-space: pre;
   }
@@ -91,7 +91,7 @@
   .elb-viz-mapping__comment {
     color: var(--viz-comment);
     font-family: var(--type-viz-code-family);
-    font-size: 12.5px;
+    font-size: var(--type-viz-code-size);
     font-style: italic;
   }
 
@@ -134,7 +134,7 @@
     flex: none;
     width: 58px;
     color: var(--viz-comment);
-    font-size: 10.5px;
+    font-size: var(--type-viz-legend-size);
   }
 
   // The code panes scroll sideways inside the card; the page never does.

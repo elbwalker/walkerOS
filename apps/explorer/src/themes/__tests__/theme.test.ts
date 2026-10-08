@@ -2,10 +2,14 @@ import type { editor } from 'monaco-editor';
 import * as design from '../../design';
 import { ELB_THEME_DARK, registerTheme } from '..';
 
-// Every colour a design constant holds, in both themes.
+// Every colour a design constant holds, in both themes; type styles hold none.
 const designColors = new Set(
   Object.values(design).flatMap((value) =>
-    typeof value === 'string' ? [value] : [value.dark, value.light],
+    typeof value === 'string'
+      ? [value]
+      : 'dark' in value
+        ? [value.dark, value.light]
+        : [],
   ),
 );
 

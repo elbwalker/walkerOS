@@ -36,7 +36,7 @@ export const HighlightButtons: React.FC<HighlightButtonsProps> = ({
     >
       <span
         style={{
-          fontSize: '12px',
+          fontSize: theme.typography.size.s1,
           color: theme.color.mediumdark,
           marginRight: '8px',
         }}
@@ -54,7 +54,7 @@ export const HighlightButtons: React.FC<HighlightButtonsProps> = ({
             variant={active ? 'solid' : 'outline'}
             onClick={() => toggleHighlight(kind)}
             style={{
-              fontSize: '11px',
+              fontSize: theme.typography.size.s1,
               padding: '4px 8px',
               // Active: the event colour on the dark visualisation ground.
               backgroundColor: active ? vizBg : 'transparent',

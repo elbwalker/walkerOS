@@ -132,13 +132,17 @@ install these dependencies.
 The codebase strictly follows **Atomic Design** principles:
 
 1. **Atoms** (`src/components/atoms/`): Base UI elements
-   - `Box`, `Button`, `ButtonGroup`, `Grid`, `Header`, `Icon` (`icons/`)
+   - `Box`, `Button`, `ButtonGroup`, `ToggleButton`, `Grid`, `Header`, `Icon`
+     (`icons/`)
    - Code: `Code`, `CodeStatic`, `CodeDiff`; `PreviewFooter`
 
 2. **Molecules** (`src/components/molecules/`): Component combinations
    - Code: `code-box.tsx` (Monaco editor with formatting controls),
      `code-diff-box.tsx`, `code-snippet.tsx`, `code-view.tsx`
    - Docs blocks: `preview`, `property-table`, `step-example`
+   - `view-source.tsx`: wraps one element of a page; its toolbar switches it to
+     its live HTML, editable in place, then re-registers the edit's triggers
+     with `elb('walker init', element)`
    - Visualization: `flow-map/`, `architecture-flow/`
 
 3. **Organisms** (`src/components/organisms/`): Complex integrated components
@@ -154,11 +158,12 @@ A second, React-only entry with the building blocks of walkerOS pages on the
 design tokens; walkeros.io's home page is built from it.
 
 - Folders follow the atomic order: `atoms/` (Button, InlineCode, EventLegend,
-  Icon, InstallCommand, Card, Eyebrow, Stat, Text, TextLink), `molecules/`
-  (CheckList, SectionHeading, ProblemCard, FeatureItem, FaqItem, PlanCard,
-  CaseCard, HighlightCard), `layout/` (Section, CardGrid, Split, Cluster, Hero)
-  and `viz/` (HeroTaggingViz, ArticleTeaserTracking, DestinationMappingViz).
-  Nothing imports upward; a demo may use atoms.
+  Icon, InstallCommand, Card, Eyebrow, Stat, Text, TextLink, PhotoPlaceholder),
+  `molecules/` (CheckList, SectionHeading, ProblemCard, FeatureItem, FaqItem,
+  PlanCard, CaseCard, HighlightCard, BrowserFrame), `layout/` (Section,
+  CardGrid, Split, Cluster, Hero) and `viz/` (HeroTaggingViz,
+  ArticleTeaserTracking, DestinationMappingViz). Nothing imports upward; a demo
+  may use atoms.
 - Each folder keeps its own `index.ts`; the entry `index.ts` re-exports the
   four, so names stay flat. Everything the entry reaches imports only `react`
   (`__tests__/entry.test.ts` fails otherwise), and the demo data in `viz/data/`

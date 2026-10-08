@@ -18,3 +18,5 @@ export { Card } from './Card';
 export type { CardProps } from './Card';
 export { InstallCommand } from './InstallCommand';
 export type { InstallCommandProps } from './InstallCommand';
+export { PhotoPlaceholder } from './PhotoPlaceholder';
+export type { PhotoPlaceholderProps } from './PhotoPlaceholder';

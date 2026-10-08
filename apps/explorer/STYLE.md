@@ -45,25 +45,29 @@ never a component.
 
 ### Which token for what
 
-| Role                | Tokens                                                                                                                                        |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Text                | `--fg` (primary), `--fg-2` (secondary, labels, inactive buttons), `--fg-3` (meta, placeholder, disabled)                                      |
-| Grounds             | `--bg` (page, inputs), `--bg-2` (headers, footers, button groups), `--surface` (boxes, menus), `--surface-2` (hover, inline code)             |
-| Edges               | `--border` (hairlines), `--border-strong` (inputs, controls, floating layers), `--focus` (focus ring)                                         |
-| Actions             | `--primary` fill with `--on-primary` text, `--link` for text in the brand colour, `--danger` with `--on-danger`                               |
-| Status              | `--success`, `--warning`, `--danger`, `--info`, tints `--success-bg` and the like; always with an icon and a word                             |
-| Events              | `--event-entity`, `--event-action`, `--event-property`, `--event-context`, `--event-globals`; on dark grounds only                            |
-| Flow steps          | `--step-source`, `--step-transformer`, `--step-collector`, `--step-destination`, `--step-store`, `--platform-web`, `--platform-server`        |
-| Code                | `--code-bg`, `--code-bar`, `--code-border`, `--code-fg`; editor colours are the `syntax-*` constants                                          |
-| Product visuals     | `--viz-*`                                                                                                                                     |
-| Type                | `--font-sans`, `--font-mono`; per style `--type-<style>-size`, `-line-height`, `-weight`, `-family`                                           |
-| Radius              | `--radius-xs` (4px, boxes and buttons), `--radius-sm` (5px), `--radius-md` (8px), `--radius-lg` (12px), `--radius-xl` (16px), `--radius-full` |
-| Layers              | `--z-raised`, `--z-sticky`, `--z-dropdown`, `--z-overlay`, `--z-modal`, `--z-popover`, `--z-toast`                                            |
-| Motion (`base.css`) | `transition: <property> var(--motion) var(--ease)`; reduced motion sets `--motion` to zero                                                    |
+| Role            | Tokens                                                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Text            | `--fg` (primary), `--fg-2` (secondary, labels, inactive buttons), `--fg-3` (meta, placeholder, disabled)                                      |
+| Grounds         | `--bg` (page, inputs), `--bg-2` (headers, footers, button groups), `--surface` (boxes, menus), `--surface-2` (hover, inline code)             |
+| Edges           | `--border` (hairlines), `--border-strong` (inputs, controls, floating layers), `--focus` (focus ring)                                         |
+| Actions         | `--primary` fill with `--on-primary` text, `--link` for text in the brand colour, `--danger` with `--on-danger`                               |
+| Status          | `--success`, `--warning`, `--danger`, `--info`, tints `--success-bg` and the like; always with an icon and a word                             |
+| Events          | `--event-entity`, `--event-action`, `--event-property`, `--event-context`, `--event-globals`; on dark grounds only                            |
+| Flow steps      | `--step-source`, `--step-transformer`, `--step-collector`, `--step-destination`, `--step-store`, `--platform-web`, `--platform-server`        |
+| Code            | `--code-bg`, `--code-bar`, `--code-border`, `--code-fg`; editor colours are the `syntax-*` constants                                          |
+| Product visuals | `--viz-*`                                                                                                                                     |
+| Type            | `--font-sans`, `--font-mono`, `--font-viz`, `--font-viz-mono`; per style `--type-<style>-size`, `-line-height`, `-weight`, `-family`          |
+| Radius          | `--radius-xs` (4px, boxes and buttons), `--radius-sm` (5px), `--radius-md` (8px), `--radius-lg` (12px), `--radius-xl` (16px), `--radius-full` |
+| Layers          | `--z-raised`, `--z-sticky`, `--z-dropdown`, `--z-overlay`, `--z-modal`, `--z-popover`, `--z-toast`                                            |
+| Motion          | `transition: <property> var(--motion) var(--ease)`, nothing else; reduced motion sets `--motion` to zero                                      |
 
 Product components use the product type group: `product-body` 14px,
 `product-small` 13px, `product-caption` 12px, `product-title` 16px,
-`product-heading` 20px (`font-size: var(--type-product-small-size)`).
+`product-heading` 20px (`font-size: var(--type-product-small-size)`), and
+`product-micro` 11px only for dense canvas labels (node badges, edge labels).
+Every text size is a type style; a label that scales with a zoom multiplies its
+style's size (`calc(var(--type-<style>-size) * <k>)`). Monaco takes its size
+from the `typeCodeStep` constant, since its options cannot read a variable.
 
 No drop shadows: a floating layer (menu, dropdown) is `var(--surface)` with a
 `1px solid var(--border-strong)` edge.
@@ -71,9 +75,8 @@ No drop shadows: a floating layer (menu, dropdown) is `var(--surface)` with a
 ### Local variables
 
 Geometry that a component sets from JavaScript or shares between its own rules
-(`--grid-min-box-width`, `--grid-row-min-height`, `--monaco-font-size`) is
-declared on that component's root, never on `.elb-explorer` and never as a
-stand-in for a token.
+(`--grid-min-box-width`, `--grid-row-min-height`) is declared on that
+component's root, never on `.elb-explorer` and never as a stand-in for a token.
 
 ### Dark islands
 
@@ -82,7 +85,7 @@ Code and product visualisations stay dark in both themes. These roots carry
 
 - `Code`, `CodeDiff`, `CodeStatic`, and the boxes of `CodeBox`, `CodeView`,
   `CodeDiffBox`, `BrowserBox` and the preview (through `Box`'s `theme` prop).
-- `EventLegend` and the design demos.
+- `EventLegend`, the design demos and `PhotoPlaceholder` with `tone="viz"`.
 
 The code panels also take `.elb-explorer-box--code`, which paints the box,
 header and footer in the `code-*` tokens. The preview iframe's ground is
@@ -439,10 +442,10 @@ import { schemas } from '@walkeros/core/dev';
 
 **What the prop enables:**
 
-- `quickSuggestions` — auto-popup on typing (normally disabled)
-- `renderValidationDecorations` — red squiggles for schema violations
-- `hover` — tooltip descriptions from schema `description` fields
-- Unique model `path` — auto-generated to isolate schema per editor instance
+- `quickSuggestions`: auto-popup on typing (normally disabled)
+- `renderValidationDecorations`: red squiggles for schema violations
+- `hover`: tooltip descriptions from schema `description` fields
+- Unique model `path`: auto-generated to isolate schema per editor instance
 
 **`intellisenseContext` prop:** Provides completions, hover tooltips, and
 semantic validation markers for every canonical walkerOS reference form:
@@ -451,7 +454,7 @@ semantic validation markers for every canonical walkerOS reference form:
 paths, `:` for literal values (env defaults) or raw-code payloads.
 
 Regex patterns live in `@walkeros/core` as `REF_VAR_FULL`, `REF_VAR_INLINE`,
-`REF_ENV`, `REF_CONTRACT`, `REF_STORE`, `REF_SECRET`, `REF_CODE_PREFIX` — import
+`REF_ENV`, `REF_CONTRACT`, `REF_STORE`, `REF_SECRET`, `REF_CODE_PREFIX`: import
 these when you need to match or validate references; do not hand-roll the
 regexes.
 
@@ -549,9 +552,11 @@ theme:
 
 **❌ DON'T:**
 
-1. Use a colour literal, a `var()` fallback on a design token, or a variable no
-   token and no file of explorer declares: `npm run lint` runs
-   `walkeros-design-check` and fails on each, comments included
+1. Use a colour literal, a `var()` fallback on a design token, a variable no
+   token and no file of explorer declares, a literal font size or family, or a
+   transition timing other than `var(--motion) var(--ease)`: `npm run lint` runs
+   `walkeros-design-check` and fails on each, comments included (rule list:
+   SKILL.md, "Design area")
 2. Declare custom properties on `.elb-explorer`
 3. Add drop shadows or a numeric `z-index` (use the `--z-*` tokens)
 4. Use inline `style` attributes
@@ -622,11 +627,11 @@ Before submitting any component:
 
 ### When to add a variable
 
-A colour, radius, type value or layer is a design token: it is added to
-`design/tokens.json`, never to a component (SKILL.md, "Design area"). A
-component declares a local variable only for its own geometry, set from
-JavaScript or shared between its own rules (`--grid-min-box-width`,
-`--monaco-font-size`), on its own root.
+A colour, radius, type value, container width, layer or motion value is a design
+token: it is added to `design/tokens.json`, never to a component (SKILL.md,
+"Design area"). A component declares a local variable only for its own geometry,
+set from JavaScript or shared between its own rules (`--grid-min-box-width`), on
+its own root.
 
 ### Colour
 
@@ -636,7 +641,9 @@ JavaScript or shared between its own rules (`--grid-min-box-width`,
 - `--primary` is a fill under `--on-primary`; text in the brand colour is
   `--link`.
 - Event colours sit only on dark grounds (a dark island).
-- Every status shows with an icon and a word, never by colour alone.
+- Every status shows with an icon and a word, never by colour alone. Any other
+  state a colour tells also gets a glyph, an edge style or a shape, and its word
+  (visible, or in the tooltip and the accessible name where it does not fit).
 - Syntax colours are the Palenight-based `syntax-*` tokens, dark only.
 
 ---

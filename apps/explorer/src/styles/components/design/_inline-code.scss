@@ -2,7 +2,7 @@
 @layer components {
   .elb-code-inline {
     font-family: var(--font-mono);
-    font-size: 0.88em;
+    font-size: var(--type-code-inline-size);
     background: var(--surface-2);
     border: 1px solid var(--border);
     padding: 0.1em 0.4em;

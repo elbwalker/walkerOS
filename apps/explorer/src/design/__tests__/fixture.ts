@@ -2,8 +2,8 @@
  * A small token file in the artifact grammar that exercises every generator
  * branch: themed and single colours, a single alias of a themed colour, a
  * per-theme alias, an invariant rgba(), a single alias of a single literal,
- * a themed and an invariant shadow, spacing, radius, zIndex, two families and
- * a style with its own family. A fresh object per call, typed loosely enough
+ * a themed and an invariant shadow, spacing, radius, container, zIndex,
+ * motion, two families and a style with its own family. A fresh object per call, typed loosely enough
  * for the guard tests to break it.
  */
 export interface FixtureTokens {
@@ -38,6 +38,7 @@ export interface FixtureTokens {
   };
   spacing: { tokens: { name: string; value: string; usage: string }[] };
   radius: { tokens: { name: string; value: string; usage: string }[] };
+  container: { tokens: { name: string; value: string; usage: string }[] };
   shadow: {
     tokens: {
       name: string;
@@ -46,6 +47,7 @@ export interface FixtureTokens {
     }[];
   };
   zIndex: { tokens: { name: string; value: string; usage: string }[] };
+  motion: { tokens: { name: string; value: string; usage: string }[] };
 }
 
 export function fixture(): FixtureTokens {
@@ -135,6 +137,11 @@ export function fixture(): FixtureTokens {
     radius: {
       tokens: [{ name: 'radius-md', value: '8px', usage: 'Buttons.' }],
     },
+    container: {
+      tokens: [
+        { name: 'container-md', value: '448px', usage: 'Dialog width.' },
+      ],
+    },
     shadow: {
       tokens: [
         {
@@ -153,5 +160,11 @@ export function fixture(): FixtureTokens {
       ],
     },
     zIndex: { tokens: [{ name: 'z-modal', value: '50', usage: 'Dialogs.' }] },
+    motion: {
+      tokens: [
+        { name: 'motion', value: '180ms', usage: 'Duration.' },
+        { name: 'ease', value: 'cubic-bezier(0.2, 0, 0, 1)', usage: 'Easing.' },
+      ],
+    },
   };
 }

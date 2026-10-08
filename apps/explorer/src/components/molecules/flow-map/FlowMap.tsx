@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import rough from 'roughjs';
 import { Icon } from '@iconify/react';
+import { typeProductCaption, typeProductSmall } from '../../../design';
 
 // ============================================
 // Helper Components for rough.js SVG rendering
@@ -141,9 +142,9 @@ function Marker({ x, y, text }: MarkerProps): React.ReactElement {
         textAnchor="middle"
         dominantBaseline="central"
         fill="var(--on-primary)"
-        fontSize={10}
+        fontSize="var(--type-product-micro-size)"
         fontWeight={600}
-        fontFamily="system-ui, -apple-system, sans-serif"
+        fontFamily="var(--font-sans)"
       >
         {text}
       </text>
@@ -394,12 +395,12 @@ export interface FlowLayoutConfig {
 
 // Default layout configuration
 export const defaultLayout: FlowLayoutConfig = {
-  labelSize: 13,
+  labelSize: parseFloat(typeProductSmall.size),
   labelWeight: '600',
-  textSize: 12,
+  textSize: parseFloat(typeProductCaption.size),
   textWeight: 'normal',
   boxHeight: 50,
-  descriptionSize: 13,
+  descriptionSize: parseFloat(typeProductSmall.size),
 };
 
 export interface FlowMapProps {
@@ -1322,9 +1323,9 @@ export function FlowMap({
             textAnchor="middle"
             dominantBaseline="middle"
             fill="var(--fg)"
-            fontSize={14}
+            fontSize="var(--type-product-body-size)"
             fontWeight={600}
-            fontFamily="system-ui, -apple-system, sans-serif"
+            fontFamily="var(--font-sans)"
           >
             {title}
           </text>
@@ -1766,7 +1767,7 @@ export function FlowMap({
                       height: '100%',
                       fontSize: layout.labelSize,
                       fontWeight: layout.labelWeight,
-                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      fontFamily: 'var(--font-sans)',
                       color: 'var(--fg)',
                     }}
                   >
@@ -1789,7 +1790,7 @@ export function FlowMap({
                         fontWeight: layout.textWeight,
                         color: 'var(--fg)',
                         textAlign: 'center',
-                        fontFamily: 'system-ui, -apple-system, sans-serif',
+                        fontFamily: 'var(--font-sans)',
                         lineHeight: 1.3,
                         height: '100%',
                         display: 'flex',
@@ -1815,7 +1816,7 @@ export function FlowMap({
                         fontSize: layout.descriptionSize,
                         color: 'var(--fg-2)',
                         textAlign: 'center',
-                        fontFamily: 'system-ui, -apple-system, sans-serif',
+                        fontFamily: 'var(--font-sans)',
                         lineHeight: 1.3,
                       }}
                     >
@@ -1867,8 +1868,8 @@ export function FlowMap({
           >
             <div
               style={{
-                fontSize: 11,
-                fontFamily: 'system-ui, -apple-system, sans-serif',
+                fontSize: 'var(--type-product-micro-size)',
+                fontFamily: 'var(--font-sans)',
                 color: 'var(--fg-2)',
                 lineHeight: 1.6,
               }}
@@ -1880,14 +1881,14 @@ export function FlowMap({
                   <span key={`legend-${index}`}>
                     <span
                       style={{
-                        width: 12,
-                        height: 12,
+                        width: MARKER_SIZE,
+                        height: MARKER_SIZE,
                         borderRadius: '50%',
                         background: 'var(--primary)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 8,
+                        fontSize: 'var(--type-product-micro-size)',
                         fontWeight: 600,
                         color: 'var(--on-primary)',
                         verticalAlign: 'middle',

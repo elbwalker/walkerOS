@@ -17,17 +17,14 @@ const sampleItems = [
   {
     id: '1',
     title: 'Debugging Dreams',
-    src: 'https://picsum.photos/400/225?random=1',
   },
   {
     id: '2',
     title: 'Code Wars',
-    src: 'https://picsum.photos/400/225?random=2',
   },
   {
     id: '3',
     title: 'API Chronicles',
-    src: 'https://picsum.photos/400/225?random=3',
   },
   {
     id: '4',
@@ -36,12 +33,10 @@ const sampleItems = [
   {
     id: '5',
     title: 'Sleepless in Stack Overflow',
-    src: 'https://picsum.photos/400/225?random=5',
   },
   {
     id: '6',
     title: 'The Art of Refactoring',
-    src: 'https://picsum.photos/400/225?random=6',
   },
 ];
 

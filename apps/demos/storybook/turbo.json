@@ -1,0 +1,15 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "src/**/*.css",
+        "src/**/*.mdx",
+        ".storybook/**"
+      ]
+    }
+  }
+}

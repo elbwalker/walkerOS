@@ -14,3 +14,5 @@ export { CaseCard } from './CaseCard';
 export type { CaseCardProps, CaseStat } from './CaseCard';
 export { HighlightCard } from './HighlightCard';
 export type { HighlightCardProps } from './HighlightCard';
+export { BrowserFrame } from './BrowserFrame';
+export type { BrowserBookmark, BrowserFrameProps } from './BrowserFrame';

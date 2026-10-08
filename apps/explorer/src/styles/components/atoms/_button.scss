@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: center;
   color: var(--fg-2);
-  transition: all 0.15s;
+  transition: all var(--motion) var(--ease);
 
   &:hover {
     background: var(--surface-2);

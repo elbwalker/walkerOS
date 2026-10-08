@@ -102,6 +102,70 @@ it.each<readonly [string, (tokens: FixtureTokens) => void, string]>([
     'radius.tokens[0].name',
   ],
   [
+    'a container name outside container-*',
+    (t) => {
+      t.container.tokens[0].name = 'width-md';
+    },
+    'container.tokens[0].name',
+  ],
+  [
+    'a container width in rem',
+    (t) => {
+      t.container.tokens[0].value = '28rem';
+    },
+    'container.tokens[0].value',
+  ],
+  [
+    'a motion duration that is not a time',
+    (t) => {
+      t.motion.tokens[0].value = '180';
+    },
+    'motion.tokens[0].value',
+  ],
+  [
+    'an ease that is not an easing function',
+    (t) => {
+      t.motion.tokens[1].value = '180ms';
+    },
+    'motion.tokens[1].value',
+  ],
+  [
+    'a motion token other than motion and ease',
+    (t) => {
+      t.motion.tokens[1].name = 'speed';
+    },
+    'motion.tokens[1].name',
+  ],
+  [
+    'a motion section without ease',
+    (t) => {
+      t.motion.tokens.pop();
+    },
+    'motion.tokens',
+  ],
+  [
+    'two type styles with one constant name',
+    (t) => {
+      t.type.groups[0].styles.push(
+        {
+          name: 'body-2',
+          fontSize: '16px',
+          lineHeight: 1.5,
+          fontWeight: 400,
+          usage: 'x',
+        },
+        {
+          name: 'body2',
+          fontSize: '16px',
+          lineHeight: 1.5,
+          fontWeight: 400,
+          usage: 'x',
+        },
+      );
+    },
+    'type.groups[0].styles[4].name',
+  ],
+  [
     'a fractional z-index',
     (t) => {
       t.zIndex.tokens[0].value = '5.5';

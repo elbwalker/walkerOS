@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, type HTMLAttributes } from 'react';
 import { cx } from '../cx';
 import { EventLegend } from '../atoms/EventLegend';
+import { PhotoPlaceholder } from '../atoms/PhotoPlaceholder';
 import {
   TEASER_CAPTIONS,
   TEASER_ENTITY,
@@ -67,9 +68,10 @@ function TeaserCard({
           {position}
         </Pill>
       </span>
-      <div className={cx('elb-viz-teaser__photo', fade(seen.has('image')))}>
-        photo
-      </div>
+      <PhotoPlaceholder
+        tone="viz"
+        className={cx('elb-viz-teaser__photo', fade(seen.has('image')))}
+      />
       <span
         className={cx(
           'elb-viz-teaser__kicker',
@@ -172,7 +174,8 @@ function TeaserGroup({
  * Tagging demo: one ArticleTeaser tagged once, walked through atom, molecule,
  * organisms and pages, showing how every instance inherits entity, action,
  * properties, context and globals. Autoplays while the code is in view; shows
- * the finished walk-through with reduced motion.
+ * the finished walk-through with reduced motion. A clicked step plays from its
+ * start and stays there.
  */
 export function ArticleTeaserTracking({
   autoplay = true,
@@ -187,7 +190,10 @@ export function ArticleTeaserTracking({
     initialStep ? teaserStepEnd(initialStep) : 0,
   );
   const [delay, setDelay] = useState<number | null>(FIRST_DELAY);
+  // A clicked step: autoplay plays it and ends with it.
+  const [pinned, setPinned] = useState<TeaserStep | null>(null);
   const playing = autoplay && inView && !reduced;
+  const end = pinned === null ? TEASER_ITEMS.length : teaserStepEnd(pinned);
 
   useEffect(() => {
     if (reduced) setShown(TEASER_ITEMS.length);
@@ -202,10 +208,10 @@ export function ArticleTeaserTracking({
         return;
       }
       setShown(advance.next);
-      setDelay(advance.delay);
+      setDelay(advance.next < end ? advance.delay : null);
     }, delay / speed);
     return () => clearTimeout(timer);
-  }, [playing, delay, shown, speed]);
+  }, [playing, delay, shown, speed, end]);
 
   // Keep the newest line in the middle of the code pane.
   useEffect(() => {
@@ -227,6 +233,7 @@ export function ArticleTeaserTracking({
   }, [shown, reduced]);
 
   const jump = (step: TeaserStep) => {
+    setPinned(step);
     if (autoplay && !reduced) {
       setShown(teaserStepStart(step));
       setDelay(JUMP_DELAY);

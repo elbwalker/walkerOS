@@ -8,6 +8,7 @@
 export const TAILWIND_RESET_NAMESPACES = [
   'color',
   'radius',
+  'container',
   'font',
   'text',
   'shadow',
@@ -22,7 +23,6 @@ export const TAILWIND_KEPT_NAMESPACES = [
   'aspect',
   'blur',
   'breakpoint',
-  'container',
   'default',
   'ease',
   'font-weight',

@@ -48,6 +48,7 @@ const AttributeBadge: React.FC<AttributeBadgeProps> = ({
   value,
   origin,
 }) => {
+  const theme = useTheme();
   const suffix = origin ? originLabel(origin) : '';
   const base = value ? `${label}: ${value}` : label;
   const displayText = suffix ? `${base} (${suffix})` : base;
@@ -56,7 +57,7 @@ const AttributeBadge: React.FC<AttributeBadgeProps> = ({
   const suffixNode = suffix ? (
     <span
       style={{
-        fontSize: '10px',
+        fontSize: theme.typography.size.s1,
         fontWeight: 400,
         fontStyle: 'italic',
         opacity: 0.65,
@@ -73,7 +74,7 @@ const AttributeBadge: React.FC<AttributeBadgeProps> = ({
         display: 'inline-block',
         padding: '2px 6px',
         margin: '0 4px',
-        fontSize: '14px',
+        fontSize: theme.typography.size.s2,
         // A dark chip: event colours only sit on the dark visualisation ground.
         color: attributeColors[type],
         backgroundColor: vizBg,

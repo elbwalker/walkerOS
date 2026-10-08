@@ -62,8 +62,12 @@ export interface DesignTokens {
   readonly groups: readonly TypeGroup[];
   readonly spacing: readonly ValueToken[];
   readonly radius: readonly ValueToken[];
+  /** Max widths in px, Tailwind's --container-* scale. */
+  readonly containers: readonly ValueToken[];
   readonly shadows: readonly ShadowToken[];
   readonly zIndex: readonly ValueToken[];
+  /** `motion` (the transition duration) and `ease` (its easing). */
+  readonly motion: readonly ValueToken[];
 }
 
 export interface Rgba {
@@ -100,7 +104,19 @@ const RGB =
   /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0|1|0?\.\d+)\s*)?\)$/;
 const ALIAS = new RegExp(`^\\{(${NAME_PATTERN})\\}$`);
 const LENGTH = /^(?:0|-?\d+(?:\.\d+)?(?:px|rem|em|%))$/;
+/** px only, so a customer page's root font size never re-sizes a container. */
+const PX = /^\d+(?:\.\d+)?px$/;
 const INTEGER = /^-?\d+$/;
+const TIME = /^\d+(?:\.\d+)?m?s$/;
+const NUMBER_ARG = '\\s*-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)\\s*';
+const EASING = new RegExp(
+  `^(?:linear|ease|ease-in|ease-out|ease-in-out|cubic-bezier\\(${NUMBER_ARG}(?:,${NUMBER_ARG}){3}\\))$`,
+);
+/** The motion tokens: each name and the value it takes. */
+const MOTION: ReadonlyArray<readonly [string, RegExp, string]> = [
+  ['motion', TIME, 'a time'],
+  ['ease', EASING, 'an easing keyword or cubic-bezier()'],
+];
 const SHADOW = /^[A-Za-z0-9 #%(),./+-]{1,400}$/;
 const FONT_STACK_FORBIDDEN = /[;{}<>\\()]/;
 const TOP_LEVEL = [
@@ -110,8 +126,10 @@ const TOP_LEVEL = [
   'type',
   'spacing',
   'radius',
+  'container',
   'shadow',
   'zIndex',
+  'motion',
 ];
 const MAX_ALIAS_DEPTH = 16;
 /** Identifiers a generated `export const` cannot take: reserved words, strict-mode bindings, undefined. */
@@ -330,6 +348,51 @@ function valueTokens(
   }));
 }
 
+/** Exactly the motion tokens of MOTION, each with its kind of value. */
+function motionTokens(value: unknown): ValueToken[] {
+  const tokens = familyEntries(value, 'motion').map(
+    ({ entry, path }): ValueToken => {
+      const name = tokenName(entry.name, `${path}.name`);
+      const kind = MOTION.find(([motionName]) => motionName === name);
+      if (kind === undefined)
+        fail(
+          `${path}.name`,
+          `"${name}" is not a motion token: ${MOTION.map(([motionName]) => motionName).join(', ')}`,
+        );
+      return {
+        name,
+        value: matching(entry.value, `${path}.value`, kind[1], kind[2]),
+        usage: text(entry.usage, `${path}.usage`),
+      };
+    },
+  );
+  const missing = MOTION.filter(
+    ([name]) => !tokens.some((token) => token.name === name),
+  );
+  if (missing.length > 0)
+    fail(
+      'motion.tokens',
+      `must declare ${missing.map(([name]) => name).join(', ')}`,
+    );
+  return tokens;
+}
+
+/** Radius and container tokens are named into Tailwind's own `--<family>-*` namespace. */
+function tailwindTokens(
+  tokens: ValueToken[],
+  family: 'radius' | 'container',
+): ValueToken[] {
+  tokens.forEach((token, i) => {
+    if (!token.name.startsWith(`${family}-`)) {
+      fail(
+        `${family}.tokens[${i}].name`,
+        `${family} names start with ${family}-, the Tailwind --${family}-* namespace`,
+      );
+    }
+  });
+  return tokens;
+}
+
 function fontStack(value: unknown, path: string): string {
   const stack = text(value, path);
   const count = (quote: string): number => stack.split(quote).length - 1;
@@ -509,10 +572,11 @@ function checkNamespace(tokens: DesignTokens): void {
     scope.set(key, path);
   };
   // Every family but type shares one --name namespace (format.md), outside
-  // Tailwind's own: tokens.css is unlayered, so a token such as container-xl
-  // would override Tailwind's --container-xl and re-size max-w-xl. Radius
-  // tokens and font families sit in --radius-* and --font-* on purpose. The
-  // type styles own --type-*.
+  // Tailwind's own: tokens.css is unlayered, so a spacing token such as
+  // container-xl would override Tailwind's --container-xl and re-size
+  // max-w-xl. Radius and container tokens and font families sit in
+  // --radius-*, --container-* and --font-* on purpose. The type styles own
+  // --type-*.
   const names = new Map<string, string>();
   const claimName = (name: string, path: string, own?: string): void => {
     if (name.startsWith(TYPE_VARIABLE_PREFIX)) {
@@ -540,21 +604,33 @@ function checkNamespace(tokens: DesignTokens): void {
   tokens.radius.forEach((t, i) =>
     claimName(t.name, `radius.tokens[${i}].name`, 'radius'),
   );
+  tokens.containers.forEach((t, i) =>
+    claimName(t.name, `container.tokens[${i}].name`, 'container'),
+  );
   tokens.zIndex.forEach((t, i) =>
     claimName(t.name, `zIndex.tokens[${i}].name`),
+  );
+  tokens.motion.forEach((t, i) =>
+    claimName(t.name, `motion.tokens[${i}].name`),
   );
   Object.keys(tokens.families).forEach((key) =>
     claimName(`font-${key}`, `type.families.${key}`, 'font'),
   );
-  // The constants module needs one valid identifier per colour and family.
+  // The constants module needs one valid identifier per colour, family,
+  // motion token and type style.
   const constants = new Map<string, string>();
-  tokens.colors.forEach((t, i) => {
-    const path = `color.tokens[${i}].name`;
-    const constant = camelName(t.name);
+  const claimConstant = (name: string, path: string): void => {
+    const constant = camelName(name);
     if (RESERVED.has(constant))
-      fail(path, `"${t.name}" would export the reserved word ${constant}`);
+      fail(path, `"${name}" would export the reserved word ${constant}`);
     claim(constants, constant, path, 'constant');
-  });
+  };
+  tokens.colors.forEach((t, i) =>
+    claimConstant(t.name, `color.tokens[${i}].name`),
+  );
+  tokens.motion.forEach((t, i) =>
+    claimConstant(t.name, `motion.tokens[${i}].name`),
+  );
   Object.keys(tokens.families).forEach((key) =>
     claim(
       constants,
@@ -585,6 +661,7 @@ function checkNamespace(tokens: DesignTokens): void {
         );
       }
       claim(styles, style.name, path, 'style');
+      claimConstant(`${TYPE_VARIABLE_PREFIX}${style.name}`, path);
     }),
   );
 }
@@ -629,15 +706,14 @@ export function parseDesignTokens(input: unknown): DesignTokens {
       usage: text(entry.usage, `${path}.usage`),
     }),
   );
-  const radius = valueTokens(root.radius, 'radius', LENGTH, 'a length');
-  radius.forEach((token, i) => {
-    if (!token.name.startsWith('radius-')) {
-      fail(
-        `radius.tokens[${i}].name`,
-        'radius names start with radius-, the Tailwind --radius-* namespace',
-      );
-    }
-  });
+  const radius = tailwindTokens(
+    valueTokens(root.radius, 'radius', LENGTH, 'a length'),
+    'radius',
+  );
+  const containers = tailwindTokens(
+    valueTokens(root.container, 'container', PX, 'a px length'),
+    'container',
+  );
 
   const tokens: DesignTokens = {
     name: text(root.name, 'name'),
@@ -646,8 +722,10 @@ export function parseDesignTokens(input: unknown): DesignTokens {
     ...parseType(root.type),
     spacing: valueTokens(root.spacing, 'spacing', LENGTH, 'a length'),
     radius,
+    containers,
     shadows,
     zIndex: valueTokens(root.zIndex, 'zIndex', INTEGER, 'an integer'),
+    motion: motionTokens(root.motion),
   };
   checkNamespace(tokens);
   colors.forEach((token, i) => {

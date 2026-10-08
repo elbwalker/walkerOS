@@ -1,5 +1,4 @@
 import React from 'react';
-import './Typography.css';
 
 export interface TypographyProps {
   variant?:
@@ -19,6 +18,34 @@ export interface TypographyProps {
   style?: React.CSSProperties;
 }
 
+// Each variant is one of the website type styles of the design system.
+const variantClasses = {
+  h1: 'text-heading-lg',
+  h2: 'text-kicker-lg',
+  h3: 'text-title-plan',
+  h4: 'text-title-card',
+  h5: 'text-title-item',
+  h6: 'text-ui',
+  body1: 'text-body',
+  body2: 'text-ui',
+  caption: 'text-small',
+};
+
+const colorClasses = {
+  primary: 'text-fg',
+  secondary: 'text-fg-2',
+  error: 'text-danger',
+  warning: 'text-warning',
+  info: 'text-info',
+  success: 'text-success',
+};
+
+const alignClasses = {
+  left: 'text-left',
+  center: 'text-center',
+  right: 'text-right',
+};
+
 export const Typography = ({
   variant = 'body1',
   color = 'primary',
@@ -34,10 +61,10 @@ export const Typography = ({
     tag,
     {
       className: [
-        'storybook-typography',
-        `storybook-typography--${variant}`,
-        `storybook-typography--${color}`,
-        `storybook-typography--${align}`,
+        'm-0',
+        variantClasses[variant],
+        colorClasses[color],
+        alignClasses[align],
         className,
       ]
         .filter(Boolean)

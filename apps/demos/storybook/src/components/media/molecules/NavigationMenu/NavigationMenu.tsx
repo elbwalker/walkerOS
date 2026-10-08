@@ -15,10 +15,10 @@ export const NavigationMenu = ({
         <button
           key={item}
           onClick={() => onItemClick?.(item)}
-          className={`px-4 py-2 text-sm font-medium transition-colors duration-200 ${
+          className={`px-4 py-2 text-ui transition-colors ${
             activeItem === item
-              ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400'
-              : 'text-foreground hover:text-primary-600 dark:hover:text-primary-400'
+              ? 'text-link border-b-2 border-link'
+              : 'text-fg-2 hover:text-fg'
           }`}
         >
           {item}

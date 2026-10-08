@@ -5,6 +5,7 @@ sidebar_position: 1
 ---
 
 import { getMappingValue } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 
 export const parseInput = (code, scope = {}) => {
   const codeStr = String(code);
@@ -14,8 +15,16 @@ export const parseInput = (code, scope = {}) => {
   )(...Object.values(scope));
 };
 
+export const flow = { started: undefined };
+
 export const logValue = async (input, config, log) => {
-  log(await parseInput(input, { getMappingValue }));
+  // One collector for every example on the page, started on the first run.
+  flow.started ??= startFlow().catch((error) => {
+    flow.started = undefined;
+    throw error;
+  });
+  const { collector } = await flow.started;
+  log(await parseInput(input, { getMappingValue, collector }));
 };
 
 # Mapping.Value
@@ -55,6 +64,10 @@ source object, so `fn: (source) => source.user.email.split('@')[1]` does both
 steps in one place. For an event field you can also rewrite it with a `policy`
 entry and read it with `key`. Anything bigger belongs in a transformer.
 
+The examples below run live: edit one and its result updates. Each calls
+`getMappingValue` with a running collector in its context (`{ collector }`,
+from `startFlow`), as a step's mapping does.
+
 ## Path
 
 Extract a value by dot-path from the event.
@@ -66,7 +79,8 @@ Extract a value by dot-path from the event.
   input={`
 await getMappingValue(
   { user: { id: '12345', name: 'John' } },
-  'user.id'
+  'user.id',
+  { collector }
 );`}
   output={`"12345"`}
   fn={logValue}
@@ -81,7 +95,8 @@ Paths also index into arrays:
   input={`
 await getMappingValue(
   { products: ['laptop', 'mouse', 'keyboard'] },
-  'products.0'
+  'products.0',
+  { collector }
 );`}
   output={`"laptop"`}
   fn={logValue}
@@ -98,7 +113,8 @@ Return a fixed value, independent of the event.
   input={`
 await getMappingValue(
   { name: 'page view' },
-  { value: 'pageview' }
+  { value: 'pageview' },
+  { collector }
 );`}
   output={`"pageview"`}
   fn={logValue}
@@ -125,7 +141,8 @@ Build an object by mapping keys to their own `Mapping.Value`.
       user_id: 'user.id',
       currency: { value: 'USD' },
     }
-  }
+  },
+  { collector }
 );`}
   output={`{
   item_id: "P123",
@@ -164,7 +181,8 @@ neither unlocks nor holds back a value; the event's consent decides. A
       'products',
       { map: { item_id: 'id', item_name: 'name' } }
     ]
-  }
+  },
+  { collector }
 );`}
   output={`[
   { item_id: "P1", item_name: "Laptop" },
@@ -212,7 +230,8 @@ TypeScript ignores the unused `context` argument.
   { user: { email: 'john@example.com' } },
   {
     fn: (event) => event.user.email.split('@')[1]
-  }
+  },
+  { collector }
 );`}
   output={`"example.com"`}
   fn={logValue}
@@ -245,12 +264,10 @@ Only produce output when the required consent states are granted on the event.
   {
     key: 'email',
     consent: { marketing: true }
-  }
+  },
+  { collector }
 );`}
-  emptyText={`// undefined
-// 'marketing' consent is false on the event, so the value is dropped.
-// Flip consent.marketing to true in the input to see 'john@example.com'.`}
-  outputLanguage="javascript"
+  emptyText="Nothing: marketing consent is false on the event, so the value is dropped. Set consent.marketing to true in the input to see john@example.com."
   fn={logValue}
 />
 
@@ -269,7 +286,8 @@ dropped (`undefined`).
   {
     key: 'email',
     validate: (value) => typeof value === 'string' && value.includes('@')
-  }
+  },
+  { collector }
 );`}
   output={`"john@example.com"`}
   fn={logValue}

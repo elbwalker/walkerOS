@@ -546,7 +546,7 @@ export function PropertyTable({
                             transform: isCollapsed
                               ? 'rotate(-90deg)'
                               : 'rotate(0deg)',
-                            transition: 'transform 0.15s ease',
+                            transition: 'transform var(--motion) var(--ease)',
                           }}
                         >
                           <polyline points="6 9 12 15 18 9" />

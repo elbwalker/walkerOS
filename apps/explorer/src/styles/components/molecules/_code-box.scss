@@ -47,7 +47,20 @@
   }
 }
 
-// Marker count badges in header: an icon and a count in the status colour
+// Empty state: plain words over the empty editor, where the code will appear
+.elb-codebox-placeholder {
+  position: absolute;
+  inset: 0 0 auto;
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--fg-3);
+  font-family: var(--font-sans);
+  font-size: var(--type-product-small-size);
+  line-height: var(--type-product-small-line-height);
+  pointer-events: none;
+}
+
+// Marker count badges in header: an icon, a count and its word in the status colour
 .elb-codebox-marker-badge {
   display: flex;
   align-items: center;
@@ -60,7 +73,7 @@
   font-weight: 600;
   font-family: var(--font-mono);
   line-height: 1;
-  transition: all 0.15s;
+  transition: all var(--motion) var(--ease);
 
   svg {
     flex-shrink: 0;

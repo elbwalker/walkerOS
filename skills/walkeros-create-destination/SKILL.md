@@ -577,9 +577,11 @@ Use these templates as your starting point:
    `flush()` or equivalent on the vendor SDK.
 6. **Mapping-based settings** (recommended): Use standard walkerOS mapping
    values (`map`, `loop`, `key`, `value`, `condition`) in `mapping.settings.*`
-   for vendor-specific operations. Resolve via `getMappingValue()` in `push()`
-   and interpret the resolved object's keys as SDK method instructions. This
-   keeps config agnostic and reuses the mapping engine.
+   for vendor-specific operations. Resolve via
+   `getMappingValue(event, value, { collector })` in `push()`, with the
+   `collector` from the push context, and interpret the resolved object's keys
+   as SDK method instructions. This keeps config agnostic and reuses the mapping
+   engine.
 7. **Consent two-layer**: `config.consent` gates walkerOS event delivery.
    `on('consent')` controls vendor SDK internals (opt-out, pause capture, etc.).
    Both needed for complete consent compliance. `on()` may be async: the

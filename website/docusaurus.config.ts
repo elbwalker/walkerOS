@@ -757,8 +757,12 @@ const config: Config = {
             to: '/docs/comparisons/dataLayer',
           },
           {
-            from: ['/docs/apps', '/docs/guides/gtm'],
-            to: '/docs/apps/walkerjs',
+            from: ['/docs/apps', '/docs/apps/walkerjs', '/docs/guides/gtm'],
+            to: '/docs/getting-started/quickstart/walkerjs',
+          },
+          {
+            from: '/docs/getting-started/first-checks',
+            to: '/docs/getting-started/quickstart',
           },
           {
             from: ['/docs/apps/runner', '/docs/apps/docker'],

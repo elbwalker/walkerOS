@@ -265,3 +265,96 @@ export const fontViz = "'Geist', system-ui, sans-serif";
 
 /** Font family `viz-mono`. */
 export const fontVizMono = "'Geist Mono', monospace";
+
+/** The one transition duration. Read it as var(--motion): reduced motion sets it to 0ms. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const motion = "180ms";
+
+/** The one transition easing, beside var(--motion). Read it as var(--ease). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const ease = "cubic-bezier(0.2, 0, 0, 1)";
+
+/** Type style `display`: Hero H1 only. Fluid: clamp(38px, 6vw, 64px), max 20ch, text-wrap balance. One phrase may take `primary`. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeDisplay = { size: "64px", lineHeight: 1.08, weight: 700, tracking: "-0.025em", family: fontSans } as const;
+
+/** Type style `heading-xl`: Large split-section heading (More features). clamp(28px, 3.6vw, 44px). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeHeadingXl = { size: "44px", lineHeight: 1.1, weight: 700, tracking: "-0.025em", family: fontSans } as const;
+
+/** Type style `heading-lg`: Section H2. clamp(28px, 3.6vw, 40px), text-wrap balance. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeHeadingLg = { size: "40px", lineHeight: 1.15, weight: 700, tracking: "-0.02em", family: fontSans } as const;
+
+/** Type style `heading-md`: Feature H2 beside its explainer. clamp(26px, 3.2vw, 36px). Also the docs page title (h1), not fluid. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeHeadingMd = { size: "36px", lineHeight: 1.15, weight: 700, tracking: "-0.02em", family: fontSans } as const;
+
+/** Type style `footer-statement`: The footer's one-line brand statement. clamp(24px, 3.2vw, 34px), max 22ch. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeFooterStatement = { size: "34px", lineHeight: 1.2, weight: 700, tracking: "-0.02em", family: fontSans } as const;
+
+/** Type style `kicker-lg`: Large coloured kicker above `heading-xl`, in `primary`. clamp(22px, 2.4vw, 28px). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeKickerLg = { size: "28px", lineHeight: 1.2, weight: 700, tracking: "-0.01em", family: fontSans } as const;
+
+/** Type style `title-plan`: Plan tier name. Also docs h2. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeTitlePlan = { size: "24px", lineHeight: 1.3, weight: 700, tracking: "-0.015em", family: fontSans } as const;
+
+/** Type style `title-card`: Problem-card H3. Also docs h3; docs h4 takes its weight. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeTitleCard = { size: "19px", lineHeight: 1.35, weight: 600, family: fontSans } as const;
+
+/** Type style `title-item`: Feature-list H3. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeTitleItem = { size: "18px", lineHeight: 1.35, weight: 600, family: fontSans } as const;
+
+/** Type style `lead`: Hero sub-copy in `fg-2`, max 58ch. clamp(18px, 2vw, 21px). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeLead = { size: "21px", lineHeight: 1.65, weight: 400, family: fontSans } as const;
+
+/** Type style `body-lg`: Feature explainer paragraphs, FAQ questions (600). Also docs h4, at the `title-card` weight. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeBodyLg = { size: "17px", lineHeight: 1.65, weight: 400, family: fontSans } as const;
+
+/** Type style `body`: Default body copy, docs body copy included; buttons (600). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeBody = { size: "16px", lineHeight: 1.65, weight: 400, family: fontSans } as const;
+
+/** Type style `ui`: Nav links, list items, footer links. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeUi = { size: "15px", lineHeight: 1.5, weight: 500, family: fontSans } as const;
+
+/** Type style `small`: Announcement bar, `Docs →` links (500), copyright (400). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeSmall = { size: "14px", lineHeight: 1.5, weight: 600, family: fontSans } as const;
+
+/** Type style `eyebrow`: Section eyebrow, UPPERCASE, in `link`. One line that states the problem the section answers. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeEyebrow = { size: "13px", lineHeight: 1.5, weight: 600, tracking: "0.12em", family: fontSans } as const;
+
+/** Type style `label`: Plan tier label, UPPERCASE, in `fg-3` (`link` on the highlighted plan). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeLabel = { size: "12px", lineHeight: 1.5, weight: 700, tracking: "0.12em", family: fontSans } as const;
+
+/** Type style `code-command`: Install-command chip. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeCodeCommand = { size: "15px", lineHeight: 1.5, weight: 500, family: fontMono } as const;
+
+/** Type style `code-step`: Mono step numbers (01, 02, 03) in `link`. Also code panes: the explorer's code editors and docs code blocks. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeCodeStep = { size: "13px", lineHeight: 1.5, weight: 400, family: fontMono } as const;
+
+/** Type style `code-inline`: Inline code inside prose, docs inline code included: `surface-2` fill, `border` outline, radius-sm. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeCodeInline = { size: "0.88em", lineHeight: 1.5, weight: 400, family: fontMono } as const;
+
+/** Type style `viz-body`: Captions inside product visualisations (Geist). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeVizBody = { size: "15px", lineHeight: 1.5, weight: 400, family: fontViz } as const;
+
+/** Type style `viz-chip`: Step pills inside visualisations. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeVizChip = { size: "13px", lineHeight: 1.4, weight: 500, family: fontViz } as const;
+
+/** Type style `viz-code`: Code pane inside visualisations (Geist Mono). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeVizCode = { size: "12px", lineHeight: 1.8, weight: 400, family: fontVizMono } as const;
+
+/** Type style `viz-legend`: Event-part legend (Geist Mono) in `viz-fg-2`. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeVizLegend = { size: "11px", lineHeight: 1.5, weight: 400, family: fontVizMono } as const;
+
+/** Type style `product-heading`: Page and dialog titles in the app, the explorer and Tag Mode. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeProductHeading = { size: "20px", lineHeight: 1.3, weight: 600, family: fontSans } as const;
+
+/** Type style `product-title`: Panel, card and section titles in product UI. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeProductTitle = { size: "16px", lineHeight: 1.4, weight: 600, family: fontSans } as const;
+
+/** Type style `product-body`: Default product copy: body text, form fields, table cells, buttons (600). Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeProductBody = { size: "14px", lineHeight: 1.5, weight: 400, family: fontSans } as const;
+
+/** Type style `product-small`: Secondary rows, help text and dense tables. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeProductSmall = { size: "13px", lineHeight: 1.45, weight: 400, family: fontSans } as const;
+
+/** Type style `product-caption`: Captions, badges and meta labels. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeProductCaption = { size: "12px", lineHeight: 1.4, weight: 500, family: fontSans } as const;
+
+/** Type style `product-micro`: Dense canvas labels only: node badges, edge labels, mark labels and compact tooltip meta. Never body copy, never interactive text. Only for places CSS variables cannot reach, such as email HTML, styles injected by script and editor options. */
+export const typeProductMicro = { size: "11px", lineHeight: 1.3, weight: 500, family: fontSans } as const;

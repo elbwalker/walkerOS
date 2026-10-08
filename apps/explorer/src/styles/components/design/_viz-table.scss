@@ -115,7 +115,7 @@
   }
 
   .elb-viz-table__row--header > .elb-viz-table__cell--n {
-    font-size: 11px;
+    font-size: var(--type-viz-legend-size);
   }
 
   .elb-viz-table__row--skeleton > .elb-viz-table__cell--n {
@@ -124,7 +124,7 @@
 
   .elb-viz-table__type {
     color: var(--viz-comment);
-    font-size: 10px;
+    font-size: var(--type-viz-legend-size);
   }
 
   .elb-viz-table__json {

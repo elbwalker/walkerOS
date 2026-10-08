@@ -12,7 +12,7 @@ const meta: Meta<typeof ArchitectureFlow> = {
   },
   decorators: [
     (Story) => (
-      <div className="elb-explorer" style={{ padding: '2rem' }}>
+      <div className="elb-explorer" style={{ padding: '32px' }}>
         <Story />
       </div>
     ),

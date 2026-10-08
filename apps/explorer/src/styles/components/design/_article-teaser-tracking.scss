@@ -41,10 +41,11 @@
       border-color var(--motion) var(--ease);
   }
 
+  // Progress is brand blue; event colours stay for the tagged parts.
   .elb-viz-teaser__step--active {
     color: var(--viz-fg);
-    background: color-mix(in srgb, var(--event-entity) 10%, transparent);
-    border-color: var(--event-entity);
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    border-color: var(--primary);
   }
 
   .elb-viz-teaser__step-number {
@@ -53,7 +54,7 @@
     color: var(--viz-bg);
     background: var(--viz-border);
     border-radius: var(--radius-full);
-    font-size: 11px;
+    font-size: var(--type-viz-legend-size);
     line-height: 20px;
     font-weight: 600;
     text-align: center;
@@ -64,7 +65,8 @@
   }
 
   .elb-viz-teaser__step--active > .elb-viz-teaser__step-number {
-    background: var(--event-entity);
+    color: var(--on-primary);
+    background: var(--primary);
   }
 
   .elb-viz-teaser__legend > .elb-legend {
@@ -315,22 +317,11 @@
     opacity: 1;
   }
 
+  // The stripes and the label come from PhotoPlaceholder (`elb-photo--viz`).
   .elb-viz-teaser__photo {
-    display: flex;
     flex: none;
-    align-items: center;
-    justify-content: center;
     height: 86px;
-    overflow: hidden;
-    color: var(--viz-comment);
-    background: repeating-linear-gradient(
-      45deg,
-      var(--viz-surface) 0 6px,
-      var(--viz-border) 6px 12px
-    );
     border-radius: var(--radius-sm);
-    font-family: var(--type-viz-code-family);
-    font-size: 10.5px;
   }
 
   .elb-viz-teaser__kicker {
@@ -340,7 +331,7 @@
     background: var(--viz-border);
     border-radius: var(--radius-xs);
     font-family: var(--type-viz-code-family);
-    font-size: 10.5px;
+    font-size: var(--type-viz-legend-size);
     letter-spacing: 0.04em;
     outline: 1.5px solid transparent;
   }

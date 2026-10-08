@@ -11,12 +11,10 @@ export const BannerText = ({
 }: BannerTextProps) => {
   return (
     <div className={`space-y-2 ${className}`}>
-      <h1 className="banner-headline text-4xl md:text-5xl font-bold leading-tight mb-2">
+      <h1 className="mb-2 text-heading-md text-fg md:text-heading-xl">
         {headline}
       </h1>
-      <h3 className="banner-subtitle text-lg md:text-xl font-medium">
-        {subtitle}
-      </h3>
+      <h3 className="text-body-lg text-fg-2 md:text-lead">{subtitle}</h3>
     </div>
   );
 };

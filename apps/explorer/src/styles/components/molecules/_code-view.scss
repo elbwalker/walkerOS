@@ -33,7 +33,7 @@
   background: var(--code-bar);
   border-radius: var(--radius-xs);
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--motion) var(--ease);
 
   .elb-explorer-content:hover > &,
   &:focus-within {

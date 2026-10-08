@@ -9,4 +9,5 @@ const meta: Meta<typeof ArticleTeaserTracking> = {
 };
 export default meta;
 
+/** Click a step: it plays from its start and the walk stays on it. */
 export const Default: StoryObj<typeof ArticleTeaserTracking> = {};

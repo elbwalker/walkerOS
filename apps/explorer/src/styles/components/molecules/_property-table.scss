@@ -117,7 +117,7 @@
   text-align: left;
   display: block;
   width: 100%;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--motion) var(--ease);
 
   &:hover {
     opacity: 0.7;
@@ -132,7 +132,7 @@
   color: var(--danger);
   font-weight: bold;
   margin-left: 4px;
-  font-size: 1.1em;
+  font-size: var(--type-product-small-size);
 }
 
 .elb-property-table__action-cell {
@@ -169,7 +169,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--motion) var(--ease);
 }
 
 .elb-property-table__more-button:hover {
@@ -243,8 +243,8 @@
   align-items: center;
   justify-content: center;
   transition:
-    color 0.2s ease,
-    background-color 0.2s ease;
+    color var(--motion) var(--ease),
+    background-color var(--motion) var(--ease);
 }
 
 .elb-property-table__close-button:hover {
@@ -309,7 +309,7 @@
 // Responsive behavior
 @media (max-width: 768px) {
   .elb-property-table__container {
-    margin: 1rem 0 0;
+    margin: 16px 0 0;
   }
 
   .elb-property-table {
@@ -327,7 +327,7 @@
 
   .elb-property-table tr {
     display: block;
-    margin-bottom: 1rem;
+    margin-bottom: 16px;
     border: 1px solid var(--border);
     border-radius: var(--radius-xs);
     background: var(--surface);
@@ -431,7 +431,7 @@
   align-items: center;
   justify-content: center;
   min-height: 120px;
-  padding: 2rem 1rem;
+  padding: 32px 16px;
   color: var(--fg-2);
   font-style: italic;
   text-align: center;

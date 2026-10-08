@@ -17,8 +17,8 @@
   border: 0;
   background: transparent;
   transition:
-    color 0.2s ease,
-    background 0.2s ease;
+    color var(--motion) var(--ease),
+    background var(--motion) var(--ease);
   position: relative;
   cursor: pointer;
   text-align: center;

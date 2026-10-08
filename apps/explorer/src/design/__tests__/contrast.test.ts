@@ -81,8 +81,9 @@ const mark = (fg: string, on: readonly string[]): Pair => ({ fg, on, min: 3 });
 /**
  * Every documented pair, both themes, no exceptions. The artifact's three
  * documented misses are the `fg-3` and `link` rows (fixed by value) and light
- * `primary`, which appears in no text or mark row: it stays a fill under
- * `on-primary`, and `focus` and `chart-1` take `link` in light.
+ * `primary`, which appears in no text or mark row on a page ground: it stays a
+ * fill under `on-primary`, and `focus` and `chart-1` take `link` in light. On
+ * the always-dark demo ground it marks the active step.
  */
 const PAIRS: readonly Pair[] = [
   ...['fg', 'fg-2', 'fg-3', 'link', ...STATUS].map((fg) => text(fg, GROUNDS)),
@@ -106,6 +107,7 @@ const PAIRS: readonly Pair[] = [
     (fg) => text(fg, ['viz-code-bg']),
   ),
   ...EVENTS.map((fg) => text(fg, ['viz-bg', 'viz-code-bg'])),
+  mark('primary', ['viz-bg']),
   ...MARKS.map((fg) => mark(fg, GROUNDS)),
   ...STATUS.map(
     (status): Pair => ({ ...mark(status, [`${status}-bg`]), over: GROUNDS }),

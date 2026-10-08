@@ -3,7 +3,7 @@ import App from './App';
 import './index.css';
 
 const meta: Meta<typeof App> = {
-  title: 'Templates/Demos',
+  title: 'Media/Pages/App',
   component: App,
   parameters: {
     layout: 'fullscreen',

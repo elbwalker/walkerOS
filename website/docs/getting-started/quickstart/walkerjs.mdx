@@ -1,0 +1,468 @@
+---
+title: walker.js
+description: Tag your HTML with data-elb attributes and get every tagged interaction in the dataLayer for Google Tag Manager, without writing dataLayer.push code.
+sidebar_position: 1
+package: '@walkeros/walker.js'
+---
+
+import productAdd from '../../../../apps/walkerjs/src/__tests__/fixtures/push.product-add.json';
+
+# walker.js
+
+<PackageLink github="apps/walkerjs" npm="@walkeros/walker.js" />
+
+Tag your HTML once, and walker.js does the `dataLayer.push` for you.
+
+walker.js is one script tag for sites that use Google Tag Manager. You describe
+your elements with `data-elb` attributes, and every tagged click, view or form
+submit arrives in the `dataLayer` as an event with the same structure, ready for
+GTM triggers and variables. GTM stays as it is: your container, tags and Consent
+Mode keep working, walker.js only adds pushes. It is also the quickest way to
+see walkerOS events on a real page.
+
+By the end of this page, a click on an "Add to cart" button arrives in GTM as
+`product add` and goes on to GA4 as `add_to_cart`. You need GTM on your site and
+access to its HTML templates, or a developer who has.
+
+## Why walker.js
+
+Today an event reaches GTM in one of two ways. A developer writes a
+`dataLayer.push` for it from your tracking spec, or you build a click trigger on
+a CSS selector that breaks with the next redesign. With walker.js the tracking
+lives on the element itself.
+
+**Without walker.js**, code a developer writes and maintains for every event:
+
+<CodeSnippet
+  code={`<button class="add-to-cart">Add to cart</button>
+<script>
+  document.querySelector('.add-to-cart').addEventListener('click', function () {
+    window.dataLayer.push({
+      event: 'add_to_cart',
+      ecommerce: {
+        items: [{ item_id: 'tee', item_name: 'Cotton Tee', price: 25 }],
+      },
+    });
+  });
+</script>`}
+  language="html"
+/>
+
+**With walker.js**, the same button described with attributes:
+
+<CodeSnippet
+  code={`<div data-elb="product" data-elb-product="id:tee;name:Cotton Tee;price:25">
+  <button data-elbaction="click:add">Add to cart</button>
+</div>`}
+  language="html"
+/>
+
+A click pushes `product add` with
+`data: { id: 'tee', name: 'Cotton Tee', price: 25 }`. What you gain:
+
+- **No push code in your site.** walker.js listens, reads the values from the
+  attributes and pushes. A restyle does not break it, because the tracking sits
+  on the element, not on its CSS classes.
+- **One structure for every event.** Every name is an entity and an action
+  (`product add`, `newsletter signup`), and every push has the same keys, so
+  `data.price` means the same in every product event.
+- **Events without tagging.** A `page view` on every page load and on every
+  route change in single-page apps, and a `session start` when a visit arrives.
+- **No cookies, no storage.** walker.js sends your events nowhere but the
+  `dataLayer`. Your GTM tags decide what leaves the page.
+- **Your tagging stays yours.** The names are neutral, `product add` rather than
+  GA4's `add_to_cart`: you map them once in GTM, and the same attributes work
+  unchanged when you [grow into your own setup](#grow-with-it).
+
+If you need consent rules before any data leaves the page, or want to send to
+GA4, Meta and other tools without GTM, build your own bundle instead, see
+[Grow with it](#grow-with-it). The full comparison:
+[walkerOS tagging vs. dataLayer.push](/docs/comparisons/dataLayer).
+
+## Install it
+
+<Tabs>
+<TabItem value="page" label="On your page" default>
+
+Add the script tag to every page, below your GTM snippet:
+
+<WalkerjsSnippet />
+
+It loads `async` and starts once the HTML is parsed. If your site sets a
+Content Security Policy, allow `https://static.walkeros.io` in `script-src`.
+
+</TabItem>
+<TabItem value="gtm" label="From GTM">
+
+When you cannot edit the page's `<head>`, add the script tag from the first tab
+to a **Custom HTML** tag in GTM, fired on **Initialization - All Pages**.
+
+Two trade-offs: walker.js starts only after the container has loaded, so clicks
+before that are not tracked (the page view and the page's `load` events are),
+and a blocker that blocks GTM blocks walker.js too. The `data-elb` attributes
+still belong in your HTML.
+
+</TabItem>
+<TabItem value="self-host" label="Self-host">
+
+Download <WalkerjsUrl /> and serve it from your own domain: no third-party
+request, no extra host in your Content Security Policy, and you decide when to
+update. That URL always serves the newest patch of its release line. To pin one
+release, use <WalkerjsUrl pinned />, which never changes. The npm package
+`@walkeros/walker.js` contains the same file as `dist/walker.js`.
+
+</TabItem>
+</Tabs>
+
+**You should see:** type your page's address into a new tab, then type
+`dataLayer` in the browser console. walker.js has pushed a `session start` and a `page view` with
+the page's path, title and referrer. Reload, and only a new `page view` arrives,
+because a session starts only when a visit arrives from another site, a campaign
+link or directly ([session detection](/docs/sources/web/session#window-based-detection)).
+In GTM Preview both appear by name in the event timeline.
+
+## Tag your page
+
+Tag the element that represents a thing, here a product, and the elements that
+trigger events. This is the product from above, with a view when the page loads:
+
+<CodeSnippet
+  code={`<body data-elbglobals="pagetype:product">
+  <div
+    data-elb="product"
+    data-elb-product="id:tee;name:Cotton Tee;price:25"
+    data-elbaction="load:view"
+  >
+    <h1>Cotton Tee</h1>
+    <button data-elbaction="click:add">Add to cart</button>
+  </div>
+</body>`}
+  language="html"
+/>
+
+- `data-elb` names the entity, `data-elb-product` holds its data. Numbers and
+  booleans arrive typed: `price` is the number `25`.
+- `data-elbaction` fires events: `load:view` sends `product view` when the page
+  loads, `click:add` sends `product add` on a click. An element without
+  `data-elbaction` sends nothing.
+- `data-elbglobals` adds page-wide values to every event, here
+  `globals.pagetype`.
+
+**You should see:** click the button, and `dataLayer` gets a push with
+`event: "product add"` and your `data`.
+
+A developer adds the attributes once, in the component or template, and every
+page that uses it is tracked from then on. Name entities and actions in your own
+business language, see
+[the entity-action approach](/docs/getting-started/event-model#entity-action-approach).
+More triggers (`visible`, `impression`, `submit`, `hover`), context, nested
+entities and the user:
+[HTML attributes](/docs/sources/web/browser/tagging/html-attributes).
+
+### Events from your own code
+
+Prefer `data-elb` attributes wherever an element exists. For events only your
+JavaScript knows about, such as a video player's callback, call `elb()`. Add
+this stub to your page's `<head>`, before your own code:
+
+<CodeSnippet
+  code={`<script>
+  function elb() {
+    (window.elbLayer = window.elbLayer || []).push(arguments);
+  }
+</script>`}
+  language="html"
+/>
+
+<CodeSnippet
+  code={`player.on('play', function () {
+  elb('video play', { title: 'Product tour' });
+});`}
+  language="javascript"
+/>
+
+walker.js loads `async`, so your code may run first: the stub queues those calls
+until walker.js is ready. The push has the same structure as a tagged event.
+Details: [elb](/docs/sources/web/browser/commands#elb).
+
+## What a push looks like
+
+Each event is one push: the walkerOS event plus `event`, its name with the
+space, for GTM's Custom Event triggers, and `_clear: true`, which makes GTM
+replace the previous event's values instead of merging them. The `product add`
+from above, with the values that change on every push shown as placeholders:
+
+<CodeSnippet code={JSON.stringify(productAdd, null, 2)} language="json" />
+
+This is the standard walkerOS event, and its structure is stable. What each key
+holds: [event model](/docs/getting-started/event-model#event-structure).
+
+If nothing shows up:
+
+- Check in the Network tab that `walker.js` loaded. Ad blockers can block it;
+  self-hosting avoids that.
+- Check that the element, or one inside it, has `data-elbaction`.
+- walker.js pushes to `window.dataLayer`. A container set up with a renamed
+  dataLayer does not see the events.
+
+## Use it in GTM
+
+walker.js has no settings: your tagging decides what it sends, and GTM decides
+what happens next. This section builds one complete example, `product add` to
+GA4's `add_to_cart`, then covers the other events.
+
+You need a **Google tag** with your GA4 measurement ID (`G-...`) as its Tag ID,
+fired on **Initialization - All Pages**. Most containers already have one.
+
+### Example: product add to GA4
+
+**1. Trigger.** Triggers, New, trigger type **Custom Event**:
+
+- Event name: `product add`, with the space
+- This trigger fires on: **All Custom Events**
+- Name it `CE - product add`
+
+**2. Variables.** Variables, User-Defined Variables, New, type **Data Layer
+Variable**, Data Layer Version **Version 2** (the default). Create one per row:
+
+| Variable name   | Data Layer Variable Name |
+| --------------- | ------------------------ |
+| `DLV - data.price` | `data.price` |
+| `DLV - data`    | `data`                   |
+| `DLV - entity`  | `entity`                 |
+| `DLV - nested`  | `nested`                 |
+
+**3. Items.** GA4 ecommerce needs an `items` list, and GTM builds lists only with
+a **Custom JavaScript** variable. It is the one piece of JavaScript in this
+setup, it lives in GTM, not in your site, and it serves every product event and
+orders. Name it `JS - walker items`:
+
+<details>
+<summary>The `JS - walker items` variable</summary>
+
+<CodeSnippet
+  code={`function () {
+  // A product event is its own item, an order carries its products in nested.
+  var list = {{DLV - entity}} === 'product'
+    ? [{ entity: 'product', data: {{DLV - data}} }]
+    : {{DLV - nested}} || [];
+  var items = [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].entity !== 'product') continue;
+    var p = list[i].data || {};
+    items.push({
+      item_id: p.id,
+      item_name: p.name,
+      price: p.price,
+      quantity: p.quantity || 1
+    });
+  }
+  return items;
+}`}
+  language="javascript"
+/>
+
+</details>
+
+**4. Tag.** Tags, New, tag type **Google Analytics: GA4 Event**:
+
+- Measurement ID: your `G-` ID
+- Event Name: `add_to_cart`
+- Event Parameters:
+
+| Parameter name | Value                    |
+| -------------- | ------------------------ |
+| `currency`     | `EUR`                    |
+| `value`        | `{{DLV - data.price}}`   |
+| `items`        | `{{JS - walker items}}`  |
+
+- Triggering: `CE - product add`
+
+GA4 requires `currency` whenever `value` is set. If you sell in several
+currencies, tag the currency as a global (`data-elbglobals="currency:EUR"`) and
+read it with a Data Layer Variable for `globals.currency`.
+
+**5. Check it.** Open **Preview** and click the button. Tag Assistant lists
+`product add` in the timeline with your GA4 tag under Tags Fired, and its
+Variables tab shows `JS - walker items` as
+`[{ item_id: "tee", item_name: "Cotton Tee", price: 25, quantity: 1 }]`. GA4's
+DebugView shows `add_to_cart` with its item.
+
+### Other events
+
+Every event works the same way: a Custom Event trigger on its name, Data Layer
+Variables for its values, a GA4 Event tag.
+
+| walkerOS event   | GA4 event       | Parameters                                                                 |
+| ---------------- | --------------- | -------------------------------------------------------------------------- |
+| `product view`   | `view_item`     | `currency`, `value` from `data.price`, `items`                              |
+| `order complete` | `purchase`      | `transaction_id` from `data.id`, `value` from `data.total`, `currency`, `items` |
+| `session start`  | `session start` | optional: `data.source`, `data.medium`, `data.campaign` under names of your own |
+
+An order confirmation is tagged like any other element, with its products
+inside, and the same items variable reads them:
+
+<CodeSnippet
+  code={`<div
+  data-elb="order"
+  data-elb-order="id:0rd3r1d;total:50"
+  data-elbaction="load:complete"
+>
+  <div data-elb="product" data-elb-product="id:tee;name:Cotton Tee;price:25;quantity:2"></div>
+</div>`}
+  language="html"
+/>
+
+`session start` counts arrivals, while GA4 keeps counting its own sessions, so
+the two numbers differ. For its parameters, avoid GA4's `campaign_*` names,
+which feed GA4's own traffic attribution.
+
+To cover several events with one tag, tick **Use regex matching** in the
+trigger, for example `^product (view|add)$`, and set the tag's Event Name with a
+**Lookup Table** variable whose Input Variable is `{{Event}}`.
+
+### Page views
+
+walker.js sends a `page view` on every page load and on every route change in
+single-page apps. Sending these to GA4 in place of GA4's own page views gives
+your page views your tagging, such as a `page_type` from `globals.pagetype`. On
+a page load, the page's `load` events, such as `product view`, arrive before its
+`page view`. To switch:
+
+1. In the Google tag, under **Configuration settings**, add the parameter
+   `send_page_view` with the value `false`.
+2. In GA4, go to Admin, Data streams, your web stream, Enhanced measurement,
+   Page views, **Show advanced settings**, and clear **Page changes based on
+   browser history events**. Otherwise GA4 still counts route changes itself,
+   and each one counts twice.
+3. Add a Custom Event trigger on `page view` and a GA4 Event tag with Event Name
+   `page_view` and the parameters `page_location` from `source.url` and
+   `page_title` from `data.title`, each read with a Data Layer Variable. Leave
+   out `page_referrer`, GA4 fills it in.
+4. Pause any tag that sends page views on a **History Change** trigger.
+
+Or keep GA4's own page views and do not forward walker.js's. Never both.
+
+### Consent
+
+walker.js pushes every event to the `dataLayer`. Whether a tag may send it on
+is decided in GTM, with Consent Mode and each tag's consent settings, as today.
+
+## Grow with it
+
+walker.js is fixed on purpose: it fills your `dataLayer` and nothing else. Most
+growth needs no new tool, only more tagging. When you want more than GTM can do
+with the `dataLayer`, replace the file with your own bundle. Your `data-elb`
+attributes and `elb()` calls stay exactly as they are.
+
+| Step            | You gain                                                                                                                                                         | You run                          |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| walker.js       | Events in the `dataLayer`, no push code                                                                                                                          | One script tag                   |
+| Your own bundle | Send to GA4, Meta and other tools directly; mapping that renames events and builds GA4 `items`; consent rules per destination; sessions across page loads once storage is allowed | The CLI, to build a file you host |
+| A server flow   | Your own collection endpoint; server destinations such as Meta Conversions API or your warehouse                                                                 | A container or Node.js process   |
+
+**Your own bundle.** Write a [flow file](/docs/getting-started/flow/) and build
+it with the [CLI](/docs/apps/cli). This flow sends the same events to GTM as
+walker.js: the session source, the browser source with `history` for
+single-page apps, and the [GTM destination](/docs/destinations/web/gtag/gtm),
+which uses the container already on your page:
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "web" },
+      "sources": {
+        "session": { "package": "@walkeros/web-source-session" },
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": { "require": ["session"], "settings": { "history": true } }
+        }
+      },
+      "destinations": {
+        "gtm": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": { "settings": { "gtm": { "containerId": "GTM-XXXXXXX" } } }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+<CodeSnippet code={`walkeros bundle flow.json -o ./dist/bundle.js`} language="bash" />
+
+Replace the walker.js script tag with your file. Your triggers and variables
+keep working, with one difference: the GTM destination pushes no `_clear`, so
+GTM merges each push with the previous one and a key an event does not carry
+keeps its last value. From here, add what you need:
+[GA4 with mapping](/docs/getting-started/ga4-ecommerce), which builds `items`
+for you, [consent rules](/docs/guides/consent), more
+[destinations](/docs/destinations), or a server flow
+([flow configuration](/docs/getting-started/flow/),
+[deploy](/docs/getting-started/deploy)).
+
+:::warning
+
+Never load walker.js and your own bundle on the same page. Both listen to the
+same attributes, so every click would count twice.
+
+:::
+
+:::cloud
+Building, hosting and deploying the same flow for you is part of the walkerOS app. The flow file and the CLI above are a complete path on their own. [What Cloud adds →](https://app.walkeros.io)
+:::
+
+## FAQ
+
+### Does it replace GTM?
+
+No. walker.js fills the `dataLayer`; your container, tags, triggers and Consent
+Mode stay as they are.
+
+### I can't edit the HTML. Can I still use it?
+
+Loaded [from GTM](#install-it), walker.js needs no page change and gives you
+`page view` and `session start`. Clicks, views and form submits need `data-elb`
+attributes in the HTML, added once per component by whoever builds the
+templates.
+
+### Will it clash with my existing dataLayer pushes?
+
+walker.js pushes `event`, `_clear` and the walkerOS event keys at the top level:
+`name`, `entity`, `action`, `data`, `context`, `globals`, `custom`, `nested`,
+`trigger`, `id`, `timestamp`, `timing`, `source`, and `user` and `consent` once
+they are set. With `_clear`, each key it pushes replaces what your site pushed
+under the same name. Keep your own values under other keys, such as `ecommerce`
+or `page`, and use walker.js variables only in tags that walker.js events
+trigger.
+
+### Does it set cookies or store anything?
+
+No. walker.js sets no cookies, writes no local or session storage and sends
+events nowhere but the `dataLayer`. Consent applies where data leaves the page,
+in your GTM tags.
+
+### Does it work with my single-page app?
+
+Yes, with routers that change the URL through the History API, which most do:
+every route change sends a `page view`. Remove `elb('walker run')` calls on
+route changes and History Change page view tags, or each navigation counts
+twice. Details and limits:
+[single-page apps](/docs/sources/web/browser/#single-page-apps).
+
+### Is the push format stable?
+
+Yes. A push is the standard walkerOS event plus `event` and `_clear`, so your
+triggers and variables keep working across updates.
+
+### I used the configurable walker.js. What changed?
+
+Since 4.7, walker.js reads no configuration: `elbConfig`, `data-elbconfig` and
+`createWalkerjs` no longer apply, and tracking starts on load. A script tag that
+loads `@walkeros/walker.js@latest` gets the new file. To keep a configured
+setup, pin
+`https://cdn.jsdelivr.net/npm/@walkeros/walker.js@4.6.1/dist/walker.js`, or
+rebuild it as [your own bundle](#grow-with-it).

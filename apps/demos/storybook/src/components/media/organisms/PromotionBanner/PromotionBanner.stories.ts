@@ -18,7 +18,7 @@ export const KidsMode: Story = {
     headline: 'Activate Kids Mode',
     subtitle: 'Create a safe space for younger viewers.',
     buttonText: 'Activate Now',
-    backgroundGradient: 'from-primary-600 to-primary-800',
+    backgroundGradient: 'from-surface-2 to-surface',
   },
 };
 
@@ -27,6 +27,6 @@ export const PremiumUpgrade: Story = {
     headline: 'Upgrade to Premium',
     subtitle: 'Unlock exclusive content and ad-free viewing.',
     buttonText: 'Learn More',
-    backgroundGradient: 'from-primary-700 to-primary-900',
+    backgroundGradient: 'from-bg-2 to-surface-2',
   },
 };

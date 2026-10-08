@@ -39,6 +39,8 @@ export type { StepExampleProps } from './components/molecules/step-example';
 
 export { Preview } from './components/molecules/preview';
 export type { PreviewProps } from './components/molecules/preview';
+export { ViewSource } from './components/molecules/view-source';
+export type { ViewSourceProps } from './components/molecules/view-source';
 
 // Atoms
 export { Code } from './components/atoms/code';
@@ -49,6 +51,7 @@ export { Grid } from './components/atoms/grid';
 export { Header } from './components/atoms/header';
 export { Button } from './components/atoms/button';
 export { ButtonGroup } from './components/atoms/button-group';
+export { ToggleButton } from './components/atoms/toggle-button';
 
 export { Icon } from './components/atoms/icons';
 export type { CodeProps } from './components/atoms/code';
@@ -62,6 +65,7 @@ export type { GridProps } from './components/atoms/grid';
 export type { HeaderProps } from './components/atoms/header';
 export type { ButtonProps } from './components/atoms/button';
 export type { ButtonGroupProps } from './components/atoms/button-group';
+export type { ToggleButtonProps } from './components/atoms/toggle-button';
 
 // Utils
 export { isMonacoCancellation } from './utils/is-monaco-cancellation';

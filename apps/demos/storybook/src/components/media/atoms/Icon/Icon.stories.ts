@@ -26,13 +26,13 @@ type Story = StoryObj<typeof meta>;
 export const Search: Story = {
   args: {
     type: 'search',
-    className: 'text-primary-600',
+    className: 'text-link',
   },
 };
 
 export const Profile: Story = {
   args: {
     type: 'profile',
-    className: 'text-primary-600',
+    className: 'text-link',
   },
 };

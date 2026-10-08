@@ -19,6 +19,7 @@ import { CodeStatic } from '../atoms/code-static';
 import { CodeBox } from '../molecules/code-box';
 import { CodeView } from '../molecules/code-view';
 import { Preview, previewStyles } from '../molecules/preview';
+import { previewDesignCss } from '../../design/preview-css';
 
 function outermost(element: React.ReactElement): Element | null {
   const host = document.createElement('div');
@@ -55,6 +56,17 @@ describe('Preview document', () => {
     );
     expect(styles).toContain(
       `box-shadow: 0 0 0 2px ${eventAction}, 0 0 0 3px ${vizBg}, 0 0 0 5px ${eventEntity}, 0 0 0 6px ${vizBg};`,
+    );
+  });
+
+  it('carries the design CSS ahead of the page CSS, its layers above the reset', () => {
+    const styles = previewStyles('.card { padding: 4px; }');
+
+    expect(styles.indexOf('@layer reset, base, components;')).toBeLessThan(
+      styles.indexOf(previewDesignCss),
+    );
+    expect(styles.indexOf(previewDesignCss)).toBeLessThan(
+      styles.indexOf('.card { padding: 4px; }'),
     );
   });
 

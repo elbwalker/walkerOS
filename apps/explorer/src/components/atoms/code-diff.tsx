@@ -5,6 +5,7 @@ import {
   type Monaco,
 } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
+import { typeCodeStep } from '../../design';
 import { ELB_THEME_DARK, registerTheme } from '../../themes';
 import { applyWalkerOSDecorations } from '../../utils/monaco-walkeros-decorations';
 import { prepareMonaco } from './code';
@@ -62,7 +63,7 @@ const DIFF_OPTIONS: editor.IStandaloneDiffEditorConstructionOptions = {
   lineNumbersMinChars: 3,
   glyphMargin: false,
   lineDecorationsWidth: 8,
-  fontSize: 13,
+  fontSize: parseFloat(typeCodeStep.size),
   wordWrap: 'off',
   diffWordWrap: 'inherit',
   renderLineHighlight: 'none',

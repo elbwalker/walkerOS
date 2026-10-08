@@ -32,10 +32,10 @@ import { CodeBox } from '@walkeros/explorer';
 ```
 
 In a Tailwind v4 build, import `@walkeros/explorer/design/tailwind.css` after
-`@import "tailwindcss"` instead of `tokens.css`: it brings the tokens and a
-utility for every design colour and type style.
-`@walkeros/explorer/design/base.css` adds optional page-wide base rules (font,
-colours, focus ring, selection).
+`@import "tailwindcss"` instead of `tokens.css`: it brings the tokens, a utility
+for every design colour and type style, `max-w-*` widths in px and `transition`
+utilities on the design motion. `@walkeros/explorer/design/base.css` adds
+optional page-wide base rules (font, colours, focus ring, selection).
 
 ## Themes
 
@@ -60,7 +60,7 @@ Explorer ships the walkerOS design system:
 | `@walkeros/explorer/design/tokens.css`   | The design tokens as CSS custom properties                                                                                   |
 | `@walkeros/explorer/design/tailwind.css` | The tokens as a Tailwind v4 theme                                                                                            |
 | `@walkeros/explorer/design/base.css`     | Optional base rules for a whole page                                                                                         |
-| `@walkeros/explorer/design`              | The token values as constants, for code that cannot read CSS variables                                                       |
+| `@walkeros/explorer/design`              | The token values as constants (colours, fonts, type styles, motion), for code that cannot read CSS variables                 |
 | `@walkeros/explorer/design/components`   | React building blocks of walkerOS pages (`Button`, `InlineCode`, `EventLegend` and more), with no Monaco or walkerOS runtime |
 
 The `walkeros-design-check` command checks a package's own styles against the

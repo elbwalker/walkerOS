@@ -19,7 +19,7 @@
 .note {
   margin-right: 0.5rem;
   color: var(--ifm-color-emphasis-600);
-  font-size: 0.75rem;
+  font-size: var(--type-product-caption-size);
   line-height: 1.75rem;
   white-space: nowrap;
 }
@@ -30,12 +30,12 @@
   justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-sm);
   color: var(--ifm-color-emphasis-600);
   text-decoration: none;
   transition:
-    color var(--ifm-transition-fast) ease,
-    background-color var(--ifm-transition-fast) ease;
+    color var(--motion) var(--ease),
+    background-color var(--motion) var(--ease);
 }
 
 .action:hover,

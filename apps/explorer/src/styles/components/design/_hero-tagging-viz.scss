@@ -58,7 +58,7 @@
     min-height: 268px;
     padding: 12px 0 14px;
     font-family: var(--type-viz-code-family);
-    font-size: 13px;
+    font-size: var(--type-viz-chip-size);
     line-height: 1.95;
     opacity: var(--elb-viz-fade);
   }
@@ -141,7 +141,7 @@
     color: var(--viz-fg-2);
     border-radius: var(--radius-xs);
     font-family: var(--type-viz-code-family);
-    font-size: 10.5px;
+    font-size: var(--type-viz-legend-size);
     letter-spacing: 0.04em;
     outline: 1.5px solid transparent;
   }
@@ -227,7 +227,7 @@
     }
 
     .elb-viz-hero__code {
-      font-size: 12px;
+      font-size: var(--type-viz-code-size);
     }
 
     .elb-viz-hero__stage {

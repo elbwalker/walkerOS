@@ -136,26 +136,28 @@ export async function getMappingEvent(
 /**
  * Gets a value from a mapping.
  *
- * @param value The value to get the mapping from.
- * @param data The mapping data.
- * @param options The mapping options.
- * @returns The mapped value.
+ * @param value The source to resolve the mapping against, usually an event.
+ * @param data The mapping data: a key path, a value config, or a list of them.
+ * @param context The collector (required), plus an optional event and consent.
+ * @returns The mapped value, or undefined when the value is undefined.
  */
 export async function getMappingValue(
   value: WalkerOS.DeepPartialEvent | unknown | undefined,
   data: Mapping.Data = {},
-  context: Partial<Mapping.Context> = {},
+  context: Mapping.ValueContext,
 ): Promise<WalkerOS.Property | undefined> {
   if (!isDefined(value)) return;
 
+  // The type requires context and collector. The optional chaining lets an
+  // untyped caller without them reach the guard in resolveMappingValue.
   // Resolve consent in priority order: value.consent > context.consent > collector.consent
   const consent =
     ((isObject(value) && value.consent) as WalkerOS.Consent) ||
-    context.consent ||
-    context.collector?.consent;
+    context?.consent ||
+    context?.collector?.consent;
 
   // Resolve event: explicit context.event wins; else infer from value when it is an event-shaped object.
-  const event = (context.event ??
+  const event = (context?.event ??
     (isObject(value) ? value : {})) as WalkerOS.DeepPartialEvent;
 
   return resolveMappingValue(value, data, { ...context, consent, event });
