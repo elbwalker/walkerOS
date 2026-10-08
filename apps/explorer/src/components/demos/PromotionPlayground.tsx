@@ -7,6 +7,21 @@ import React, {
 } from 'react';
 import type { WalkerOS, Elb, Collector } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
+import {
+  bg,
+  bg2,
+  border,
+  borderStrong,
+  fg,
+  fg2,
+  fg3,
+  focus,
+  link,
+  onPrimary,
+  primary,
+  surface,
+  surface2,
+} from '../../design';
 import { Grid } from '../atoms/grid';
 import { Preview } from '../molecules/preview';
 import { BrowserBox } from '../organisms/browser-box';
@@ -75,6 +90,8 @@ const defaultHtml = `<div
 </div>
 <span data-elbglobals="language:en"></span>`;
 
+// The demo page's own CSS: a light product card, its colours taken from the
+// design system's light values.
 const defaultCss = `* {
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -84,9 +101,9 @@ const defaultCss = `* {
   width: 100%;
   max-width: 400px;
   margin: 0 auto;
-  background: #ffffff;
+  background: ${surface.light};
+  border: 1px solid ${border.light};
   border-radius: 16px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
@@ -96,15 +113,13 @@ const defaultCss = `* {
   padding: 0;
   width: 100%;
   height: 160px;
-  background:
-    linear-gradient(135deg, rgba(243, 244, 246, 0.9) 0%, rgba(229, 231, 235, 0.9) 100%),
-    repeating-linear-gradient(
-      45deg,
-      #f9fafb,
-      #f9fafb 10px,
-      #f3f4f6 10px,
-      #f3f4f6 20px
-    );
+  background: repeating-linear-gradient(
+    45deg,
+    ${bg2.light},
+    ${bg2.light} 10px,
+    ${surface2.light} 10px,
+    ${surface2.light} 20px
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -123,8 +138,8 @@ const defaultCss = `* {
 }
 
 .product-badge {
-  background: #01b5e2;
-  color: white;
+  background: ${primary.light};
+  color: ${onPrimary.light};
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.75rem;
@@ -141,7 +156,7 @@ const defaultCss = `* {
   font-size: 1.125rem;
   font-weight: 700;
   margin: 0 0 1rem 0;
-  color: #111827;
+  color: ${fg.light};
 }
 
 .form-control {
@@ -152,43 +167,42 @@ const defaultCss = `* {
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #6b7280;
+  color: ${fg2.light};
   margin-bottom: 0.5rem;
 }
 
 .form-select {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid ${borderStrong.light};
   border-radius: 8px;
   font-size: 0.875rem;
-  color: #111827;
-  background: white;
+  color: ${fg.light};
+  background: ${bg.light};
   cursor: pointer;
   transition: border-color 0.2s;
 }
 
 .form-select:hover {
-  border-color: #9ca3af;
+  border-color: ${fg3.light};
 }
 
 .form-select:focus {
-  outline: none;
-  border-color: #01b5e2;
-  box-shadow: 0 0 0 3px rgba(1, 181, 226, 0.1);
+  outline: 2px solid ${focus.light};
+  outline-offset: 2px;
 }
 
 .product-price {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #111827;
+  color: ${fg.light};
   margin: 0 0 1rem 0;
 }
 
 .product-old-price {
   font-size: 1rem;
   font-weight: 400;
-  color: #9ca3af;
+  color: ${fg3.light};
   text-decoration: line-through;
   margin-left: 0.5rem;
 }
@@ -213,7 +227,6 @@ const defaultCss = `* {
 
 .btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .btn:active {
@@ -221,23 +234,24 @@ const defaultCss = `* {
 }
 
 .btn-primary {
-  background: #01b5e2;
-  color: white;
+  background: ${primary.light};
+  color: ${onPrimary.light};
 }
 
 .btn-primary:hover {
-  background: #0195b8;
+  filter: brightness(1.08);
 }
 
 .btn-secondary {
-  background: #ffffff;
-  color: #01b5e2;
-  border: 1px solid #01b5e2;
+  background: ${surface.light};
+  color: ${link.light};
+  border: 1px solid ${link.light};
 }
 
 .btn-secondary:hover {
-  background: #01b5e2;
-  color: #ffffff;
+  background: ${primary.light};
+  border-color: ${primary.light};
+  color: ${onPrimary.light};
 }`;
 
 const defaultMapping = `{

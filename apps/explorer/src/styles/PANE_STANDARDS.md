@@ -44,7 +44,7 @@ From `_mapping-panes.scss:280-286`:
   flex: 1;
   min-height: 0;
   overflow-y: auto; // ← Scrolling
-  padding: var(--spacing-grid-gap); // ← 16px padding (all sides)
+  padding: 16px; // ← padding on all sides
   padding-bottom: 50vh; // ← Extra bottom for scroll comfort
 }
 ```
@@ -148,7 +148,7 @@ These use their own wrapper patterns but still follow the principle:
 ## Benefits
 
 1. **Consistency** - All panes have the same padding and scroll behavior
-2. **DRY** - Change padding in ONE place (`--spacing-grid-gap`)
+2. **DRY** - Change padding in ONE place (`.elb-mapping-pane-content`)
 3. **Maintainability** - No guessing about spacing
 4. **No Conflicts** - No double padding issues
 5. **Easy Testing** - Predictable layout behavior

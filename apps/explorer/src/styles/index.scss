@@ -1,21 +1,14 @@
 // walkerOS Explorer - SCSS Architecture
 // Single entry point for all styles
 
-// Theme (always first)
-@use './theme/tokens';
-@use './theme/variables';
-@use './theme/dark';
-
 // Foundation
 @use './foundation/reset';
 @use './foundation/typography';
 @use './foundation/layout';
-@use './foundation/spacing';
 @use './foundation/responsive';
 @use './foundation/grid';
 
 // Utilities
-@use './utilities/scrollbar';
 @use './utilities/helpers';
 
 // Components - Atoms
@@ -26,11 +19,11 @@
 
 // Components - Molecules
 @use './components/molecules/code-box';
+@use './components/molecules/code-diff-box';
 @use './components/molecules/code-snippet';
 @use './components/molecules/code-view';
 @use './components/molecules/step-example';
 @use './components/molecules/preview';
-@use './components/molecules/explorer-controls';
 @use './components/molecules/architecture-flow';
 @use './components/molecules/flow-map';
 @use './components/molecules/property-table';

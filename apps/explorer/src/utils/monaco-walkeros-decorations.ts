@@ -1,4 +1,11 @@
 import type { editor } from 'monaco-editor';
+import {
+  syntaxFunction,
+  syntaxKeyword,
+  syntaxOperator,
+  syntaxString,
+  syntaxType,
+} from '../design';
 
 export type ReferenceType =
   | 'variable'
@@ -131,13 +138,13 @@ export function registerWalkerOSDecorationStyles(): void {
   const style = document.createElement('style');
   style.id = 'walkeros-ref-styles';
   style.textContent = `
-    .monaco-editor .elb-ref-variable { color: #89ddff !important; font-style: italic; }
-    .monaco-editor .elb-ref-secret { color: #ffcb6b !important; font-style: italic; }
-    .monaco-editor .elb-ref-env { color: #ffcb6b !important; font-style: italic; }
-    .monaco-editor .elb-ref-contract { color: #c3e88d !important; font-style: italic; }
-    .monaco-editor .elb-ref-store { color: #89ddff !important; font-style: italic; }
-    .monaco-editor .elb-ref-flow { color: #82aaff !important; font-style: italic; }
-    .monaco-editor .elb-ref-code { color: #c084fc !important; }
+    .monaco-editor .elb-ref-variable { color: ${syntaxOperator} !important; font-style: italic; }
+    .monaco-editor .elb-ref-secret { color: ${syntaxType} !important; font-style: italic; }
+    .monaco-editor .elb-ref-env { color: ${syntaxType} !important; font-style: italic; }
+    .monaco-editor .elb-ref-contract { color: ${syntaxString} !important; font-style: italic; }
+    .monaco-editor .elb-ref-store { color: ${syntaxOperator} !important; font-style: italic; }
+    .monaco-editor .elb-ref-flow { color: ${syntaxFunction} !important; font-style: italic; }
+    .monaco-editor .elb-ref-code { color: ${syntaxKeyword} !important; }
   `;
   document.head.appendChild(style);
 }

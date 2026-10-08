@@ -1,4 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import {
+  bg,
+  border,
+  borderStrong,
+  fg,
+  fg2,
+  fg3,
+  onPrimary,
+  primary,
+  surface,
+  surface2,
+} from '../../design';
 import { Preview } from './preview';
 
 /**
@@ -64,8 +76,8 @@ const sampleCss = `
 
 .product-card {
   width: 288px;
-  background: white;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  background: ${surface.light};
+  border: 1px solid ${border.light};
   border-radius: 8px;
   overflow: hidden;
   margin: 0 auto;
@@ -74,7 +86,7 @@ const sampleCss = `
 .product-image {
   position: relative;
   height: 200px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: ${surface2.light};
   margin: 0;
 }
 
@@ -85,8 +97,8 @@ const sampleCss = `
 }
 
 .product-badge {
-  background: #01b5e2;
-  color: white;
+  background: ${primary.light};
+  color: ${onPrimary.light};
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -101,7 +113,7 @@ const sampleCss = `
   font-size: 1.125rem;
   font-weight: 600;
   margin: 0 0 16px 0;
-  color: #1f2937;
+  color: ${fg.light};
 }
 
 .product-form-control {
@@ -113,27 +125,29 @@ const sampleCss = `
   font-size: 0.875rem;
   font-weight: 500;
   margin-bottom: 4px;
-  color: #374151;
+  color: ${fg2.light};
 }
 
 .product-select {
   width: 100%;
   padding: 8px;
-  border: 1px solid #d1d5db;
+  border: 1px solid ${borderStrong.light};
   border-radius: 4px;
   font-size: 0.875rem;
+  color: ${fg.light};
+  background: ${bg.light};
 }
 
 .product-price {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1f2937;
+  color: ${fg.light};
   margin: 0 0 16px 0;
 }
 
 .product-old-price {
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: ${fg3.light};
   text-decoration: line-through;
   font-weight: 400;
   margin-left: 8px;
@@ -156,32 +170,29 @@ const sampleCss = `
 }
 
 .product-button-secondary {
-  background: #f3f4f6;
-  color: #4b5563;
+  background: ${surface2.light};
+  color: ${fg2.light};
 }
 
 .product-button-secondary:hover {
-  background: #e5e7eb;
+  color: ${fg.light};
 }
 
 .product-button-primary {
-  background: #3b82f6;
-  color: white;
+  background: ${primary.light};
+  color: ${onPrimary.light};
 }
 
 .product-button-primary:hover {
-  background: #2563eb;
+  filter: brightness(1.08);
 }
 `;
 
 /**
  * Default preview with product card HTML and styling
  *
- * Features highlight buttons to show walkerOS data attributes:
- * - Context (purple)
- * - Entity (blue)
- * - Property (green)
- * - Action (orange)
+ * Features highlight buttons to show walkerOS data attributes, each in its
+ * event colour: globals, context, entity, property and action.
  */
 export const Default: Story = {
   args: {

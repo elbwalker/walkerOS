@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { Theme } from '../../design';
 import { Header } from './header';
 import { useGridHeight } from '../../contexts/GridHeightContext';
 
@@ -29,6 +30,8 @@ export interface BoxProps {
   defaultTab?: string; // Uncontrolled default
   // Mac style
   showTrafficLights?: boolean;
+  /** Pins the box to one theme, whatever the page theme (a dark island). */
+  theme?: Theme;
 }
 
 /**
@@ -81,6 +84,7 @@ export function Box({
   onTabChange,
   defaultTab,
   showTrafficLights = false,
+  theme,
 }: BoxProps) {
   // Grid context for synchronized heights
   const gridContext = useGridHeight();
@@ -151,6 +155,7 @@ export function Box({
     <div
       className={`elb-explorer elb-explorer-box ${autoHeightClass} ${className}`.trim()}
       style={boxStyle}
+      data-theme={theme}
     >
       {hasTabs && (
         <div className="elb-explorer-tabs">

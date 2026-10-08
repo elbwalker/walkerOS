@@ -3,6 +3,8 @@
 // `.elb-code-view--fit`: the box sizes to its code and scrolls inside past
 // the cap, instead of the Box default fixed height.
 .elb-code-view--fit {
+  --height-code-view-max: 600px;
+
   // (0,2,0) outranks `.elb-explorer-box` in _box.scss, which loads later.
   &.elb-explorer-box {
     height: auto;
@@ -26,10 +28,10 @@
   position: absolute;
   top: 6px;
   right: 6px;
-  z-index: 1;
+  z-index: var(--z-raised);
   display: flex;
-  background: var(--bg-box);
-  border-radius: var(--radius-button);
+  background: var(--code-bar);
+  border-radius: var(--radius-xs);
   opacity: 0;
   transition: opacity 0.15s;
 

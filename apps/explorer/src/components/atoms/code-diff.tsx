@@ -1,21 +1,11 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   DiffEditor,
   type DiffOnMount,
   type Monaco,
 } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
-import {
-  ELB_THEME_DARK,
-  ELB_THEME_LIGHT,
-  registerAllThemes,
-} from '../../themes';
+import { ELB_THEME_DARK, registerTheme } from '../../themes';
 import { applyWalkerOSDecorations } from '../../utils/monaco-walkeros-decorations';
 import { prepareMonaco } from './code';
 
@@ -84,20 +74,11 @@ const DIFF_OPTIONS: editor.IStandaloneDiffEditorConstructionOptions = {
   },
 };
 
-/** Detect the current [data-theme] value from the closest ancestor or document. */
-function detectDataTheme(el: HTMLElement | null): string | null {
-  if (typeof document === 'undefined') return null;
-  if (el) {
-    const closest = el.closest('[data-theme]');
-    if (closest) return closest.getAttribute('data-theme');
-  }
-  return document.documentElement.getAttribute('data-theme');
-}
-
 /**
  * CodeDiff — read-only Monaco DiffEditor atom.
  *
- * Generic: diffs any Monaco-supported language. Theme follows [data-theme].
+ * Generic: diffs any Monaco-supported language. A dark island in both page
+ * themes, like every code surface.
  * Use <CodeDiffBox> for the full chrome (header, summary, toggle, copy).
  */
 export function CodeDiff({
@@ -111,36 +92,10 @@ export function CodeDiff({
   onMount,
   className,
 }: CodeDiffProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
   const decoCleanupRef = useRef<Array<() => void>>([]);
   const summaryCbRef = useRef(onSummaryChange);
   summaryCbRef.current = onSummaryChange;
-
-  // Theme state follows [data-theme]
-  const [themeName, setThemeName] = useState<string>(ELB_THEME_LIGHT);
-  useEffect(() => {
-    const read = () => {
-      const dataTheme = detectDataTheme(containerRef.current);
-      const isDark =
-        dataTheme === 'dark' ||
-        (dataTheme === null &&
-          window.matchMedia('(prefers-color-scheme: dark)').matches);
-      setThemeName(isDark ? ELB_THEME_DARK : ELB_THEME_LIGHT);
-    };
-    read();
-    const observer = new MutationObserver(read);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme'],
-    });
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    mq.addEventListener('change', read);
-    return () => {
-      observer.disconnect();
-      mq.removeEventListener('change', read);
-    };
-  }, []);
 
   // Keep renderSideBySide live — no remount on toggle
   useEffect(() => {
@@ -152,7 +107,7 @@ export function CodeDiff({
       // Runs before the diff's models exist, so a TypeScript or JavaScript
       // diff that mounts before any Code still gets the shared setup.
       prepareMonaco(monaco);
-      registerAllThemes(monaco);
+      registerTheme(monaco);
       beforeMount?.(monaco);
     },
     [beforeMount],
@@ -216,15 +171,15 @@ export function CodeDiff({
 
   return (
     <div
-      ref={containerRef}
       className={className}
       style={{ height: '100%', width: '100%' }}
+      data-theme="dark"
     >
       <DiffEditor
         language={language}
         original={original}
         modified={modified}
-        theme={themeName}
+        theme={ELB_THEME_DARK}
         height={height}
         options={mergedOptions}
         beforeMount={handleBeforeMount}

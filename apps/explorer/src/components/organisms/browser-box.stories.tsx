@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { border, fg, onPrimary, primary, surface } from '../../design';
 import { BrowserBox } from './browser-box';
 
 /**
@@ -38,9 +39,9 @@ const sampleCss = `
 .product-card {
   width: 300px;
   padding: 20px;
-  background: white;
+  background: ${surface.light};
+  border: 1px solid ${border.light};
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   font-family: -apple-system, sans-serif;
 }
 
@@ -54,12 +55,12 @@ const sampleCss = `
 .product-title {
   margin: 0;
   font-size: 1.25rem;
-  color: #1f2937;
+  color: ${fg.light};
 }
 
 .product-badge {
-  background: #3b82f6;
-  color: white;
+  background: ${primary.light};
+  color: ${onPrimary.light};
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -69,15 +70,15 @@ const sampleCss = `
 .product-price {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1f2937;
+  color: ${fg.light};
   margin: 0 0 16px 0;
 }
 
 .product-button {
   width: 100%;
   padding: 12px;
-  background: #3b82f6;
-  color: white;
+  background: ${primary.light};
+  color: ${onPrimary.light};
   border: none;
   border-radius: 6px;
   font-weight: 600;
@@ -86,7 +87,7 @@ const sampleCss = `
 }
 
 .product-button:hover {
-  background: #2563eb;
+  filter: brightness(1.08);
 }
 `;
 

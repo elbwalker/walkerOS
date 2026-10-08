@@ -88,9 +88,18 @@ Build creates:
 
 - `dist/index.js` (CJS) and `dist/index.mjs` (ESM) - main module
 - `dist/index.d.ts` - TypeScript declarations
-- `dist/styles.css` - compiled SCSS styles
+- `dist/styles.css` - compiled SCSS styles (explorer's components; no tokens)
+- `dist/design/tokens.css`, `tailwind.css`, `base.css` - the design system CSS
+- `dist/design/index.{mjs,cjs,d.ts}` - the design constants
+  (`@walkeros/explorer/design`)
+- `dist/design/components/index.{mjs,cjs,d.ts}` - the design components
+- `dist/design/check.mjs` - the checker, started by the committed launcher
+  `bin/walkeros-design-check.mjs`
 
-The build is configured in `tsup.config.ts` with SCSS compilation via Sass.
+The build is configured in `tsup.config.ts` with SCSS compilation via Sass. The
+design generator (`writeDesign()` from `src/design/generate.ts`) runs when the
+config loads, before any tsup block: it parses `design/tokens.json`, refreshes
+the committed `src/design/index.ts` and writes the design CSS.
 
 ### Bundling Dependencies
 
@@ -197,8 +206,9 @@ Components Only"). The few shared pieces of state:
     `format-code.ts`), data attribute highlighting (`monaco-decorators.ts`) and
     `is-monaco-cancellation.ts`.
   - `code-normalizer.ts`: compares code ignoring comments and whitespace.
-- `src/themes/`: the Monaco themes (`palenight` dark, `lighthouse` light),
-  switched by `data-theme`.
+- `src/themes/`: the one code theme (`palenight.ts`, built from the design
+  constants) for Monaco and Shiki; `registerTheme(monaco)` registers it as
+  `ELB_THEME_DARK`. Code surfaces are dark in both page themes.
 - `src/lib/utils.ts`: `cn()` merges Tailwind class names.
 - `src/helpers/destinations.ts`: demo destinations, see "Integration with
   walkerOS".
@@ -207,52 +217,63 @@ Components Only"). The few shared pieces of state:
 
 **Complete styling documentation:** [STYLE.md](./STYLE.md)
 
+### Design area
+
+Explorer is the home of the walkerOS design system. `design/tokens.json` is the
+only source of colour, type, spacing, radius and z-index values; `src/design/`
+holds the type guard (`tokens.ts`), the generator (`generate.ts`), the generated
+constants (`index.ts`), the hand-written `base.css`, the checker (`check/`) and
+the design components (`components/`). How to change a token and what the
+outputs are: [SKILL.md](./SKILL.md), "Design area".
+
 ### Quick Reference
 
-**Theme Support (Required)**:
+**Theme:** one attribute on the page root, `data-theme="dark"` (the default) or
+`"light"`. The page imports `@walkeros/explorer/design/tokens.css` (or
+`design/tailwind.css` in a Tailwind build) once, then
+`@walkeros/explorer/styles.css`. Explorer's code roots (`Code`, `CodeDiff`,
+`CodeStatic`, `CodeView`, `CodeBox`), the preview, `EventLegend` and the design
+demos carry `data-theme="dark"` themselves: they stay dark in both themes.
 
-```html
-<html data-theme="dark">
-  ...
-</html>
-```
-
-**Monaco Editor Themes**:
-
-- Dark: `elbTheme-dark` (Prism Palenight)
-- Light: `elbTheme-light` (Lighthouse, `src/themes/lighthouse.ts`)
-- Automatically sync with `data-theme` attribute
+**Monaco:** one theme, `elbTheme-dark` (`ELB_THEME_DARK`), built from the
+`syntax-*` and `code-*` design constants and registered by `Code` and `CodeDiff`
+before the editor mounts.
 
 **SCSS Rules (MANDATORY):**
 
 **✅ DO:**
 
-- Use ONLY defined CSS variables from `theme/_variables.scss`
+- Read design tokens only: `var(--fg)`, `var(--surface)`,
+  `var(--border-strong)`, `var(--radius-xs)`, `var(--type-product-small-size)`
 - Follow BEM naming: `.elb-{component}-{element}--{modifier}`
-- Use `calc(var(--font-size-base) - 1px)` for font size variations
 - Create one SCSS file per component in correct directory
 - Import new files alphabetically in `index.scss`
-- Test in both light and dark themes
+- Check both themes in Storybook (toolbar)
 
 **❌ DON'T:**
 
-- Use undefined CSS variables (e.g., `--bg-secondary`, `--font-size-sm`)
-- Use `--font-family-mono` (correct: `--font-mono`)
-- Hardcode colors, spacing, or font sizes
+- Use a colour literal, a `var()` fallback on a design token or a variable no
+  token and no file of explorer declares (`npm run lint` runs
+  `walkeros-design-check` and fails on each)
+- Declare custom properties on `.elb-explorer` (it is a layout root only); a
+  local geometry variable sits on its own component root
+- Add drop shadows: a floating layer is `var(--surface)` with a
+  `1px solid var(--border-strong)` edge
 - Use inline `style` attributes
 
 **See [STYLE.md](./STYLE.md) for:**
 
-- Complete CSS Variables Reference (all variables with light/dark values)
+- Design tokens in explorer's components (names, islands, type, layers)
 - Grid System (height modes: equal, auto, synced - why Grid is complex)
-- Monaco Editor (theming, tokens, local loading, IntelliSense, debugging)
+- Monaco Editor (the code theme, tokens, IntelliSense, debugging)
 - SCSS Architecture & Component Checklist
-- Design Rules (when to add variables, color selection, accessibility)
 - Common Tasks & Troubleshooting
 
 ## Important Files
 
 - `src/index.ts` - Public API exports (add new public components here)
+- `design/tokens.json` - the design tokens; `src/design/` - generator, checker,
+  design components
 - `tsup.config.ts` - Build configuration (module + styles)
 - `.storybook/main.ts` - Storybook config (component stories and the design
   stories)
@@ -306,11 +327,11 @@ step.
 - [ ] SCSS file created in correct directory with BEM naming
       (`elb-{component}-*`)
 - [ ] SCSS imported in `index.scss` (alphabetical order)
-- [ ] All CSS variables exist in `theme/_variables.scss`
-- [ ] No hardcoded values (colors, spacing, fonts)
-- [ ] Uses `calc(var(--font-size-base) - Npx)` for size variations
+- [ ] Reads design tokens only (`npm run lint` passes the checker)
+- [ ] Type sizes and weights from the `--type-<style>-*` tokens where a style
+      fits
 - [ ] No inline `style` attributes
-- [ ] Light and dark theme tested
+- [ ] Both themes checked in Storybook
 - [ ] Reuses existing components (Box, Button, CodeBox, etc.)
 - [ ] Content components have no root padding (follows Pane Standards)
 - [ ] Build succeeds: `npm run build`

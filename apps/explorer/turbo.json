@@ -4,6 +4,19 @@
     "test": {
       "dependsOn": ["build", "^build"],
       "inputs": ["$TURBO_DEFAULT$", "dist/**"]
+    },
+    "lint": {
+      "dependsOn": ["build", "^build"],
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "src/**/*.jsx",
+        "src/**/*.cjs",
+        "src/**/*.css",
+        "src/**/*.scss",
+        "src/**/*.mdx",
+        "src/**/*.html",
+        "src/**/*.svg"
+      ]
     }
   }
 }

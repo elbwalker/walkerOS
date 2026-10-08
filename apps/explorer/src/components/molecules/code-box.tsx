@@ -401,7 +401,8 @@ export function CodeBox({
 
   // Auto-height class for content-based sizing (Box handles gridContext)
   const autoHeightClass = autoHeight ? 'elb-box--auto-height' : '';
-  const boxClassName = `${autoHeightClass} ${className || ''}`.trim();
+  const boxClassName =
+    `elb-explorer-box--code ${autoHeightClass} ${className || ''}`.trim();
 
   // Convert CodeBoxTab[] to BoxTab[] with Code as content (Box handles rendering).
   // Memoized so a marker-count update does not give each <Code>/Monaco subtree
@@ -454,6 +455,7 @@ export function CodeBox({
       height={height}
       style={style}
       className={boxClassName}
+      theme="dark"
     >
       {/* Only render Code as children when no tabs (single code mode) */}
       {!tabs && (

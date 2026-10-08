@@ -1,8 +1,8 @@
 // Property Table - Full-width responsive layout
 .elb-property-table__container {
   overflow: visible;
-  border-radius: var(--radius-box);
-  border: 1px solid var(--border-box);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
   width: 100%;
   box-sizing: border-box;
   container-type: inline-size;
@@ -17,22 +17,22 @@
   width: 100%;
   table-layout: auto;
   border-collapse: collapse;
-  font-size: calc(var(--font-size-base) - 1px);
-  background: var(--bg-box);
+  font-size: var(--type-product-small-size);
+  background: var(--surface);
   display: table;
 }
 
 .elb-property-table thead {
-  background: var(--bg-header);
+  background: var(--bg-2);
 }
 
 .elb-property-table th {
   padding: 12px 16px;
   text-align: left;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-label);
-  border-bottom: 2px solid var(--border-box);
-  font-size: calc(var(--font-size-base) - 2px);
+  font-weight: 600;
+  color: var(--fg-2);
+  border-bottom: 2px solid var(--border);
+  font-size: var(--type-product-caption-size);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -40,7 +40,7 @@
 
 .elb-property-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-box);
+  border-bottom: 1px solid var(--border);
   vertical-align: top;
 }
 
@@ -50,19 +50,19 @@
 }
 
 .elb-property-table__property-name {
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-button-primary);
+  font-weight: 600;
+  color: var(--link);
   font-family: var(--font-mono);
-  font-size: calc(var(--font-size-base) - 2px);
+  font-size: var(--type-product-caption-size);
 }
 
 // Nested rows: subtle tint plus a left guide line so the grouping reads as a
 // nested type rather than a flat list of unrelated properties.
 .elb-property-table__row--nested {
-  background: var(--bg-header);
+  background: var(--bg-2);
 
   .elb-property-table__property-cell {
-    border-left: 2px solid var(--border-box);
+    border-left: 2px solid var(--border);
   }
 }
 
@@ -76,18 +76,18 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-label);
+  color: var(--fg-2);
   vertical-align: baseline;
 
   &:hover {
-    color: var(--color-button-primary);
+    color: var(--link);
   }
 }
 
 .elb-property-table__property-type {
-  color: var(--color-text);
+  color: var(--fg);
   font-family: var(--font-mono);
-  font-size: calc(var(--font-size-base) - 3px);
+  font-size: var(--type-product-caption-size);
   white-space: nowrap;
 }
 
@@ -103,7 +103,7 @@
     top: 0;
     bottom: 0;
     width: 30px;
-    background: linear-gradient(to right, transparent, var(--bg-box));
+    background: linear-gradient(to right, transparent, var(--surface));
     pointer-events: none;
   }
 }
@@ -124,12 +124,12 @@
   }
 
   &:hover .elb-property-table__property-type--truncated::after {
-    background: linear-gradient(to right, transparent, var(--bg-input-hover));
+    background: linear-gradient(to right, transparent, var(--surface-2));
   }
 }
 
 .elb-property-table__required-icon {
-  color: var(--color-button-danger);
+  color: var(--danger);
   font-weight: bold;
   margin-left: 4px;
   font-size: 1.1em;
@@ -153,7 +153,7 @@
 // Description column will auto-fill remaining space (no width specified)
 .elb-property-table__description {
   line-height: 1.4;
-  color: var(--color-text);
+  color: var(--fg);
   word-break: break-word;
   overflow-wrap: anywhere;
   min-width: 0;
@@ -163,9 +163,9 @@
   background: none;
   border: none;
   padding: 6px;
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-xs);
   cursor: pointer;
-  color: var(--color-button-primary);
+  color: var(--link);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -173,13 +173,13 @@
 }
 
 .elb-property-table__more-button:hover {
-  background: var(--bg-button-hover);
+  background: var(--surface-2);
 }
 
 .elb-property-table__required-notice {
   margin-top: 0;
-  font-size: calc(var(--font-size-base) - 2px);
-  color: var(--color-text-muted);
+  font-size: var(--type-product-caption-size);
+  color: var(--fg-2);
   font-style: italic;
 }
 
@@ -190,23 +190,23 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
   padding: 20px;
 }
 
+// A floating layer: a surface with a 1px strong edge, no shadow
 .elb-property-table__modal-content {
-  background: var(--bg-box);
-  border-radius: var(--radius-box);
-  box-shadow: var(--shadow-dropdown);
+  background: var(--surface);
+  border-radius: var(--radius-xs);
   max-width: 600px;
   width: 100%;
   max-height: 80vh;
   overflow-y: auto;
-  border: 1px solid var(--border-box);
+  border: 1px solid var(--border-strong);
 }
 
 .elb-property-table__modal-header {
@@ -214,31 +214,31 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--border-box);
+  border-bottom: 1px solid var(--border);
 }
 
 .elb-property-table__modal-title {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--type-product-heading-size);
+  font-weight: 600;
   display: flex;
   align-items: center;
 }
 
 .elb-property-table__modal-property-name {
   font-family: var(--font-mono);
-  color: var(--color-button-primary);
-  font-weight: var(--font-weight-semibold);
-  font-size: 1rem;
+  color: var(--link);
+  font-weight: 600;
+  font-size: var(--type-product-title-size);
 }
 
 .elb-property-table__close-button {
   background: none;
   border: none;
   padding: 8px;
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-xs);
   cursor: pointer;
-  color: var(--color-text-muted);
+  color: var(--fg-2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -248,8 +248,8 @@
 }
 
 .elb-property-table__close-button:hover {
-  color: var(--color-text);
-  background: var(--bg-button-hover);
+  color: var(--fg);
+  background: var(--surface-2);
 }
 
 .elb-property-table__modal-body {
@@ -266,16 +266,16 @@
 
 .elb-property-table__modal-label {
   display: block;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-label);
+  font-weight: 600;
+  color: var(--fg-2);
   margin-bottom: 6px;
-  font-size: calc(var(--font-size-base) - 1px);
+  font-size: var(--type-product-small-size);
 }
 
 .elb-property-table__modal-type {
   font-family: var(--font-mono);
-  color: var(--color-text);
-  font-size: calc(var(--font-size-base) - 1px);
+  color: var(--fg);
+  font-size: var(--type-product-small-size);
 }
 
 .elb-property-table__modal-type--wrap {
@@ -288,19 +288,19 @@
 .elb-property-table__modal-description {
   margin: 0;
   line-height: 1.5;
-  color: var(--color-text);
+  color: var(--fg);
 }
 
 .elb-property-table__modal-default {
   font-family: var(--font-mono);
-  color: var(--color-text);
-  font-size: calc(var(--font-size-base) - 1px);
+  color: var(--fg);
+  font-size: var(--type-product-small-size);
 }
 
 .elb-property-table__modal-example {
   font-family: var(--font-mono);
-  color: var(--color-text);
-  font-size: calc(var(--font-size-base) - 1px);
+  color: var(--fg);
+  font-size: var(--type-product-small-size);
   display: block;
   white-space: pre-wrap;
   word-break: break-word;
@@ -313,7 +313,7 @@
   }
 
   .elb-property-table {
-    font-size: calc(var(--font-size-base) - 2px);
+    font-size: var(--type-product-caption-size);
     display: block;
   }
 
@@ -328,21 +328,21 @@
   .elb-property-table tr {
     display: block;
     margin-bottom: 1rem;
-    border: 1px solid var(--border-box);
-    border-radius: var(--radius-box);
-    background: var(--bg-box);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--surface);
     position: relative;
   }
 
   .elb-property-table td {
     display: block;
     padding: 8px 12px;
-    border-bottom: 1px solid var(--border-box);
+    border-bottom: 1px solid var(--border);
     text-align: left;
   }
 
   .elb-property-table tbody tr:last-child td {
-    border-bottom: 1px solid var(--border-box);
+    border-bottom: 1px solid var(--border);
   }
 
   .elb-property-table td:last-child {
@@ -352,16 +352,16 @@
   .elb-property-table td::before {
     content: attr(data-label);
     display: block;
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-label);
-    font-size: calc(var(--font-size-base) - 3px);
+    font-weight: 600;
+    color: var(--fg-2);
+    font-size: var(--type-product-caption-size);
     text-transform: uppercase;
     margin-bottom: 4px;
   }
 
   .elb-property-table__property-name,
   .elb-property-table__property-type {
-    font-size: calc(var(--font-size-base) - 2px);
+    font-size: var(--type-product-caption-size);
   }
 
   .elb-property-table__property-cell {
@@ -380,7 +380,7 @@
   }
 
   .elb-property-table__description {
-    font-size: calc(var(--font-size-base) - 2px);
+    font-size: var(--type-product-caption-size);
   }
 
   .elb-property-table__action-cell {
@@ -404,7 +404,7 @@
     width: auto;
     min-width: 28px;
     height: 28px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
   }
 
   .elb-property-table__more-button svg {
@@ -432,7 +432,7 @@
   justify-content: center;
   min-height: 120px;
   padding: 2rem 1rem;
-  color: var(--color-text-muted);
+  color: var(--fg-2);
   font-style: italic;
   text-align: center;
 }
@@ -471,7 +471,7 @@
     column-gap: 8px;
     row-gap: 4px;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border-box);
+    border-bottom: 1px solid var(--border);
   }
 
   .elb-property-table tbody tr:last-child {
@@ -511,7 +511,7 @@
     grid-row: 2;
     grid-column: 1 / -1;
     line-height: 1.4;
-    color: var(--color-text-muted);
-    font-size: calc(var(--font-size-base) - 1px);
+    color: var(--fg-2);
+    font-size: var(--type-product-small-size);
   }
 }

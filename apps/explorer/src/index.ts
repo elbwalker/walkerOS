@@ -84,15 +84,8 @@ export { allowedRefKinds } from './utils/allowed-ref-kinds';
 export type { RefKind } from './utils/allowed-ref-kinds';
 export { getJsonPathAtOffset } from './utils/monaco-json-path';
 
-// Monaco Editor themes
-export {
-  palenightTheme,
-  lighthouseTheme,
-  registerPalenightTheme,
-  registerLighthouseTheme,
-  registerAllThemes,
-} from './themes';
-export type { ExplorerTheme } from './themes';
+// Monaco Editor code theme (one dark theme; code surfaces are dark islands)
+export { registerTheme, ELB_THEME_DARK } from './themes';
 
 // Monaco Editor type (re-exported for consumers of callbacks that receive a
 // Monaco instance — e.g. `CodeBox.beforeMount(monaco)`. Raw `Editor` / `DiffEditor`

@@ -54,12 +54,7 @@ const walkerOSDestinations: FlowColumn = {
         { icon: <Icon icon="logos:google-ads" />, label: 'Google Ads' },
         { icon: <Icon icon="logos:meta-icon" />, label: 'Meta Pixel' },
         {
-          icon: (
-            <Icon
-              icon="simple-icons:plausibleanalytics"
-              style={{ color: '#5850EC' }}
-            />
-          ),
+          icon: <Icon icon="simple-icons:plausibleanalytics" />,
           label: 'Plausible',
         },
         { icon: <Icon icon="walkeros:piwik-pro" />, label: 'Piwik PRO' },

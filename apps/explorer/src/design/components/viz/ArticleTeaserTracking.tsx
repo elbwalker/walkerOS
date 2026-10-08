@@ -40,16 +40,19 @@ function TeaserCard({
   article,
   position,
   seen,
+  ahead,
 }: {
   article: TeaserArticle;
   position: number;
   seen: ReadonlySet<TeaserEffect>;
+  ahead: boolean;
 }) {
   return (
     <div
       className={cx(
         'elb-viz-teaser__card',
         seen.has('entity') && 'elb-viz-teaser__card--entity',
+        ahead && 'elb-viz-teaser__card--ahead',
       )}
     >
       <span className="elb-viz-teaser__pills">
@@ -98,20 +101,32 @@ function TeaserCard({
   );
 }
 
+/**
+ * A list and its cards are reached at the list's step. The lead list's first
+ * card stands for the teaser the atom and molecule steps tag, so it and its
+ * list are reached from step 1. Narrow frames hide what is not reached yet
+ * instead of stacking empty boxes.
+ */
 function TeaserGroup({
   page,
   seen,
+  current,
+  lead,
 }: {
   page: TeaserPage;
   seen: ReadonlySet<TeaserEffect>;
+  current: TeaserStep;
+  lead: boolean;
 }) {
   const globalsOn = seen.has(page.globalsEffect);
   const listOn = seen.has(page.listEffect);
+  const reached = page.step <= current;
   return (
     <div
       className={cx(
         'elb-viz-teaser__page',
         globalsOn && 'elb-viz-teaser__page--on',
+        !reached && !lead && 'elb-viz-teaser__page--ahead',
       )}
     >
       <span className="elb-viz-teaser__page-pill">
@@ -144,6 +159,7 @@ function TeaserGroup({
               article={article}
               position={index + 1}
               seen={seen}
+              ahead={!reached && !(lead && index === 0)}
             />
           ))}
         </div>
@@ -307,8 +323,14 @@ export function ArticleTeaserTracking({
             </div>
           </div>
           <div className="elb-viz-teaser__pages">
-            {TEASER_PAGE_IDS.map((id) => (
-              <TeaserGroup key={id} page={TEASER_PAGES[id]} seen={seen} />
+            {TEASER_PAGE_IDS.map((id, index) => (
+              <TeaserGroup
+                key={id}
+                page={TEASER_PAGES[id]}
+                seen={seen}
+                current={current}
+                lead={index === 0}
+              />
             ))}
           </div>
         </div>

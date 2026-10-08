@@ -3,16 +3,17 @@
  *
  * Converts a Monaco IStandaloneThemeData into Shiki's TextMate-format
  * ThemeRegistrationRaw so CodeStatic (Shiki) and Code (Monaco) use the
- * same walkerOS token colors (`elbTheme-dark` / `elbTheme-light`).
+ * same walkerOS token colors (`elbTheme-dark`).
  *
  * Monaco token names are already TextMate-compatible scopes (e.g.
  * `string.quoted`, `entity.name.function`). The main differences:
  * - Shiki colors need a leading `#` prefix
  * - Shiki uses `tokenColors[]` instead of `rules[]`
- * - Shiki needs a `name` and `type` ('light' | 'dark')
+ * - Shiki needs a `name` and `type`
  */
 import type { editor } from 'monaco-editor';
 import type { ThemeRegistrationRaw } from 'shiki';
+import { codeBg, codeFg } from '../design';
 
 function normalizeColor(hex: string | undefined): string | undefined {
   if (!hex) return undefined;
@@ -33,15 +34,10 @@ function normalizeColors(
 
 export interface MonacoToShikiOptions {
   name: string;
-  type: 'light' | 'dark';
-  /** Fallback foreground if the Monaco theme didn't set editor.foreground. */
-  defaultForeground?: string;
-  /** Fallback background if the Monaco theme uses a transparent one. */
-  defaultBackground?: string;
 }
 
 /**
- * Convert a Monaco theme to a Shiki ThemeRegistrationRaw.
+ * Convert the dark Monaco code theme to a Shiki ThemeRegistrationRaw.
  */
 export function monacoThemeToShiki(
   monaco: editor.IStandaloneThemeData,
@@ -60,21 +56,10 @@ export function monacoThemeToShiki(
 
   const colors = normalizeColors(monaco.colors);
 
-  // Shiki requires an opaque background and a foreground. Monaco themes use
-  // transparent backgrounds (`#00000000`) so CSS can theme the box — replace
-  // those with the caller-provided fallback.
-  const isTransparent = (c: string | undefined) =>
-    !c || c === '#00000000' || /^#[0-9a-f]{6}00$/i.test(c);
-
-  const bg = isTransparent(colors['editor.background'])
-    ? (options.defaultBackground ??
-      (options.type === 'dark' ? '#292d3e' : '#ffffff'))
-    : colors['editor.background'];
-
-  const fg =
-    colors['editor.foreground'] ??
-    options.defaultForeground ??
-    (options.type === 'dark' ? '#bfc7d5' : '#24292E');
+  // Shiki requires a background and a foreground; the code panel colours
+  // apply when the Monaco theme leaves either out.
+  const bg = colors['editor.background'] ?? codeBg;
+  const fg = colors['editor.foreground'] ?? codeFg;
 
   // Shiki's ThemeRegistrationRaw requires a `settings` array (TextMate format).
   // First entry sets global defaults; remaining entries are the token rules.
@@ -85,7 +70,7 @@ export function monacoThemeToShiki(
 
   return {
     name: options.name,
-    type: options.type,
+    type: 'dark',
     bg,
     fg,
     colors: {

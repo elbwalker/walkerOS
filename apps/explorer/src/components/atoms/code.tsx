@@ -1,17 +1,12 @@
 import React, {
   type ComponentType,
   useEffect,
-  useState,
   useRef,
   useCallback,
 } from 'react';
 import { Editor, loader, type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
-import {
-  registerAllThemes,
-  ELB_THEME_DARK,
-  ELB_THEME_LIGHT,
-} from '../../themes';
+import { registerTheme, ELB_THEME_DARK } from '../../themes';
 import {
   configureMonacoTypeScript,
   registerWalkerOSAmbients,
@@ -215,10 +210,6 @@ export function Code({
   validate,
   onMarkerCounts,
 }: CodeProps) {
-  // Track if component has mounted (client-side hydration complete)
-  const [isMounted, setIsMounted] = useState(false);
-  // Use a consistent default theme for SSR - only update after mount
-  const [monacoTheme, setMonacoTheme] = useState('vs-light');
   const decorationsCleanupRef = useRef<Array<() => void>>([]);
   const monacoRef = useRef<typeof import('monaco-editor') | null>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -266,65 +257,6 @@ export function Code({
   useEffect(() => {
     registerDataElbStyles();
   }, []);
-
-  // Helper: Find data-theme attribute from closest ancestor or document
-  // Returns null during SSR (no document available)
-  const getDataTheme = useCallback((): string | null => {
-    if (typeof document === 'undefined') return null;
-
-    // Check container ref first (closest to Monaco)
-    if (containerRef.current) {
-      const closest = containerRef.current.closest('[data-theme]');
-      if (closest) {
-        return closest.getAttribute('data-theme');
-      }
-    }
-
-    // Fall back to document root
-    return document.documentElement.getAttribute('data-theme');
-  }, []);
-
-  // Mark component as mounted (hydration complete)
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Theme detection - only runs after mount to prevent hydration mismatch
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const checkTheme = () => {
-      const dataTheme = getDataTheme();
-      const isDark =
-        dataTheme === 'dark' ||
-        (dataTheme === null &&
-          window.matchMedia('(prefers-color-scheme: dark)').matches);
-      const newTheme = isDark ? ELB_THEME_DARK : ELB_THEME_LIGHT;
-
-      setMonacoTheme(newTheme);
-    };
-
-    checkTheme();
-
-    const observer = new MutationObserver(() => {
-      checkTheme();
-    });
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme'],
-    });
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      checkTheme();
-    };
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => {
-      observer.disconnect();
-      mediaQuery.removeEventListener('change', handleChange);
-    };
-  }, [isMounted, getDataTheme]);
 
   // ResizeObserver for container size changes
   // Complements automaticLayout: true for more reliable detection
@@ -428,7 +360,7 @@ export function Code({
     initMonacoJson(monaco);
 
     // Always run built-in setup
-    registerAllThemes(monaco);
+    registerTheme(monaco);
     registerFormatters(monaco);
 
     if (packages && packages.length > 0) {
@@ -441,14 +373,6 @@ export function Code({
         }
       }
     }
-
-    const dataTheme = getDataTheme();
-    const isDark =
-      dataTheme === 'dark' ||
-      (dataTheme === null &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const themeName = isDark ? ELB_THEME_DARK : ELB_THEME_LIGHT;
-    monaco.editor.setTheme(themeName);
 
     // Register walkerOS IntelliSense providers for JSON
     if (language === 'json') {
@@ -638,8 +562,10 @@ export function Code({
   const codeClassName =
     `elb-code ${useContentHeight ? 'elb-code--auto-height' : ''} ${className || ''}`.trim();
 
+  // Code is a dark island in both page themes: the root carries the theme, so
+  // the editor needs no ancestor to set it.
   return (
-    <div className={codeClassName} ref={containerRef}>
+    <div className={codeClassName} ref={containerRef} data-theme="dark">
       <MonacoEditor
         height={monacoHeight}
         language={language}
@@ -647,7 +573,7 @@ export function Code({
         onChange={handleChange}
         beforeMount={handleBeforeMount}
         onMount={handleEditorMount}
-        theme={monacoTheme}
+        theme={ELB_THEME_DARK}
         path={modelPathRef.current || undefined}
         options={{
           readOnly: disabled || !onChange,

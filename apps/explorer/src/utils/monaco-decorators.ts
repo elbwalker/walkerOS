@@ -95,7 +95,7 @@ export function registerDataElbStyles() {
   style.id = styleId;
   style.textContent = `
     .monaco-editor .elb-data-attribute {
-      color: var(--color-highlight-primary, #01b5e2) !important;
+      color: var(--primary) !important;
     }
   `;
   document.head.appendChild(style);

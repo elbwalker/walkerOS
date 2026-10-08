@@ -27,7 +27,7 @@ export const WithMapping: Story = {
         data: {
           id: 'ers',
           name: 'Everyday Ruck Snack',
-          color: 'black',
+          taste: 'salty',
           size: 'l',
           price: 420,
         },

@@ -2,8 +2,14 @@
 @use 'sass:map';
 @use '../foundation/responsive' as *;
 
-// Grid wrapper with container query context
+// Grid wrapper with container query context. The grid geometry is local to
+// the component; Grid's props override it on the grid element.
 .elb-explorer-grid-wrapper {
+  --grid-min-box-width: 350px;
+  --grid-row-min-height: 250px;
+  --grid-row-max-height: 450px;
+  --grid-box-max-height-mobile: 500px;
+
   position: relative;
   width: 100%;
   container-type: inline-size;
@@ -13,7 +19,7 @@
 // Grid layout - modern CSS, no JS required
 .elb-explorer-grid {
   display: grid;
-  gap: var(--spacing-grid-gap);
+  gap: 12px;
   width: 100%;
 
   // Mobile-first: Vertical stack
@@ -83,21 +89,20 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 10;
+  z-index: var(--z-raised);
   width: 40px;
   height: 40px;
   padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--bg-box);
-  color: var(--color-text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--fg);
   font-size: 24px;
   line-height: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: all 0.2s ease;
   user-select: none;
 
@@ -107,8 +112,7 @@
   }
 
   &:hover {
-    background: var(--bg-button-hover);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    background: var(--surface-2);
     transform: translateY(-50%) scale(1.1);
   }
 

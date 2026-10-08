@@ -23,8 +23,8 @@ const meta: Meta<typeof Code> = {
           height: '300px',
           display: 'flex',
           flexDirection: 'column',
-          background: '#292d3e',
-          borderRadius: '8px',
+          background: 'var(--code-bg)',
+          borderRadius: 'var(--radius-md)',
         }}
       >
         <Story />

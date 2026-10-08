@@ -47,14 +47,10 @@ export interface CodeDiffBoxProps {
 
 function SummaryBadges({ summary }: { summary: CodeDiffSummary }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs font-medium tabular-nums">
-      <span className="text-green-600 dark:text-green-400">
-        +{summary.added}
-      </span>
-      <span className="text-red-600 dark:text-red-400">-{summary.deleted}</span>
-      <span className="text-zinc-500 dark:text-zinc-400">
-        ~{summary.modified}
-      </span>
+    <div className="elb-code-diff-box__summary">
+      <span className="elb-code-diff-box__added">+{summary.added}</span>
+      <span className="elb-code-diff-box__deleted">-{summary.deleted}</span>
+      <span className="elb-code-diff-box__modified">~{summary.modified}</span>
     </div>
   );
 }
@@ -66,20 +62,16 @@ function ViewToggle({
   view: 'split' | 'inline';
   onChange: (v: 'split' | 'inline') => void;
 }) {
-  const base =
-    'px-2 py-0.5 text-xs font-medium rounded transition-colors cursor-pointer select-none';
-  const active =
-    'bg-zinc-200 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100';
-  const inactive =
-    'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200';
+  const buttonClass = (mode: 'split' | 'inline') =>
+    `elb-explorer-btn${view === mode ? ' active' : ''}`;
   return (
     <div
-      className="flex rounded bg-zinc-100 p-0.5 dark:bg-zinc-800"
+      className="elb-explorer-button-group elb-code-diff-box__toggle"
       aria-label="Diff view mode"
     >
       <button
         type="button"
-        className={`${base} ${view === 'split' ? active : inactive}`}
+        className={buttonClass('split')}
         aria-pressed={view === 'split'}
         onClick={() => onChange('split')}
       >
@@ -87,7 +79,7 @@ function ViewToggle({
       </button>
       <button
         type="button"
-        className={`${base} ${view === 'inline' ? active : inactive}`}
+        className={buttonClass('inline')}
         aria-pressed={view === 'inline'}
         onClick={() => onChange('inline')}
       >
@@ -133,7 +125,7 @@ function CopyButton({ value }: { value: string }) {
       title={label}
       aria-label="Copy modified content"
     >
-      <span className="sr-only" aria-live="polite">
+      <span className="elb-explorer-sr-only" aria-live="polite">
         {status !== 'idle' ? label : ''}
       </span>
       {status === 'copied' ? (
@@ -186,7 +178,7 @@ export function CodeDiffBox({
   const boxHeader = header ?? label ?? 'Diff';
 
   const actions = (
-    <div className="flex items-center gap-2">
+    <div className="elb-code-diff-box__actions">
       {showSummary && <SummaryBadges summary={summary} />}
       {showViewToggle && <ViewToggle view={view} onChange={setView} />}
       {showCopy && <CopyButton value={modified} />}
@@ -202,7 +194,8 @@ export function CodeDiffBox({
       footer={footer}
       height={height}
       style={style}
-      className={className}
+      className={`elb-explorer-box--code ${className || ''}`.trim()}
+      theme="dark"
     >
       <CodeDiff
         original={original}

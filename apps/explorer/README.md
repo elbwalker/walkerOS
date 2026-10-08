@@ -21,21 +21,50 @@ npm install @walkeros/explorer
 
 ## Quick start
 
-Import a component and the stylesheet:
+Import the design tokens once per page, then explorer's styles and a component:
 
 ```tsx
-import { MappingDemo } from '@walkeros/explorer';
+import '@walkeros/explorer/design/tokens.css';
 import '@walkeros/explorer/styles.css';
+import { CodeBox } from '@walkeros/explorer';
 
-<MappingDemo
-  input='{"name": "example"}'
-  config='{"transform": "uppercase"}'
-  fn={async (input, config) => transform(input, config)}
-/>;
+<CodeBox code={'{ "name": "page view" }'} language="json" label="Event" />;
 ```
 
-Switch themes via the `data-theme` attribute on a parent element (`light` or
-`dark`).
+In a Tailwind v4 build, import `@walkeros/explorer/design/tailwind.css` after
+`@import "tailwindcss"` instead of `tokens.css`: it brings the tokens and a
+utility for every design colour and type style.
+`@walkeros/explorer/design/base.css` adds optional page-wide base rules (font,
+colours, focus ring, selection).
+
+## Themes
+
+Set `data-theme="dark"` (the default) or `data-theme="light"` on the page root.
+Code surfaces (`CodeBox`, `CodeView`, `Code`, the preview) stay dark in both
+themes. Monaco uses one code theme; `Code` and `CodeBox` register it themselves.
+A Monaco editor of your own registers it with:
+
+```ts
+import { registerTheme, ELB_THEME_DARK } from '@walkeros/explorer';
+
+registerTheme(monaco);
+monaco.editor.setTheme(ELB_THEME_DARK);
+```
+
+## Design system
+
+Explorer ships the walkerOS design system:
+
+| Import                                   | What                                                                                                                         |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `@walkeros/explorer/design/tokens.css`   | The design tokens as CSS custom properties                                                                                   |
+| `@walkeros/explorer/design/tailwind.css` | The tokens as a Tailwind v4 theme                                                                                            |
+| `@walkeros/explorer/design/base.css`     | Optional base rules for a whole page                                                                                         |
+| `@walkeros/explorer/design`              | The token values as constants, for code that cannot read CSS variables                                                       |
+| `@walkeros/explorer/design/components`   | React building blocks of walkerOS pages (`Button`, `InlineCode`, `EventLegend` and more), with no Monaco or walkerOS runtime |
+
+The `walkeros-design-check` command checks a package's own styles against the
+design system.
 
 ## Documentation
 

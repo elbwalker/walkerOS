@@ -61,7 +61,7 @@ export interface MappingDemoEvent {
 export const GENERATED_ID = '…';
 
 export const MAPPING_CAPTION =
-  '50+ destination adapters ship with the project. Removing GA4 or adding a new pixel is a block in this file, not a re-instrumentation project across every page.';
+  '50+ destination packages ship with the project. Removing GA4 or adding a new pixel is a block in this file, not a re-instrumentation project across every page.';
 
 const GA4_MEASUREMENT_ID = 'G-XXXXXXXXXX';
 

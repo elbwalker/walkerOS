@@ -7,25 +7,13 @@ import '@walkeros/explorer/design/base.css';
 import '../src/styles/index.scss';
 import './monaco-setup';
 
-// The theme sits on <html>, as on every product page. Design stories render
-// bare; the older component stories keep the .elb-explorer wrapper until the
-// explorer components move onto the design tokens.
+// The theme sits on <html>, as on every product page. Every story renders
+// bare: each component's own root carries what it needs, and code surfaces
+// stay dark in both themes.
 const withTheme: Decorator = (Story, context) => {
   const theme = context.globals.theme === 'light' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', theme);
-  if (context.title.startsWith('Design/')) return <Story />;
-  return (
-    <div
-      className="elb-explorer"
-      style={{
-        background: 'var(--bg-header)',
-        minHeight: '100vh',
-        padding: 24,
-      }}
-    >
-      <Story />
-    </div>
-  );
+  return <Story />;
 };
 
 const preview: Preview = {

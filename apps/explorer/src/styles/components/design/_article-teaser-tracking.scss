@@ -420,5 +420,12 @@
     .elb-viz-teaser__link {
       margin-top: 0;
     }
+
+    // Stacked, the cards a step has not reached would be a column of empty
+    // boxes; they come in with their step.
+    .elb-viz-teaser__page--ahead,
+    .elb-viz-teaser__card--ahead {
+      display: none;
+    }
   }
 }

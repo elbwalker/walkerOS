@@ -32,12 +32,12 @@ $container-breakpoint: 550px;
 
 // Title styling
 .elb-architecture-flow__title {
-  font-size: var(--font-size-base, 16px);
-  font-weight: var(--font-weight-semibold, 600);
+  font-size: var(--type-product-body-size);
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   text-align: center;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--fg-2);
 
   &--desktop {
     display: none;
@@ -85,17 +85,17 @@ $container-breakpoint: 550px;
 // Individual section box
 .elb-architecture-flow__section {
   padding: 16px;
-  border-radius: 12px;
-  border: 1px solid var(--border-box, rgba(128, 128, 128, 0.3));
-  background-color: var(--bg-box, transparent);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
 }
 
 // Section title (e.g., "Client-side", "Server-side")
 .elb-architecture-flow__section-title {
   display: block;
-  font-size: calc(var(--font-size-base, 16px) - 2px);
+  font-size: var(--type-product-caption-size);
   font-weight: 500;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--fg-2);
   margin-bottom: 12px;
 }
 
@@ -111,7 +111,7 @@ $container-breakpoint: 550px;
   display: flex;
   align-items: center;
   gap: 12px;
-  color: var(--color-text, currentColor);
+  color: var(--fg);
 }
 
 // Item icon
@@ -131,22 +131,22 @@ $container-breakpoint: 550px;
 
 // Item label
 .elb-architecture-flow__item-label {
-  font-size: var(--font-size-base, 16px);
+  font-size: var(--type-product-body-size);
   white-space: nowrap;
 }
 
 // "and more..." indicator
 .elb-architecture-flow__more {
-  font-size: calc(var(--font-size-base, 16px) - 2px);
+  font-size: var(--type-product-caption-size);
   font-style: italic;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--fg-2);
   opacity: 0.7;
   text-align: center;
 }
 
 // Arrow styling
 .elb-architecture-flow__arrow {
-  color: var(--color-button-primary, #01b5e2);
+  color: var(--link);
 
   > svg {
     width: 32px;

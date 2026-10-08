@@ -1,230 +1,92 @@
 # Explorer Styling Guide
 
-Complete guide to styling, theming, and customization in walkerOS Explorer.
+Styling explorer's components on the walkerOS design system.
 
-**Quick Links:** [Quick Start](#quick-start) ·
-[Theme Variables](#theme-variables) · [Grid System](#grid-system) ·
-[Monaco Editor](#monaco-editor) · [SCSS Architecture](#scss-architecture)
+**Quick Links:** [Quick Start](#quick-start) · [Design Tokens](#design-tokens) ·
+[Grid System](#grid-system) · [Monaco Editor](#monaco-editor) ·
+[SCSS Architecture](#scss-architecture)
 
 ---
 
 ## Quick Start
 
-### Theme Switching
-
-Explorer supports two built-in themes via the `data-theme` attribute:
-
-```html
-<!-- Dark theme (default) -->
-<div data-theme="dark">
-  <YourExplorerComponents />
-</div>
-
-<!-- Light theme -->
-<div data-theme="light">
-  <YourExplorerComponents />
-</div>
-```
-
-Theme detection priority:
-
-1. Closest ancestor `data-theme` attribute
-2. Document root `data-theme` attribute
-3. System preference via `prefers-color-scheme`
-
-### Customizing Colors
-
-Override CSS variables in your stylesheet:
-
-```css
-[data-theme='dark'] {
-  --color-primary: #your-brand-color;
-  --bg-box: #your-background;
-  --text-primary: #your-text-color;
-}
-```
-
-### Required Import
+### Required Imports
 
 ```tsx
+// Once per page: the design tokens (in a Tailwind v4 build,
+// '@walkeros/explorer/design/tailwind.css' instead)
+import '@walkeros/explorer/design/tokens.css';
+// Explorer's component styles (they do not include the tokens)
 import '@walkeros/explorer/styles.css';
 ```
 
+### Theme
+
+One attribute on the page root:
+
+```html
+<html data-theme="dark">
+  <!-- or data-theme="light" -->
+</html>
+```
+
+Dark is the default: without the attribute the tokens resolve to their dark
+values. There is no system-preference fallback. Code surfaces stay dark in both
+themes (see [Dark islands](#dark-islands)).
+
 ---
 
-## Theme Variables
+## Design Tokens
 
-### Complete Variable Reference
+Explorer's components read the walkerOS design tokens from `design/tokens.json`
+(SKILL.md, "Design area"). Explorer declares no variables of its own, and
+`.elb-explorer` is a layout root only. To change a colour, change its token,
+never a component.
 
-#### Text Colors
+### Which token for what
 
-| Variable                     | Light     | Dark      | Usage                   |
-| ---------------------------- | --------- | --------- | ----------------------- |
-| `--color-text`               | `#000`    | `#e0e0e0` | Primary text            |
-| `--color-text-label`         | `#424242` | `#cccccc` | Labels, headers         |
-| `--color-text-button`        | `#616161` | `#cccccc` | Button text (inactive)  |
-| `--color-text-button-hover`  | `#424242` | `#ffffff` | Button text on hover    |
-| `--color-text-button-active` | `#1f2937` | `#ffffff` | Button text when active |
-| `--color-text-muted`         | `#666`    | `#999`    | Secondary/muted text    |
-| `--color-text-toggle`        | `#666`    | `#999`    | Toggle/switch labels    |
-| `--color-text-input`         | `#000`    | `#e0e0e0` | Input field text        |
-| `--color-text-placeholder`   | `#9ca3af` | `#666`    | Input placeholder text  |
+| Role                | Tokens                                                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Text                | `--fg` (primary), `--fg-2` (secondary, labels, inactive buttons), `--fg-3` (meta, placeholder, disabled)                                      |
+| Grounds             | `--bg` (page, inputs), `--bg-2` (headers, footers, button groups), `--surface` (boxes, menus), `--surface-2` (hover, inline code)             |
+| Edges               | `--border` (hairlines), `--border-strong` (inputs, controls, floating layers), `--focus` (focus ring)                                         |
+| Actions             | `--primary` fill with `--on-primary` text, `--link` for text in the brand colour, `--danger` with `--on-danger`                               |
+| Status              | `--success`, `--warning`, `--danger`, `--info`, tints `--success-bg` and the like; always with an icon and a word                             |
+| Events              | `--event-entity`, `--event-action`, `--event-property`, `--event-context`, `--event-globals`; on dark grounds only                            |
+| Flow steps          | `--step-source`, `--step-transformer`, `--step-collector`, `--step-destination`, `--step-store`, `--platform-web`, `--platform-server`        |
+| Code                | `--code-bg`, `--code-bar`, `--code-border`, `--code-fg`; editor colours are the `syntax-*` constants                                          |
+| Product visuals     | `--viz-*`                                                                                                                                     |
+| Type                | `--font-sans`, `--font-mono`; per style `--type-<style>-size`, `-line-height`, `-weight`, `-family`                                           |
+| Radius              | `--radius-xs` (4px, boxes and buttons), `--radius-sm` (5px), `--radius-md` (8px), `--radius-lg` (12px), `--radius-xl` (16px), `--radius-full` |
+| Layers              | `--z-raised`, `--z-sticky`, `--z-dropdown`, `--z-overlay`, `--z-modal`, `--z-popover`, `--z-toast`                                            |
+| Motion (`base.css`) | `transition: <property> var(--motion) var(--ease)`; reduced motion sets `--motion` to zero                                                    |
 
-#### Background Colors
+Product components use the product type group: `product-body` 14px,
+`product-small` 13px, `product-caption` 12px, `product-title` 16px,
+`product-heading` 20px (`font-size: var(--type-product-small-size)`).
 
-| Variable                           | Light     | Dark                     | Usage                         |
-| ---------------------------------- | --------- | ------------------------ | ----------------------------- |
-| `--bg-box`                         | `#ffffff` | `#1e1e1e`                | Main container background     |
-| `--bg-header`                      | `#f5f5f5` | `#252526`                | Header background             |
-| `--bg-footer`                      | `#f5f5f5` | `#252526`                | Footer background             |
-| `--bg-button-hover`                | `#e8e8e8` | `#2a2d2e`                | Button background on hover    |
-| `--bg-button-active`               | `#ffffff` | `#1e1e1e`                | Button background when active |
-| `--bg-button-group`                | `#f3f4f6` | `#2a2d2e`                | Button group container        |
-| `--bg-input`                       | `#ffffff` | `#252526`                | Input field background        |
-| `--bg-input-hover`                 | `#f9f9f9` | `#2a2d2e`                | Input field on hover          |
-| `--bg-code-inline`                 | `#f9f9f9` | `rgba(255,255,255,0.05)` | Inline code background        |
-| `--bg-dropdown`                    | `#ffffff` | `#252526`                | Dropdown menu background      |
-| `--bg-dropdown-option-hover`       | `#f0f0f0` | `#2a2d2e`                | Dropdown option on hover      |
-| `--bg-dropdown-option-highlighted` | `#e3f2fd` | `#1e3a5f`                | Highlighted dropdown option   |
+No drop shadows: a floating layer (menu, dropdown) is `var(--surface)` with a
+`1px solid var(--border-strong)` edge.
 
-#### Border Colors
+### Local variables
 
-| Variable                | Light     | Dark      | Usage                     |
-| ----------------------- | --------- | --------- | ------------------------- |
-| `--border-box`          | `#e0e0e0` | `#3c3c3c` | Main container border     |
-| `--border-header`       | `#e0e0e0` | `#3c3c3c` | Header border             |
-| `--border-footer`       | `#e0e0e0` | `#3c3c3c` | Footer border             |
-| `--border-button-group` | `#d1d5db` | `#3c3c3c` | Button group borders      |
-| `--border-input`        | `#d1d5db` | `#3c3c3c` | Input field border        |
-| `--border-input-focus`  | `#3b82f6` | `#4a90e2` | Input border when focused |
+Geometry that a component sets from JavaScript or shares between its own rules
+(`--grid-min-box-width`, `--grid-row-min-height`, `--monaco-font-size`) is
+declared on that component's root, never on `.elb-explorer` and never as a
+stand-in for a token.
 
-#### Button Colors
+### Dark islands
 
-| Variable                       | Light     | Dark      | Usage                     |
-| ------------------------------ | --------- | --------- | ------------------------- |
-| `--color-button-primary`       | `#3b82f6` | `#4a90e2` | Primary button background |
-| `--color-button-primary-hover` | `#2563eb` | `#357abd` | Primary button on hover   |
-| `--color-button-primary-text`  | `#ffffff` | `#ffffff` | Primary button text       |
-| `--color-button-danger`        | `#ef4444` | `#ef4444` | Danger button background  |
-| `--color-button-danger-hover`  | `#dc2626` | `#dc2626` | Danger button on hover    |
-| `--color-button-danger-text`   | `#ffffff` | `#ffffff` | Danger button text        |
+Code and product visualisations stay dark in both themes. These roots carry
+`data-theme="dark"`, so every token inside them resolves to its dark value:
 
-#### Status Colors
+- `Code`, `CodeDiff`, `CodeStatic`, and the boxes of `CodeBox`, `CodeView`,
+  `CodeDiffBox`, `BrowserBox` and the preview (through `Box`'s `theme` prop).
+- `EventLegend` and the design demos.
 
-| Variable                  | Light     | Dark      | Usage                 |
-| ------------------------- | --------- | --------- | --------------------- |
-| `--color-status-enabled`  | `#22c55e` | `#22c55e` | Enabled/success state |
-| `--color-status-disabled` | `#9ca3af` | `#9ca3af` | Disabled state        |
-| `--color-status-warning`  | `#f59e0b` | `#f59e0b` | Warning state         |
-
-#### Highlight Colors
-
-Used for code highlighting and data attribute visualization.
-
-| Variable                    | Light                    | Dark                     | Usage                        |
-| --------------------------- | ------------------------ | ------------------------ | ---------------------------- |
-| `--color-highlight-primary` | `#01b5e2`                | `#01b5e2`                | Primary highlight color      |
-| `--highlight-globals`       | `#4fc3f7cc`              | `#4fc3f7cc`              | Global properties highlight  |
-| `--highlight-context`       | `#ffbd44cc`              | `#ffbd44cc`              | Context properties highlight |
-| `--highlight-entity`        | `#00ca4ecc`              | `#00ca4ecc`              | Entity name highlight        |
-| `--highlight-property`      | `#ff605ccc`              | `#ff605ccc`              | Property name highlight      |
-| `--highlight-action`        | `#9900ffcc`              | `#9900ffcc`              | Action name highlight        |
-| `--highlight-background`    | `#1f2937`                | `#1f2937`                | Highlight tooltip background |
-| `--highlight-text`          | `#9ca3af`                | `#9ca3af`                | Highlight tooltip text       |
-| `--highlight-hover`         | `rgba(255,255,255,0.05)` | `rgba(255,255,255,0.05)` | Highlight hover effect       |
-| `--highlight-separator`     | `rgba(255,255,255,0.05)` | `rgba(255,255,255,0.05)` | Separator in highlights      |
-
-#### Typography
-
-| Variable                       | Light                           | Dark | Usage                      |
-| ------------------------------ | ------------------------------- | ---- | -------------------------- |
-| `--font-family-base`           | `system-ui, -apple-system, ...` | Same | Base font family           |
-| `--font-mono`                  | `'SF Mono', 'Monaco', ...`      | Same | Monospace font for code    |
-| `--font-size-base`             | `14px`                          | Same | Base font size             |
-| `--font-size-label`            | `13px`                          | Same | Label font size            |
-| `--font-size-toggle`           | `12px`                          | Same | Toggle/switch font size    |
-| `--font-size-highlight-button` | `0.75rem`                       | Same | Highlight button font size |
-| `--line-height-base`           | `1.5`                           | Same | Base line height           |
-| `--font-weight-normal`         | `400`                           | Same | Normal font weight         |
-| `--font-weight-semibold`       | `600`                           | Same | Semibold font weight       |
-
-#### Spacing & Layout
-
-| Variable                       | Light      | Dark | Usage                          |
-| ------------------------------ | ---------- | ---- | ------------------------------ |
-| `--spacing-header`             | `6px 10px` | Same | Header padding                 |
-| `--spacing-footer`             | `6px 10px` | Same | Footer padding                 |
-| `--spacing-button`             | `4px 8px`  | Same | Button padding                 |
-| `--spacing-button-group`       | `1px`      | Same | Gap between button group items |
-| `--spacing-grid-gap`           | `12px`     | Same | Grid gap spacing               |
-| `--grid-min-box-width`         | `350px`    | Same | Minimum box width in grid      |
-| `--grid-row-min-height`        | `250px`    | Same | Minimum grid row height        |
-| `--grid-row-max-height`        | `450px`    | Same | Maximum grid row height        |
-| `--grid-box-max-height-mobile` | `500px`    | Same | Max box height on mobile       |
-
-#### Border Radius
-
-| Variable                    | Light | Dark | Usage                          |
-| --------------------------- | ----- | ---- | ------------------------------ |
-| `--radius-box`              | `4px` | Same | Main container border radius   |
-| `--radius-button`           | `3px` | Same | Button border radius           |
-| `--radius-button-group`     | `4px` | Same | Button group border radius     |
-| `--radius-highlight-button` | `6px` | Same | Highlight button border radius |
-
-#### Shadows
-
-| Variable                 | Light                       | Dark                        | Usage                |
-| ------------------------ | --------------------------- | --------------------------- | -------------------- |
-| `--shadow-button-active` | `0 1px 2px rgba(0,0,0,0.1)` | `0 1px 2px rgba(0,0,0,0.3)` | Active button shadow |
-| `--shadow-dropdown`      | `0 4px 6px rgba(0,0,0,0.1)` | `0 4px 6px rgba(0,0,0,0.5)` | Dropdown shadow      |
-
-#### Monaco Editor
-
-| Variable               | Light  | Dark | Usage                     |
-| ---------------------- | ------ | ---- | ------------------------- |
-| `--monaco-font-size`   | `13px` | Same | Monaco editor font size   |
-| `--monaco-line-height` | `1.5`  | Same | Monaco editor line height |
-
-### Customization Examples
-
-**Custom Brand Colors:**
-
-```css
-.elb-explorer {
-  --color-button-primary: #ff6b35;
-  --color-button-primary-hover: #ff5722;
-  --border-input-focus: #ff6b35;
-}
-```
-
-**Larger Fonts for Accessibility:**
-
-```css
-.elb-explorer {
-  --font-size-base: 16px;
-  --font-size-label: 15px;
-  --monaco-font-size: 15px;
-  --line-height-base: 1.6;
-}
-```
-
-**High Contrast Theme:**
-
-```css
-[data-theme='light'] .elb-explorer {
-  --color-text: #000000;
-  --bg-box: #ffffff;
-  --border-box: #000000;
-  --color-button-primary: #0000ff;
-}
-
-[data-theme='dark'] .elb-explorer {
-  --color-text: #ffffff;
-  --bg-box: #000000;
-  --border-box: #ffffff;
-  --color-button-primary: #00ffff;
-}
-```
+The code panels also take `.elb-explorer-box--code`, which paints the box,
+header and footer in the `code-*` tokens. The preview iframe's ground is
+`viz-bg`.
 
 ---
 
@@ -300,7 +162,7 @@ The Grid height synchronization required sophisticated coordination because:
    Monaco height
 2. **Not handling async layout** - Monaco's layout() is async, use callbacks
 3. **ResizeObserver loops** - Debounce layout calls with requestAnimationFrame
-4. **Theme-specific heights** - Test both light and dark themes for consistency
+4. **Theme-specific heights** - Check both themes for consistency
 
 **Usage Guidelines:**
 
@@ -340,47 +202,38 @@ const rowHeight = Math.max(...boxHeightsInRow); // Use tallest box
 
 ## Monaco Editor
 
-### Theme Integration
+### The code theme
 
-Explorer includes two Monaco themes that automatically sync with `data-theme`
-attribute:
+Explorer has one Monaco theme, `elbTheme-dark` (`ELB_THEME_DARK`), built in
+[palenight.ts](./src/themes/palenight.ts) from the design constants: the
+`syntax-*` colours for code, the `code-*` colours for the editor UI, and
+`primary` for the cursor. Shiki (`CodeStatic`, which `CodeView` renders) uses
+the same theme through `shiki-adapter.ts`. Code surfaces are dark in both page
+themes, so nothing switches the editor theme. `Code` and `CodeDiff` call
+`registerTheme(monaco)` in `beforeMount`.
 
-- **`elbTheme-dark`** - Dark theme based on Prism Palenight
-- **`elbTheme-light`** - Light theme based on GitHub syntax highlighting
+### Token colours
 
-**Automatic Theme Switching:**
+Each role reads one design constant; every scope of the role follows it
+(`TOKEN_GROUPS` in `palenight.ts` feeds Monaco and Shiki alike):
 
-```typescript
-// Theme detection in code.tsx
-const checkTheme = () => {
-  const dataTheme = getDataTheme();
-  const isDark =
-    dataTheme === 'dark' ||
-    (dataTheme === null &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const newTheme = isDark ? 'elbTheme-dark' : 'elbTheme-light';
-  setMonacoTheme(newTheme);
-};
-```
+| Role                                   | Constant          |
+| -------------------------------------- | ----------------- |
+| Comments (italic)                      | `syntaxComment`   |
+| Strings, attribute values              | `syntaxString`    |
+| Numbers                                | `syntaxNumber`    |
+| Keywords, CSS properties               | `syntaxKeyword`   |
+| Functions, CSS ids                     | `syntaxFunction`  |
+| Types and classes                      | `syntaxType`      |
+| Operators, regular expressions         | `syntaxOperator`  |
+| Booleans and constants                 | `syntaxConstant`  |
+| Punctuation and delimiters             | `syntaxPunct`     |
+| HTML tags, CSS selectors, invalid code | `syntaxTag`       |
+| Namespaces                             | `syntaxNamespace` |
+| Variables, URLs                        | `codeFg`          |
 
-### Token Color Palette (Dark Theme)
-
-Current color scheme matches Prism Palenight:
-
-| Token Type        | Color     | Usage                     |
-| ----------------- | --------- | ------------------------- |
-| Comments          | `#697098` | Gray, italic              |
-| Strings           | `#c3e88d` | Green                     |
-| Numbers           | `#f78c6c` | Orange                    |
-| Functions         | `#82aaff` | Blue                      |
-| Delimiters        | `#c792ea` | Purple (braces, brackets) |
-| Operators         | `#89ddff` | Cyan                      |
-| Keywords          | `#c084fc` | Bright purple, italic     |
-| Types/Classes     | `#ffcb6b` | Yellow/gold               |
-| Variables         | `#bfc7d5` | Light gray                |
-| Booleans          | `#ff5874` | Red                       |
-| Tags (HTML)       | `#bfc7d5` | Light gray                |
-| Attributes (HTML) | `#bfc7d5` | Light gray                |
+To change a colour, change its token in `design/tokens.json`, never the theme
+file.
 
 ### Language-Specific Token Rules
 
@@ -388,15 +241,18 @@ Current color scheme matches Prism Palenight:
 language-specific rules for proper highlighting:
 
 ```typescript
-// Generic rule (may not work)
-{ token: 'string', foreground: 'c3e88d' },
-
-// Language-specific rules (work reliably)
-{ token: 'string.html', foreground: 'c3e88d' },
-{ token: 'string.json', foreground: 'c3e88d' },
-{ token: 'string.js', foreground: 'c3e88d' },
-{ token: 'string.ts', foreground: 'c3e88d' },
-{ token: 'string.value.json', foreground: 'c3e88d' },
+// One token group in palenight.ts: the generic scope alone may not match
+{
+  foreground: C.string,
+  scopes: [
+    'string',
+    'string.html',
+    'string.json',
+    'string.js',
+    'string.ts',
+    'string.value.json',
+  ],
+},
 ```
 
 **Common Language-Specific Tokens:**
@@ -457,46 +313,19 @@ if (typeof window !== 'undefined') {
 
 ### Monaco UI Colors
 
+The editor UI keys derive from the `code-*` constants and `primary`, never a new
+literal:
+
 ```typescript
 colors: {
-  // Transparent backgrounds let CSS variables control color
-  'editor.background': '#00000000',
-  'editorGutter.background': '#00000000',
-  'editor.lineHighlightBackground': '#00000000',
-
-  // CRITICAL: Sticky scroll MUST have solid background
-  'editorStickyScroll.background': '#1e1e2e',
-
-  // Cursor/selection transparent for read-only snippets
-  'editorCursor.foreground': '#00000000',
-  'editor.selectionBackground': '#00000000',
+  'editor.background': codeBg,
+  'editor.lineHighlightBackground': codeBg,
+  'editorCursor.foreground': primary.dark,
+  'editor.selectionBackground': codeSelection,
+  // Sticky scroll MUST have a solid background
+  'editorStickyScroll.background': codeBg,
+  'editorStickyScroll.border': codeBorder,
 }
-```
-
-### Custom Monaco Themes
-
-To create a custom Monaco theme:
-
-```typescript
-import { lighthouseTheme } from '@walkeros/explorer';
-import type { editor } from 'monaco-editor';
-
-const customTheme: editor.IStandaloneThemeData = {
-  ...lighthouseTheme,
-  rules: [
-    ...lighthouseTheme.rules,
-    { token: 'string', foreground: '00ff00' }, // Green strings
-  ],
-};
-
-// Register in Code component's beforeMount
-<Code
-  code={code}
-  beforeMount={(monaco) => {
-    monaco.editor.defineTheme('my-custom-theme', customTheme);
-    monaco.editor.setTheme('my-custom-theme');
-  }}
-/>
 ```
 
 ### Debugging Token Colors
@@ -515,11 +344,11 @@ Scopes:
 **Step 2: Add Specific Rule**
 
 ```typescript
-// Before (not working)
-{ token: 'keyword', foreground: 'c084fc' }
-
-// After (works)
-{ token: 'keyword.const.ts', foreground: 'c084fc' }
+// Add the scope to its role's token group in palenight.ts
+{
+  foreground: C.keyword,
+  scopes: ['keyword', 'keyword.const.ts'],
+},
 ```
 
 **Step 3: Verify in Browser DevTools**
@@ -569,8 +398,8 @@ import { registerWalkerOSTypes } from '../../utils/monaco-types';
 
 const handleBeforeMount = (monaco: typeof import('monaco-editor')) => {
   registerWalkerOSTypes(monaco); // Enables IntelliSense
-  registerAllThemes(monaco);
-  monaco.editor.setTheme('elbTheme-dark');
+  registerTheme(monaco);
+  monaco.editor.setTheme(ELB_THEME_DARK);
 };
 ```
 
@@ -665,16 +494,15 @@ unregisterJsonSchema(path);
 ```
 src/styles/
 ├── index.scss              # Main entry (import all components here)
-├── theme/
-│   ├── _tokens.scss        # SCSS tokens ($spacing-md: 12px)
-│   ├── _variables.scss     # CSS variables (--bg-input, --color-text)
-│   └── _dark.scss          # Dark theme overrides
+├── _config.scss
 ├── foundation/
-│   ├── _reset.scss
+│   ├── _reset.scss         # Scoped to .elb-explorer, reads design tokens
 │   ├── _typography.scss
 │   ├── _layout.scss        # Grid/flex mixins
-│   ├── _spacing.scss
+│   ├── _grid.scss
 │   └── _responsive.scss    # Breakpoint mixins
+├── utilities/
+│   └── _helpers.scss
 └── components/
     ├── atoms/              # _button.scss, _code.scss, etc.
     ├── molecules/          # _code-box.scss, _flow-map.scss, etc.
@@ -711,19 +539,21 @@ theme:
 
 **✅ DO:**
 
-1. Use ONLY defined CSS variables from `theme/_variables.scss`
+1. Read design tokens only (see [Design Tokens](#design-tokens))
 2. Follow BEM naming: `.elb-{component}-{element}--{modifier}`
-3. Use `calc(var(--font-size-base) - 1px)` for font size variations
+3. Take type from the `--type-<style>-*` tokens where a style fits
 4. Create one SCSS file per component in correct directory
 5. Import new files alphabetically in `index.scss`
 6. Use standard gap: `12px` for vertical spacing in flex/grid layouts
-7. Test in both light and dark themes
+7. Check both themes in Storybook
 
 **❌ DON'T:**
 
-1. Use undefined CSS variables (e.g., `--bg-secondary`, `--font-size-sm`)
-2. Use `--font-family-mono` (correct: `--font-mono`)
-3. Hardcode colors, spacing, or font sizes
+1. Use a colour literal, a `var()` fallback on a design token, or a variable no
+   token and no file of explorer declares: `npm run lint` runs
+   `walkeros-design-check` and fails on each, comments included
+2. Declare custom properties on `.elb-explorer`
+3. Add drop shadows or a numeric `z-index` (use the `--z-*` tokens)
 4. Use inline `style` attributes
 5. Skip wrapper pattern for widgets: `elb-rjsf-widget` →
    `elb-{name}-widget-wrapper`
@@ -739,34 +569,35 @@ theme:
   gap: 12px; // Standard gap
 
   // Box model (outside to inside)
-  margin: var(--spacing-md);
-  border: 1px solid var(--border-box);
-  padding: var(--spacing-md);
+  margin: 12px;
+  border: 1px solid var(--border);
+  padding: 12px;
 
   // Typography
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-base);
+  font-family: var(--font-sans);
+  font-size: var(--type-product-body-size);
+  line-height: var(--type-product-body-line-height);
 
   // Visual
-  background-color: var(--bg-box);
-  color: var(--color-text);
-  border-radius: var(--radius-box);
+  background-color: var(--surface);
+  color: var(--fg);
+  border-radius: var(--radius-xs);
 
   // Modifier
   &--primary {
-    background-color: var(--color-button-primary);
-    color: white;
+    background-color: var(--primary);
+    color: var(--on-primary);
   }
 
   // Element
   &__header {
-    font-size: calc(var(--font-size-base) + 2px);
-    font-weight: 600;
+    font-size: var(--type-product-title-size);
+    font-weight: var(--type-product-title-weight);
   }
 
   // State
   &.-active {
-    background-color: var(--color-button-primary);
+    background-color: var(--surface-2);
   }
 }
 ```
@@ -779,58 +610,34 @@ Before submitting any component:
 - [ ] TypeScript types exported from component file
 - [ ] SCSS file created with BEM naming (`elb-{component}-*`)
 - [ ] SCSS imported in `index.scss` (alphabetical order)
-- [ ] All CSS variables exist in `theme/_variables.scss`
-- [ ] No hardcoded values (colors, spacing, fonts)
-- [ ] Uses `calc(var(--font-size-base) - Npx)` for size variations
+- [ ] Reads design tokens only (`npm run lint` passes the checker)
+- [ ] Type from the `--type-<style>-*` tokens where a style fits
 - [ ] No inline `style` attributes
-- [ ] Light and dark theme tested
+- [ ] Both themes checked in Storybook
 - [ ] Build succeeds: `npm run build`
 
 ---
 
 ## Design Rules
 
-### When to Add CSS Variables
+### When to add a variable
 
-Add a CSS variable when:
+A colour, radius, type value or layer is a design token: it is added to
+`design/tokens.json`, never to a component (SKILL.md, "Design area"). A
+component declares a local variable only for its own geometry, set from
+JavaScript or shared between its own rules (`--grid-min-box-width`,
+`--monaco-font-size`), on its own root.
 
-1. **Color appears in 2+ places** - Ensures consistency
-2. **Value should be theme-aware** - Different light/dark values
-3. **Users might customize** - Exposed as customization API
-4. **Component-specific but reused** - Like `--pane-header-height`
+### Colour
 
-Don't add CSS variables for:
-
-1. **One-off values** - Use literal values in component SCSS
-2. **Calculated values** - Use SCSS math instead
-3. **Values that never change** - Like specific font names
-
-### Color Selection Guidelines
-
-**Primary Colors:**
-
-- Use for interactive elements (buttons, links, focus states)
-- Should have 4.5:1 contrast ratio with background
-- Provide variants (hover, active, disabled)
-
-**Text Colors:**
-
-- Primary text: 7:1 contrast minimum
-- Secondary text: 4.5:1 contrast minimum
-- Always test with
-  [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
-
-**Syntax Highlighting:**
-
-- Follow established palette (Prism Palenight for dark, GitHub for light)
-- Ensure readability (4.5:1 minimum for code)
-- Use semantic colors (green for strings, red for errors)
-
-**Accessibility:**
-
-- All interactive elements: 3:1 contrast with background minimum
-- Focus indicators: 3:1 contrast with adjacent colors
-- Test with multiple color vision deficiencies
+- The tokens carry the contrast rules, checked by
+  `src/design/__tests__/contrast.test.ts` in both themes: text 4.5:1 on its
+  grounds; control edges, the focus ring and step colours 3:1.
+- `--primary` is a fill under `--on-primary`; text in the brand colour is
+  `--link`.
+- Event colours sit only on dark grounds (a dark island).
+- Every status shows with an icon and a word, never by colour alone.
+- Syntax colours are the Palenight-based `syntax-*` tokens, dark only.
 
 ---
 
@@ -841,27 +648,25 @@ Don't add CSS variables for:
 **1. Create Component SCSS** (`src/styles/components/_your-component.scss`):
 
 ```scss
-@use '../theme/variables';
-
 .elb-your-component {
-  background-color: var(--bg-box);
-  color: var(--color-text);
-  border: 1px solid var(--border-box);
-  border-radius: var(--radius-box);
-  padding: var(--spacing-md);
+  background-color: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 12px;
 
   &__header {
-    font-size: calc(var(--font-size-base) + 2px);
-    font-weight: 600;
-    color: var(--color-text);
-    border-bottom: 1px solid var(--border-box);
-    padding-bottom: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
+    font-size: var(--type-product-title-size);
+    font-weight: var(--type-product-title-weight);
+    color: var(--fg);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
   }
 
   &--primary {
-    background-color: var(--color-button-primary);
-    color: white;
+    background-color: var(--primary);
+    color: var(--on-primary);
   }
 }
 ```
@@ -901,40 +706,11 @@ export function YourComponent({
 }
 ```
 
-### Customize Theme Colors
+### Change a Colour
 
-**Option 1: Override CSS Variables** (Recommended)
-
-```css
-/* custom-theme.css */
-[data-theme='dark'] {
-  --color-button-primary: #your-brand-color;
-  --bg-app: #your-dark-bg;
-  --bg-box: #your-dark-box-bg;
-  --color-text: #your-dark-text;
-}
-
-[data-theme='light'] {
-  --color-button-primary: #your-brand-color;
-  --bg-app: #your-light-bg;
-  --bg-box: #your-light-box-bg;
-  --color-text: #your-light-text;
-}
-```
-
-Import after Explorer styles:
-
-```typescript
-import '@walkeros/explorer/dist/index.css';
-import './custom-theme.css'; // Overrides Explorer defaults
-```
-
-**Option 2: Fork and Modify** (Advanced)
-
-1. Clone Explorer package
-2. Modify `src/styles/_variables.scss`
-3. Rebuild with `npm run build`
-4. Use local build instead of npm package
+Explorer has no theme of its own to override: its colours are the design tokens.
+Change the token in `design/tokens.json` and rebuild (SKILL.md, "Design area");
+every component, the Monaco theme and the constants follow.
 
 ---
 
@@ -946,12 +722,12 @@ import './custom-theme.css'; // Overrides Explorer defaults
 
 **Cause:** Monaco theme not registered before Editor mounts
 
-**Solution:** Ensure `handleBeforeMount` registers themes:
+**Solution:** Ensure `handleBeforeMount` registers the code theme:
 
 ```typescript
 const handleBeforeMount = (monaco: typeof import('monaco-editor')) => {
-  registerAllThemes(monaco);
-  monaco.editor.setTheme('elbTheme-dark');
+  registerTheme(monaco);
+  monaco.editor.setTheme(ELB_THEME_DARK);
 };
 ```
 
@@ -961,12 +737,11 @@ const handleBeforeMount = (monaco: typeof import('monaco-editor')) => {
 
 **Cause:** Missing language-specific token rules
 
-**Solution:** Add language variant rules:
+**Solution:** Add the language variant scopes to the role's token group in
+`palenight.ts`:
 
 ```typescript
-{ token: 'string', foreground: 'c3e88d' },        // Generic
-{ token: 'string.html', foreground: 'c3e88d' },   // HTML-specific
-{ token: 'string.json', foreground: 'c3e88d' },   // JSON-specific
+{ foreground: C.string, scopes: ['string', 'string.html', 'string.json'] },
 ```
 
 ---
@@ -1053,26 +828,23 @@ requestAnimationFrame(() => {
 
 ---
 
-### Theme Switching Issues
+### Theme Issues
 
-**Problem:** Theme changes but Monaco stays same color
+**Problem:** A code box stays dark in the light theme
 
-**Cause:** Monaco theme name doesn't match data-theme value
+**Cause:** By design: code surfaces are dark islands (`data-theme="dark"` on
+their root).
 
-**Solution:** Map data-theme to Monaco theme name:
-
-```typescript
-const themeName = dataTheme === 'dark' ? 'elbTheme-dark' : 'elbTheme-light';
-setMonacoTheme(themeName);
-```
+**Solution:** None needed. A box that should follow the page theme is a plain
+`Box` without `theme`.
 
 ---
 
-**Problem:** CSS variables update but colors don't change
+**Problem:** A colour does not change with the theme
 
-**Cause:** Components caching old CSS variable values
+**Cause:** A literal colour, or a variable that is not a design token
 
-**Solution:** CSS variables update immediately - check for hard-coded colors:
+**Solution:** Read the token; `npm run lint` finds the literal:
 
 ```scss
 // Wrong
@@ -1082,70 +854,6 @@ setMonacoTheme(themeName);
 
 // Correct
 .component {
-  color: var(--color-text);
+  color: var(--fg);
 }
 ```
-
----
-
-## Change Log
-
-### November 2025
-
-**HTML Token Standardization**
-
-- Changed HTML tag colors from red (#ff5572) to light gray (#bfc7d5)
-- Changed HTML attribute colors from green (#c3e88d) to light gray (#bfc7d5)
-- Kept attribute string values green for consistency
-- Added comprehensive HTML-specific token rules
-
-**Debug Logging Cleanup**
-
-- Removed all console.log statements from production code
-- Cleaned up code.tsx, monaco-setup.ts, theme files
-
-**Documentation Consolidation**
-
-- Created unified STYLE.md as single source of truth
-- Archived historical docs (STYLE.md, THEME.md, etc.)
-- Eliminated ~30% duplicate content
-
-### October 2025
-
-**Monaco Theme Rename**
-
-- Renamed `palenight` theme to `elbTheme-dark`
-- Renamed `lighthouse` theme to `elbTheme-light`
-- Updated all references
-
-**Local Monaco Loading**
-
-- Migrated from CDN to local npm package loading
-- Added static imports for Monaco and language workers
-- Configured MonacoEnvironment for Vite workers
-
-**Language-Specific Token Rules**
-
-- Added HTML-specific tokens
-- Added JSON-specific tokens
-- Added JavaScript/TypeScript-specific tokens
-- Improved token matching reliability
-
-### September 2025
-
-**Website Color Alignment**
-
-- Aligned Explorer colors with walkerOS website
-- Updated Prism Palenight colors for dark theme
-- Updated GitHub colors for light theme
-
-**Contrast Improvements**
-
-- Fixed low-contrast text issues (7:1 for primary text)
-- Fixed button contrast issues (4.5:1 minimum)
-- Fixed border contrast issues (3:1 minimum)
-- WCAG AA compliance achieved
-
----
-
-**Last Updated:** 2025-11-06

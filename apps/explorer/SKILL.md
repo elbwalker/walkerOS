@@ -4,11 +4,11 @@ Entry point for working with the walkerOS explorer component library.
 
 ## Quick Reference
 
-| Document               | Purpose                                                       |
-| ---------------------- | ------------------------------------------------------------- |
-| [AGENT.md](AGENT.md)   | Architecture, code standards, SCSS compliance                 |
-| [STYLE.md](STYLE.md)   | Complete CSS variable reference (colors, spacing, typography) |
-| [README.md](README.md) | Usage guidelines, component patterns                          |
+| Document               | Purpose                                                |
+| ---------------------- | ------------------------------------------------------ |
+| [AGENT.md](AGENT.md)   | Architecture, code standards, SCSS compliance          |
+| [STYLE.md](STYLE.md)   | Design tokens in components, Monaco, SCSS architecture |
+| [README.md](README.md) | Usage guidelines, component patterns                   |
 
 ## Design area
 
@@ -108,23 +108,24 @@ structure and `viz/` for the demos: `atoms/`, `molecules/`, `layout/`, `viz/`
 .elb-alert--error
 ```
 
-### 4. CSS Variables Only
+### 4. Design Tokens Only
 
-Never use hardcoded values. Import from theme:
+Never use hardcoded colours. Read the design tokens (no import needed: the page
+loads `design/tokens.css`):
 
 ```scss
-@use '../../theme/variables' as *;
-
 .elb-button {
-  background: var(--color-button-primary);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-button);
-  font-size: var(--font-size-base);
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  font-size: var(--type-product-small-size);
 }
 ```
 
-Design component partials take the design tokens instead of the theme variables
-(STYLE.md, "Design component styles").
+`npm run lint` runs `walkeros-design-check`, which fails on a colour literal, a
+`var()` fallback on a token and a variable nothing declares. Design component
+partials follow the same tokens (STYLE.md, "Design component styles").
 
 ## File Structure
 
@@ -144,8 +145,7 @@ src/
 │       ├── atoms/  molecules/  layout/  viz/   # Each with its own index.ts
 │       └── viz/parts/  viz/data/              # Internal demo parts and data
 ├── styles/
-│   ├── theme/
-│   │   └── _variables.scss    # All CSS variables
+│   ├── foundation/            # Reset, typography, layout, grid (no variables)
 │   ├── components/
 │   │   ├── atoms/
 │   │   │   └── _button.scss
@@ -212,13 +212,11 @@ export const Small: Story = {
 
 ```scss
 // src/styles/components/atoms/_spinner.scss
-@use '../../theme/variables' as *;
-
 .elb-spinner {
   display: inline-block;
-  border: 2px solid var(--border-box);
-  border-top-color: var(--color-button-primary);
-  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: var(--radius-full);
   animation: elb-spin 0.6s linear infinite;
 
   &--sm {
@@ -260,27 +258,28 @@ export { Spinner } from './components/atoms/spinner';
 export type { SpinnerProps } from './components/atoms/spinner';
 ```
 
-## CSS Variables
+## Design Tokens
 
-Scoped under `.elb-explorer`, never `:root`. Dark is
-`[data-theme='dark'] .elb-explorer`. Names are **unprefixed**:
+Explorer declares no variables of its own: its components read the design tokens
+from `design/tokens.css` (see "Design area"), resolved by the page's
+`data-theme`. `.elb-explorer` is a layout root only. The ones components use
+most:
 
 ```scss
---color-text          // primary text
---color-text-muted    // secondary text
---bg-box              // main container background
---bg-header           // header background
---bg-input            // input field background
---border-box          // container border
---border-input-focus  // input border when focused
---color-button-primary
---radius-box
---spacing-md
---font-size-base      // 14px
+--fg, --fg-2, --fg-3          // text: primary, secondary, meta
+--bg, --bg-2                  // page ground, alternate band and headers
+--surface, --surface-2        // boxes and menus, hover and inline code
+--border, --border-strong     // hairlines, control and floating-layer edges
+--primary, --on-primary, --link, --focus
+--code-bg, --code-bar, --code-border, --code-fg   // code panels
+--radius-xs                   // 4px, boxes and buttons
+--type-product-body-size      // 14px; also -small (13px), -caption (12px)
+--z-dropdown                  // menus; also --z-raised, --z-popover, ...
 ```
 
-Full reference: [STYLE.md](STYLE.md). Sizes: type 11-16px, radii 3-6px, sized
-for code boxes and dropdowns rather than pages.
+Product components use the product type group (12 to 20px) and small radii,
+sized for code boxes and menus rather than pages. Full guide:
+[STYLE.md](STYLE.md).
 
 ## Checklist
 
@@ -289,7 +288,7 @@ Before merging new components:
 - [ ] Component is fully controlled (no internal state for user data)
 - [ ] Props interface exported with component
 - [ ] BEM class naming: `.elb-{component}`
-- [ ] SCSS uses only CSS variables
+- [ ] SCSS reads design tokens only (`npm run lint` passes the checker)
 - [ ] Story with `tags: ['autodocs']`
 - [ ] SCSS imported in `index.scss`
 - [ ] Component exported in `index.ts`

@@ -96,6 +96,51 @@ describe('first frames, on the server and in the first client frame', () => {
   });
 });
 
+// Below 640px the cards stack, and the narrow rule hides what a step has not
+// reached (jsdom evaluates no container query, so this checks the classes it
+// targets). The first card stands for the tagged teaser from step 1.
+describe('teaser: what a step has not reached yet', () => {
+  const ahead = (container: HTMLElement, part: 'card' | 'page') =>
+    Array.from(
+      container.querySelectorAll(`.elb-viz-teaser__${part}`),
+      (element) => element.classList.contains(`elb-viz-teaser__${part}--ahead`),
+    );
+
+  it('the server frame: only the first card, the article list hidden', () => {
+    const container = serverHtml(<ArticleTeaserTracking />);
+    expect(ahead(container, 'card')).toEqual([
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect(ahead(container, 'page')).toEqual([false, true]);
+  });
+
+  it.each([
+    [1, [false, true, true, true, true, true], [false, true]],
+    [2, [false, true, true, true, true, true], [false, true]],
+    [3, [false, false, false, true, true, true], [false, true]],
+    [4, [false, false, false, false, false, false], [false, false]],
+    [5, [false, false, false, false, false, false], [false, false]],
+  ] as const)('step %i', (step, cards, pages) => {
+    const { container } = render(
+      <ArticleTeaserTracking autoplay={false} initialStep={step} />,
+    );
+    expect(ahead(container, 'card')).toEqual(cards);
+    expect(ahead(container, 'page')).toEqual(pages);
+  });
+
+  it('reduced motion: nothing hidden', () => {
+    preferReducedMotion();
+    const { container } = render(<ArticleTeaserTracking />);
+    expect(ahead(container, 'card')).not.toContain(true);
+    expect(ahead(container, 'page')).not.toContain(true);
+  });
+});
+
 describe('reduced motion', () => {
   beforeEach(preferReducedMotion);
 

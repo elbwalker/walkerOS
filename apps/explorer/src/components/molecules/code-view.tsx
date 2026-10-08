@@ -162,7 +162,8 @@ export function CodeView({
   // its code up to a cap, unless a height is given or a Grid sizes the row.
   const fitClassName =
     height === undefined && !gridContext ? 'elb-code-view--fit' : '';
-  const boxClassName = `${fitClassName} ${className || ''}`.trim();
+  const boxClassName =
+    `elb-explorer-box--code ${fitClassName} ${className || ''}`.trim();
 
   return (
     <Box
@@ -178,6 +179,7 @@ export function CodeView({
       height={height}
       style={style}
       className={boxClassName}
+      theme="dark"
     >
       {!tabs && <CodeStatic code={code ?? ''} language={currentLanguage} />}
       {floatingActions && (

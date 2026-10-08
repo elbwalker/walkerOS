@@ -18,6 +18,15 @@ interface SourceHandle {
     SourceBrowser.Env
   >;
 }
+import {
+  eventAction,
+  eventContext,
+  eventEntity,
+  eventGlobals,
+  eventProperty,
+  vizBg,
+  vizFg,
+} from '../../design';
 import { Box } from '../atoms/box';
 import { PreviewFooter } from '../atoms/preview-footer';
 import { ButtonGroup } from '../atoms/button-group';
@@ -29,6 +38,74 @@ import { Code } from '../atoms/code';
  */
 export const DEFAULT_FALLBACK_HTML =
   '<div data-elb="product" data-elbaction="click:add"><button data-elb-product="name:Example;price:9.99">Add to cart</button></div>';
+
+/**
+ * Highlight rings, one per event part, innermost first. Each ring is edged
+ * with the visualisation ground, so it reads on any page colour.
+ */
+function rings(...colors: string[]): string {
+  return colors
+    .map(
+      (color, index) =>
+        `0 0 0 ${2 + index * 3}px ${color}, 0 0 0 ${3 + index * 3}px ${vizBg}`,
+    )
+    .join(', ');
+}
+
+/**
+ * The stylesheet of the preview document. The page paints the visualisation
+ * ground (a preview is a dark island), the page's own CSS follows, and the
+ * highlights mark tagged elements in the event colours.
+ */
+export function previewStyles(css: string): string {
+  return `
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      padding: 1.5rem;
+      background: ${vizBg};
+      color: ${vizFg};
+      min-height: 100vh;
+    }
+
+    /* User CSS */
+    ${css}
+
+    /* Highlights */
+    body.elb-highlight.highlight-globals [data-elbglobals] {
+      box-shadow: ${rings(eventGlobals)};
+    }
+
+    body.elb-highlight.highlight-entity [data-elb] {
+      box-shadow: ${rings(eventEntity)};
+    }
+
+    body.elb-highlight.highlight-context [data-elbcontext] {
+      box-shadow: ${rings(eventContext)};
+    }
+
+    body.elb-highlight.highlight-property [data-elbproperty] {
+      box-shadow: ${rings(eventProperty)};
+    }
+
+    body.elb-highlight.highlight-action [data-elbaction] {
+      box-shadow: ${rings(eventAction)};
+    }
+
+    /* Combined highlights */
+    body.elb-highlight.highlight-entity.highlight-action [data-elb][data-elbaction] {
+      box-shadow: ${rings(eventAction, eventEntity)};
+    }
+
+    body.elb-highlight.highlight-entity.highlight-context [data-elb][data-elbcontext] {
+      box-shadow: ${rings(eventEntity, eventContext)};
+    }
+
+    body.elb-highlight.highlight-action.highlight-context [data-elbaction][data-elbcontext] {
+      box-shadow: ${rings(eventAction, eventContext)};
+    }
+  `;
+}
 
 export interface PreviewProps {
   html?: string;
@@ -155,68 +232,7 @@ export function Preview({
         <html>
           <head>
             <meta charset="utf-8">
-            <style>
-              /* Reset */
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                padding: 1.5rem;
-                background: #f9fafb;
-                color: #111827;
-                min-height: 100vh;
-              }
-
-              @media (prefers-color-scheme: dark) {
-                body {
-                  background: #1f2937;
-                  color: #e5e7eb;
-                }
-              }
-
-              /* User CSS */
-              ${cssRef.current}
-
-              /* Highlight CSS - imported from highlight styles */
-              :root {
-                --highlight-globals: #4fc3f7cc;
-                --highlight-context: #ffbd44cc;
-                --highlight-entity: #00ca4ecc;
-                --highlight-property: #ff605ccc;
-                --highlight-action: #9900ffcc;
-              }
-
-              body.elb-highlight.highlight-globals [data-elbglobals] {
-                box-shadow: 0 0 0 2px var(--highlight-globals);
-              }
-
-              body.elb-highlight.highlight-entity [data-elb] {
-                box-shadow: 0 0 0 2px var(--highlight-entity);
-              }
-
-              body.elb-highlight.highlight-context [data-elbcontext] {
-                box-shadow: 0 0 0 2px var(--highlight-context);
-              }
-
-              body.elb-highlight.highlight-property [data-elbproperty] {
-                box-shadow: 0 0 0 2px var(--highlight-property);
-              }
-
-              body.elb-highlight.highlight-action [data-elbaction] {
-                box-shadow: 0 0 0 2px var(--highlight-action);
-              }
-
-              /* Combined highlights */
-              body.elb-highlight.highlight-entity.highlight-action [data-elb][data-elbaction] {
-                box-shadow: 0 0 0 2px var(--highlight-action), 0 0 0 4px var(--highlight-entity);
-              }
-
-              body.elb-highlight.highlight-entity.highlight-context [data-elb][data-elbcontext] {
-                box-shadow: 0 0 0 2px var(--highlight-entity), 0 0 0 4px var(--highlight-context);
-              }
-
-              body.elb-highlight.highlight-action.highlight-context [data-elbaction][data-elbcontext] {
-                box-shadow: 0 0 0 2px var(--highlight-action), 0 0 0 4px var(--highlight-context);
-              }
-            </style>
+            <style>${previewStyles(cssRef.current)}</style>
           </head>
           <body class="elb-highlight ${highlightClasses}">
             ${htmlRef.current}
@@ -436,6 +452,7 @@ export function Preview({
           <PreviewFooter highlights={highlights} onToggle={toggleHighlight} />
         ) : null
       }
+      theme="dark"
     >
       {/* The iframe stays mounted to preserve the live source binding; editor
           tabs sit on top and the preview is hidden, not unmounted. */}

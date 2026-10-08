@@ -41,7 +41,7 @@
     "build": "tsup --silent",
     "dev": "jest --watchAll --colors",
     "storybook": "storybook dev -p 6007 --no-open",
-    "lint": "eslint \"src/**/*.ts*\"",
+    "lint": "eslint \"src/**/*.ts*\" && walkeros-design-check src --allow 'src/design/{__tests__,check}/**' --allow 'src/design/*.{ts,css}' --allow src/components/atoms/icons/icons.tsx --allow '**/*.svg'",
     "test": "jest",
     "clean": "rm -rf .turbo && rm -rf dist",
     "build-storybook": "storybook build",

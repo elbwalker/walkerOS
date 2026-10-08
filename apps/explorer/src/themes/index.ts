@@ -1,43 +1,40 @@
 /**
- * Monaco Editor Themes for walkerOS Explorer
+ * The one code theme of walkerOS Explorer
  *
- * Custom Monaco themes that integrate seamlessly with the CSS-based theme system.
- * Theme switching is handled via CSS `data-theme` attribute on document root.
+ * Code surfaces are dark in both page themes, so Monaco (CodeBox) and Shiki
+ * (CodeView) share one theme, built from the design constants.
  */
+import type { editor } from 'monaco-editor';
+import { palenightTheme } from './palenight';
 
-// Import registration functions for use in registerAllThemes
-import { registerPalenightTheme } from './palenight';
-import { registerLighthouseTheme } from './lighthouse';
+/** Monaco `defineTheme` key and Shiki theme name of the code theme. */
+export const ELB_THEME_DARK = 'elbTheme-dark';
 
-// Monaco Editor themes
-export { palenightTheme, registerPalenightTheme } from './palenight';
-export { lighthouseTheme, registerLighthouseTheme } from './lighthouse';
-
-// Theme name constants — use these instead of hard-coded string literals
-export { ELB_THEME_DARK, ELB_THEME_LIGHT } from './names';
-export type { ElbThemeName } from './names';
-
-// Unified scope → color grouping (drives Monaco + Shiki from one source)
-export type { TokenGroup } from './token-groups';
-
-// Theme types (for documentation and TypeScript support)
-export type { ExplorerTheme } from './types';
+/** The part of the Monaco API that registering a theme needs. */
+export interface MonacoThemeRegistry {
+  editor: {
+    defineTheme(
+      themeName: string,
+      themeData: editor.IStandaloneThemeData,
+    ): void;
+  };
+}
 
 /**
- * Register all Monaco themes
- * Convenience function for registering both themes at once
+ * Register the code theme with Monaco. Call it before the first editor
+ * mounts; Code and CodeDiff do so in their `beforeMount`.
  *
  * @example
  * ```typescript
- * import { registerAllThemes } from '@walkeros/explorer';
- * import * as monaco from 'monaco-editor';
+ * import { registerTheme, ELB_THEME_DARK } from '@walkeros/explorer';
  *
- * registerAllThemes(monaco);
+ * registerTheme(monaco);
+ * monaco.editor.setTheme(ELB_THEME_DARK);
  * ```
  */
-export function registerAllThemes(
-  monaco: typeof import('monaco-editor'),
-): void {
-  registerPalenightTheme(monaco);
-  registerLighthouseTheme(monaco);
+export function registerTheme(monaco: MonacoThemeRegistry): void {
+  monaco.editor.defineTheme(ELB_THEME_DARK, palenightTheme);
 }
+
+// Unified scope to colour grouping (drives Monaco and Shiki from one source)
+export type { TokenGroup } from './token-groups';
