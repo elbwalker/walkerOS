@@ -1,22 +1,42 @@
 import { JSX } from 'react';
 import Layout from '@theme/Layout';
-import { Section, SectionHeading } from '@walkeros/explorer/design/components';
+import {
+  Section,
+  SectionHeading,
+  Text,
+  TextLink,
+} from '@walkeros/explorer/design/components';
+import { EXTERNAL } from '../../components/landing/links';
 import { DemoFrame } from './_DemoFrame';
 
 export default function DemosPage(): JSX.Element {
   return (
     <Layout
       title="Demos"
-      description="Example sites tagged with walkerOS: a shop and a media page, live in the browser."
+      description="Industry example pages tagged with walkerOS data-elb attributes: a shop and a media site, live in the browser."
     >
       <main>
         <Section>
           <SectionHeading
             level={1}
-            title="See walkerOS on a real page."
-            lead="A shop and a media site, both tagged with walkerOS. Switch between them with the bookmarks, and on the shop, flip a section or a product card to Code to see its tags."
+            title="Industry example pages."
+            lead={
+              <>
+                Each page is a working website, tagged with walkerOS{' '}
+                <code>data-elb</code> attributes. Use the bookmarks to switch
+                between the shop and the media site, and click Code on a section
+                or a card to see the attributes behind it.
+              </>
+            }
           />
           <DemoFrame />
+          <Text>
+            The components behind these pages are in the{' '}
+            <TextLink href={EXTERNAL.storybook}>
+              component library in Storybook
+            </TextLink>
+            .
+          </Text>
         </Section>
       </main>
     </Layout>

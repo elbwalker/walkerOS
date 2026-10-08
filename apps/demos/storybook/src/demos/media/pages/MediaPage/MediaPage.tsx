@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Fragment, useState, type ReactElement } from 'react';
+import { ViewSource } from '@walkeros/explorer';
 import logoImg from '../../../../assets/logo.png';
 import { Button } from '../../../../shared/atoms/Button';
 import { Link } from '../../../../shared/atoms/Link';
@@ -28,6 +29,19 @@ import {
 const MediaContent = ({ controls }: DemoPageProps) => {
   const t = useText();
   const [extraRowCount, setExtraRowCount] = useState(0);
+  const { elb } = controls;
+  // Source views sit on the outermost tagged element of a section (the
+  // organism's root) or of a card; no ancestor carries a click action.
+  const sectionSource = (organism: ReactElement) => (
+    <ViewSource elb={elb}>{organism}</ViewSource>
+  );
+  // Cards fill their slot in the carousel row and keep their width in it
+  // (shrink-0): the row scrolls, it never squeezes a card.
+  const cardSource = (card: ReactElement) => (
+    <ViewSource elb={elb} stretch className="shrink-0">
+      {card}
+    </ViewSource>
+  );
 
   return (
     // The page context the media demo has always sent, its first component
@@ -60,32 +74,45 @@ const MediaContent = ({ controls }: DemoPageProps) => {
       >
         {/* data-elbobserve: the walker auto-registers rows added below at
             runtime, so a new row's tagged items fire their events without a
-            walker re-run. Section anchors sit on the page's own containers. */}
+            walker re-run. Section anchors sit on the page's own containers,
+            never on a source view or inside an organism. */}
         <div data-elbobserve="">
-          <div id="hero">
-            <HeroBanner {...hero} />
-          </div>
+          <div id="hero">{sectionSource(<HeroBanner {...hero} />)}</div>
           <div id="series">
-            <CarouselSection {...topSeries} />
+            {sectionSource(
+              <CarouselSection {...topSeries} wrapItem={cardSource} />,
+            )}
           </div>
           <div id="films">
-            <CarouselSection {...filmRecommendations} type="postcard" />
+            {sectionSource(
+              <CarouselSection
+                {...filmRecommendations}
+                type="postcard"
+                wrapItem={cardSource}
+              />,
+            )}
           </div>
           <div id="promotion">
-            <PromotionBanner {...promotion} />
+            {sectionSource(<PromotionBanner {...promotion} />)}
           </div>
           <div id="documentaries">
-            <CarouselSection {...documentaries} />
+            {sectionSource(
+              <CarouselSection {...documentaries} wrapItem={cardSource} />,
+            )}
           </div>
 
           {Array.from({ length: extraRowCount }, (_, index) => {
             const row = extraRows[index % extraRows.length];
             return (
-              <CarouselSection
-                key={`extra-${index}`}
-                title={`${row.title} #${index + 1}`}
-                items={row.items}
-              />
+              <Fragment key={`extra-${index}`}>
+                {sectionSource(
+                  <CarouselSection
+                    title={`${row.title} #${index + 1}`}
+                    items={row.items}
+                    wrapItem={cardSource}
+                  />,
+                )}
+              </Fragment>
             );
           })}
 

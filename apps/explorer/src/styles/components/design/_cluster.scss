@@ -14,4 +14,8 @@
   .elb-cluster--center {
     justify-content: center;
   }
+
+  .elb-cluster--separated {
+    margin-top: var(--heading-gap);
+  }
 }

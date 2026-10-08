@@ -42,7 +42,6 @@ export const EXTERNAL = {
   npm: 'https://www.npmjs.com/package/@walkeros/core',
   linkedin: 'https://www.linkedin.com/company/elbwalker/',
   storybook: 'https://storybook.walkeros.io/',
-  demo: 'https://demo.walkeros.io',
   about: 'https://www.elbwalker.com',
   services: 'https://www.elbwalker.com/services',
   contact: 'https://www.elbwalker.com/contact/',

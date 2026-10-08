@@ -67,4 +67,15 @@ describe('Cluster', () => {
       'elb-cluster elb-cluster--links elb-cluster--center',
     );
   });
+
+  it('sets a call to action apart from the content above', () => {
+    const root = render(
+      <Cluster align="center" separated>
+        <a href="#a">A</a>
+      </Cluster>,
+    ).container.firstElementChild;
+    expect(root?.getAttribute('class')).toBe(
+      'elb-cluster elb-cluster--center elb-cluster--separated',
+    );
+  });
 });

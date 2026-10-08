@@ -22,3 +22,14 @@ const meta: Meta<typeof Cluster> = {
 export default meta;
 
 export const Default: StoryObj<typeof Cluster> = {};
+
+/** A call to action below a section's content, set apart by an extra heading gap. */
+export const Separated: StoryObj<typeof Cluster> = {
+  args: { align: 'center', separated: true },
+  render: (args) => (
+    <div>
+      <p>The section's content ends here.</p>
+      <Cluster {...args} />
+    </div>
+  ),
+};

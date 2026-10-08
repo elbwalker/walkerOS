@@ -160,8 +160,9 @@ design tokens; walkeros.io's home page is built from it.
 - Folders follow the atomic order: `atoms/` (Button, InlineCode, EventLegend,
   Icon, InstallCommand, Card, Eyebrow, Stat, Text, TextLink, PhotoPlaceholder),
   `molecules/` (CheckList, SectionHeading, ProblemCard, FeatureItem, FaqItem,
-  PlanCard, CaseCard, HighlightCard, BrowserFrame), `layout/` (Section,
-  CardGrid, Split, Cluster, Hero) and `viz/` (HeroTaggingViz,
+  PlanCard, CaseCard, HighlightCard, BrowserFrame, QuickstartSteps), `layout/`
+  (Section, CardGrid, Split, Cluster (`separated` sets a call to action apart
+  from the content above), Hero) and `viz/` (HeroTaggingViz,
   ArticleTeaserTracking, DestinationMappingViz). Nothing imports upward; a demo
   may use atoms.
 - Each folder keeps its own `index.ts`; the entry `index.ts` re-exports the

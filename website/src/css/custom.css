@@ -388,21 +388,6 @@ a.elb-btn:hover {
   all: revert-layer;
 }
 
-/* Landing CTA row below a section's content. In the components layer, so
-   the section's revert-layer reset above keeps it. */
-@layer components {
-  .landing-cta-stack {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-5);
-    text-align: center;
-  }
-  .landing-cta-stack--after {
-    margin-top: var(--heading-gap);
-  }
-}
-
 /* Sidebar destination badges */
 .sidebar-badge-web .menu__link::after,
 .sidebar-badge-server .menu__link::after {

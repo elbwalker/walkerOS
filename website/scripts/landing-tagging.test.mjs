@@ -149,6 +149,7 @@ const SECTION_ENTITY = {
   Vendor: 'vendor',
   Proof: 'proof',
   MoreFeatures: 'features',
+  GettingStarted: 'quickstart',
   Beyond: 'beyond',
   Plans: 'plans',
   Faq: 'faq',
@@ -180,7 +181,7 @@ test('the landing only places copy: no CSS, className or style', () => {
     );
 });
 
-test('the home page renders the nine sections in the artifact order', () => {
+test('the home page renders the sections in the artifact order', () => {
   const page = readFileSync(join(WEBSITE, 'src/pages/index.tsx'), 'utf8');
   assert.deepEqual(
     [...page.matchAll(/<(\w+)Section \/>/g)].map((match) => match[1]),

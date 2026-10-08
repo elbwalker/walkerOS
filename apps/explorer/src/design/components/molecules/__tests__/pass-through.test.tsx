@@ -7,6 +7,7 @@ import { FeatureItem } from '../FeatureItem';
 import { HighlightCard } from '../HighlightCard';
 import { PlanCard } from '../PlanCard';
 import { ProblemCard } from '../ProblemCard';
+import { QuickstartSteps } from '../QuickstartSteps';
 import { SectionHeading } from '../SectionHeading';
 import {
   PROBE,
@@ -72,6 +73,11 @@ it.each<[string, ReactElement, string]>([
     >
       Text
     </HighlightCard>,
+    'div',
+  ],
+  [
+    'QuickstartSteps',
+    <QuickstartSteps steps={[{ title: 'T', text: 'Text' }]} {...PROBE} />,
     'div',
   ],
 ])(

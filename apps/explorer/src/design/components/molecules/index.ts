@@ -16,3 +16,5 @@ export { HighlightCard } from './HighlightCard';
 export type { HighlightCardProps } from './HighlightCard';
 export { BrowserFrame } from './BrowserFrame';
 export type { BrowserBookmark, BrowserFrameProps } from './BrowserFrame';
+export { QuickstartSteps } from './QuickstartSteps';
+export type { QuickstartStep, QuickstartStepsProps } from './QuickstartSteps';

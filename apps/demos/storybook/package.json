@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:demo": "npm run build && storybook build -o dist/storybook --quiet",
     "lint": "eslint . && walkeros-design-check src .storybook",
     "typecheck": "tsc -b --noEmit",
     "test": "jest",

@@ -201,15 +201,17 @@ load, as a CMP does.
 
 ## Demo Site
 
-The same package builds the demo site for `demo.walkeros.io`: one HTML entry per
-page, no client-side routing.
+The same package builds the demo pages that walkeros.io serves under `demos/`:
+one HTML entry per page, no client-side routing, every asset URL relative (Vite
+`base: './'`), so the pages work under any path prefix, PR previews included.
 
-| Path          | Entry                | What it is                                 |
-| ------------- | -------------------- | ------------------------------------------ |
-| `/`           | `index.html`         | the list of demos, runs no walkerOS        |
-| `/shop/`      | `shop/index.html`    | the Shop page                              |
-| `/media/`     | `media/index.html`   | the Media page                             |
-| `/storybook/` | `storybook build -o` | this Storybook, with the addon's collector |
+| Path on walkeros.io | Entry              | What it is     |
+| ------------------- | ------------------ | -------------- |
+| `/demos/shop/`      | `shop/index.html`  | the Shop page  |
+| `/demos/media/`     | `media/index.html` | the Media page |
+
+`/demos/` itself is the website's Demos page, which frames these pages. This
+Storybook stays at `storybook.walkeros.io` (`storybook.yml`).
 
 `src/site/boot.tsx` runs a demo page (`bootDemo`):
 
@@ -225,7 +227,8 @@ page, no client-side routing.
 - The consent bar remembers its choice in `localStorage`.
 
 A new demo is one more entry: `<demo>/index.html`, `src/site/<demo>.tsx` calling
-`bootDemo(<Demo>Page, pageRoot(document))`, and one line in `vite.config.ts`.
+`bootDemo(<Demo>Page, pageRoot(document))`, one line in `vite.config.ts` and one
+in `website/scripts/copy-demos.mjs` (`DEMO_PAGES`).
 
 ## Design System
 
@@ -255,58 +258,36 @@ A standalone `npm install` of this package, outside the monorepo, needs an
 ```bash
 npm run storybook        # Start development server
 npm run build-storybook  # Build static version
-npm run dev              # Start the demo site (/, /shop/, /media/)
-npm run build            # Build the demo site into dist/
-npm run build:demo       # Build the demo site and Storybook into dist/
-npm run preview          # Serve dist/ as deployed
+npm run dev              # Start the demo pages (/shop/, /media/)
+npm run build            # Build the demo pages into dist/
+npm run preview          # Serve dist/
 npm test                 # Tag parity, language, personas, consent and boot tests
 ```
 
 ## Deploy
 
-`.github/workflows/demo.yml` builds the demo site and Storybook into one `dist/`
-(Storybook in `dist/storybook/`) and uploads it to Bunny on every push to `main`
-that touches this package, the Storybook addon or explorer.
-`scripts/deploy-bunny.mjs` uploads the folder named in `DEPLOY_DIR` (default
-`storybook-static`).
+The demo pages ship with the website; they have no deploy of their own:
 
-The merge to `main` that brings this site also publishes the website's Demos
-page, which frames `demo.walkeros.io`, and `demo.yml` fails on every push until
-its secrets exist. So the host comes first.
+- `website/turbo.json` makes the website `build` depend on this package's
+  `build`.
+- The website's `build` script runs `scripts/copy-demos.mjs` after
+  `docusaurus build`. It copies this package's `dist/` (the pages, their assets
+  and the favicon) into `website/build/demos/`, never over the Demos page at
+  `demos/index.html`, and fails the build when the demo build is missing.
+- `website.yml` also runs on changes under `apps/demos/storybook/`.
 
-Before merging to `main`:
+This Storybook deploys as before, through `storybook.yml` to
+`storybook.walkeros.io`.
 
-1. In Bunny, create a storage zone and a pull zone for the demo site.
-2. On the pull zone, add the hostname `demo.walkeros.io`, point a CNAME for it
-   at the pull zone and turn on TLS.
-3. In the walkerOS repository, set the secrets `BUNNY_DEMO_STORAGE_ZONE`,
-   `BUNNY_DEMO_STORAGE_PASSWORD` and `BUNNY_DEMO_PULLZONE_URL`. `BUNNY_API_KEY`
-   is shared with the other deploys.
-4. In the app flow "Tagging demo", allow the origin `https://demo.walkeros.io`
-   next to `https://tagging.walkeros.io` and redeploy the flow. Its server flow
-   answers cross-origin requests from `https://tagging.walkeros.io` only, so
-   without this every event sent from the new host after Accept is blocked.
+Before the merge to `main` that brings the Demos page: in the app flow "Tagging
+demo", allow the origin `https://www.walkeros.io` next to
+`https://tagging.walkeros.io` and redeploy the flow. Its server flow answers
+cross-origin requests from `https://tagging.walkeros.io` only, so without this
+every event sent from the demo pages after Accept is blocked.
 
-Right after the merge:
-
-1. Check that the `demo.yml` run is green.
-2. `curl -sI` each of `https://demo.walkeros.io/`, `/shop/`, `/media/` and
-   `/storybook/`: each answers 200, with no `X-Frame-Options` and no
-   `Content-Security-Policy` with `frame-ancestors`.
-3. Open `https://www.walkeros.io/demos/` and check that the Shop shows in the
-   frame and stays.
-4. On `https://demo.walkeros.io/shop/`, accept consent and check that the
-   browser console shows no CORS error.
-
-After go-live:
-
-1. Bunny 301 rules send `tagging.walkeros.io/*` to
-   `https://demo.walkeros.io/shop/` and `storybook.walkeros.io/*` to
-   `https://demo.walkeros.io/storybook/`, query string kept.
-2. The app's `DEMO_SITE_URL` changes to `https://demo.walkeros.io/shop/`.
-3. `apps/demos/tagging`, `tagging.yml` and `storybook.yml` are deleted, the
-   "Tagging Website" line leaves `apps/demos/README.md`, and the
-   `deploy-bunny.mjs` default becomes `dist`.
+The static tagging demo at `tagging.walkeros.io` stays: it is the app's preview
+sandbox (`DEMO_SITE_URL`). Never add `www.walkeros.io` to the app's preview
+allowlist: the "Tagging demo" bundle accepts any project's preview code.
 
 ## Learn More
 

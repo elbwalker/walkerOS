@@ -35,24 +35,63 @@ const SKILLS = new Set(
   ),
 );
 
-function resolvesDoc(path) {
-  if (SLUGS.has(`/${path}`.replace(/\/$/, '') || '/')) return true;
+/** The doc file a docs path renders, relative to docs/, or undefined. */
+function docFile(path) {
+  const slug = SLUGS.get(`/${path}`.replace(/\/$/, '') || '/');
+  if (slug) return slug;
   const base = join(DOCS, path);
   return [
     `${base}.md`,
     `${base}.mdx`,
     join(base, 'index.md'),
     join(base, 'index.mdx'),
-  ].some((file) => existsSync(file) && !MOVED.has(relative(DOCS, file)));
+  ]
+    .map((file) => relative(DOCS, file))
+    .find((file) => existsSync(join(DOCS, file)) && !MOVED.has(file));
 }
 
-/** True when `route` reaches a page, a doc, a skill or a landing section. */
+/**
+ * A doc's heading anchors as Docusaurus writes them: an explicit `{#id}`,
+ * else the github-slugger slug of the heading text (lower case, punctuation
+ * dropped, spaces to hyphens), with `-1`, `-2` on repeats.
+ */
+function docAnchors(file) {
+  const text = readFileSync(join(DOCS, file), 'utf8').replace(
+    /^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$/gm,
+    '',
+  );
+  const anchors = new Set();
+  const seen = new Map();
+  for (const [, heading] of text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
+    const explicit = /\{#([^}]+)\}$/.exec(heading);
+    if (explicit) {
+      anchors.add(explicit[1]);
+      continue;
+    }
+    const slug = heading
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{M}\p{N}_ -]/gu, '')
+      .replace(/ /g, '-');
+    const count = seen.get(slug) ?? 0;
+    seen.set(slug, count + 1);
+    anchors.add(count === 0 ? slug : `${slug}-${count}`);
+  }
+  return anchors;
+}
+
+/** True when `route` reaches a page, a doc, a skill, a doc heading or a landing section. */
 function resolves(route) {
   const [path, hash] = route.split('#');
-  if (hash !== undefined)
-    return path === '/' && Object.values(SECTION_ID).includes(hash);
-  if (path === '/docs' || path.startsWith('/docs/'))
-    return resolvesDoc(path.replace(/^\/docs\/?/, '').replace(/\/$/, ''));
+  const docPath =
+    (path === '/docs' || path.startsWith('/docs/')) &&
+    path.replace(/^\/docs\/?/, '').replace(/\/$/, '');
+  if (hash !== undefined) {
+    if (path === '/') return Object.values(SECTION_ID).includes(hash);
+    const file = docPath !== false && docFile(docPath);
+    return Boolean(file) && docAnchors(file).has(hash);
+  }
+  if (docPath !== false) return docFile(docPath) !== undefined;
   if (path === '/skills' || path.startsWith('/skills/')) {
     const name = path.replace(/^\/skills\/?/, '').replace(/\/$/, '');
     return name === '' || SKILLS.has(name);
@@ -63,7 +102,7 @@ function resolves(route) {
   );
 }
 
-test('the resolver accepts pages, docs, slugs, skills and sections and rejects the rest', () => {
+test('the resolver accepts pages, docs, slugs, skills, doc headings and sections and rejects the rest', () => {
   assert.equal(resolves('/docs/'), true, 'the docs root is a slug');
   assert.equal(resolves('/playground/'), true);
   assert.equal(resolves('/skills/'), true);
@@ -79,6 +118,8 @@ test('the resolver accepts pages, docs, slugs, skills and sections and rejects t
     'a client-redirect source',
   );
   assert.equal(resolves('/#nowhere'), false);
+  assert.equal(resolves('/docs/apps/mcp#quick-start'), true, 'a doc heading');
+  assert.equal(resolves('/docs/apps/mcp#nowhere'), false);
 });
 
 test('every internal landing, navbar and footer route resolves', () => {

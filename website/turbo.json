@@ -2,6 +2,9 @@
   "$schema": "https://turbo.build/schema.json",
   "extends": ["//"],
   "tasks": {
+    "build": {
+      "dependsOn": ["^build", "@walkeros/storybook-demo#build"]
+    },
     "test": {
       "inputs": [
         "$TURBO_EXTENDS$",

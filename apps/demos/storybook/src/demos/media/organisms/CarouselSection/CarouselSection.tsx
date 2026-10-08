@@ -1,3 +1,4 @@
+import { Fragment, type ReactElement, type ReactNode } from 'react';
 import type { ImageProps } from '../../../../shared/atoms/Image';
 import { Heading } from '../../../../shared/atoms/Heading';
 import { useText } from '../../../../shared/language';
@@ -14,6 +15,8 @@ export interface CarouselSectionProps {
   onItemClick?: (id: unknown) => void;
   type?: ImageProps['type'];
   dataElb?: DataElb;
+  /** Wraps each item card, the entity box (for a source view). */
+  wrapItem?: (card: ReactElement) => ReactNode;
 }
 
 export const CarouselSection = ({
@@ -22,6 +25,7 @@ export const CarouselSection = ({
   onItemClick,
   type = 'thumbnail',
   dataElb,
+  wrapItem,
 }: CarouselSectionProps) => {
   // The list context keeps the English title; only the heading translates.
   const t = useText();
@@ -43,17 +47,24 @@ export const CarouselSection = ({
         </Heading>
 
         <div className="flex space-x-1 overflow-x-auto scrollbar-hide pb-4 -mx-2 -my-2">
-          {items.map((item, index) => (
-            <CarouselItem
-              key={index}
-              title={item.title}
-              position={++index}
-              style={index}
-              type={type}
-              alt={item.alt}
-              onClick={() => onItemClick?.(index)}
-            />
-          ))}
+          {items.map((item, index) => {
+            const position = index + 1;
+            const card = (
+              <CarouselItem
+                title={item.title}
+                position={position}
+                style={position}
+                type={type}
+                alt={item.alt}
+                onClick={() => onItemClick?.(position)}
+              />
+            );
+            return (
+              <Fragment key={index}>
+                {wrapItem ? wrapItem(card) : card}
+              </Fragment>
+            );
+          })}
         </div>
       </div>
     </section>

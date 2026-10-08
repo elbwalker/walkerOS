@@ -36,19 +36,17 @@ export default function BeyondSection() {
           vendor only where you actually need one, or not at all.
         </HighlightCard>
       </CardGrid>
-      <div className="landing-cta-stack landing-cta-stack--after">
-        <Cluster align="center">
-          <Button
-            {...actionTags('setup')}
-            href={ROUTES.mcpQuickStart}
-            arrow
-            linkComponent={Link}
-          >
-            Set up with your agent
-          </Button>
-          <InstallCommand {...actionTags('copy')} />
-        </Cluster>
-      </div>
+      <Cluster align="center" separated>
+        <Button
+          {...actionTags('setup')}
+          href={ROUTES.mcpQuickStart}
+          arrow
+          linkComponent={Link}
+        >
+          Set up with your agent
+        </Button>
+        <InstallCommand {...actionTags('copy')} />
+      </Cluster>
     </Section>
   );
 }

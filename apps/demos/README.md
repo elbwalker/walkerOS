@@ -6,6 +6,6 @@
   - Shop (`storybook/src/demos/shop`): the static tagging demo as a one-page
     shop
   - Media (`storybook/src/demos/media`): a one-page streaming site
-  - The demo site for demo.walkeros.io (`storybook/src/site`): these pages and
-    the Storybook, built from the same package
+  - The demo pages at walkeros.io/demos/ (`storybook/src/site`), built from the
+    same package and copied into the website build
 - [Tagging Website](./tagging/): the static tagging demo

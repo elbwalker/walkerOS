@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useBaseUrlUtils } from '@docusaurus/useBaseUrl';
 import useIsBrowser from '@docusaurus/useIsBrowser';
 import {
   BrowserFrame,
@@ -6,12 +7,27 @@ import {
   Icon,
   type BrowserBookmark,
 } from '@walkeros/explorer/design/components';
-import { EXTERNAL } from '../../components/landing/links';
 
-const bookmarks: BrowserBookmark[] = [
-  { label: 'Shop', url: `${EXTERNAL.demo}/shop/` },
-  { label: 'Media', url: `${EXTERNAL.demo}/media/` },
+/** The demo pages: static files the website build copies in, not routes. */
+const demos = [
+  { label: 'Shop', path: '/demos/shop/' },
+  { label: 'Media', path: '/demos/media/' },
 ];
+
+interface DemoBookmark extends BrowserBookmark {
+  /** The same-origin path the iframe loads, under the site's base URL. */
+  src: string;
+}
+
+/** Each demo's absolute address for the address field, and its path for the iframe. */
+function useDemoBookmarks(): DemoBookmark[] {
+  const { withBaseUrl } = useBaseUrlUtils();
+  return demos.map(({ label, path }) => ({
+    label,
+    url: withBaseUrl(path, { absolute: true }),
+    src: withBaseUrl(path),
+  }));
+}
 
 /** Without a `load` within this time, the frame says the demo didn't load. */
 const LOAD_TIMEOUT_MS = 10_000;
@@ -20,7 +36,10 @@ type Status = 'loading' | 'loaded' | 'failed';
 
 /** The demo site in a browser window; the bookmarks switch between demos. */
 export function DemoFrame() {
+  const bookmarks = useDemoBookmarks();
   const [url, setUrl] = useState(bookmarks[0].url);
+  const demo =
+    bookmarks.find((bookmark) => bookmark.url === url) ?? bookmarks[0];
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<Status>('loading');
   // The iframe exists only in the browser: a pre-rendered one can finish
@@ -54,7 +73,7 @@ export function DemoFrame() {
         isBrowser && (
           <iframe
             key={`${url}#${attempt}`}
-            src={url}
+            src={demo.src}
             title="walkerOS demo"
             onLoad={() => setStatus('loaded')}
           />

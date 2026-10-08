@@ -1,18 +1,18 @@
-/* Quickstart steps. In the components layer: the site's revert-layer reset for
-   headings, paragraphs and lists inside .elb-section rolls back to this layer. */
+// QuickstartSteps (@walkeros/explorer/design/components): numbered steps joined
+// by hand-drawn arrows, a column on narrow screens.
 @layer components {
-  .body {
+  .elb-quickstart {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 32px;
   }
 
-  .steps {
+  // Steps and arrows alternate in the implicit columns: 1fr, 84px, 1fr, ...
+  .elb-quickstart__steps {
     display: grid;
-    grid-template-columns:
-      minmax(0, 1fr) 84px minmax(0, 1fr) 84px
-      minmax(0, 1fr);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr) 84px;
     gap: 0 16px;
     align-items: start;
     align-self: stretch;
@@ -21,7 +21,7 @@
     list-style: none;
   }
 
-  .step {
+  .elb-quickstart__step {
     display: flex;
     flex-direction: column;
     gap: var(--space-3-5);
@@ -29,13 +29,13 @@
     margin: 0;
   }
 
-  .stepHead {
+  .elb-quickstart__head {
     display: flex;
     align-items: center;
     gap: var(--space-3);
   }
 
-  .num {
+  .elb-quickstart__num {
     flex: none;
     display: inline-flex;
     align-items: center;
@@ -51,7 +51,7 @@
     font-weight: 600;
   }
 
-  .stepTitle {
+  .elb-quickstart__title {
     margin: 0;
     color: var(--fg);
     font-family: var(--type-title-card-family);
@@ -60,7 +60,7 @@
     line-height: 1.3;
   }
 
-  .stepCopy {
+  .elb-quickstart__copy {
     margin: 0;
     color: var(--fg-2);
     font-family: var(--type-body-family);
@@ -69,42 +69,43 @@
     text-wrap: pretty;
   }
 
-  .arrow {
+  .elb-quickstart__arrow {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 32px;
     margin: 0;
     color: var(--primary);
+
+    > svg {
+      overflow: visible;
+    }
   }
 
-  .arrow svg {
-    overflow: visible;
-  }
-
-  .arrowWave svg {
+  .elb-quickstart__arrow--wave > svg {
     transform: rotate(-4deg);
   }
 
-  .arrowLoop svg {
+  .elb-quickstart__arrow--loop > svg {
     transform: rotate(3deg);
   }
 
   @media (max-width: 807px) {
-    .steps {
+    .elb-quickstart__steps {
+      grid-auto-flow: row;
       grid-template-columns: minmax(0, 1fr);
       gap: 4px;
     }
 
-    .arrow {
+    .elb-quickstart__arrow {
       height: 64px;
     }
 
-    .arrowWave svg {
+    .elb-quickstart__arrow--wave > svg {
       transform: rotate(90deg);
     }
 
-    .arrowLoop svg {
+    .elb-quickstart__arrow--loop > svg {
       transform: rotate(90deg) scaleY(-1);
     }
   }
