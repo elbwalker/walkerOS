@@ -258,7 +258,6 @@ const config: Config = {
           label: 'Documentation',
         },
         { to: ROUTES.playground, label: 'Playground', position: 'left' },
-        { to: ROUTES.demos, label: 'Demos', position: 'left' },
         {
           type: 'docSidebar',
           sidebarId: 'skillsSidebar',

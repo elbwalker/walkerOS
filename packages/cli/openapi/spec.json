@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "4.7.0+338d4329",
+    "version": "4.7.0+2098429d",
     "contact": {
       "name": "elbwalker",
       "url": "https://www.elbwalker.com"
@@ -632,7 +632,14 @@
             }
           },
           "412": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowConflictResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -699,8 +706,28 @@
               }
             }
           },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "412": {
             "description": ""
+          },
+          "502": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -2648,6 +2675,16 @@
               }
             }
           },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
             "description": "",
             "content": {
@@ -2887,6 +2924,16 @@
             }
           },
           "429": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
             "description": "",
             "content": {
               "application/json": {
@@ -3632,6 +3679,15 @@
             "required": true,
             "name": "projectId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$"
+            },
+            "required": false,
+            "name": "flowId",
+            "in": "query"
           },
           {
             "schema": {
@@ -4472,6 +4528,9 @@
             "minLength": 1,
             "maxLength": 255
           },
+          "placeholder": {
+            "type": "boolean"
+          },
           "summary": {
             "type": "string"
           },
@@ -4494,7 +4553,14 @@
             "format": "date-time"
           }
         },
-        "required": ["id", "name", "createdAt", "updatedAt", "deletedAt"]
+        "required": [
+          "id",
+          "name",
+          "placeholder",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
       },
       "FlowSettingsListItem": {
         "type": "object",
@@ -4639,6 +4705,9 @@
           "config": {
             "$ref": "#/components/schemas/FlowConfig"
           },
+          "placeholder": {
+            "type": "boolean"
+          },
           "settings": {
             "type": "array",
             "items": {
@@ -4665,6 +4734,7 @@
           "id",
           "name",
           "config",
+          "placeholder",
           "createdAt",
           "updatedAt",
           "deletedAt"
@@ -4778,6 +4848,41 @@
           }
         },
         "required": ["id", "name", "config", "createdAt", "updatedAt"]
+      },
+      "FlowConflictResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["PRECONDITION_FAILED"]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"]
+          },
+          "head": {
+            "type": "object",
+            "properties": {
+              "config": {
+                "$ref": "#/components/schemas/FlowConfig"
+              },
+              "etag": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": ["config", "etag", "updatedAt"]
+          }
+        },
+        "required": ["error", "head"]
       },
       "CreateProjectResponse": {
         "type": "object",
@@ -4926,6 +5031,10 @@
           "label": {
             "type": ["string", "null"]
           },
+          "flowId": {
+            "type": ["string", "null"],
+            "pattern": "^flow_[a-zA-Z0-9_-]+$"
+          },
           "origin": {
             "type": "string",
             "enum": ["cloud", "self-hosted"]
@@ -5052,6 +5161,7 @@
           "slug",
           "target",
           "label",
+          "flowId",
           "origin",
           "status",
           "currentVersion",
