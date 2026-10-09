@@ -1,30 +1,13 @@
 @import 'tailwindcss';
 
-@theme {
-  --color-background: #ffffff;
-  --color-foreground: #0f172a;
-  --color-muted: #64748b;
-  --color-accent: #06b6d4;
-}
+/* The walkerOS design system: its Tailwind theme (tokens, the reset palette,
+   radius, font, text and shadow scales, a utility per design colour and type
+   style), then the global base rules (ground, text colour, font, focus ring). */
+@import '@walkeros/explorer/design/tailwind.css';
+@import '@walkeros/explorer/design/base.css';
 
-.dark {
-  --color-background: #0f172a;
-  --color-foreground: #f8fafc;
-  --color-muted: #94a3b8;
-  --color-accent: #22d3ee;
-}
-
-body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  margin: 0;
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* The design components' own styles (PhotoPlaceholder's stripes). */
+@import '@walkeros/explorer/styles.css';
 
 /* Custom scrollbar hiding */
 .scrollbar-hide {
@@ -34,13 +17,4 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
-}
-
-/* Banner text overrides */
-.banner-headline {
-  color: #ffffff !important;
-}
-
-.banner-subtitle {
-  color: #f1f5f9 !important;
 }

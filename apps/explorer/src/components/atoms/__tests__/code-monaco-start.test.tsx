@@ -12,21 +12,6 @@
 // Stub the Vite virtual module before any import of code.tsx.
 jest.mock('virtual:walkeros-core-types', () => '', { virtual: true });
 
-// jsdom doesn't ship matchMedia; code.tsx uses it for theme detection.
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  }),
-});
-
 // A fresh stand-in for the part of the Monaco API that the editors and their
 // setup call. The setup remembers every instance it has prepared, so each
 // test hands its own instance to the mocks below.

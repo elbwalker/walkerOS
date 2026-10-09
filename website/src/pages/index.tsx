@@ -1,10 +1,14 @@
 import Layout from '@theme/Layout';
-import Hero from '@site/src/components/home/hero';
-import Features from '@site/src/components/organisms/features';
-import Integrations from '@site/src/components/home/integrations';
-import GettingStarted from '@site/src/components/organisms/gettingStarted';
-import Benefits from '@site/src/components/organisms/benefits';
-import CTAStart from '@site/src/components/ctas/start';
+import BeyondSection from '@site/src/components/landing/Beyond';
+import FaqSection from '@site/src/components/landing/Faq';
+import GettingStartedSection from '@site/src/components/landing/GettingStarted';
+import HeroSection from '@site/src/components/landing/Hero';
+import MoreFeaturesSection from '@site/src/components/landing/MoreFeatures';
+import PlansSection from '@site/src/components/landing/Plans';
+import ProofSection from '@site/src/components/landing/Proof';
+import TaggingSection from '@site/src/components/landing/Tagging';
+import VendorSection from '@site/src/components/landing/Vendor';
+import WhySection from '@site/src/components/landing/Why';
 
 export default function Home() {
   return (
@@ -12,13 +16,17 @@ export default function Home() {
       title="Home"
       description="Open-source event data collection platform"
     >
-      <Hero />
       <main>
-        <GettingStarted />
-        <Features />
-        <Integrations />
-        <Benefits />
-        <CTAStart />
+        <HeroSection />
+        <WhySection />
+        <TaggingSection />
+        <VendorSection />
+        <ProofSection />
+        <MoreFeaturesSection />
+        <GettingStartedSection />
+        <BeyondSection />
+        <PlansSection />
+        <FaqSection />
       </main>
     </Layout>
   );

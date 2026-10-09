@@ -27,7 +27,7 @@ export const WithMapping: Story = {
         data: {
           id: 'ers',
           name: 'Everyday Ruck Snack',
-          color: 'black',
+          taste: 'salty',
           size: 'l',
           price: 420,
         },
@@ -87,19 +87,6 @@ export const WithMapping: Story = {
           },
         ],
       ],
-    },
-  },
-};
-
-/**
- * Short code: boxes shrink to their content instead of a fixed height.
- */
-export const Short: Story = {
-  args: {
-    example: {
-      in: { name: 'page view', data: { title: 'Home' } },
-      mapping: { name: 'page_view' },
-      out: [['gtag', 'event', 'page_view']],
     },
   },
 };

@@ -121,31 +121,47 @@ getId(5, 'abcdefghijklmnopqrstuvwxyz'); // Lowercase letters only`}
 
 ### getMappingValue
 
-`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, context?: Partial<Mapping.Context>): Promise<WalkerOS.Property | undefined>`
+`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, context: Mapping.ValueContext): Promise<WalkerOS.Property | undefined>`
 extracts values from events using
 
-<Link to="/docs/mapping">mapping configurations</Link>.
+<Link to="/docs/mapping">mapping configurations</Link>. The context requires the
+running `collector`: inside a step, take it from the step's context; elsewhere,
+use the one `startFlow` returns.
 
 <CodeSnippet
-  code={`// Simple path mapping
-await getMappingValue(event, 'data.productId');
+  code={`import { startFlow } from '@walkeros/collector';
+import { getMappingValue } from '@walkeros/core';
+
+const { collector } = await startFlow();
+const event = {
+  name: 'order complete',
+  data: { id: '0rd3r1d' },
+  nested: [
+    { entity: 'product', data: { id: 'ers', name: 'Everyday Ruck Snack' } },
+    { entity: 'gift', data: { name: 'Surprise' } },
+  ],
+};
+
+// Simple path mapping
+await getMappingValue(event, 'data.id', { collector }); // '0rd3r1d'
 
 // Complex mapping with conditions and loops
 const mapping = {
-map: {
-orderId: 'data.id',
-products: {
-  loop: [
-    'nested',
-    {
-      condition: (entity) => entity.entity === 'product',
-      map: { id: 'data.id', name: 'data.name' },
+  map: {
+    orderId: 'data.id',
+    products: {
+      loop: [
+        'nested',
+        {
+          condition: (entity) => entity.entity === 'product',
+          map: { id: 'data.id', name: 'data.name' },
+        },
+      ],
     },
-  ],
-},
-},
+  },
 };
-await getMappingValue(event, mapping);`}
+await getMappingValue(event, mapping, { collector });
+// { orderId: '0rd3r1d', products: [{ id: 'ers', name: 'Everyday Ruck Snack' }] }`}
   language="typescript"
 />
 

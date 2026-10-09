@@ -1,0 +1,28 @@
+// PhotoPlaceholder (@walkeros/explorer/design/components): diagonal stripes
+// with a centred label where a photo would go. The caller sets its size and
+// radius.
+@layer components {
+  .elb-photo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--fg-3);
+    background: repeating-linear-gradient(
+      45deg,
+      var(--surface-2) 0 6px,
+      var(--border) 6px 12px
+    );
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-legend-size);
+  }
+
+  .elb-photo--viz {
+    color: var(--viz-comment);
+    background: repeating-linear-gradient(
+      45deg,
+      var(--viz-surface) 0 6px,
+      var(--viz-border) 6px 12px
+    );
+  }
+}

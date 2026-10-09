@@ -1,5 +1,20 @@
 # @walkeros/web-destination-heap
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The `disablePageviewAutocapture`, `disableSessionReplay` and
+  `ingestServer` descriptions now say that the classic Heap SDK loaded by
+  `loadScript` ignores them. The settings schema lists `heapConfig` for further
+  `heap.load()` options, and the step examples name the destination config they
+  rely on and the consent methods the classic SDK lacks.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

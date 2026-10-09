@@ -129,6 +129,15 @@ export interface Context {
   consent?: WalkerOS.Consent;
 }
 
+/**
+ * Context for `getMappingValue`. The collector is required; the other
+ * Context fields are optional. `event` and `consent` override what is
+ * inferred from the value and the collector; the logger always comes from
+ * the collector.
+ */
+export type ValueContext = Pick<Context, 'collector'> &
+  Partial<Omit<Context, 'collector'>>;
+
 export type Fn = (
   value: unknown,
   context: Context,

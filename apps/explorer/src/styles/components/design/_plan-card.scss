@@ -1,0 +1,22 @@
+// PlanCard (@walkeros/explorer/design/components): a service tier on a Card.
+@layer components {
+  .elb-plan__title {
+    margin: 0;
+    color: var(--fg);
+    font-family: var(--type-title-plan-family);
+    font-size: var(--type-title-plan-size);
+    line-height: var(--type-title-plan-line-height);
+    font-weight: var(--type-title-plan-weight);
+    letter-spacing: var(--type-title-plan-tracking);
+  }
+
+  .elb-plan__text {
+    flex: 1;
+    margin: 0;
+    color: var(--fg-2);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+    font-weight: var(--type-body-weight);
+  }
+}

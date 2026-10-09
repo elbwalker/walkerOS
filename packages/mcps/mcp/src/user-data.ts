@@ -20,8 +20,10 @@ export function wrapUserData(s: string): string {
 /**
  * Human-facing display text: user-authored strings the assistant should only
  * read. `name` and `flowName` are display names, `summary` is a flow's
- * one-line summary built from its step keys. The one key list behind both
- * {@link wrapListedRecord} (top level) and {@link redactDisplayNames} (deep).
+ * one-line summary built from its step keys. `flowName` is never a tool
+ * input: the settings identifier a tool takes is `settingsName`. The one key
+ * list behind both {@link wrapListedRecord} (top level) and
+ * {@link redactDisplayNames} (deep).
  */
 const DISPLAY_TEXT_KEYS: ReadonlySet<string> = new Set([
   'name',
@@ -33,7 +35,7 @@ const DISPLAY_TEXT_KEYS: ReadonlySet<string> = new Set([
  * A listed record (a project, a flow summary, the project of a flow group)
  * with its top-level display text wrapped as user data. Every other field
  * stays literal, nested ones included, so a flow's `settings[].name` (an
- * identifier the assistant passes back as `flowName`) is never wrapped.
+ * identifier the assistant passes back as `settingsName`) is never wrapped.
  * Anything that is not an object passes through unchanged.
  */
 export function wrapListedRecord(value: unknown): unknown {

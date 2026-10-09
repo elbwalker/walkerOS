@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Grid } from './grid';
-import { Box } from './box';
+import { CodeBox } from '../molecules/code-box';
 
 /**
  * Grid - Horizontal scrolling layout component
@@ -24,107 +24,25 @@ export default meta;
 
 type Story = StoryObj<typeof Grid>;
 
+/**
+ * Two columns with synced row height, as LiveCode lays out its input and
+ * result: both boxes take the height of the taller editor content.
+ */
 export const Default: Story = {
   args: {
-    columns: 3,
-    children: (
-      <>
-        <Box header="Box 1">Content for box 1</Box>
-        <Box header="Box 2">Content for box 2</Box>
-        <Box header="Box 3">Content for box 3</Box>
-      </>
-    ),
-  },
-};
-
-export const AutoHeight: Story = {
-  args: {
     columns: 2,
-    rowHeight: 'auto',
+    rowHeight: 'synced',
     children: (
       <>
-        <Box header="Short">Short content</Box>
-        <Box header="Tall">
-          <div>Line 1</div>
-          <div>Line 2</div>
-          <div>Line 3</div>
-          <div>Line 4</div>
-        </Box>
-      </>
-    ),
-  },
-};
-
-export const EqualHeight: Story = {
-  args: {
-    columns: 3,
-    rowHeight: 'equal',
-    children: (
-      <>
-        <Box header="Box A">Short</Box>
-        <Box header="Box B">
-          <div>Tall content</div>
-          <div>More lines</div>
-          <div>Even more</div>
-        </Box>
-        <Box header="Box C">Medium</Box>
-      </>
-    ),
-  },
-};
-
-export const FixedHeight: Story = {
-  args: {
-    columns: 2,
-    rowHeight: 200,
-    children: (
-      <>
-        <Box header="Fixed 200px">Content fits in 200px height</Box>
-        <Box header="Also 200px">Same height regardless of content</Box>
-      </>
-    ),
-  },
-};
-
-export const CustomGap: Story = {
-  args: {
-    columns: 3,
-    gap: 32,
-    children: (
-      <>
-        <Box header="Wide Gap">32px gap between boxes</Box>
-        <Box header="Box 2">Content</Box>
-        <Box header="Box 3">Content</Box>
-      </>
-    ),
-  },
-};
-
-export const NoScrollButtons: Story = {
-  args: {
-    columns: 2,
-    showScrollButtons: false,
-    children: (
-      <>
-        <Box header="No Buttons">Scroll buttons hidden</Box>
-        <Box header="Box 2">Content</Box>
-      </>
-    ),
-  },
-};
-
-/**
- * More boxes than columns: two per row, the rest wrap to a new row.
- */
-export const WrappingColumns: Story = {
-  args: {
-    columns: 2,
-    children: (
-      <>
-        <Box header="Row 1, left">Content</Box>
-        <Box header="Row 1, right">Content</Box>
-        <Box header="Row 2, left">Content</Box>
-        <Box header="Row 2, right">Content</Box>
+        <CodeBox
+          label="Event"
+          code={`{
+  "name": "product view",
+  "data": { "id": "ers", "price": 420 }
+}`}
+          language="json"
+        />
+        <CodeBox label="Result" code={`"ers"`} language="json" disabled />
       </>
     ),
   },

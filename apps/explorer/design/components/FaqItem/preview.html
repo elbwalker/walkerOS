@@ -1,0 +1,6 @@
+<!-- @dsCard group="Content" height=260 -->
+<div id="root" class="wos-root" style="background:var(--bg);padding:24px;min-height:100%"></div>
+<script>
+var h = React.createElement, W = window.WalkerOS;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } }, h(W.FaqItem, { open: true, question: "Can't I just do this with Google Tag Manager?" }, ['GTM fans one event out to many vendor tags, so it overlaps with the job.', 'walkerOS replaces the framework itself, not just where it executes.']), h(W.FaqItem, { question: 'We want to build a tracking library in-house. Why would we adopt this instead?' }, 'Because adopting walkerOS does not ask you to stop building.')));
+</script>

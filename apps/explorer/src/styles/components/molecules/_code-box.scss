@@ -12,17 +12,17 @@
   }
 }
 
+// Floating layers: a surface with a 1px strong edge, no shadow
 .elb-codebox-settings {
   position: absolute;
   top: 100%;
   right: 0;
-  z-index: 10;
+  z-index: var(--z-dropdown);
   margin-top: 4px;
   padding: 8px 0;
-  background: var(--bg-dropdown);
-  border: 1px solid var(--border-box);
-  border-radius: var(--radius-button);
-  box-shadow: var(--shadow-dropdown);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xs);
   min-width: 140px;
 }
 
@@ -31,14 +31,14 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  font-size: var(--font-size-label);
-  color: var(--color-text);
+  font-size: var(--type-product-small-size);
+  color: var(--fg);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
 
   &:hover {
-    background: var(--bg-dropdown-option-hover);
+    background: var(--surface-2);
   }
 
   input[type='checkbox'] {
@@ -47,40 +47,53 @@
   }
 }
 
-// Marker count badges in header
+// Empty state: plain words over the empty editor, where the code will appear
+.elb-codebox-placeholder {
+  position: absolute;
+  inset: 0 0 auto;
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--fg-3);
+  font-family: var(--font-sans);
+  font-size: var(--type-product-small-size);
+  line-height: var(--type-product-small-line-height);
+  pointer-events: none;
+}
+
+// Marker count badges in header: an icon, a count and its word in the status colour
 .elb-codebox-marker-badge {
   display: flex;
   align-items: center;
   gap: 3px;
   padding: 2px 6px;
   border: none;
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-xs);
   cursor: pointer;
-  font-size: calc(var(--font-size-base) - 2px);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--type-product-caption-size);
+  font-weight: 600;
   font-family: var(--font-mono);
   line-height: 1;
-  transition: all 0.15s;
+  transition: all var(--motion) var(--ease);
 
   svg {
     flex-shrink: 0;
   }
 
   &--error {
-    color: var(--color-alert-error-text);
+    color: var(--danger);
     background: transparent;
 
     &:hover {
-      background: var(--color-alert-error-bg);
+      background: var(--danger-bg);
     }
   }
 
   &--warning {
-    color: var(--color-alert-warning-text);
+    color: var(--warning);
     background: transparent;
 
     &:hover {
-      background: var(--color-alert-warning-bg);
+      background: var(--warning-bg);
     }
   }
 }
@@ -90,13 +103,12 @@
   position: absolute;
   top: 100%;
   right: 0;
-  z-index: 10;
+  z-index: var(--z-dropdown);
   margin-top: 4px;
   padding: 4px 0;
-  background: var(--bg-dropdown);
-  border: 1px solid var(--border-box);
-  border-radius: var(--radius-button);
-  box-shadow: var(--shadow-dropdown);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xs);
   min-width: 200px;
   max-width: 340px;
   max-height: 200px;
@@ -112,19 +124,19 @@
   border: none;
   background: none;
   cursor: pointer;
-  font-size: calc(var(--font-size-base) - 2px);
-  color: var(--color-text);
+  font-size: var(--type-product-caption-size);
+  color: var(--fg);
   text-align: left;
 
   &:hover {
-    background: var(--bg-dropdown-option-hover);
+    background: var(--surface-2);
   }
 }
 
 .elb-codebox-marker-menu-line {
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
   opacity: 0.6;
 }
 

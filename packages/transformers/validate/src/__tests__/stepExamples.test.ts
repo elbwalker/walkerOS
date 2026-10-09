@@ -43,6 +43,8 @@ const settingsByExample: Record<string, ValidateSettings> = {
   passAnnotateInvalid: { contract: [pageContract], mode: 'pass' },
   gtmFilterDropped: { contract: [noGtmContract], mode: 'strict' },
   gtmFilterPasses: { contract: [noGtmContract], mode: 'strict' },
+  formatCustomUserKeys: { format: true, mode: 'strict' },
+  formatWrongUserType: { format: true, mode: 'strict' },
 };
 
 describe('validate transformer step examples', () => {

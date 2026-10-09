@@ -1,0 +1,36 @@
+// CodeDiffBox header actions: summary counts, the split or inline toggle and
+// the copy button, on the code bar of the dark island.
+.elb-code-diff-box__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Each count carries its sign (+, -, ~), so the colour never stands alone
+.elb-code-diff-box__summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--type-product-caption-size);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.elb-code-diff-box__added {
+  color: var(--success);
+}
+
+.elb-code-diff-box__deleted {
+  color: var(--danger);
+}
+
+.elb-code-diff-box__modified {
+  color: var(--fg-2);
+}
+
+.elb-code-diff-box__toggle .elb-explorer-btn {
+  padding: 2px 8px;
+  font-size: var(--type-product-caption-size);
+  font-weight: 500;
+  user-select: none;
+}

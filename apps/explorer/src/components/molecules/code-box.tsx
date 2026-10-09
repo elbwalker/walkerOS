@@ -9,6 +9,7 @@ import type { editor } from 'monaco-editor';
 import { useMonaco } from '@monaco-editor/react';
 import { Box } from '../atoms/box';
 import { Code, type CodeProps } from '../atoms/code';
+import { ErrorIcon, WarningIcon } from '../atoms/status-icons';
 
 /**
  * Tab with code content for CodeBox
@@ -52,6 +53,13 @@ export interface CodeBoxProps extends Omit<CodeProps, 'code'> {
 
   /** Callback when validation issues change. Use to disable Save when errors > 0. */
   onValidationIssues?: (counts: { errors: number; warnings: number }) => void;
+
+  /** Plain words shown over the editor while `code` is empty, such as what fills it. */
+  placeholder?: string;
+  /** What failed for this box, shown above the editor with an icon and the word Error. */
+  error?: string;
+  /** `status` for input validation the reader is typing through; `alert` (default) otherwise. */
+  errorRole?: 'alert' | 'status';
 
   // Layout
   footer?: React.ReactNode;
@@ -123,6 +131,10 @@ export function CodeBox({
   showSettings = false,
   // Validation
   onValidationIssues,
+  // States
+  placeholder,
+  error,
+  errorRole,
   // Layout
   footer,
   height,
@@ -401,7 +413,8 @@ export function CodeBox({
 
   // Auto-height class for content-based sizing (Box handles gridContext)
   const autoHeightClass = autoHeight ? 'elb-box--auto-height' : '';
-  const boxClassName = `${autoHeightClass} ${className || ''}`.trim();
+  const boxClassName =
+    `elb-explorer-box--code ${autoHeightClass} ${className || ''}`.trim();
 
   // Convert CodeBoxTab[] to BoxTab[] with Code as content (Box handles rendering).
   // Memoized so a marker-count update does not give each <Code>/Monaco subtree
@@ -454,6 +467,9 @@ export function CodeBox({
       height={height}
       style={style}
       className={boxClassName}
+      theme="dark"
+      error={error}
+      errorRole={errorRole}
     >
       {/* Only render Code as children when no tabs (single code mode) */}
       {!tabs && (
@@ -469,8 +485,16 @@ export function CodeBox({
           {...settingsProps}
         />
       )}
+      {!tabs && placeholder && !code && !error && (
+        <p className="elb-codebox-placeholder">{placeholder}</p>
+      )}
     </Box>
   );
+}
+
+/** A count and its noun, such as "1 error" or "2 warnings". */
+function count(n: number, noun: string): string {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`;
 }
 
 interface MarkerBadgesProps {
@@ -508,24 +532,14 @@ const MarkerBadges = React.memo(function MarkerBadges({
           style={{ position: 'relative' }}
         >
           <button
+            type="button"
             className="elb-codebox-marker-badge elb-codebox-marker-badge--error"
             onClick={() =>
               setOpenMarkerMenu(openMarkerMenu === 'error' ? null : 'error')
             }
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="15" y1="9" x2="9" y2="15" />
-              <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
-            <span>{markerCounts.errors}</span>
+            <ErrorIcon />
+            <span>{count(markerCounts.errors, 'error')}</span>
           </button>
           {openMarkerMenu === 'error' && (
             <MarkerMenu
@@ -541,26 +555,14 @@ const MarkerBadges = React.memo(function MarkerBadges({
           style={{ position: 'relative' }}
         >
           <button
+            type="button"
             className="elb-codebox-marker-badge elb-codebox-marker-badge--warning"
             onClick={() =>
               setOpenMarkerMenu(openMarkerMenu === 'warning' ? null : 'warning')
             }
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <circle cx="12" cy="17" r=".5" />
-            </svg>
-            <span>{markerCounts.warnings}</span>
+            <WarningIcon />
+            <span>{count(markerCounts.warnings, 'warning')}</span>
           </button>
           {openMarkerMenu === 'warning' && (
             <MarkerMenu

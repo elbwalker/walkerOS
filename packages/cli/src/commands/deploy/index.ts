@@ -142,7 +142,7 @@ export interface DeployOptions {
   projectId?: string;
   wait?: boolean;
   flowName?: string;
-  timeout?: number; // ms, default 120_000
+  timeout?: number; // ms, default DEFAULT_DEPLOY_WAIT_MS (12 minutes)
   signal?: AbortSignal;
   onStatus?: (status: string, substatus: string | null) => void;
 }

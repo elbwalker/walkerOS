@@ -1,0 +1,146 @@
+// ViewSource - a component's live HTML in place, with no frame of its own.
+// The code covers the element's visible box (its border box when it paints
+// one, else its content box), with a floor so a tiny element still opens a
+// usable editor; the toolbar floats at that box's top right.
+.elb-view-source {
+  --elb-view-source-width: 100%;
+  --elb-view-source-height: 0px;
+  --elb-view-source-radius: 0px;
+  --elb-view-source-inset: 0px;
+  --elb-view-source-inset-top: 0px;
+  --elb-view-source-inset-right: 0px;
+  position: relative;
+
+  // Opt-in (`stretch`): one-column grids on the root and the content, so an
+  // auto-height wrapped element fills a stretched grid or flex cell; its
+  // margins, own self-alignment and explicit height still apply. Before the
+  // `[hidden]` rule, which wins at equal specificity.
+  &--stretch,
+  &--stretch > .elb-view-source__content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  &__content[hidden] {
+    display: none;
+  }
+
+  &__toolbar {
+    position: absolute;
+    top: calc(var(--elb-view-source-inset-top) + 8px);
+    right: calc(var(--elb-view-source-inset-right) + 8px);
+    z-index: var(--z-raised);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: stretch;
+    gap: 4px;
+    max-width: calc(100% - 16px);
+    font-family: var(--font-sans);
+    font-size: var(--type-product-small-size);
+    line-height: var(--type-product-small-line-height);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--motion) var(--ease);
+  }
+
+  // Floating controls: surface with a 1px border-strong edge, one each
+  &__notice,
+  &__reset {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xs);
+    background: var(--surface);
+  }
+
+  &__notice {
+    gap: 4px;
+    padding: 0 8px;
+    color: var(--fg);
+
+    svg {
+      flex: none;
+      color: var(--warning);
+    }
+
+    // The live region stays in the accessibility tree while empty, so a
+    // later notice is announced: out of the flow and sizeless, never hidden
+    &:empty {
+      position: absolute;
+      padding: 0;
+      border: 0;
+    }
+  }
+
+  &__reset {
+    justify-content: center;
+    margin: 0;
+    // 14px icon plus padding: square, one row with the toggle
+    padding: 7px;
+    color: var(--fg-2);
+    cursor: pointer;
+    transition:
+      background-color var(--motion) var(--ease),
+      color var(--motion) var(--ease);
+
+    &:hover {
+      background: var(--surface-2);
+      color: var(--fg);
+    }
+  }
+
+  // The element's border box; its padding stays free (transparent) when the
+  // element paints no box of its own
+  &__code {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: var(--elb-view-source-width);
+    max-width: 100%;
+    height: max(var(--elb-view-source-height), 160px);
+    padding: var(--elb-view-source-inset);
+  }
+
+  // The dark code surface, on its own element so its corners stay round
+  &__surface {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: var(--elb-view-source-radius);
+    background: var(--code-bg);
+    // Monaco's own layers (sticky rows, scrollbars) stay inside this stacking
+    // context, so the toolbar is always on top.
+    isolation: isolate;
+  }
+}
+
+// Always shown in Code, while edited and with a notice
+.elb-view-source--code > .elb-view-source__toolbar,
+.elb-view-source--edited > .elb-view-source__toolbar,
+.elb-view-source--notice > .elb-view-source__toolbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+// Shown on hover and keyboard focus of the innermost wrapper only, one
+// toolbar at a time when wrappers nest; a mouse click leaves no lasting
+// reveal. Its own rule, so an engine without :has() drops only this one.
+.elb-view-source:hover:not(:has(.elb-view-source:hover))
+  > .elb-view-source__toolbar,
+.elb-view-source:has(:focus-visible):not(:has(.elb-view-source :focus-visible))
+  > .elb-view-source__toolbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+// Without :has(), every hovered or focused wrapper shows its toolbar.
+@supports not selector(:has(*)) {
+  .elb-view-source:hover > .elb-view-source__toolbar,
+  .elb-view-source:focus-within > .elb-view-source__toolbar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

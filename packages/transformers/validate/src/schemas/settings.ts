@@ -12,7 +12,7 @@ export const SettingsSchema = z
       .boolean()
       .optional()
       .describe(
-        'When true, also validate the canonical WalkerOS.Event structural shape (correct field types, no unknown fields). All fields are optional, so this checks structure and types, not presence.',
+        'When true, also validate the canonical WalkerOS.Event structural shape (correct field types; no unknown top-level fields and no unknown keys on a nested entity; `user`, `source`, `data`, `globals`, `custom`, `context` and `consent` accept extra keys of their value type). All fields are optional, so this checks structure and types, not presence.',
       ),
     mode: z
       .enum(['strict', 'pass'])

@@ -1,15 +1,12 @@
-import * as prettier from 'prettier/standalone';
-import prettierBabel from 'prettier/plugins/babel';
-import prettierEstree from 'prettier/plugins/estree';
-import prettierTypescript from 'prettier/plugins/typescript';
-import prettierHtml from 'prettier/plugins/html';
 import type * as monaco from 'monaco-editor';
+import { loadPrettier } from './load-prettier';
 
 /**
  * Register Monaco Editor formatting providers for various languages
  *
  * Uses Prettier for professional-grade code formatting.
- * Registered once when Monaco is initialized.
+ * Registered once when Monaco is initialized; Prettier and the language's
+ * plugins load on the first format of that language (load-prettier).
  *
  * Supported languages:
  * - JavaScript (parser: babel)
@@ -26,9 +23,10 @@ export function registerFormatters(monacoInstance: typeof monaco): void {
       async provideDocumentFormattingEdits(model, options) {
         try {
           const text = model.getValue();
-          const formatted = await prettier.format(text, {
+          const { format, plugins } = await loadPrettier('babel');
+          const formatted = await format(text, {
             parser: 'babel',
-            plugins: [prettierBabel, prettierEstree],
+            plugins,
             tabWidth: options.tabSize,
             useTabs: !options.insertSpaces,
             semi: true,
@@ -55,9 +53,10 @@ export function registerFormatters(monacoInstance: typeof monaco): void {
       async provideDocumentFormattingEdits(model, options) {
         try {
           const text = model.getValue();
-          const formatted = await prettier.format(text, {
+          const { format, plugins } = await loadPrettier('typescript');
+          const formatted = await format(text, {
             parser: 'typescript',
-            plugins: [prettierTypescript, prettierEstree],
+            plugins,
             tabWidth: options.tabSize,
             useTabs: !options.insertSpaces,
             semi: true,
@@ -101,9 +100,10 @@ export function registerFormatters(monacoInstance: typeof monaco): void {
     async provideDocumentFormattingEdits(model, options) {
       try {
         const text = model.getValue();
-        const formatted = await prettier.format(text, {
+        const { format, plugins } = await loadPrettier('html');
+        const formatted = await format(text, {
           parser: 'html',
-          plugins: [prettierHtml],
+          plugins,
           tabWidth: options.tabSize,
           useTabs: !options.insertSpaces,
           htmlWhitespaceSensitivity: 'css',
@@ -125,9 +125,10 @@ export function registerFormatters(monacoInstance: typeof monaco): void {
     async provideDocumentFormattingEdits(model, options) {
       try {
         const text = model.getValue();
-        const formatted = await prettier.format(text, {
+        const { format, plugins } = await loadPrettier('css');
+        const formatted = await format(text, {
           parser: 'css',
-          plugins: [prettierHtml], // CSS parser is in html plugin
+          plugins,
           tabWidth: options.tabSize,
           useTabs: !options.insertSpaces,
         });

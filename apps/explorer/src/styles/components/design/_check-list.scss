@@ -1,0 +1,41 @@
+// CheckList (@walkeros/explorer/design/components): claims led by a check.
+@layer components {
+  .elb-checklist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 28px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--fg-2);
+    font-family: var(--type-ui-family);
+    font-size: var(--type-ui-size);
+    line-height: var(--type-ui-line-height);
+    font-weight: 400;
+  }
+
+  .elb-checklist--center {
+    justify-content: center;
+  }
+
+  .elb-checklist--stack {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 9px;
+  }
+
+  .elb-checklist__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .elb-checklist--stack > .elb-checklist__item {
+    align-items: flex-start;
+    gap: 10px;
+
+    > .elb-icon {
+      margin-top: 4px;
+    }
+  }
+}

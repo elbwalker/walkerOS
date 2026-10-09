@@ -1,0 +1,54 @@
+// Hero (@walkeros/explorer/design/components): the page's opening band.
+@layer components {
+  .elb-hero {
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 104px 0 var(--section-y);
+    color: var(--fg);
+    background: var(--bg);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: -120px;
+      width: min(1000px, 140%);
+      height: 520px;
+      translate: -50% 0;
+      background: radial-gradient(closest-side, var(--glow), transparent 75%);
+      pointer-events: none;
+    }
+  }
+
+  .elb-hero__inner {
+    position: relative;
+    box-sizing: border-box;
+    max-width: var(--container);
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+    text-align: center;
+  }
+
+  .elb-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-top: 34px;
+  }
+
+  .elb-hero__proof {
+    display: flex;
+    justify-content: center;
+    margin-top: 34px;
+  }
+
+  .elb-hero__demo {
+    margin-top: 56px;
+    text-align: left;
+  }
+}

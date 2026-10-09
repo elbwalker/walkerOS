@@ -21,10 +21,3 @@ export const Default: Story = {
     children: 'Click me',
   },
 };
-
-export const Active: Story = {
-  args: {
-    children: 'Active Button',
-    active: true,
-  },
-};

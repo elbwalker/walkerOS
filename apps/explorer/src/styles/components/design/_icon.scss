@@ -1,0 +1,12 @@
+// Icon (@walkeros/explorer/design/components): line glyphs in currentColor.
+@layer components {
+  .elb-icon {
+    display: inline-block;
+    flex: none;
+    vertical-align: middle;
+  }
+
+  .elb-icon--check {
+    color: var(--primary);
+  }
+}

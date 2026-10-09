@@ -26,13 +26,18 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import { createFlowManageToolSpec } from '../../tools/flow-manage.js';
+import {
+  createFlowManageToolSpec,
+  registerFlowManageTool,
+} from '../../tools/flow-manage.js';
+import { connectTool } from '../support/connected-tool.js';
 import { stubClient } from '../support/stub-client.js';
 import {
   structured,
   record,
   rows,
   hintsOf,
+  isErrorResult,
   textOf,
 } from '../support/tool-result.js';
 
@@ -139,13 +144,31 @@ describe('flow_manage tool — preview actions', () => {
       const spec = createFlowManageToolSpec(stubClient());
       const result = await spec.handler({
         action: 'preview_create',
-        flowName: 'demo',
+        settingsName: 'demo',
       });
 
       expect(record(result).isError).toBe(true);
     });
 
-    it('requires flowName or flowSettingsId', async () => {
+    it('refuses the old flowName key in the handler, naming it, and creates nothing', async () => {
+      const createPreview = jest.fn();
+      const spec = createFlowManageToolSpec(
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
+      const result = await spec.handler({
+        action: 'preview_create',
+        flowId: 'cfg_1',
+        flowName: 'web',
+      });
+
+      expect(isErrorResult(result)).toBe(true);
+      const parsed = record(JSON.parse(textOf(result)));
+      expect(parsed.error).toContain('Unrecognized key');
+      expect(parsed.error).toContain('flowName');
+      expect(createPreview).not.toHaveBeenCalled();
+    });
+
+    it('requires settingsName or flowSettingsId', async () => {
       const spec = createFlowManageToolSpec(stubClient());
       const result = await spec.handler({
         action: 'preview_create',
@@ -175,7 +198,7 @@ describe('flow_manage tool — preview actions', () => {
       const result = await spec.handler({
         action: 'preview_create',
         flowId: 'cfg_1',
-        flowName: 'demo',
+        settingsName: 'demo',
       });
 
       expect(createPreview).toHaveBeenCalledWith({
@@ -210,7 +233,7 @@ describe('flow_manage tool — preview actions', () => {
       const result = await spec.handler({
         action: 'preview_create',
         flowId: 'cfg_1',
-        flowName: 'demo',
+        settingsName: 'demo',
         siteUrl: 'https://example.com',
       });
 
@@ -284,7 +307,7 @@ describe('flow_manage tool — preview actions', () => {
       expect(Object.keys(callArg)).not.toContain('source');
     });
 
-    it('works with flowSettingsId instead of flowName', async () => {
+    it('works with flowSettingsId instead of settingsName', async () => {
       const createPreview = jest.fn().mockResolvedValue({
         id: 'prv_1',
         token: 'tok_abc',
@@ -319,7 +342,7 @@ describe('flow_manage tool — preview actions', () => {
       const result = await spec.handler({
         action: 'preview_create',
         flowId: 'cfg_1',
-        flowName: 'demo',
+        settingsName: 'demo',
       });
 
       expect(record(result).isError).toBe(true);
@@ -345,7 +368,7 @@ describe('flow_manage tool — preview actions', () => {
         action: 'preview_create',
         projectId: 'proj_explicit',
         flowId: 'cfg_1',
-        flowName: 'demo',
+        settingsName: 'demo',
       });
 
       expect(createPreview).toHaveBeenCalledWith({
@@ -354,6 +377,62 @@ describe('flow_manage tool — preview actions', () => {
         flowName: 'demo',
         flowSettingsId: undefined,
       });
+    });
+  });
+
+  describe('preview_create through the MCP transport', () => {
+    it('creates the preview for the settings named by settingsName', async () => {
+      const createPreview = jest.fn().mockResolvedValue({ id: 'prv_1' });
+      const { mcp, close } = await connectTool(
+        registerFlowManageTool,
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
+      try {
+        const result = await mcp.callTool({
+          name: 'flow_manage',
+          arguments: {
+            action: 'preview_create',
+            flowId: 'cfg_1',
+            settingsName: 'web',
+          },
+        });
+
+        expect(isErrorResult(result)).toBe(false);
+        expect(createPreview).toHaveBeenCalledWith({
+          projectId: 'proj_default',
+          flowId: 'cfg_1',
+          flowName: 'web',
+          flowSettingsId: undefined,
+        });
+      } finally {
+        await close();
+      }
+    });
+
+    it('answers the old flowName key with an input error naming it, and creates nothing', async () => {
+      const createPreview = jest.fn();
+      const { mcp, close } = await connectTool(
+        registerFlowManageTool,
+        stubClient({ createPreview, getDefaultProject: () => 'proj_default' }),
+      );
+      try {
+        const result = await mcp.callTool({
+          name: 'flow_manage',
+          arguments: {
+            action: 'preview_create',
+            flowId: 'cfg_1',
+            flowName: 'web',
+          },
+        });
+
+        expect(isErrorResult(result)).toBe(true);
+        // The registered schema refuses it before the handler runs.
+        expect(textOf(result)).toContain('Input validation error');
+        expect(textOf(result)).toContain('flowName');
+        expect(createPreview).not.toHaveBeenCalled();
+      } finally {
+        await close();
+      }
     });
   });
 
@@ -584,7 +663,7 @@ describe('flow_manage tool — preview actions', () => {
       const result = await spec.handler({
         action: 'preview_create',
         flowId: 'cfg_1',
-        flowName: 'demo',
+        settingsName: 'demo',
       });
 
       expect(record(result).isError).toBeUndefined();

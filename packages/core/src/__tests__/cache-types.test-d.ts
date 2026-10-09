@@ -11,17 +11,11 @@
 import type { CacheResult } from '../cache';
 import { checkCache } from '../cache';
 import type { Cache, EventCacheRule, StoreCacheRule } from '../types/cache';
-
-type Equal<X, Y> =
-  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
-    ? true
-    : false;
-
-type Expect<T extends true> = T;
+import type { IsExactly, Expect } from '../schemas/__tests__/type-utils';
 
 // Pin: checkCache returns Promise<CacheResult | null>.
 type _CheckCacheReturnsPromise = Expect<
-  Equal<ReturnType<typeof checkCache>, Promise<CacheResult | null>>
+  IsExactly<ReturnType<typeof checkCache>, Promise<CacheResult | null>>
 >;
 
 void (null as unknown as _CheckCacheReturnsPromise);

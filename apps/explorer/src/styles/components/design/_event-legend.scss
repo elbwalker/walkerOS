@@ -1,0 +1,28 @@
+// EventLegend (@walkeros/explorer/design/components): the colour key for the
+// five parts of an event. A dark island: the component sets data-theme="dark".
+@layer components {
+  .elb-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-family: var(--font-viz-mono);
+    font-size: var(--type-viz-legend-size);
+    color: var(--viz-fg-2);
+    background: var(--viz-bg);
+    padding: 12px 16px;
+    border-radius: var(--radius-lg);
+  }
+
+  .elb-legend__item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .elb-legend__swatch {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+  }
+}

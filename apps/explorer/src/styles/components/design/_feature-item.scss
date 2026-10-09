@@ -1,0 +1,39 @@
+// FeatureItem (@walkeros/explorer/design/components): a checked feature.
+@layer components {
+  .elb-feature {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: var(--space-3-5);
+    align-items: start;
+
+    > .elb-icon {
+      margin-top: 3px;
+    }
+  }
+
+  .elb-feature__title {
+    margin: 0 0 var(--space-2);
+    color: var(--fg);
+    font-family: var(--type-title-item-family);
+    font-size: var(--type-title-item-size);
+    line-height: var(--type-title-item-line-height);
+    font-weight: var(--type-title-item-weight);
+  }
+
+  .elb-feature__text {
+    margin: 0 0 var(--space-2);
+    color: var(--fg-2);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+    font-weight: var(--type-body-weight);
+    text-wrap: pretty;
+  }
+
+  .elb-feature__link {
+    font-family: var(--type-small-family);
+    font-size: var(--type-small-size);
+    line-height: var(--type-small-line-height);
+    font-weight: 500;
+  }
+}

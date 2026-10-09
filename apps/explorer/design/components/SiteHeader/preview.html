@@ -1,0 +1,7 @@
+<!-- @dsCard group="Navigation" height=90 -->
+<div id="root" class="wos-root" style="background:var(--bg);padding:0;min-height:100%"></div>
+<script>
+var h = React.createElement, W = window.WalkerOS;
+function Header(){ var s=React.useState(document.documentElement.getAttribute('data-theme')||'dark'); var t=s[0]; return h(W.SiteHeader,{theme:t,onToggleTheme:function(){var n=t==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',n); s[1](n);}}); }
+ReactDOM.createRoot(document.getElementById('root')).render(h(Header));
+</script>

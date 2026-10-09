@@ -5,20 +5,21 @@
  * to maximize warm start performance.
  */
 
-import { sourceLambda, type SourceLambda } from '@walkeros/server-source-aws';
+import { Source } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
+import { sourceLambda, type SourceLambda } from '@walkeros/server-source-aws';
 
 // Handler singleton - reused across warm invocations
-let handler: SourceLambda.Push;
+let handler: SourceLambda.Push | undefined;
 
 /**
  * Initialize the Lambda source and collector
  * Only runs once per Lambda container lifecycle
  */
-async function setup() {
+async function setup(): Promise<SourceLambda.Push> {
   if (handler) return handler;
 
-  const { elb } = await startFlow<SourceLambda.Push>({
+  const { collector } = await startFlow({
     sources: {
       lambda: {
         code: sourceLambda,
@@ -37,7 +38,7 @@ async function setup() {
     },
   });
 
-  handler = elb;
+  handler = Source.getSource<SourceLambda.Types>(collector, 'lambda').push;
   return handler;
 }
 

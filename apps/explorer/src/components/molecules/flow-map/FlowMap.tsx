@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import rough from 'roughjs';
 import { Icon } from '@iconify/react';
+import { typeProductCaption, typeProductSmall } from '../../../design';
 
 // ============================================
 // Helper Components for rough.js SVG rendering
@@ -123,7 +124,7 @@ interface MarkerProps {
 }
 
 /**
- * Marker - Red circle with number/text inside
+ * Marker - Numbered circle on the primary fill
  */
 function Marker({ x, y, text }: MarkerProps): React.ReactElement {
   return (
@@ -132,18 +133,18 @@ function Marker({ x, y, text }: MarkerProps): React.ReactElement {
         cx={x}
         cy={y}
         diameter={MARKER_SIZE}
-        fill="var(--flow-marker-fill, #dc2626)"
-        stroke="var(--flow-marker-stroke, #991b1b)"
+        fill="var(--primary)"
+        stroke="var(--primary)"
       />
       <text
         x={x}
         y={y}
         textAnchor="middle"
         dominantBaseline="central"
-        fill="var(--flow-marker-text, #ffffff)"
-        fontSize={10}
+        fill="var(--on-primary)"
+        fontSize="var(--type-product-micro-size)"
         fontWeight={600}
-        fontFamily="system-ui, -apple-system, sans-serif"
+        fontFamily="var(--font-sans)"
       >
         {text}
       </text>
@@ -394,12 +395,12 @@ export interface FlowLayoutConfig {
 
 // Default layout configuration
 export const defaultLayout: FlowLayoutConfig = {
-  labelSize: 13,
+  labelSize: parseFloat(typeProductSmall.size),
   labelWeight: '600',
-  textSize: 12,
+  textSize: parseFloat(typeProductCaption.size),
   textWeight: 'normal',
   boxHeight: 50,
-  descriptionSize: 13,
+  descriptionSize: parseFloat(typeProductSmall.size),
 };
 
 export interface FlowMapProps {
@@ -1234,8 +1235,7 @@ export function FlowMap({
           {
             key: 'before',
             config: stageBefore,
-            fillVar: '--flow-before-fill',
-            strokeVar: '--flow-before-stroke',
+            stroke: 'var(--border-strong)',
             defaultLabel: 'Before',
             defaultLink: undefined as string | undefined,
           },
@@ -1245,8 +1245,7 @@ export function FlowMap({
     ...sortedSourceEntries.map(([name, sourceConfig]) => ({
       key: `source-${name}`,
       config: sourceConfig,
-      fillVar: '--flow-source-fill',
-      strokeVar: '--flow-source-stroke',
+      stroke: 'var(--step-source)',
       defaultLabel: 'Source',
       defaultLink: '/docs/sources' as string | undefined,
     })),
@@ -1254,16 +1253,14 @@ export function FlowMap({
     ...preTransformerList.map(({ name, config }) => ({
       key: `pre-${name}`,
       config,
-      fillVar: '--flow-transformer-fill',
-      strokeVar: '--flow-transformer-stroke',
+      stroke: 'var(--step-transformer)',
       defaultLabel: name.charAt(0).toUpperCase() + name.slice(1),
       defaultLink: '/docs/transformers' as string | undefined,
     })),
     {
       key: 'collector',
       config: collector,
-      fillVar: '--flow-collector-fill',
-      strokeVar: '--flow-collector-stroke',
+      stroke: 'var(--step-collector)',
       defaultLabel: 'Collector',
       defaultLink: '/docs/collectors' as string | undefined,
     },
@@ -1271,8 +1268,7 @@ export function FlowMap({
     ...collectorChainList.map(({ name, config }) => ({
       key: `chain-${name}`,
       config,
-      fillVar: '--flow-transformer-fill',
-      strokeVar: '--flow-transformer-stroke',
+      stroke: 'var(--step-transformer)',
       defaultLabel: name.charAt(0).toUpperCase() + name.slice(1),
       defaultLink: '/docs/transformers' as string | undefined,
     })),
@@ -1280,8 +1276,7 @@ export function FlowMap({
     ...postTransformerList.map(({ name, config }) => ({
       key: `post-${name}`,
       config,
-      fillVar: '--flow-transformer-fill',
-      strokeVar: '--flow-transformer-stroke',
+      stroke: 'var(--step-transformer)',
       defaultLabel: name.charAt(0).toUpperCase() + name.slice(1),
       defaultLink: '/docs/transformers' as string | undefined,
     })),
@@ -1289,8 +1284,7 @@ export function FlowMap({
     ...sortedDestinationEntries.map(([name, destConfig]) => ({
       key: `destination-${name}`,
       config: destConfig,
-      fillVar: '--flow-destination-fill',
-      strokeVar: '--flow-destination-stroke',
+      stroke: 'var(--step-destination)',
       defaultLabel: 'Destination',
       defaultLink: '/docs/destinations' as string | undefined,
     })),
@@ -1298,8 +1292,7 @@ export function FlowMap({
     ...afterPositions.map(({ name: destName, config: afterConfig }) => ({
       key: `after-${destName}`,
       config: afterConfig,
-      fillVar: '--flow-after-fill',
-      strokeVar: '--flow-after-stroke',
+      stroke: 'var(--border-strong)',
       defaultLabel: 'External',
       defaultLink: undefined as string | undefined,
     })),
@@ -1329,10 +1322,10 @@ export function FlowMap({
             y={18}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill="var(--color-text, #f3f4f6)"
-            fontSize={14}
+            fill="var(--fg)"
+            fontSize="var(--type-product-body-size)"
             fontWeight={600}
-            fontFamily="system-ui, -apple-system, sans-serif"
+            fontFamily="var(--font-sans)"
           >
             {title}
           </text>
@@ -1355,7 +1348,7 @@ export function FlowMap({
                 height={boxHeight + pad * 2}
                 rx={10}
                 fill="none"
-                stroke="var(--flow-collector-stroke, #7dd3fc)"
+                stroke="var(--step-collector)"
                 strokeWidth={1}
                 strokeDasharray="4 4"
               />
@@ -1418,7 +1411,7 @@ export function FlowMap({
                   fromY={centerY}
                   toX={stages.source.x}
                   toY={centerY}
-                  stroke="var(--flow-edge-stroke, #9ca3af)"
+                  stroke="var(--border-strong)"
                   centerY={centerY}
                 />
               )}
@@ -1430,7 +1423,7 @@ export function FlowMap({
                   fromY={centerY}
                   toX={stages.source.x}
                   toY={stages.source.y + boxHeight / 2}
-                  stroke="var(--flow-edge-stroke, #9ca3af)"
+                  stroke="var(--border-strong)"
                   centerY={centerY}
                 />
               )}
@@ -1490,7 +1483,7 @@ export function FlowMap({
                         fromY={sourceCenterY - offset}
                         toX={targetPos.x}
                         toY={spreadY - offset}
-                        stroke="var(--flow-edge-stroke, #9ca3af)"
+                        stroke="var(--border-strong)"
                         centerY={centerY}
                       />
                       {withReturn && (
@@ -1499,7 +1492,7 @@ export function FlowMap({
                           fromY={spreadY + offset}
                           toX={sourcePos.x + STAGE_WIDTH}
                           toY={sourceCenterY + offset}
-                          stroke="var(--flow-edge-stroke, #9ca3af)"
+                          stroke="var(--border-strong)"
                           centerY={centerY}
                         />
                       )}
@@ -1530,7 +1523,7 @@ export function FlowMap({
                       fromY={fromY - offset}
                       toX={targetPos.x}
                       toY={toY - offset}
-                      stroke="var(--flow-edge-stroke, #9ca3af)"
+                      stroke="var(--border-strong)"
                       centerY={centerY}
                     />
                     {withReturn && (
@@ -1539,7 +1532,7 @@ export function FlowMap({
                         fromY={toY + offset}
                         toX={pos.x + STAGE_WIDTH}
                         toY={fromY + offset}
-                        stroke="var(--flow-edge-stroke, #9ca3af)"
+                        stroke="var(--border-strong)"
                         centerY={centerY}
                       />
                     )}
@@ -1564,7 +1557,7 @@ export function FlowMap({
                       fromY={sourceCenterY - offset}
                       toX={destPos.x}
                       toY={destCenterY - offset}
-                      stroke="var(--flow-edge-stroke, #9ca3af)"
+                      stroke="var(--border-strong)"
                       centerY={centerY}
                     />
                     {withReturn && (
@@ -1573,7 +1566,7 @@ export function FlowMap({
                         fromY={destCenterY + offset}
                         toX={sourcePos.x + STAGE_WIDTH}
                         toY={sourceCenterY + offset}
-                        stroke="var(--flow-edge-stroke, #9ca3af)"
+                        stroke="var(--border-strong)"
                         centerY={centerY}
                       />
                     )}
@@ -1602,7 +1595,7 @@ export function FlowMap({
                         fromY={fromY - offset}
                         toX={targetPos.x}
                         toY={toY - offset}
-                        stroke="var(--flow-edge-stroke, #9ca3af)"
+                        stroke="var(--border-strong)"
                         centerY={centerY}
                       />
                       {withReturn && (
@@ -1611,7 +1604,7 @@ export function FlowMap({
                           fromY={toY + offset}
                           toX={pos.x + STAGE_WIDTH}
                           toY={fromY + offset}
-                          stroke="var(--flow-edge-stroke, #9ca3af)"
+                          stroke="var(--border-strong)"
                           centerY={centerY}
                         />
                       )}
@@ -1635,7 +1628,7 @@ export function FlowMap({
                       fromY={y - offset}
                       toX={pos.x}
                       toY={y - offset}
-                      stroke="var(--flow-edge-stroke, #9ca3af)"
+                      stroke="var(--border-strong)"
                       centerY={centerY}
                     />
                     {withReturn && (
@@ -1644,7 +1637,7 @@ export function FlowMap({
                         fromY={y + offset}
                         toX={fromPos.x + STAGE_WIDTH}
                         toY={y + offset}
-                        stroke="var(--flow-edge-stroke, #9ca3af)"
+                        stroke="var(--border-strong)"
                         centerY={centerY}
                       />
                     )}
@@ -1668,7 +1661,7 @@ export function FlowMap({
                         fromY={fromY - offset}
                         toX={firstPostPos.x}
                         toY={toY - offset}
-                        stroke="var(--flow-edge-stroke, #9ca3af)"
+                        stroke="var(--border-strong)"
                         centerY={centerY}
                       />
                       {withReturn && (
@@ -1677,7 +1670,7 @@ export function FlowMap({
                           fromY={toY + offset}
                           toX={fanOutPos.x + STAGE_WIDTH}
                           toY={fromY + offset}
-                          stroke="var(--flow-edge-stroke, #9ca3af)"
+                          stroke="var(--border-strong)"
                           centerY={centerY}
                         />
                       )}
@@ -1699,7 +1692,7 @@ export function FlowMap({
                     fromY={destCenterY}
                     toX={afterPos.x}
                     toY={afterCenterY}
-                    stroke="var(--flow-edge-stroke, #9ca3af)"
+                    stroke="var(--border-strong)"
                     centerY={centerY}
                   />
                 );
@@ -1712,7 +1705,7 @@ export function FlowMap({
                   fromY={centerY}
                   toX={totalWidth}
                   toY={centerY}
-                  stroke="var(--flow-edge-stroke, #9ca3af)"
+                  stroke="var(--border-strong)"
                   centerY={centerY}
                 />
               )}
@@ -1722,7 +1715,7 @@ export function FlowMap({
 
         {/* Stages */}
         {stageConfigs.map(
-          ({ key, config, fillVar, strokeVar, defaultLabel, defaultLink }) => {
+          ({ key, config, stroke, defaultLabel, defaultLink }) => {
             const pos = stages[key];
             const icon = config?.icon;
             const label = config?.label || defaultLabel;
@@ -1754,12 +1747,8 @@ export function FlowMap({
                   y={pos.y}
                   width={pos.width}
                   height={pos.height}
-                  fill={`var(${fillVar}, #6b7280)`}
-                  stroke={
-                    stageHighlight
-                      ? `var(${strokeVar}, #6b7280)`
-                      : 'var(--flow-edge-stroke, #9ca3af)'
-                  }
+                  fill="transparent"
+                  stroke={stageHighlight ? stroke : 'var(--border-strong)'}
                 />
 
                 {/* Label (with optional icon) */}
@@ -1778,8 +1767,8 @@ export function FlowMap({
                       height: '100%',
                       fontSize: layout.labelSize,
                       fontWeight: layout.labelWeight,
-                      fontFamily: 'system-ui, -apple-system, sans-serif',
-                      color: 'var(--color-text)',
+                      fontFamily: 'var(--font-sans)',
+                      color: 'var(--fg)',
                     }}
                   >
                     {icon && <Icon icon={icon} width={14} height={14} />}
@@ -1799,9 +1788,9 @@ export function FlowMap({
                       style={{
                         fontSize: layout.textSize,
                         fontWeight: layout.textWeight,
-                        color: 'var(--color-text)',
+                        color: 'var(--fg)',
                         textAlign: 'center',
-                        fontFamily: 'system-ui, -apple-system, sans-serif',
+                        fontFamily: 'var(--font-sans)',
                         lineHeight: 1.3,
                         height: '100%',
                         display: 'flex',
@@ -1825,9 +1814,9 @@ export function FlowMap({
                     <div
                       style={{
                         fontSize: layout.descriptionSize,
-                        color: 'var(--color-text-muted)',
+                        color: 'var(--fg-2)',
                         textAlign: 'center',
-                        fontFamily: 'system-ui, -apple-system, sans-serif',
+                        fontFamily: 'var(--font-sans)',
                         lineHeight: 1.3,
                       }}
                     >
@@ -1879,9 +1868,9 @@ export function FlowMap({
           >
             <div
               style={{
-                fontSize: 11,
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                color: 'var(--color-text-muted)',
+                fontSize: 'var(--type-product-micro-size)',
+                fontFamily: 'var(--font-sans)',
+                color: 'var(--fg-2)',
                 lineHeight: 1.6,
               }}
             >
@@ -1892,16 +1881,16 @@ export function FlowMap({
                   <span key={`legend-${index}`}>
                     <span
                       style={{
-                        width: 12,
-                        height: 12,
+                        width: MARKER_SIZE,
+                        height: MARKER_SIZE,
                         borderRadius: '50%',
-                        background: 'var(--flow-marker-fill, #dc2626)',
+                        background: 'var(--primary)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 8,
+                        fontSize: 'var(--type-product-micro-size)',
                         fontWeight: 600,
-                        color: 'var(--flow-marker-text, #ffffff)',
+                        color: 'var(--on-primary)',
                         verticalAlign: 'middle',
                         marginRight: 4,
                         position: 'relative',

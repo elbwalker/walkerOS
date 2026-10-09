@@ -202,8 +202,9 @@ export async function fetchOpenApi(baseUrl?: string): Promise<OpenApiResult> {
  * - `in-sync`: every client operation has the client's wire shape.
  * - `changed`: some client operations differ from the server's and the
  *   server's label names a floor (`<floor>+<hash8>`) not below the client's.
- *   A hash has no order, so the direction is not determined: the server may
- *   be a newer or an older deploy.
+ *   When the server's floor is higher, the server is the newer deploy:
+ *   upgrade the client. With the same floor a hash has no order, so the
+ *   server may be a newer or an older deploy.
  * - `server-older`: the server lacks client operations, or changed some and
  *   its label names a lower floor or none (a label without build metadata
  *   predates floors).

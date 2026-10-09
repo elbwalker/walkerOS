@@ -217,13 +217,21 @@ that matched (including wildcards).
 getMappingValue(
   value: unknown,
   mapping: Mapping.Data,
-  context?: Partial<Mapping.Context>,
+  context: Mapping.ValueContext, // { collector, event?, consent? }
 ): Promise<WalkerOS.Property | undefined>
 ```
 
 Resolves a `Mapping.Value` against an input. Used internally for every `data`,
 `policy`, and `set` resolution. The companion reference for each value form
 lives in [Mapping.Value](./value.mdx).
+
+The context requires the running `collector`: inside a step, take it from the
+step's context; elsewhere, use the one `startFlow` returns.
+
+```typescript
+const { collector } = await startFlow();
+await getMappingValue(event, 'data.id', { collector });
+```
 
 ## Rule-level examples
 

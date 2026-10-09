@@ -103,7 +103,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       order: z.enum(['asc', 'desc']).optional(),
       includeDeleted: z.boolean().optional(),
       previewId: z.string().optional(),
-      flowName: z.string().optional(),
+      settingsName: z.string().optional(),
       flowSettingsId: z.string().optional(),
       siteUrl: z.string().optional(),
     },
@@ -129,7 +129,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       type: z.enum(['web', 'server']).optional(),
       status: z.string().optional(),
       wait: z.boolean().optional(),
-      flowName: z.string().optional(),
+      settingsName: z.string().optional(),
     },
     annotations: {
       readOnlyHint: false,

@@ -15,6 +15,28 @@ describe('parseToolInput', () => {
     });
   });
 
+  it('drops a key the shape does not name by default', () => {
+    expect(
+      parseToolInput(shape, { configPath: './flow.json', flowName: 'web' }),
+    ).toEqual({
+      ok: true,
+      data: { configPath: './flow.json', stats: true },
+    });
+  });
+
+  it('refuses a key the shape does not name when strict, naming it', () => {
+    const parsed = parseToolInput(
+      shape,
+      { configPath: './flow.json', flowName: 'web' },
+      { strict: true },
+    );
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.structuredContent).toEqual({
+      error: 'input: Unrecognized key: "flowName"',
+    });
+  });
+
   it('reports each issue as one path: message line', () => {
     const parsed = parseToolInput(shape, { limit: 'ten' });
     expect(parsed.ok).toBe(false);

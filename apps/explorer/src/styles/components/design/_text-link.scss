@@ -1,0 +1,21 @@
+// TextLink (@walkeros/explorer/design/components): an inline link.
+@layer components {
+  .elb-text-link {
+    color: var(--link);
+    font-weight: 500;
+    text-decoration: none;
+    transition: color var(--motion) var(--ease);
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .elb-text-link--muted {
+    color: var(--fg-2);
+
+    &:hover {
+      color: var(--fg);
+    }
+  }
+}

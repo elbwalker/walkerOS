@@ -241,25 +241,25 @@
         "bundle": {
           "packages": {
             "@walkeros/collector": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/web-source-cmp-usercentrics": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/web-source-session": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/web-source-datalayer": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/web-source-browser": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/web-destination-gtag": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/web-destination-api": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             }
           },
           "env": {
@@ -1765,40 +1765,40 @@
         "bundle": {
           "packages": {
             "@walkeros/collector": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-source-express": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/transformer-ga4": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/transformer-validate": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-transformer-bot": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-transformer-fingerprint": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-transformer-file": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-store-fs": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-destination-gcp": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-destination-meta": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-destination-piwikpro": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-destination-datamanager": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             }
           }
         }
@@ -4875,13 +4875,13 @@
         "bundle": {
           "packages": {
             "@walkeros/collector": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-source-gcp": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             },
             "@walkeros/server-destination-gcp": {
-              "version": "4.7.2"
+              "version": "4.8.0"
             }
           }
         }

@@ -21,21 +21,6 @@
 // Stub the Vite virtual module before any import of code.tsx.
 jest.mock('virtual:walkeros-core-types', () => '', { virtual: true });
 
-// jsdom doesn't ship matchMedia; code.tsx uses it for theme detection.
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  }),
-});
-
 // Capture the `options` prop the real component hands to the editor. The global
 // mock (jest.setup.ts) is a bare <div> that discards props, so we extend it
 // locally to record options. The production file-based mock is untouched.

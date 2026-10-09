@@ -1,0 +1,49 @@
+// InstallCommand (@walkeros/explorer/design/components): a copy-to-clipboard
+// chip for a CLI command, with a visually hidden status beside it.
+@layer components {
+  .elb-cmd {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 12px 18px;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: var(--type-code-command-family);
+    font-size: var(--type-code-command-size);
+    line-height: var(--type-code-command-line-height);
+    font-weight: var(--type-code-command-weight);
+    cursor: pointer;
+    transition: border-color var(--motion) var(--ease);
+
+    &:hover {
+      border-color: var(--primary);
+    }
+  }
+
+  .elb-cmd__prompt {
+    color: var(--fg-3);
+  }
+
+  .elb-cmd__icon {
+    display: inline-flex;
+    color: var(--fg-3);
+  }
+
+  .elb-cmd__icon--done {
+    color: var(--primary);
+  }
+
+  .elb-cmd__status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}

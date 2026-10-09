@@ -1,0 +1,241 @@
+// HeroTaggingViz (@walkeros/explorer/design/components): the hero demo. Static
+// looks here; per-frame values arrive as --elb-viz-* properties, defaults below.
+@layer components {
+  .elb-viz-hero {
+    --elb-viz-fade: 1;
+    --elb-viz-card-opacity: 1;
+    --elb-viz-card-offset: 0;
+    --elb-viz-cursor-x: 22;
+    --elb-viz-cursor-y: 11;
+    --elb-viz-cursor-opacity: 0;
+    --elb-viz-ring-scale: 1;
+    --elb-viz-ring-opacity: 0;
+    --elb-viz-press: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .elb-viz-hero__pane {
+    display: flex;
+    flex: 1.2 1 520px;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--viz-code-bg);
+    border: 1px solid var(--viz-surface);
+    border-radius: var(--radius-lg);
+  }
+
+  .elb-viz-hero__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3-5);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--viz-surface);
+  }
+
+  .elb-viz-hero__dots {
+    display: flex;
+    gap: 7px;
+
+    > span {
+      width: 10px;
+      height: 10px;
+      background: var(--viz-border);
+      border-radius: var(--radius-full);
+    }
+  }
+
+  .elb-viz-hero__file {
+    color: var(--primary);
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-code-size);
+  }
+
+  .elb-viz-hero__code {
+    min-height: 268px;
+    padding: 12px 0 14px;
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-chip-size);
+    line-height: 1.95;
+    opacity: var(--elb-viz-fade);
+  }
+
+  .elb-viz-hero__line--on {
+    background: color-mix(in srgb, var(--event-entity) 7%, transparent);
+  }
+
+  .elb-viz-hero__stage {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 34px 24px 28px;
+    background: repeating-linear-gradient(
+      45deg,
+      var(--viz-code-bg) 0 8px,
+      var(--viz-bg) 8px 16px
+    );
+    border-top: 1px solid var(--viz-surface);
+  }
+
+  .elb-viz-hero__card {
+    position: relative;
+    display: flex;
+    gap: var(--space-3-5);
+    width: 100%;
+    max-width: 430px;
+    padding: var(--space-3);
+    background: var(--viz-surface);
+    border: 1.5px solid var(--viz-border);
+    border-radius: var(--radius-faq);
+    opacity: var(--elb-viz-card-opacity);
+    transform: translateY(calc(var(--elb-viz-card-offset) * 1px));
+  }
+
+  .elb-viz-hero__card--tagged {
+    border-color: var(--event-entity);
+  }
+
+  .elb-viz-hero__pills {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    display: flex;
+    gap: 6px;
+  }
+
+  .elb-viz-hero__thumb {
+    position: relative;
+    flex: none;
+    width: 112px;
+    min-height: 86px;
+    overflow: hidden;
+    background: var(--viz-surface);
+    border-radius: var(--radius-sm);
+
+    > .elb-viz-thumb {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  .elb-viz-hero__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .elb-viz-hero__kicker {
+    align-self: flex-start;
+    margin-left: -3px;
+    padding: 0 3px;
+    color: var(--viz-fg-2);
+    border-radius: var(--radius-xs);
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-legend-size);
+    letter-spacing: 0.04em;
+    outline: 1.5px solid transparent;
+  }
+
+  .elb-viz-hero__title {
+    font-size: var(--type-viz-body-size);
+    font-weight: 600;
+    line-height: 1.3;
+    text-wrap: pretty;
+  }
+
+  .elb-viz-hero__mark {
+    border-radius: var(--radius-xs);
+    outline: 1.5px solid transparent;
+    outline-offset: 1px;
+  }
+
+  .elb-viz-hero__kicker--on,
+  .elb-viz-hero__mark--on {
+    outline-color: var(--event-property);
+    box-shadow: 0 0 10px 1px
+      color-mix(in srgb, var(--event-property) 55%, transparent);
+  }
+
+  .elb-viz-hero__foot {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: auto;
+    padding-top: 6px;
+  }
+
+  .elb-viz-hero__link {
+    position: relative;
+    margin-left: -5px;
+    padding: 1px 5px;
+    color: var(--primary);
+    border-radius: var(--radius-sm);
+    font-family: var(--type-viz-chip-family);
+    font-size: var(--type-viz-chip-size);
+    font-weight: var(--type-viz-chip-weight);
+    outline: 1.5px solid transparent;
+  }
+
+  .elb-viz-hero__link--on {
+    outline-color: var(--event-action);
+  }
+
+  .elb-viz-hero__cursor {
+    position: absolute;
+    left: calc(var(--elb-viz-cursor-x) * 1px);
+    top: calc(var(--elb-viz-cursor-y) * 1px);
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    pointer-events: none;
+    opacity: var(--elb-viz-cursor-opacity);
+  }
+
+  .elb-viz-hero__ring,
+  .elb-viz-hero__pointer {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-full);
+  }
+
+  .elb-viz-hero__ring {
+    border: 2px solid var(--event-entity);
+    opacity: var(--elb-viz-ring-opacity);
+    transform: scale(var(--elb-viz-ring-scale));
+  }
+
+  .elb-viz-hero__pointer {
+    background: color-mix(in srgb, var(--viz-fg) 22%, transparent);
+    border: 2px solid color-mix(in srgb, var(--viz-fg) 90%, transparent);
+    transform: scale(var(--elb-viz-press));
+  }
+
+  @container (max-width: 639px) {
+    .elb-viz-hero__pane,
+    .elb-viz-hero > .elb-viz-table {
+      flex-basis: 100%;
+    }
+
+    .elb-viz-hero__code {
+      font-size: var(--type-viz-code-size);
+    }
+
+    .elb-viz-hero__stage {
+      padding: 24px 12px;
+    }
+
+    .elb-viz-hero__thumb {
+      width: 88px;
+    }
+  }
+}

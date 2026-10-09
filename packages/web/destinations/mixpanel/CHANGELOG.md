@@ -1,5 +1,19 @@
 # @walkeros/web-destination-mixpanel
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The `group` setting description now says it is resolved and sent with
+  `set_group` on every push, not at init. The step examples name the destination
+  config they rely on, the login example uses a millisecond timestamp, and a new
+  example covers the destination-level group.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @walkeros/web-destination-plausible
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The custom event step example now sends scalar `props` only.
+  Plausible accepts no arrays or objects as prop values and expects `revenue` as
+  `{ currency, amount }`, as the purchase example shows.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

@@ -1,0 +1,474 @@
+// Playground (@walkeros/explorer): component, event, mapping and result
+// panels. The panels are always dark code surfaces and dark islands
+// (`data-theme="dark"`), so the viz, event and syntax tokens in them read their
+// dark values; the page around them follows the theme.
+@layer components {
+  .elb-pg {
+    --elb-pg-panel: var(--viz-bg);
+    --elb-pg-bar: color-mix(in srgb, var(--viz-bg) 60%, var(--viz-code-bg));
+    --elb-pg-code: var(--viz-code-bg);
+    --elb-pg-line: var(--viz-surface);
+    --elb-pg-line-2: color-mix(
+      in srgb,
+      var(--viz-surface) 70%,
+      var(--viz-code-bg)
+    );
+    --elb-pg-text: var(--viz-fg);
+    --elb-pg-muted: var(--viz-fg-2);
+    --elb-pg-dim: var(--viz-comment);
+    --elb-pg-code-fg: var(--code-fg);
+    --elb-pg-line-height: 1.75;
+
+    box-sizing: border-box;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 56px var(--gutter) var(--section-y);
+    color: var(--fg);
+    font-family: var(--font-sans);
+  }
+
+  .elb-pg__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 48px;
+    padding-bottom: 28px;
+
+    > .elb-pg__intro > .elb-eyebrow {
+      margin-bottom: 14px;
+    }
+  }
+
+  .elb-pg__title {
+    margin: 0 0 12px;
+    color: var(--fg);
+    font-family: var(--type-heading-xl-family);
+    font-size: clamp(30px, 3.6vw, var(--type-heading-xl-size));
+    line-height: 1.12;
+    font-weight: var(--type-heading-xl-weight);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .elb-pg__lead {
+    max-width: 62ch;
+    margin: 0;
+    color: var(--fg-2);
+    font-size: var(--type-title-item-size);
+    line-height: var(--type-body-line-height);
+    text-wrap: pretty;
+  }
+
+  .elb-pg__reset .elb-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .elb-pg__grid {
+    display: grid;
+    gap: 16px;
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'comp event mapping'
+      'comp result result';
+  }
+
+  .elb-pg-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--elb-pg-text);
+    background: var(--elb-pg-panel);
+    border: 1px solid var(--viz-border);
+    border-radius: var(--radius-lg);
+  }
+
+  .elb-pg-panel--comp {
+    grid-area: comp;
+  }
+  .elb-pg-panel--event {
+    grid-area: event;
+  }
+  .elb-pg-panel--mapping {
+    grid-area: mapping;
+  }
+  .elb-pg-panel--result {
+    grid-area: result;
+  }
+
+  .elb-pg-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 0 8px 0 14px;
+    background: var(--elb-pg-bar);
+    border-bottom: 1px solid var(--elb-pg-line);
+  }
+
+  .elb-pg-step {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-full);
+    color: var(--link);
+    font: 600 var(--type-viz-legend-size) var(--font-mono);
+  }
+
+  .elb-pg-name {
+    margin: 0;
+    color: var(--elb-pg-text);
+    font-family: var(--font-sans);
+    font-size: var(--type-small-size);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .elb-pg-meta {
+    color: var(--elb-pg-dim);
+    font: var(--type-product-caption-size) var(--font-mono);
+  }
+
+  .elb-pg-meta--edit {
+    color: var(--event-entity);
+  }
+
+  .elb-pg-meta--end {
+    margin-left: auto;
+    padding-right: 8px;
+  }
+
+  .elb-pg-copy {
+    display: inline-flex;
+    margin-left: auto;
+    padding: 8px;
+    color: var(--elb-pg-muted);
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      color: var(--elb-pg-text);
+      background: var(--elb-pg-line-2);
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.4;
+    }
+  }
+
+  .elb-pg-tabs {
+    display: flex;
+    gap: 2px;
+    margin-left: 8px;
+  }
+
+  .elb-pg-tab {
+    padding: 6px 10px;
+    color: var(--elb-pg-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    font: 500 var(--type-product-small-size) var(--font-sans);
+    cursor: pointer;
+
+    &[aria-selected='true'] {
+      color: var(--elb-pg-text);
+      background: var(--elb-pg-line-2);
+    }
+  }
+
+  .elb-pg-pane {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .elb-pg-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--elb-pg-line-2);
+
+    > span {
+      margin-right: 4px;
+      color: var(--elb-pg-dim);
+      font: var(--type-product-caption-size) var(--font-mono);
+    }
+  }
+
+  .elb-pg-chip {
+    --elb-pg-chip: var(--event-entity);
+
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    color: var(--elb-pg-muted);
+    background: transparent;
+    border: 1px solid var(--viz-border);
+    border-radius: var(--radius-full);
+    font: 500 var(--type-product-caption-size) var(--font-mono);
+    cursor: pointer;
+
+    i {
+      width: 7px;
+      height: 7px;
+      background: var(--viz-line-number);
+      border-radius: var(--radius-full);
+    }
+
+    &[aria-pressed='true'] {
+      color: var(--elb-pg-text);
+      background: color-mix(in srgb, var(--viz-fg) 4%, transparent);
+      border-color: var(--elb-pg-chip);
+
+      i {
+        background: var(--elb-pg-chip);
+      }
+    }
+  }
+
+  .elb-pg-chip--property {
+    --elb-pg-chip: var(--event-property);
+  }
+  .elb-pg-chip--action {
+    --elb-pg-chip: var(--event-action);
+  }
+  .elb-pg-chip--context {
+    --elb-pg-chip: var(--event-context);
+  }
+  .elb-pg-chip--globals {
+    --elb-pg-chip: var(--event-globals);
+  }
+
+  .elb-pg-preview {
+    flex: 1;
+    min-height: 440px;
+    padding: 24px 18px;
+    color: var(--elb-pg-text);
+    background: var(--elb-pg-code);
+    font-family: var(--font-sans);
+  }
+
+  .elb-pg-editor {
+    position: relative;
+    flex: 1;
+    background: var(--elb-pg-code);
+
+    pre,
+    textarea {
+      position: absolute;
+      inset: 0;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 14px 16px;
+      font: var(--type-code-step-size) / var(--elb-pg-line-height)
+        var(--font-mono);
+      white-space: pre;
+      tab-size: 2;
+    }
+
+    pre {
+      overflow: hidden;
+      color: var(--elb-pg-code-fg);
+      background: transparent;
+      border-radius: 0;
+      pointer-events: none;
+
+      > div {
+        min-height: calc(var(--elb-pg-line-height) * 1em);
+      }
+    }
+
+    textarea {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      color: transparent;
+      background: transparent;
+      border: 0;
+      outline: none;
+      resize: none;
+      caret-color: var(--elb-pg-text);
+
+      &::selection {
+        color: transparent;
+        background: color-mix(in srgb, var(--primary) 35%, transparent);
+      }
+
+      &:focus-visible {
+        box-shadow: inset 0 0 0 2px var(--focus);
+      }
+    }
+  }
+
+  .elb-pg-editor__on {
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+    box-shadow: inset 2px 0 0 var(--primary);
+  }
+
+  .elb-pg-editor--tall {
+    min-height: 480px;
+  }
+
+  .elb-pg-status {
+    padding: 10px 14px;
+    color: var(--elb-pg-dim);
+    border-bottom: 1px solid var(--elb-pg-line-2);
+    font: var(--type-product-caption-size) var(--font-mono);
+  }
+
+  .elb-pg-note {
+    padding: 9px 14px;
+    color: var(--event-context);
+    background: color-mix(in srgb, var(--event-context) 8%, transparent);
+    border-bottom: 1px solid var(--elb-pg-line-2);
+    font-size: var(--type-product-small-size);
+  }
+
+  .elb-pg-error {
+    padding: 8px 14px;
+    color: var(--event-property);
+    background: color-mix(in srgb, var(--event-property) 10%, transparent);
+    border-bottom: 1px solid var(--elb-pg-line-2);
+    font: var(--type-product-caption-size) var(--font-mono);
+  }
+
+  // Event and Mapping: fixed heights, scrolling inside, never growing the page.
+  .elb-pg-scroll {
+    flex: none;
+    box-sizing: border-box;
+    height: 400px;
+    min-height: 0;
+    overflow: auto;
+    padding: 12px 0;
+    color: var(--elb-pg-code-fg);
+    background: var(--elb-pg-code);
+    font: var(--type-code-step-size) / var(--elb-pg-line-height)
+      var(--font-mono);
+
+    &:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: -2px;
+    }
+  }
+
+  // A row stretched by a taller neighbour is filled, never grown.
+  .elb-pg-panel--event .elb-pg-scroll,
+  .elb-pg-scroll--map {
+    flex-grow: 1;
+  }
+
+  .elb-pg-scroll--map {
+    position: relative;
+    height: 446px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .elb-pg-out {
+    min-height: 120px;
+    padding: 12px 0;
+    color: var(--elb-pg-code-fg);
+    background: var(--elb-pg-code);
+    font: var(--type-code-step-size) / var(--elb-pg-line-height)
+      var(--font-mono);
+  }
+
+  .elb-pg-ln {
+    padding-right: 14px;
+    text-indent: -14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .elb-pg-sent {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--event-entity);
+    font: var(--type-product-caption-size) var(--font-mono);
+
+    &::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      background: currentColor;
+      border-radius: var(--radius-full);
+    }
+  }
+
+  .elb-pg-c-key,
+  .elb-pg-c-globals {
+    color: var(--event-globals);
+  }
+  .elb-pg-c-str {
+    color: var(--syntax-string);
+  }
+  .elb-pg-c-num {
+    color: var(--syntax-number);
+  }
+  .elb-pg-c-punct {
+    color: var(--viz-fg-2);
+  }
+  .elb-pg-c-tag,
+  .elb-pg-c-property {
+    color: var(--event-property);
+  }
+  .elb-pg-c-kw,
+  .elb-pg-c-action {
+    color: var(--event-action);
+  }
+  .elb-pg-c-fn {
+    color: var(--syntax-function);
+  }
+  .elb-pg-c-dim {
+    color: var(--elb-pg-dim);
+  }
+  .elb-pg-c-entity {
+    color: var(--event-entity);
+  }
+  .elb-pg-c-context {
+    color: var(--event-context);
+  }
+
+  @media (max-width: 1127px) {
+    .elb-pg__grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-areas:
+        'comp event'
+        'comp mapping'
+        'result result';
+    }
+
+    .elb-pg-scroll,
+    .elb-pg-scroll--map {
+      height: 240px;
+    }
+  }
+
+  @media (max-width: 747px) {
+    .elb-pg__grid {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: 'comp' 'event' 'mapping' 'result';
+    }
+
+    .elb-pg-scroll,
+    .elb-pg-scroll--map {
+      height: 360px;
+    }
+  }
+}

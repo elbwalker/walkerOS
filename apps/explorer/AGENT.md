@@ -88,9 +88,18 @@ Build creates:
 
 - `dist/index.js` (CJS) and `dist/index.mjs` (ESM) - main module
 - `dist/index.d.ts` - TypeScript declarations
-- `dist/styles.css` - compiled SCSS styles
+- `dist/styles.css` - compiled SCSS styles (explorer's components; no tokens)
+- `dist/design/tokens.css`, `tailwind.css`, `base.css` - the design system CSS
+- `dist/design/index.{mjs,cjs,d.ts}` - the design constants
+  (`@walkeros/explorer/design`)
+- `dist/design/components/index.{mjs,cjs,d.ts}` - the design components
+- `dist/design/check.mjs` - the checker, started by the committed launcher
+  `bin/walkeros-design-check.mjs`
 
-The build is configured in `tsup.config.ts` with SCSS compilation via Sass.
+The build is configured in `tsup.config.ts` with SCSS compilation via Sass. The
+design generator (`writeDesign()` from `src/design/generate.ts`) runs when the
+config loads, before any tsup block: it parses `design/tokens.json`, refreshes
+the committed `src/design/index.ts` and writes the design CSS.
 
 ### Bundling Dependencies
 
@@ -123,203 +132,157 @@ install these dependencies.
 The codebase strictly follows **Atomic Design** principles:
 
 1. **Atoms** (`src/components/atoms/`): Base UI elements
-   - `Box`, `Button`, `ButtonGroup`, `Header`, `Toggle`
-   - Mapping primitives: `mapping-string`, `mapping-number`, `mapping-boolean`
-   - Form controls: `icon-button`, `mapping-collapsible`, `field-header`
+   - `Box`, `Button`, `ButtonGroup`, `ToggleButton`, `Grid`, `Header`, `Icon`
+     (`icons/`)
+   - Code: `Code`, `CodeStatic`, `CodeDiff`; `PreviewFooter`
 
 2. **Molecules** (`src/components/molecules/`): Component combinations
-   - Navigation: `mapping-tab-bar`, `mapping-tree-sidebar`, `mapping-breadcrumb`
-   - Pane views: `mapping-*-pane-view` (rule, entity, consent, condition, etc.)
-   - Editors: `auto-select`, `preview`, `mapping-map-field`
-   - Visualization: `flow-map`
+   - Code: `code-box.tsx` (Monaco editor with formatting controls),
+     `code-diff-box.tsx`, `code-snippet.tsx`, `code-view.tsx`
+   - Docs blocks: `preview`, `property-table`, `step-example`
+   - `view-source.tsx`: wraps one element of a page; its toolbar switches it to
+     its live HTML, editable in place, then re-registers the edit's triggers
+     with `elb('walker init', element)`
+   - Visualization: `flow-map/`, `architecture-flow/`
 
 3. **Organisms** (`src/components/organisms/`): Complex integrated components
    - `live-code.tsx` - Generic live code execution (input/config/output panels)
-   - `code-box.tsx` - Monaco editor with formatting controls
    - `browser-box.tsx` - Multi-tab editor (HTML/CSS/JS) with live preview
-   - `collector-box.tsx` - Collector processing display
-   - `config-editor/` - Advanced configuration editor system
 
 4. **Demos** (`src/components/demos/`): Ready-to-use complete demos
-   - `MappingDemo.tsx` - Three-panel transformation editor
    - `PromotionPlayground.tsx` - Promotion event playground
-   - `MappingCode.tsx` - Code-based mapping demo
 
-### RJSF Architecture (Critical Pattern)
+### Design components (`@walkeros/explorer/design/components`)
 
-The project uses **React JSON Schema Form (RJSF)** with a **mandatory
-Field/Widget separation pattern**:
+A second, React-only entry with the building blocks of walkerOS pages on the
+design tokens; walkeros.io's home page is built from it.
 
-**Field Layer** (src/components/atoms/\*-field.tsx):
-
-- Converts RJSF `FieldProps` → `WidgetProps`
-- Pass-through only (id, value, onChange, schema, uiSchema, rawErrors, disabled,
-  readonly)
-- ~20 lines, no UI logic
-- Examples: `mapping-consent-field.tsx`, `mapping-condition-field.tsx`
-
-**Widget Layer** (src/components/atoms/\*.tsx):
-
-- Full UI implementation using standard building blocks
-- State management (expand/collapse, previous values, show/hide)
-- Form change handling and cleanup
-- External value sync via `useEffect`
-- Uses shared components: `MappingCollapsible`, `MappingFormWrapper`,
-  `IconButton`
-- Examples: `mapping-consent.tsx`, `mapping-condition.tsx`
-
-**Field/Widget Registry**:
-
-- `src/components/forms/field-registry.ts` - Maps field types to Field
-  components
-- `src/components/forms/widget-registry.ts` - Maps widget types to Widget
-  components
-
-**Common Patterns**:
-
-- `MappingCollapsible` - Toggle/checkbox UI wrapper
-- `MappingFormWrapper` - Nested form container with RJSF integration
-- `IconButton` - Action buttons (add, delete, toggle)
-- `cleanFormData()` - Remove empty/undefined values before onChange
+- Folders follow the atomic order: `atoms/` (Button, InlineCode, EventLegend,
+  Icon, InstallCommand, Card, Eyebrow, Stat, Text, TextLink, PhotoPlaceholder),
+  `molecules/` (CheckList, SectionHeading, ProblemCard, FeatureItem, FaqItem,
+  PlanCard, CaseCard, HighlightCard, BrowserFrame, QuickstartSteps), `layout/`
+  (Section, CardGrid, Split, Cluster (`separated` sets a call to action apart
+  from the content above), Hero) and `viz/` (HeroTaggingViz,
+  ArticleTeaserTracking, DestinationMappingViz). Nothing imports upward; a demo
+  may use atoms.
+- Each folder keeps its own `index.ts`; the entry `index.ts` re-exports the
+  four, so names stay flat. Everything the entry reaches imports only `react`
+  (`__tests__/entry.test.ts` fails otherwise), and the demo data in `viz/data/`
+  imports no package either.
+- Every component passes the attributes it does not own (`data-*`, `aria-*`,
+  `id`) to its root element. A component with a link takes `linkComponent` (a
+  router `Link`) and the link's own tagging through `CallToAction.attributes` or
+  `linkAttributes`. The shared checks live in `__tests__/passThrough.tsx`, and
+  each folder's `__tests__/pass-through.test.tsx` runs them.
+- These components may keep their own presentation state (a copy confirmation,
+  the event a demo shows); form controls elsewhere stay controlled.
+- Styles: one partial per component in `src/styles/components/design/`, plus the
+  demos' shared `_viz-*` parts; see STYLE.md "Design component styles".
+- Demos are dark islands (`data-theme="dark"` on their root). The server render
+  equals the first client frame. The hero and teaser demos animate only while
+  visible and show a still frame with reduced motion; the mapping demo changes
+  only on a click.
+- A fidelity test holds what each demo shows to what walkerOS does: the hero and
+  teaser markup runs through the real browser source and collector, the mapping
+  demo's rules through the real destinations
+  (`website/scripts/landing-mapping.test.mjs`). When one fails, the demo data is
+  wrong: fix the data, never the test.
+- Stories sit next to their component, titled `Design/<Folder>/<Name>`.
 
 ### State Management
 
-**Hooks** (`src/hooks/`):
+Product components are controlled: props down, events up (SKILL.md "Controlled
+Components Only"). The few shared pieces of state:
 
-- `useMappingState.ts` - Core mapping configuration state management
-- `useMappingNavigation.ts` - Navigation state (current path, breadcrumbs, tree
-  expansion)
-- `useTreeState.ts` - Tree sidebar expand/collapse state
-- `useMonacoHeight.ts` - Dynamic Monaco editor height calculation
-
-**Data Flow**:
-
-- Props down, events up (standard React unidirectional flow)
-- Controlled components throughout
-- State deduplication via `useEffect` with deep equality checks
-- Schema passing via `ui:options` in RJSF components
+- `src/hooks/useMonacoHeight.ts`: sizes a Monaco editor to its content.
+- `src/contexts/GridHeightContext.tsx`: lets a `Grid` sync the heights of its
+  `Box` children (`useGridHeight`, `useBoxId`).
 
 ### Utilities
 
-**Key utilities** (`src/utils/`):
-
-- `clean-form-data.ts` - Remove empty values from form data before submission
-- `mapping-path.ts` - Path manipulation for nested mapping structures
-- `consent-scanner.ts` - Scan and detect consent configuration
-- `type-detector.ts` - **Single source of truth** for node type detection
-- `value-display-formatter.ts` - Format values for display
-- `code-normalizer.ts` - Normalize code strings (whitespace, indentation)
-- `generic-tree-builder.ts` - Build tree structures from flat data
-- `config-validator.ts` - Validate configuration objects
-- `schema-validation.ts` - JSON schema validation helpers
-
-**Schemas** (`src/schemas/`):
-
-- `config-structures/` - Configuration object structures (destination, mapping
-  rule)
-- `mapping-rule-schema.ts` - Mapping rule JSON schema
-- `value-config-schema.ts` - Value configuration schema
-
-### Navigation Architecture (CRITICAL)
-
-**Single Source of Truth**: ALL navigation MUST use `detectNodeType()` from
-`src/utils/type-detector.ts`
-
-**Two Complementary Systems**:
-
-1. **Structure Definitions** (`ConfigStructureDef`) - Navigation metadata
-   - Which pane to open for each property
-   - Tree children strategy (entity-action, schema-driven, none)
-   - Human-readable titles and descriptions
-   - Location: `src/schemas/config-structures/`
-
-2. **JSON Schemas** (`RJSFSchema`) - Validation and forms
-   - Value validation rules (types, patterns, enums)
-   - Form generation (RJSF uses these)
-   - Type inference for primitives (enum, boolean, string, number)
-
-**Detection Priority** (implemented in `detectNodeType`):
-
-```typescript
-1. Structure definition (explicit nodeType property)
-2. Schema detection (enum, boolean, primitives from JSON Schema)
-3. Value introspection (fallback for complex types)
-```
-
-**Mandatory Rules**:
-
-- NEVER hardcode nodeType based on path patterns
-- NEVER hardcode nodeType based on path length
-- NEVER hardcode nodeType based on property names
-- ALWAYS call `detectNodeType(value, path, structure, schemas)`
-- Navigation hooks MUST receive `config`, `structure`, and `schemas` parameters
-
-**Examples**:
-
-```typescript
-// ❌ WRONG - Hardcoded logic
-const nodeType = path.length === 2 ? 'rule' : 'valueConfig';
-
-// ❌ WRONG - Property name pattern matching
-const nodeType = path[0] === 'consent' ? 'consent' : 'valueConfig';
-
-// ✅ CORRECT - Use detectNodeType
-const value = getValueAtPath(config, path);
-const nodeType = detectNodeType(value, path, structure, schemas);
-```
+- `src/utils/` is mostly Monaco support for `Code` and `CodeBox`:
+  - JSON schemas for the flow, contract and variables editors
+    (`monaco-schema-*.ts`), registered through `monaco-json-schema.ts`.
+  - IntelliSense for walkerOS references (`monaco-walkeros-*.ts`,
+    `monaco-intellisense-flow-extractor.ts`, `monaco-json-path.ts`,
+    `monaco-chain-ref-detector.ts`, `contract-path-walker.ts`,
+    `mapping-context-detector.ts`, `allowed-ref-kinds.ts`).
+  - TypeScript types and ambients (`monaco-types.ts`,
+    `monaco-context-types.ts`), Prettier formatting (`monaco-formatters.ts`,
+    `format-code.ts`), data attribute highlighting (`monaco-decorators.ts`) and
+    `is-monaco-cancellation.ts`.
+  - `code-normalizer.ts`: compares code ignoring comments and whitespace.
+- `src/themes/`: the one code theme (`palenight.ts`, built from the design
+  constants) for Monaco and Shiki; `registerTheme(monaco)` registers it as
+  `ELB_THEME_DARK`. Code surfaces are dark in both page themes.
+- `src/lib/utils.ts`: `cn()` merges Tailwind class names.
+- `src/helpers/destinations.ts`: demo destinations, see "Integration with
+  walkerOS".
 
 ## Styling Architecture (CRITICAL)
 
 **Complete styling documentation:** [STYLE.md](./STYLE.md)
 
+### Design area
+
+Explorer is the home of the walkerOS design system. `design/tokens.json` is the
+only source of colour, type, spacing, radius and z-index values; `src/design/`
+holds the type guard (`tokens.ts`), the generator (`generate.ts`), the generated
+constants (`index.ts`), the hand-written `base.css`, the checker (`check/`) and
+the design components (`components/`). How to change a token and what the
+outputs are: [SKILL.md](./SKILL.md), "Design area".
+
 ### Quick Reference
 
-**Theme Support (Required)**:
+**Theme:** one attribute on the page root, `data-theme="dark"` (the default) or
+`"light"`. The page imports `@walkeros/explorer/design/tokens.css` (or
+`design/tailwind.css` in a Tailwind build) once, then
+`@walkeros/explorer/styles.css`. Explorer's code roots (`Code`, `CodeDiff`,
+`CodeStatic`, `CodeView`, `CodeBox`), the preview, `EventLegend` and the design
+demos carry `data-theme="dark"` themselves: they stay dark in both themes.
 
-```html
-<html data-theme="dark">
-  ...
-</html>
-```
-
-**Monaco Editor Themes**:
-
-- Dark: `elbTheme-dark` (Prism Palenight)
-- Light: `elbTheme-light` (GitHub)
-- Automatically sync with `data-theme` attribute
+**Monaco:** one theme, `elbTheme-dark` (`ELB_THEME_DARK`), built from the
+`syntax-*` and `code-*` design constants and registered by `Code` and `CodeDiff`
+before the editor mounts.
 
 **SCSS Rules (MANDATORY):**
 
 **✅ DO:**
 
-- Use ONLY defined CSS variables from `theme/_variables.scss`
+- Read design tokens only: `var(--fg)`, `var(--surface)`,
+  `var(--border-strong)`, `var(--radius-xs)`, `var(--type-product-small-size)`
 - Follow BEM naming: `.elb-{component}-{element}--{modifier}`
-- Use `calc(var(--font-size-base) - 1px)` for font size variations
 - Create one SCSS file per component in correct directory
 - Import new files alphabetically in `index.scss`
-- Test in both light and dark themes
+- Check both themes in Storybook (toolbar)
 
 **❌ DON'T:**
 
-- Use undefined CSS variables (e.g., `--bg-secondary`, `--font-size-sm`)
-- Use `--font-family-mono` (correct: `--font-mono`)
-- Hardcode colors, spacing, or font sizes
+- Use a colour literal, a `var()` fallback on a design token or a variable no
+  token and no file of explorer declares (`npm run lint` runs
+  `walkeros-design-check` and fails on each)
+- Declare custom properties on `.elb-explorer` (it is a layout root only); a
+  local geometry variable sits on its own component root
+- Add drop shadows: a floating layer is `var(--surface)` with a
+  `1px solid var(--border-strong)` edge
 - Use inline `style` attributes
 
 **See [STYLE.md](./STYLE.md) for:**
 
-- Complete CSS Variables Reference (all variables with light/dark values)
+- Design tokens in explorer's components (names, islands, type, layers)
 - Grid System (height modes: equal, auto, synced - why Grid is complex)
-- Monaco Editor (theming, tokens, local loading, IntelliSense, debugging)
+- Monaco Editor (the code theme, tokens, IntelliSense, debugging)
 - SCSS Architecture & Component Checklist
-- Design Rules (when to add variables, color selection, accessibility)
 - Common Tasks & Troubleshooting
 
 ## Important Files
 
 - `src/index.ts` - Public API exports (add new public components here)
+- `design/tokens.json` - the design tokens; `src/design/` - generator, checker,
+  design components
 - `tsup.config.ts` - Build configuration (module + styles)
-- `vite.config.ts` - Dev server config (serves examples/)
+- `.storybook/main.ts` - Storybook config (component stories and the design
+  stories)
 - `jest.config.mjs` - Test configuration
 - `src/styles/index.scss` - Main stylesheet entry
 - `src/styles/PANE_STANDARDS.md` - Pane layout standards
@@ -370,15 +333,13 @@ step.
 - [ ] SCSS file created in correct directory with BEM naming
       (`elb-{component}-*`)
 - [ ] SCSS imported in `index.scss` (alphabetical order)
-- [ ] All CSS variables exist in `theme/_variables.scss`
-- [ ] No hardcoded values (colors, spacing, fonts)
-- [ ] Uses `calc(var(--font-size-base) - Npx)` for size variations
+- [ ] Reads design tokens only (`npm run lint` passes the checker)
+- [ ] Type sizes and weights from the `--type-<style>-*` tokens where a style
+      fits
 - [ ] No inline `style` attributes
-- [ ] Light and dark theme tested
-- [ ] Reuses existing components (MappingCollapsible, IconButton, etc.)
-- [ ] RJSF components follow Field/Widget separation pattern
+- [ ] Both themes checked in Storybook
+- [ ] Reuses existing components (Box, Button, CodeBox, etc.)
 - [ ] Content components have no root padding (follows Pane Standards)
-- [ ] Navigation uses `detectNodeType()` (no hardcoded path/length logic)
 - [ ] Build succeeds: `npm run build`
 - [ ] Exported from `src/index.ts` if public API
 

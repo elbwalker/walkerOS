@@ -1,0 +1,86 @@
+// Thumb (@walkeros/explorer/design/components, internal): the hero's article
+// thumbnails, repainted from viz tokens.
+@layer components {
+  .elb-viz-thumb {
+    display: block;
+  }
+
+  .elb-viz-thumb__legs,
+  .elb-viz-thumb__seam,
+  .elb-viz-thumb__shine,
+  .elb-viz-thumb__wave,
+  .elb-viz-thumb__score {
+    fill: none;
+  }
+
+  .elb-viz-thumb--bug {
+    .elb-viz-thumb__ground {
+      fill: var(--viz-fg);
+    }
+
+    .elb-viz-thumb__shadow {
+      fill: var(--viz-fg-2);
+    }
+
+    .elb-viz-thumb__ink {
+      fill: var(--viz-bg);
+    }
+
+    .elb-viz-thumb__legs,
+    .elb-viz-thumb__seam {
+      stroke: var(--viz-bg);
+    }
+
+    .elb-viz-thumb__eye {
+      fill: var(--viz-fg);
+    }
+
+    .elb-viz-thumb__shell {
+      fill: var(--viz-number);
+    }
+
+    .elb-viz-thumb__shine {
+      stroke: color-mix(in srgb, var(--viz-number) 60%, var(--viz-fg));
+    }
+  }
+
+  .elb-viz-thumb--tech {
+    .elb-viz-thumb__ground {
+      fill: var(--viz-border);
+    }
+
+    .elb-viz-thumb__badge {
+      fill: var(--viz-number);
+    }
+
+    .elb-viz-thumb__dot {
+      fill: var(--viz-fg);
+    }
+
+    .elb-viz-thumb__wave {
+      stroke: var(--viz-fg);
+    }
+  }
+
+  .elb-viz-thumb--food {
+    .elb-viz-thumb__ground {
+      fill: var(--viz-fg);
+    }
+
+    .elb-viz-thumb__plate {
+      fill: var(--viz-fg-2);
+    }
+
+    .elb-viz-thumb__loaf {
+      fill: var(--viz-number);
+    }
+
+    .elb-viz-thumb__crust {
+      fill: var(--viz-string);
+    }
+
+    .elb-viz-thumb__score {
+      stroke: var(--viz-fg);
+    }
+  }
+}

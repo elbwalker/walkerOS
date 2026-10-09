@@ -6,17 +6,19 @@
   grid-auto-columns: 1fr;
   flex: 1;
   align-self: stretch;
-  background: var(--bg-footer);
+  background: var(--bg-2);
 }
 
 .elb-preview-btn {
   padding: 6px 6px;
-  font-size: var(--font-size-toggle);
+  font-size: var(--type-product-caption-size);
   font-weight: 600;
-  color: var(--color-text-button);
+  color: var(--fg-2);
   border: 0;
   background: transparent;
-  transition: color 0.2s ease, background 0.2s ease;
+  transition:
+    color var(--motion) var(--ease),
+    background var(--motion) var(--ease);
   position: relative;
   cursor: pointer;
   text-align: center;
@@ -29,12 +31,12 @@
   justify-content: center;
 
   &:hover {
-    color: var(--color-text-button-hover);
-    background: var(--bg-button-hover);
+    color: var(--fg);
+    background: var(--surface-2);
   }
 
   &:active {
-    background: var(--bg-button-active);
+    background: var(--surface);
   }
 
   // Separator line between buttons
@@ -45,28 +47,28 @@
     top: 20%;
     height: 60%;
     width: 1px;
-    background: var(--border-footer);
+    background: var(--border);
     opacity: 0.3;
   }
 
-  // Active states with color highlights
+  // Active states in the event colours (the preview is a dark island)
   &.highlight-globals {
-    color: var(--highlight-globals);
+    color: var(--event-globals);
   }
 
   &.highlight-context {
-    color: var(--highlight-context);
+    color: var(--event-context);
   }
 
   &.highlight-entity {
-    color: var(--highlight-entity);
+    color: var(--event-entity);
   }
 
   &.highlight-property {
-    color: var(--highlight-property);
+    color: var(--event-property);
   }
 
   &.highlight-action {
-    color: var(--highlight-action);
+    color: var(--event-action);
   }
 }

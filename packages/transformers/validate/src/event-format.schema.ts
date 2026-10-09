@@ -92,113 +92,111 @@ export const eventFormatSchema = Object.freeze({
         'Ordered properties with [value, order] tuples for priority control.',
     },
     WalkerOSUser: {
-      allOf: [
-        {
-          description: 'Flexible property collection with optional values',
-          allOf: [
-            {
-              $ref: '#/definitions/WalkerOSProperties',
-            },
-          ],
+      type: 'object',
+      properties: {
+        id: {
+          description: 'User identifier',
+          type: 'string',
         },
-        {
-          type: 'object',
-          properties: {
-            id: {
-              description: 'User identifier',
-              type: 'string',
-            },
-            device: {
-              description: 'Device identifier',
-              type: 'string',
-            },
-            session: {
-              description: 'Session identifier',
-              type: 'string',
-            },
-            hash: {
-              description: 'Hashed identifier',
-              type: 'string',
-            },
-            address: {
-              description: 'User address',
-              type: 'string',
-            },
-            email: {
-              description: 'User email address',
-              type: 'string',
-              format: 'email',
-              pattern:
-                "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
-            },
-            phone: {
-              description: 'User phone number',
-              type: 'string',
-            },
-            userAgent: {
-              description: 'Browser user agent string',
-              type: 'string',
-            },
-            browser: {
-              description: 'Browser name',
-              type: 'string',
-            },
-            browserVersion: {
-              description: 'Browser version',
-              type: 'string',
-            },
-            deviceType: {
-              description: 'Device type (mobile, desktop, tablet)',
-              type: 'string',
-            },
-            os: {
-              description: 'Operating system',
-              type: 'string',
-            },
-            osVersion: {
-              description: 'Operating system version',
-              type: 'string',
-            },
-            screenSize: {
-              description: 'Screen dimensions',
-              type: 'string',
-            },
-            language: {
-              description: 'User language',
-              type: 'string',
-            },
-            country: {
-              description: 'User country',
-              type: 'string',
-            },
-            region: {
-              description: 'User region/state',
-              type: 'string',
-            },
-            city: {
-              description: 'User city',
-              type: 'string',
-            },
-            zip: {
-              description: 'User postal code',
-              type: 'string',
-            },
-            timezone: {
-              description: 'User timezone',
-              type: 'string',
-            },
-            ip: {
-              description: 'User IP address',
-              type: 'string',
-            },
-            internal: {
-              description: 'Internal user flag (employee, test user)',
-              type: 'boolean',
-            },
+        device: {
+          description: 'Device identifier',
+          type: 'string',
+        },
+        session: {
+          description: 'Session identifier',
+          type: 'string',
+        },
+        hash: {
+          description: 'Hashed identifier',
+          type: 'string',
+        },
+        address: {
+          description: 'User address',
+          type: 'string',
+        },
+        email: {
+          description: 'User email address',
+          type: 'string',
+          format: 'email',
+          pattern:
+            "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+        },
+        phone: {
+          description: 'User phone number',
+          type: 'string',
+        },
+        userAgent: {
+          description: 'Browser user agent string',
+          type: 'string',
+        },
+        browser: {
+          description: 'Browser name',
+          type: 'string',
+        },
+        browserVersion: {
+          description: 'Browser version',
+          type: 'string',
+        },
+        deviceType: {
+          description: 'Device type (mobile, desktop, tablet)',
+          type: 'string',
+        },
+        os: {
+          description: 'Operating system',
+          type: 'string',
+        },
+        osVersion: {
+          description: 'Operating system version',
+          type: 'string',
+        },
+        screenSize: {
+          description: 'Screen dimensions',
+          type: 'string',
+        },
+        language: {
+          description: 'User language',
+          type: 'string',
+        },
+        country: {
+          description: 'User country',
+          type: 'string',
+        },
+        region: {
+          description: 'User region/state',
+          type: 'string',
+        },
+        city: {
+          description: 'User city',
+          type: 'string',
+        },
+        zip: {
+          description: 'User postal code',
+          type: 'string',
+        },
+        timezone: {
+          description: 'User timezone',
+          type: 'string',
+        },
+        ip: {
+          description: 'User IP address',
+          type: 'string',
+        },
+        internal: {
+          description: 'Internal user flag (employee, test user)',
+          type: 'boolean',
+        },
+        optout: {
+          description: 'User opted out of tracking',
+          type: 'boolean',
+        },
+      },
+      additionalProperties: {
+        allOf: [
+          {
+            $ref: '#/definitions/WalkerOSProperty',
           },
-          additionalProperties: false,
-        },
-      ],
+        ],
+      },
       title: 'WalkerOS.User',
       description: 'User identification and attributes.',
     },
@@ -275,75 +273,68 @@ export const eventFormatSchema = Object.freeze({
         'Consent state mapping. Keys are consent groups (e.g. marketing, functional), values are booleans for granted/denied.',
     },
     WalkerOSSource: {
-      allOf: [
-        {
-          description: 'Flexible property collection with optional values',
-          allOf: [
-            {
-              $ref: '#/definitions/WalkerOSProperties',
-            },
-          ],
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          description: 'Source kind (browser, dataLayer, gtag, ...)',
         },
-        {
+        platform: {
+          description:
+            'Runtime platform (web, server, app, ios, android, terminal, ...)',
+          type: 'string',
+        },
+        version: {
+          description: 'Deployment version of the source emitter',
+          type: 'string',
+        },
+        schema: {
+          description: 'Event model spec version (collector defaults to "4")',
+          type: 'string',
+        },
+        count: {
+          description: 'Emission sequence per run',
+          type: 'integer',
+          minimum: 0,
+          maximum: 9007199254740991,
+        },
+        trace: {
+          description:
+            'Trace id shared by every event of a run (W3C trace-id shape)',
+          type: 'string',
+        },
+        release: {
+          description:
+            'Per-flow config release map, keyed by flow name; accumulates across walkerOS crossings',
           type: 'object',
-          properties: {
-            type: {
-              type: 'string',
-              description: 'Source kind (browser, dataLayer, gtag, ...)',
-            },
-            platform: {
-              description:
-                'Runtime platform (web, server, app, ios, android, terminal, ...)',
-              type: 'string',
-            },
-            version: {
-              description: 'Deployment version of the source emitter',
-              type: 'string',
-            },
-            schema: {
-              description:
-                'Event model spec version (collector defaults to "4")',
-              type: 'string',
-            },
-            count: {
-              description: 'Emission sequence per run',
-              type: 'integer',
-              minimum: 0,
-              maximum: 9007199254740991,
-            },
-            trace: {
-              description:
-                'Trace id shared by every event of a run (W3C trace-id shape)',
-              type: 'string',
-            },
-            release: {
-              description:
-                'Per-flow config release map, keyed by flow name; accumulates across walkerOS crossings',
-              type: 'object',
-              propertyNames: {
-                type: 'string',
-              },
-              additionalProperties: {
-                type: 'string',
-              },
-            },
-            url: {
-              type: 'string',
-            },
-            referrer: {
-              type: 'string',
-            },
-            tool: {
-              type: 'string',
-            },
-            command: {
-              type: 'string',
-            },
+          propertyNames: {
+            type: 'string',
           },
-          required: ['type'],
-          additionalProperties: false,
+          additionalProperties: {
+            type: 'string',
+          },
         },
-      ],
+        url: {
+          type: 'string',
+        },
+        referrer: {
+          type: 'string',
+        },
+        tool: {
+          type: 'string',
+        },
+        command: {
+          type: 'string',
+        },
+      },
+      required: ['type'],
+      additionalProperties: {
+        allOf: [
+          {
+            $ref: '#/definitions/WalkerOSProperty',
+          },
+        ],
+      },
       title: 'WalkerOS.Source',
       description: 'Event source information (origin of the event).',
     },
@@ -440,115 +431,118 @@ export const eventFormatSchema = Object.freeze({
           ],
         },
         user: {
-          allOf: [
-            {
-              description: 'Flexible property collection with optional values',
-              allOf: [
-                {
-                  $ref: '#/definitions/WalkerOSProperties',
-                },
-              ],
+          type: 'object',
+          properties: {
+            id: {
+              description: 'User identifier',
+              type: 'string',
             },
-            {
-              type: 'object',
-              properties: {
-                id: {
-                  description: 'User identifier',
-                  type: 'string',
-                },
-                device: {
-                  description: 'Device identifier',
-                  type: 'string',
-                },
-                session: {
-                  description: 'Session identifier',
-                  type: 'string',
-                },
-                hash: {
-                  description: 'Hashed identifier',
-                  type: 'string',
-                },
-                address: {
-                  description: 'User address',
-                  type: 'string',
-                },
-                email: {
-                  description: 'User email address',
-                  type: 'string',
-                  format: 'email',
-                  pattern:
-                    "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
-                },
-                phone: {
-                  description: 'User phone number',
-                  type: 'string',
-                },
-                userAgent: {
-                  description: 'Browser user agent string',
-                  type: 'string',
-                },
-                browser: {
-                  description: 'Browser name',
-                  type: 'string',
-                },
-                browserVersion: {
-                  description: 'Browser version',
-                  type: 'string',
-                },
-                deviceType: {
-                  description: 'Device type (mobile, desktop, tablet)',
-                  type: 'string',
-                },
-                os: {
-                  description: 'Operating system',
-                  type: 'string',
-                },
-                osVersion: {
-                  description: 'Operating system version',
-                  type: 'string',
-                },
-                screenSize: {
-                  description: 'Screen dimensions',
-                  type: 'string',
-                },
-                language: {
-                  description: 'User language',
-                  type: 'string',
-                },
-                country: {
-                  description: 'User country',
-                  type: 'string',
-                },
-                region: {
-                  description: 'User region/state',
-                  type: 'string',
-                },
-                city: {
-                  description: 'User city',
-                  type: 'string',
-                },
-                zip: {
-                  description: 'User postal code',
-                  type: 'string',
-                },
-                timezone: {
-                  description: 'User timezone',
-                  type: 'string',
-                },
-                ip: {
-                  description: 'User IP address',
-                  type: 'string',
-                },
-                internal: {
-                  description: 'Internal user flag (employee, test user)',
-                  type: 'boolean',
-                },
+            device: {
+              description: 'Device identifier',
+              type: 'string',
+            },
+            session: {
+              description: 'Session identifier',
+              type: 'string',
+            },
+            hash: {
+              description: 'Hashed identifier',
+              type: 'string',
+            },
+            address: {
+              description: 'User address',
+              type: 'string',
+            },
+            email: {
+              description: 'User email address',
+              type: 'string',
+              format: 'email',
+              pattern:
+                "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            },
+            phone: {
+              description: 'User phone number',
+              type: 'string',
+            },
+            userAgent: {
+              description: 'Browser user agent string',
+              type: 'string',
+            },
+            browser: {
+              description: 'Browser name',
+              type: 'string',
+            },
+            browserVersion: {
+              description: 'Browser version',
+              type: 'string',
+            },
+            deviceType: {
+              description: 'Device type (mobile, desktop, tablet)',
+              type: 'string',
+            },
+            os: {
+              description: 'Operating system',
+              type: 'string',
+            },
+            osVersion: {
+              description: 'Operating system version',
+              type: 'string',
+            },
+            screenSize: {
+              description: 'Screen dimensions',
+              type: 'string',
+            },
+            language: {
+              description: 'User language',
+              type: 'string',
+            },
+            country: {
+              description: 'User country',
+              type: 'string',
+            },
+            region: {
+              description: 'User region/state',
+              type: 'string',
+            },
+            city: {
+              description: 'User city',
+              type: 'string',
+            },
+            zip: {
+              description: 'User postal code',
+              type: 'string',
+            },
+            timezone: {
+              description: 'User timezone',
+              type: 'string',
+            },
+            ip: {
+              description: 'User IP address',
+              type: 'string',
+            },
+            internal: {
+              description: 'Internal user flag (employee, test user)',
+              type: 'boolean',
+            },
+            optout: {
+              description: 'User opted out of tracking',
+              type: 'boolean',
+            },
+          },
+          additionalProperties: {
+            allOf: [
+              {
+                $ref: '#/definitions/WalkerOSProperty',
               },
-              additionalProperties: false,
-            },
-          ],
+            ],
+          },
           title: 'WalkerOS.User',
           description: 'User identification and attributes',
+          allOf: [
+            {
+              $ref: '#/definitions/WalkerOSUser',
+            },
+          ],
         },
         nested: {
           type: 'array',
@@ -607,77 +601,76 @@ export const eventFormatSchema = Object.freeze({
           description: 'Event processing timing information',
         },
         source: {
-          allOf: [
-            {
-              description: 'Flexible property collection with optional values',
-              allOf: [
-                {
-                  $ref: '#/definitions/WalkerOSProperties',
-                },
-              ],
+          type: 'object',
+          properties: {
+            type: {
+              type: 'string',
+              description: 'Source kind (browser, dataLayer, gtag, ...)',
             },
-            {
+            platform: {
+              description:
+                'Runtime platform (web, server, app, ios, android, terminal, ...)',
+              type: 'string',
+            },
+            version: {
+              description: 'Deployment version of the source emitter',
+              type: 'string',
+            },
+            schema: {
+              description:
+                'Event model spec version (collector defaults to "4")',
+              type: 'string',
+            },
+            count: {
+              description: 'Emission sequence per run',
+              type: 'integer',
+              minimum: 0,
+              maximum: 9007199254740991,
+            },
+            trace: {
+              description:
+                'Trace id shared by every event of a run (W3C trace-id shape)',
+              type: 'string',
+            },
+            release: {
+              description:
+                'Per-flow config release map, keyed by flow name; accumulates across walkerOS crossings',
               type: 'object',
-              properties: {
-                type: {
-                  type: 'string',
-                  description: 'Source kind (browser, dataLayer, gtag, ...)',
-                },
-                platform: {
-                  description:
-                    'Runtime platform (web, server, app, ios, android, terminal, ...)',
-                  type: 'string',
-                },
-                version: {
-                  description: 'Deployment version of the source emitter',
-                  type: 'string',
-                },
-                schema: {
-                  description:
-                    'Event model spec version (collector defaults to "4")',
-                  type: 'string',
-                },
-                count: {
-                  description: 'Emission sequence per run',
-                  type: 'integer',
-                  minimum: 0,
-                  maximum: 9007199254740991,
-                },
-                trace: {
-                  description:
-                    'Trace id shared by every event of a run (W3C trace-id shape)',
-                  type: 'string',
-                },
-                release: {
-                  description:
-                    'Per-flow config release map, keyed by flow name; accumulates across walkerOS crossings',
-                  type: 'object',
-                  propertyNames: {
-                    type: 'string',
-                  },
-                  additionalProperties: {
-                    type: 'string',
-                  },
-                },
-                url: {
-                  type: 'string',
-                },
-                referrer: {
-                  type: 'string',
-                },
-                tool: {
-                  type: 'string',
-                },
-                command: {
-                  type: 'string',
-                },
+              propertyNames: {
+                type: 'string',
               },
-              required: ['type'],
-              additionalProperties: false,
+              additionalProperties: {
+                type: 'string',
+              },
             },
-          ],
+            url: {
+              type: 'string',
+            },
+            referrer: {
+              type: 'string',
+            },
+            tool: {
+              type: 'string',
+            },
+            command: {
+              type: 'string',
+            },
+          },
+          required: ['type'],
+          additionalProperties: {
+            allOf: [
+              {
+                $ref: '#/definitions/WalkerOSProperty',
+              },
+            ],
+          },
           title: 'WalkerOS.Source',
           description: 'Event source information',
+          allOf: [
+            {
+              $ref: '#/definitions/WalkerOSSource',
+            },
+          ],
         },
       },
       additionalProperties: false,

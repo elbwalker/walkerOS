@@ -1,0 +1,54 @@
+/*
+ * walkerOS base rules. Opt-in and global: import once per page after
+ * tokens.css. Explorer's own reset stays scoped to .elb-explorer.
+ */
+@layer base {
+  /*
+   * tokens.css sets --motion to 0ms for reduced motion; this guard also stops
+   * animations, transitions with their own durations and smooth scrolling.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  :root,
+  :host,
+  [data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  [data-theme='light'] {
+    color-scheme: light;
+  }
+
+  /* Islands recompute these from their own theme's tokens. */
+  html,
+  :host,
+  [data-theme] {
+    font-family: var(--font-sans);
+    color: var(--fg);
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  /* Only the page paints a ground; a background on :host would cover the customer page. */
+  html {
+    background-color: var(--bg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background-color: var(--primary);
+    color: var(--on-primary);
+  }
+}

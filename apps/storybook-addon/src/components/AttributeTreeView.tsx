@@ -3,7 +3,9 @@ import { SyntaxHighlighter } from 'storybook/internal/components';
 import { useTheme } from 'storybook/theming';
 import type { AttributeNode, PropertyOrigin } from '../types';
 import type { WalkerOS } from '@walkeros/core';
+import { vizBg } from '@walkeros/explorer/design';
 import { originLabel } from './origin-chip';
+import { attributeColors, type AttributeKind } from '../utils/eventColors';
 
 // Utility to format complex values for display in badges
 const formatValueForBadge = (value: unknown): string => {
@@ -34,7 +36,7 @@ interface AttributeTreeViewProps {
 }
 
 interface AttributeBadgeProps {
-  type: 'entity' | 'action' | 'context' | 'globals' | 'data';
+  type: AttributeKind;
   label: string;
   value?: string;
   origin?: PropertyOrigin;
@@ -46,14 +48,7 @@ const AttributeBadge: React.FC<AttributeBadgeProps> = ({
   value,
   origin,
 }) => {
-  const colors = {
-    entity: '#00ca4e',
-    action: '#9900ff',
-    context: '#ffbd44',
-    globals: '#4fc3f7',
-    data: '#ff605c',
-  };
-
+  const theme = useTheme();
   const suffix = origin ? originLabel(origin) : '';
   const base = value ? `${label}: ${value}` : label;
   const displayText = suffix ? `${base} (${suffix})` : base;
@@ -62,7 +57,7 @@ const AttributeBadge: React.FC<AttributeBadgeProps> = ({
   const suffixNode = suffix ? (
     <span
       style={{
-        fontSize: '10px',
+        fontSize: theme.typography.size.s1,
         fontWeight: 400,
         fontStyle: 'italic',
         opacity: 0.65,
@@ -79,9 +74,11 @@ const AttributeBadge: React.FC<AttributeBadgeProps> = ({
         display: 'inline-block',
         padding: '2px 6px',
         margin: '0 4px',
-        fontSize: '14px',
-        color: 'black',
-        backgroundColor: colors[type],
+        fontSize: theme.typography.size.s2,
+        // A dark chip: event colours only sit on the dark visualisation ground.
+        color: attributeColors[type],
+        backgroundColor: vizBg,
+        border: `1px solid ${attributeColors[type]}`,
         borderRadius: '3px',
         maxWidth: '240px',
         overflow: 'hidden',

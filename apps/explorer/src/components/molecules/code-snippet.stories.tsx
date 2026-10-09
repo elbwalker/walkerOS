@@ -16,13 +16,6 @@ const meta: Meta<typeof CodeSnippet> = {
 export default meta;
 type Story = StoryObj<typeof CodeSnippet>;
 
-export const OneLine: Story = {
-  args: {
-    code: "import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';",
-    language: 'javascript',
-  },
-};
-
 export const MultiLine: Story = {
   args: {
     code: `export async function setupGA4Complete() {
@@ -40,16 +33,6 @@ export const MultiLine: Story = {
   });
   return { collector, elb };
 }`,
-    language: 'javascript',
-  },
-};
-
-/**
- * Install command - the common docs use case (read-only shell snippet).
- */
-export const Bash: Story = {
-  args: {
-    code: 'npm install @walkeros/web-destination-amplitude',
-    language: 'bash',
+    language: 'typescript',
   },
 };

@@ -1,5 +1,15 @@
 # @walkeros/server-destination-redis
 
+## 4.8.0
+
+### Patch Changes
+
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/server-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

@@ -1,5 +1,21 @@
 # @walkeros/transformer-validate
 
+## 4.8.0
+
+### Minor Changes
+
+- 421233d: `format: true` now accepts extra keys on `user` and `source` (custom
+  user attributes, GA4 transformer fields, a previous validate verdict), as the
+  types always allowed. `user.optout` is typed as a boolean. Unknown top-level
+  fields and wrong types still fail.
+
+### Patch Changes
+
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

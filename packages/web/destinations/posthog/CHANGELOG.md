@@ -1,5 +1,20 @@
 # @walkeros/web-destination-posthog
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The `capture_heatmaps` and `capture_exceptions` descriptions now say
+  that, when unset, the PostHog project setting decides. The `identify` and
+  `group` descriptions say when the calls repeat. The step examples name the
+  destination config they rely on, and the login example uses a millisecond
+  timestamp.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

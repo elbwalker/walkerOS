@@ -2,9 +2,9 @@
 .elb-explorer-box {
   display: flex;
   flex-direction: column;
-  background: var(--bg-box);
-  border: 1px solid var(--border-box);
-  border-radius: var(--radius-box);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
   overflow: hidden;
   box-sizing: border-box;
 
@@ -46,24 +46,69 @@
   }
 }
 
+// Code panels (CodeBox, CodeView, CodeDiffBox, BrowserBox) are dark islands in
+// the code block colours, matching the docs' code blocks.
+.elb-explorer-box--code {
+  background: var(--code-bg);
+  border-color: var(--code-border);
+
+  > .elb-explorer-header,
+  > .elb-explorer-tabs,
+  > .elb-explorer-footer {
+    background: var(--code-bar);
+    border-color: var(--code-border);
+  }
+
+  > .elb-explorer-content {
+    background: var(--code-bg);
+  }
+}
+
 // Header section
 .elb-explorer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-header);
-  background: var(--bg-header);
-  border-bottom: 1px solid var(--border-header);
+  padding: 6px 10px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   height: 36px;
   box-sizing: border-box;
 }
 
 .elb-explorer-label {
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-label);
+  font-size: var(--type-product-small-size);
+  font-weight: 600;
+  color: var(--fg-2);
   user-select: none;
+}
+
+// Error notice between header and content: what failed in this box, with
+// an icon and the word, on the danger tint
+.elb-explorer-box-error {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--danger);
+  background: var(--danger-bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--type-product-small-size);
+  line-height: var(--type-product-small-line-height);
+  flex-shrink: 0;
+  overflow-wrap: anywhere;
+
+  svg {
+    flex: none;
+    align-self: center;
+    color: var(--danger);
+  }
+
+  strong {
+    font-weight: 600;
+  }
 }
 
 // Footer section
@@ -71,9 +116,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-footer);
-  background: var(--bg-footer);
-  border-top: 1px solid var(--border-footer);
+  padding: 6px 10px;
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
   height: 40px;
   box-sizing: border-box;
@@ -89,7 +134,7 @@
   flex: 1;
   min-height: 0; // Critical for flex overflow
   position: relative;
-  background: var(--bg-box);
+  background: var(--surface);
   overflow: hidden; // Hidden (not auto) - lets Monaco handle internal scrolling
   display: flex;
   flex-direction: column;
@@ -106,75 +151,57 @@
   }
 }
 
-// Button group styling
-.elb-explorer-button-group {
-  display: flex;
-  background: var(--bg-button-group);
-  border-radius: var(--radius-button-group);
-  padding: var(--spacing-button-group);
-  border: 1px solid var(--border-button-group);
-}
-
 // Tabs header
 .elb-explorer-tabs {
   display: flex;
   align-items: center;
-  background: var(--bg-header);
-  border-bottom: 1px solid var(--border-header);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   min-height: 36px;
   box-sizing: border-box;
 }
 
 .elb-explorer-tab {
-  padding: 0.5rem 1rem;
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-muted);
+  padding: 8px 16px;
+  font-size: var(--type-product-small-size);
+  font-weight: 600;
+  color: var(--fg-2);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition:
+    color var(--motion) var(--ease),
+    border-color var(--motion) var(--ease);
   user-select: none;
 
   &:hover {
-    color: var(--color-text-label);
+    color: var(--fg);
   }
 
   &--active {
-    color: #01b5e2;
-    border-bottom-color: #01b5e2;
+    color: var(--link);
+    border-bottom-color: var(--primary);
   }
 }
 
 .elb-explorer-tab-actions {
   margin-left: auto;
-  padding-right: 0.5rem;
+  padding-right: 8px;
 }
 
-// Traffic lights (Mac window decoration)
+// Traffic lights (Mac window decoration), neutral dots on the bar
 .elb-explorer-traffic-lights {
   display: flex;
-  gap: 0.5rem;
-  padding: 0 1rem;
+  gap: 8px;
+  padding: 0 16px;
   align-items: center;
 }
 
 .elb-explorer-traffic-light {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 50%;
-
-  &--red {
-    background-color: #ff5f56;
-  }
-
-  &--yellow {
-    background-color: #ffbd2e;
-  }
-
-  &--green {
-    background-color: #27c93f;
-  }
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background-color: var(--border-strong);
 }

@@ -486,11 +486,27 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
         412: {
           headers: {
             [name: string]: unknown;
           };
           content?: never;
+        };
+        502: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
         };
       };
     };
@@ -567,7 +583,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            'application/json': components['schemas']['FlowConflictResponse'];
+          };
         };
       };
     };
@@ -1995,6 +2013,14 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
         409: {
           headers: {
             [name: string]: unknown;
@@ -2277,6 +2303,14 @@ export interface paths {
           };
         };
         429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        502: {
           headers: {
             [name: string]: unknown;
           };
@@ -2837,6 +2871,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          flowId?: string;
           pageKey?: string;
           frameId?: string;
           markId?: string;
@@ -3500,6 +3535,7 @@ export interface components {
     FlowSummary: {
       id: string;
       name: string;
+      placeholder: boolean;
       summary?: string;
       settings?: components['schemas']['FlowSettingsListItem'][];
       /** Format: date-time */
@@ -3557,6 +3593,7 @@ export interface components {
       id: string;
       name: string;
       config: components['schemas']['FlowConfig'];
+      placeholder: boolean;
       settings?: components['schemas']['FlowSettingsEnriched'][];
       bundleId?: string | null;
       /** Format: date-time */
@@ -3598,6 +3635,19 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+    };
+    FlowConflictResponse: {
+      error: {
+        /** @enum {string} */
+        code: 'PRECONDITION_FAILED';
+        message: string;
+      };
+      head: {
+        config: components['schemas']['FlowConfig'];
+        etag: string;
+        /** Format: date-time */
+        updatedAt: string;
+      };
     };
     CreateProjectResponse: {
       id: string;
@@ -3649,6 +3699,7 @@ export interface components {
       slug: string;
       target: string | null;
       label: string | null;
+      flowId: string | null;
       /** @enum {string} */
       origin: 'cloud' | 'self-hosted';
       /** @enum {string} */

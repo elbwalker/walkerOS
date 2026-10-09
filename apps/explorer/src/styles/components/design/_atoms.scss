@@ -1,0 +1,13 @@
+// Design atoms (@walkeros/explorer/design/components). Namespaced, as their
+// file names repeat explorer's own atoms (button).
+@use './button' as design-button;
+@use './inline-code' as design-inline-code;
+@use './event-legend' as design-event-legend;
+@use './icon' as design-icon;
+@use './eyebrow' as design-eyebrow;
+@use './stat' as design-stat;
+@use './text' as design-text;
+@use './text-link' as design-text-link;
+@use './card' as design-card;
+@use './install-command' as design-install-command;
+@use './photo-placeholder' as design-photo-placeholder;

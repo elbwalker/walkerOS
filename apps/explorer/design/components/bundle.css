@@ -1,0 +1,108 @@
+/* walkerOS components — every value from tokens.css */
+.wos-root, .wos-root * { box-sizing: border-box; }
+.wos-root { font-family: var(--font-sans); color: var(--fg); -webkit-font-smoothing: antialiased; }
+.wos-root a { color: var(--link); text-decoration: none; }
+.wos-root a:hover { text-decoration: underline; }
+.wos-root :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: var(--radius-xs); }
+
+/* Button */
+.wos-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: var(--font-sans); font-weight: 600; font-size: 16px; line-height: 1.5; padding: 12px 24px; border-radius: var(--radius-md); border: 1px solid transparent; cursor: pointer; text-decoration: none; transition: border-color .18s, filter .18s; }
+.wos-root a.wos-btn:hover { text-decoration: none; }
+.wos-btn--primary, .wos-root a.wos-btn--primary { background: var(--primary); color: var(--on-primary); }
+.wos-btn--primary:hover { filter: brightness(1.08); color: var(--on-primary); }
+.wos-btn--secondary, .wos-root a.wos-btn--secondary { background: var(--surface); color: var(--fg); border-color: var(--border); }
+.wos-btn--secondary:hover { border-color: var(--primary); color: var(--fg); }
+.wos-btn--block { width: 100%; }
+
+/* InstallCommand */
+.wos-cmd { display: inline-flex; align-items: center; gap: 12px; font: 500 15px/1.5 var(--font-mono); padding: 12px 18px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface); color: var(--fg); cursor: pointer; transition: border-color .18s; }
+.wos-cmd:hover { border-color: var(--primary); }
+.wos-cmd__prompt { color: var(--fg-3); }
+.wos-cmd__icon { display: inline-flex; color: var(--fg-3); }
+.wos-cmd__icon--done { color: var(--primary); }
+
+/* Check icon + CheckList */
+.wos-check { flex: none; color: var(--primary); }
+.wos-checklist { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 10px 28px; color: var(--fg-2); font-size: 15px; }
+.wos-checklist--center { justify-content: center; }
+.wos-checklist--stack { flex-direction: column; flex-wrap: nowrap; gap: 9px; }
+.wos-checklist li { display: flex; align-items: center; gap: 8px; }
+.wos-checklist--stack li { align-items: flex-start; gap: 10px; }
+.wos-checklist--stack .wos-check { margin-top: 4px; }
+
+/* AnnouncementBar */
+.wos-announce { background: var(--primary); color: var(--on-primary); text-align: center; font-size: 14px; font-weight: 600; line-height: 1.5; padding: 7px 16px; }
+.wos-root .wos-announce a { color: inherit; text-decoration: underline; }
+
+/* SiteHeader */
+.wos-header { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+.wos-header__in { max-width: var(--container); margin: 0 auto; padding: 0 var(--gutter); display: flex; align-items: center; gap: var(--gutter); height: var(--header-h); }
+.wos-header__logo { flex: none; display: block; height: 22px; }
+.wos-header__logo img { height: 22px; width: auto; display: block; }
+.wos-header__nav { display: flex; gap: 22px; margin-right: auto; min-width: 0; overflow-x: auto; white-space: nowrap; }
+.wos-header__end { display: flex; align-items: center; gap: 14px; flex: none; }
+.wos-root .wos-navlink { color: var(--fg); font-weight: 500; font-size: 15px; }
+.wos-root .wos-navlink:hover { color: var(--link); text-decoration: none; }
+.wos-iconbtn { background: none; border: 0; color: var(--fg-2); cursor: pointer; padding: 6px; border-radius: var(--radius-full); display: inline-flex; }
+.wos-iconbtn:hover { background: var(--surface-2); color: var(--fg); }
+
+/* SectionHeading */
+.wos-sh { max-width: 760px; margin: 0; }
+.wos-sh--center { margin: 0 auto; text-align: center; }
+.wos-eyebrow { color: var(--link); font-size: 13px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; line-height: 1.5; margin: 0 0 16px; }
+.wos-h1 { font-size: clamp(38px, 6vw, 64px); line-height: 1.08; letter-spacing: -.025em; font-weight: 700; margin: 0 auto 22px; max-width: 20ch; text-wrap: balance; color: var(--fg); }
+.wos-h1 em { font-style: normal; color: var(--primary); }
+.wos-h2 { font-size: clamp(28px, 3.6vw, 40px); line-height: 1.15; letter-spacing: -.02em; font-weight: 700; margin: 0 0 14px; text-wrap: balance; color: var(--fg); }
+.wos-lead { color: var(--fg-2); font-size: 18px; line-height: 1.65; margin: 0; }
+.wos-sh--center .wos-lead { font-size: clamp(18px, 2vw, 21px); max-width: 58ch; margin: 0 auto; }
+
+/* ProblemCard */
+.wos-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--card-pad-sm); transition: border-color .18s; }
+.wos-card:hover { border-color: color-mix(in srgb, var(--primary) 50%, var(--border)); }
+.wos-card__title { font-size: 19px; font-weight: 600; line-height: 1.35; margin: 0 0 8px; display: flex; gap: 12px; align-items: baseline; color: var(--fg); }
+.wos-card__num { font-family: var(--font-mono); font-size: 13px; color: var(--link); }
+.wos-card__text { margin: 0; color: var(--fg-2); font-size: 16px; line-height: 1.65; }
+
+/* FeatureItem */
+.wos-feature { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 14px; align-items: start; }
+.wos-feature .wos-check { margin-top: 3px; }
+.wos-feature__title { margin: 0 0 8px; font-size: 18px; font-weight: 600; line-height: 1.35; color: var(--fg); }
+.wos-feature__text { margin: 0 0 8px; color: var(--fg-2); font-size: 16px; line-height: 1.65; text-wrap: pretty; }
+.wos-root .wos-feature__link { font-size: 14px; font-weight: 500; }
+
+/* PlanCard */
+.wos-plan { display: flex; flex-direction: column; gap: var(--space-3-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--card-pad); }
+.wos-plan--highlight { border-color: var(--primary); box-shadow: var(--plan-highlight); }
+.wos-plan__label { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--fg-3); }
+.wos-plan--highlight .wos-plan__label { color: var(--link); }
+.wos-plan__title { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.015em; line-height: 1.3; color: var(--fg); }
+.wos-plan__text { margin: 0; color: var(--fg-2); flex: 1; font-size: 16px; line-height: 1.65; }
+
+/* FaqItem */
+.wos-faq { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-faq); }
+.wos-faq summary { list-style: none; cursor: pointer; padding: 18px 22px; font-weight: 600; font-size: 17px; line-height: 1.5; display: flex; justify-content: space-between; gap: 16px; color: var(--fg); }
+.wos-faq summary::-webkit-details-marker { display: none; }
+.wos-faq summary:hover { color: var(--link); }
+.wos-faq summary::after { content: '+'; color: var(--fg-3); font-size: 22px; line-height: 1; }
+.wos-faq[open] summary::after { content: '−'; }
+.wos-faq__body { padding: 16px 22px 20px; color: var(--fg-2); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; font-size: 16px; line-height: 1.65; }
+.wos-faq__body p { margin: 0; max-width: 72ch; }
+
+/* InlineCode */
+.wos-code { font-family: var(--font-mono); font-size: .88em; background: var(--surface-2); border: 1px solid var(--border); padding: .1em .4em; border-radius: var(--radius-sm); color: var(--fg); }
+
+/* EventLegend */
+.wos-legend { display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--font-viz-mono); font-size: 11px; color: var(--viz-fg-2); background: var(--viz-bg); padding: 12px 16px; border-radius: var(--radius-lg); }
+.wos-legend span { display: flex; align-items: center; gap: 6px; }
+.wos-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+/* SiteFooter */
+.wos-footer { background: var(--bg-2); border-top: 1px solid var(--border); padding: 64px 0 40px; }
+.wos-footer__in { max-width: var(--container); margin: 0 auto; padding: 0 var(--gutter); }
+.wos-footer__statement { font-size: clamp(24px, 3.2vw, 34px); font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin: 0 0 44px; max-width: 22ch; color: var(--fg); }
+.wos-footer__cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 28px; }
+.wos-footer__cols h4 { margin: 0 0 12px; font-size: 15px; font-weight: 700; color: var(--fg); }
+.wos-footer__cols ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
+.wos-root .wos-footer__cols a { color: var(--fg-2); }
+.wos-root .wos-footer__cols a:hover { color: var(--link); text-decoration: none; }
+.wos-footer__copy { text-align: center; color: var(--fg-3); font-size: 14px; margin: 48px 0 0; }

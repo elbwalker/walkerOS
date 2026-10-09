@@ -47,7 +47,7 @@ npx walkeros --version`}
 | `auth` | Authentication and identity | Log in, log out, check identity |
 | `projects` | Manage walkerOS projects | Create, list, update, delete projects |
 | `flows` | Manage walkerOS flows | Create, list, update, delete, duplicate flows |
-| `deploy` | Create and manage deployments | Deploy flows to walkerOS cloud or self-hosted |
+| `deploy` | Create and manage deployments | Deploy flows through the walkerOS app or self-hosted |
 | `previews` | Manage preview bundles | Test flow changes on live sites before deploying |
 | `observe` | Open an Observe session on a flow | Watch a running flow's live events from the terminal |
 | `diagnostics` | Show the CLI version, the app URL, app health, and the API contract verdict | See which backend you are on and whether this CLI matches it |
@@ -441,7 +441,7 @@ The bundle is now ready to deploy!
 | `-v, --verbose` | Detailed logging |
 | `-s, --silent` | Suppress output |
 
-When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads via HTTP PUT. This is used by the walkerOS cloud service for remote builds.
+When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads via HTTP PUT. This is used by the walkerOS app for remote builds.
 
 For server flows, `-o` resolves to a directory: `dist/{flow.mjs, package.json, node_modules/}`. When `-o` ends in `.tar.gz` or `.tgz`, that same directory is packed into a single gzip archive instead (server flows only). For multi-flow `--all`, each flow gets its own subdirectory: `dist/<flowName>/...`.
 
@@ -1536,7 +1536,7 @@ The entry validator:
 
 ## Auth commands
 
-The `auth` command group manages authentication with the walkerOS cloud service. Authentication is required for cloud commands (`projects`, `flows`, `deploy`).
+The `auth` command group manages authentication with the walkerOS app. Authentication is required for app commands (`projects`, `flows`, `deploy`).
 
 ### Login
 
@@ -1617,13 +1617,13 @@ The CLI resolves a credential in this order, first match wins:
 1. `WALKEROS_TOKEN` environment variable. Used as-is, never refreshed.
 2. A static `token` in the config file, written by an older CLI. Honored until it expires, with a one-line notice pointing at `walkeros auth login`.
 3. The OAuth session in the config file, written by `auth login`. Refreshed automatically when the access token is close to expiry.
-4. Nothing, and cloud commands report "Not authenticated. Run `walkeros auth login` first."
+4. Nothing, and app commands report "Not authenticated. Run `walkeros auth login` first."
 
 A refresh that cannot reach the app is reported as such and leaves the saved session in place, so the next command tries again rather than sending you back to the browser.
 
 ## Projects commands
 
-The `projects` command group manages walkerOS cloud projects. All commands require authentication (see [Auth commands](#auth-commands)).
+The `projects` command group manages walkerOS app projects. All commands require authentication (see [Auth commands](#auth-commands)).
 
 ### List projects
 
@@ -1788,7 +1788,7 @@ All `flows` subcommands support:
 
 ## Deploy commands
 
-The `deploy` command group handles deploying flows to the walkerOS cloud or managing self-hosted deployments with heartbeat registration. All commands require authentication.
+The `deploy` command group handles deploying flows through the walkerOS app or managing self-hosted deployments with heartbeat registration. All commands require authentication.
 
 ### deploy create
 
@@ -1820,7 +1820,7 @@ On success, the CLI displays the deployment ID, slug, and type. It also shows ex
 
 ### deploy start
 
-Deploy a remote flow to walkerOS cloud infrastructure. Auto-detects whether to use web (script hosting) or server (container) deployment based on the flow content. Streams deployment progress via SSE.
+Deploy a remote flow through the walkerOS app. Auto-detects whether to use web (script hosting) or server (container) deployment based on the flow content. Streams deployment progress via SSE.
 
 <CodeSnippet
   code={`# Deploy a flow
@@ -2432,7 +2432,7 @@ These options work with all commands:
 
 | Variable | Purpose |
 |----------|---------|
-| `WALKEROS_TOKEN` | Automation token (`wos_pat_...`) for cloud commands, from Account then Automation tokens. Overrides the `auth login` session |
+| `WALKEROS_TOKEN` | Automation token (`wos_pat_...`) for app commands, from Account then Automation tokens. Overrides the `auth login` session |
 | `WALKEROS_PROJECT_ID` | Default project ID for `projects`, `flows`, and `deploy` commands |
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
 | `WALKEROS_DEPLOY_TOKEN` | Deploy token for container heartbeat authentication |
@@ -2481,7 +2481,7 @@ with the same floor can therefore differ in their hash while the verdict is
 | Verdict | Line | Means |
 |---------|------|-------|
 | `in-sync` | `contract: in-sync (server 4.7.0+5e6f7a8b, client 4.7.0+1a2b3c4d, 55 operations)` | Every operation this client calls has the shape it was built with. |
-| `changed` | `contract: changed (server 4.7.0+9f8e7d6c, client 4.7.0+1a2b3c4d); changed: GET /api/projects/{projectId}/frames` | Operations this client calls differ from the server's, and the server's `<floor>+<hash>` label names a floor not below the client's, usually the same one. The direction is not determined: the server may be a newer or an older deploy. |
+| `changed` | `contract: changed (server 4.7.0+9f8e7d6c, client 4.7.0+1a2b3c4d); changed: GET /api/projects/{projectId}/frames` | Operations this client calls differ from the server's, and the server's `<floor>+<hash>` label names a floor not below the client's, usually the same one. When the server's floor is higher, the server is the newer deploy: upgrade the client. With the same floor a hash has no order, so the server may be a newer or an older deploy. |
 | `server-older` | `contract: server-older (server 4.6.1, client 4.7.0+1a2b3c4d); not offered (1): GET /api/projects/{projectId}/frames (mcp frame_manage)` | The server lacks operations this client calls, listed with the commands and tools that call them, or changed some and names a lower floor or none. A label without `+<hash>`, such as `4.7.1`, predates floors. |
 | `client-outdated` | `contract: client-outdated (https://app.walkeros.io requires @walkeros/cli >= 4.9.0; this is 4.8.0)` | The server's `minSupportedClient` is above this client's version. |
 | `unknown` | `contract: unknown (GET https://app.walkeros.io/api/health: timeout after 5000 ms)` | The health route or the OpenAPI document could not be read. |
@@ -2604,7 +2604,7 @@ lsof -ti:8080 | xargs kill`}
 
 ### Authentication Issues
 
-If cloud commands fail with authentication errors:
+If app commands fail with authentication errors:
 
 <CodeSnippet
   code={`# Check current identity

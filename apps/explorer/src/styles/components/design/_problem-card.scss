@@ -1,0 +1,35 @@
+// ProblemCard (@walkeros/explorer/design/components): a numbered problem.
+@layer components {
+  .elb-problem-card {
+    gap: var(--space-2);
+  }
+
+  .elb-problem-card__title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin: 0;
+    color: var(--fg);
+    font-family: var(--type-title-card-family);
+    font-size: var(--type-title-card-size);
+    line-height: var(--type-title-card-line-height);
+    font-weight: var(--type-title-card-weight);
+  }
+
+  .elb-problem-card__number {
+    color: var(--link);
+    font-family: var(--type-code-step-family);
+    font-size: var(--type-code-step-size);
+    line-height: var(--type-code-step-line-height);
+    font-weight: var(--type-code-step-weight);
+  }
+
+  .elb-problem-card__text {
+    margin: 0;
+    color: var(--fg-2);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+    font-weight: var(--type-body-weight);
+  }
+}

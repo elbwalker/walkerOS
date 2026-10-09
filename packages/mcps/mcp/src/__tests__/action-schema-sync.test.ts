@@ -110,7 +110,7 @@ const mapDrivenTools: MapDrivenTool[] = [
       flowId: 'flow_1',
       previewId: 'prv_1',
       name: 'My Flow',
-      flowName: 'demo',
+      settingsName: 'demo',
       flowSettingsId: 'set_1',
     },
   },

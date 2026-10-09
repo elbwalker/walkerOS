@@ -1,5 +1,20 @@
 # @walkeros/server-source-gcp
 
+## 4.8.0
+
+### Patch Changes
+
+- 421233d: The Cloud Function and Pub/Sub push handlers now accept the request
+  headers that Express and the Functions Framework pass, where a header value
+  may be undefined. The typed handler from `Source.getSource` now plugs straight
+  into `http()` from the Functions Framework or an Express route, without a
+  cast.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/collector@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

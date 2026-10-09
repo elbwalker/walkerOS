@@ -1,5 +1,31 @@
 # @walkeros/mcp
 
+## 4.8.0
+
+### Minor Changes
+
+- 421233d: `deploy_manage` and `flow_manage` `preview_create` take the settings
+  identifier as `settingsName`. `flowName` is only a display name in results.
+  Unknown input keys on these two tools are now rejected instead of ignored.
+
+### Patch Changes
+
+- 5593d7b: Frames belong to a flow: `frame_manage` (list, page and get) and the
+  CLI frame reads now take the `flowId` of the flow they live in. Deleting a
+  flow also deletes its frames.
+
+  A frame read also returns `lastSavedVersion`, `lastSavedNumber` and
+  `markupAssetId`, so a client can tell whether a frame has changed since it was
+  last saved as a version.
+
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+- Updated dependencies [5593d7b]
+- Updated dependencies [5593d7b]
+  - @walkeros/core@4.8.0
+  - @walkeros/cli@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

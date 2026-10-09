@@ -1,11 +1,11 @@
 // Scope all resets under .elb-explorer to avoid affecting host application
 .elb-explorer {
-  // Establish baseline styles for embedded environments
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-    Cantarell, 'Helvetica Neue', sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--color-text);
+  // Establish baseline styles for embedded environments: the product body
+  // type style on the design tokens
+  font-family: var(--font-sans);
+  font-size: var(--type-product-body-size);
+  line-height: var(--type-product-body-line-height);
+  color: var(--fg);
 
   * {
     box-sizing: border-box;

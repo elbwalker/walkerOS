@@ -35,7 +35,7 @@ describe('validateActionInput', () => {
     create: { required: ['name'] },
     preview_create: {
       required: ['flowId'],
-      oneOf: [['flowName', 'flowSettingsId']],
+      oneOf: [['settingsName', 'flowSettingsId']],
     },
   };
 
@@ -70,7 +70,7 @@ describe('validateActionInput', () => {
     const result = validateActionInput(
       'flow_manage',
       'preview_create',
-      { flowId: 'f1', flowName: 'demo' },
+      { flowId: 'f1', settingsName: 'demo' },
       map,
     );
     expect(result).toBeNull();
@@ -129,7 +129,7 @@ describe('validateActionInput', () => {
       );
       expect(FLOW_MANAGE_REQUIREMENTS.preview_create).toEqual({
         required: ['flowId'],
-        oneOf: [['flowName', 'flowSettingsId']],
+        oneOf: [['settingsName', 'flowSettingsId']],
       });
     });
 

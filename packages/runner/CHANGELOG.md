@@ -1,5 +1,18 @@
 # @walkeros/runner
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The runner refuses to start when the loaded flow does not match
+  `WALKEROS_FLOW_RELEASE` (and `WALKEROS_FLOW_NAME`, when set), so a container
+  never serves an artifact other than the one it was deployed with. Every start
+  logs the loaded flow's name and release.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

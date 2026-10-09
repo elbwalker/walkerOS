@@ -1,6 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { WalkerOS } from '@walkeros/core';
-import { debounce, isString, tryCatchAsync } from '@walkeros/core';
+import {
+  debounce,
+  getErrorMessage,
+  isString,
+  tryCatchAsync,
+} from '@walkeros/core';
 import { CodeBox } from '../molecules/code-box';
 import { Grid } from '../atoms/grid';
 import { cn } from '../../lib/utils';
@@ -21,6 +26,7 @@ export interface LiveCodeProps {
   labelInput?: string;
   labelConfig?: string;
   labelOutput?: string;
+  /** Plain words in the empty Result box, such as why a run returns nothing. */
   emptyText?: string;
   disableInput?: boolean;
   disableConfig?: boolean;
@@ -30,7 +36,7 @@ export interface LiveCodeProps {
   format?: boolean;
   rowHeight?: 'auto' | 'equal' | 'synced' | number;
   /** Language for the Result panel. Defaults to json (the typical output
-   * shape). Set to `javascript` when emptyText includes `//` comments. */
+   * shape). */
   outputLanguage?: string;
   /** Language for the Config panel. Defaults to `json`. Override when the
    * Config panel content is not JSON. */
@@ -67,6 +73,7 @@ export function LiveCode({
   const [input, setInput] = useState(formatValue(initInput));
   const [config, setConfig] = useState(formatValue(initConfig));
   const [output, setOutput] = useState([formatValue(initOutput)]);
+  const [error, setError] = useState<string>();
 
   // Format input code on mount
   useEffect(() => {
@@ -84,29 +91,52 @@ export function LiveCode({
     }
   }, [initConfig, language, format]);
 
-  const log = useCallback(
-    (...args: unknown[]) => {
+  // One logged call, as the Result box shows it.
+  const formatLog = useCallback(
+    (args: unknown[]) => {
       const params = args
         .map((arg) => formatValue(arg, { quotes: showQuotes }))
         .join(', ');
-      setOutput([fnName ? `${fnName}(${params})` : params]);
+      return fnName ? `${fnName}(${params})` : params;
     },
     [fnName, showQuotes],
   );
 
+  // The latest run; a log of an older one shows nothing.
+  const runRef = useRef(0);
+
+  // A run's result replaces the last one when the run ends, so the box never
+  // empties between runs; a failed run shows its error alone. A log that
+  // arrives after its run resolved still shows, as the latest call.
   const updateOutput = useCallback(
     debounce(
       async (inputStr: string, configStr: string, opts: WalkerOS.AnyObject) => {
         if (!fn) return;
-        setOutput([]);
+        const run = ++runRef.current;
+        const logged: string[] = [];
+        const failures: string[] = [];
+        let ended = false;
         await tryCatchAsync(fn, (e) => {
-          setOutput([`Error: ${String(e)}`]);
-        })(inputStr, configStr, log, opts);
+          failures.push(getErrorMessage(e));
+        })(
+          inputStr,
+          configStr,
+          (...args: unknown[]) => {
+            const line = formatLog(args);
+            if (!ended) logged.push(line);
+            else if (run === runRef.current) setOutput([line]);
+          },
+          opts,
+        );
+        ended = true;
+        if (run !== runRef.current) return;
+        setOutput(failures.length ? [] : logged.slice(-1));
+        setError(failures[0]);
       },
       500,
       true,
     ),
-    [fn, log],
+    [fn, formatLog],
   );
 
   useEffect(() => {
@@ -137,9 +167,11 @@ export function LiveCode({
 
       <CodeBox
         label={labelOutput}
-        code={output[0] || emptyText}
+        code={output[0] || ''}
         disabled
         language={outputLanguage}
+        placeholder={emptyText}
+        error={error}
       />
     </Grid>
   );

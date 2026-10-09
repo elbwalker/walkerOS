@@ -25,7 +25,7 @@ import {
 const TITLE = 'Deploy Management';
 const DESCRIPTION =
   'Deploy walkerOS flows and manage deployments. ' +
-  'deploy waits for the deployment to reach a terminal status by default (wait=true), with a 12-minute budget; pass wait=false to return immediately with the deployment id. ' +
+  'deploy waits for the deployment to reach a terminal status by default (wait=true), up to 12 minutes on the local door and up to 10 minutes on the hosted door; pass wait=false to return immediately with the deployment id. ' +
   'A finished deployment carries its status and, on failure, an errorMessage with the user-facing reason; use the get action to re-read it. ' +
   'list supports cursor and limit for pagination. ' +
   'delete removes an active deployment. ' +
@@ -82,13 +82,13 @@ const inputSchema = {
     .boolean()
     .optional()
     .describe(
-      'Wait for the deployment to reach a terminal status (default true), with a 12-minute budget. Set false to return the deployment id immediately. Only used with deploy action.',
+      'Wait for the deployment to reach a terminal status (default true): up to 12 minutes on the local door, up to 10 minutes on the hosted door. Set false to return the deployment id immediately. Only used with deploy action.',
     ),
-  flowName: z
+  settingsName: z
     .string()
     .optional()
     .describe(
-      'Flow name for multi-settings flows. Only used with deploy action.',
+      'Settings name of a multi-settings flow (the `settings[].name` from flow_manage list). Only used with deploy action.',
     ),
   cursor: z
     .string()
@@ -226,7 +226,7 @@ export function createDeployManageToolSpec(client: ToolClient): ToolSpec {
 }
 
 async function deployManageHandlerBody(client: ToolClient, input: unknown) {
-  const parsed = parseToolInput(inputSchema, input);
+  const parsed = parseToolInput(inputSchema, input, { strict: true });
   if (!parsed.ok) return parsed.error;
   const {
     action,
@@ -236,7 +236,7 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
     type,
     status,
     wait,
-    flowName,
+    settingsName,
     cursor,
     limit,
   } = parsed.data;
@@ -261,7 +261,7 @@ async function deployManageHandlerBody(client: ToolClient, input: unknown) {
           flowId,
           projectId,
           wait: wait ?? true,
-          flowName,
+          flowName: settingsName,
         });
         // The deployment's own page, whether this call waited for a terminal
         // status or returned the id straight away. It is where the status the
@@ -343,7 +343,9 @@ export function registerDeployTool(server: McpServer, client: ToolClient) {
     {
       title: spec.title,
       description: spec.description,
-      inputSchema: spec.inputSchema,
+      // Strict, so a key the tool does not take is an input error naming that
+      // key: a dropped settings key would deploy as if no settings were named.
+      inputSchema: z.strictObject(spec.inputSchema),
       annotations: spec.annotations,
     },
     (args) => deployManageHandlerBody(client, args),

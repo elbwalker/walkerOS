@@ -1,0 +1,112 @@
+// QuickstartSteps (@walkeros/explorer/design/components): numbered steps joined
+// by hand-drawn arrows, a column on narrow screens.
+@layer components {
+  .elb-quickstart {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  // Steps and arrows alternate in the implicit columns: 1fr, 84px, 1fr, ...
+  .elb-quickstart__steps {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr) 84px;
+    gap: 0 16px;
+    align-items: start;
+    align-self: stretch;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .elb-quickstart__step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3-5);
+    min-width: 0;
+    margin: 0;
+  }
+
+  .elb-quickstart__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .elb-quickstart__num {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-full);
+    color: var(--link);
+    font-family: var(--font-mono);
+    font-size: var(--type-small-size);
+    font-weight: 600;
+  }
+
+  .elb-quickstart__title {
+    margin: 0;
+    color: var(--fg);
+    font-family: var(--type-title-card-family);
+    font-size: var(--type-title-card-size);
+    font-weight: var(--type-title-card-weight);
+    line-height: 1.3;
+  }
+
+  .elb-quickstart__copy {
+    margin: 0;
+    color: var(--fg-2);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+    text-wrap: pretty;
+  }
+
+  .elb-quickstart__arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    margin: 0;
+    color: var(--primary);
+
+    > svg {
+      overflow: visible;
+    }
+  }
+
+  .elb-quickstart__arrow--wave > svg {
+    transform: rotate(-4deg);
+  }
+
+  .elb-quickstart__arrow--loop > svg {
+    transform: rotate(3deg);
+  }
+
+  @media (max-width: 807px) {
+    .elb-quickstart__steps {
+      grid-auto-flow: row;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+    }
+
+    .elb-quickstart__arrow {
+      height: 64px;
+    }
+
+    .elb-quickstart__arrow--wave > svg {
+      transform: rotate(90deg);
+    }
+
+    .elb-quickstart__arrow--loop > svg {
+      transform: rotate(90deg) scaleY(-1);
+    }
+  }
+}

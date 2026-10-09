@@ -23,7 +23,7 @@ type Story = StoryObj<typeof ButtonGroup>;
 /**
  * Default button group with tab selection
  *
- * Shows typical usage for tab switching with active state.
+ * Header tabs as Preview and BrowserBox render them (`variant="tabs"`).
  */
 export const Default: Story = {
   render: () => {
@@ -42,6 +42,7 @@ export const Default: Story = {
           { label: 'JS', value: 'js', active: activeTab === 'js' },
         ]}
         onButtonClick={setActiveTab}
+        variant="tabs"
       />
     );
   },

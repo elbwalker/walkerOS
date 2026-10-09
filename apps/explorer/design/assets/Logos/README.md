@@ -1,0 +1,5 @@
+- `walkerOS-logo.svg` — full wordmark (mark + "walkerOS"), single ink `#00b8e1`. Header logo at 22px height; works on `bg` in both themes. Never recolour or rebuild it.
+- `walkerOS-mark.svg` — the three slanted bars alone, ink `#00b8e1`. Use where the wordmark is too wide (avatars, the collector node in diagrams, the bundle thumbnail).
+- `walkerOS-icon.png` — 192px raster of the mark in brand blue on transparent; app icons and social avatars.
+- `favicon.png` — 32px favicon.
+- Place logos on `bg`, `bg-2` or `surface`; never on `primary` (blue on blue).

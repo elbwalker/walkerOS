@@ -1,0 +1,12 @@
+// InlineCode (@walkeros/explorer/design/components): a mono code token in prose.
+@layer components {
+  .elb-code-inline {
+    font-family: var(--font-mono);
+    font-size: var(--type-code-inline-size);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 0.1em 0.4em;
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+  }
+}

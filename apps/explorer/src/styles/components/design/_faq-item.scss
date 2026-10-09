@@ -1,0 +1,69 @@
+// FaqItem (@walkeros/explorer/design/components): one question as a native
+// disclosure. Width and the gap between siblings live here, no wrapper needed.
+@layer components {
+  .elb-faq {
+    box-sizing: border-box;
+    max-width: 900px;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-faq);
+  }
+
+  .elb-faq + .elb-faq {
+    margin-top: var(--space-3);
+  }
+
+  .elb-faq__question {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px;
+    list-style: none;
+    cursor: pointer;
+    color: var(--fg);
+    font-family: var(--type-body-lg-family);
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line-height);
+    font-weight: 600;
+    transition: color var(--motion) var(--ease);
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::after {
+      content: '+';
+      flex: none;
+      color: var(--fg-3);
+      font-size: var(--type-lead-size);
+      line-height: 1;
+    }
+
+    &:hover {
+      color: var(--link);
+    }
+  }
+
+  .elb-faq[open] > .elb-faq__question::after {
+    content: '\2212';
+  }
+
+  .elb-faq__answer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: 16px 22px 20px;
+    color: var(--fg-2);
+    border-top: 1px solid var(--border);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+    font-weight: var(--type-body-weight);
+
+    > p {
+      max-width: 72ch;
+      margin: 0;
+    }
+  }
+}

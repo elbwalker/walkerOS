@@ -1,0 +1,186 @@
+// DestinationMappingViz (@walkeros/explorer/design/components): one event, four
+// destinations. A dark island (VizFrame); breakpoints are container queries.
+@layer components {
+  .elb-viz-mapping {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .elb-viz-mapping__pick {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 20px 0;
+  }
+
+  .elb-viz-mapping__label {
+    color: var(--viz-fg-2);
+    font-family: var(--type-viz-legend-family);
+    font-size: var(--type-viz-legend-size);
+    line-height: var(--type-viz-legend-line-height);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .elb-viz-mapping__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .elb-viz-mapping__chip {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--viz-border);
+    border-radius: var(--radius-md);
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-chip-size);
+    line-height: var(--type-viz-chip-line-height);
+    cursor: pointer;
+    transition:
+      border-color var(--motion) var(--ease),
+      background var(--motion) var(--ease);
+
+    &:hover {
+      border-color: var(--viz-comment);
+    }
+  }
+
+  .elb-viz-mapping__chip--active,
+  .elb-viz-mapping__chip--active:hover {
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+    border-color: var(--primary);
+  }
+
+  .elb-viz-mapping__chip-entity {
+    padding: 7px 10px;
+    color: var(--viz-fg);
+    background: color-mix(in srgb, var(--viz-fg) 4%, transparent);
+  }
+
+  .elb-viz-mapping__chip-action {
+    padding: 7px 10px;
+    color: var(--primary);
+  }
+
+  .elb-viz-mapping__event {
+    margin: 16px 20px 0;
+    padding: 10px 14px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--viz-border) transparent;
+    background: var(--viz-code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-code-size);
+    line-height: 1.6;
+    white-space: pre;
+  }
+
+  .elb-viz-mapping__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 20px 20px;
+  }
+
+  .elb-viz-mapping__comment {
+    color: var(--viz-comment);
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-code-size);
+    font-style: italic;
+  }
+
+  .elb-viz-mapping__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+    gap: 10px;
+  }
+
+  .elb-viz-mapping__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: 12px 14px;
+    background: var(--viz-code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-faq);
+  }
+
+  .elb-viz-mapping__name {
+    font-size: var(--type-small-size);
+    font-weight: var(--type-small-weight);
+  }
+
+  .elb-viz-mapping__row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-code-size);
+    line-height: var(--type-viz-code-line-height);
+  }
+
+  .elb-viz-mapping__row--sends {
+    align-items: flex-start;
+  }
+
+  .elb-viz-mapping__tag {
+    flex: none;
+    width: 58px;
+    color: var(--viz-comment);
+    font-size: var(--type-viz-legend-size);
+  }
+
+  // The code panes scroll sideways inside the card; the page never does.
+  .elb-viz-mapping__rule,
+  .elb-viz-mapping__calls {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    white-space: pre;
+    scrollbar-width: thin;
+    scrollbar-color: var(--viz-border) transparent;
+  }
+
+  .elb-viz-mapping__caption {
+    margin: 0;
+    padding: 18px 20px 20px;
+    color: var(--viz-punct);
+    border-top: 1px solid var(--viz-border);
+    font-family: var(--type-viz-body-family);
+    font-size: var(--type-viz-body-size);
+    line-height: 1.6;
+    text-wrap: pretty;
+  }
+
+  @container (max-width: 639px) {
+    .elb-viz-mapping__pick {
+      padding: 14px 14px 0;
+    }
+
+    .elb-viz-mapping__event {
+      margin: 14px 14px 0;
+    }
+
+    .elb-viz-mapping__body,
+    .elb-viz-mapping__caption {
+      padding: 14px;
+    }
+
+    .elb-viz-mapping__row {
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .elb-viz-mapping__rule,
+    .elb-viz-mapping__calls {
+      align-self: stretch;
+    }
+  }
+}

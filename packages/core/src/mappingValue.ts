@@ -13,20 +13,25 @@ import { getGrantedConsent } from './consent';
 /**
  * Like getMappingValue, but also runs for an undefined source and takes
  * consent and event only from the context.
+ *
+ * @param value The source to resolve the mapping against.
+ * @param data The mapping data: a key path, a value config, or a list of them.
+ * @param context The collector (required), plus an optional event and consent.
+ * @returns The mapped value.
  */
 export async function resolveMappingValue(
   value: unknown,
   data: Mapping.Data = {},
-  context: Partial<Mapping.Context> = {},
+  context: Mapping.ValueContext,
 ): Promise<WalkerOS.Property | undefined> {
-  const consent = context.consent || context.collector?.consent;
-  const event = context.event ?? {};
-
   if (!context.collector) {
-    // Internal sites (cache.ts, top-level callers) MUST pass a collector.
-    // This guard catches plumbing bugs early instead of silent type-narrowing.
+    // The type requires a collector. This guard protects untyped callers
+    // (JavaScript, or getMappingValue called without one) with a clear error.
     throw new Error('getMappingValue: context.collector is required');
   }
+
+  const consent = context.consent || context.collector.consent;
+  const event = context.event ?? {};
 
   const baseContext: Mapping.Context = {
     event,
@@ -42,7 +47,7 @@ export async function resolveMappingValue(
       processMappingValue,
       (err: unknown): undefined => {
         if (err instanceof FatalError) throw err;
-        if (context.collector) context.collector.status.failed++;
+        context.collector.status.failed++;
         baseContext.logger.error('mapping processing failed', {
           event,
           error: err,

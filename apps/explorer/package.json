@@ -1,12 +1,15 @@
 {
   "name": "@walkeros/explorer",
-  "version": "4.7.2",
+  "version": "4.8.0",
   "description": "Interactive React components for walkerOS documentation and exploration",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "walkeros-design-check": "./bin/walkeros-design-check.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -14,17 +17,31 @@
       "require": "./dist/index.js"
     },
     "./styles.css": "./dist/styles.css",
-    "./styles": "./dist/styles.css"
+    "./styles": "./dist/styles.css",
+    "./design": {
+      "types": "./dist/design/index.d.ts",
+      "import": "./dist/design/index.mjs",
+      "require": "./dist/design/index.cjs"
+    },
+    "./design/components": {
+      "types": "./dist/design/components/index.d.ts",
+      "import": "./dist/design/components/index.mjs",
+      "require": "./dist/design/components/index.cjs"
+    },
+    "./design/tokens.css": "./dist/design/tokens.css",
+    "./design/base.css": "./dist/design/base.css",
+    "./design/tailwind.css": "./dist/design/tailwind.css"
   },
   "files": [
     "dist/**",
+    "bin/**",
     "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup --silent",
     "dev": "jest --watchAll --colors",
     "storybook": "storybook dev -p 6007 --no-open",
-    "lint": "eslint \"src/**/*.ts*\"",
+    "lint": "eslint \"src/**/*.ts*\" && walkeros-design-check src --allow 'src/design/{__tests__,check}/**' --allow 'src/design/*.{ts,css}' --allow src/components/atoms/icons/icons.tsx --allow '**/*.svg'",
     "test": "jest",
     "clean": "rm -rf .turbo && rm -rf dist",
     "build-storybook": "storybook build",
@@ -36,10 +53,11 @@
     "@rjsf/core": "^6.1.2",
     "@rjsf/utils": "^6.1.2",
     "@rjsf/validator-ajv8": "^6.1.2",
-    "@walkeros/collector": "4.7.2",
-    "@walkeros/core": "4.7.2",
-    "@walkeros/web-core": "4.7.2",
-    "@walkeros/web-source-browser": "4.7.2",
+    "@walkeros/collector": "4.8.0",
+    "@walkeros/core": "4.8.0",
+    "@walkeros/web-core": "4.8.0",
+    "@walkeros/web-source-browser": "4.8.0",
+    "@walkeros/web-destination-gtag": "4.8.0",
     "clsx": "^2.1.1",
     "monaco-editor": "^0.55.1",
     "prettier": "^3.7.4",
@@ -65,8 +83,7 @@
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
     "@vitejs/plugin-react": "^6.0.2",
-    "@walkeros/config": "4.7.2",
-    "@walkeros/web-destination-gtag": "4.7.2",
+    "@walkeros/config": "4.8.0",
     "eslint": "^9.23.0",
     "eslint-plugin-jest": "^29.15.2",
     "eslint-plugin-storybook": "^10.1.11",

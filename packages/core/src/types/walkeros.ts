@@ -30,7 +30,12 @@ export interface Consent {
   [name: string]: boolean; // name of consent group or tool
 }
 
-export interface User extends Properties {
+/**
+ * Declared (named) fields of an event User. Index-free like `SourceFields`, so
+ * the drift guard can compare `keyof UserFields` against
+ * `keyof z.infer<typeof UserFieldsSchema>`.
+ */
+export interface UserFields {
   // IDs
   id?: string;
   device?: string;
@@ -55,7 +60,10 @@ export interface User extends Properties {
   screenSize?: string;
   ip?: string;
   internal?: boolean;
+  optout?: boolean;
 }
+
+export interface User extends Properties, UserFields {}
 
 export type SourcePlatform =
   | 'web'

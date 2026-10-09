@@ -1,4 +1,5 @@
-// Code component - Monaco editor wrapper
+// Code component - Monaco editor wrapper, a dark island that paints the code
+// panel in both page themes
 .elb-code {
   flex: 1;
   min-height: 0; // Critical for flex overflow
@@ -7,6 +8,7 @@
   flex-direction: column;
   position: relative;
   overflow: hidden; // Monaco handles scrolling internally
+  background: var(--code-bg);
 
   // Monaco wrapper div - must fill available space
   > div {
@@ -26,7 +28,7 @@
     }
   }
 
-  // Monaco editor styling - transparent, let box handle background
+  // Monaco editor styling - transparent, the wrapper paints the panel
   .monaco-editor {
     background: transparent !important;
 
@@ -40,7 +42,7 @@
 
     // Sticky scroll widget: opaque background so content doesn't show through
     .sticky-widget {
-      background: var(--bg-content) !important;
+      background: var(--code-bg) !important;
       border: none !important;
       outline: none !important;
       box-shadow: none !important;

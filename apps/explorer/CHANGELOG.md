@@ -1,5 +1,80 @@
 # @walkeros/explorer
 
+## 4.8.0
+
+### Minor Changes
+
+- bf6221f: Explorer now ships the walkerOS design system. Import
+  `@walkeros/explorer/design/tokens.css` for colour, type, spacing, radius and
+  layer tokens (dark by default, light under `data-theme="light"`), the opt-in
+  `design/base.css`, the Tailwind v4 bridge `design/tailwind.css`, and typed
+  colour and font constants from `@walkeros/explorer/design`. A
+  `walkeros-design-check` command lints consuming code. Existing exports are
+  unchanged.
+- aa4bb8b: Add `Playground`: a tagged component, its event, an editable mapping
+  and the resulting gtag call side by side, on one real flow (`startFlow`, the
+  browser source scoped to a shadow root, and the gtag destination with a
+  stubbed `gtag`). `@walkeros/web-destination-gtag` is now a runtime dependency.
+
+### Patch Changes
+
+- 7132619: `@walkeros/explorer/design/components` gains `BrowserFrame`, a
+  browser window on the site theme around any page: an address field with the
+  URL, an optional reload button, a slot for the caller's actions and an
+  optional bookmarks row that marks the current page. It is sized by its caller
+  and styled by `@walkeros/explorer/styles.css`. `Icon` gains `lock`, `reload`
+  and `bookmark`.
+- d5cbc9c: New `@walkeros/explorer/design/components` export with `Button`,
+  `InlineCode` and `EventLegend`, styled by `@walkeros/explorer/styles.css`.
+  `Button` forwards tagging attributes to its element and accepts a router link
+  component.
+- d5cbc9c: `@walkeros/explorer/design/components` gains the building blocks of
+  the walkerOS home page: `Icon`, `InstallCommand`, `Card`, `Eyebrow`, `Stat`,
+  `Text`, `TextLink`, `CheckList`, `SectionHeading`, `ProblemCard`,
+  `FeatureItem`, `FaqItem`, `PlanCard`, `CaseCard`, `HighlightCard`, `Section`,
+  `CardGrid`, `Split`, `Cluster`, `Hero`, and the three home page demos
+  (`HeroTaggingViz`, `ArticleTeaserTracking`, `DestinationMappingViz`). Every
+  design component forwards tagging attributes to its root.
+- 01d86a5: Explorer components now read the walkerOS design tokens: import
+  `@walkeros/explorer/design/tokens.css` beside `styles.css`. The old theme
+  variables (`--bg-box`, `--color-text` and the rest) are removed. Code panels
+  are dark in both page themes. Removed exports: `lighthouseTheme`,
+  `registerLighthouseTheme`, `palenightTheme`, `registerPalenightTheme`, type
+  `ExplorerTheme`, and `registerAllThemes`, replaced by `registerTheme`.
+  `ELB_THEME_DARK` is now exported.
+- d5cbc9c: `@walkeros/explorer/design/tokens.css` now declares every type style
+  as CSS variables: `--type-<style>-size`, `-line-height`, `-weight`, `-family`
+  and, when the style sets one, `-tracking`. Components can take sizes and
+  weights from the design system instead of fixed values.
+- 7132619: The `PromotionPlayground` and `LiveCode` mapping examples show events
+  and results again, and every failure says so in the box it concerns. `Preview`
+  takes a `collector` instead of `elb` and captures the page's events through
+  it; its document carries the design tokens, base rules and design atom styles,
+  so the demo product card is built from `Card`, `PhotoPlaceholder`, `Text` and
+  `Button`. The Playground drops its separate Code box and the `labelCode` prop:
+  the Preview's HTML, CSS and JS tabs edit the page. New props: `placeholder`
+  and `error` on `CodeBox`, `error` on `Box`, `boxWidth` on `Grid` for one row
+  of fixed-width boxes.
+- 7132619: New `ViewSource` component: wrap a tagged element, hover it and
+  toggle to its live HTML with the `data-elb` attributes, edited in place. Back
+  in Visual the element renders your edit and walkerOS picks up the new tags; a
+  Reset icon restores the original. New `ToggleButton`: one button that names
+  the option a click switches to, at a fixed width.
+- a4b03ba: The five event colours (globals, context, entity, property, action)
+  now have a light-theme value that reads as text on light backgrounds. Their
+  constants in `@walkeros/explorer/design` are now `{ dark, light }` objects,
+  like every other themed colour; read `.dark` where the colour sits on a dark
+  ground.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+- Updated dependencies [5593d7b]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-destination-gtag@4.8.0
+  - @walkeros/collector@4.8.0
+  - @walkeros/web-core@4.8.0
+  - @walkeros/web-source-browser@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

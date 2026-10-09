@@ -1,5 +1,19 @@
 # @walkeros/web-destination-clarity
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: Step examples that run with destination settings now name them in
+  their description (`settings.identify`, `settings.consent`), because the docs
+  show only an example's event, mapping and output, not the settings it runs
+  with.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

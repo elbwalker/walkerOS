@@ -18,6 +18,13 @@ export interface GridProps {
    */
   columns?: number;
   minBoxWidth?: number | string;
+  /**
+   * Fixed box width in px: one row at every container width, scrolled
+   * sideways and snapping to each box. A box never grows past the row, so a
+   * narrow container still shows the edge of the next one. Overrides
+   * `columns` and `minBoxWidth`.
+   */
+  boxWidth?: number;
   gap?: number | string;
   rowHeight?: 'auto' | 'equal' | 'synced' | number;
   maxRowHeight?: number | string | 'none';
@@ -31,7 +38,8 @@ export interface GridProps {
  * Provides consistent grid layout for box components with horizontal
  * scrolling when content exceeds available space. Boxes keep a minimum width.
  * By default all boxes share one row; `columns` sets the boxes per row and
- * wraps the rest. Narrow containers stack the boxes.
+ * wraps the rest. Narrow containers stack the boxes. `boxWidth` keeps one
+ * row of fixed-width boxes at every width instead.
  *
  * @example
  * // 5 boxes with default 350px minimum width
@@ -47,6 +55,15 @@ export interface GridProps {
  * // Custom minimum box width
  * <Grid columns={3} minBoxWidth={400}>
  *   <BrowserBox ... />
+ *   <CodeBox ... />
+ *   <CodeBox ... />
+ * </Grid>
+ *
+ * @example
+ * // One row of 350px boxes, scrolled sideways on any screen
+ * <Grid boxWidth={350}>
+ *   <Preview ... />
+ *   <CodeBox ... />
  *   <CodeBox ... />
  *   <CodeBox ... />
  * </Grid>
@@ -82,6 +99,7 @@ export function Grid({
   children,
   columns,
   minBoxWidth,
+  boxWidth,
   gap,
   rowHeight = 'equal',
   maxRowHeight,
@@ -147,7 +165,10 @@ export function Grid({
 
   // `columns` boxes per row, the rest wrap. Set from the prop, not by counting
   // React children: a Fragment or a wrapper component counts as one child.
-  if (columns !== undefined && columns >= 1) {
+  if (boxWidth !== undefined) {
+    classNames.push('elb-explorer-grid--fixed');
+    gridStyle['--grid-box-width'] = `${boxWidth}px`;
+  } else if (columns !== undefined && columns >= 1) {
     classNames.push('elb-explorer-grid--columns');
     gridStyle['--grid-columns'] = String(Math.floor(columns));
   }
@@ -230,7 +251,7 @@ export function Grid({
             aria-label="Scroll left"
             type="button"
           >
-            ‹
+            <Chevron direction="left" />
           </button>
         )}
 
@@ -245,10 +266,30 @@ export function Grid({
             aria-label="Scroll right"
             type="button"
           >
-            ›
+            <Chevron direction="right" />
           </button>
         )}
       </div>
     </GridHeightContext.Provider>
+  );
+}
+
+function Chevron({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline
+        points={direction === 'left' ? '15 18 9 12 15 6' : '9 18 15 12 9 6'}
+      />
+    </svg>
   );
 }

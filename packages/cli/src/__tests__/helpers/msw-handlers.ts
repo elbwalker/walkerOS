@@ -56,6 +56,7 @@ export const mockFlow = {
   config: {
     version: 4 as const,
   },
+  placeholder: false,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   deletedAt: null,
@@ -114,6 +115,7 @@ export const handlers = [
         {
           id: mockFlow.id,
           name: mockFlow.name,
+          placeholder: mockFlow.placeholder,
           createdAt: mockFlow.createdAt,
           updatedAt: mockFlow.updatedAt,
           deletedAt: null,

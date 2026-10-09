@@ -1,5 +1,20 @@
 # @walkeros/web-destination-segment
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The `consent` setting description now says that only mapped keys are
+  forwarded and that no consent context is sent without it. The `cdnURL`
+  description says the setting is not applied, the `identify` description says
+  identify repeats on every push while `anonymousId` is set, and the step
+  examples name the config they rely on.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

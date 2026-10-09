@@ -30,7 +30,7 @@ const JSON_A = `{
   "destinations": {
     "gtag": {
       "package": "@walkeros/web-destination-gtag",
-      "config": { "settings": { "ga4": { "measurementId": "G-AAAA" } } }
+      "config": { "settings": { "ga4": { "measurementId": "$var.gaId" } } }
     }
   }
 }`;
@@ -45,95 +45,32 @@ const JSON_B = `{
   "destinations": {
     "gtag": {
       "package": "@walkeros/web-destination-gtag",
-      "config": { "settings": { "ga4": { "measurementId": "G-BBBB" } } }
+      "config": { "settings": { "ga4": { "measurementId": "$var.gaIdV2" } } }
     },
     "meta": {
       "package": "@walkeros/web-destination-meta",
-      "config": { "settings": { "pixelId": "123" } }
-    }
-  }
-}`;
-
-const TS_A = `export function handlePush(event: WalkerOS.Event) {
-  if (!event) return;
-  const normalized = normalize(event);
-  return dispatch(normalized);
-}
-
-function normalize(e: WalkerOS.Event) {
-  return { ...e, timestamp: Date.now() };
-}`;
-
-const TS_B = `export async function handlePush(event: WalkerOS.Event) {
-  if (!event) return;
-  const normalized = await normalize(event);
-  if (normalized.skip) return;
-  return dispatch(normalized);
-}
-
-async function normalize(e: WalkerOS.Event) {
-  const enriched = await enrich(e);
-  return { ...enriched, timestamp: Date.now() };
-}`;
-
-const WALKEROS_REFS_A = `{
-  "destinations": {
-    "gtag": {
-      "package": "@walkeros/web-destination-gtag",
-      "config": {
-        "settings": {
-          "ga4": { "measurementId": "$var.ga4MeasurementId" }
-        },
-        "env": {
-          "apiKey": "$secret.GTAG_API_KEY"
-        }
-      }
-    }
-  }
-}`;
-
-const WALKEROS_REFS_B = `{
-  "destinations": {
-    "gtag": {
-      "package": "@walkeros/web-destination-gtag",
-      "config": {
-        "settings": {
-          "ga4": { "measurementId": "$var.ga4MeasurementIdV2" }
-        },
-        "env": {
-          "apiKey": "$secret.GTAG_API_KEY_V2",
-          "region": "$var.region"
-        }
-      }
+      "config": { "settings": { "pixelId": "$env.META_PIXEL_ID" } }
     }
   }
 }`;
 
 // ── Stories ─────────────────────────────────────────────────────────────────
 
+/**
+ * Version diff as the app's release, history and deploy views render it:
+ * header with summary, split view toggle and copy, filling its container.
+ */
 export const JsonDefault: Story = {
   args: {
-    label: 'flow.json',
+    label: 'v3 to v4',
     language: 'json',
     original: JSON_A,
     modified: JSON_B,
-  },
-};
-
-export const TypeScript: Story = {
-  args: {
-    label: 'handle-push.ts',
-    language: 'typescript',
-    original: TS_A,
-    modified: TS_B,
-  },
-};
-
-export const JsonWithWalkerOSRefs: Story = {
-  args: {
-    label: 'flow.json (with $var. / $secret.)',
-    language: 'json',
-    original: WALKEROS_REFS_A,
-    modified: WALKEROS_REFS_B,
+    showHeader: true,
+    showSummary: true,
+    showViewToggle: true,
+    showCopy: true,
+    defaultView: 'split',
+    height: '100%',
   },
 };

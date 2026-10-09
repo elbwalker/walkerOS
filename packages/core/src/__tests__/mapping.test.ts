@@ -825,10 +825,15 @@ describe('getMappingValue', () => {
     );
   });
 
-  test('throws when context.collector is missing', async () => {
-    await expect(getMappingValue('any', { key: 'data.x' }, {})).rejects.toThrow(
-      'getMappingValue: context.collector is required',
-    );
+  test('an untyped caller without a collector gets a clear error', async () => {
+    // Reflect.apply calls it the way JavaScript can, past the required type.
+    const message = 'getMappingValue: context.collector is required';
+    await expect(
+      Reflect.apply(getMappingValue, undefined, ['any', { key: 'data.x' }, {}]),
+    ).rejects.toThrow(message);
+    await expect(
+      Reflect.apply(getMappingValue, undefined, ['any', { key: 'data.x' }]),
+    ).rejects.toThrow(message);
   });
 
   test('error functions', async () => {

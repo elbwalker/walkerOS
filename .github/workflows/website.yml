@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'website/**'
+      - 'apps/demos/storybook/**'
       - '.github/workflows/website.yml'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     paths:
       - 'website/**'
+      - 'apps/demos/storybook/**'
       - '.github/workflows/website.yml'
   workflow_dispatch:
     inputs:

@@ -15,12 +15,12 @@ interface ListProps {
   items: Item[];
 }
 
-const ListWrapper = styled.ul({
+const ListWrapper = styled.ul(({ theme }) => ({
   listStyle: 'none',
-  fontSize: 14,
+  fontSize: theme.typography.size.s2,
   padding: 0,
   margin: 0,
-});
+}));
 
 const Wrapper = styled.div(({ theme }) => ({
   display: 'flex',
@@ -37,7 +37,6 @@ const Icon = styled(ArrowDownIcon)(({ theme }) => ({
   minWidth: 10,
   color: theme.color.mediumdark,
   marginRight: 10,
-  transition: 'transform 0.1s ease-in-out',
   alignSelf: 'center',
   display: 'inline-flex',
 }));

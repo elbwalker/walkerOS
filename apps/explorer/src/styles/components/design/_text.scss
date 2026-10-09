@@ -1,0 +1,23 @@
+// Text (@walkeros/explorer/design/components): a paragraph of supporting copy.
+@layer components {
+  .elb-text {
+    margin: 0;
+    color: var(--fg-2);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line-height);
+    font-weight: var(--type-body-weight);
+    text-wrap: pretty;
+  }
+
+  .elb-text--lg {
+    font-family: var(--type-body-lg-family);
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line-height);
+    font-weight: var(--type-body-lg-weight);
+  }
+
+  .elb-text--fg {
+    color: var(--fg);
+  }
+}

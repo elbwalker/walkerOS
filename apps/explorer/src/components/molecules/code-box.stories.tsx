@@ -22,25 +22,19 @@ export default meta;
 type Story = StoryObj<typeof CodeBox>;
 
 /**
- * Default CodeBox with JavaScript code
+ * Read-only JSON output, the most common form in the app: `disabled` with an
+ * `autoHeight` range so the box sizes to its content.
  */
 export const Default: Story = {
   args: {
-    code: `const event = {
-  entity: 'product',
-  action: 'view',
-  data: {
-    id: 'P123',
-    name: 'Laptop',
-    price: 999
-  }
-};
-
-console.log('Event:', event);`,
-    language: 'javascript',
-    label: 'Code Editor',
-    showCopy: true,
-    showFormat: false,
+    code: `{
+  "name": "product view",
+  "data": { "id": "ers", "name": "Everyday Ruck Snack", "price": 420 }
+}`,
+    language: 'json',
+    label: 'Output',
+    disabled: true,
+    autoHeight: { min: 160, max: 600 },
   },
 };
 
@@ -50,133 +44,61 @@ const flowJsonCode = `{
     "default": {
       "config": { "platform": "web" },
       "sources": {
-        "browser": {
-          "package": "@walkeros/web-source-browser",
-          "config": { "settings": { "pageview": true } }
-        }
+        "browser": { "package": "@walkeros/web-source-browser" }
       },
       "destinations": {
-        "ga4": {
-          "package": "@walkeros/web-destination-gtag",
-          "config": {
-            "settings": { "ga4": { "measurementId": "G-XXX" } }
-          }
-        }
+        "ga4": { "package": "@walkeros/web-destination-gtag" }
       }
     }
   }
 }`;
 
 /**
- * Mac-style code window with traffic lights and filename tab
- *
- * Use this pattern for landing pages and documentation.
+ * Mac-style code window with traffic lights and a filename tab, read-only and
+ * sized to its content. The website getting-started section uses this form.
  */
 export const WithTrafficLights: Story = {
   args: {
-    code: flowJsonCode,
-    language: 'json',
     showTrafficLights: true,
-    tabs: [{ id: 'file', label: 'flow.json', code: flowJsonCode }],
-    showCopy: true,
-    height: 400,
+    tabs: [
+      { id: 'file', label: 'flow.json', code: flowJsonCode, language: 'json' },
+    ],
+    disabled: true,
+    autoHeight: true,
+    style: { maxWidth: '800px' },
   },
 };
 
 /**
- * CodeBox with multiple tabs - clicking tabs switches code content
+ * Read-only file tabs: clicking a tab switches the code content.
  */
 export const WithTabs: Story = {
   args: {
     tabs: [
       {
-        id: 'config',
-        label: 'config.ts',
-        code: `export const config = {
-  tracking: true,
-  debug: false,
-  destinations: ['ga4', 'gtm']
-};`,
-        language: 'typescript',
+        id: 'html',
+        label: 'product.html',
+        code: `<div data-elb="product" data-elbaction="load:view">
+  <h1 data-elb-product="name">Sneakers</h1>
+  <button data-elbaction="click:add">Add to Cart</button>
+</div>`,
+        language: 'html',
       },
       {
-        id: 'index',
-        label: 'index.ts',
-        code: `import { config } from './config';
-import { elb } from '@walkeros/core';
+        id: 'product',
+        label: 'ProductDetail.tsx',
+        code: `import { createTagger } from '@walkeros/web-source-browser';
 
-elb('walker run', config);`,
-        language: 'typescript',
-      },
-      {
-        id: 'types',
-        label: 'types.ts',
-        code: `export interface TrackingConfig {
-  tracking: boolean;
-  debug: boolean;
-  destinations: string[];
+const tagger = createTagger();
+
+export function ProductDetail() {
+  return <div {...tagger().entity('product').action('load', 'view').get()} />;
 }`,
         language: 'typescript',
       },
     ],
-    defaultTab: 'config',
-    showCopy: true,
-    height: 300,
-  },
-};
-
-/**
- * CodeBox with JSON Schema IntelliSense
- *
- * Demonstrates JSON validation, autocomplete, and hover docs
- * powered by a JSON Schema passed via the `jsonSchema` prop.
- */
-export const WithJsonSchema: Story = {
-  render: () => {
-    const [code, setCode] = useState(
-      JSON.stringify({ version: 4, flows: {} }, null, 2),
-    );
-    return (
-      <CodeBox
-        code={code}
-        onChange={setCode}
-        language="json"
-        label="Flow Config (with IntelliSense)"
-        showFormat
-        jsonSchema={{
-          $schema: 'http://json-schema.org/draft-07/schema#',
-          type: 'object',
-          properties: {
-            version: {
-              type: 'number',
-              description: 'Flow configuration version',
-              enum: [4],
-            },
-            flows: {
-              type: 'object',
-              description: 'Named flow configurations',
-              additionalProperties: {
-                type: 'object',
-                properties: {
-                  config: {
-                    type: 'object',
-                    description: 'Per-flow config (platform, settings, bundle)',
-                    properties: {
-                      platform: {
-                        type: 'string',
-                        enum: ['web', 'server'],
-                        description: 'Platform identity for this flow',
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          required: ['version', 'flows'],
-        }}
-      />
-    );
+    packages: ['@walkeros/core'],
+    disabled: true,
   },
 };
 
@@ -214,97 +136,8 @@ export const ExternalValueChange: Story = {
 };
 
 /**
- * CodeBox with settings toggle
- *
- * Click the gear icon to toggle line numbers, minimap, and word wrap.
- */
-export const WithSettings: Story = {
-  render: () => {
-    const [code, setCode] = useState(
-      JSON.stringify(
-        {
-          version: 4,
-          flows: {
-            default: {
-              config: { platform: 'web' },
-              sources: {
-                browser: {
-                  package: '@walkeros/web-source-browser',
-                  config: { settings: { pageview: true } },
-                },
-              },
-              destinations: {
-                ga4: {
-                  package: '@walkeros/web-destination-gtag',
-                  config: {
-                    settings: { ga4: { measurementId: 'G-XXX' } },
-                    mapping: {
-                      'page view': { name: 'page_view' },
-                      'product view': {
-                        name: 'view_item',
-                        data: { map: { id: 'items.0.item_id' } },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        null,
-        2,
-      ),
-    );
-    return (
-      <CodeBox
-        code={code}
-        onChange={setCode}
-        language="json"
-        label="Flow Config"
-        showFormat
-        showSettings
-        height={500}
-      />
-    );
-  },
-};
-
-// ============================================================
-// IntelliSense Stories
-// ============================================================
-
-/**
- * Enriched Flow.Json schema with defaultSnippets and markdownDescription
- *
- * Uses the real Flow.Json JSON Schema from @walkeros/core, enriched with
- * Monaco-specific extensions (snippets, markdown hover docs).
- *
- * **How to verify:** Place cursor inside `{}` after `"flows":`, press
- * Ctrl+Space, autocomplete shows property suggestions from the schema.
- */
-export const EnrichedFlowConfig: Story = {
-  render: () => {
-    const [code, setCode] = useState(
-      JSON.stringify({ version: 4, flows: {} }, null, 2),
-    );
-    return (
-      <CodeBox
-        code={code}
-        onChange={setCode}
-        language="json"
-        label="Flow Config (Enriched Schema)"
-        showFormat
-        jsonSchema={enrichFlowConfigSchema(
-          schemas.configJsonSchema as Record<string, unknown>,
-        )}
-        height={400}
-      />
-    );
-  },
-};
-
-/**
- * Contract schema with entity/action snippets
+ * Contract editor: the enriched contract schema with entity and action
+ * snippets, as the app's contract JSON mode renders it.
  *
  * **How to verify:** Autocomplete inside entities shows entity snippet;
  * hover on properties shows markdown descriptions.
@@ -317,17 +150,17 @@ export const EnrichedContract: Story = {
         code={code}
         onChange={setCode}
         language="json"
-        label="Data Contract"
+        height={400}
         showFormat
         jsonSchema={getEnrichedContractSchema()}
-        height={400}
       />
     );
   },
 };
 
 /**
- * Variables schema with `$var.` interpolation docs
+ * Variables editor: the variables schema with `$var.` interpolation docs, as
+ * the app's variables code view renders it.
  *
  * **How to verify:** Autocomplete shows "Add string variable",
  * "Add boolean variable", "Add number variable" snippets.
@@ -342,64 +175,28 @@ export const VariablesEditor: Story = {
         code={code}
         onChange={setCode}
         language="json"
-        label="Variables"
+        autoHeight={{ min: 250, max: 400 }}
         showFormat
         jsonSchema={getVariablesSchema()}
-        height={300}
       />
     );
   },
 };
 
 /**
- * Visual coloring of `$var.`, `$secret.`, `$env.`, `$code:` references
+ * Flow editor: the enriched Flow.Json schema plus an IntelliSense context
+ * derived from the flow itself, as the app's flow code view renders it.
  *
- * Decorations are applied automatically for JSON content. Each reference type
- * is colored differently: variables=cyan italic, secrets/env=amber italic,
- * code=purple.
- *
- * **How to verify:** Each reference value should be colored differently
- * in the editor.
- */
-export const ReferenceDecorations: Story = {
-  render: () => {
-    const [code, setCode] = useState(
-      JSON.stringify(
-        {
-          measurementId: '$var.gaId',
-          apiKey: '$secret.apiKey',
-          endpoint: '$env.API_URL',
-          mapping: '$var.cleanEvent',
-          code: '$code:myFunction',
-        },
-        null,
-        2,
-      ),
-    );
-    return (
-      <CodeBox
-        code={code}
-        onChange={setCode}
-        language="json"
-        label="Reference Decorations"
-        showFormat
-        height={300}
-      />
-    );
-  },
-};
-
-/**
- * Dynamic Flow Context — self-referencing IntelliSense
- *
- * Edit the flow JSON and the variables you define become immediately
- * available as `$var.` completions in the same editor (scalars and structures).
+ * Variables defined in the flow become `$var.` completions in the same
+ * editor. `$var.`, `$secret.`, `$env.` and `$code:` references are colored
+ * by type.
  *
  * **How to verify:**
  * - Add a variable in the `"variables"` section (e.g., `"myVar": "hello"`)
- * - Scroll down to a destination config and type `$var.` — your new variable appears
- * - Rename or delete the variable — completions update instantly
+ * - In a destination config, type `$var.` and the new variable appears
+ * - Rename or delete the variable and the completions update
  * - `$var.nonExistent` gets a warning marker
+ * - Each reference type is colored differently
  */
 export const DynamicFlowContext: Story = {
   name: 'Dynamic Flow Context',
@@ -409,22 +206,46 @@ export const DynamicFlowContext: Story = {
         {
           version: 4,
           variables: {
-            gaId: 'G-XXXXXXXXXX',
+            pixelId: '1234567890',
             debug: false,
             cleanEvent: { filter: true },
           },
           flows: {
             default: {
-              config: { platform: 'web' },
+              config: { platform: 'server' },
               sources: {
-                browser: { package: '@walkeros/web-source-browser' },
+                express: { package: '@walkeros/server-source-express' },
               },
               destinations: {
-                ga4: {
-                  package: '@walkeros/web-destination-gtag',
+                meta: {
+                  package: '@walkeros/server-destination-meta',
                   config: {
                     settings: {
-                      ga4: { measurementId: '$var.gaId' },
+                      accessToken: '$secret.META_ACCESS_TOKEN',
+                      pixelId: '$var.pixelId',
+                    },
+                    mapping: {
+                      order: {
+                        complete: {
+                          name: 'Purchase',
+                          data: {
+                            map: {
+                              value: {
+                                key: 'data.total',
+                                fn: '$code:(value) => Number(value)',
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                api: {
+                  package: '@walkeros/server-destination-api',
+                  config: {
+                    settings: {
+                      url: '$env.COLLECT_URL',
                       missing: '$var.nonExistent',
                     },
                   },
@@ -438,22 +259,19 @@ export const DynamicFlowContext: Story = {
       ),
     );
 
-    const validation = schemas.validateFlowConfig(code);
+    const { context } = schemas.validateFlowConfig(code);
 
     return (
       <CodeBox
         code={code}
         onChange={setCode}
         language="json"
-        label="Flow Config (Dynamic Validation)"
-        showFormat
-        jsonSchema={enrichFlowConfigSchema(
-          schemas.configJsonSchema as Record<string, unknown>,
-        )}
-        validate={schemas.validateFlowConfig}
-        intellisenseContext={validation.context}
-        onValidationIssues={(counts) => console.log('Validation:', counts)}
         height={500}
+        showFormat
+        folding
+        sticky
+        jsonSchema={enrichFlowConfigSchema(schemas.configJsonSchema)}
+        intellisenseContext={context}
       />
     );
   },

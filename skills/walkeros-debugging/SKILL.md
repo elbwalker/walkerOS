@@ -326,9 +326,11 @@ diagnostic information:
 When a request fails or behaves unexpectedly, call **`diagnostics`** (read-only,
 no parameters, works logged out). It reports the MCP and CLI versions, the
 resolved app URL and whether it came from `WALKEROS_APP_URL` or the default, app
-`/api/health` reachability, the bundled OpenAPI contract version, and which
-source served the last package lookup, so you can tell which backend and
-versions you are on.
+`/api/health` reachability, the bundled OpenAPI contract version, the contract
+verdict against that app (`in-sync`, `changed`, `server-older`,
+`client-outdated`, `unknown` when the app cannot be read, or `in-process` on the
+hosted door), and which source served the last package lookup, so you can tell
+which backend and versions you are on.
 
 ## Related Skills
 

@@ -120,7 +120,8 @@ export function BrowserBox({
           />
         ) : null
       }
-      className={className}
+      className={`elb-explorer-box--code ${className}`.trim()}
+      theme="dark"
     >
       {activeTab === 'preview' ? (
         <Preview html={html || ''} css={css || ''} />

@@ -181,29 +181,16 @@ jobs:
         if: inputs.images_only == ''
         id: changesets
         run: |
-          CHANGES=""
           PACKAGES=""
-          RELEASE_NEEDED="false"
 
           for file in .changeset/*.md; do
             if [ -f "$file" ] && [ "$(basename $file)" != "README.md" ]; then
-              # Extract package names from frontmatter
-              PKGS=$(sed -n '/^---$/,/^---$/p' "$file" | grep -oE "'@?walkeros[^']*'" | tr -d "'" | sort -u)
+              # Extract package names from frontmatter, in single or double quotes
+              PKGS=$(sed -n '/^---$/,/^---$/p' "$file" | grep -oE "[\"']@?walkeros[^\"']*[\"']" | tr -d "\"'" | sort -u)
               for pkg in $PKGS; do
                 # Add to packages list (dedupe later)
                 PACKAGES="$PACKAGES$pkg\n"
               done
-
-              # Check if core or collector triggers release
-              if echo "$PKGS" | grep -qE "@walkeros/(core|collector)$"; then
-                RELEASE_NEEDED="true"
-              fi
-
-              # Capture description (text after frontmatter)
-              CONTENT=$(sed -n '/^---$/,/^---$/d; p' "$file" | sed '/^$/d')
-              if [ -n "$CONTENT" ]; then
-                CHANGES="$CHANGES$CONTENT\n\n"
-              fi
             fi
           done
 
@@ -221,13 +208,9 @@ jobs:
             echo "No changesets found: recovery re-dispatch, nothing new to version."
           fi
 
-          echo "changes<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$CHANGES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
           echo "packages<<EOF" >> $GITHUB_OUTPUT
           echo "$PACKAGES_FORMATTED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          echo "release_needed=$RELEASE_NEEDED" >> $GITHUB_OUTPUT
 
       - name: Configure Git
         if: inputs.images_only == ''
@@ -348,49 +331,35 @@ jobs:
             npx changeset publish
           fi
 
+      # Every stable release gets a GitHub release at its version commit (the
+      # published tree), never at a later branch tip. The notes come from the
+      # changesets that commit consumed (scripts/release-notes.sh, also used to
+      # create a missed release by hand). A re-dispatch whose release exists is
+      # a no-op; one whose HEAD is not the version commit fails.
       - name: Create GitHub Release
-        if: |
-          inputs.images_only == '' &&
-          inputs.release_type == 'stable release' &&
-          steps.changesets.outputs.release_needed == 'true'
+        if: inputs.images_only == '' && inputs.release_type == 'stable release'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Changeset-authored text is read from the environment, never spliced
-          # into the script body, where it could break out into the shell.
-          CHANGES: ${{ steps.changesets.outputs.changes }}
-          PACKAGES: ${{ steps.changesets.outputs.packages }}
         run: |
           VERSION="v$(node -p "require('./packages/collector/package.json').version")"
-          # Tag the pushed version commit (the published tree), never the default branch tip.
-          TARGET="$(git rev-parse HEAD)"
-
-          printf '## Changes\n\n%s\n\n## Published Packages\n\n%s\n' \
-            "$CHANGES" "$PACKAGES" > /tmp/release-notes.md
-
-          # Idempotent: a re-dispatch that recovers a partial release must not
-          # die here just because the tag already landed.
           if gh release view "$VERSION" >/dev/null 2>&1; then
-            echo "Release $VERSION already exists, refreshing notes"
-            if git fetch --quiet origin "refs/tags/$VERSION:refs/tags/$VERSION" && TAGGED="$(git rev-list -n1 "$VERSION")"; then
-              if [ "$TAGGED" != "$TARGET" ]; then
-                echo "::warning::Tag $VERSION is at $TAGGED, not at the version commit $TARGET. It is not moved; retag by hand if needed."
-              fi
-            else
-              echo "::warning::Could not read tag $VERSION to check it against the version commit $TARGET."
-            fi
-            gh release edit "$VERSION" --notes-file /tmp/release-notes.md
-          else
-            gh release create "$VERSION" \
-              --target "$TARGET" \
-              --title "walkerOS $VERSION" \
-              --notes-file /tmp/release-notes.md
+            echo "::notice::Release $VERSION already exists; nothing to release."
+            exit 0
           fi
+          PREVIOUS="$(git show HEAD~1:packages/collector/package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")"
+          if [ "$VERSION" = "v$PREVIOUS" ]; then
+            echo "::error::HEAD is not the version commit of $VERSION. Create the release by hand at that commit (scripts/release-notes.sh <sha>)."
+            exit 1
+          fi
+          bash scripts/release-notes.sh HEAD > /tmp/release-notes.md
+          gh release create "$VERSION" --target "$(git rev-parse HEAD)" --title "walkerOS $VERSION" --notes-file /tmp/release-notes.md
 
       - name: Comment on PR
         if: inputs.images_only == '' && steps.changesets.outputs.packages != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # As with the release notes: changeset-authored text stays in env.
+          # Changeset-authored text is read from the environment, never spliced
+          # into the script body, where it could break out into the shell.
           PACKAGES: ${{ steps.changesets.outputs.packages }}
           RELEASE_TYPE: ${{ inputs.release_type }}
         run: |

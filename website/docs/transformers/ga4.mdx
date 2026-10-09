@@ -181,8 +181,9 @@ gtag.js sends a single event as a POST with the parameters in the query string a
 `@walkeros/server-source-fetch`, `sourceCloudFunction` (`@walkeros/server-source-gcp`), and `sourceLambda` (`@walkeros/server-source-aws`) also keep a body that is not JSON as `ingest.body`, so batched hits decode there with the same `ingest` and `before` settings (the Lambda source rejects a POST without a body, see above). The fetch source also takes `paths`, but has no `port` setting: it is a `(Request) => Response` handler you hand to your runtime. On Cloudflare Workers:
 
 ```typescript
+import { Source } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { sourceFetch } from '@walkeros/server-source-fetch';
+import { sourceFetch, type SourceFetch } from '@walkeros/server-source-fetch';
 import { transformerGa4 } from '@walkeros/transformer-ga4';
 import { destinationDemo } from '@walkeros/destination-demo';
 
@@ -212,7 +213,9 @@ const { collector } = await startFlow({
   },
 });
 
-export default { fetch: collector.sources.http.push };
+export default {
+  fetch: Source.getSource<SourceFetch.Types>(collector, 'http').push,
+};
 ```
 
 `runneros` and the `walkeros/flow` Docker image only serve a source that exposes a Node HTTP handler, which the fetch source does not, so a bundled flow with the fetch source needs a runtime that calls its `push` with each `Request`.

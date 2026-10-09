@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import type { Theme } from '../../design';
 import { Header } from './header';
+import { ErrorIcon } from './status-icons';
 import { useGridHeight } from '../../contexts/GridHeightContext';
 
 export interface BoxTab {
@@ -29,6 +31,15 @@ export interface BoxProps {
   defaultTab?: string; // Uncontrolled default
   // Mac style
   showTrafficLights?: boolean;
+  /** Pins the box to one theme, whatever the page theme (a dark island). */
+  theme?: Theme;
+  /** What failed in this box, shown above its content with an icon and the word Error. */
+  error?: string;
+  /**
+   * How the error is announced: `alert` (default) interrupts, for a failure;
+   * `status` waits, for input validation that changes as the reader types.
+   */
+  errorRole?: 'alert' | 'status';
 }
 
 /**
@@ -81,6 +92,9 @@ export function Box({
   onTabChange,
   defaultTab,
   showTrafficLights = false,
+  theme,
+  error,
+  errorRole = 'alert',
 }: BoxProps) {
   // Grid context for synchronized heights
   const gridContext = useGridHeight();
@@ -145,12 +159,14 @@ export function Box({
 
   // Render tabs header or regular header
   const hasTabs = tabs && tabs.length > 0;
-  const showRegularHeader = showHeader && header && !hasTabs;
+  // An empty header string keeps the bar for its actions, without a label.
+  const showRegularHeader = showHeader && header !== undefined && !hasTabs;
 
   return (
     <div
       className={`elb-explorer elb-explorer-box ${autoHeightClass} ${className}`.trim()}
       style={boxStyle}
+      data-theme={theme}
     >
       {hasTabs && (
         <div className="elb-explorer-tabs">
@@ -171,6 +187,13 @@ export function Box({
         </div>
       )}
       {showRegularHeader && <Header label={header}>{headerActions}</Header>}
+      {error && (
+        <div className="elb-explorer-box-error" role={errorRole}>
+          <ErrorIcon />
+          <strong>Error</strong>
+          <span>{error}</span>
+        </div>
+      )}
       <div className="elb-explorer-content">{content}</div>
       {footer && <div className="elb-explorer-footer">{footer}</div>}
     </div>

@@ -4,7 +4,7 @@ description: Transform events with a code-free, declarative mapping syntax
 sidebar_position: 4
 ---
 
-import { getMappingEvent, getMappingValue } from '@walkeros/core';
+import { getMappingEvent } from '@walkeros/core';
 
 export const parseInput = (code, scope = {}) => {
   const codeStr = String(code);
@@ -16,9 +16,6 @@ export const parseInput = (code, scope = {}) => {
 
 export const logEvent = async (input, config, log) => {
   log(await parseInput(input, { getMappingEvent }));
-};
-export const logValue = async (input, config, log) => {
-  log(await parseInput(input, { getMappingValue }));
 };
 
 # Mapping

@@ -48,10 +48,10 @@ export async function pushSnowplowEvent(
   event: WalkerOS.Event,
   mapping: Mapping,
   data: WalkerOS.AnyObject,
+  collector: Collector.Instance,
   actionName?: string,
   config?: Config,
   logger?: Logger.Instance,
-  collector?: Collector.Instance,
 ): Promise<void> {
   const settings = config?.settings;
   const adapter = settings?._state?.adapter;
@@ -116,8 +116,8 @@ export async function pushSnowplowEvent(
       event,
       mapping.struct,
       adapter,
-      logger,
       collector,
+      logger,
     );
     return;
   }
@@ -172,7 +172,7 @@ export async function pushSnowplowEvent(
 async function buildContext(
   event: WalkerOS.Event,
   mapping: Mapping,
-  collector?: Collector.Instance,
+  collector: Collector.Instance,
 ): Promise<SelfDescribingJson<WalkerOS.Properties>[]> {
   const contexts: SelfDescribingJson<WalkerOS.Properties>[] = [];
 
@@ -242,8 +242,8 @@ async function handleStructuredEvent(
   event: WalkerOS.Event,
   struct: StructuredEventMapping,
   adapter: SnowplowAdapter,
+  collector: Collector.Instance,
   logger?: Logger.Instance,
-  collector?: Collector.Instance,
 ): Promise<void> {
   // Resolve required fields
   const category = await getMappingValue(event, struct.category, { collector });

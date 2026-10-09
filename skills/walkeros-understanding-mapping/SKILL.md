@@ -25,7 +25,7 @@ implementation.
 | Function                                        | Purpose                                     |
 | ----------------------------------------------- | ------------------------------------------- |
 | `getMappingEvent(event, rules)`                 | Find mapping rule for an event              |
-| `getMappingValue(value, data, options)`         | Transform a value using mapping config      |
+| `getMappingValue(value, data, { collector })`   | Transform a value using mapping config      |
 | `processEventMapping(event, config, collector)` | Unified processing for sources/destinations |
 
 ### processEventMapping Flow

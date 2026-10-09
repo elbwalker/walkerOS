@@ -97,7 +97,7 @@ export const FLOW_MANAGE_REQUIREMENTS: ActionRequirementMap = {
   preview_get: { required: ['flowId', 'previewId'] },
   preview_create: {
     required: ['flowId'],
-    oneOf: [['flowName', 'flowSettingsId']],
+    oneOf: [['settingsName', 'flowSettingsId']],
   },
   preview_delete: { required: ['flowId', 'previewId'] },
   preview_regrant: { required: ['flowId', 'previewId'] },

@@ -1,0 +1,44 @@
+// Pill (@walkeros/explorer/design/components, internal): a label in an event
+// part's colour; text on viz-bg.
+@layer components {
+  .elb-viz-pill {
+    --elb-viz-pill: var(--event-entity);
+    display: inline-block;
+    padding: 0 7px;
+    color: var(--viz-bg);
+    background: var(--elb-viz-pill);
+    border: 1.5px solid var(--elb-viz-pill);
+    border-radius: var(--radius-xs);
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-legend-size);
+    line-height: 16px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .elb-viz-pill--entity {
+    --elb-viz-pill: var(--event-entity);
+  }
+
+  .elb-viz-pill--action {
+    --elb-viz-pill: var(--event-action);
+  }
+
+  .elb-viz-pill--property {
+    --elb-viz-pill: var(--event-property);
+  }
+
+  .elb-viz-pill--context {
+    --elb-viz-pill: var(--event-context);
+  }
+
+  .elb-viz-pill--globals {
+    --elb-viz-pill: var(--event-globals);
+  }
+
+  .elb-viz-pill--outline {
+    padding: 0 6px;
+    color: var(--elb-viz-pill);
+    background: var(--viz-bg);
+  }
+}

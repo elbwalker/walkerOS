@@ -1,0 +1,32 @@
+// Stat (@walkeros/explorer/design/components): a figure and its label.
+@layer components {
+  .elb-stat {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-faq);
+  }
+
+  .elb-stat__value {
+    display: flex;
+    color: var(--primary);
+    font-family: var(--type-display-family);
+    font-size: var(--type-footer-statement-size);
+    line-height: 1;
+    font-weight: var(--type-display-weight);
+    letter-spacing: -0.03em;
+  }
+
+  .elb-stat__label {
+    margin: 0;
+    color: var(--fg-2);
+    font-family: var(--type-small-family);
+    font-size: var(--type-small-size);
+    line-height: var(--type-small-line-height);
+    font-weight: 400;
+  }
+}

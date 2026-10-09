@@ -8,7 +8,7 @@ export interface HeaderProps {
 export function Header({ label, children }: HeaderProps) {
   return (
     <div className="elb-explorer-header">
-      <span className="elb-explorer-label">{label}</span>
+      {label && <span className="elb-explorer-label">{label}</span>}
       {children}
     </div>
   );

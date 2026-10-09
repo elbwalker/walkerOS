@@ -1,37 +1,36 @@
 .elb-explorer-btn {
-  padding: var(--spacing-button);
+  padding: 4px 8px;
   background: transparent;
   border: none;
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-xs);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-button);
-  transition: all 0.15s;
+  color: var(--fg-2);
+  transition: all var(--motion) var(--ease);
 
   &:hover {
-    background: var(--bg-button-hover);
-    color: var(--color-text-button-hover);
+    background: var(--surface-2);
+    color: var(--fg);
   }
 
   &.active {
-    background: var(--bg-button-active);
-    color: var(--color-text-button-active);
-    box-shadow: var(--shadow-button-active);
-    font-weight: var(--font-weight-semibold);
+    background: var(--surface);
+    color: var(--fg);
+    font-weight: 600;
   }
 }
 
 .elb-explorer-button-group {
   display: flex;
-  background: var(--bg-button-group);
-  border-radius: var(--radius-button-group);
-  padding: var(--spacing-button-group);
-  border: 1px solid var(--border-button-group);
+  background: var(--bg-2);
+  border-radius: var(--radius-xs);
+  padding: 1px;
+  border: 1px solid var(--border-strong);
 }
 
-// Tabs variant — flat header tabs matching the step-detail modal tab style.
+// Tabs variant: flat header tabs matching the step-detail modal tab style.
 // No track fill or outer border; the active tab is a filled, top-rounded
 // surface that reads as connected to the content below.
 .elb-explorer-button-group.elb-explorer-button-group--tabs {
@@ -43,21 +42,20 @@
 
   .elb-explorer-btn {
     padding: 3px 10px;
-    font-size: var(--font-size-label);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-button);
+    font-size: var(--type-product-small-size);
+    font-weight: 500;
+    color: var(--fg-2);
     background: transparent;
-    border-radius: var(--radius-button) var(--radius-button) 0 0;
+    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
 
     &:hover {
       background: transparent;
-      color: var(--color-text-button-hover);
+      color: var(--fg);
     }
 
     &.active {
-      background: var(--bg-button-active);
-      color: var(--color-text-button-active);
-      box-shadow: none;
+      background: var(--surface);
+      color: var(--fg);
     }
   }
 }

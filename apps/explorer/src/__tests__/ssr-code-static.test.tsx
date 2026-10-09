@@ -1,5 +1,6 @@
 import React from 'react';
 import { renderToString } from 'react-dom/server';
+import { syntaxKeyword } from '../design';
 import { CodeStatic } from '../components/atoms/code-static';
 import { CodeView } from '../components/molecules/code-view';
 
@@ -10,8 +11,10 @@ describe('CodeStatic SSR', () => {
     );
     expect(html).toContain('const');
     expect(html).toMatch(/<pre[^>]*class="[^"]*shiki/);
-    // Dual-theme output carries the dark variables for the data-theme switch.
-    expect(html).toContain('--shiki-dark');
+    // One dark theme in both page themes: colours inline, from the design
+    // constants, with no second theme to switch to.
+    expect(html).not.toContain('--shiki-dark');
+    expect(html.toLowerCase()).toContain(`color:${syntaxKeyword}`);
   });
 
   it('degrades gracefully for an unknown language and escapes the input', () => {
