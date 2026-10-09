@@ -650,22 +650,17 @@ export async function bundleCore(
       // `import('<pkg>/dev')` to externalize here. A future registry-bearing
       // non-skeleton browser target would need to externalize `<pkg>/dev` on the
       // browser branch below (gated on `externalizeDev`) to stay dev-free.
-      const browser = (buildOptions.platform || 'node') === 'browser';
-      const stage2Entry = browser
-        ? generateWebEntry(stage1Path, dataPayload, {
-            windowCollector: buildOptions.windowCollector,
-            windowElb: buildOptions.windowElb,
-            platform: buildOptions.platform as 'browser' | 'node',
-            observe: readObserveConnect(flowSettings, logger),
-          })
-        : generateServerEntry(stage1Path, dataPayload);
+      const stage2Entry =
+        (buildOptions.platform || 'node') === 'browser'
+          ? generateWebEntry(stage1Path, dataPayload, {
+              windowCollector: buildOptions.windowCollector,
+              windowElb: buildOptions.windowElb,
+              platform: buildOptions.platform as 'browser' | 'node',
+              observe: readObserveConnect(flowSettings, logger),
+            })
+          : generateServerEntry(stage1Path, dataPayload);
 
-      // The browser entry imports the Tag Mode loader from @walkeros/core.
-      // TEMP_DIR's node_modules hold the flow's own core, which may predate
-      // the loader, so that entry is written outside TEMP_DIR and resolves
-      // core from the CLI's own dependency tree, as the wrap step does.
-      const stage2Dir = browser ? await tmpRunDir('wrap') : TEMP_DIR;
-      const stage2EntryPath = path.join(stage2Dir, 'stage2.mjs');
+      const stage2EntryPath = path.join(TEMP_DIR, 'stage2.mjs');
       await fs.writeFile(stage2EntryPath, stage2Entry);
 
       // Stage 2 esbuild: resolve imports, inline stage 1, minify
@@ -698,7 +693,9 @@ export async function bundleCore(
         // `window` explicitly, so they still run. The browser entry has zero
         // exports, so no `globalName` is needed (one would add a window var).
         stage2Options.format = 'iife';
-        stage2Options.nodePaths = getNodeResolutionPaths();
+        // The entry's Tag Mode loader comes from the CLI's own core, never
+        // from the flow's core in TEMP_DIR, which may predate it.
+        stage2Options.plugins = [cliCorePlugin()];
         // Every build flag is defined from the flow's needs, so a feature the
         // flow does not use folds out (see build-flags.ts).
         stage2Options.define = {
@@ -724,7 +721,6 @@ export async function bundleCore(
         await esbuild.build(stage2Options);
       } finally {
         await esbuild.stop();
-        if (stage2Dir !== TEMP_DIR) await fs.remove(stage2Dir).catch(() => {});
       }
     }
 
@@ -988,27 +984,33 @@ export function getNodeExternals(): string[] {
   return externals;
 }
 
+// Marks the plugin's own lookup, so it is not intercepted again.
+const CLI_CORE = 'walkeros-cli-core';
+
 /**
- * Returns the candidate `node_modules` dirs esbuild should consult for a
- * stage 2 entry that imports from `@walkeros/core` (the wrap step, and the
- * browser entry's Tag Mode loader). We start at this module's own location
- * and walk upward, since the build always runs from inside the CLI
- * package: either via `node_modules/@walkeros/cli/dist/...` or directly
- * from the workspace source tree during tests.
+ * Resolves every `@walkeros/core` import of a generated entry (the Tag Mode
+ * loader, the preview activator) from this module's own location: the core
+ * this CLI was installed with. Resolving from the entry's temp dir would walk
+ * up through every `node_modules` above it, where another core (a flow's
+ * pinned one, or a stray install in a shared temp root) can shadow it.
  */
-export function getNodeResolutionPaths(): string[] {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const candidates: string[] = [];
-  let dir = here;
-  // Walk up at most 8 levels looking for node_modules dirs.
-  for (let i = 0; i < 8; i++) {
-    const candidate = path.join(dir, 'node_modules');
-    candidates.push(candidate);
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return candidates;
+export function cliCorePlugin(): esbuild.Plugin {
+  const resolveDir = path.dirname(fileURLToPath(import.meta.url));
+  return {
+    name: CLI_CORE,
+    setup(build) {
+      build.onResolve({ filter: /^@walkeros\/core$/ }, async (args) => {
+        if (args.pluginData === CLI_CORE) return undefined;
+        const resolved = await build.resolve(args.path, {
+          kind: args.kind,
+          resolveDir,
+          pluginData: CLI_CORE,
+        });
+        if (resolved.errors.length > 0) return { errors: resolved.errors };
+        return { path: resolved.path, sideEffects: resolved.sideEffects };
+      });
+    },
+  };
 }
 
 /**

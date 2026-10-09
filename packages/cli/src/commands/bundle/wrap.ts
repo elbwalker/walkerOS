@@ -16,13 +16,14 @@
  */
 
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import * as esbuild from 'esbuild';
 import {
+  cliCorePlugin,
   generateWrapEntry,
   generateWrapEntryServer,
   getNodeExternals,
-  getNodeResolutionPaths,
 } from './bundler.js';
 import type { MoinTarget, ObserveWeb } from '@walkeros/core';
 import { tmpRunDir } from '../../core/tmp-names.js';
@@ -115,6 +116,28 @@ export function extractDevExternals(skeletonText: string): string[] {
     found.add(match[1]);
   }
   return Array.from(found);
+}
+
+/**
+ * Returns the candidate `node_modules` dirs esbuild should consult for
+ * the wrap step's stage 2 entry. We start at this module's own location
+ * and walk upward, since the wrap step always runs from inside the CLI
+ * package: either via `node_modules/@walkeros/cli/dist/...` or directly
+ * from the workspace source tree during tests.
+ */
+function getNodeResolutionPaths(): string[] {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates: string[] = [];
+  let dir = here;
+  // Walk up at most 8 levels looking for node_modules dirs.
+  for (let i = 0; i < 8; i++) {
+    const candidate = path.join(dir, 'node_modules');
+    candidates.push(candidate);
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return candidates;
 }
 
 export async function wrapSkeleton(
@@ -235,6 +258,10 @@ export async function wrapSkeleton(
       // `window` explicitly, so they still run. The entry has zero exports, so
       // no `globalName` is needed.
       esbuildOptions.format = 'iife';
+      // The entry's core imports (the Tag Mode loader, the preview
+      // activator) come from the CLI's own core, never from a core above the
+      // temp dir.
+      esbuildOptions.plugins = [cliCorePlugin()];
       // Build flags from the needs the skeleton carries. Only a baked observe
       // config adds to them: the recorder runs only for a collector that has
       // one. A skeleton without needs (an older CLI) keeps every flag on.
