@@ -89,7 +89,8 @@ Add the script tag to every page, below your GTM snippet:
 <WalkerjsSnippet />
 
 It loads `async` and starts once the HTML is parsed. If your site sets a
-Content Security Policy, allow `https://static.walkeros.io` in `script-src`.
+Content Security Policy, allow `https://static.walkeros.io` in `script-src`
+(and `https://cdn.walkeros.io` if you want [Tag Mode](#tag-mode)).
 
 </TabItem>
 <TabItem value="gtm" label="From GTM">
@@ -411,6 +412,27 @@ same attributes, so every click would count twice.
 
 :::
 
+## Tag Mode
+
+Tag Mode is the walkerOS app's overlay for your live page: draw your
+measurement plan on it, capture sections and check your tagging where it runs.
+walker.js carries what Tag Mode needs from the first release after 4.8.0, as
+do the web bundles the CLI builds, so there is nothing to install or configure.
+Start it from the walkerOS app with the **Tag Mode** button in a flow's plan:
+the app opens your page in a new tab with `elbMoin` added to its address.
+
+On a page opened this way, walker.js waits for the walkerOS app tab that opened
+it to answer, and only then loads the Tag Mode script from
+`https://cdn.walkeros.io`, checked against the exact file the app names.
+Without that answer it loads nothing, whoever sent the link, and on a page
+opened without `elbMoin` it does nothing at all. Tag Mode stays in that one tab while you move
+around your site, and closing either tab ends it. Your visitors never see it.
+
+Your Content Security Policy decides whether Tag Mode can run on your site.
+Without `https://cdn.walkeros.io` in `script-src`, nothing loads. A policy with
+`'strict-dynamic'` trusts the scripts walker.js adds through walker.js's own
+nonce, so there Tag Mode loads regardless of the host list.
+
 ## FAQ
 
 ### Does it replace GTM?
@@ -439,7 +461,11 @@ trigger.
 
 No. walker.js sets no cookies, writes no local or session storage and sends
 events nowhere but the `dataLayer`. Consent applies where data leaves the page,
-in your GTM tags.
+in your GTM tags. The one exception is a tab the walkerOS app opened for
+[Tag Mode](#tag-mode): there walker.js keeps one session storage entry,
+`elbMoin`, so Tag Mode follows you from page to page, and Tag Mode keeps its
+frames and unsent work in that browser's site storage (localStorage and
+IndexedDB).
 
 ### Does it work with my single-page app?
 

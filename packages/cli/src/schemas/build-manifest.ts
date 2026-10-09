@@ -128,6 +128,11 @@ export const BuildWrapOptionsSchema = z
       })
       .strict()
       .optional(),
+    moin: z
+      .object({ app: z.string(), base: z.string() })
+      .strict()
+      .optional()
+      .describe('Tag Mode loader target; absent, the production app'),
     minify: z.boolean().optional(),
     minifyOptions: z
       .object({

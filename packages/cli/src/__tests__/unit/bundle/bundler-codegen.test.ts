@@ -1134,6 +1134,94 @@ describe('generateWrapEntry platform gating', () => {
   });
 });
 
+describe('the Tag Mode loader call', () => {
+  const DATA_PAYLOAD = '{"sources":{},"destinations":{}}';
+  const LOADER_IMPORT = "import { moin } from '@walkeros/core';\n";
+  const STAGE = {
+    app: 'https://stage.app.walkeros.io',
+    base: 'https://stage.cdn.walkeros.io/tag-mode/',
+  };
+  const preview = {
+    enabled: true,
+    keyring: [{ kid: 'kid1', spki: 'c3BraQ' }],
+    iss: 'app:stage',
+    pb: 'pb_a',
+    previewOrigin: 'cdn.walkeros.io',
+  };
+
+  it('generateWebEntry calls the loader first in a browser entry', () => {
+    const output = generateWebEntry('./skeleton.mjs', DATA_PAYLOAD, {
+      platform: 'browser',
+    });
+    expect(output.startsWith(LOADER_IMPORT)).toBe(true);
+    expect(output).toContain('(async () => {\n  moin();\n  const config');
+  });
+
+  it('generateWebEntry leaves a node entry without the loader', () => {
+    const output = generateWebEntry('./skeleton.mjs', DATA_PAYLOAD, {
+      platform: 'node',
+    });
+    expect(output).not.toContain('moin');
+  });
+
+  it('generateWrapEntry calls the loader before the preview activator', () => {
+    const output = generateWrapEntry('./skeleton.mjs', { preview });
+    expect(output.startsWith(LOADER_IMPORT)).toBe(true);
+    expect(output).toContain(
+      '(async () => {\n  moin();\n  // --- Preview activation ---',
+    );
+    expect(output.indexOf('moin();')).toBeLessThan(
+      output.indexOf('if (await browserSwapActivator('),
+    );
+  });
+
+  it('generateWrapEntry calls the loader in a preview artifact', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      previewGrantTargets: ['api'],
+    });
+    expect(output).toContain('(async () => {\n  moin();\n  const config');
+  });
+
+  it('generateWrapEntry passes a stage target as string literals', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      preview,
+      moin: STAGE,
+    });
+    expect(output).toContain(
+      '(async () => {\n  moin({ app: "https://stage.app.walkeros.io", base: "https://stage.cdn.walkeros.io/tag-mode/" });\n  // --- Preview activation ---',
+    );
+  });
+
+  it('generateWrapEntry leaves a node entry without the loader', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {
+      platform: 'node',
+      moin: STAGE,
+    });
+    expect(output).not.toContain('moin');
+  });
+
+  it.each<[string, { app: string; base: string }]>([
+    ['an http app', { ...STAGE, app: 'http://stage.app.walkeros.io' }],
+    [
+      'an app with a path',
+      { ...STAGE, app: 'https://stage.app.walkeros.io/x' },
+    ],
+    ['an app with a trailing slash', { ...STAGE, app: `${STAGE.app}/` }],
+    ['an app that is no URL', { ...STAGE, app: 'stage.app.walkeros.io' }],
+    ['an app with a quote', { ...STAGE, app: 'https://x"});alert(1);//' }],
+    ['an http base', { ...STAGE, base: 'http://stage.cdn.walkeros.io/t/' }],
+    [
+      'a base without a trailing slash',
+      { ...STAGE, base: STAGE.base.slice(0, -1) },
+    ],
+    ['a base with a query', { ...STAGE, base: `${STAGE.base}?x=/` }],
+    ['a base with a fragment', { ...STAGE, base: `${STAGE.base}#/` }],
+    ['a base with credentials', { ...STAGE, base: 'https://u:p@cdn.test/t/' }],
+  ])('generateWrapEntry refuses a target with %s', (_label, moin) => {
+    expect(() => generateWrapEntry('./skeleton.mjs', { moin })).toThrow(/moin/);
+  });
+});
+
 describe('generateServerEntry observer wiring', () => {
   it('iterates context.observers and installs them on collector.observers after startFlow', () => {
     const out = generateServerEntry('./skel.mjs', '{}');

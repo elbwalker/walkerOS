@@ -163,9 +163,10 @@ describe('generateWrapEntry preview-artifact observe connect', () => {
       observe,
     });
     expect(code).not.toContain('browserSwapActivator');
-    // The connect module is pure config; the artifact entry needs zero core
-    // imports.
-    expect(code).not.toContain("from '@walkeros/core'");
+    // The connect module is pure config; the artifact entry's only core
+    // import is the Tag Mode loader.
+    expect(code.match(/from '@walkeros\/core'/g)).toHaveLength(1);
+    expect(code).toContain("import { moin } from '@walkeros/core';");
   });
 
   it('bakes the connect module for a web-only artifact (no grant targets)', () => {

@@ -1,8 +1,9 @@
 import esbuild from 'esbuild';
 import { builtinModules } from 'module';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
-import type { Flow, ObserveWeb, PreviewKey } from '@walkeros/core';
+import type { Flow, MoinTarget, ObserveWeb, PreviewKey } from '@walkeros/core';
 import {
   packageNameToVariable,
   getStepRuntimeProps,
@@ -649,17 +650,22 @@ export async function bundleCore(
       // `import('<pkg>/dev')` to externalize here. A future registry-bearing
       // non-skeleton browser target would need to externalize `<pkg>/dev` on the
       // browser branch below (gated on `externalizeDev`) to stay dev-free.
-      const stage2Entry =
-        (buildOptions.platform || 'node') === 'browser'
-          ? generateWebEntry(stage1Path, dataPayload, {
-              windowCollector: buildOptions.windowCollector,
-              windowElb: buildOptions.windowElb,
-              platform: buildOptions.platform as 'browser' | 'node',
-              observe: readObserveConnect(flowSettings, logger),
-            })
-          : generateServerEntry(stage1Path, dataPayload);
+      const browser = (buildOptions.platform || 'node') === 'browser';
+      const stage2Entry = browser
+        ? generateWebEntry(stage1Path, dataPayload, {
+            windowCollector: buildOptions.windowCollector,
+            windowElb: buildOptions.windowElb,
+            platform: buildOptions.platform as 'browser' | 'node',
+            observe: readObserveConnect(flowSettings, logger),
+          })
+        : generateServerEntry(stage1Path, dataPayload);
 
-      const stage2EntryPath = path.join(TEMP_DIR, 'stage2.mjs');
+      // The browser entry imports the Tag Mode loader from @walkeros/core.
+      // TEMP_DIR's node_modules hold the flow's own core, which may predate
+      // the loader, so that entry is written outside TEMP_DIR and resolves
+      // core from the CLI's own dependency tree, as the wrap step does.
+      const stage2Dir = browser ? await tmpRunDir('wrap') : TEMP_DIR;
+      const stage2EntryPath = path.join(stage2Dir, 'stage2.mjs');
       await fs.writeFile(stage2EntryPath, stage2Entry);
 
       // Stage 2 esbuild: resolve imports, inline stage 1, minify
@@ -692,6 +698,7 @@ export async function bundleCore(
         // `window` explicitly, so they still run. The browser entry has zero
         // exports, so no `globalName` is needed (one would add a window var).
         stage2Options.format = 'iife';
+        stage2Options.nodePaths = getNodeResolutionPaths();
         // Every build flag is defined from the flow's needs, so a feature the
         // flow does not use folds out (see build-flags.ts).
         stage2Options.define = {
@@ -717,6 +724,7 @@ export async function bundleCore(
         await esbuild.build(stage2Options);
       } finally {
         await esbuild.stop();
+        if (stage2Dir !== TEMP_DIR) await fs.remove(stage2Dir).catch(() => {});
       }
     }
 
@@ -978,6 +986,29 @@ export function getNodeExternals(): string[] {
     externals.push(mod, `node:${mod}`, `${mod}/*`, `node:${mod}/*`);
   }
   return externals;
+}
+
+/**
+ * Returns the candidate `node_modules` dirs esbuild should consult for a
+ * stage 2 entry that imports from `@walkeros/core` (the wrap step, and the
+ * browser entry's Tag Mode loader). We start at this module's own location
+ * and walk upward, since the build always runs from inside the CLI
+ * package: either via `node_modules/@walkeros/cli/dist/...` or directly
+ * from the workspace source tree during tests.
+ */
+export function getNodeResolutionPaths(): string[] {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates: string[] = [];
+  let dir = here;
+  // Walk up at most 8 levels looking for node_modules dirs.
+  for (let i = 0; i < 8; i++) {
+    const candidate = path.join(dir, 'node_modules');
+    candidates.push(candidate);
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return candidates;
 }
 
 /**
@@ -1926,6 +1957,53 @@ function emitObserveAssignment(observe: ObserveWeb): string {
   config.observe = ${JSON.stringify(literal)};`;
 }
 
+/** Imports the Tag Mode loader into a browser entry. */
+const MOIN_IMPORT = "import { moin } from '@walkeros/core';\n";
+
+/**
+ * The Tag Mode loader call, the first statement of a browser entry: the
+ * production target when none is given, or the target a deploy passes. A
+ * target must be an https origin and an https base ending in `/`, so a
+ * malformed value fails the build instead of shipping a loader that never
+ * loads; its values are emitted as string literals.
+ */
+function emitMoinCall(target?: MoinTarget): string {
+  if (!target)
+    return `
+  moin();`;
+  const app = parseHttps(target.app);
+  if (!app || app.origin !== target.app) {
+    throw new Error(
+      `Invalid moin.app "${target.app}". Must be an https origin such as https://app.example.com.`,
+    );
+  }
+  const base = parseHttps(target.base);
+  if (
+    !base ||
+    base.href !== target.base ||
+    base.username ||
+    base.password ||
+    base.search ||
+    base.hash ||
+    !base.pathname.endsWith('/')
+  ) {
+    throw new Error(
+      `Invalid moin.base "${target.base}". Must be an https URL ending in "/" without query or fragment.`,
+    );
+  }
+  return `
+  moin({ app: ${JSON.stringify(target.app)}, base: ${JSON.stringify(target.base)} });`;
+}
+
+function parseHttps(value: string): URL | undefined {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Generate a stage 2 entry file for web/browser bundles.
  * Imports startFlow and wireConfig from the stage 1 .mjs file,
@@ -1982,11 +2060,14 @@ export function generateWebEntry(
     ? emitObserveAssignment(options.observe)
     : '';
 
-  return `import { startFlow, wireConfig } from '${stage1Specifier}';
+  const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
+  const loaderCall = platform === 'browser' ? emitMoinCall() : '';
+
+  return `${loaderImport}import { startFlow, wireConfig } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
-(async () => {
+(async () => {${loaderCall}
   const config = wireConfig(__configData);${envBlock}${observeBlock}
   const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
@@ -2056,6 +2137,11 @@ export function generateWrapEntry(
      * preview-artifact observation wiring: it bakes no ingest token.
      */
     observe?: ObserveWeb;
+    /**
+     * The Tag Mode loader target, internal deploy data like the preview
+     * keyring. Absent, the loader trusts the production app.
+     */
+    moin?: MoinTarget;
   } = {},
 ): string {
   const assignments: string[] = [];
@@ -2173,9 +2259,14 @@ ${grantTargets
     ? emitObserveAssignment(options.observe)
     : '';
 
-  return `${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
+  // The loader runs first, before the activator: host and artifact both call
+  // it, and its page guard keeps the first one.
+  const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
+  const loaderCall = platform === 'browser' ? emitMoinCall(options.moin) : '';
 
-(async () => {${previewBlock}
+  return `${loaderImport}${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
+
+(async () => {${loaderCall}${previewBlock}
   const config = wireConfig(__configData);${envBlock}${previewGrantBlock}${observeBlock}
   const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;

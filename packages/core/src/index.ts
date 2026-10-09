@@ -40,6 +40,8 @@ export * from './useHooks';
 export * from './telemetry';
 export * from './telemetryResolver';
 export * from './preview';
+export { MOIN_PARAM, MOIN_PRODUCTION, moin } from './moin';
+export type { MoinTarget } from './moin';
 export * from './journey';
 export { getTraceUntil, setTraceUntil } from './traceState';
 export { emitStep } from './emitStep';

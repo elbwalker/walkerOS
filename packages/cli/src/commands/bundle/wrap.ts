@@ -16,15 +16,15 @@
  */
 
 import * as path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import * as esbuild from 'esbuild';
 import {
   generateWrapEntry,
   generateWrapEntryServer,
   getNodeExternals,
+  getNodeResolutionPaths,
 } from './bundler.js';
-import type { ObserveWeb } from '@walkeros/core';
+import type { MoinTarget, ObserveWeb } from '@walkeros/core';
 import { tmpRunDir } from '../../core/tmp-names.js';
 import { buildFlagDefines, readNeedsMarker } from './build-flags.js';
 import type { WrapEntryPreview } from './bundler.js';
@@ -82,6 +82,13 @@ export interface WrapSkeletonOptions {
   observe?: ObserveWeb;
 
   /**
+   * Browser-only: the Tag Mode loader target, internal deploy data the stage
+   * app passes like the preview keyring. Absent, the loader trusts the
+   * production app.
+   */
+  moin?: MoinTarget;
+
+  /**
    * esbuild target. @default 'es2018' for browser, 'node18' for node.
    */
   target?: string;
@@ -93,13 +100,6 @@ export interface WrapSkeletonOptions {
   minifyOptions?: MinifyOptions;
 }
 
-/**
- * Returns the candidate `node_modules` dirs esbuild should consult for
- * the wrap step's stage 2 entry. We start at this module's own location
- * and walk upward, since the wrap step always runs from inside the CLI
- * package — either via `node_modules/@walkeros/cli/dist/...` or directly
- * from the workspace source tree during tests.
- */
 /**
  * Extracts the `<pkg>/dev` specifiers from a skeleton's lazy `__devExports`
  * registry by reading its literal `import('<pkg>/dev')` thunks. The registry is
@@ -115,21 +115,6 @@ export function extractDevExternals(skeletonText: string): string[] {
     found.add(match[1]);
   }
   return Array.from(found);
-}
-
-function getNodeResolutionPaths(): string[] {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const candidates: string[] = [];
-  let dir = here;
-  // Walk up at most 8 levels looking for node_modules dirs.
-  for (let i = 0; i < 8; i++) {
-    const candidate = path.join(dir, 'node_modules');
-    candidates.push(candidate);
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return candidates;
 }
 
 export async function wrapSkeleton(
@@ -203,6 +188,7 @@ export async function wrapSkeleton(
             : {}),
           platform,
           ...(options.observe ? { observe: options.observe } : {}),
+          ...(options.moin ? { moin: options.moin } : {}),
         })
       : generateWrapEntryServer(absoluteSkeletonPath);
 

@@ -185,6 +185,50 @@ export const __configData = { test: true };
     expect(output).not.toContain('browserSwapActivator');
   });
 
+  it('loads Tag Mode from production unless a deploy passes another target', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const read = async (name: string, moin?: { app: string; base: string }) => {
+      const outputPath = path.join(tmpDir, name);
+      await wrapSkeleton({
+        skeletonPath,
+        platform: 'browser',
+        outputPath,
+        minify: false,
+        ...(moin ? { moin } : {}),
+      });
+      return fs.readFile(outputPath, 'utf-8');
+    };
+
+    const production = await read('production.js');
+    expect(production).toContain('"https://app.walkeros.io"');
+    expect(production).toContain('"https://cdn.walkeros.io/tag-mode/"');
+    expect(production).not.toContain('stage.');
+
+    const stage = await read('stage.js', {
+      app: 'https://stage.app.walkeros.io',
+      base: 'https://stage.cdn.walkeros.io/tag-mode/',
+    });
+    // The call keeps its literals; the minified core renames `moin`.
+    expect(stage).toMatch(
+      /\w+\(\{\s*app: "https:\/\/stage\.app\.walkeros\.io",\s*base: "https:\/\/stage\.cdn\.walkeros\.io\/tag-mode\/"\s*\}\)/,
+    );
+  });
+
+  it('refuses a malformed Tag Mode target', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    await expect(
+      wrapSkeleton({
+        skeletonPath,
+        platform: 'browser',
+        outputPath: path.join(tmpDir, 'walker.js'),
+        moin: {
+          app: 'http://localhost:3000',
+          base: 'http://localhost:9001/tag-mode/',
+        },
+      }),
+    ).rejects.toThrow(/Invalid moin\.app/);
+  });
+
   it('throws when the skeleton does not exist', async () => {
     const outputPath = path.join(tmpDir, 'walker.js');
     await expect(
