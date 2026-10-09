@@ -1,5 +1,24 @@
 # @walkeros/web-destination-matomo
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The ecommerce step examples are no longer published in the docs, and
+  their descriptions say they are test fixtures. Matomo needs an
+  `addEcommerceItem` call per product before a cart update, and before an order
+  to record its products, and tracks a product view as `setEcommerceView`
+  followed by a page view. One rule sends one command.
+- 5593d7b: The ecommerce step examples now test for a product entity without a
+  package helper. The published condition, shown in the docs and returned by
+  `package_get`, referenced a minified import and threw when copied into a flow;
+  it now runs on its own.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @walkeros/web-destination-gtag
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The settings schema now lists the GA4 settings `scriptSrc` and
+  `init`, so `walkeros validate` no longer warns about them as unknown
+  properties.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

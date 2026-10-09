@@ -1,5 +1,29 @@
 # @walkeros/storybook-addon
 
+## 4.8.0
+
+### Patch Changes
+
+- a4b03ba: The five event colours (globals, context, entity, property, action)
+  now have a light-theme value that reads as text on light backgrounds. Their
+  constants in `@walkeros/explorer/design` are now `{ dark, light }` objects,
+  like every other themed colour; read `.dark` where the colour sits on a dark
+  ground.
+- d5cbc9c: Highlight colours now follow the walkerOS design system. Outlines on
+  the story canvas, the highlight buttons and the attribute badges use the same
+  event colours as the rest of walkerOS, and every outline carries a thin dark
+  edge so it stays readable on light and dark stories.
+- 7132619: The walkerOS panel takes its text sizes from the Storybook theme, so
+  labels, highlight buttons and attribute badges match the rest of the Storybook
+  UI.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/collector@4.8.0
+  - @walkeros/web-core@4.8.0
+  - @walkeros/web-source-browser@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

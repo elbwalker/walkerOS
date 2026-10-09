@@ -1,5 +1,19 @@
 # @walkeros/web-destination-fullstory
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The `startCaptureManually` description now says that the FullStory
+  script still loads at init and that recording starts once a consent key mapped
+  to `capture` is granted. The step examples name the consent mapping they rely
+  on.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

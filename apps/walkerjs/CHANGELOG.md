@@ -1,5 +1,7 @@
 # @walkeros/walker.js
 
+## 4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

@@ -1,5 +1,25 @@
 # @walkeros/core
 
+## 4.8.0
+
+### Minor Changes
+
+- 421233d: `format: true` now accepts extra keys on `user` and `source` (custom
+  user attributes, GA4 transformer fields, a previous validate verdict), as the
+  types always allowed. `user.optout` is typed as a boolean. Unknown top-level
+  fields and wrong types still fail.
+
+### Patch Changes
+
+- 7132619: The `context` of `getMappingValue` now requires `collector` in its
+  type (`Mapping.ValueContext`), matching the runtime, which already threw
+  without one.
+- 5593d7b: A failed async cache write no longer escapes as an unhandled
+  rejection on pages that replace the global `Promise`, and a `* *` mapping
+  rule's condition runs once per event instead of twice. A transformer with
+  `code` or `package` that declares both `config.mapping` and `mapping` now gets
+  a warning naming both.
+
 ## 4.7.2
 
 ### Patch Changes

@@ -1,5 +1,29 @@
 # @walkeros/cli
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The warehouse examples of `flow-complete.json` (Pub/Sub, the
+  warehouse source and the BigQuery row) now carry the customer `segment` next
+  to `ltv`, as the events upstream do.
+- 5593d7b: Frames belong to a flow: `frame_manage` (list, page and get) and the
+  CLI frame reads now take the `flowId` of the flow they live in. Deleting a
+  flow also deletes its frames.
+
+  A frame read also returns `lastSavedVersion`, `lastSavedNumber` and
+  `markupAssetId`, so a client can tell whether a frame has changed since it was
+  last saved as a version.
+
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/transformer-validate@4.8.0
+  - @walkeros/collector@4.8.0
+  - @walkeros/server-core@4.8.0
+  - @walkeros/server-destination-api@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes

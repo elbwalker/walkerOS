@@ -1,5 +1,23 @@
 # @walkeros/web-destination-piwikpro
 
+## 4.8.0
+
+### Patch Changes
+
+- 5593d7b: The `identified` description and hint now explain why its consent
+  states stay out of `config.consent`: a destination needs only one granted
+  state there, so a repeated state lets events through on its own, and as the
+  only state it holds events back, so no anonymous hit is sent.
+- 5593d7b: The ecommerce step examples now test for a product entity without a
+  package helper. The published condition, shown in the docs and returned by
+  `package_get`, referenced a minified import and threw when copied into a flow;
+  it now runs on its own.
+- Updated dependencies [7132619]
+- Updated dependencies [5593d7b]
+- Updated dependencies [421233d]
+  - @walkeros/core@4.8.0
+  - @walkeros/web-core@4.8.0
+
 ## 4.7.2
 
 ### Patch Changes
