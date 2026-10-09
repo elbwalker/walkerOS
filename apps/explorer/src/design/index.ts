@@ -146,6 +146,9 @@ export const danger = { dark: "#ffa4ac", light: "#b91c1c" } as const;
 /** Text and icons on a `danger` fill such as a destructive button (dark 8.6:1, light 6.5:1). */
 export const onDanger = { dark: "#450a0a", light: "#ffffff" } as const;
 
+/** Text and icons on an event-colour fill: a tag card's Done. Dark ink on the dark event values (5.6:1 or more), white on the light ones (about 5:1). */
+export const onEvent = { dark: "#111827", light: "#ffffff" } as const;
+
 /** Success and healthy states, always with an icon and a word. Sits on the blue side of green, so it stays apart from `danger` with red-green colour blindness, and apart from every step and event colour. Text at 4.5:1 or more on every ground. */
 export const success = { dark: "#8cf9ff", light: "#07675d" } as const;
 
