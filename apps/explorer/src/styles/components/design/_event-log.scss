@@ -50,24 +50,6 @@
     line-height: 20px;
   }
 
-  // An event colour, as on the hero's events table: events arrive here.
-  .elb-event-log__live {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--event-entity);
-    font-size: var(--type-product-caption-size);
-    line-height: var(--type-product-caption-line-height);
-    font-weight: var(--type-product-caption-weight);
-  }
-
-  .elb-event-log__dot {
-    width: 6px;
-    height: 6px;
-    background: var(--event-entity);
-    border-radius: var(--radius-full);
-  }
-
   // The Button atom at the size of the log's bars.
   .elb-event-log__button {
     flex: none;
@@ -153,7 +135,8 @@
     }
   }
 
-  // A new event is the first row: it tints as it arrives, then settles.
+  // A new event is the first row: it tints as it arrives, then settles. An
+  // event colour, as on the hero's events table.
   .elb-event-log__list > li:first-child > .elb-event-log__row {
     animation: elb-event-log-arrive 900ms var(--ease);
   }
@@ -180,7 +163,9 @@
     text-align: right;
   }
 
+  // Its own column, with or without a trigger before it.
   .elb-event-log__time {
+    grid-column: 4;
     color: var(--fg-2);
   }
 
@@ -218,11 +203,15 @@
     background: var(--viz-code-bg);
   }
 
+  // Stays in view while the fields or the JSON scroll under it.
   .elb-event-log__head {
+    position: sticky;
+    top: 0;
     display: flex;
     align-items: flex-start;
     gap: var(--space-3);
     padding: var(--space-3-5) 16px var(--space-3) 18px;
+    background: var(--viz-code-bg);
     border-bottom: 1px solid var(--viz-surface);
   }
 
@@ -336,6 +325,7 @@
     }
   }
 
+  // A note beside a value, or alone in a row where a key would be.
   .elb-event-log__sub {
     color: var(--viz-fg-2);
     font-size: var(--type-product-caption-size);

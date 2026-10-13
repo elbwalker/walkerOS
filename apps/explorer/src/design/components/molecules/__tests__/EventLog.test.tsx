@@ -134,8 +134,8 @@ describe('EventLog', () => {
     expect(row?.querySelector('.elb-event-log__entity')).toBeNull();
   });
 
-  it('follows the newest event without a selection, and says so', () => {
-    const { container, getByRole, queryByRole } = render(
+  it('follows the newest event without a selection', () => {
+    const { container, getByRole } = render(
       <EventLog records={RECORDS} onSelect={() => {}} />,
     );
     expect(getByRole('button', { name: /product add/ })).toHaveAttribute(
@@ -149,13 +149,9 @@ describe('EventLog', () => {
     expect(
       container.querySelector('.elb-event-log__detail-name'),
     ).toHaveTextContent('product add');
-    expect(container.querySelector('.elb-event-log__live')).toHaveTextContent(
-      'Live',
-    );
-    expect(queryByRole('button', { name: /Show latest/ })).toBeNull();
   });
 
-  it('shows the selected event, and how many came after it', () => {
+  it('shows the selected event', () => {
     const { container, getByRole } = render(
       <EventLog records={RECORDS} selectedSeq={1} onSelect={() => {}} />,
     );
@@ -166,10 +162,6 @@ describe('EventLog', () => {
     expect(
       container.querySelector('.elb-event-log__detail-name'),
     ).toHaveTextContent('page view');
-    expect(container.querySelector('.elb-event-log__live')).toBeNull();
-    expect(
-      getByRole('button', { name: '2 new · Show latest' }),
-    ).toBeInTheDocument();
   });
 
   it('heads the detail with the number, the trigger and the time', () => {
@@ -190,30 +182,45 @@ describe('EventLog', () => {
     expect(onSelect).toHaveBeenCalledWith(1);
   });
 
-  it('follows the newest again on a click on it or on Show latest', () => {
+  it('follows the newest again on a click on the newest event', () => {
     const onSelect = jest.fn();
     const { getByRole } = render(
       <EventLog records={RECORDS} selectedSeq={1} onSelect={onSelect} />,
     );
     fireEvent.click(getByRole('button', { name: /product add/ }));
-    fireEvent.click(getByRole('button', { name: /Show latest/ }));
-    expect(onSelect.mock.calls).toEqual([[null], [null]]);
+    expect(onSelect.mock.calls).toEqual([[null]]);
   });
 
-  it('disables the rows and offers no Show latest without onSelect', () => {
-    const { getByRole, queryByRole } = render(
-      <EventLog records={RECORDS} selectedSeq={1} />,
+  // The bar holds the title, the count and Clear, in every state.
+  it.each([
+    ['following the newest', undefined],
+    ['with an older event selected', 1],
+  ])('adds nothing to the bar %s', (_state, selectedSeq) => {
+    const { container } = render(
+      <EventLog
+        records={RECORDS}
+        selectedSeq={selectedSeq}
+        onSelect={() => {}}
+        onClear={() => {}}
+      />,
     );
-    expect(getByRole('button', { name: /page view/ })).toBeDisabled();
-    expect(queryByRole('button', { name: /Show latest/ })).toBeNull();
+    expect(container.querySelector('.elb-event-log__bar')).toHaveTextContent(
+      /^Events3Clear$/,
+    );
   });
 
-  it('shows data, context, globals, user and nested as fields, those with content', () => {
+  it('disables the rows without onSelect', () => {
+    const { getByRole } = render(<EventLog records={RECORDS} />);
+    expect(getByRole('button', { name: /page view/ })).toBeDisabled();
+  });
+
+  it('shows data, context, globals, consent, user and nested as fields', () => {
     const { container, rerender } = render(<EventLog records={RECORDS} />);
     expect(sections(container).map(([label]) => label)).toEqual([
       'data',
       'context',
       'globals',
+      'consent',
       'user',
       'nested',
     ]);
@@ -225,14 +232,23 @@ describe('EventLog', () => {
         ['sale', 'true'],
       ],
     ]);
+    expect(sections(container)[3]).toEqual([
+      'consent',
+      [['marketing', 'granted']],
+    ]);
 
-    // The page view has an empty context and no nested entities.
-    rerender(<EventLog records={RECORDS} selectedSeq={1} />);
+    // An empty group is left out, but consent says that there is none.
+    const event = { ...PAGE_VIEW, consent: {} };
+    rerender(<EventLog records={[{ seq: 1, event }]} />);
     expect(sections(container).map(([label]) => label)).toEqual([
       'data',
       'globals',
+      'consent',
       'user',
     ]);
+    expect(
+      container.querySelectorAll('.elb-event-log__section')[2],
+    ).toHaveTextContent(/^consentnone$/);
   });
 
   it('colours a value by its type', () => {
@@ -345,7 +361,6 @@ describe('EventLog', () => {
     expect(empty).toHaveTextContent('No events yet');
     expect(empty).toHaveTextContent('its events show up here');
     expect(plain.container.querySelector('.elb-event-log__list')).toBeNull();
-    expect(plain.container.querySelector('.elb-event-log__live')).toBeNull();
     plain.unmount();
 
     const { container } = render(

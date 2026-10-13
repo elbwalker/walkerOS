@@ -38,13 +38,13 @@ export interface EventLogProps extends Omit<
   records: ReadonlyArray<EventLogRecord>;
   /**
    * The `seq` of the event shown in detail. Without a match the log follows
-   * the newest event and says Live.
+   * the newest event.
    */
   selectedSeq?: number | null;
   /**
-   * Called with an event's `seq` on its click, and with null to follow the
-   * newest again: a click on the newest event or on Show latest. Without it
-   * the rows are disabled.
+   * Called with an event's `seq` on its click, and with null on a click on the
+   * newest event: the log follows the newest again. Without it the rows are
+   * disabled.
    */
   onSelect?: (seq: number | null) => void;
   /** Adds a Clear button while there are events. */
@@ -54,7 +54,14 @@ export interface EventLogProps extends Omit<
 }
 
 // The event fields the Fields view lists, in this order; JSON shows them all.
-const SECTIONS = ['data', 'context', 'globals', 'user', 'nested'] as const;
+const SECTIONS = [
+  'data',
+  'context',
+  'globals',
+  'consent',
+  'user',
+  'nested',
+] as const;
 
 const VIEWS = [
   ['fields', 'Fields'],
@@ -104,6 +111,9 @@ function fieldRows(section: string, group: object): FieldRow[] {
     // A context value is the value and its order.
     if (section === 'context' && Array.isArray(value) && value.length === 2)
       return { key, value: valueToken(value[0]), sub: `order ${value[1]}` };
+    // A consent state reads as a word.
+    if (section === 'consent' && typeof value === 'boolean')
+      return { key, value: tok(value ? 'granted' : 'denied', 'str') };
     return { key, value: valueToken(value) };
   });
 }
@@ -140,30 +150,40 @@ function EventName({ event }: { event: EventLogEvent }) {
   );
 }
 
-/** The sections of the event that have content, each a list of its fields. */
+/**
+ * The sections of the event that have content, each a list of its fields.
+ * Consent is always there: without a state it says none.
+ */
 function Fields({ event }: { event: EventLogEvent }) {
   const fields = new Map<string, unknown>(Object.entries(event));
   return (
     <div className="elb-event-log__sections">
       {SECTIONS.map((section) => {
         const group = fields.get(section);
-        if (!isGroup(group) || Object.keys(group).length === 0) return null;
+        const rows = isGroup(group) ? fieldRows(section, group) : [];
+        if (rows.length === 0 && section !== 'consent') return null;
         return (
           <div key={section} className="elb-event-log__section">
             <span className="elb-event-log__label">{section}</span>
-            <dl className="elb-event-log__fields">
-              {fieldRows(section, group).map(({ key, value, sub }) => (
-                <div key={key} className="elb-event-log__field">
-                  <dt>
-                    <CodeTokens tokens={[tok(key, 'key')]} />
-                  </dt>
-                  <dd>
-                    <CodeTokens tokens={[value]} />
-                    {sub && <span className="elb-event-log__sub">{sub}</span>}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            {rows.length === 0 ? (
+              <span className="elb-event-log__field elb-event-log__sub">
+                none
+              </span>
+            ) : (
+              <dl className="elb-event-log__fields">
+                {rows.map(({ key, value, sub }) => (
+                  <div key={key} className="elb-event-log__field">
+                    <dt>
+                      <CodeTokens tokens={[tok(key, 'key')]} />
+                    </dt>
+                    <dd>
+                      <CodeTokens tokens={[value]} />
+                      {sub && <span className="elb-event-log__sub">{sub}</span>}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </div>
         );
       })}
@@ -204,10 +224,8 @@ export function EventLog({
   const [view, setView] = useState<View>('fields');
   const [copyState, copy] = useCopy();
   const newest: EventLogRecord | undefined = records[records.length - 1];
-  const pinned = records.find((record) => record.seq === selectedSeq);
-  const selected = pinned ?? newest;
-  // The events that came after the pinned one.
-  const newer = pinned ? records.length - 1 - records.indexOf(pinned) : 0;
+  const selected =
+    records.find((record) => record.seq === selectedSeq) ?? newest;
   const json = selected ? JSON.stringify(selected.event, null, 2) : '';
 
   return (
@@ -215,21 +233,6 @@ export function EventLog({
       <div className="elb-event-log__bar">
         <span className="elb-event-log__title">Events</span>
         <span className="elb-event-log__count">{records.length}</span>
-        {newest !== undefined && pinned === undefined && (
-          <span className="elb-event-log__live">
-            <span className="elb-event-log__dot" aria-hidden="true" />
-            Live
-          </span>
-        )}
-        {onSelect && newer > 0 && (
-          <Button
-            variant="primary"
-            className="elb-event-log__button"
-            onClick={() => onSelect(null)}
-          >
-            {newer} new · Show latest
-          </Button>
-        )}
         {onClear && records.length > 0 && (
           <Button
             variant="secondary"

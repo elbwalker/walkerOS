@@ -74,8 +74,8 @@ export default meta;
 
 /**
  * The caller holds the events and the selection. The log follows the newest
- * event and says Live; a click on an older row pins it, and the events that
- * come after are counted on Show latest. Clear empties the log.
+ * event; a click on an older row keeps that one, a click on the newest row
+ * follows again. Clear empties the log.
  */
 function Session(args: EventLogProps) {
   const [records, setRecords] = useState<EventLogRecord[]>([...args.records]);
