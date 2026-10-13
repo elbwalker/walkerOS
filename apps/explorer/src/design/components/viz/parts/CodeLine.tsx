@@ -1,32 +1,6 @@
 import React, { type ReactNode } from 'react';
+import type { EventPart } from '../../codeTokens';
 import { cx } from '../../cx';
-import type { CodeToken, EventPart } from './tokens';
-
-/** Code runs in their colours; a marked run tints only while `active`. */
-export function CodeTokens({
-  tokens,
-  active = false,
-}: {
-  tokens: readonly CodeToken[];
-  active?: boolean;
-}) {
-  return (
-    <>
-      {tokens.map((token, index) => (
-        <span
-          key={index}
-          className={cx(
-            'elb-viz-tok',
-            `elb-viz-tok--${token.kind}`,
-            active && token.mark && `elb-viz-tok--mark-${token.mark}`,
-          )}
-        >
-          {token.t}
-        </span>
-      ))}
-    </>
-  );
-}
 
 export interface CodeLineProps {
   number?: number;

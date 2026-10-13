@@ -50,9 +50,9 @@ never a component.
 | Text            | `--fg` (primary), `--fg-2` (secondary, labels, inactive buttons), `--fg-3` (meta, placeholder, disabled)                                      |
 | Grounds         | `--bg` (page, inputs), `--bg-2` (headers, footers, button groups), `--surface` (boxes, menus), `--surface-2` (hover, inline code)             |
 | Edges           | `--border` (hairlines), `--border-strong` (inputs, controls, floating layers), `--focus` (focus ring)                                         |
-| Actions         | `--primary` fill with `--on-primary` text, `--link` for text in the brand colour, `--danger` with `--on-danger`                               |
+| Actions         | `--primary` with `--on-primary`, `--link` for text in the brand colour, `--danger` with `--on-danger`, a tag card's Done with `--on-event`    |
 | Status          | `--success`, `--warning`, `--danger`, `--info`, tints `--success-bg` and the like; always with an icon and a word                             |
-| Events          | `--event-entity`, `--event-action`, `--event-property`, `--event-context`, `--event-globals`; on dark grounds only                            |
+| Events          | `--event-entity`, `--event-action`, `--event-property`, `--event-context`, `--event-globals`; dark grounds, and a tag card's Done             |
 | Flow steps      | `--step-source`, `--step-transformer`, `--step-collector`, `--step-destination`, `--step-store`, `--platform-web`, `--platform-server`        |
 | Code            | `--code-bg`, `--code-bar`, `--code-border`, `--code-fg`; editor colours are the `syntax-*` constants                                          |
 | Product visuals | `--viz-*`                                                                                                                                     |
@@ -640,7 +640,9 @@ its own root.
   grounds; control edges, the focus ring and step colours 3:1.
 - `--primary` is a fill under `--on-primary`; text in the brand colour is
   `--link`.
-- Event colours sit only on dark grounds (a dark island).
+- Event colours sit only on dark grounds (a dark island). One exception: a tag
+  card's Done is filled with its kind colour and takes `--on-event` for its
+  text; the colour names the kind, the word names the action.
 - Every status shows with an icon and a word, never by colour alone. Any other
   state a colour tells also gets a glyph, an edge style or a shape, and its word
   (visible, or in the tooltip and the accessible name where it does not fit).

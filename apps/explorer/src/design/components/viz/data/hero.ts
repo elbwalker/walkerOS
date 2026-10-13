@@ -5,14 +5,9 @@
  * walkerOS makes of it; a fidelity test runs the one through walkerOS and
  * compares with the other. Imports only package-free demo parts.
  */
+import { tok, type CodeToken } from '../../codeTokens';
 import { clamp, ease } from '../parts/timeline';
-import {
-  lineText,
-  tok,
-  truncate,
-  typedLength,
-  type CodeToken,
-} from '../parts/tokens';
+import { lineText, truncate, typedLength } from '../parts/tokens';
 import type { ThumbKind } from '../parts/Thumb';
 
 export interface HeroArticle {

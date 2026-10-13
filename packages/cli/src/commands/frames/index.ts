@@ -45,7 +45,7 @@ export interface ListPageFramesOptions {
   pageKey: string;
 }
 
-/** The frames of the flow on one page at any depth, with their marks. */
+/** The frames of the flow on one page, with their marks. */
 export async function listPageFrames(
   options: ListPageFramesOptions,
 ): Promise<FrameListResponse> {

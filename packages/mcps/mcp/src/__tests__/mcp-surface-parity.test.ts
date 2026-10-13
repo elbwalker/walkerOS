@@ -53,7 +53,7 @@ import {
   FRAME_HINT_MARK_SPACE,
   FRAME_HINT_READ_KNOWLEDGE,
   FRAME_HINT_NONE_ON_PAGE,
-  FRAME_HINT_EXTENDS_BASE,
+  FRAME_HINT_FOLLOW_LINKS,
 } from '../tools/frame-manage.js';
 import { featureDenialHint } from '../tools/feature-gate.js';
 import { stubClient } from './support/stub-client.js';
@@ -156,7 +156,7 @@ const FRAME_HINTS: Record<string, string> = {
   MARK_SPACE: FRAME_HINT_MARK_SPACE,
   READ_KNOWLEDGE: FRAME_HINT_READ_KNOWLEDGE,
   NONE_ON_PAGE: FRAME_HINT_NONE_ON_PAGE,
-  EXTENDS_BASE: FRAME_HINT_EXTENDS_BASE,
+  FOLLOW_LINKS: FRAME_HINT_FOLLOW_LINKS,
 };
 
 /**
@@ -519,10 +519,9 @@ function leanFrame(overrides: Partial<FrameLeanWire> = {}): FrameLeanWire {
     id: FRAME_ID,
     projectId: 'proj_1',
     name: 'Cart',
-    parentId: null,
-    placements: [{ id: 'pl_1', rect: { x: 0.1, y: 0.2, w: 0.5, h: 0.3 } }],
+    links: [],
+    variantSetId: null,
     size: { width: 800, height: 400 },
-    extends: null,
     source: {
       kind: 'page',
       key: 'https://shop.example/cart',
@@ -862,11 +861,25 @@ describe('MCP surface parity: frame_manage', () => {
           pageKey: 'https://shop.example/cart',
         },
       ),
-      getVariation: await frameHintKeysFor(
-        { getFrame: async () => fullFrame({ extends: 'frm_base' }) },
+      getWithLinks: await frameHintKeysFor(
+        {
+          getFrame: async () =>
+            fullFrame({
+              links: [
+                {
+                  id: 'lnk_V1StGXR8Z5jdHi6BmyT7K',
+                  frameId: 'frm_shownFrame000000000AB',
+                  x: 0.1,
+                  y: 0.2,
+                  w: 0.5,
+                  h: 0.3,
+                },
+              ],
+            }),
+        },
         { action: 'get', flowId: FLOW_ID, frameId: FRAME_ID },
       ),
-      getBase: await frameHintKeysFor(
+      getWithoutLinks: await frameHintKeysFor(
         { getFrame: async () => fullFrame() },
         { action: 'get', flowId: FLOW_ID, frameId: FRAME_ID },
       ),

@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react';
 import { cx } from '../../cx';
-import type { EventPart } from './tokens';
+import type { EventPart } from '../../codeTokens';
 
 export interface PillProps {
   part: EventPart;

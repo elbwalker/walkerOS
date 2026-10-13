@@ -4078,15 +4078,9 @@ export interface components {
       anchorType: 'tag' | 'page';
       body: string;
     };
-    FramePlacement: {
+    FrameLink: {
       id: string;
-      rect: components['schemas']['PlanRect'];
-      selector?: string;
-      anchor?: {
-        [key: string]: unknown;
-      };
-    };
-    PlanRect: {
+      frameId: string;
       x: number;
       y: number;
       w: number;
@@ -4112,22 +4106,20 @@ export interface components {
       | {
           /** @enum {string} */
           kind: 'image';
-        }
-      | null;
+        };
     Frame: {
       id: string;
       projectId: string;
       name: string;
-      parentId: string | null;
-      placements: components['schemas']['FramePlacement'][];
       size: components['schemas']['PlanSize'];
       marks: {
         [key: string]: unknown;
       };
-      extends: string | null;
       source: components['schemas']['FrameSource'];
       /** @enum {string} */
       origin: 'drawn' | 'imported' | 'observed';
+      links: components['schemas']['FrameLink'][];
+      variantSetId: string | null;
       flowId: string;
       screenshot: components['schemas']['FrameScreenshot'] | null;
       markupAssetId: string | null;
@@ -4151,17 +4143,22 @@ export interface components {
       dpr: number;
       capturedRect: components['schemas']['PlanRect'];
     };
+    PlanRect: {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+    };
     FrameLean: {
       id: string;
       projectId: string;
       name: string;
-      parentId: string | null;
-      placements: components['schemas']['FramePlacement'][];
       size: components['schemas']['PlanSize'];
-      extends: string | null;
       source: components['schemas']['FrameSource'];
       /** @enum {string} */
       origin: 'drawn' | 'imported' | 'observed';
+      links: components['schemas']['FrameLink'][];
+      variantSetId: string | null;
       flowId: string;
       screenshot: components['schemas']['FrameScreenshot'] | null;
       markupAssetId: string | null;

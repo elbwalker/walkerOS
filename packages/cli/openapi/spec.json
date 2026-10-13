@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "4.7.0+2098429d",
+    "version": "4.7.0+88043196",
     "contact": {
       "name": "elbwalker",
       "url": "https://www.elbwalker.com"
@@ -6295,30 +6295,17 @@
           "body"
         ]
       },
-      "FramePlacement": {
+      "FrameLink": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^pl_[A-Za-z0-9_-]{21}$"
+            "pattern": "^lnk_[A-Za-z0-9_-]{21}$"
           },
-          "rect": {
-            "$ref": "#/components/schemas/PlanRect"
-          },
-          "selector": {
+          "frameId": {
             "type": "string",
-            "maxLength": 2048
+            "pattern": "^frm_[A-Za-z0-9_-]{21}$"
           },
-          "anchor": {
-            "type": "object",
-            "additionalProperties": {}
-          }
-        },
-        "required": ["id", "rect"]
-      },
-      "PlanRect": {
-        "type": "object",
-        "properties": {
           "x": {
             "type": "number"
           },
@@ -6326,13 +6313,16 @@
             "type": "number"
           },
           "w": {
-            "type": "number"
+            "type": "number",
+            "exclusiveMinimum": 0
           },
           "h": {
-            "type": "number"
+            "type": "number",
+            "exclusiveMinimum": 0
           }
         },
-        "required": ["x", "y", "w", "h"]
+        "required": ["id", "frameId", "x", "y", "w", "h"],
+        "additionalProperties": false
       },
       "PlanSize": {
         "type": "object",
@@ -6399,9 +6389,6 @@
               }
             },
             "required": ["kind"]
-          },
-          {
-            "type": "null"
           }
         ]
       },
@@ -6418,15 +6405,6 @@
           "name": {
             "type": "string"
           },
-          "parentId": {
-            "type": ["string", "null"]
-          },
-          "placements": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FramePlacement"
-            }
-          },
           "size": {
             "$ref": "#/components/schemas/PlanSize"
           },
@@ -6434,15 +6412,21 @@
             "type": "object",
             "additionalProperties": {}
           },
-          "extends": {
-            "type": ["string", "null"]
-          },
           "source": {
             "$ref": "#/components/schemas/FrameSource"
           },
           "origin": {
             "type": "string",
             "enum": ["drawn", "imported", "observed"]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FrameLink"
+            }
+          },
+          "variantSetId": {
+            "type": ["string", "null"]
           },
           "flowId": {
             "type": "string",
@@ -6494,13 +6478,12 @@
           "id",
           "projectId",
           "name",
-          "parentId",
-          "placements",
           "size",
           "marks",
-          "extends",
           "source",
           "origin",
+          "links",
+          "variantSetId",
           "flowId",
           "screenshot",
           "markupAssetId",
@@ -6537,6 +6520,24 @@
         },
         "required": ["assetId", "capturedAt", "size", "dpr", "capturedRect"]
       },
+      "PlanRect": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "w": {
+            "type": "number"
+          },
+          "h": {
+            "type": "number"
+          }
+        },
+        "required": ["x", "y", "w", "h"]
+      },
       "FrameLean": {
         "type": "object",
         "properties": {
@@ -6550,20 +6551,8 @@
           "name": {
             "type": "string"
           },
-          "parentId": {
-            "type": ["string", "null"]
-          },
-          "placements": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FramePlacement"
-            }
-          },
           "size": {
             "$ref": "#/components/schemas/PlanSize"
-          },
-          "extends": {
-            "type": ["string", "null"]
           },
           "source": {
             "$ref": "#/components/schemas/FrameSource"
@@ -6571,6 +6560,15 @@
           "origin": {
             "type": "string",
             "enum": ["drawn", "imported", "observed"]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FrameLink"
+            }
+          },
+          "variantSetId": {
+            "type": ["string", "null"]
           },
           "flowId": {
             "type": "string",
@@ -6622,12 +6620,11 @@
           "id",
           "projectId",
           "name",
-          "parentId",
-          "placements",
           "size",
-          "extends",
           "source",
           "origin",
+          "links",
+          "variantSetId",
           "flowId",
           "screenshot",
           "markupAssetId",

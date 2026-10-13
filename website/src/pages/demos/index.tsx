@@ -25,7 +25,8 @@ export default function DemosPage(): JSX.Element {
                 Each page is a working website, tagged with walkerOS{' '}
                 <code>data-elb</code> attributes. Use the bookmarks to switch
                 between the shop and the media site, and click Code on a section
-                or a card to see the attributes behind it.
+                or a card to see the attributes behind it. Every event the page
+                sends is listed below it.
               </>
             }
           />

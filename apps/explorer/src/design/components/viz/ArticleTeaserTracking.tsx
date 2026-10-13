@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, type HTMLAttributes } from 'react';
 import { cx } from '../cx';
+import { CodeTokens } from '../atoms/CodeTokens';
 import { EventLegend } from '../atoms/EventLegend';
 import { PhotoPlaceholder } from '../atoms/PhotoPlaceholder';
 import {
@@ -17,7 +18,7 @@ import {
   type TeaserPage,
   type TeaserStep,
 } from './data/article-teaser';
-import { CodeLine, CodeTokens } from './parts/CodeTokens';
+import { CodeLine } from './parts/CodeLine';
 import { useInView, useReducedMotion } from './parts/hooks';
 import { Pill } from './parts/Pill';
 import { VizFrame } from './parts/VizFrame';

@@ -64,6 +64,41 @@ describe('frames programmatic API', () => {
     ).rejects.toMatchObject({ code, message });
   });
 
+  it.each([
+    ['listFrames', () => listFrames({ projectId: 'proj_1', flowId: 'flow_1' })],
+    [
+      'listPageFrames',
+      () =>
+        listPageFrames({
+          projectId: 'proj_1',
+          flowId: 'flow_1',
+          pageKey: 'https://shop.example/cart',
+        }),
+    ],
+    [
+      'getFrame',
+      () =>
+        getFrame({
+          projectId: 'proj_1',
+          flowId: 'flow_1',
+          frameId: 'frm_V1StGXR8Z5jdHi6BmyT7K',
+        }),
+    ],
+  ])(
+    '%s throws CLIENT_OUTDATED with the wire message, never an empty read',
+    async (_name, read) => {
+      const message = 'This client is too old for this endpoint. Upgrade it.';
+      mockApiFetch.mockResolvedValue(
+        ok({ error: { code: 'CLIENT_OUTDATED', message } }, 426),
+      );
+      await expect(read()).rejects.toMatchObject({
+        code: 'CLIENT_OUTDATED',
+        message,
+        status: 426,
+      });
+    },
+  );
+
   it('surfaces FEATURE_NOT_AVAILABLE naming frames', async () => {
     mockApiFetch.mockResolvedValue(
       ok(

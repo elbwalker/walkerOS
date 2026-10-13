@@ -1,6 +1,7 @@
 // Design atoms (@walkeros/explorer/design/components). Namespaced, as their
 // file names repeat explorer's own atoms (button).
 @use './button' as design-button;
+@use './code-tokens' as design-code-tokens;
 @use './inline-code' as design-inline-code;
 @use './event-legend' as design-event-legend;
 @use './icon' as design-icon;

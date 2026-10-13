@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBaseUrlUtils } from '@docusaurus/useBaseUrl';
 import useIsBrowser from '@docusaurus/useIsBrowser';
+import type { WalkerOS } from '@walkeros/core';
 import {
   BrowserFrame,
   Button,
+  EventLog,
   Icon,
   type BrowserBookmark,
+  type EventLogRecord,
 } from '@walkeros/explorer/design/components';
 
 /** The demo pages: static files the website build copies in, not routes. */
@@ -34,7 +37,38 @@ const LOAD_TIMEOUT_MS = 10_000;
 
 type Status = 'loading' | 'loaded' | 'failed';
 
-/** The demo site in a browser window; the bookmarks switch between demos. */
+/** The log keeps this many events, the newest. */
+const LOG_CAP = 200;
+
+/**
+ * Adds a destination to the demo page's own walkerOS that hands every event to
+ * `onEvent`; the collector first replays to it the events the page sent before.
+ * The demo page shares this site's origin, so its `elb` is in reach: the queue
+ * until walker.js runs, its push after. False when the page has no `elb`.
+ */
+function readEvents(
+  frame: HTMLIFrameElement,
+  onEvent: (event: WalkerOS.Event) => void,
+): boolean {
+  const elb = frame.contentWindow?.elb;
+  if (typeof elb !== 'function') return false;
+  void elb('walker destination', {
+    code: {
+      type: 'demos-page',
+      config: {},
+      // A copy: the log outlives the page the event object belongs to.
+      push: (event: WalkerOS.Event) => {
+        onEvent(structuredClone(event));
+      },
+    },
+  });
+  return true;
+}
+
+/**
+ * The demo site in a browser window, with the events it sends listed below;
+ * the bookmarks switch between demos.
+ */
 export function DemoFrame() {
   const bookmarks = useDemoBookmarks();
   const [url, setUrl] = useState(bookmarks[0].url);
@@ -59,27 +93,60 @@ export function DemoFrame() {
 
   const reload = () => setAttempt((n) => n + 1);
 
+  // The log lives through reloads and demo switches, until Clear.
+  const [records, setRecords] = useState<EventLogRecord[]>([]);
+  // Null follows the newest event.
+  const [selectedSeq, setSelectedSeq] = useState<number | null>(null);
+  const [readable, setReadable] = useState(true);
+  const lastSeq = useRef(0);
+
+  const record = useCallback((event: WalkerOS.Event) => {
+    lastSeq.current += 1;
+    const next: EventLogRecord = { seq: lastSeq.current, event };
+    setRecords((current) => [...current, next].slice(-LOG_CAP));
+  }, []);
+
+  const clear = () => {
+    lastSeq.current = 0;
+    setRecords([]);
+    setSelectedSeq(null);
+  };
+
   return (
-    <BrowserFrame
-      url={url}
-      bookmarks={bookmarks}
-      onNavigate={setUrl}
-      onReload={reload}
-      className="h-[min(80vh,900px)] w-full"
-    >
-      {status === 'failed' ? (
-        <FailedNotice onRetry={reload} />
-      ) : (
-        isBrowser && (
-          <iframe
-            key={`${url}#${attempt}`}
-            src={demo.src}
-            title="walkerOS demo"
-            onLoad={() => setStatus('loaded')}
-          />
-        )
-      )}
-    </BrowserFrame>
+    <div className="flex flex-col gap-4">
+      <BrowserFrame
+        url={url}
+        bookmarks={bookmarks}
+        onNavigate={setUrl}
+        onReload={reload}
+        className="h-[min(50vh,640px)] w-full"
+      >
+        {status === 'failed' ? (
+          <FailedNotice onRetry={reload} />
+        ) : (
+          isBrowser && (
+            <iframe
+              key={`${url}#${attempt}`}
+              src={demo.src}
+              title="walkerOS demo"
+              // Fires for every page the frame loads, a persona switch too.
+              onLoad={(event) => {
+                setStatus('loaded');
+                setReadable(readEvents(event.currentTarget, record));
+              }}
+            />
+          )
+        )}
+      </BrowserFrame>
+      <EventLog
+        records={records}
+        selectedSeq={selectedSeq}
+        onSelect={setSelectedSeq}
+        onClear={clear}
+        emptyText={readable ? undefined : "The demo's events can't be read."}
+        className="h-[min(40vh,480px)] w-full"
+      />
+    </div>
   );
 }
 

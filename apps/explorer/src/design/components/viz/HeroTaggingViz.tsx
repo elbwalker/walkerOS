@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, type HTMLAttributes } from 'react';
 import { cx } from '../cx';
+import { CodeTokens } from '../atoms/CodeTokens';
 import { HERO_START, heroFrame } from './data/hero';
-import { CodeLine, CodeTokens } from './parts/CodeTokens';
+import { CodeLine } from './parts/CodeLine';
 import { EventsTable } from './parts/EventsTable';
 import { useInView, useReducedMotion } from './parts/hooks';
 import { Pill } from './parts/Pill';

@@ -333,11 +333,13 @@ export interface PlanRectWire {
   h: number;
 }
 
-export interface FramePlacementWire {
+/**
+ * One frame shown on another: the rectangle it takes, in fractions of the
+ * frame that shows it, and the id of the frame shown there.
+ */
+export interface FrameLinkWire extends PlanRectWire {
   id: string;
-  rect: PlanRectWire;
-  selector?: string;
-  anchor?: Record<string, unknown>;
+  frameId: string;
 }
 
 export type FrameSourceWire =
@@ -357,12 +359,13 @@ export interface FrameLeanWire {
   id: string;
   projectId: string;
   name: string;
-  parentId: string | null;
-  placements: FramePlacementWire[];
   size: PlanSizeWire;
-  extends: string | null;
-  source: FrameSourceWire | null;
+  source: FrameSourceWire;
   origin: 'drawn' | 'imported' | 'observed';
+  /** The frames this one shows, in paint order. */
+  links: FrameLinkWire[];
+  /** The group the frame shares with its variants, null for a frame with none. */
+  variantSetId: string | null;
   flowId: string;
   screenshot: FrameScreenshotWire | null;
   version: number;

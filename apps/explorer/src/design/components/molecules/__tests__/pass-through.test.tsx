@@ -2,6 +2,7 @@ import React, { type ReactElement } from 'react';
 import { BrowserFrame } from '../BrowserFrame';
 import { CaseCard } from '../CaseCard';
 import { CheckList } from '../CheckList';
+import { EventLog } from '../EventLog';
 import { FaqItem } from '../FaqItem';
 import { FeatureItem } from '../FeatureItem';
 import { HighlightCard } from '../HighlightCard';
@@ -27,6 +28,7 @@ it.each<[string, ReactElement, string]>([
     </BrowserFrame>,
     'div',
   ],
+  ['EventLog', <EventLog records={[]} {...PROBE} />, 'div'],
   ['SectionHeading', <SectionHeading title="T" {...PROBE} />, 'div'],
   [
     'ProblemCard',

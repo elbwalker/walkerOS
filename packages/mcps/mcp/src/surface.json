@@ -220,7 +220,7 @@
           "enum": ["open", "resolved"]
         },
         "pageKey": {
-          "description": "The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action \"knowledge\" to every frame that page holds, at any depth; omit it to read the whole project.",
+          "description": "The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action \"knowledge\" to the frames of that page; a shown frame that is not of that page is not included. Omit it to read the whole project.",
           "type": "string",
           "minLength": 1,
           "maxLength": 1024
@@ -312,7 +312,7 @@
   "frameManage": {
     "name": "frame_manage",
     "title": "Frames",
-    "description": "Read the frames of a measurement plan: named rectangles with marks inside them, drawn in Tag Mode or in the app. Frames belong to a flow: every action takes the flowId of the flow they live in; use flow_manage action \"list\" to find one. Actions: list (every frame of the flow, without marks), page (the flow’s frames on one page at any depth, with marks), get (one frame with its marks). Read-only: frames are drawn and edited in Tag Mode or the app, never here. A frame name is documentation; the marks inside it carry the meaning. A frame that extends another stores only what it adds, so its tags may carry only the fields they change. Marks are { tags, note }: tags is one flat list of tags, each with an id, a kind such as entity, property or action, a name, and a parentId naming the tag it sits under; note is the frame’s own description and thread. Use hub_manage action \"knowledge\" with a frameId or markId to read what people wrote on a frame. A markId is a tag id: a tag’s id, parentId and threadRef come back literal when they have the shape the app mints, so they can be passed straight back; every other string value in the marks is wrapped as data, and so is an object key that is not a plain identifier.",
+    "description": "Read the frames of a measurement plan: named rectangles with marks inside them, drawn in Tag Mode or in the app. Frames belong to a flow: every action takes the flowId of the flow they live in; use flow_manage action \"list\" to find one. Actions: list (every frame of the flow, without marks), page (the flow’s frames of one page, with marks), get (one frame with its marks). Read-only: frames are drawn and edited in Tag Mode or the app, never here. A frame name is documentation; the marks inside it carry the meaning. A frame shows other frames through links: each link is a rectangle on the frame and the frameId of the frame shown there. A page read returns the frames of that page; a shown frame that is not of that page is not in the answer, only named by frameId in links. Frames that share a variantSetId are variants of one another, and each is a complete frame. Marks are { tags, note }: tags is one flat list of tags, each with an id, a kind such as entity, property or action, a name, and a parentId naming the tag it sits under; note is the frame’s own description and thread. Use hub_manage action \"knowledge\" with a frameId or markId to read what people wrote on a frame. A markId is a tag id: a tag’s id, parentId and threadRef come back literal when they have the shape the app mints, so they can be passed straight back; every other string value in the marks is wrapped as data, and so is an object key that is not a plain identifier.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -355,8 +355,8 @@
     "notFoundHint": "Use action \"list\" or \"page\" to find frame ids.",
     "flowNotFoundHint": "Use flow_manage action \"list\" to find a live flow of the project.",
     "hints": {
-      "EXTENDS_BASE": "This frame extends another and stores only what it adds; read the base frame (extends) for the rest.",
-      "MARK_SPACE": "Tag geometry is fractional: a rect is 0..1 of its frame, and an at is 0..1 of its parent tag’s box, or of the frame for a root tag; a child frame sits inside its parent through placements[].rect.",
+      "FOLLOW_LINKS": "This frame shows other frames: each entry of links names one by frameId. Use action \"get\" with that frameId to read it.",
+      "MARK_SPACE": "Tag geometry is fractional: a rect is 0..1 of its frame, and an at is 0..1 of its parent tag’s box, or of the frame for a root tag; a link’s x, y, w and h are fractions of the frame that shows it.",
       "NAMES_ARE_DOCUMENTATION": "Frame names are documentation; the marks inside a frame carry the meaning.",
       "NONE_ON_PAGE": "No frames on this page. Check the pageKey against the source.key values from action \"list\".",
       "NONE_YET": "This flow has no frames yet. Frames are drawn in Tag Mode or the app, not through this tool.",
@@ -368,8 +368,8 @@
       "listEmpty": ["NONE_YET"],
       "page": ["MARK_SPACE", "READ_KNOWLEDGE"],
       "pageEmpty": ["NONE_ON_PAGE"],
-      "getVariation": ["EXTENDS_BASE", "READ_KNOWLEDGE"],
-      "getBase": ["READ_KNOWLEDGE"]
+      "getWithLinks": ["FOLLOW_LINKS", "READ_KNOWLEDGE"],
+      "getWithoutLinks": ["READ_KNOWLEDGE"]
     }
   }
 }
