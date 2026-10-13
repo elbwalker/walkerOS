@@ -195,7 +195,8 @@ export function DemoFrame() {
             </button>
           )
         }
-        className="h-[min(60vh,720px)] w-full"
+        // At least 640px: Tag Mode's tray has to fit below the two bars.
+        className="h-[clamp(640px,70vh,800px)] w-full"
       >
         {status === 'failed' ? (
           <FailedNotice onRetry={reload} />
