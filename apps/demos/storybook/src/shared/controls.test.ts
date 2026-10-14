@@ -1,8 +1,7 @@
-import type { SourceBrowser } from '@walkeros/web-source-browser';
-import { elbAtApplyFrom } from './controls';
+import { elbAtApplyFrom, type PageElb } from './controls';
 
 test('looks the elb up at each call, not when made', async () => {
-  let running: SourceBrowser.Push | undefined = undefined;
+  let running: PageElb | undefined = undefined;
   const elb = elbAtApplyFrom(() => running);
 
   expect(await elb('walker init', document.body)).toStrictEqual({

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "walkerOS Tag Manager API",
-    "version": "4.7.0+88043196",
+    "version": "4.7.0+9c4b69f0",
     "contact": {
       "name": "elbwalker",
       "url": "https://www.elbwalker.com"
@@ -6428,6 +6428,12 @@
           "variantSetId": {
             "type": ["string", "null"]
           },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "flowId": {
             "type": "string",
             "pattern": "^flow_[a-zA-Z0-9_-]+$"
@@ -6484,6 +6490,7 @@
           "origin",
           "links",
           "variantSetId",
+          "labels",
           "flowId",
           "screenshot",
           "markupAssetId",
@@ -6570,6 +6577,12 @@
           "variantSetId": {
             "type": ["string", "null"]
           },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "flowId": {
             "type": "string",
             "pattern": "^flow_[a-zA-Z0-9_-]+$"
@@ -6625,6 +6638,7 @@
           "origin",
           "links",
           "variantSetId",
+          "labels",
           "flowId",
           "screenshot",
           "markupAssetId",

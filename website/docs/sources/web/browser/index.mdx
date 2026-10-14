@@ -44,8 +44,8 @@ import { sourceSession } from '@walkeros/web-source-session';
 
 const { collector, elb } = await startFlow({
   sources: {
-    browser: sourceBrowser,
-    session: sourceSession, // Add for session tracking
+    browser: { code: sourceBrowser },
+    session: { code: sourceSession }, // Add for session tracking
   },
 });`}
   language="typescript"
@@ -82,24 +82,25 @@ Add to your `flow.json` sources:
 
 ## Enhanced elb
 
-The browser source returns an enhanced `elb` function with additional features:
+With a browser source in `sources`, the `elb` that `startFlow` returns is the
+browser source's own, and the source installs it as `window.elb` as well. It
+takes the same [partial event](/docs/getting-started/event-model#push-an-event)
+as the collector's `elb`:
 
 <CodeSnippet
-  code={`// Collector elb: Basic event tracking
-collector.push('product view', { id: 'P123' });
+  code={`// The event also gets source.url, source.referrer and the page's globals
+await elb({ name: 'product view', data: { id: 'P123' } });
 
-// Browser source elb: Enhanced with DOM commands
-elb('walker init', document.querySelector('#app'));
-elb('product view', { id: 'P123' }); // Also tracks events`}
+// A DOM command: register tagged elements added after the page loaded
+await elb('walker init', document.querySelector('#app'));`}
   language="typescript"
 />
 
 **Browser source elb adds:**
 
+* **Page context**: the tagged globals on every event, plus `source.url` and `source.referrer` unless the event brings its own `source`
 * **DOM commands**: `walker init` for asynchronous DOM element loading
-* **Flexible arguments**: support for multiple argument patterns
 * **elbLayer integration**: automatic processing of queued commands
-* **Element parameters**: support for element parameters in commands
 
 See [Commands](/docs/sources/web/browser/commands) for complete API documentation.
 

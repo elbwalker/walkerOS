@@ -530,6 +530,36 @@ export function findCloudCalloutIssues(content: string): BoundaryFinding[] {
     : [];
 }
 
+// Events are taught in one form: `elb` takes a partial event,
+// `elb({ name: 'entity action', data })`. A quoted "entity action" string as the
+// first argument is the string form; `walker` commands keep their string name.
+// The match spans line breaks so a call split over lines is found too.
+export function findElbStringEventIssues(content: string): BoundaryFinding[] {
+  const findings: BoundaryFinding[] = [];
+  const re = /\belb\(\s*(['"`])(?!walker )([^'"`\n]+ [^'"`\n]*)\1/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content)) !== null) {
+    findings.push({
+      line: content.slice(0, m.index).split('\n').length,
+      message: `elb event "${m[2]}" uses the string form: pass a partial event, elb({ name: '${m[2]}', data })`,
+    });
+  }
+  return findings;
+}
+
+function checkElbEventForm(file: string, content: string): void {
+  // Migration guides may quote the form a version transition replaced.
+  if (/website\/docs\/migrat(e|ing)\//.test(file)) return;
+  for (const f of findElbStringEventIssues(content)) {
+    issues.push({
+      file: relative(ROOT, file),
+      line: f.line,
+      severity: 'error',
+      message: f.message,
+    });
+  }
+}
+
 function checkBoundaryRegister(): void {
   const scopeGlobs = [
     'website/docs/getting-started/**/*.mdx',
@@ -599,8 +629,8 @@ function checkFirstEventSnippet(): void {
   const normalize = (s: string): string =>
     s.replace(/["']/g, "'").replace(/\s+/g, ' ').trim();
 
-  // Extract the event name from `elb('page view', ...)` in the source.
-  const eventMatch = source.match(/elb\(\s*['"]([^'"]+)['"]/);
+  // Extract the event name from `elb({ name: 'page view', ... })` in the source.
+  const eventMatch = source.match(/elb\(\s*\{\s*name:\s*['"]([^'"]+)['"]/);
   // Extract the console.log message literal from `console.log('Event:', ...)`.
   const logMatch = source.match(/console\.log\(\s*['"]([^'"]+)['"]/);
 
@@ -621,7 +651,7 @@ function checkFirstEventSnippet(): void {
   const requiredTokens = [
     normalize("type: 'console'"),
     normalize(`console.log('${logMessage}', event.name)`),
-    normalize(`elb('${eventName}'`),
+    normalize(`elb({ name: '${eventName}'`),
   ];
 
   const docFiles = [
@@ -780,10 +810,10 @@ function checkGa4MappingSnippet(): void {
   const eventName = nameMatch[1]; // e.g. "add_to_cart"
 
   // Extract the product id from the source's push input
-  // (`elb('product add', { id: 'ers', ... })`) so the pinned push snippet stays
-  // derived from the verified source rather than hardcoded.
+  // (`elb({ name: 'product add', data: { id: 'ers', ... } })`) so the pinned
+  // push snippet stays derived from the verified source rather than hardcoded.
   const idMatch = source.match(
-    /elb\(\s*['"]product add['"]\s*,\s*\{\s*id:\s*['"]([^'"]+)['"]/,
+    /elb\(\s*\{\s*name:\s*['"]product add['"]\s*,\s*data:\s*\{\s*id:\s*['"]([^'"]+)['"]/,
   );
   if (!idMatch) {
     issues.push({
@@ -804,7 +834,7 @@ function checkGa4MappingSnippet(): void {
     normalize("item_id: 'data.id'"),
     normalize("item_name: 'data.name'"),
     normalize("value: 'data.price'"),
-    normalize(`elb('product add', { id: '${productId}'`),
+    normalize(`elb({ name: 'product add', data: { id: '${productId}'`),
   ];
 
   // Defensive: the source itself must carry every required token, otherwise the
@@ -1135,7 +1165,17 @@ async function main() {
     checkLegacyPatterns(file, content);
     checkDomainRefs(file, content);
     checkReadmeStructure(file, content);
+    checkElbEventForm(file, content);
   }
+  // The elb event form also binds the root and app READMEs, which the
+  // package-README structure checks above do not cover.
+  const readmes = await glob(['README.md', 'apps/**/README.md'], {
+    cwd: ROOT,
+    ignore: ['**/node_modules/**', '**/dist/**'],
+    absolute: true,
+  });
+  for (const file of readmes)
+    checkElbEventForm(file, readFileSync(file, 'utf-8'));
 
   checkBundledSnippets();
   checkFirstEventSnippet();

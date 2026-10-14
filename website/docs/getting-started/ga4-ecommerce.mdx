@@ -43,7 +43,7 @@ const { elb } = await startFlow({
   },
 });
 
-await elb('page view', { title: 'Home' });
+await elb({ name: 'page view', data: { title: 'Home' } });
 // -> logs: Event: page view`}
   language="javascript"
 />
@@ -70,7 +70,7 @@ const { elb } = await startFlow({
   },
 });
 
-await elb('page view', { title: 'Home' });`}
+await elb({ name: 'page view', data: { title: 'Home' } });`}
   language="typescript"
 />
 
@@ -114,7 +114,10 @@ is shaped into a GA4 `items` array via a `this` loop:
 Pushing a `product add` event:
 
 <CodeSnippet
-  code={`elb('product add', { id: 'ers', name: 'Everyday Ruck Snack', price: 420 });`}
+  code={`elb({
+  name: 'product add',
+  data: { id: 'ers', name: 'Everyday Ruck Snack', price: 420 },
+});`}
   language="typescript"
 />
 

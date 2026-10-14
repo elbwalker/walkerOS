@@ -32,7 +32,7 @@
       <button data-elbaction="click:add">Add to cart</button>
     </section>
 
-    <button onclick="elb('order complete', { total: 42 })">Checkout</button>
+    <button onclick="elb({ name: 'order complete', data: { total: 42 } })">Checkout</button>
 
     <h2>dataLayer pushes</h2>
     <pre id="pushes"></pre>

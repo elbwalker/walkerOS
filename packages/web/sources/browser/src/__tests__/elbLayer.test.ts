@@ -1,5 +1,5 @@
 import { createPushResult } from '@walkeros/collector';
-import { isObject, isString } from '@walkeros/core';
+import { isObject, isString, createMockLogger } from '@walkeros/core';
 import type { Elb } from '@walkeros/core';
 import { createElbLayer } from '../elbLayer';
 import { createRegistry } from '../trigger';
@@ -44,6 +44,7 @@ const makeHarness = () => {
     push: elb,
     settings: settings(),
     registry: createRegistry(),
+    logger: createMockLogger(),
     initScope,
   };
 

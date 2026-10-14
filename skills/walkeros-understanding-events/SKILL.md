@@ -209,20 +209,31 @@ Transformation to vendor formats happens in **mapping**, not in event creation.
 
 ## Creating Events
 
+`elb` takes a partial event: `name` is required, every other field is optional.
+The collector adds `id`, `timestamp`, `entity`, `action` and `source`, and
+merges its own `globals`, `user` and `consent` key by key (the event's values
+win).
+
 ```typescript
-import { elb } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 
-// Basic event
-await elb('page view', { title: 'Home', path: '/' });
+const { elb } = await startFlow({
+  /* destinations */
+});
 
-// With all properties
-await elb(
-  'product add',
-  { id: 'P123', price: 99 }, // data
-  { stage: ['cart', 1] }, // context (optional)
-  { currency: 'USD' }, // globals (optional)
-);
+const result = await elb({
+  name: 'product add',
+  data: { id: 'P123', price: 99 },
+  context: { stage: ['cart', 1] },
+  globals: { currency: 'USD' },
+});
+
+// A rejected event reaches no destination, e.g. 'Event name is invalid'
+if (!result.ok) console.error(result.error);
 ```
+
+Every event uses this partial event form. `walker` commands keep their string
+name: `elb('walker consent', { marketing: true })`.
 
 ## Related Skills
 

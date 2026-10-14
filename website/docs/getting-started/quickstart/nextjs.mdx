@@ -177,7 +177,11 @@ function ProductPage({ product }: { product: { id: number; name: string } }) {
         .get()}
     >
       <h1>{product.name}</h1>
-      <button onClick={() => window.elb('product add', { id: product.id })}>
+      <button
+        onClick={() =>
+          window.elb({ name: 'product add', data: { id: product.id } })
+        }
+      >
         Add to Cart
       </button>
     </div>

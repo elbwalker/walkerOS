@@ -47,9 +47,10 @@ const LOG_CAP = 200;
  * demonstration only on `origins`, and does nothing anywhere else.
  */
 const TAG_MODE = {
-  // The stage copy. Production's file and base
-  // (https://cdn.walkeros.io/tag-mode/) go in before a release.
-  file: '4ZKXq-UCwGU5zUPzIulyqfN0ZVOpiYrmGk17PJxEFuoki3qGFbGjyFuW7o3_McBL',
+  // The stage copy. Before a release only `base` changes, to
+  // https://cdn.walkeros.io/tag-mode/: production runs the build stage ran,
+  // so the file keeps its name there.
+  file: 'SPwvtoe6zx3P8I5OGG4g4CNWmgdQzHHL-E_-TbzmJOiIp80CngpYbz5pKOhSn9FL',
   base: 'https://stage.cdn.walkeros.io/tag-mode/',
   origins: ['https://www.walkeros.io', 'https://walkeros.io'],
 };

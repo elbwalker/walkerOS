@@ -1,5 +1,5 @@
 ---
-'@walkeros/mcp': minor
+'@walkeros/mcp': patch
 '@walkeros/cli': patch
 ---
 

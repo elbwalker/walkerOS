@@ -54,4 +54,5 @@ export {
   transformerInit,
 } from './transformer';
 export { wrapEnv } from './wrapEnv';
+export { ELB_IGNORED_ARGUMENTS } from './elb';
 export { getCacheStore } from './cache';

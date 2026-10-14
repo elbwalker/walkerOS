@@ -1,4 +1,5 @@
 import type { Elb } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import type { Context, Registry } from '../types';
 import {
   initVisibilityTracking,
@@ -30,6 +31,7 @@ const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
     elbLayer: false,
   },
   registry,
+  logger: createMockLogger(),
 });
 
 // A single `await Promise.resolve()` advances the microtask queue by exactly one
@@ -317,6 +319,7 @@ describe('triggerVisible', () => {
         elbLayer: false,
       },
       registry,
+      logger: createMockLogger(),
     });
 
     test('3a observes and fires a sub-scope element via the shared per-document observer', async () => {

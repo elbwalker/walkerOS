@@ -219,7 +219,7 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
   code={`// Old
 dataLayer.push({ event: 'purchase', value: 99.99 });
 // New
-elb('order complete', { total: 99.99 });`}
+elb({ name: 'order complete', data: { total: 99.99 } });`}
   language="typescript"
 />
 

@@ -1,5 +1,5 @@
 import type { Elb } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
+import { isObject, createMockLogger } from '@walkeros/core';
 import type { Context, Registry, Settings } from '../types';
 import {
   createRegistry,
@@ -61,6 +61,7 @@ describe('Trigger System', () => {
     push: mockElb,
     settings: createTestSettings(prefix),
     registry,
+    logger: createMockLogger(),
   });
 
   beforeEach(() => {
@@ -162,7 +163,13 @@ describe('Trigger System', () => {
     };
 
     await handleTrigger(
-      { elb: mockElb, push: mockElb, settings: testSettings, registry },
+      {
+        elb: mockElb,
+        push: mockElb,
+        settings: testSettings,
+        registry,
+        logger: createMockLogger(),
+      },
       element,
       Triggers.Click,
     );
@@ -520,6 +527,7 @@ describe('Trigger System', () => {
         push: mockElb,
         settings: rootSettings,
         registry,
+        logger: createMockLogger(),
       };
       initGlobalTrigger(rootContext);
 
@@ -534,6 +542,7 @@ describe('Trigger System', () => {
         push: mockElb,
         settings: containerSettings,
         registry,
+        logger: createMockLogger(),
       };
       initScopeTrigger(containerContext);
 
@@ -658,6 +667,7 @@ describe('Trigger System', () => {
         push: mockElb,
         settings,
         registry,
+        logger: createMockLogger(),
       };
 
       initScopeTrigger(context);

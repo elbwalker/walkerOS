@@ -106,26 +106,19 @@ export async function testMapping(): Promise<MappingTestResult> {
   });
 
   // Event without mapping
-  await elb('page view', { title: 'Home Page' });
+  await elb({ name: 'page view', data: { title: 'Home Page' } });
 
   // Product view mapped to view_item
-  await elb('product view', {
-    id: 'P123',
-    name: 'Premium Laptop',
-    price: 999.99,
+  await elb({
+    name: 'product view',
+    data: { id: 'P123', name: 'Premium Laptop', price: 999.99 },
   });
 
   // Product add mapped to add_to_cart
-  await elb('product add', {
-    id: 'P123',
-    quantity: 2,
-  });
+  await elb({ name: 'product add', data: { id: 'P123', quantity: 2 } });
 
   // Order complete with calculated tax
-  await elb('order complete', {
-    id: 'ORDER-789',
-    total: 1000,
-  });
+  await elb({ name: 'order complete', data: { id: 'ORDER-789', total: 1000 } });
 
   const { collector } = await startFlow({
     sources: {

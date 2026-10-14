@@ -76,10 +76,9 @@ Track events manually from React components:
 
 ```typescript
 // Track custom event
-window.elb('custom event', {
-  category: 'interaction',
-  action: 'button_click',
-  label: 'cta',
+window.elb({
+  name: 'custom event',
+  data: { category: 'interaction', action: 'button_click', label: 'cta' },
 });
 
 // Update consent

@@ -47,10 +47,9 @@ const edit = `<div data-elb="promotion" data-elbaction="visible:view">
 </div>`;
 
 function elbResolving(result: Elb.PushResult) {
-  return jest.fn<
-    ReturnType<SourceBrowser.BrowserArguments>,
-    Parameters<SourceBrowser.BrowserArguments>
-  >(() => Promise.resolve(result));
+  return jest.fn<Promise<Elb.PushResult>, unknown[]>(() =>
+    Promise.resolve(result),
+  );
 }
 
 type Queries = ReturnType<typeof render>;
@@ -300,17 +299,13 @@ describe('ViewSource', () => {
     ['walker init fails', elbResolving({ ok: false, error: 'not running' })],
     [
       'walker init rejects',
-      jest.fn<
-        ReturnType<SourceBrowser.BrowserArguments>,
-        Parameters<SourceBrowser.BrowserArguments>
-      >(() => Promise.reject(new Error('gone'))),
+      jest.fn<Promise<Elb.PushResult>, unknown[]>(() =>
+        Promise.reject(new Error('gone')),
+      ),
     ],
     [
       'elb throws',
-      jest.fn<
-        ReturnType<SourceBrowser.BrowserArguments>,
-        Parameters<SourceBrowser.BrowserArguments>
-      >(() => {
+      jest.fn<Promise<Elb.PushResult>, unknown[]>(() => {
         throw new Error('broken');
       }),
     ],

@@ -94,9 +94,14 @@ It extracts canonical tokens from the Tier-1 source and asserts the docs
 snippets contain them, tolerating intentional doc simplifications (dropping the
 `seen` capture, arrow `push` instead of a method). `first-event.ts` is pinned on
 the quickstart, integrated-mode, and README pages, plus the GA4 ecommerce page;
-`react.mdx` is pinned shape-only (it has no `elb('page view')` push).
+`react.mdx` is pinned shape-only (it pushes no `page view`).
 
 The doc-lint also runs these structural and coherence checks:
+
+- **elb event form** (docs, skills, READMEs): every event is pushed as a partial
+  event, `elb({ name: 'entity action', data })`. A quoted `"entity action"`
+  string as the first `elb` argument is an error; `walker` commands keep their
+  string name (`elb('walker consent', ...)`).
 
 - **Bundled-snippet platform guard**: every JSON flow with `bundle` carries
   `config.platform` (getting-started, README, flow reference).
@@ -398,6 +403,7 @@ Note: `hints` is a direct export (not `* as`), because it's already a
 ### Content
 
 - [ ] All event names use `"entity action"` format with space
+- [ ] Events are pushed as partial events: `elb({ name, data })`
 - [ ] Flow config shown as primary usage pattern
 - [ ] Examples are complete and copy-pasteable
 - [ ] Includes imports in code examples

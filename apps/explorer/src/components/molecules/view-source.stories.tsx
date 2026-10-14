@@ -24,13 +24,14 @@ type Story = StoryObj<typeof ViewSource>;
 // The Actions panel stands in for the page's walkerOS: it logs the call and
 // accepts it.
 const logInit = action('elb');
+const actionsElb: SourceBrowser.Push = async (...args: unknown[]) => {
+  logInit(...args);
+  return { ok: true };
+};
 
 export const TaggedSample: Story = {
   args: {
-    elb: async (...args: Parameters<SourceBrowser.BrowserArguments>) => {
-      logInit(...args);
-      return { ok: true };
-    },
+    elb: actionsElb,
     children: (
       <section
         data-elb="promotion"

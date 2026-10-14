@@ -1,3 +1,4 @@
+import type { Elb } from '@walkeros/core';
 import type { SourceBrowser } from '@walkeros/web-source-browser';
 import type { DemoConsent } from './consent';
 import type { Language } from './language';
@@ -22,6 +23,12 @@ export interface DemoPageProps {
   controls: DemoControls;
 }
 
+/**
+ * A page global elb as the page holds it: a function the page calls with
+ * whatever arguments it has. The browser source reports the ones it ignores.
+ */
+export type PageElb = (...args: unknown[]) => Promise<Elb.PushResult>;
+
 /** Why a command was not sent: no walkerOS runs on the page (yet). */
 export const notRunning = 'walkerOS is not running.';
 
@@ -32,9 +39,9 @@ export const notRunning = 'walkerOS is not running.';
  * `{ ok: false }` with the reason, which ViewSource shows.
  */
 export function elbAtApplyFrom(
-  getElb: () => SourceBrowser.Push | undefined,
+  getElb: () => PageElb | undefined,
 ): SourceBrowser.Push {
-  return (...args: Parameters<SourceBrowser.BrowserArguments>) => {
+  return (...args: unknown[]) => {
     const elb = getElb();
     return elb
       ? elb(...args)

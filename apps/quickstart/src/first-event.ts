@@ -19,7 +19,7 @@ export async function firstEvent(): Promise<string[]> {
     },
   });
 
-  await elb('page view', { title: 'Home' });
+  await elb({ name: 'page view', data: { title: 'Home' } });
 
   return seen;
 }

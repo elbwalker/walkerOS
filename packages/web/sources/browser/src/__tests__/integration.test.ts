@@ -54,7 +54,11 @@ describe('Browser Source Integration Tests', () => {
 
       // Manually trigger event to test source information addition
       if (elb) {
-        await elb('product view', { id: 123, name: 'Test Product' }, 'load');
+        await elb({
+          name: 'product view',
+          data: { id: 123, name: 'Test Product' },
+          trigger: 'load',
+        });
       }
 
       // Should have processed the event with source information
@@ -137,8 +141,8 @@ describe('Browser Source Integration Tests', () => {
       // Pre-populate elbLayer with commands
       window.elbLayer = [
         ['walker run', { consent: { marketing: true } }],
-        ['page view', { title: 'Home' }, 'load', { url: '/' }],
-        ['product click', { id: '123' }, 'click', { position: 1 }],
+        [{ name: 'page view', data: { title: 'Home' }, trigger: 'load' }],
+        [{ name: 'product click', data: { id: '123' }, trigger: 'click' }],
       ];
 
       // Initialize source - should process existing commands.

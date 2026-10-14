@@ -1,4 +1,5 @@
 import type { Elb } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import type { Settings, Context, Registry } from '../types';
 import { getAllEvents, getEvents, getGlobals } from '../walker';
 import {
@@ -65,6 +66,7 @@ describe('Shadow DOM', () => {
     push: mockElb,
     settings: createTestSettings(prefix),
     registry,
+    logger: createMockLogger(),
   });
 
   beforeEach(() => {

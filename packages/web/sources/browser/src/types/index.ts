@@ -79,7 +79,9 @@ export interface Context {
   // field with a module-level fallback would put the containers back in module
   // scope, which is the state parallel sources must not share.
   registry: Registry;
-  logger?: Logger.Instance;
+  // Required: the ERROR for an ignored `elb` argument goes here, and the
+  // source always has the collector's logger.
+  logger: Logger.Instance;
   // Scope travels in context.settings.scope; the implementation reads it from
   // there. Called with a single, scope-aligned context for `walker init`.
   initScope?: (context: Context) => void;
@@ -171,4 +173,7 @@ export interface Registry {
   // deferred past init (the DOM-ready hook) still fires, so every path that
   // wires, scans or emits reads this first.
   destroyed: boolean;
+  // The event and command names this source reported an ignored `elb`
+  // argument for, so the page sees each name's ERROR once, not on every call.
+  ignoredArguments: Set<string>;
 }

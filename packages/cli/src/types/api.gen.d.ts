@@ -4120,6 +4120,7 @@ export interface components {
       origin: 'drawn' | 'imported' | 'observed';
       links: components['schemas']['FrameLink'][];
       variantSetId: string | null;
+      labels: string[];
       flowId: string;
       screenshot: components['schemas']['FrameScreenshot'] | null;
       markupAssetId: string | null;
@@ -4159,6 +4160,7 @@ export interface components {
       origin: 'drawn' | 'imported' | 'observed';
       links: components['schemas']['FrameLink'][];
       variantSetId: string | null;
+      labels: string[];
       flowId: string;
       screenshot: components['schemas']['FrameScreenshot'] | null;
       markupAssetId: string | null;

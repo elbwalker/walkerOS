@@ -26,8 +26,6 @@ export const pageView: Flow.StepExample = {
         },
         context: {},
         globals: {},
-        nested: undefined,
-        custom: undefined,
         trigger: 'load',
         source: {
           type: 'browser',
@@ -62,8 +60,6 @@ export const routeChange: Flow.StepExample = {
         },
         context: {},
         globals: {},
-        nested: undefined,
-        custom: undefined,
         trigger: 'load',
         source: {
           type: 'browser',
@@ -85,8 +81,6 @@ export const routeChange: Flow.StepExample = {
         },
         context: {},
         globals: {},
-        nested: undefined,
-        custom: undefined,
         trigger: 'load',
         source: {
           type: 'browser',
@@ -205,8 +199,6 @@ export const nestedEntities: Flow.StepExample = {
         },
         context: {},
         globals: {},
-        nested: undefined,
-        custom: undefined,
         trigger: 'load',
         source: {
           type: 'browser',

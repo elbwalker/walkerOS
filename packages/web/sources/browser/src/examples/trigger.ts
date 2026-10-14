@@ -137,6 +137,7 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
         push: flow.collector.push,
         settings: settingsFrom(source.config.settings),
         registry: createRegistry(),
+        logger: flow.collector.logger,
       };
 
       // 7. Call handleTrigger directly, same convergence point as production

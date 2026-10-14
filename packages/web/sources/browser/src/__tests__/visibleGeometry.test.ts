@@ -1,4 +1,5 @@
 import type { Elb } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import type { Context, Registry } from '../types';
 import {
   isEligible,
@@ -190,6 +191,7 @@ const createTestContext = (elb: Elb.Fn, prefix = 'data-elb'): Context => ({
     elbLayer: false,
   },
   registry,
+  logger: createMockLogger(),
 });
 
 // A single `await Promise.resolve()` advances the microtask queue by exactly

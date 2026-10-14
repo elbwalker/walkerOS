@@ -184,7 +184,7 @@ destinations: {
 
 // elb is now browser.push (enhanced with DOM commands)
 // Use elb for manual event tracking
-await elb('product view', { id: 'P123', name: 'Laptop' });`}
+await elb({ name: 'product view', data: { id: 'P123', name: 'Laptop' } });`}
   language="typescript"
 />
 
@@ -194,7 +194,7 @@ await elb('product view', { id: 'P123', name: 'Laptop' });`}
 
 * **With sources**: Returns first source's `push` method (enhanced features)
 * **Multiple sources**: First source is primary by default
-* **No sources**: Returns `collector.push` (basic functionality)
+* **No sources**: Returns the collector's own `elb` (events and walker commands, no DOM commands)
 
 ### Override primary source
 
