@@ -79,9 +79,9 @@ const MEVENTS = [
     ] },
 ];
 const MSHORT = {
-  product: "elb('product view', { id: 'ers', price: 420, currency: 'EUR' })",
-  lead: "elb('lead submit', { type: 'demo', value: 2500, currency: 'EUR' })",
-  order: "elb('order complete', { id: '0rd3r1d', value: 462, currency: 'EUR' })",
+  product: "elb({ name: 'product view', data: { id: 'ers', price: 420, currency: 'EUR' } })",
+  lead: "elb({ name: 'lead submit', data: { type: 'demo', value: 2500, currency: 'EUR' } })",
+  order: "elb({ name: 'order complete', data: { id: '0rd3r1d', value: 462, currency: 'EUR' } })",
 };
 
 function DestinationMappingViz(props) {

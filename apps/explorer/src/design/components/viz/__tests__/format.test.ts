@@ -77,14 +77,16 @@ describe('formatCall', () => {
 });
 
 describe('formatElb', () => {
-  it('prints a flat event as elb(name, data)', () => {
+  it('prints a flat event as a partial event', () => {
     expect(
       formatElb({
         entity: 'product',
         action: 'view',
         data: { id: 'ers', price: 420, currency: 'EUR' },
       }),
-    ).toBe("elb('product view', { id: 'ers', price: 420, currency: 'EUR' })");
+    ).toBe(
+      "elb({ name: 'product view', data: { id: 'ers', price: 420, currency: 'EUR' } })",
+    );
   });
 
   it('prints an event with nested entities as an object, nested abbreviated', () => {
