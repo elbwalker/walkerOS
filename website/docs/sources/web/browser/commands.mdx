@@ -46,7 +46,9 @@ resolves with the [push result](/docs/getting-started/event-model#push-an-event)
 
 Code that can run before the source starts, such as a page script ahead of an
 `async` walker.js, defines this stub first. It queues every call in
-`window.elbLayer`, and the source processes the queue once it starts:
+`window.elbLayer`, and the source processes the queue once it starts. A queued
+call returns nothing; only calls made after the source installed its `elb`
+resolve with the push result:
 
 <CodeSnippet
   code={`function elb() {

@@ -348,8 +348,8 @@ function checkCodeIndentation(): void {
   const expectations: { pattern: RegExp; description: string }[] = [
     { pattern: /^ {2}sources: \{$/, description: '  sources: {' },
     {
-      pattern: /^ {4}browser: sourceBrowser,$/,
-      description: '    browser: sourceBrowser,',
+      pattern: /^ {4}browser: \{ code: sourceBrowser \},$/,
+      description: '    browser: { code: sourceBrowser },',
     },
     { pattern: /^ {2}"browser": \{$/, description: '  "browser": {' },
   ];
