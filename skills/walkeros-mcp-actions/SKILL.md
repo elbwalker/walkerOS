@@ -96,17 +96,25 @@ if (!valid) {
   return `invalid flow: ${[...codes, ...skipped].join(', ')}`;
 }
 
-// 2. Simulate one event through the flow; output is verbose (every destination).
-const sim = await mcp.call('walkeros-flow:flow_simulate', {
-  configPath: 'flow.json',
-  event: 'product add',
-});
-
-// 3. Filter in code: keep only destinations that failed. The model never sees
-//    the full per-destination call dump, only the distilled verdict.
-const failed = Object.entries(sim.structuredContent.destinations)
-  .filter(([, d]) => !d.received)
-  .map(([name]) => name);
+// 2. Simulate one event per destination: `step` names one target step
+//    ("destination.<name>"), and each answer is verbose (every vendor call).
+const destinations = Object.keys(
+  JSON.parse(flow).flows.default.destinations ?? {},
+);
+const failed = [];
+for (const name of destinations) {
+  const sim = await mcp.call('walkeros-flow:flow_simulate', {
+    configPath: 'flow.json',
+    step: `destination.${name}`,
+    event: 'product add',
+  });
+  // 3. Filter in code: keep only destinations that received nothing. The
+  //    model never sees the per-destination call dump, only the verdict.
+  const received = Object.values(sim.structuredContent.destinations ?? {}).some(
+    (d) => d.received,
+  );
+  if (!received) failed.push(name);
+}
 
 // 4. Return one line.
 return failed.length

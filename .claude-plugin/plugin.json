@@ -1,6 +1,6 @@
 {
   "name": "walkeros",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Skills and MCP tools for walkerOS - the open-source event data collection platform. Learn architecture, create sources/destinations/transformers, validate events, bundle flows locally, and manage projects and deployments through the hosted walkerOS MCP server.",
   "author": {
     "name": "elbwalker",
