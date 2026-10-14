@@ -26,26 +26,13 @@ browserSource --> collector
 
 ## elb
 
-The browser source provides an enhanced `elb` function that supports flexible
-argument patterns and browser-specific features.
+The browser source puts its `elb` function on the page. Push an event as a
+[partial event](/docs/getting-started/event-model#push-an-event), and a
+command by its name:
 
 <CodeSnippet
-  code={`// Import from browser source
-import { elb } from '@walkeros/web-source-browser';
-window.elb = elb;
-
-// Or define the elb function manually in the browser
-function elb() {
-(window.elbLayer = window.elbLayer || []).push(arguments);
-}`}
-  language="javascript"
-/>
-
-Usage options:
-
-<CodeSnippet
-  code={`elb("entity action", data, ...);
-elb({name: "entity action", data: { foo: "bar"}});`}
+  code={`elb({ name: 'product add', data: { id: 'P123', price: 29.99 } });
+elb('walker consent', { marketing: true });`}
   language="javascript"
 />
 
@@ -55,7 +42,20 @@ installs it: a source that finds the name held by another one logs an error,
 skips the install, and keeps capturing through its own `push`. Set `elb: false`
 to install no window property at all, which is the posture for an embedded
 source that should leave no page-window footprint. Calls return a promise that
-resolves with the processing result.
+resolves with the [push result](/docs/getting-started/event-model#push-an-event).
+
+Code that can run before the source starts, such as a page script ahead of an
+`async` walker.js, defines this stub first. It queues every call in
+`window.elbLayer`, and the source processes the queue once it starts. A queued
+call returns nothing; only calls made after the source installed its `elb`
+resolve with the push result:
+
+<CodeSnippet
+  code={`function elb() {
+  (window.elbLayer = window.elbLayer || []).push(arguments);
+}`}
+  language="javascript"
+/>
 
 See
 [Multiple sources on one page](/docs/sources/web/browser#multiple-sources-on-one-page)
@@ -134,10 +134,11 @@ event setup. It will:
   language="javascript"
 />
 
-A run accepts a partial state parameter:
+A run accepts state to set before it starts, any of `consent`, `user`,
+`globals` and `custom`:
 
 <CodeSnippet
-  code={`elb('walker run', { group: 'group1d' });`}
+  code={`elb('walker run', { globals: { pagegroup: 'checkout' } });`}
   language="javascript"
 />
 

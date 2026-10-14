@@ -1,6 +1,6 @@
 import type { Source, On } from '@walkeros/core';
 import type { Context, Scope, Types, Env } from './types';
-import type { BrowserPush, BrowserArguments } from './types/elb';
+import type { BrowserPush } from './types/elb';
 import { isString } from '@walkeros/core';
 import {
   createRegistry,
@@ -66,7 +66,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   const { config, env, logger } = context;
   // `env.push` is the collector's source-pipeline entry for EVENTS. Aliased
   // because this module's own `push` (below) is the source's outward-facing
-  // BrowserPush, which accepts commands and flexible argument forms too.
+  // BrowserPush, which accepts commands and the string form too.
   const { elb, push: pipelinePush, command, window, document } = env;
 
   const userSettings = config?.settings || {};
@@ -135,10 +135,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     previousHref = href || actualWindow?.location.href;
     return translateToCoreCollector(
       { ...translationContext, href },
-      'page view',
-      data,
-      'load',
-      contextData,
+      { name: 'page view', data, context: contextData, trigger: 'load' },
     );
   };
 
@@ -212,7 +209,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
         );
       } else {
         const windowElb: BrowserPush = adoptedController
-          ? (((...args: Parameters<BrowserArguments>) =>
+          ? (((...args: unknown[]) =>
               adoptedController.intake(args)) satisfies BrowserPush)
           : push;
         installedWindowElb = mark(windowElb, registry);
@@ -268,18 +265,19 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     }
   };
 
-  const push: BrowserPush = ((...args: Parameters<BrowserArguments>) => {
-    const [event, data, options, context, nested, custom] = args;
-    return translateToCoreCollector(
+  // Every argument is forwarded, so one the call form does not take is
+  // reported, not dropped unseen.
+  const push: BrowserPush = ((
+    event?: unknown,
+    data?: unknown,
+    ...rest: unknown[]
+  ) =>
+    translateToCoreCollector(
       translationContext,
       event,
       data,
-      options,
-      context,
-      nested,
-      custom,
-    );
-  }) satisfies BrowserPush;
+      ...rest,
+    )) satisfies BrowserPush;
 
   // Return stateless source instance with event handler and push method
   return {

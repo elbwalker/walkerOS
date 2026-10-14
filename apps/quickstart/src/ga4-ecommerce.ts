@@ -55,10 +55,9 @@ export async function ga4AddToCart(): Promise<unknown[]> {
     },
   });
 
-  await elb('product add', {
-    id: 'ers',
-    name: 'Everyday Ruck Snack',
-    price: 420,
+  await elb({
+    name: 'product add',
+    data: { id: 'ers', name: 'Everyday Ruck Snack', price: 420 },
   });
 
   // The destination's init emits gtag('js', ...) and gtag('config', ...) first,

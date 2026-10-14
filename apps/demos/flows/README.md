@@ -309,7 +309,8 @@ echo "walker.js available at: $SERVE_URL/walker.js"
 1. **Click buttons** - See events in the visual console
 2. **Open Network tab** - Events go to YOUR endpoint, not google-analytics.com
 3. **Open BigQuery** - Events arrive in your database
-4. **Browser console** - `elb('custom event', { data: 'here' })`
+4. **Browser console** -
+   `elb({ name: 'custom event', data: { label: 'here' } })`
 
 ---
 

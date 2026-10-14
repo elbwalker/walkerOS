@@ -200,6 +200,48 @@ event `id` is a W3C `span_id` (16 lowercase hex characters) generated per
 event. The collector sets `trace`, `count`, and `id` only when they are absent,
 so an event forwarded from web to server keeps its original values.
 
+## Push an event {#push-an-event}
+
+Pass `elb` a partial event. `name` is required, every other field is optional,
+and the collector completes the event before any destination receives it.
+
+<CodeSnippet
+  code={`const result = await elb({
+  name: 'product add',
+  data: { id: 'ers', name: 'Everyday Ruck Snack', price: 420 },
+  context: { stage: ['cart', 1] },
+});
+
+if (!result.ok) console.error(result.error);`}
+  language="typescript"
+/>
+
+| Field | In your partial event | Added by the collector |
+| --- | --- | --- |
+| `name` | Required, as `"entity action"` | |
+| `entity`, `action` | | The first two words of `name` |
+| `data`, `context`, `nested`, `custom`, `trigger` | Optional | Empty when missing |
+| `globals`, `user`, `consent` | Optional, for this event only | Its own state, merged key by key; your values win |
+| `id`, `timestamp`, `timing`, `source` | | Set when missing |
+
+A source can add fields on the way in: the browser source sets `source.url`,
+`source.referrer` and the globals tagged on the page.
+
+`elb` resolves with the push result. `done`, `queued` and `failed` list the
+destinations by id, and `event` is the completed event. `ok` is `false` when a
+destination failed or the event was rejected. A rejected event reaches no
+destination: a name without an action, such as `'purchase'`, returns
+`{ ok: false, invalid: true, error: 'Event name is invalid' }`.
+
+A first argument that starts with `walker `, such as
+`elb('walker consent', { analytics: true })`, is a
+[command](/docs/collector/commands), not an event.
+
+`startFlow` returns `elb`, which is the browser source's own when it is the
+[primary source](/docs/sources#primary-source). On a web page the
+browser source also installs it as `window.elb`
+([browser source commands](/docs/sources/web/browser/commands#elb)).
+
 ## Strengths
 
 ### Structured flexibility

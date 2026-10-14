@@ -94,15 +94,19 @@ export function formatCall(record: CallRecord): string[] {
   ];
 }
 
-/** The `elb()` call that sends `event`; nested entities are abbreviated. */
+/** The `elb()` call that sends `event`, as a partial event; nested entities are abbreviated. */
 export function formatElb(event: ElbShape): string {
-  const name = literal(`${event.entity} ${event.action}`);
-  const data = literal(event.data);
-  if (!event.nested?.length) return `elb(${name}, ${data})`;
-  const nested = event.nested.map(
-    (entity) => `{ entity: ${literal(entity.entity)}, … }`,
-  );
-  return `elb({ name: ${name}, data: ${data}, nested: [${nested.join(', ')}] })`;
+  const fields = [
+    `name: ${literal(`${event.entity} ${event.action}`)}`,
+    `data: ${literal(event.data)}`,
+  ];
+  if (event.nested?.length) {
+    const nested = event.nested.map(
+      (entity) => `{ entity: ${literal(entity.entity)}, … }`,
+    );
+    fields.push(`nested: [${nested.join(', ')}]`);
+  }
+  return `elb({ ${fields.join(', ')} })`;
 }
 
 const TOKEN = /"[^"]*"|'[^']*'|\d+(?:\.\d+)?|[A-Za-z_]\w*|\s+|./g;

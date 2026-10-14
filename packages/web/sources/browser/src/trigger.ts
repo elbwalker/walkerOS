@@ -35,6 +35,7 @@ export function createRegistry(): Registry {
     elements: new WeakMap(),
     visibility: new WeakMap(),
     destroyed: false,
+    ignoredArguments: new Set(),
   };
 }
 

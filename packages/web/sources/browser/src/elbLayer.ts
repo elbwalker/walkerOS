@@ -157,8 +157,10 @@ export function createElbLayer(
 
   const route = (item: unknown): Promise<Elb.PushResult> => {
     if (Array.isArray(item)) {
-      const [eventOrCommand, ...rest] = item;
-      return translateToCoreCollector(context, eventOrCommand, ...rest);
+      // Every argument is forwarded, so one the call form does not take is
+      // reported like a direct call's.
+      const [eventOrCommand, data, ...rest] = item;
+      return translateToCoreCollector(context, eventOrCommand, data, ...rest);
     }
     return translateToCoreCollector(context, item);
   };

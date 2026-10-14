@@ -1,4 +1,5 @@
 import type { Elb } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import type {
   Context,
   ElementRegistration,
@@ -106,6 +107,7 @@ describe('observe internals', () => {
       push: mockElb,
       settings: createTestSettings(),
       registry,
+      logger: createMockLogger(),
     };
   });
 

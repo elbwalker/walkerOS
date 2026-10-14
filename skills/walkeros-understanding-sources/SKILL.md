@@ -166,11 +166,11 @@ http('handler', source.push);
 - `env.push` is **outward**: where the source sends the events it produced.
 
 A source can legitimately have both, and they need not be related: the browser
-source's `Instance.push` is a flexible `BrowserPush` that accepts commands and
-argument forms, while its events leave via `env.push`. The dataLayer and session
-sources keep `Instance.push: env.elb`, because callers do not feed them events
-at all — they capture from `dataLayer.push` and from session detection
-respectively.
+source's `Instance.push` is a `BrowserPush` that accepts event objects, `walker`
+commands and the string form, while its events leave via `env.push`. The
+dataLayer and session sources keep `Instance.push: env.elb`, because callers do
+not feed them events at all: they capture from `dataLayer.push` and from session
+detection respectively.
 
 When a test or integration code needs to invoke a source's `push` through the
 collector bag, `collector.sources` erases the per-source generic on read. Use

@@ -227,6 +227,9 @@ export function getPageViewData(
   if (loc.search) data.search = loc.search;
   if (loc.hash) data.hash = loc.hash;
 
+  // A tagged page id wins; untagged, the page is its path.
+  if (!data.id) data.id = loc.pathname;
+
   // @TODO get all nested entities
   return [data, context];
 }

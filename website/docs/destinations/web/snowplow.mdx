@@ -324,26 +324,29 @@ The destination supports all media events and contexts.
 ### Basic usage
 
 <CodeSnippet
-  code={`await elb('video play', {
-  id: 'video-123',
-  title: 'Product Demo',
-  currentTime: 0,
-  duration: 120,
+  code={`await elb({
+  name: 'video play',
+  data: {
+    id: 'video-123',
+    title: 'Product Demo',
+    currentTime: 0,
+    duration: 120,
+  },
 });
 
-await elb('video progress', {
-  id: 'video-123',
-  percentProgress: 25,
+await elb({
+  name: 'video progress',
+  data: { id: 'video-123', percentProgress: 25 },
 });
 
-await elb('video pause', {
-  id: 'video-123',
-  currentTime: 45,
+await elb({
+  name: 'video pause',
+  data: { id: 'video-123', currentTime: 45 },
 });
 
-await elb('video end', {
-  id: 'video-123',
-  duration: 120,
+await elb({
+  name: 'video end',
+  data: { id: 'video-123', duration: 120 },
 });`}
   language="typescript"
 />

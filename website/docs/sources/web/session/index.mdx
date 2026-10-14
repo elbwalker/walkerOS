@@ -34,7 +34,7 @@ import { sourceSession } from '@walkeros/web-source-session';
 
 const { collector, elb } = await startFlow({
   sources: {
-    browser: sourceBrowser,
+    browser: { code: sourceBrowser },
     session: {
       code: sourceSession,
       config: {

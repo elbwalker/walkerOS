@@ -92,16 +92,16 @@
     <div class="card">
       <h2>Quick Events</h2>
       <div class="btn-grid">
-        <button class="btn btn-primary" onclick="elb('page view', { title: 'Demo Page' })">
+        <button class="btn btn-primary" onclick="elb({ name: 'page view', data: { title: 'Demo Page' } })">
           Page View
         </button>
-        <button class="btn btn-success" onclick="elb('button click', { label: 'CTA Button' })">
+        <button class="btn btn-success" onclick="elb({ name: 'button click', data: { label: 'CTA Button' } })">
           Button Click
         </button>
-        <button class="btn btn-warning" onclick="elb('form submit', { form: 'newsletter' })">
+        <button class="btn btn-warning" onclick="elb({ name: 'form submit', data: { form: 'newsletter' } })">
           Form Submit
         </button>
-        <button class="btn btn-purple" onclick="elb('order complete', { orderId: 'ORD-' + Date.now(), total: 99.99 })">
+        <button class="btn btn-purple" onclick="elb({ name: 'order complete', data: { orderId: 'ORD-' + Date.now(), total: 99.99 } })">
           Order Complete
         </button>
       </div>
@@ -128,7 +128,7 @@
 
     <div class="info">
       <strong>Try in browser console:</strong>
-      <code>elb('custom event', { any: 'data' })</code>
+      <code>elb({ name: 'custom event', data: { any: 'data' } })</code>
       <br><br>
       <strong>Check Network tab:</strong> Events go to <code>walkeros-demo-xxx.run.app/collect</code> (YOUR endpoint)
     </div>

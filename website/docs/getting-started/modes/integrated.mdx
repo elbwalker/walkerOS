@@ -35,7 +35,7 @@ const { elb } = await startFlow({
   },
 });
 
-await elb('page view', { title: 'Home' });
+await elb({ name: 'page view', data: { title: 'Home' } });
 // -> logs: Event: page view`}
   language="typescript"
 />
@@ -147,18 +147,26 @@ sources: {
 
 This differs from Bundled mode where you use `package:` with a string reference.
 
-### The `elb` Function
+### The `elb` function {#the-elb-function}
 
-`startFlow()` returns an `elb` function for tracking events:
+`startFlow()` returns `elb`. Pass it a partial event: `name` is required, and
+the collector adds the rest, such as `id`, `timestamp` and `source`.
 
 ```typescript
 const { elb } = await startFlow({ ... });
 
-// Track events with entity-action format
-elb('page view', { title: 'Home' });
-elb('product add', { id: 'abc', name: 'Widget', price: 29.99 });
-elb('order complete', { total: 99.99, currency: 'USD' });
+const result = await elb({
+  name: 'product add',
+  data: { id: 'abc', name: 'Widget', price: 29.99 },
+});
+
+if (!result.ok) console.error(result.error);
 ```
+
+`result.done` lists the destinations that received the event, `result.queued`
+those waiting for consent, and `result.failed` those whose push failed. The
+[event model](/docs/getting-started/event-model#push-an-event) lists the fields
+a partial event takes and what the collector adds.
 
 ### Type safety
 
@@ -261,7 +269,7 @@ export function WalkerProvider({ children }: { children: React.ReactNode }) {
 The basic setup above logs every event it receives. Run it (Node, or your app's dev server) and push an event:
 
 <CodeSnippet
-  code={`await elb('page view', { title: 'Home' });
+  code={`await elb({ name: 'page view', data: { title: 'Home' } });
 // -> logs: Event: page view`}
   language="typescript"
 />

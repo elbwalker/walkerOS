@@ -31,7 +31,7 @@ const { elb } = await startFlow({
   },
 });
 
-await elb('page view', { title: 'Home' });
+await elb({ name: 'page view', data: { title: 'Home' } });
 ```
 
 ## Documentation

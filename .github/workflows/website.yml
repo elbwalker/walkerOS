@@ -65,11 +65,20 @@ jobs:
           cache: 'npm'
       - run: npm ci
 
+      # The source checks take seconds and need only core's `dev` export, so
+      # they run before the website build: a docs error fails in about two
+      # minutes, not after the build. The website build reuses this core build.
+      - name: Validate docs sources
+        run: |
+          npx turbo run build --filter=@walkeros/core
+          npm run validate:sources
+
       - name: Build website
         run: npm run build:website
 
-      - name: Validate docs and LLM export
-        run: npm run validate
+      # Reads the build output, so it runs after the build.
+      - name: Validate LLM export
+        run: npm run validate:llms
 
       - name: Deploy to production
         if:
@@ -102,11 +111,12 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}
           PR_NUM: ${{ github.event.pull_request.number }}
         with:
           script: |
-            const previewUrl = `${process.env.BUNNY_PULLZONE_URL}/preview/pr-${process.env.PR_NUM}/`;
+            // The public host serves the same pull zone as the CDN host the
+            // deploy purges through.
+            const previewUrl = `https://www.walkeros.io/preview/pr-${process.env.PR_NUM}/`;
             const body = `### Preview deployed\n\n${previewUrl}`;
 
             // Find existing comment

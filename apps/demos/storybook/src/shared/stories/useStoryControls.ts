@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import type { SourceBrowser } from '@walkeros/web-source-browser';
 import { useDemoConsent } from '../consent';
-import { elbAtApplyFrom, type DemoControls } from '../controls';
+import { elbAtApplyFrom, type DemoControls, type PageElb } from '../controls';
 import type { Language } from '../language';
 import type { PersonaKey } from '../personas';
 
@@ -10,7 +9,7 @@ import type { PersonaKey } from '../personas';
 // when it failed to).
 declare global {
   interface Window {
-    __storybookElb?: SourceBrowser.Push;
+    __storybookElb?: PageElb;
   }
 }
 

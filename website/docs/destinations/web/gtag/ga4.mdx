@@ -142,7 +142,10 @@ via a `this` loop.
 Pushing a `product add` event:
 
 <CodeSnippet
-  code={`elb('product add', { id: 'ers', name: 'Everyday Ruck Snack', price: 420 });`}
+  code={`elb({
+  name: 'product add',
+  data: { id: 'ers', name: 'Everyday Ruck Snack', price: 420 },
+});`}
   language="typescript"
 />
 

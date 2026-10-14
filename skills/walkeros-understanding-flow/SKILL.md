@@ -68,8 +68,12 @@ interface Flow {
 | Collector   | `push(event) → void`          | Process and route     |
 | Destination | `push(event, context) → void` | Transform and deliver |
 
-The `elb()` function is an alias for `collector.push` - used for component
-wiring.
+The collector's `elb()` takes a partial event
+(`elb({ name: 'page view', data })`) or a `walker` command; `collector.push`
+takes event objects only. `startFlow` returns the primary source's `push` as
+`elb`, or the collector's `elb` when no source is configured. The browser
+source's push takes the same partial event; a server source's push is its
+request handler.
 
 ### startFlow Helper
 

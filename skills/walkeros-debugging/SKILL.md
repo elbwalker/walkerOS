@@ -91,7 +91,7 @@ const destination = {
 
 ```typescript
 // Event pushed
-elb('product view', { id: 'P123' });
+elb({ name: 'product view', data: { id: 'P123' } });
 
 // Mapping expects different name
 mapping: {

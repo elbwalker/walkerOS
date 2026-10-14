@@ -1,4 +1,4 @@
-import type { SourceBrowser } from '@walkeros/web-source-browser';
+import type { PageElb } from '../shared/controls';
 
 /**
  * The managed walker.js of the app flow "Tagging demo", the one the static
@@ -11,7 +11,7 @@ export const WALKER_JS_URL =
 // Narrowed by `typeof`: on this page only the queue below or walker.js's
 // push sits there. The global's own type (`Elb.Fn`) lacks the browser-only
 // commands ViewSource sends, such as `walker init`.
-const isPush = (value: unknown): value is SourceBrowser.Push =>
+const isPush = (value: unknown): value is PageElb =>
   typeof value === 'function';
 
 /**
@@ -23,9 +23,7 @@ const isPush = (value: unknown): value is SourceBrowser.Push =>
 export function installElbQueue(win: Window): void {
   const existing: unknown = win.elb;
   if (isPush(existing)) return;
-  const queue: SourceBrowser.Push = (
-    ...args: Parameters<SourceBrowser.BrowserArguments>
-  ) => {
+  const queue: PageElb = (...args) => {
     (win.elbLayer = win.elbLayer || []).push(args);
     return Promise.resolve({ ok: true });
   };
@@ -33,7 +31,7 @@ export function installElbQueue(win: Window): void {
 }
 
 /** The page's elb right now: the queue until walker.js runs, then its push. */
-export function currentElb(win: Window): SourceBrowser.Push | undefined {
+export function currentElb(win: Window): PageElb | undefined {
   const elb: unknown = win.elb;
   return isPush(elb) ? elb : undefined;
 }

@@ -1,4 +1,5 @@
 import type { Elb } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import type { Context, InitScope } from '../types';
 import {
   createRegistry,
@@ -52,6 +53,7 @@ const makeContext = (scope: InitScope, elb: Elb.Fn): Context => {
       elbLayer: false,
     },
     registry: createRegistry(),
+    logger: createMockLogger(),
   };
   built.push(context);
   return context;

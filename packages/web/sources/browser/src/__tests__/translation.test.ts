@@ -2,6 +2,7 @@ import { startFlow } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 import { translateToCoreCollector } from '../translation';
 import type { WalkerOS, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import type { Context, Settings } from '../types';
 import { createRegistry } from '../trigger';
 
@@ -63,74 +64,18 @@ describe('Translation Layer', () => {
     push: mockPush,
     settings: createTestSettings(prefix),
     registry: createRegistry(),
+    logger: createMockLogger(),
   });
 
   describe('Source Information', () => {
     test('adds source information to string events', async () => {
       // Test direct translation call
-      await translateToCoreCollector(
-        makeContext(),
-        'test event',
-        { id: 123 },
-        undefined,
-        { page: ['test', 0] },
-      );
+      await translateToCoreCollector(makeContext(), 'test event', { id: 123 });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'test event',
           data: { id: 123 },
-          context: { page: ['test', 0] },
-          source: {
-            type: 'browser',
-            platform: 'web',
-            url: 'https://example.com/test-page',
-            referrer: 'https://previous.com/page',
-          },
-        }),
-      );
-    });
-
-    test('adds source information to flexible format events', async () => {
-      // Test with number as event (falls through to flexible format)
-      await translateToCoreCollector(
-        makeContext(),
-        123,
-        { value: 'test' },
-        undefined,
-        { context: ['info', 0] },
-      );
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: '123',
-          data: { value: 'test' },
-          context: { context: ['info', 0] },
-          source: {
-            type: 'browser',
-            platform: 'web',
-            url: 'https://example.com/test-page',
-            referrer: 'https://previous.com/page',
-          },
-        }),
-      );
-    });
-
-    test('normalizes non-object data to empty object (legacy behavior)', async () => {
-      // Test with primitive data - should become empty object
-      await translateToCoreCollector(
-        makeContext(),
-        'test event',
-        'primitive string data',
-        undefined,
-        { page: ['test', 0] },
-      );
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'test event',
-          data: {}, // Should be empty object, not { value: 'primitive string data' }
-          context: { page: ['test', 0] },
           source: {
             type: 'browser',
             platform: 'web',
@@ -154,6 +99,7 @@ describe('Translation Layer', () => {
           push: isolatedMockPush,
           settings: createTestSettings(),
           registry: createRegistry(),
+          logger: createMockLogger(),
         },
         'walker run',
         { consent: { marketing: true } },
@@ -185,8 +131,7 @@ describe('Translation Layer', () => {
       expect(mockPush).not.toHaveBeenCalled();
     });
 
-    test('does not add source information to object events', async () => {
-      // Test object event - should pass through as-is
+    test('keeps the source an object event carries', async () => {
       const eventObject = {
         name: 'custom event',
         data: { test: true },
@@ -200,8 +145,48 @@ describe('Translation Layer', () => {
 
       await translateToCoreCollector(makeContext(), eventObject);
 
-      // Object events should pass through unchanged
-      expect(mockPush).toHaveBeenCalledWith(eventObject);
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({ source: eventObject.source }),
+      );
+    });
+
+    test('leaves the caller event object unchanged', async () => {
+      const eventObject = { name: 'product view', data: { id: 'P1' } };
+
+      await translateToCoreCollector(makeContext(), eventObject);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'product view',
+          source: expect.objectContaining({ type: 'browser' }),
+          globals: {},
+        }),
+      );
+      expect(eventObject).toEqual({ name: 'product view', data: { id: 'P1' } });
+    });
+
+    test('merges the page globals under the globals an object event carries', async () => {
+      document.body.innerHTML =
+        '<div data-elbglobals="pagegroup:shop;lang:de"></div>';
+
+      await translateToCoreCollector(makeContext(), {
+        name: 'product view',
+        globals: { lang: 'en' },
+      });
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({ globals: { pagegroup: 'shop', lang: 'en' } }),
+      );
+    });
+
+    test('hands on a copy of the caller data, as written', async () => {
+      const data = { title: 'Home' };
+
+      await translateToCoreCollector(makeContext(), 'page view', data);
+
+      const [event] = mockPush.mock.calls[0];
+      expect(event.data).toEqual({ title: 'Home' });
+      expect(event.data).not.toBe(data);
     });
 
     test('handles empty referrer', async () => {
@@ -250,8 +235,15 @@ describe('Translation Layer', () => {
     test('events from ELB layer include source information', async () => {
       // Setup ELB layer with events
       window.elbLayer = [
-        ['product', { id: '123' }, 'click', { position: 1 }],
-        ['page', { title: 'Test' }, 'load'],
+        [
+          {
+            name: 'product click',
+            data: { id: '123' },
+            context: { position: [1, 0] },
+            trigger: 'click',
+          },
+        ],
+        ['page view', { title: 'Test' }],
       ];
 
       // Initialize source - should process existing commands.
@@ -267,9 +259,9 @@ describe('Translation Layer', () => {
       // Should have processed both events with source info
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'product',
+          name: 'product click',
           data: { id: '123' },
-          context: { position: 1 },
+          context: { position: [1, 0] },
           trigger: 'click',
           source: {
             type: 'browser',
@@ -282,9 +274,9 @@ describe('Translation Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'page',
-          data: { id: '/test-page', title: 'Test' },
-          trigger: 'load',
+          name: 'page view',
+          data: { title: 'Test' },
+          trigger: '',
           source: {
             type: 'browser',
             platform: 'web',
@@ -303,7 +295,7 @@ describe('Translation Layer', () => {
 
       // Test by directly calling the event with source information
       if (elb) {
-        await elb('product view', { id: 123 }, 'load');
+        await elb({ name: 'product view', data: { id: 123 }, trigger: 'load' });
       }
 
       // Should have processed the event with source info
@@ -320,38 +312,6 @@ describe('Translation Layer', () => {
             referrer: 'https://previous.com/page',
           },
         }),
-      );
-    });
-  });
-
-  describe('Context Normalization', () => {
-    const element = () => {
-      const el = document.createElement('div');
-      el.id = 'test-element';
-      el.className = 'test-class';
-      return el;
-    };
-    const ordered: WalkerOS.OrderedProperties = {
-      page: ['home', 0],
-      section: ['hero', 1],
-    };
-
-    it.each([
-      ['undefined', () => undefined, {}],
-      ['an element', element, {}],
-      ['an empty object', () => ({}), {}],
-      ['valid ordered properties', () => ordered, ordered],
-    ])('normalizes %s context', async (_label, build, expected) => {
-      await translateToCoreCollector(
-        makeContext(),
-        'test event',
-        { id: 123 },
-        undefined,
-        build(),
-      );
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({ context: expected }),
       );
     });
   });

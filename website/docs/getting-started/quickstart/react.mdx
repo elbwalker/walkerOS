@@ -213,9 +213,9 @@ Use the `elb` function for custom events:
 function CheckoutForm({ total, itemCount }: { total: number; itemCount: number }) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    window.elb('checkout complete', {
-      total,
-      items: itemCount,
+    window.elb({
+      name: 'checkout complete',
+      data: { total, items: itemCount },
     });
   };
 

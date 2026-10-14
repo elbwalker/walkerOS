@@ -1,5 +1,5 @@
 import type { Elb, Flow } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
+import { isObject, createMockLogger } from '@walkeros/core';
 import { sourceBrowser } from '../index';
 import { getConfig } from '../config';
 import { createRegistry, handleTrigger } from '../trigger';
@@ -74,6 +74,7 @@ describe('Step Examples', () => {
       push: mockElb,
       settings,
       registry: createRegistry(),
+      logger: createMockLogger(),
     };
 
     const type = triggerInfo?.type;
@@ -88,13 +89,12 @@ describe('Step Examples', () => {
         settings.prefix || 'data-elb',
         document,
       );
-      await translateToCoreCollector(
-        context,
-        'page view',
+      await translateToCoreCollector(context, {
+        name: 'page view',
         data,
-        'load',
-        contextData,
-      );
+        context: contextData,
+        trigger: 'load',
+      });
       // Plus any data-elb elements with load triggers
       const loadElems = document.querySelectorAll('[data-elbaction*="load"]');
       for (const elem of Array.from(loadElems)) {
