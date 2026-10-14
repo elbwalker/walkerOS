@@ -7,6 +7,7 @@
  * Vendor-specific examples belong in packages (fetched via package_get).
  */
 import { schemas } from '@walkeros/core/dev';
+import flowComplete from '@walkeros/cli/examples/flow-complete.json';
 import { fetchCatalog } from '../catalog.js';
 import type { ResourceContent, StaticResourceSpec } from '../knowledge-spec.js';
 
@@ -140,7 +141,8 @@ export const REFERENCE_RESOURCES: readonly StaticResourceSpec[] = [
     read: async () => json(schemas.contractJsonSchema),
   },
 
-  // Examples reference (loaded from @walkeros/cli at runtime)
+  // Examples reference (inlined from @walkeros/cli at build time, so a host
+  // that bundles the server needs no file lookup)
   {
     kind: 'static',
     name: 'examples',
@@ -148,20 +150,7 @@ export const REFERENCE_RESOURCES: readonly StaticResourceSpec[] = [
     description:
       'Complete, tested flow config (flow-complete.json): web, server and warehouse flows with mapping, consent, contracts, routes, state, stores and step examples. Its guide is examples/flow-complete.md in @walkeros/cli.',
     mimeType: JSON_MIME,
-    read: async () => {
-      let example: string;
-      try {
-        const { readFileSync } = await import('fs');
-        const { createRequire } = await import('module');
-        const require = createRequire(import.meta.url);
-        const examplePath =
-          require.resolve('@walkeros/cli/examples/flow-complete.json');
-        example = readFileSync(examplePath, 'utf-8');
-      } catch {
-        example = JSON.stringify({ error: 'Example not found' });
-      }
-      return { text: example, mimeType: JSON_MIME };
-    },
+    read: async () => json(flowComplete),
   },
 
   // Packages catalog resource

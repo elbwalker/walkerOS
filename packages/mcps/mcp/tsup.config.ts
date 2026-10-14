@@ -19,6 +19,9 @@ const common = {
     '@walkeros/cli',
     '@walkeros/core',
   ],
+  // The examples reference ships inside the package: a host that bundles the
+  // server has no @walkeros/cli on disk to read it from.
+  noExternal: ['@walkeros/cli/examples/flow-complete.json'],
   define: {
     __VERSION__: JSON.stringify(version),
   },

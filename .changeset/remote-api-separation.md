@@ -1,6 +1,6 @@
 ---
-'@walkeros/cli': minor
-'@walkeros/mcp': minor
+'@walkeros/cli': patch
+'@walkeros/mcp': patch
 ---
 
 New `walkeros api` sends any request to the walkerOS app API, `walkeros api ls`
