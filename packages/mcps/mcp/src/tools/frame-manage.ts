@@ -41,7 +41,7 @@ import { codeOf, errorHint } from './feature-gate.js';
  */
 
 // Caps and patterns the server enforces. Duplicated here so the schema can
-// describe them; the app's src/lib/api/schemas/frames.ts is the authority.
+// describe them; the app is the authority.
 const FRAME_ID_PATTERN = /^frm_[A-Za-z0-9_-]{21}$/;
 const MAX_PAGE_KEY_CHARS = 1024;
 
@@ -54,9 +54,11 @@ const TITLE = 'Frames';
 export const FRAME_MANAGE_DESCRIPTION =
   'Read the frames of a measurement plan: named rectangles with marks inside them, drawn in Tag Mode or in the app. ' +
   'Frames belong to a flow: every action takes the flowId of the flow they live in; use flow_manage action "list" to find one. ' +
-  'Actions: list (every frame of the flow, without marks), page (the flow’s frames on one page at any depth, with marks), get (one frame with its marks). ' +
+  'Actions: list (every frame of the flow, without marks), page (the flow’s frames of one page, with marks), get (one frame with its marks). ' +
   'Read-only: frames are drawn and edited in Tag Mode or the app, never here. ' +
-  'A frame name is documentation; the marks inside it carry the meaning. A frame that extends another stores only what it adds, so its tags may carry only the fields they change. ' +
+  'A frame name is documentation; the marks inside it carry the meaning. ' +
+  'A frame shows other frames through links: each link is a rectangle on the frame and the frameId of the frame shown there. A page read returns the frames of that page; a shown frame that is not of that page is not in the answer, only named by frameId in links. ' +
+  'Frames that share a variantSetId are variants of one another, and each is a complete frame. ' +
   'Marks are { tags, note }: tags is one flat list of tags, each with an id, a kind such as entity, property or action, a name, and a parentId naming the tag it sits under; note is the frame’s own description and thread. ' +
   'Use hub_manage action "knowledge" with a frameId or markId to read what people wrote on a frame. ' +
   'A markId is a tag id: a tag’s id, parentId and threadRef come back literal when they have the shape the app mints, so they can be passed straight back; every other string value in the marks is wrapped as data, and so is an object key that is not a plain identifier.';
@@ -119,17 +121,25 @@ export const FRAME_HINT_NAMES_ARE_DOCUMENTATION =
 export const FRAME_HINT_NONE_YET =
   'This flow has no frames yet. Frames are drawn in Tag Mode or the app, not through this tool.';
 export const FRAME_HINT_MARK_SPACE =
-  'Tag geometry is fractional: a rect is 0..1 of its frame, and an at is 0..1 of its parent tag’s box, or of the frame for a root tag; a child frame sits inside its parent through placements[].rect.';
+  'Tag geometry is fractional: a rect is 0..1 of its frame, and an at is 0..1 of its parent tag’s box, or of the frame for a root tag; a link’s x, y, w and h are fractions of the frame that shows it.';
 export const FRAME_HINT_READ_KNOWLEDGE =
   'Use hub_manage action "knowledge" with frameId (and markId) to read what people wrote here. A markId is a tag id from these marks, and a tag’s threadRef is the id of its thread entry there.';
 export const FRAME_HINT_NONE_ON_PAGE =
   'No frames on this page. Check the pageKey against the source.key values from action "list".';
-export const FRAME_HINT_EXTENDS_BASE =
-  'This frame extends another and stores only what it adds; read the base frame (extends) for the rest.';
+export const FRAME_HINT_FOLLOW_LINKS =
+  'This frame shows other frames: each entry of links names one by frameId. Use action "get" with that frameId to read it.';
 export const FRAME_NOT_FOUND_HINT =
   'Use action "list" or "page" to find frame ids.';
 export const FRAME_FLOW_NOT_FOUND_HINT =
   'Use flow_manage action "list" to find a live flow of the project.';
+
+/**
+ * What a read answers when the app sends a frame without `links`: an app that
+ * does not serve them. Said in words a person can act on, because the
+ * alternative is a TypeError from the first field read off the frame.
+ */
+const FRAME_LINKS_NOT_SERVED =
+  'This app does not serve frame links yet, so this client cannot read its frames. It needs the app release that serves links.';
 
 /**
  * The hint a refusal carries. The app answers a frame the flow does not hold
@@ -160,26 +170,33 @@ const keepSourceAddress = (key: string): boolean =>
   key === 'kind' || key === 'key';
 
 /**
- * A placement's `selector` and `anchor` are opaque DOM anchors captured off a
- * live page, of unbounded size: page content a reader gains nothing from and
- * this tool would otherwise have to wrap. Only the rectangle is kept.
+ * A link is named field by field: two ids and a rectangle. Both ids stay
+ * literal, because the app only stores ids of the shape it mints there and a
+ * reader passes `frameId` straight back to `get`. Anything else a link might
+ * carry is dropped rather than handed on unwrapped.
  *
  * `projectId`, `flowId` and `deletedAt` are dropped for a different reason: the
  * caller named the project and the flow, and a listing only ever carries live
  * frames, so all three would be noise on every row.
  */
 function serializeLean(frame: FrameLeanWire) {
+  // The type promises `links`. A response is never checked against it, and an
+  // app that does not serve links answers a frame without them.
+  if (!Array.isArray(frame.links)) throw new Error(FRAME_LINKS_NOT_SERVED);
   return {
     id: frame.id,
     name: wrapUserData(frame.name),
-    parentId: frame.parentId,
-    extends: frame.extends,
     source: redactNestedStrings(frame.source, { skip: keepSourceAddress }),
     origin: frame.origin,
-    placements: frame.placements.map((placement) => ({
-      id: placement.id,
-      rect: placement.rect,
+    links: frame.links.map((link) => ({
+      id: link.id,
+      frameId: link.frameId,
+      x: link.x,
+      y: link.y,
+      w: link.w,
+      h: link.h,
     })),
+    variantSetId: frame.variantSetId,
     size: frame.size,
     screenshot: frame.screenshot
       ? {
@@ -238,13 +255,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * A tag id as the app mints it, and nothing wider:
  *
- *  - `<prefix>_<n>` from the editor (`nextMarkId` in `tag-plan/frames.ts`,
- *    `freshId` in `tag-plan/write.ts`);
+ *  - `<prefix>_<n>` from the editor;
  *  - `e_<entity>`, `...#data.v<n>` and `...#action.<n>` from a contract or observed
- *    events (`tag-plan/contract.ts`, `tag-plan/infer.ts`);
+ *    events;
  *  - `<entity>-<n>`, a nested `.../<entity>-<n>`, `...#data.<n>`, `...#action.<n>`,
- *    `...#context.<n>`, `globals#<n>` and `page#action.<n>` from a page read
- *    (`tag-plan/walker-plan.ts`).
+ *    `...#context.<n>`, `globals#<n>` and `page#action.<n>` from a page read.
  *
  * No colon, which keeps the hub key `<frameId>:<markId>` parseable, and no
  * whitespace, quote or angle bracket. An entity name outside `[A-Za-z0-9_-]`
@@ -253,12 +268,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const TAG_ID_PATTERN =
   /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*(?:#(?:data\.v?[0-9]+|action\.[0-9]+|context\.[0-9]+|[0-9]+))?$/;
 
-/** The longest mark id the hub accepts (`MAX_MARK_ID_LENGTH` in the app's
- *  `src/lib/hub/knowledge.ts`), so a longer value cannot be a markId. */
+/** The longest mark id the hub accepts, so a longer value cannot be a
+ *  markId. */
 const MAX_TAG_ID_CHARS = 200;
 
 /** A hub thread id as the app mints it: `thr_` plus a 21-character lowercase
- *  alphanumeric nanoid (`src/lib/id.ts`, `src/lib/hub/knowledge.ts`). */
+ *  alphanumeric nanoid. */
 const THREAD_ID_PATTERN = /^thr_[a-z0-9]{21}$/;
 
 const isTagId = (value: string): boolean =>
@@ -447,8 +462,8 @@ async function frameManageHandler(
           { frame: serializeFrame(frame) },
           {
             next:
-              frame.extends !== null
-                ? [FRAME_HINT_EXTENDS_BASE, FRAME_HINT_READ_KNOWLEDGE]
+              frame.links.length > 0
+                ? [FRAME_HINT_FOLLOW_LINKS, FRAME_HINT_READ_KNOWLEDGE]
                 : [FRAME_HINT_READ_KNOWLEDGE],
           },
         );

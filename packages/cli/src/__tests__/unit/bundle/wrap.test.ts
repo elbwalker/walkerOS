@@ -185,6 +185,50 @@ export const __configData = { test: true };
     expect(output).not.toContain('browserSwapActivator');
   });
 
+  it('loads Tag Mode from production unless a deploy passes another target', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    const read = async (name: string, moin?: { app: string; base: string }) => {
+      const outputPath = path.join(tmpDir, name);
+      await wrapSkeleton({
+        skeletonPath,
+        platform: 'browser',
+        outputPath,
+        minify: false,
+        ...(moin ? { moin } : {}),
+      });
+      return fs.readFile(outputPath, 'utf-8');
+    };
+
+    const production = await read('production.js');
+    expect(production).toContain('"https://app.walkeros.io"');
+    expect(production).toContain('"https://cdn.walkeros.io/tag-mode/"');
+    expect(production).not.toContain('stage.');
+
+    const stage = await read('stage.js', {
+      app: 'https://stage.app.walkeros.io',
+      base: 'https://stage.cdn.walkeros.io/tag-mode/',
+    });
+    // The call keeps its literals; the minified core renames `moin`.
+    expect(stage).toMatch(
+      /\w+\(\{\s*app: "https:\/\/stage\.app\.walkeros\.io",\s*base: "https:\/\/stage\.cdn\.walkeros\.io\/tag-mode\/"\s*\}\)/,
+    );
+  });
+
+  it('refuses a malformed Tag Mode target', async () => {
+    const skeletonPath = await writeFakeSkeleton();
+    await expect(
+      wrapSkeleton({
+        skeletonPath,
+        platform: 'browser',
+        outputPath: path.join(tmpDir, 'walker.js'),
+        moin: {
+          app: 'http://localhost:3000',
+          base: 'http://localhost:9001/tag-mode/',
+        },
+      }),
+    ).rejects.toThrow(/Invalid moin\.app/);
+  });
+
   it('throws when the skeleton does not exist', async () => {
     const outputPath = path.join(tmpDir, 'walker.js');
     await expect(
@@ -202,6 +246,60 @@ export const __configData = { test: true };
  * from the needs the skeleton carries, so a flag-guarded feature the flow does
  * not use folds out of the wrapped bundle.
  */
+describe('wrapSkeleton core resolution', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'wrap-shadow-test-'));
+    // An older core above the wrap's temp dir, as a shared /tmp can hold one.
+    const shadow = path.join(tmpDir, 'node_modules', '@walkeros', 'core');
+    await fs.outputJson(path.join(shadow, 'package.json'), {
+      name: '@walkeros/core',
+      version: '0.0.1',
+      type: 'module',
+      exports: { '.': './index.mjs' },
+    });
+    await fs.writeFile(
+      path.join(shadow, 'index.mjs'),
+      'export const shadowCore = true;\n',
+    );
+    // The CLI's temp root is read once at load: reload it under tmpDir.
+    jest
+      .spyOn(jest.requireActual<typeof os>('os'), 'tmpdir')
+      .mockReturnValue(tmpDir);
+    jest.resetModules();
+  });
+
+  afterEach(async () => {
+    await fs.remove(tmpDir).catch(() => {});
+  });
+
+  it('imports the loader from the CLI core, never from a core above its temp dir', async () => {
+    const { wrapSkeleton: wrap } =
+      await import('../../../commands/bundle/wrap.js');
+    const skeletonPath = path.join(tmpDir, 'skeleton.mjs');
+    await fs.writeFile(
+      skeletonPath,
+      `export function wireConfig(d) { return d; }
+export function startFlow(c) { return Promise.resolve({ collector: { config: c }, elb() {} }); }
+export const __configData = {};
+`,
+    );
+    const outputPath = path.join(tmpDir, 'walker.js');
+
+    await wrap({
+      skeletonPath,
+      platform: 'browser',
+      outputPath,
+      minify: false,
+    });
+
+    const output = await fs.readFile(outputPath, 'utf-8');
+    expect(output).toContain('walkeros.moin');
+    expect(output).not.toContain('shadowCore');
+  });
+});
+
 describe('wrapSkeleton build flags', () => {
   let tmpDir: string;
 

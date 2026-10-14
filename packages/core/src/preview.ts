@@ -1,3 +1,5 @@
+import { injectScript } from './inject-script';
+
 /** Claims carried by an activation grant. See the preview-sessions design spec. */
 export interface ActivationGrant {
   /** Issuing environment, e.g. 'app:stage'. Verifier rejects a foreign issuer. */
@@ -429,17 +431,9 @@ const LOG = '[walkerOS:preview]';
 const SWAP_TIMEOUT_MS = 5000;
 
 // Structural slices of the browser globals the activator touches. Core
-// compiles without the DOM lib, so window/document/URLSearchParams/console/
-// setTimeout are all untyped here; reading them off globalThis behind guards
-// is the batchedPoster precedent. Runtime behavior is identical.
-interface ScriptEl {
-  onload: (() => void) | null;
-  onerror: (() => void) | null;
-  src: string;
-  setAttribute(name: string, value: string): void;
-  parentNode: { removeChild(el: ScriptEl): void } | null;
-}
-
+// compiles without the DOM lib, so window/document/URLSearchParams/console
+// are all untyped here; reading them off globalThis behind guards is the
+// batchedPoster precedent. Runtime behavior is identical.
 interface BrowserGlobals {
   window?: {
     location: { href: string; origin: string; search: string };
@@ -450,18 +444,13 @@ interface BrowserGlobals {
       removeItem(key: string): void;
     };
   };
-  document?: {
-    head: { appendChild(el: ScriptEl): void };
-    createElement(tag: 'script'): ScriptEl;
-  };
+  document?: unknown;
   URLSearchParams?: new (init: string) => {
     getAll(name: string): string[];
     delete(name: string): void;
     toString(): string;
   };
   console?: { warn(msg: string): void; info(msg: string): void };
-  setTimeout?: (fn: () => void, ms: number) => number;
-  clearTimeout?: (id: number) => void;
 }
 
 const G = globalThis as BrowserGlobals;
@@ -525,33 +514,6 @@ function stripParam(): void {
   } catch {
     // A page that forbids history writes still previews; the param just stays.
   }
-}
-
-function injectArtifact(src: string, sri: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const doc = G.document;
-    if (!doc) {
-      resolve(false);
-      return;
-    }
-    const script = doc.createElement('script');
-    let settled = false;
-    let timer: number | undefined;
-    const done = (ok: boolean) => {
-      if (settled) return;
-      settled = true;
-      if (timer !== undefined) G.clearTimeout?.(timer);
-      if (!ok && script.parentNode) script.parentNode.removeChild(script);
-      resolve(ok);
-    };
-    timer = G.setTimeout?.(() => done(false), SWAP_TIMEOUT_MS);
-    script.onload = () => done(true);
-    script.onerror = () => done(false);
-    script.setAttribute('integrity', sri);
-    script.setAttribute('crossorigin', 'anonymous');
-    script.src = src;
-    doc.head.appendChild(script);
-  });
 }
 
 /**
@@ -675,7 +637,7 @@ export async function browserSwapActivator(
   if (!grant) return false;
 
   const src = `https://${cfg.previewOrigin}/preview/${grant.art}.js`;
-  const loaded = await injectArtifact(src, grant.sri);
+  const loaded = await injectScript(src, grant.sri, SWAP_TIMEOUT_MS);
 
   if (!loaded) {
     warn('swap-failed');

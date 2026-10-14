@@ -18,7 +18,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "test": "jest --colors --coverage",
+    "test": "jest --colors --coverage --testPathIgnorePatterns '__tests__/integration/'",
+    "test:integration": "jest --colors --testPathPatterns='__tests__/integration/'",
     "dev": "jest --watchAll --colors",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.ts*\"",

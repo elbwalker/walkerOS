@@ -1,12 +1,7 @@
-import React, {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type ButtonHTMLAttributes,
-} from 'react';
+import React, { useId, type ButtonHTMLAttributes } from 'react';
 import { cx } from '../cx';
 import { Icon } from './Icon';
+import { useCopy } from './useCopy';
 
 export interface InstallCommandProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -14,24 +9,6 @@ export interface InstallCommandProps extends Omit<
 > {
   /** The command shown and copied. */
   command?: string;
-}
-
-type CopyState = 'idle' | 'done' | 'failed';
-
-/** How long the check stays after a successful copy. */
-const CONFIRM_MS = 1400;
-
-/**
- * True only when the clipboard took the text. A missing clipboard API (http,
- * older browsers) throws on access, which counts as a failure like a rejection.
- */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -48,25 +25,7 @@ export function InstallCommand({
   ...rest
 }: InstallCommandProps) {
   const hintId = useId();
-  const [state, setState] = useState<CopyState>('idle');
-  const mounted = useRef(true);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      clearTimeout(timer.current);
-    };
-  }, []);
-
-  const copy = async (): Promise<void> => {
-    const copied = await copyText(command);
-    if (!mounted.current) return;
-    clearTimeout(timer.current);
-    setState(copied ? 'done' : 'failed');
-    if (copied) timer.current = setTimeout(() => setState('idle'), CONFIRM_MS);
-  };
+  const [state, copy] = useCopy();
 
   return (
     <>
@@ -75,9 +34,7 @@ export function InstallCommand({
         aria-describedby={describedBy ? `${hintId} ${describedBy}` : hintId}
         type="button"
         className={cx('elb-cmd', className)}
-        onClick={() => {
-          void copy();
-        }}
+        onClick={() => copy(command)}
       >
         <span>
           <span className="elb-cmd__prompt" aria-hidden="true">

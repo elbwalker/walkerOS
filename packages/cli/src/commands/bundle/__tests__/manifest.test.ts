@@ -618,3 +618,38 @@ describe('BuildManifestSchema headers', () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe('BuildManifestSchema wrap options', () => {
+  const manifest = (options: Record<string, unknown>) => ({
+    version: 1,
+    toolchain: VERSION,
+    artifacts: [
+      {
+        target: 'wrap',
+        platform: 'browser',
+        skeleton: { url: 'https://x/s.mjs' },
+        options,
+        outputName: 'w.js',
+        putUrl: 'https://x/w',
+      },
+    ],
+    resultPutUrl: 'https://x/r',
+  });
+  const STAGE = {
+    app: 'https://stage.app.walkeros.io',
+    base: 'https://stage.cdn.walkeros.io/tag-mode/',
+  };
+
+  it('accepts a Tag Mode loader target', () => {
+    expect(
+      BuildManifestSchema.safeParse(manifest({ moin: STAGE })).success,
+    ).toBe(true);
+  });
+
+  it('refuses an unknown field in the loader target', () => {
+    expect(
+      BuildManifestSchema.safeParse(manifest({ moin: { ...STAGE, file: 'x' } }))
+        .success,
+    ).toBe(false);
+  });
+});

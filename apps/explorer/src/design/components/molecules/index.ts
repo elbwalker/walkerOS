@@ -16,5 +16,7 @@ export { HighlightCard } from './HighlightCard';
 export type { HighlightCardProps } from './HighlightCard';
 export { BrowserFrame } from './BrowserFrame';
 export type { BrowserBookmark, BrowserFrameProps } from './BrowserFrame';
+export { EventLog } from './EventLog';
+export type { EventLogEvent, EventLogProps, EventLogRecord } from './EventLog';
 export { QuickstartSteps } from './QuickstartSteps';
 export type { QuickstartStep, QuickstartStepsProps } from './QuickstartSteps';

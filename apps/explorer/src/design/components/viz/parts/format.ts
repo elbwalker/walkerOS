@@ -1,4 +1,4 @@
-import { tok, type CodeToken } from './tokens';
+import { tok, type CodeToken } from '../../codeTokens';
 
 /** A value printed as JavaScript: a vendor call's argument or an event field. */
 export type Literal =

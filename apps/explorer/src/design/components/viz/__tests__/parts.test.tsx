@@ -1,14 +1,16 @@
 import React, { useRef } from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from '@testing-library/react';
-import { CodeLine, CodeTokens } from '../parts/CodeTokens';
+import { CodeTokens } from '../../atoms/CodeTokens';
+import { tok } from '../../codeTokens';
+import { CodeLine } from '../parts/CodeLine';
 import { EventsTable } from '../parts/EventsTable';
 import { useInView, useReducedMotion } from '../parts/hooks';
 import { Pill } from '../parts/Pill';
 import { vizStyle } from '../parts/style';
 import { Thumb } from '../parts/Thumb';
 import { clamp, ease } from '../parts/timeline';
-import { lineText, tok, truncate, typedLength } from '../parts/tokens';
+import { lineText, truncate, typedLength } from '../parts/tokens';
 import { VizFrame } from '../parts/VizFrame';
 import { observeAs, preferReducedMotion } from './browser';
 

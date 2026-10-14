@@ -1,0 +1,356 @@
+// EventLog (@walkeros/explorer/design/components): the walkerOS events of a
+// session, a list beside the selected event. Product UI in the product type
+// group. The bar and the list follow the site theme; the detail is a code pane,
+// a dark island in the visualisations' colours. Its buttons are the Button
+// atom, its trigger chip InlineCode, its code CodeTokens. The caller sets its
+// size.
+@use './visually-hidden' as a11y;
+
+@layer components {
+  // The root is the container: the list and the detail stack when it is narrow.
+  .elb-event-log {
+    container: elb-event-log / inline-size;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    font-family: var(--type-product-body-family);
+    font-size: var(--type-product-body-size);
+    line-height: var(--type-product-body-line-height);
+    font-weight: var(--type-product-body-weight);
+    text-align: left;
+  }
+
+  .elb-event-log__bar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 10px;
+    padding: var(--space-3) var(--space-3-5) var(--space-3) 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .elb-event-log__title {
+    font-size: var(--type-product-title-size);
+    line-height: var(--type-product-title-line-height);
+    font-weight: var(--type-product-title-weight);
+  }
+
+  .elb-event-log__count {
+    padding: 0 7px;
+    color: var(--fg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    font-family: var(--type-code-step-family);
+    font-size: var(--type-product-caption-size);
+    line-height: 20px;
+  }
+
+  // The Button atom at the size of the log's bars.
+  .elb-event-log__button {
+    flex: none;
+    padding: 4px 10px;
+    font-family: var(--type-product-caption-family);
+    font-size: var(--type-product-caption-size);
+    line-height: var(--type-product-caption-line-height);
+    white-space: nowrap;
+  }
+
+  .elb-event-log__clear {
+    margin-left: auto;
+  }
+
+  .elb-event-log__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 48px var(--gutter);
+    text-align: center;
+  }
+
+  .elb-event-log__empty-title {
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .elb-event-log__empty-text {
+    max-width: 300px;
+    margin: 0;
+    color: var(--fg-2);
+    font-size: var(--type-product-small-size);
+    line-height: var(--type-product-small-line-height);
+    text-wrap: pretty;
+  }
+
+  .elb-event-log__body {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(320px, 1fr) minmax(0, 1.2fr);
+    min-height: 0;
+  }
+
+  .elb-event-log__list {
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    border-right: 1px solid var(--border);
+  }
+
+  .elb-event-log__row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: 9px 16px 9px 11px;
+    color: var(--fg);
+    background: transparent;
+    border: 0;
+    border-left: 3px solid transparent;
+    border-bottom: 1px solid var(--border);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--motion) var(--ease);
+
+    &:hover:not(:disabled) {
+      background: var(--surface-2);
+    }
+
+    &:disabled {
+      cursor: default;
+    }
+
+    // Selected: filled and edged, not by colour alone.
+    &[aria-pressed='true'] {
+      background: var(--surface-2);
+      border-left-color: var(--primary);
+    }
+  }
+
+  // A new event is the first row: it tints as it arrives, then settles. An
+  // event colour, as on the hero's events table.
+  .elb-event-log__list > li:first-child > .elb-event-log__row {
+    animation: elb-event-log-arrive 900ms var(--ease);
+  }
+
+  @keyframes elb-event-log-arrive {
+    from {
+      background-color: color-mix(
+        in srgb,
+        var(--event-entity) 22%,
+        transparent
+      );
+    }
+  }
+
+  .elb-event-log__seq,
+  .elb-event-log__time {
+    font-family: var(--type-code-step-family);
+    font-size: var(--type-product-caption-size);
+    line-height: var(--type-product-caption-line-height);
+  }
+
+  .elb-event-log__seq {
+    color: var(--fg-3);
+    text-align: right;
+  }
+
+  // Its own column, with or without a trigger before it.
+  .elb-event-log__time {
+    grid-column: 4;
+    color: var(--fg-2);
+  }
+
+  .elb-event-log__name {
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--type-code-step-family);
+    font-size: var(--type-code-step-size);
+    line-height: var(--type-code-step-line-height);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // InlineCode, quieter than the event's name.
+  .elb-event-log__trigger {
+    color: var(--fg-2);
+    white-space: nowrap;
+  }
+
+  // The dark value inside the detail, the theme's own in the list.
+  .elb-event-log__entity {
+    color: var(--event-entity);
+  }
+
+  .elb-event-log__action {
+    color: var(--event-action);
+  }
+
+  // A code pane: dark in both themes (the element is a dark island).
+  .elb-event-log__detail {
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    color: var(--viz-fg);
+    background: var(--viz-code-bg);
+  }
+
+  // Stays in view while the fields or the JSON scroll under it.
+  .elb-event-log__head {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3-5) 16px var(--space-3) 18px;
+    background: var(--viz-code-bg);
+    border-bottom: 1px solid var(--viz-surface);
+  }
+
+  .elb-event-log__summary {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .elb-event-log__detail-name {
+    font-family: var(--type-code-step-family);
+    font-size: var(--type-product-title-size);
+    line-height: var(--type-product-title-line-height);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .elb-event-log__meta {
+    color: var(--viz-fg-2);
+    font-size: var(--type-product-small-size);
+    line-height: var(--type-product-small-line-height);
+  }
+
+  .elb-event-log__views {
+    display: flex;
+    flex: none;
+    padding: 2px;
+    border: 1px solid var(--viz-surface);
+    border-radius: var(--radius-md);
+  }
+
+  .elb-event-log__view {
+    padding: 3px 9px;
+    color: var(--viz-fg-2);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-sm);
+    font: inherit;
+    font-size: var(--type-product-caption-size);
+    line-height: var(--type-product-caption-line-height);
+    cursor: pointer;
+    transition:
+      color var(--motion) var(--ease),
+      background var(--motion) var(--ease);
+
+    &:hover {
+      color: var(--viz-fg);
+    }
+
+    // The view shown: filled, not by colour alone.
+    &[aria-pressed='true'] {
+      color: var(--viz-fg);
+      background: var(--viz-surface);
+    }
+  }
+
+  .elb-event-log__status {
+    @include a11y.visually-hidden;
+  }
+
+  .elb-event-log__sections {
+    padding: 6px 0 var(--space-3-5);
+  }
+
+  .elb-event-log__section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 18px 4px;
+  }
+
+  .elb-event-log__label {
+    padding-bottom: 4px;
+    color: var(--viz-fg-2);
+    font-family: var(--type-code-step-family);
+    font-size: var(--type-product-caption-size);
+    line-height: var(--type-product-caption-line-height);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .elb-event-log__fields {
+    margin: 0;
+  }
+
+  .elb-event-log__field {
+    display: grid;
+    grid-template-columns: minmax(80px, 120px) minmax(0, 1fr);
+    gap: var(--space-3-5);
+    padding: 3px 0;
+    font-family: var(--type-code-step-family);
+    font-size: var(--type-code-step-size);
+    line-height: var(--type-code-step-line-height);
+    font-weight: var(--type-code-step-weight);
+
+    > dt {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    > dd {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0 var(--space-2);
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  // A note beside a value, or alone in a row where a key would be.
+  .elb-event-log__sub {
+    color: var(--viz-fg-2);
+    font-size: var(--type-product-caption-size);
+  }
+
+  .elb-event-log__json {
+    padding: var(--space-3) 18px 16px;
+    font-family: var(--type-code-step-family);
+    font-size: var(--type-code-step-size);
+    line-height: var(--type-code-step-line-height);
+    font-weight: var(--type-code-step-weight);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  @container elb-event-log (max-width: 639px) {
+    .elb-event-log__body {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, auto) minmax(0, 1fr);
+    }
+
+    .elb-event-log__list {
+      max-height: 190px;
+      border-right: 0;
+      border-bottom: 1px solid var(--border);
+    }
+  }
+}

@@ -52,8 +52,7 @@ import { errorHint } from './feature-gate.js';
  */
 
 // Caps and patterns the server enforces. Duplicated here so the schema can
-// describe them; the app's src/lib/hub/threads.ts, src/lib/versions/step-history.ts,
-// src/lib/hub/knowledge.ts and src/lib/api/schemas/frames.ts are the authority.
+// describe them; the app is the authority.
 const MAX_ANNOTATION_TEXT_LENGTH = 4000;
 const MAX_ANCHOR_KEY_LENGTH = 255;
 const MAX_ANCHOR_LABEL_LENGTH = 255;
@@ -241,7 +240,7 @@ export const HUB_MANAGE_INPUT_SCHEMA = {
     .max(MAX_SOURCE_KEY_LENGTH)
     .optional()
     .describe(
-      'The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action "knowledge" to every frame that page holds, at any depth; omit it to read the whole project.',
+      'The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action "knowledge" to the frames of that page; a shown frame that is not of that page is not included. Omit it to read the whole project.',
     ),
   frameId: z
     .string()

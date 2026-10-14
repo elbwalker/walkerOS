@@ -432,7 +432,9 @@ Options:
 
 Output:
 
-- Web: `dist/walker.js` (single self-contained IIFE)
+- Web: `dist/walker.js` (single self-contained IIFE). Every browser entry (this
+  bundle, managed wraps, walker.js) calls the Tag Mode loader `moin()` first; it
+  stays idle unless the page was opened with `?elbMoin`.
 - Server: `dist/{flow.mjs, package.json, node_modules/}` (always a directory;
   nft-traced)
 - Server archive: `flow.tar.gz` / `flow.tgz` (the server bundle directory packed

@@ -284,7 +284,10 @@ the preview artifact itself: it forwards the stored grant as an
 `X-Walkeros-Preview` header to named server-bound destinations, so a server flow
 can be previewed too. `preview` and `previewGrantTargets` are mutually exclusive
 on a single wrap invocation: a host bundle activates a preview, a preview
-artifact injects its grant, not both.
+artifact injects its grant, not both. In both variants the Tag Mode loader
+(`moin()` from `@walkeros/core`) runs first, before the preview block; the
+internal `moin` wrap option names a non-production Tag Mode target and is set
+only by the app's stage deploys.
 
 ### Subcommands
 

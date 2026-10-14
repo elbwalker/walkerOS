@@ -104,6 +104,9 @@ const PAIRS: readonly Pair[] = [
   ...['fg', 'fg-2', 'fg-3', 'link', ...STATUS].map((fg) => text(fg, GROUNDS)),
   text('on-primary', ['primary']),
   text('on-danger', ['danger']),
+  // A tag card's Done is filled with its kind colour: the event part's dark
+  // value in the dark theme, its light value in the light theme.
+  ...THEMED_EVENTS.map((ground) => text('on-event', [ground])),
   ...STATUS.map(
     (status): Pair => ({ ...text('fg', [`${status}-bg`]), over: GROUNDS }),
   ),

@@ -1,7 +1,7 @@
 import React, { useState, type HTMLAttributes } from 'react';
 import { cx } from '../cx';
+import { CodeTokens } from '../atoms/CodeTokens';
 import { MAPPING_CAPTION, MAPPING_EVENTS } from './data/destination-mapping';
-import { CodeTokens } from './parts/CodeTokens';
 import {
   formatCall,
   formatElb,

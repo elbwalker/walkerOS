@@ -577,7 +577,7 @@ takes. Needs the `hub` feature.
 | `anchorLabel` | string | No | How the anchor reads on screen, stored once when a thread is opened so a later rename leaves it readable. Derived for a release (`v14`). Pass it only when opening a thread on another anchor type. |
 | `threadId` | string | No | Thread ID (`thr_...`) from action `threads`. Pass it to `note_add` to reply in that thread, omit it to open a new thread on the anchor. |
 | `status` | `"open"` \| `"resolved"` | No | Read only threads in this state. Action `threads` only, omit for both. |
-| `pageKey` | string | No | The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action `knowledge` to every frame that page holds, at any depth. Omit it to read the whole project. |
+| `pageKey` | string | No | The page a note was left on, as Tag Mode addressed it, usually the page URL. Narrows action `knowledge` to the frames of that page. A shown frame that is not of that page is not included. Omit it to read the whole project. |
 | `frameId` | string | No | One frame (`frm_...`), the named rectangle a note hangs on. Action `knowledge` only. Narrower than `pageKey`, since a page holds several frames. |
 | `markId` | string | No | One tag within `frameId`, by its tag id (the `id` of an entry in `frame_manage` `marks.tags`). Action `knowledge` only, and refused without `frameId`, since a mark id alone addresses nothing. Naming a mark is also what attaches the message bodies. |
 
@@ -590,10 +590,19 @@ next to the pixels it was drawn on, so frames are edited where the page is.
 Use `hub_manage` with action `knowledge` to read what people wrote on a frame.
 Needs the `frames` feature.
 
+A frame shows other frames through `links`. Each link is a rectangle on the
+frame (`x`, `y`, `w`, `h`, in fractions of that frame) and the `frameId` of the
+frame shown there. Pass that `frameId` to action `get` to read the shown frame.
+A `page` read returns the frames of that page. A shown frame that is not of
+that page is not in the answer, it is only named by `frameId` in `links`. Frames
+that share a `variantSetId` are variants of one another, and each is a complete
+frame.
+
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | `"list"` \| `"page"` \| `"get"` | Yes | `list` returns every frame of the project without marks, `page` returns one page's frames with their marks, `get` returns one frame with its marks. |
+| `action` | `"list"` \| `"page"` \| `"get"` | Yes | `list` returns every frame of the flow without marks, `page` returns the frames of one page with their marks, `get` returns one frame with its marks. |
 | `projectId` | string | No | Project ID (`proj_...`). Optional: falls back to the default project when omitted. |
+| `flowId` | string | Yes | Flow ID (`flow_...`). Frames belong to a flow, so every action needs it. Use `flow_manage` action `list` to find one. |
 | `pageKey` | string | No | The page as its frames address it (the `source.key` of a page frame, usually the page URL without query). Required for `page`. |
 | `frameId` | string | No | Frame ID (`frm_...`). Required for `get`. Use action `list` or `page` to find one. |
 

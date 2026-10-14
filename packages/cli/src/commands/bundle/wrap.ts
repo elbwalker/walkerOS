@@ -20,11 +20,12 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import * as esbuild from 'esbuild';
 import {
+  cliCorePlugin,
   generateWrapEntry,
   generateWrapEntryServer,
   getNodeExternals,
 } from './bundler.js';
-import type { ObserveWeb } from '@walkeros/core';
+import type { MoinTarget, ObserveWeb } from '@walkeros/core';
 import { tmpRunDir } from '../../core/tmp-names.js';
 import { buildFlagDefines, readNeedsMarker } from './build-flags.js';
 import type { WrapEntryPreview } from './bundler.js';
@@ -82,6 +83,13 @@ export interface WrapSkeletonOptions {
   observe?: ObserveWeb;
 
   /**
+   * Browser-only: the Tag Mode loader target, internal deploy data the stage
+   * app passes like the preview keyring. Absent, the loader trusts the
+   * production app.
+   */
+  moin?: MoinTarget;
+
+  /**
    * esbuild target. @default 'es2018' for browser, 'node18' for node.
    */
   target?: string;
@@ -93,13 +101,6 @@ export interface WrapSkeletonOptions {
   minifyOptions?: MinifyOptions;
 }
 
-/**
- * Returns the candidate `node_modules` dirs esbuild should consult for
- * the wrap step's stage 2 entry. We start at this module's own location
- * and walk upward, since the wrap step always runs from inside the CLI
- * package — either via `node_modules/@walkeros/cli/dist/...` or directly
- * from the workspace source tree during tests.
- */
 /**
  * Extracts the `<pkg>/dev` specifiers from a skeleton's lazy `__devExports`
  * registry by reading its literal `import('<pkg>/dev')` thunks. The registry is
@@ -117,6 +118,13 @@ export function extractDevExternals(skeletonText: string): string[] {
   return Array.from(found);
 }
 
+/**
+ * Returns the candidate `node_modules` dirs esbuild should consult for
+ * the wrap step's stage 2 entry. We start at this module's own location
+ * and walk upward, since the wrap step always runs from inside the CLI
+ * package: either via `node_modules/@walkeros/cli/dist/...` or directly
+ * from the workspace source tree during tests.
+ */
 function getNodeResolutionPaths(): string[] {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const candidates: string[] = [];
@@ -203,6 +211,7 @@ export async function wrapSkeleton(
             : {}),
           platform,
           ...(options.observe ? { observe: options.observe } : {}),
+          ...(options.moin ? { moin: options.moin } : {}),
         })
       : generateWrapEntryServer(absoluteSkeletonPath);
 
@@ -249,6 +258,10 @@ export async function wrapSkeleton(
       // `window` explicitly, so they still run. The entry has zero exports, so
       // no `globalName` is needed.
       esbuildOptions.format = 'iife';
+      // The entry's core imports (the Tag Mode loader, the preview
+      // activator) come from the CLI's own core, never from a core above the
+      // temp dir.
+      esbuildOptions.plugins = [cliCorePlugin()];
       // Build flags from the needs the skeleton carries. Only a baked observe
       // config adds to them: the recorder runs only for a collector that has
       // one. A skeleton without needs (an older CLI) keeps every flag on.

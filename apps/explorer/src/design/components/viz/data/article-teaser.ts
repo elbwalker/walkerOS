@@ -4,7 +4,7 @@
  * expected events all come from the constants below, so a fidelity test that
  * runs the page HTML through walkerOS checks what the cards show.
  */
-import { tok, type CodeToken, type EventPart } from '../parts/tokens';
+import { tok, type CodeToken, type EventPart } from '../../codeTokens';
 
 export type TeaserStep = 1 | 2 | 3 | 4 | 5;
 export type TeaserPageId = 'home' | 'article';

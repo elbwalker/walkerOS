@@ -300,6 +300,34 @@ the wait time.
   language="javascript"
 />
 
+## Tag Mode loader
+
+### moin
+
+`moin()` lets the walkerOS app open [Tag Mode](/docs/getting-started/quickstart/walkerjs#tag-mode)
+on your page, in the one browser tab the app opened for it. There is nothing to
+configure. walker.js and the web bundles the CLI builds call it first in their
+entry, so call it yourself only when you start a flow from your own browser
+code:
+
+<CodeSnippet
+  code={`import { moin } from '@walkeros/core';
+
+moin(); // once, early, before startFlow`}
+  language="typescript"
+/>
+
+It does nothing unless the page was opened with `elbMoin` in its address. On
+such a page it waits for the walkerOS app tab to answer and only then loads the
+Tag Mode script from `https://cdn.walkeros.io`; without that answer nothing
+loads. Without `https://cdn.walkeros.io` in your Content Security Policy's
+`script-src`, nothing loads either, unless the policy uses `'strict-dynamic'`,
+which trusts scripts added by a script that carries your nonce.
+
+`moin(target?: MoinTarget)` takes no argument in normal use: the default,
+`MOIN_PRODUCTION`, trusts the walkerOS app at `https://app.walkeros.io`.
+`MOIN_PARAM` is the address parameter, `'elbMoin'`.
+
 ## Utilities
 
 ### trim

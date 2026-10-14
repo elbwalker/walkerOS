@@ -1,4 +1,5 @@
 import { startFlow } from '@walkeros/collector';
+import { moin } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { sourceSession } from '@walkeros/web-source-session';
 import { dataLayerDestination } from './destination';
@@ -31,6 +32,9 @@ function start(): void {
 if (typeof window !== 'undefined' && !Reflect.get(window, LOADED)) {
   // Set before anything async so a second copy stops here.
   Reflect.set(window, LOADED, true);
+
+  // The Tag Mode loader: idle unless the page was opened for Tag Mode.
+  moin();
 
   // Calls made before DOM ready are queued; the browser source adopts
   // elbLayer and replaces this unmarked stub with its own writer.
