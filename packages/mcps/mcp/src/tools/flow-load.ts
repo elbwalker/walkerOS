@@ -1,19 +1,10 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
-import { isAuthenticationError, AUTH_HINT } from '../types.js';
 import { redactNestedStrings, keepStructural } from '../user-data.js';
 
-import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { parseToolInput } from './parse-input.js';
-import {
-  NO_DEFAULT_PROJECT_ERROR,
-  resolveDefaultProject,
-} from './project-context.js';
 import { RuntimeRefusal, type FlowRuntime } from '../runtime/types.js';
-
-import { flowConfigOf, isCloudId } from '../cloud-flow.js';
 
 const WEB_SKELETON = {
   version: 4,
@@ -39,9 +30,8 @@ const SERVER_SKELETON = {
 
 const TITLE = 'Load or Create Flow';
 const DESCRIPTION =
-  'Load an existing flow configuration from a local file path, URL, or walkerOS API (by flow ID). ' +
-  'On the hosted server only inline JSON or a saved flow id is accepted, no file paths or URLs. ' +
-  'Or create a new empty flow by specifying a platform (web or server). ' +
+  'Load a flow configuration (inline JSON, or a reference this server can read; on your own machine a file path or an http(s) URL), ' +
+  'or create a new empty flow by specifying a platform (web or server). ' +
   'Use the add-step prompt to add sources, destinations, transformers, or stores to the flow.';
 
 const inputSchema = {
@@ -49,8 +39,8 @@ const inputSchema = {
     .string()
     .optional()
     .describe(
-      'Flow source: local file path (./flow.json), URL (https://...), ' +
-        'inline JSON string, or API flow ID (cfg_...). Omit to create a new flow.',
+      'Flow source: inline JSON, or a reference this server can read ' +
+        '(locally a file path such as ./flow.json or an http(s) URL). Omit to create a new flow.',
     ),
   platform: z
     .enum(['web', 'server'])
@@ -73,55 +63,22 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
-export function createFlowLoadToolSpec(
-  client: ToolClient,
-  runtime: FlowRuntime,
-): ToolSpec {
+export function createFlowLoadToolSpec(runtime: FlowRuntime): ToolSpec {
   return {
     name: 'flow_load',
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
+    outputSchema,
     annotations,
-    handler: (input) => flowLoadHandlerBody(client, runtime, input),
+    handler: (input) => flowLoadHandlerBody(runtime, input),
   };
 }
 
-async function flowLoadHandlerBody(
-  client: ToolClient,
-  runtime: FlowRuntime,
-  input: unknown,
-) {
+async function flowLoadHandlerBody(runtime: FlowRuntime, input: unknown) {
   const parsed = parseToolInput(inputSchema, input);
   if (!parsed.ok) return parsed.error;
   const { source, platform } = parsed.data;
-
-  // Load by cloud flow/config id (flow_… / cfg_…) via the same client seam
-  // flow_manage `get` uses. Its NOT_FOUND surfaces directly, never remapped
-  // to the local "file not found" hint below.
-  if (source && isCloudId(source)) {
-    const resolvedProjectId = resolveDefaultProject(client, undefined);
-    if (!resolvedProjectId) {
-      return mcpError(new Error(NO_DEFAULT_PROJECT_ERROR));
-    }
-    try {
-      const flow = await client.getFlow({
-        flowId: source,
-        projectId: resolvedProjectId,
-      });
-      return mcpResult(
-        redactNestedStrings(flowConfigOf(flow), { skip: keepStructural }),
-        {
-          next: ['Use flow_validate to check', 'Use add-step prompt to modify'],
-        },
-      );
-    } catch (error) {
-      return mcpError(
-        error,
-        isAuthenticationError(error) ? AUTH_HINT : undefined,
-      );
-    }
-  }
 
   try {
     if (source) {
@@ -136,7 +93,7 @@ async function flowLoadHandlerBody(
     if (!platform) {
       return mcpError(
         new Error(
-          'Provide source (file path, URL, or flow ID) to load existing flow, ' +
+          'Provide source (file path or URL) to load existing flow, ' +
             'or platform (web/server) to create a new one.',
         ),
       );
@@ -153,27 +110,7 @@ async function flowLoadHandlerBody(
     if (error instanceof RuntimeRefusal) return mcpError(error, error.hint);
     const msg = error instanceof Error ? error.message : '';
     if (msg.includes('not found') || msg.includes('ENOENT'))
-      return mcpError(error, 'Check configPath — expected a flow.json file');
+      return mcpError(error, 'Check configPath: expected a flow.json file');
     return mcpError(error);
   }
-}
-
-export function registerFlowLoadTool(
-  server: McpServer,
-  client: ToolClient,
-  runtime: FlowRuntime,
-) {
-  const spec = createFlowLoadToolSpec(client, runtime);
-  server.registerTool(
-    spec.name,
-    {
-      title: spec.title,
-      description: spec.description,
-      inputSchema: spec.inputSchema,
-      // outputSchema is wire-only; not part of ToolSpec
-      outputSchema,
-      annotations: spec.annotations,
-    },
-    (args) => flowLoadHandlerBody(client, runtime, args),
-  );
 }

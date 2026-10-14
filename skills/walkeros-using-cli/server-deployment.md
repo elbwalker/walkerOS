@@ -9,7 +9,7 @@ collection flow.
 - A walkerOS project (create at app.walkeros.io or via API)
 - Authentication: `walkeros auth login`, or `WALKEROS_TOKEN` set to an
   automation token (`wos_pat_...`) from Account, Automation tokens
-- `WALKEROS_PROJECT_ID` set, or `--project` on every command
+- `WALKEROS_PROJECT_ID` set, or `--project` on every `walkeros api` call
 
 ## 1. Create the Flow Config
 
@@ -86,25 +86,32 @@ curl -X POST http://localhost:3000/collect \
 
 ## 3. Create the Flow in walkerOS
 
-Create a flow via the app UI or API, then upload the config:
+Create the flow in the app UI, or send a flow record that names `name` and
+`config` with `walkeros api`. The answer carries the flow ID (`flow_...`) the
+deploy needs:
 
 ```bash
-# Via MCP tools or API — create flow and upload config
-# The flow ID (flow_xxx) is needed for deployment
+# Wrap flow.json into a flow record
+jq -n --slurpfile config flow.json '{ name: "my-server-flow", config: $config[0] }' > flow-record.json
+
+walkeros api POST /api/projects/{projectId}/flows --data @flow-record.json | jq -r .id
+# flow_abc123
 ```
 
 ## 4. Deploy
 
-```bash
-# Deploy and watch progress
-walkeros deploy start flow_abc123
+Start the deploy, then read the deployment until its status is `active` (a
+server flow) or `failed`:
 
-# Output:
-# Building bundle...
-# Deploying container...
-# Starting container...
-# ✓ Active: https://your-flow.functions.fnc.fr-par.scw.cloud
+```bash
+DEPLOYMENT=$(walkeros api POST /api/projects/{projectId}/flows/flow_abc123/deploy | jq -r .deploymentId)
+
+walkeros api GET /api/projects/{projectId}/deployments/$DEPLOYMENT | jq '{ status, url, error }'
 ```
+
+`url` is the live endpoint once the status is `active`. For a CI job that waits
+for the result, see "Deploy from CI" in the
+[CLI docs](https://www.walkeros.io/docs/apps/cli#deploy-from-ci).
 
 ## 5. Verify
 
@@ -146,7 +153,6 @@ an ESM `flow.mjs` plus a `node_modules/` traced by `@vercel/nft`, all inside
 
 ## Related
 
-- [commands-reference.md](commands-reference.md) — Full `deploy` command
-  reference
-- [flow-configuration.md](flow-configuration.md) — Complete Flow.Json schema
-- [SKILL.md](SKILL.md) — CLI overview
+- [commands-reference.md](commands-reference.md): the `api` command reference
+- [flow-configuration.md](flow-configuration.md): the complete Flow.Json schema
+- [SKILL.md](SKILL.md): the CLI overview

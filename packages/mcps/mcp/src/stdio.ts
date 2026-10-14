@@ -1,19 +1,15 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { setClientContext } from '@walkeros/cli';
 
 import { createWalkerOSMcpServer, getMcpEmitterSingleton } from './server.js';
-import { HttpToolClient } from './http-tool-client.js';
 import { createMcpEmitter } from './telemetry.js';
 import { createLocalRuntime } from './runtime/local.js';
 
 declare const __VERSION__: string;
 
-setClientContext({ type: 'mcp', version: __VERSION__ });
-
 // Hook process-level error channels so we can emit `error throw` before the
 // process tears down. Both handlers look up the emitter lazily: if the MCP
 // handshake never completed, no emitter exists and we silently skip.
-// We don't call process.exit — stdio transport already propagates failures
+// We don't call process.exit: stdio transport already propagates failures
 // up to the parent client via the JSON-RPC channel.
 process.on('uncaughtException', (err) => {
   const emitter = getMcpEmitterSingleton();
@@ -35,7 +31,6 @@ async function main() {
   // stdio runs on the user's own machine: the local runtime keeps file, URL and
   // in-process bundle, simulate and push behaviour exactly as before.
   const server = createWalkerOSMcpServer({
-    client: new HttpToolClient(),
     version: __VERSION__,
     runtime: createLocalRuntime(),
   });
@@ -45,7 +40,7 @@ async function main() {
 }
 
 main().catch(async (error) => {
-  // Startup failure — no client handshake happened, so there's no emitter in
+  // Startup failure: no client handshake happened, so there's no emitter in
   // the module singleton. Build a one-shot emitter with an unknown client so
   // the error is still visible to telemetry.
   try {
@@ -55,7 +50,7 @@ main().catch(async (error) => {
     });
     await emitter.emitError('startup');
   } catch {
-    // swallow — telemetry must never mask the original startup error
+    // swallow: telemetry must never mask the original startup error
   }
   console.error('Failed to start Flow MCP server:', error);
   process.exit(1);

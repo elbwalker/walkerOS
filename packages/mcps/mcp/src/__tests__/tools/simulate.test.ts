@@ -1,10 +1,6 @@
 import { createLocalRuntime } from '../../runtime/local.js';
 import { z } from 'zod';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import {
-  createFlowSimulateToolSpec,
-  registerFlowSimulateTool,
-} from '../../tools/simulate.js';
+import { createFlowSimulateToolSpec } from '../../tools/simulate.js';
 import { SimulateOutputShape } from '../../schemas/output.js';
 
 // Mock @walkeros/cli/dev schemas
@@ -38,7 +34,7 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  // The real narrowing helper: cloud-id resolution reads the flow record through it.
+  // The real narrowing helper: the local runtime reads through it.
   isObject: jest.requireActual('@walkeros/core').isObject,
   mcpResult: jest.fn((result, hints) => ({
     content: [
@@ -73,7 +69,6 @@ import {
   simulateDestination,
   simulateCollector,
 } from '@walkeros/cli';
-import { stubClient } from '../support/stub-client.js';
 import { structured, record, rows, textOf } from '../support/tool-result.js';
 import type { Simulation } from '@walkeros/core';
 const mockSimulateSource = jest.mocked(simulateSource);
@@ -109,14 +104,9 @@ function inputSchemaField(config: unknown, key: string): z.ZodType {
 
 describe('flow_simulate tool', () => {
   let spec: ReturnType<typeof createFlowSimulateToolSpec>;
-  let getFlow: jest.Mock;
 
   beforeEach(() => {
-    getFlow = jest.fn();
-    spec = createFlowSimulateToolSpec(
-      stubClient({ getFlow }),
-      createLocalRuntime(),
-    );
+    spec = createFlowSimulateToolSpec(createLocalRuntime());
     jest.clearAllMocks();
   });
 
@@ -132,11 +122,7 @@ describe('flow_simulate tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    const server = new McpServer({ name: 'test', version: '0.0.0' });
-    const registerTool = jest.spyOn(server, 'registerTool');
-    registerFlowSimulateTool(server, stubClient(), createLocalRuntime());
-    const call: unknown[] = registerTool.mock.calls[0] ?? [];
-    expect(record(call[1]).outputSchema).toBe(SimulateOutputShape);
+    expect(spec.outputSchema).toBe(SimulateOutputShape);
   });
 
   it('registers step as a required (non-optional) zod string', () => {
@@ -306,69 +292,7 @@ describe('flow_simulate tool', () => {
     );
   });
 
-  it('resolves a cloud flow id (flow_…) via the client and passes config inline', async () => {
-    const cloudConfig = { version: 4, flows: { default: {} } };
-    getFlow.mockResolvedValue({ config: cloudConfig });
-    mockSimulateDestination.mockResolvedValue({
-      step: 'destination',
-      name: 'gtag',
-      events: [],
-      calls: [],
-      duration: 5,
-    });
-
-    await spec.handler({
-      configPath: 'flow_abc123',
-      event: '{"name":"page view"}',
-      flow: undefined,
-      step: 'destination.gtag',
-    });
-
-    expect(getFlow).toHaveBeenCalledWith({ flowId: 'flow_abc123' });
-    expect(mockSimulateDestination).toHaveBeenCalledWith(
-      cloudConfig,
-      { name: 'page view' },
-      {
-        destinationId: 'gtag',
-        bundlePath: expect.any(String),
-        flow: undefined,
-        silent: true,
-      },
-    );
-  });
-
-  it('resolves a cloud config id (cfg_…) via the client for a source step', async () => {
-    const cloudConfig = { version: 4, flows: { default: {} } };
-    getFlow.mockResolvedValue({ config: cloudConfig });
-    mockSimulateSource.mockResolvedValue({
-      step: 'source',
-      name: 'demo',
-      events: [],
-      calls: [],
-      duration: 5,
-    });
-
-    await spec.handler({
-      configPath: 'cfg_xyz789',
-      event: '{"content":{"name":"page view"}}',
-      flow: undefined,
-      step: 'source.demo',
-    });
-
-    expect(getFlow).toHaveBeenCalledWith({ flowId: 'cfg_xyz789' });
-    expect(mockSimulateSource).toHaveBeenCalledWith(
-      cloudConfig,
-      { content: { name: 'page view' } },
-      {
-        sourceId: 'demo',
-        bundlePath: expect.any(String),
-        flow: undefined,
-        silent: true,
-      },
-    );
-  });
-
-  it('reads a local file path itself (no client call)', async () => {
+  it('reads a local file path itself', async () => {
     mockSimulateDestination.mockResolvedValue({
       step: 'destination',
       name: 'gtag',
@@ -384,7 +308,6 @@ describe('flow_simulate tool', () => {
       step: 'destination.gtag',
     });
 
-    expect(getFlow).not.toHaveBeenCalled();
     expect(mockSimulateDestination).toHaveBeenCalledWith(
       { version: 4, flows: {} },
       { name: 'page view' },

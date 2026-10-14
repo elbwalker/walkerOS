@@ -56,7 +56,7 @@ const tagger = createTagger();
 
 // Create with custom configuration
 const customTagger = createTagger({
-prefix: 'data-elb',
+  prefix: 'data-elb',
 });`}
   language="typescript"
 />
@@ -74,9 +74,9 @@ prefix: 'data-elb',
 
 // Using tagger with a scope parameter sets naming for data attributes only
 const attributes = tagger('product')
-.data('id', '123')
-.data('name', 'Widget')
-.get();
+  .data('id', '123')
+  .data('name', 'Widget')
+  .get();
 
 // Result:
 // {
@@ -91,10 +91,10 @@ const attributes = tagger('product')
 <CodeSnippet
   code={`// To create an entity attribute, use the .entity() method
 const attributes = tagger()
-.entity('product')
-.data('id', '123')
-.data('name', 'Widget')
-.get();
+  .entity('product')
+  .data('id', '123')
+  .data('name', 'Widget')
+  .get();
 
 // Result:
 // {
@@ -108,9 +108,9 @@ const attributes = tagger()
 
 <CodeSnippet
   code={`const attributes = tagger()
-.action('load', 'view')
-.action('click', 'select')
-.get();
+  .action('load', 'view')
+  .action('click', 'select')
+  .get();
 
 // Result:
 // {
@@ -123,11 +123,11 @@ const attributes = tagger()
 
 <CodeSnippet
   code={`const attributes = tagger()
-.entity('product')
-.data('id', 123)
-.context('test', 'engagement')
-.globals('lang', 'en')
-.get();
+  .entity('product')
+  .data('id', 123)
+  .context('test', 'engagement')
+  .globals('lang', 'en')
+  .get();
 
 // Result:
 // {
@@ -147,10 +147,10 @@ entity receives. It uses the same value syntax and escaping as the other methods
 
 <CodeSnippet
   code={`const attributes = tagger()
-.entity('product')
-.data('name', 'A')
-.scoped('size', 'L')
-.get();
+  .entity('product')
+  .data('name', 'A')
+  .scoped('size', 'L')
+  .get();
 
 // Result:
 // {
@@ -166,10 +166,10 @@ entity receives. It uses the same value syntax and escaping as the other methods
 <CodeSnippet
   code={`// Starting with a naming scope
 const attributes = tagger('product')
-.data('id', 123)
-.entity('user') // Changes both entity attribute and naming scope
-.data('name', 'John')
-.get();
+  .data('id', 123)
+  .entity('user') // Changes both entity attribute and naming scope
+  .data('name', 'John')
+  .get();
 
 // Result:
 // {
@@ -185,11 +185,11 @@ const attributes = tagger('product')
 <CodeSnippet
   code={`// Data before entity uses original scope
 const attributes = tagger('product')
-.data('id', 123)
-.data('price', 99.99)
-.entity('cart') // Changes scope for future data calls
-.data('quantity', 2)
-.get();
+  .data('id', 123)
+  .data('price', 99.99)
+  .entity('cart') // Changes scope for future data calls
+  .data('quantity', 2)
+  .get();
 
 // Result:
 // {
@@ -209,8 +209,8 @@ the browser source reads, so the value arrives as passed.
 
 <CodeSnippet
   code={`const attributes = tagger()
-.data('description', "Men's shirt: size L; blue")
-.get();
+  .data('description', "Men's shirt: size L; blue")
+  .get();
 
 // Result:
 // {
@@ -389,44 +389,48 @@ returns the final attributes object.
 <CodeSnippet
   code={`// For product cards with nearest entity tracking only
 function ProductCard({ product }) {
-return (
-<div
-{...tagger('product')
-  .data({
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    category: product.category
-  })
-  .action('click', 'select') // Only tracks the product entity
-  .get()}
->
-{product.name}
-</div>
-);
+  return (
+    <div
+      {...tagger('product')
+        .data({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+        })
+        .action('click', 'select') // Only tracks the product entity
+        .get()}
+    >
+      {product.name}
+    </div>
+  );
 }
 
 // For product cards that also need page context tracking
 function ProductCardWithContext({ product }) {
-return (
-<div className="page-section" data-elb="page" data-elb-page="section:products">
-<div
-  {...tagger('product')
-    .data({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      category: product.category
-    })
-    .actions('click', 'select') // Uses data-elbactions
-    .get()}
->
-  {product.name}
-</div>
-</div>
-);
+  return (
+    <div
+      className="page-section"
+      data-elb="page"
+      data-elb-page="section:products"
+    >
+      <div
+        {...tagger('product')
+          .data({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            category: product.category,
+          })
+          .actions('click', 'select') // Uses data-elbactions
+          .get()}
+      >
+        {product.name}
+      </div>
+    </div>
+  );
 }`}
-  language="typescript"
+  language="tsx"
 />
 
 ### Shopping cart
@@ -434,23 +438,23 @@ return (
 <CodeSnippet
   code={`// For cart items that need both entity and data attributes
 function CartItem({ item }) {
-return (
-<div
-{...tagger()
-  .entity('cart')
-  .data({
-    productId: item.id,
-    quantity: item.quantity,
-    price: item.price
-  })
-  .action('click', 'remove')
-  .get()}
->
-{item.name}
-</div>
-);
+  return (
+    <div
+      {...tagger()
+        .entity('cart')
+        .data({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price,
+        })
+        .action('click', 'remove')
+        .get()}
+    >
+      {item.name}
+    </div>
+  );
 }`}
-  language="typescript"
+  language="tsx"
 />
 
 ### Dynamic component tracking
@@ -458,15 +462,18 @@ return (
 <CodeSnippet
   code={`// Reusable tracking function
 function trackComponent(type, data, actions = {}) {
-return tagger(type)
-.data(data)
-.action(actions)
-.get();
+  return tagger(type).data(data).action(actions).get();
 }
 
 // Usage
-<button {...trackComponent('cta', { label: 'Sign Up', position: 'header' }, { click: 'signup' })}>
-Sign Up
-</button>`}
-  language="typescript"
+<button
+  {...trackComponent(
+    'cta',
+    { label: 'Sign Up', position: 'header' },
+    { click: 'signup' },
+  )}
+>
+  Sign Up
+</button>;`}
+  language="tsx"
 />

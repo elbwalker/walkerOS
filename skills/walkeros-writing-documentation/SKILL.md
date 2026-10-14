@@ -272,8 +272,13 @@ with the matching `dark-plus` / `light-plus` themes.
 
 `<CodeView>` and `<CodeSnippet>` render their code server-side, so it appears in
 the static HTML and the markdown/`llms.txt` export. Code is shown exactly as
-authored (no automatic reformatting), so format multi-line snippets before
-putting them in the `code` prop.
+authored (no automatic reformatting). `npm run validate:snippets` (part of
+`validate:sources`, run in CI) fails on a docs `<CodeSnippet>` that Prettier
+would format differently, and `npm run validate:snippets -- --write` fixes it in
+place. Excerpts Prettier cannot parse (`settings: {...}`, `{ ... }`
+placeholders, a lone opening tag) are only checked for indentation: indent them
+by hand, two spaces per level. JSX belongs in `language="tsx"`, not
+`typescript`.
 
 **Rule:** default to `<CodeView>`. Only reach for `<CodeBox>` when the code must
 be editable.

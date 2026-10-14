@@ -28,9 +28,9 @@ it concatenates arrays from both objects, removing duplicates.
 
 <CodeSnippet
   code={`interface AssignOptions {
-merge?: boolean; // Merge array properties (default: true)
-shallow?: boolean; // Create shallow copy (default: true)
-extend?: boolean; // Extend with new properties (default: true)
+  merge?: boolean; // Merge array properties (default: true)
+  shallow?: boolean; // Create shallow copy (default: true)
+  extend?: boolean; // Extend with new properties (default: true)
 }
 
 const obj1 = { a: 1, b: [1, 2] };
@@ -179,7 +179,7 @@ extracts UTM and click ID parameters from URLs.
 
 <CodeSnippet
   code={`getMarketingParameters(
-new URL('https://example.com/?utm_source=docs&gclid=123'),
+  new URL('https://example.com/?utm_source=docs&gclid=123'),
 );
 // Returns { source: "docs", gclid: "123", clickId: "gclid" }
 
@@ -271,8 +271,8 @@ async operations.
 
 <CodeSnippet
   code={`const safeAsyncCall = tryCatchAsync(
-() => fetchUserData(),
-(error) => ({ error: 'Failed to load user' }),
+  () => fetchUserData(),
+  (error) => ({ error: 'Failed to load user' }),
 );`}
   language="javascript"
 />

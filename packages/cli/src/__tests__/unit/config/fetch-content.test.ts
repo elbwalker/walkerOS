@@ -1,4 +1,4 @@
-import { fetchContentString } from '../../../config/utils.js';
+import { fetchContentString, loadJsonConfig } from '../../../config/utils.js';
 
 const APP_URL = 'https://app.example.test';
 const TOKEN = 'tok_secret';
@@ -31,7 +31,7 @@ function recorder() {
   return { fetchFn, calls };
 }
 
-describe('fetchContentString auth scoping', () => {
+describe('fetchContentString sends no credential', () => {
   const originalEnv = process.env;
   const originalFetch = globalThis.fetch;
 
@@ -48,13 +48,13 @@ describe('fetchContentString auth scoping', () => {
     globalThis.fetch = originalFetch;
   });
 
-  it('sends the bearer to the configured app origin', async () => {
+  it('sends no Authorization header to the app origin either', async () => {
     const { fetchFn, calls } = recorder();
     globalThis.fetch = fetchFn;
 
-    await fetchContentString(`${APP_URL}/api/flows/fl_1/bundle.js`);
+    await fetchContentString(`${APP_URL}/api/flow-config/signed-abc`);
 
-    expect(calls[0]?.authorization).toBe(`Bearer ${TOKEN}`);
+    expect(calls[0]?.authorization).toBeUndefined();
   });
 
   it.each([
@@ -77,15 +77,17 @@ describe('fetchContentString auth scoping', () => {
     expect(calls[0]?.authorization).toBeUndefined();
   });
 
-  it('refuses to send the bearer to the app over plain http', async () => {
+  it('reads an app URL over plain http, since no credential goes along', async () => {
     const { fetchFn, calls } = recorder();
     globalThis.fetch = fetchFn;
     process.env.WALKEROS_APP_URL = 'http://app.example.test';
 
-    await expect(
-      fetchContentString('http://app.example.test/api/flows/fl_1/bundle.js'),
-    ).rejects.toThrow(/plain http/);
-    expect(calls).toHaveLength(0);
+    await fetchContentString(
+      'http://app.example.test/api/flow-config/signed-abc',
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.authorization).toBeUndefined();
   });
 
   it('leaves a plain http URL that carries no bearer alone', async () => {
@@ -104,5 +106,48 @@ describe('fetchContentString auth scoping', () => {
     await expect(
       fetchContentString('https://attacker.example/flow.json'),
     ).resolves.toBe('{}');
+  });
+});
+
+describe('fetchContentString failures', () => {
+  const originalEnv = process.env;
+  const originalFetch = globalThis.fetch;
+  const URL_ = 'https://config.example.test/flow.json';
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+    delete process.env.WALKEROS_TOKEN;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    globalThis.fetch = originalFetch;
+  });
+
+  it.each([404, 403, 410])('names HTTP %i and the URL', async (status) => {
+    globalThis.fetch = async () => new Response('{}', { status });
+    await expect(fetchContentString(URL_)).rejects.toThrow(
+      new RegExp(`^Failed to fetch ${URL_.replace(/\./g, '\\.')}: ${status}`),
+    );
+  });
+
+  it('names an unreachable host with the network code', async () => {
+    globalThis.fetch = async () => {
+      throw Object.assign(new TypeError('fetch failed'), {
+        cause: Object.assign(new Error('connect ECONNREFUSED'), {
+          code: 'ECONNREFUSED',
+        }),
+      });
+    };
+    await expect(fetchContentString(URL_)).rejects.toThrow(
+      `Could not reach ${URL_}: fetch failed (ECONNREFUSED)`,
+    );
+  });
+
+  it('loadJsonConfig keeps a reach failure instead of calling it invalid JSON', async () => {
+    globalThis.fetch = async () => {
+      throw new TypeError('fetch failed');
+    };
+    await expect(loadJsonConfig(URL_)).rejects.toThrow(/^Could not reach /);
   });
 });

@@ -75,7 +75,9 @@ First rule caches only keys starting with `session:` for five minutes. The secon
   "stores": {
     "files": {
       "package": "@walkeros/server-store-gcs",
-      "config": { "settings": { "bucket": "my-cache-bucket", "prefix": "cache/" } },
+      "config": {
+        "settings": { "bucket": "my-cache-bucket", "prefix": "cache/" }
+      },
       "cache": { "rules": [{ "ttl": 300 }] }
     },
     "crm": {
@@ -168,7 +170,9 @@ Each read through a wrapped store also emits a flow record to the collector's ob
 For interactive debugging, the wrapped store instance exposes a `counters` accessor:
 
 <CodeSnippet
-  code={`const { collector } = await startFlow({ /* ... */ });
+  code={`const { collector } = await startFlow({
+  /* ... */
+});
 const sessions = collector.stores.sessions;
 if ('counters' in sessions) console.log(sessions.counters);
 // { hits: 412, misses: 18, populates: 18, writes: 0, deletes: 0,

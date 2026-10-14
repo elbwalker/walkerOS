@@ -252,12 +252,11 @@ its API destination at the URL of a sibling server flow:
 
 Strictness rules:
 
-- `walkeros bundle` and `walkeros deploy` error if `$flow.X.Y` resolves
-  to an empty value.
+- `walkeros bundle` errors if `$flow.X.Y` resolves to an empty value.
 - `walkeros validate` warns by default, escalates to error with
   `--strict`.
 - The error message points you to the source: set
-  `flows.server.config.url`, or run `walkeros deploy server` first.
+  `flows.server.config.url`, or deploy the `server` flow first.
 
 ## TypeScript type renames
 

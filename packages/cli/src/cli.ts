@@ -15,40 +15,14 @@ import { validateCommand } from './commands/validate/index.js';
 import { registerCacheCommand } from './commands/cache.js';
 import { loginCommand } from './commands/login/index.js';
 import { logoutCommand } from './commands/logout/index.js';
-import { whoamiCommand } from './commands/auth/index.js';
-import {
-  listProjectsCommand,
-  getProjectCommand,
-  createProjectCommand,
-  updateProjectCommand,
-  deleteProjectCommand,
-} from './commands/projects/index.js';
-import {
-  listFlowsCommand,
-  getFlowCommand,
-  createFlowCommand,
-  updateFlowCommand,
-  deleteFlowCommand,
-  duplicateFlowCommand,
-} from './commands/flows/index.js';
-import {
-  deployCommand,
-  getDeploymentCommand,
-} from './commands/deploy/index.js';
-import {
-  createDeployCommand,
-  listDeploymentsCommand,
-  deleteDeploymentCommand,
-  getDeploymentBySlugCommand,
-} from './commands/deployments/index.js';
-import { feedbackCommand } from './commands/feedback/index.js';
+import { authTokenCommand, whoamiCommand } from './commands/auth/index.js';
+import { registerApiCommand } from './commands/api/index.js';
 import { diagnosticsCommand } from './commands/diagnostics/index.js';
 import {
   telemetryStatusCommand,
   telemetryEnableCommand,
   telemetryDisableCommand,
 } from './commands/telemetry/index.js';
-import { writeResult } from './core/output.js';
 
 setClientContext({ type: 'cli', version: VERSION });
 
@@ -221,7 +195,7 @@ program
 // Setup command
 // Note: positional arg is `<target>` (component selector like
 // `destination.NAME`), not `[file]`. The flow config path comes from
-// `-c/--config`, mirroring how `deploy start <flowId>` selects an entity.
+// `-c/--config`.
 program
   .command('setup <target>')
   .description(
@@ -335,394 +309,25 @@ authCmd
     });
   });
 
-// Projects command group
-const projectsCmd = program
-  .command('projects')
-  .description('Manage walkerOS projects');
-
-projectsCmd
-  .command('list')
-  .description('List all projects')
-  .option('--cursor <c>', 'cursor for next page (from previous response)')
-  .option('--limit <n>', 'page size', parseInt)
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (options) => {
-    await listProjectsCommand(options);
+authCmd
+  .command('token')
+  .description('Print the current access token, for any HTTP client')
+  .action(async () => {
+    process.exitCode = await authTokenCommand();
   });
 
-projectsCmd
-  .command('get [projectId]')
-  .description('Get project details')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (projectId, options) => {
-    await getProjectCommand(projectId, options);
-  });
-
-projectsCmd
-  .command('create <name>')
-  .description('Create a new project')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (name, options) => {
-    await createProjectCommand(name, options);
-  });
-
-projectsCmd
-  .command('update [projectId]')
-  .description('Update a project')
-  .requiredOption('--name <name>', 'new project name')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (projectId, options) => {
-    await updateProjectCommand(projectId, options);
-  });
-
-projectsCmd
-  .command('delete [projectId]')
-  .description('Delete a project')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (projectId, options) => {
-    await deleteProjectCommand(projectId, options);
-  });
-
-// Flows command group
-const flowsCmd = program.command('flows').description('Manage walkerOS flows');
-
-flowsCmd
-  .command('list')
-  .description('List all flows in a project')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('--sort <field>', 'sort by: name, updated_at, created_at')
-  .option('--order <dir>', 'sort order: asc, desc')
-  .option('--include-deleted', 'include soft-deleted flows')
-  .option('--cursor <c>', 'cursor for next page (from previous response)')
-  .option('--limit <n>', 'page size', parseInt)
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (options) => {
-    await listFlowsCommand(options);
-  });
-
-flowsCmd
-  .command('get <flowId>')
-  .description('Get a flow with its full content')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (flowId, options) => {
-    await getFlowCommand(flowId, options);
-  });
-
-flowsCmd
-  .command('create <name>')
-  .description('Create a new flow')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-c, --content <content>', 'Flow.Json JSON string, file path or URL')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (name, options) => {
-    await createFlowCommand(name, options);
-  });
-
-flowsCmd
-  .command('update <flowId>')
-  .description('Update a flow')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('--name <name>', 'new flow name')
-  .option(
-    '-c, --content <content>',
-    'new Flow.Json JSON string, file path or URL',
-  )
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (flowId, options) => {
-    await updateFlowCommand(flowId, options);
-  });
-
-flowsCmd
-  .command('delete <flowId>')
-  .description('Delete a flow and its frames')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (flowId, options) => {
-    await deleteFlowCommand(flowId, options);
-  });
-
-flowsCmd
-  .command('duplicate <flowId>')
-  .description('Duplicate a flow')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('--name <name>', 'name for the copy')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (flowId, options) => {
-    await duplicateFlowCommand(flowId, options);
-  });
-
-// Unified deploy command group
-const deployCmd = program
-  .command('deploy')
-  .description('Create, manage, and deploy flows');
-
-// deploy create [config] - placeholder until Task 2
-deployCmd
-  .command('create [config]')
-  .description(
-    'Create a deployment (infers type from flow config or remote flow)',
-  )
-  .option('--label <string>', 'human-readable label')
-  .option('-f, --flow <name>', 'flow name for multi-flow configs')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (config, options) => {
-    await createDeployCommand(config, options);
-  });
-
-// deploy start <flowId> - existing cloud deploy (unchanged logic)
-deployCmd
-  .command('start <flowId>')
-  .description('Deploy a flow to walkerOS cloud (auto-detects web or server)')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-f, --flow <name>', 'flow name for multi-config flows')
-  .option('--no-wait', 'do not wait for deployment to complete')
-  .option(
-    '--timeout <seconds>',
-    'timeout in seconds for deployment polling (default: 720, the 12-minute server deploy budget)',
-  )
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (flowId, options) => {
-    await deployCommand(flowId, options);
-  });
-
-// deploy list
-deployCmd
-  .command('list')
-  .description('List all deployments in a project')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('--type <type>', 'filter by type: web, server')
-  .option('--status <status>', 'filter by status')
-  .option('--cursor <c>', 'cursor for next page (from previous response)')
-  .option('--limit <n>', 'page size', parseInt)
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (options) => {
-    await listDeploymentsCommand(options);
-  });
-
-// deploy status <id-or-slug>
-deployCmd
-  .command('status <id-or-slug>')
-  .description('Get deployment details by ID or slug')
-  .option('--project <id>', 'project ID')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (idOrSlug, options) => {
-    await getDeploymentBySlugCommand(idOrSlug, options);
-  });
-
-// deploy delete <id-or-slug>
-deployCmd
-  .command('delete <id-or-slug>')
-  .description('Delete a deployment')
-  .option('--project <id>', 'project ID')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (idOrSlug, options) => {
-    await deleteDeploymentCommand(idOrSlug, options);
-  });
-
-// ── Previews ─────────────────────────────────────────────────────────────
-const previewsCmd = program
-  .command('previews')
-  .description('Manage preview bundles for testing flow changes on live sites');
-
-previewsCmd
-  .command('list <flowId>')
-  .description('List previews for a flow')
-  .option('--project <projectId>', 'Project ID (overrides default)')
-  .action(async (flowId, options) => {
-    try {
-      const { listPreviews } = await import('./commands/previews/index.js');
-      const result = (await listPreviews({
-        projectId: options.project,
-        flowId,
-      })) as { previews: unknown };
-      await writeResult(JSON.stringify(result.previews, null, 2), {});
-    } catch (err) {
-      handleCliError(err);
-    }
-  });
-
-previewsCmd
-  .command('get <flowId> <previewId>')
-  .description('Get preview details')
-  .option('--project <projectId>', 'Project ID (overrides default)')
-  .action(async (flowId, previewId, options) => {
-    try {
-      const { getPreview } = await import('./commands/previews/index.js');
-      const result = await getPreview({
-        projectId: options.project,
-        flowId,
-        previewId,
-      });
-      await writeResult(JSON.stringify(result, null, 2), {});
-    } catch (err) {
-      handleCliError(err);
-    }
-  });
-
-previewsCmd
-  .command('create <flowId>')
-  .description('Create a preview bundle for a flow settings entry')
-  .option('-f, --flow <name>', 'Flow settings name (resolved to ID)')
-  .option('-s, --settings-id <id>', 'Flow settings ID (alternative to --flow)')
-  .option('-u, --url <url>', 'Site URL to construct activation URL')
-  .option('--project <projectId>', 'Project ID (overrides default)')
-  .action(async (flowId, options) => {
-    try {
-      // Validate --url BEFORE creating the preview - otherwise an invalid URL
-      // would produce a server-side preview that can't be used, wasting a
-      // quota slot and forcing manual cleanup.
-      if (options.url) {
-        try {
-          new URL(options.url);
-        } catch {
-          throw new Error(`Invalid --url value: ${options.url}`);
-        }
-      }
-      const { createPreview } = await import('./commands/previews/index.js');
-      const { printPreviewCreated } =
-        await import('./commands/previews/output.js');
-      const preview = await createPreview({
-        projectId: options.project,
-        flowId,
-        flowName: options.flow,
-        flowSettingsId: options.settingsId,
-        // Pass the target URL so the server re-mints an origin-bound grant for
-        // it; the activation URL is app-signed and cannot be built client-side.
-        url: options.url,
-      });
-      printPreviewCreated(preview, { url: options.url });
-    } catch (err) {
-      handleCliError(err);
-    }
-  });
-
-previewsCmd
-  .command('delete <flowId> <previewId>')
-  .description('Delete a preview')
-  .option('-y, --yes', 'Skip confirmation prompt')
-  .option('--project <projectId>', 'Project ID (overrides default)')
-  .action(async (flowId, previewId, options) => {
-    try {
-      if (!options.yes) {
-        throw new Error('Confirmation required. Use --yes to skip.');
-      }
-      const { deletePreview } = await import('./commands/previews/index.js');
-      await deletePreview({
-        projectId: options.project,
-        flowId,
-        previewId,
-      });
-      process.stderr.write(`Deleted ${previewId}\n`);
-    } catch (err) {
-      handleCliError(err);
-    }
-  });
-
-// Observe command group
-const observeCmd = program
-  .command('observe')
-  .description('Observe live events flowing through a flow');
-
-observeCmd
-  .command('start <flowId>')
-  .description(
-    'Start an observe session: mints it via the app and prints the web and server attach info',
-  )
-  .option(
-    '-f, --flow <name>',
-    'Flow settings name (auto-resolved when the flow has exactly one)',
-  )
-  .option('--project <projectId>', 'Project ID (overrides default)')
-  .option(
-    '--level <level>',
-    'Observation detail level: off, standard, or trace',
-  )
-  .option('--replace', 'Replace an existing active session for this flow')
-  .option('--no-wait', 'Do not wait for the session to settle')
-  .option(
-    '--timeout <seconds>',
-    'Seconds to wait for the session to settle (default: 300)',
-  )
-  .option('--json', 'Output the session as JSON')
-  .action(async (flowId, options) => {
-    const { observeStartCommand } = await import('./commands/observe/index.js');
-    await observeStartCommand(flowId, {
-      project: options.project,
-      flow: options.flow,
-      level: options.level,
-      replace: options.replace,
-      wait: options.wait,
-      timeout: options.timeout,
-      json: options.json,
-    });
-  });
+// Any app API operation, by method and path
+registerApiCommand(program);
 
 // Diagnostics command
 program
   .command('diagnostics')
   .description(
-    'Show the CLI version, the app URL and its source, app health, and the API contract verdict against that app',
+    'Show the CLI version, the app URL and its source, and whether the app answers',
   )
   .option('--json', 'output as JSON')
   .action(async (options) => {
     await diagnosticsCommand({ json: options.json });
-  });
-
-// Feedback command
-program
-  .command('feedback <text>')
-  .description('Send feedback to walkerOS')
-  .action(async (text) => {
-    await feedbackCommand(text);
   });
 
 // Telemetry command group
@@ -751,7 +356,7 @@ registerCacheCommand(program);
 // Telemetry hooks - populate cmdPath/cmdStart for action-bound commands.
 program.hook('preAction', (_thisCmd, actionCmd) => {
   cmdStart = Date.now();
-  // Space-joined command path: `walkeros projects list` → "projects list".
+  // Space-joined command path: `walkeros auth login` → "auth login".
   const parts: string[] = [];
   let cur: Command | null = actionCmd;
   while (cur && cur.name() !== 'walkeros') {
@@ -763,9 +368,10 @@ program.hook('preAction', (_thisCmd, actionCmd) => {
 
 program.hook('postAction', async () => {
   try {
+    // A command that reports failure through the exit code returns normally.
     await emitter.send(
       'cmd invoke',
-      { command: cmdPath, outcome: 'success' },
+      { command: cmdPath, outcome: process.exitCode ? 'error' : 'success' },
       Date.now() - cmdStart,
       { command: cmdPath },
     );

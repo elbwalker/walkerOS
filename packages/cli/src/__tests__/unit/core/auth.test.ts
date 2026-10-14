@@ -5,7 +5,6 @@ import {
   resolveAccessToken,
   getAuthHeaders,
   credentialSource,
-  requireProjectId,
   resetLegacyTokenNotice,
 } from '../../../core/auth.js';
 import { readConfig, writeConfig } from '../../../lib/config-file.js';
@@ -339,30 +338,6 @@ describe('core/auth', () => {
     it('returns null for a config that holds no credential at all', () => {
       writeConfig({ defaultProjectId: 'proj_1' });
       expect(credentialSource()).toBeNull();
-    });
-  });
-
-  describe('requireProjectId', () => {
-    it('returns env var when set', () => {
-      process.env.WALKEROS_PROJECT_ID = 'proj-from-env';
-      expect(requireProjectId()).toBe('proj-from-env');
-    });
-
-    it('returns config defaultProjectId when env var not set', () => {
-      writeConfig({ defaultProjectId: 'proj-from-config' });
-      expect(requireProjectId()).toBe('proj-from-config');
-    });
-
-    it('prefers env var over config when both set', () => {
-      process.env.WALKEROS_PROJECT_ID = 'proj-from-env';
-      writeConfig({ defaultProjectId: 'proj-from-config' });
-      expect(requireProjectId()).toBe('proj-from-env');
-    });
-
-    it('throws when neither env var nor config is set', () => {
-      expect(() => requireProjectId()).toThrow(
-        'No project selected. Set WALKEROS_PROJECT_ID or configure a default project.',
-      );
     });
   });
 });

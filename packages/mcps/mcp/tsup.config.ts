@@ -25,9 +25,12 @@ const common = {
 };
 
 export default defineConfig([
+  // The main and the spec entry share chunks, so both carry one
+  // RuntimeRefusal class and an instanceof check holds across them.
   {
     ...common,
-    entry: { index: 'src/index.ts' },
+    entry: { index: 'src/index.ts', specs: 'src/specs.ts' },
+    splitting: true,
   },
   {
     ...common,

@@ -68,26 +68,26 @@ data warehouses.
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
-consent: { functional: true },
-sources: {
-browser: {
-  code: sourceBrowser,
-  config: {
-    settings: {
-      pageview: true,
+  consent: { functional: true },
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+        },
+      },
     },
   },
-},
-},
-destinations: {
-console: {
-  code: {
-    type: 'console',
-    config: {},
-    push: (event) => console.log('Event:', event),
+  destinations: {
+    console: {
+      code: {
+        type: 'console',
+        config: {},
+        push: (event) => console.log('Event:', event),
+      },
+    },
   },
-},
-},
 });`}
   language="typescript"
 />
@@ -104,30 +104,30 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
-consent: { functional: true },
-sources: {
-browser: {
-  code: sourceBrowser,
-  config: {
-    settings: {
-      pageview: true,
+  consent: { functional: true },
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+        },
+      },
     },
   },
-},
-},
-destinations: {
-api: {
-  code: destinationAPI,
-  config: {
-    settings: {
-      url: 'https://analytics.example.com/events',
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://analytics.example.com/events',
+        },
+      },
     },
   },
-},
-},
-logger: {
-level: 'DEBUG', // Show all logs (ERROR, INFO, DEBUG)
-},
+  logger: {
+    level: 'DEBUG', // Show all logs (ERROR, INFO, DEBUG)
+  },
 });`}
   language="typescript"
 />
@@ -199,11 +199,16 @@ await startFlow({
     validate: { code: transformerValidate },
   },
   next: [
-    { match: { key: 'event.name', operator: 'eq', value: 'product impression' }, stop: true },
+    {
+      match: { key: 'event.name', operator: 'eq', value: 'product impression' },
+      stop: true,
+    },
     'bot',
     'validate',
   ],
-  destinations: { /* ... */ },
+  destinations: {
+    /* ... */
+  },
 });`}
   language="typescript"
 />
@@ -228,7 +233,9 @@ The collector tracks delivery metrics on `collector.status`, giving you real-tim
 visibility into event flow without external monitoring:
 
 <CodeSnippet
-  code={`const { collector } = await startFlow({ /* ... */ });
+  code={`const { collector } = await startFlow({
+  /* ... */
+});
 
 // After events have been processed
 console.log(collector.status);
@@ -305,14 +312,18 @@ logger.error('command failed', { command, data, error });
 logger.error('mapping processing failed', { event, error });
 logger.scope('source').error('source factory failed', { sourceId, error });
 logger.scope('source').error('source init failed', { sourceId, error });
-logger.scope('source').error('source on flush failed', { sourceId, type, error });
-logger.scope('transformer:<type>').error('transformer init failed', { transformer, error });
+logger
+  .scope('source')
+  .error('source on flush failed', { sourceId, type, error });
+logger
+  .scope('transformer:<type>')
+  .error('transformer init failed', { transformer, error });
 logger.scope('<destination type>').error('destination init failed', { error });
 
 // user-callback failures (logged, NOT counted)
 logger.error('mapping condition failed', { event, error });
-logger.error('mapping fn failed',        { event, error });
-logger.error('mapping validate failed',  { event, error });
+logger.error('mapping fn failed', { event, error });
+logger.error('mapping validate failed', { event, error });
 logger.scope('on').error('on callback failed', { kind, error });`}
   language="typescript"
 />
@@ -357,15 +368,15 @@ const dlqSize = dest.dlq?.length || 0;
 
 // Or from status (point-in-time snapshots refreshed after each push pass):
 const metaStatus = collector.status.destinations['meta'];
-metaStatus.queuePushSize;   // events waiting for consent
-metaStatus.dlqSize;         // failed pushes retained for triage
+metaStatus.queuePushSize; // events waiting for consent
+metaStatus.dlqSize; // failed pushes retained for triage
 
 // Drop counts live on the process-wide \`status.dropped\` map, keyed by
 // stepId (use \`stepId()\` from \`@walkeros/core\`):
 import { stepId } from '@walkeros/core';
 const metaDrops = collector.status.dropped[stepId('destination', 'meta')];
 metaDrops?.queue ?? 0; // monotonic count of evicted consent-queued events
-metaDrops?.dlq ?? 0;   // monotonic count of evicted DLQ entries`}
+metaDrops?.dlq ?? 0; // monotonic count of evicted DLQ entries`}
   language="typescript"
 />
 
@@ -419,7 +430,7 @@ const collectorDrops =
 //  - dlq:   failed-push entries evicted from the destination's DLQ
 const ga4Drops = collector.status.dropped[stepId('destination', 'ga4')];
 ga4Drops?.queue ?? 0;
-ga4Drops?.dlq ?? 0;   // sustained non-zero rate signals destination outage`}
+ga4Drops?.dlq ?? 0; // sustained non-zero rate signals destination outage`}
   language="typescript"
 />
 

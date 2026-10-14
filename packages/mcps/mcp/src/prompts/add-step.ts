@@ -1,68 +1,64 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { PromptSpec } from '../knowledge-spec.js';
 
-export function registerAddStepPrompt(server: McpServer) {
-  server.registerPrompt(
-    'add-step',
-    {
-      description:
-        'Add a source, destination, transformer, or store step to a flow configuration. ' +
-        'Guides through package selection, config scaffolding, and wiring.',
-      argsSchema: {
-        stepType: z
-          .string()
-          .optional()
-          .describe(
-            'Type of step to add: source, destination, transformer, or store',
-          ),
-        flowPath: z
-          .string()
-          .optional()
-          .describe('Path to the flow.json file to modify'),
-      },
-    },
-    async ({ stepType, flowPath }) => ({
-      messages: [
-        {
-          role: 'user' as const,
-          content: {
-            type: 'text' as const,
-            text: [
-              `Help me add a ${stepType || 'new'} step to my flow${flowPath ? ` at ${flowPath}` : ''}.`,
-              '',
-              'Follow these steps:',
-              `1. ${stepType ? '' : 'Ask what type of step (source, destination, transformer, store). Then '}Use package_search to browse available packages for the selected type and platform.`,
-              '2. Use package_get to read the package\'s config schema (schemas.config contains the full config shape: base fields like consent/require/logger + package-specific settings). Use section="hints" for additional guidance.',
-              '3. Use package_get with section="examples" to see working configuration examples.',
-              '4. Scaffold the step config using the package schemas — include required settings with placeholder values.',
-              '5. Wire the step into the flow: add to packages section (with version if needed), connect via next/before chains if needed.',
-              '6. For destinations: configure mapping using nested entity → action keys. Event "product add" maps to `{ "product": { "add": { name: "AddToCart" } } }`. Use the setup-mapping prompt for guidance.',
-              '7. For destinations: if consent-gated loading is needed, add require: ["consent"] to config. ' +
-                'Note: require delays initialization until a "walker consent" event fires. ' +
-                'When simulating with flow_simulate, destinations with require will error "not found" — ' +
-                'remove require temporarily or test without it. ' +
-                'For per-event consent filtering, add consent: { marketing: true } to config.',
-              '8. Use flow_validate to verify the result.',
-              '9. For server sources: check if the package supports `ingest` configuration via package_get. Ingest extracts request metadata (IP, user-agent, headers) using mapping syntax. Transformers like fingerprint depend on ingest data.',
-              '10. When adding a transformer that uses ingest fields, verify the source has `ingest` configured — otherwise ingest fields resolve to empty values.',
-              '',
-              'Important:',
-              '- Read the walkeros://reference/flow-schema resource to understand connection rules.',
-              '- Sources connect to transformers via `next` (runs before the collector).',
-              '- The collector connects to transformers via `collector.next` (runs once per event before the destination fan-out, for every destination).',
-              '- Destinations connect to transformers via `before` (runs for that destination only; put per-destination filtering here).',
-              '- Routing uses one grammar in every chain field: string IDs, sequences (`["a", "b"]`, where a member\'s own `next` runs right after it), or RouteConfig (`{ match?, next }` for a gated link, `{ match?, one: [...] }` for first-match dispatch, `{ match?, many: [...] }` to fork each match into its own copy that finishes the rest of the path, `{ match?, stop: true }` to drop). A `stop` in `collector.next` drops the event for all destinations. Omit `match` for always-match.',
-              '- A transformer entry can be code-bearing (`code`), package-bearing (`package`), or a **pass-through step** (no `code`, no `package`). Pass-through synthesis is automatic at runtime. Three flavors of pass-through: `before`/`next`-only (named hop reusable across destinations), `cache`-only (dedup, rate-limit), or `mapping`-only (declarative event-to-event transform). A pass-through must declare at least one of `before`, `next`, `cache`, or `mapping`.',
-              '- The `mapping` field on a transformer step uses the same `Mapping.Config` shape as destinations, but the semantic is event-to-event (mutates the event in place via `policy`, per-rule `policy`, `mapping[].name` for renames, `mapping[].ignore` to drop). Vendor-payload fields (`data`, `silent`) are no-ops at this position.',
-              '- Closed schema: unknown top-level keys on a transformer step are errors (catches typos like `dedup` instead of `cache`). `code` + `package` together is a conflict.',
-              '- Stores are passive — referenced via `$store.storeName` in env values.',
-              '- Use variables ($var) for values that change between environments.',
-              '- For required settings without defaults in the package schema, ask the user which value to use. Do not guess credentials, IDs, or environment-specific values.',
-              '- If $meta.exports lists named exports, set the `code` field on the step to the chosen export name. If only one export exists, use it automatically.',
-            ].join('\n'),
-          },
+export const ADD_STEP_PROMPT: PromptSpec = {
+  name: 'add-step',
+  description:
+    'Add a source, destination, transformer, or store step to a flow configuration. ' +
+    'Guides through package selection, config scaffolding, and wiring.',
+  argsSchema: {
+    stepType: z
+      .string()
+      .optional()
+      .describe(
+        'Type of step to add: source, destination, transformer, or store',
+      ),
+    flowPath: z
+      .string()
+      .optional()
+      .describe('Path to the flow.json file to modify'),
+  },
+  handler: async ({ stepType, flowPath }) => ({
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: [
+            `Help me add a ${stepType || 'new'} step to my flow${flowPath ? ` at ${flowPath}` : ''}.`,
+            '',
+            'Follow these steps:',
+            `1. ${stepType ? '' : 'Ask what type of step (source, destination, transformer, store). Then '}Use package_search to browse available packages for the selected type and platform.`,
+            '2. Use package_get to read the package\'s config schema (schemas.config contains the full config shape: base fields like consent/require/logger + package-specific settings). Use section="hints" for additional guidance.',
+            '3. Use package_get with section="examples" to see working configuration examples.',
+            '4. Scaffold the step config using the package schemas: include required settings with placeholder values.',
+            '5. Wire the step into the flow: add to packages section (with version if needed), connect via next/before chains if needed.',
+            '6. For destinations: configure mapping using nested entity → action keys. Event "product add" maps to `{ "product": { "add": { name: "AddToCart" } } }`. Use the setup-mapping prompt for guidance.',
+            '7. For destinations: if consent-gated loading is needed, add require: ["consent"] to config. ' +
+              'Note: require delays initialization until a "walker consent" event fires. ' +
+              'When simulating with flow_simulate, destinations with require will error "not found"; ' +
+              'remove require temporarily or test without it. ' +
+              'For per-event consent filtering, add consent: { marketing: true } to config.',
+            '8. Use flow_validate to verify the result.',
+            '9. For server sources: check if the package supports `ingest` configuration via package_get. Ingest extracts request metadata (IP, user-agent, headers) using mapping syntax. Transformers like fingerprint depend on ingest data.',
+            '10. When adding a transformer that uses ingest fields, verify the source has `ingest` configured, otherwise ingest fields resolve to empty values.',
+            '',
+            'Important:',
+            '- Read the walkeros://reference/flow-schema resource to understand connection rules.',
+            '- Sources connect to transformers via `next` (runs before the collector).',
+            '- The collector connects to transformers via `collector.next` (runs once per event before the destination fan-out, for every destination).',
+            '- Destinations connect to transformers via `before` (runs for that destination only; put per-destination filtering here).',
+            '- Routing uses one grammar in every chain field: string IDs, sequences (`["a", "b"]`, where a member\'s own `next` runs right after it), or RouteConfig (`{ match?, next }` for a gated link, `{ match?, one: [...] }` for first-match dispatch, `{ match?, many: [...] }` to fork each match into its own copy that finishes the rest of the path, `{ match?, stop: true }` to drop). A `stop` in `collector.next` drops the event for all destinations. Omit `match` for always-match.',
+            '- A transformer entry can be code-bearing (`code`), package-bearing (`package`), or a **pass-through step** (no `code`, no `package`). Pass-through synthesis is automatic at runtime. Three flavors of pass-through: `before`/`next`-only (named hop reusable across destinations), `cache`-only (dedup, rate-limit), or `mapping`-only (declarative event-to-event transform). A pass-through must declare at least one of `before`, `next`, `cache`, or `mapping`.',
+            '- The `mapping` field on a transformer step uses the same `Mapping.Config` shape as destinations, but the semantic is event-to-event (mutates the event in place via `policy`, per-rule `policy`, `mapping[].name` for renames, `mapping[].ignore` to drop). Vendor-payload fields (`data`, `silent`) are no-ops at this position.',
+            '- Closed schema: unknown top-level keys on a transformer step are errors (catches typos like `dedup` instead of `cache`). `code` + `package` together is a conflict.',
+            '- Stores are passive: referenced via `$store.storeName` in env values.',
+            '- Use variables ($var) for values that change between environments.',
+            '- For required settings without defaults in the package schema, ask the user which value to use. Do not guess credentials, IDs, or environment-specific values.',
+            '- If $meta.exports lists named exports, set the `code` field on the step to the chosen export name. If only one export exists, use it automatically.',
+          ].join('\n'),
         },
-      ],
-    }),
-  );
-}
+      },
+    ],
+  }),
+};

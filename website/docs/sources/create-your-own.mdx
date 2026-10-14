@@ -36,11 +36,11 @@ The returned instance must implement:
 
 <CodeSnippet
   code={`interface Source.Instance {
-type: string; // Unique identifier
-config: Source.Config; // Merged configuration
-push: Elb.Fn; // Function to send events (forwards to env.elb)
-destroy?(): void | Promise<void>; // Optional cleanup
-on?(event, context): void | Promise<void>; // Optional reactive hooks
+  type: string; // Unique identifier
+  config: Source.Config; // Merged configuration
+  push: Elb.Fn; // Function to send events (forwards to env.elb)
+  destroy?(): void | Promise<void>; // Optional cleanup
+  on?(event, context): void | Promise<void>; // Optional reactive hooks
 }`}
   language="typescript"
 />
@@ -54,13 +54,13 @@ Sources use a `Types` interface to bundle all TypeScript types:
 
 // 1. Define your settings
 interface Settings {
-captureClicks?: boolean;
-prefix?: string;
+  captureClicks?: boolean;
+  prefix?: string;
 }
 
 // 2. Define environment dependencies
 interface Env extends Source.BaseEnv {
-customAPI?: YourAPIType;
+  customAPI?: YourAPIType;
 }
 
 // 3. Bundle them together
@@ -262,20 +262,20 @@ import { sourceEventAPI } from './sourceEventAPI';
 const externalAPI = getYourAPI();
 
 const { elb } = await startFlow({
-sources: {
-eventAPI: {
-code: sourceEventAPI,
-config: {
-  settings: {
-    captureInteractions: true,
-    prefix: 'myapp',
+  sources: {
+    eventAPI: {
+      code: sourceEventAPI,
+      config: {
+        settings: {
+          captureInteractions: true,
+          prefix: 'myapp',
+        },
+      },
+      env: {
+        api: externalAPI, // Collector provides elb automatically
+      },
+    },
   },
-},
-env: {
-  api: externalAPI, // Collector provides elb automatically
-},
-},
-},
 });`}
   language="typescript"
 />
@@ -332,7 +332,7 @@ describe('Event API Source', () => {
     const push = createMockPush();
 
     await expect(
-      sourceEventAPI(createSourceContext({}, { push }))
+      sourceEventAPI(createSourceContext({}, { push })),
     ).rejects.toThrow('requires api');
   });
 
@@ -343,8 +343,8 @@ describe('Event API Source', () => {
     await sourceEventAPI(
       createSourceContext(
         { settings: { captureInteractions: true } },
-        { push, api }
-      )
+        { push, api },
+      ),
     );
 
     expect(api.on).toHaveBeenCalledWith('userAction', expect.any(Function));
@@ -446,14 +446,14 @@ When the external API isn't immediately available:
 
 <CodeSnippet
   code={`async function waitForAPI<T>(getter: () => T | null): Promise<T> {
-return new Promise((resolve) => {
-const check = () => {
-const instance = getter();
-if (instance) resolve(instance);
-else setTimeout(check, 100);
-};
-check();
-});
+  return new Promise((resolve) => {
+    const check = () => {
+      const instance = getter();
+      if (instance) resolve(instance);
+      else setTimeout(check, 100);
+    };
+    check();
+  });
 }
 
 // Usage

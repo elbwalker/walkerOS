@@ -323,14 +323,9 @@ diagnostic information:
   instead of silently returning a partial list
 - All error responses include a `hint` field with recovery suggestions
 
-When a request fails or behaves unexpectedly, call **`diagnostics`** (read-only,
-no parameters, works logged out). It reports the MCP and CLI versions, the
-resolved app URL and whether it came from `WALKEROS_APP_URL` or the default, app
-`/api/health` reachability, the bundled OpenAPI contract version, the contract
-verdict against that app (`in-sync`, `changed`, `server-older`,
-`client-outdated`, `unknown` when the app cannot be read, or `in-process` on the
-hosted door), and which source served the last package lookup, so you can tell
-which backend and versions you are on.
+From a terminal, `walkeros diagnostics` reports the CLI version, the app URL
+(and whether it came from `WALKEROS_APP_URL`, the config file or the default),
+and whether the app answers its health route.
 
 ## Related Skills
 

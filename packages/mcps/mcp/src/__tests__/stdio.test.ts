@@ -17,7 +17,6 @@ jest.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
   StdioServerTransport: class {},
 }));
 
-jest.mock('../http-tool-client.js', () => ({ HttpToolClient: class {} }));
 jest.mock('../telemetry.js', () => ({ createMcpEmitter: jest.fn() }));
 jest.mock('../server.js', () => ({
   createWalkerOSMcpServer: jest.fn(() => ({
@@ -26,6 +25,7 @@ jest.mock('../server.js', () => ({
   getMcpEmitterSingleton: jest.fn(),
 }));
 
+import { setClientContext } from '@walkeros/cli';
 import { createWalkerOSMcpServer } from '../server.js';
 
 describe('stdio entry point', () => {
@@ -41,10 +41,13 @@ describe('stdio entry point', () => {
 
       expect(createWalkerOSMcpServer).toHaveBeenCalledTimes(1);
       const opts = jest.mocked(createWalkerOSMcpServer).mock.calls[0][0];
-      expect(typeof opts.runtime?.load).toBe('function');
-      expect(typeof opts.runtime?.bundle).toBe('function');
-      expect(typeof opts.runtime?.simulate).toBe('function');
-      expect(typeof opts.runtime?.push).toBe('function');
+      expect(typeof opts.runtime.load).toBe('function');
+      expect(typeof opts.runtime.bundle).toBe('function');
+      expect(typeof opts.runtime.simulate).toBe('function');
+      expect(typeof opts.runtime.push).toBe('function');
+      expect(opts).not.toHaveProperty('client');
+      // The local server calls no app, so it announces no client to one.
+      expect(jest.mocked(setClientContext)).not.toHaveBeenCalled();
     } finally {
       onSpy.mockRestore();
       errorSpy.mockRestore();

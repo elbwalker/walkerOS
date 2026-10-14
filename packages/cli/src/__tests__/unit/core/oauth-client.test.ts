@@ -6,6 +6,10 @@ import {
   refreshTokens,
   revokeRefreshToken,
 } from '../../../core/oauth-client.js';
+import {
+  resetClientContext,
+  setClientContext,
+} from '../../../core/client-context.js';
 
 const APP_URL = 'https://app.example.test';
 
@@ -89,6 +93,41 @@ function tokenBody(overrides: Record<string, unknown> = {}) {
 }
 
 describe('oauth-client', () => {
+  it('sends the client context on every OAuth request', async () => {
+    setClientContext({ type: 'cli', version: '9.9.9' });
+    const seen: Headers[] = [];
+    const fetchFn: typeof fetch = async (_input, init) => {
+      seen.push(new Headers(init?.headers));
+      return jsonResponse({ error: 'authorization_pending' }, 400);
+    };
+    await pollDeviceToken(APP_URL, 'dev_1', fetchFn);
+    await refreshTokens(APP_URL, 'rt_1', fetchFn).catch(() => undefined);
+    await revokeRefreshToken(APP_URL, 'rt_1', fetchFn);
+    expect(seen.map((h) => h.get('X-WalkerOS-Client'))).toEqual([
+      'cli',
+      'cli',
+      'cli',
+    ]);
+    resetClientContext();
+  });
+
+  it('names the upgrade an outdated client needs', async () => {
+    const fetchFn: typeof fetch = async () =>
+      jsonResponse(
+        {
+          error: {
+            code: 'CLIENT_OUTDATED',
+            message:
+              'This endpoint requires @walkeros/cli >= 4.10.0 (you are on 4.9.0).',
+          },
+        },
+        426,
+      );
+    await expect(startDeviceAuthorization(APP_URL, fetchFn)).rejects.toThrow(
+      '>= 4.10.0',
+    );
+  });
+
   describe('startDeviceAuthorization', () => {
     it('posts a form-encoded client_id, scope and api resource', async () => {
       const { fetchFn, calls } = recorder(() =>

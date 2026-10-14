@@ -9,9 +9,10 @@ const config = {
   // forceExit, and keep --detectOpenHandles in CI as a guard.
   maxWorkers: 3,
   testTimeout: 30000,
-  // Transform ESM packages: jsdom and its dependency closure are pure ESM.
+  // Transform ESM packages: jsdom and its dependency closure are pure ESM, and
+  // so is commander, which the command registration tests load.
   transformIgnorePatterns: [
-    'node_modules/(?!(@walkeros|chalk|jsdom|parse5|nwsapi|entities|@exodus/bytes|@asamuzakjp|@bramus|@csstools|css-tree|tough-cookie|msw|until-async|rettime|@bundled-es-modules|@mswjs|@open-draft)/)',
+    'node_modules/(?!(@walkeros|chalk|commander|jsdom|parse5|nwsapi|entities|@exodus/bytes|@asamuzakjp|@bramus|@csstools|css-tree|tough-cookie|msw|until-async|rettime|@bundled-es-modules|@mswjs|@open-draft)/)',
   ],
   testPathIgnorePatterns: [
     ...(baseConfig.testPathIgnorePatterns || []),

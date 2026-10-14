@@ -1,8 +1,6 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   createPackageGetToolSpec,
   createPackageSearchToolSpec,
-  registerGetPackageSchemaTool,
 } from '../../tools/package.js';
 import type { ToolSpec } from '../../tool-spec.js';
 import { structured, record, isErrorResult } from '../support/tool-result.js';
@@ -41,27 +39,13 @@ import { fetchPackage } from '@walkeros/core';
 import { mergeConfigSchema } from '@walkeros/core/dev';
 const mockFetchPackage = jest.mocked(fetchPackage);
 
-// The catalog module reaches the app through the CLI's typed client; this
-// suite mocks fetchCatalog itself, so the client is never called.
-jest.mock('@walkeros/cli', () => ({ apiRequest: jest.fn() }));
-
 jest.mock('../../catalog.js', () => ({
   fetchCatalog: jest.fn(),
   normalizePlatform: jest.requireActual('../../catalog.js').normalizePlatform,
-  getPackageBaseUrl: jest.requireActual('../../catalog.js').getPackageBaseUrl,
 }));
 
 import { fetchCatalog } from '../../catalog.js';
 const mockFetchCatalog = jest.mocked(fetchCatalog);
-
-/** The config the first `registerTool` call passed, narrowed. */
-function firstRegisteredConfig(
-  calls: readonly unknown[],
-): Record<string, unknown> {
-  const first = calls[0];
-  if (!Array.isArray(first)) throw new Error('No tool was registered');
-  return record(first[1]);
-}
 
 describe('package_get tool', () => {
   let tool: ToolSpec;
@@ -73,13 +57,8 @@ describe('package_get tool', () => {
 
   it('should register with correct name', () => {
     expect(tool.name).toBe('package_get');
-    // No outputSchema — removed to avoid SDK -32602 crashes on unexpected field values
-    const server = new McpServer({ name: 'test', version: '0.0.0' });
-    const registerTool = jest.spyOn(server, 'registerTool');
-    registerGetPackageSchemaTool(server);
-    expect(
-      firstRegisteredConfig(registerTool.mock.calls).outputSchema,
-    ).toBeUndefined();
+    // No outputSchema: removed to avoid SDK -32602 crashes on unexpected field values
+    expect(tool.outputSchema).toBeUndefined();
   });
 
   it('should fetch package info', async () => {
@@ -542,14 +521,14 @@ describe('package_search tool', () => {
     mockFetchCatalog.mockResolvedValue({
       entries: [],
       warnings: [
-        'app catalog endpoint unavailable, fell back to npm; results may be incomplete',
+        'npm package search failed (npm search failed: 500); the package catalog is empty. Try again, or use package_get with an exact package name.',
       ],
     });
     const result = await tool.handler({});
 
     const hints = record(structured(result)._hints);
     expect(hints.warnings).toEqual([
-      'app catalog endpoint unavailable, fell back to npm; results may be incomplete',
+      'npm package search failed (npm search failed: 500); the package catalog is empty. Try again, or use package_get with an exact package name.',
     ]);
   });
 

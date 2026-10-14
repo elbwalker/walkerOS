@@ -52,46 +52,46 @@ Tag a page...
 
 <CodeSnippet
   code={`{
-name: 'promotion view', // Name as a combination of entity and action
-data: {
-// Arbitrary properties related to the entity
-name: 'Setting up tracking easily',
-category: 'analytics',
-},
-context: {
-// Provides additional information about the state during the event
-test: ['engagement', 0] // Key, [value, order]
-},
-globals: {
-// General properties that apply to every event
-language: 'en'
-},
-custom: {}, // Additional space for individual setups
-user: {
-// Contains user identifiers for different identification levels
-// Require consent and set manually for sessions building and cross-device
-id: 'us3r1d',
-device: 'c00k131d',
-session: 's3ss10n1d',
-},
-nested: [], // List of nested entities
-consent: { functional: true }, // Status of the granted consent state(s)
-id: '0123456789abcdef', // W3C Trace Context span_id (16 hex chars)
-trigger: 'visible', // Name of the trigger that fired
-entity: 'promotion', // The entity name involved in the event
-action: 'view', // The specific action performed on the entity
-timestamp: 1647261462000, // Time when the event fired
-timing: 3.14, // Duration how long it took to trigger this event
-source: {
-// Details about the origin of the event
-type: 'browser', // Source kind (e.g. browser, dataLayer)
-platform: 'web', // Runtime platform (web or server)
-url: 'https://github.com/elbwalker/walkerOS', // Page URL
-referrer: 'https://www.walkeros.io/', // Referrer URL
-count: 1, // Emission sequence within the run
-trace: '0123456789abcdef0123456789abcdef', // Run-scoped W3C trace_id (32 hex chars)
-release: { web: '3' } // Config release per flow, keyed by flow name
-}
+  name: 'promotion view', // Name as a combination of entity and action
+  data: {
+    // Arbitrary properties related to the entity
+    name: 'Setting up tracking easily',
+    category: 'analytics',
+  },
+  context: {
+    // Provides additional information about the state during the event
+    test: ['engagement', 0] // Key, [value, order]
+  },
+  globals: {
+    // General properties that apply to every event
+    language: 'en'
+  },
+  custom: {}, // Additional space for individual setups
+  user: {
+    // Contains user identifiers for different identification levels
+    // Require consent and set manually for sessions building and cross-device
+    id: 'us3r1d',
+    device: 'c00k131d',
+    session: 's3ss10n1d',
+  },
+  nested: [], // List of nested entities
+  consent: { functional: true }, // Status of the granted consent state(s)
+  id: '0123456789abcdef', // W3C Trace Context span_id (16 hex chars)
+  trigger: 'visible', // Name of the trigger that fired
+  entity: 'promotion', // The entity name involved in the event
+  action: 'view', // The specific action performed on the entity
+  timestamp: 1647261462000, // Time when the event fired
+  timing: 3.14, // Duration how long it took to trigger this event
+  source: {
+    // Details about the origin of the event
+    type: 'browser', // Source kind (e.g. browser, dataLayer)
+    platform: 'web', // Runtime platform (web or server)
+    url: 'https://github.com/elbwalker/walkerOS', // Page URL
+    referrer: 'https://www.walkeros.io/', // Referrer URL
+    count: 1, // Emission sequence within the run
+    trace: '0123456789abcdef0123456789abcdef', // Run-scoped W3C trace_id (32 hex chars)
+    release: { web: '3' } // Config release per flow, keyed by flow name
+  }
 }`}
   language="javascript"
 />
@@ -414,7 +414,9 @@ the first colon splits key and value.
 
 <CodeSnippet
   code={`<!-- backslash escapes -->
-<p data-elb="foo" data-elb-foo="name:Men\\'s shirt;brand:Levi\\'s">{ "name": "Men's shirt", "brand": "Levi's" }</p>
+<p data-elb="foo" data-elb-foo="name:Men\\'s shirt;brand:Levi\\'s">
+  { "name": "Men's shirt", "brand": "Levi's" }
+</p>
 <p data-elb="foo" data-elb-foo="b:a\\;r">{ "b": "a;r" }</p>
 <p data-elb="foo" data-elb-foo="title:'it\\'s'">{ "title": "it's" }</p>
 <p data-elb="foo" data-elb-foo="path:C:\\\\temp">{ "path": "C:\\\\temp" }</p>`}
@@ -485,10 +487,10 @@ To create an array, add the `[]` suffix to a property's name, such as
 
 <CodeSnippet
   code={`{
-data: {
-size: ["s", "l"],
-},
-// ...
+  data: {
+    size: ["s", "l"],
+  },
+  // ...
 }`}
   language="javascript"
 />
@@ -512,13 +514,13 @@ related entity. Explicitly named properties are preferred over generic ones.
 
 <CodeSnippet
   code={`{
-data: {
-p: 'v', // parent
-k: 'v', // explicit
-g: 'v', // generic
-o: 'v' // overridden by explicit
-},
-// ...
+  data: {
+    p: 'v', // parent
+    k: 'v', // explicit
+    g: 'v', // generic
+    o: 'v' // overridden by explicit
+  },
+  // ...
 }`}
   language="javascript"
 />
@@ -577,10 +579,10 @@ This example leads to the following event:
 
 <CodeSnippet
   code={`{
-"name": "entity action",
-"data": { "foo": "bar" },
-"globals": { "outof": "scope" }
-// other properties omitted
+  "name": "entity action",
+  "data": { "foo": "bar" },
+  "globals": { "outof": "scope" }
+  // other properties omitted
 }`}
   language="javascript"
 />
@@ -613,9 +615,9 @@ The page view, and every event pushed after it, carries the user:
 
 <CodeSnippet
   code={`{
-"name": "page view",
-"user": { "id": "u123", "loggedin": true }
-// other properties omitted
+  "name": "page view",
+  "user": { "id": "u123", "loggedin": true }
+  // other properties omitted
 }`}
   language="javascript"
 />
@@ -660,14 +662,14 @@ parent has index 0 (`[value, index]`). Access the value via
 
 <CodeSnippet
   code={`{
-name: "promotion click",
-data: { title: "click me" },
-globals: { plan: "paid" },
-context: {
-test: ["engagement", 1],
-recommendation: ["smart_ai", 0],
-},
-// other properties omitted
+  name: "promotion click",
+  data: { title: "click me" },
+  globals: { plan: "paid" },
+  context: {
+    test: ["engagement", 1],
+    recommendation: ["smart_ai", 0],
+  },
+  // other properties omitted
 }`}
   language="javascript"
 />
@@ -704,18 +706,18 @@ This example leads to the following event on load:
 
 <CodeSnippet
   code={`{
-"name": "mother view",
-"data": { "label": "caring" },
-"nested": [
-{ "entity": "son", "data": { "age": 23 } },
-{
-"entity": "daughter",
-"data": { "age": 32 },
-"nested": [{ "entity": "baby", "data": { "status": "infant" } }],
-},
-{ "entity": "baby", "data": { "status": "infant" } },
-],
-// other properties omitted
+  "name": "mother view",
+  "data": { "label": "caring" },
+  "nested": [
+    { "entity": "son", "data": { "age": 23 } },
+    {
+      "entity": "daughter",
+      "data": { "age": 32 },
+      "nested": [{ "entity": "baby", "data": { "status": "infant" } }],
+    },
+    { "entity": "baby", "data": { "status": "infant" } },
+  ],
+  // other properties omitted
 }`}
   language="javascript"
 />

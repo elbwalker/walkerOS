@@ -35,7 +35,9 @@ This web flow sends one event stream to four analytics tools at once, with no pe
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
-          "config": { "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } } }
+          "config": {
+            "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
+          }
         },
         "amplitude": {
           "package": "@walkeros/web-destination-amplitude",
@@ -101,10 +103,10 @@ success: true
 The collector fans the same event out to all four destinations, and each one forwards it in its own native call (from the packages' examples):
 
 <CodeSnippet
-  code={`gtag('event', 'order_complete', { send_to: 'G-XXXXXXXXXX' })
-amplitude.track('order complete', {})
-mixpanel.track('order complete', {})
-posthog.capture('order complete', {})`}
+  code={`gtag('event', 'order_complete', { send_to: 'G-XXXXXXXXXX' });
+amplitude.track('order complete', {});
+mixpanel.track('order complete', {});
+posthog.capture('order complete', {});`}
   language="javascript"
 />
 

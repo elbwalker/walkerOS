@@ -171,7 +171,11 @@ Fan-out is the `many` operator. Use it when one inbound event needs to feed seve
       "next": {
         "many": [
           {
-            "match": { "key": "ingest.path", "operator": "prefix", "value": "/purchase" },
+            "match": {
+              "key": "ingest.path",
+              "operator": "prefix",
+              "value": "/purchase"
+            },
             "next": "purchase_parser"
           },
           { "next": "audit_log" }

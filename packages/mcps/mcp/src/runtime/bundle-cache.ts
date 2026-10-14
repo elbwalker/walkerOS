@@ -92,9 +92,8 @@ async function evictIfNeeded(): Promise<void> {
  * reusing a cached bundle when the same resolved config was bundled before.
  *
  * `resolvedConfig` is the exact string the simulate functions would otherwise
- * receive as `configPath` (inline JSON for cloud ids after id resolution, or a
- * file path / URL / inline JSON otherwise). Keying on it means a cloud id whose
- * underlying content changes between calls rebuilds correctly.
+ * receive as `configPath` (a file path, a URL or inline JSON). Keying on it
+ * means inline content that changes between calls rebuilds correctly.
  *
  * Returns `undefined` for file-path / URL configs (see `isInlineJsonConfig`):
  * those bypass the cache so an edited file is never served from a stale bundle.

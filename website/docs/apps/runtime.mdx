@@ -306,7 +306,11 @@ requests:
           },
           "next": [
             {
-              "match": { "key": "ingest.method", "operator": "eq", "value": "GET" },
+              "match": {
+                "key": "ingest.method",
+                "operator": "eq",
+                "value": "GET"
+              },
               "next": "file"
             }
           ]

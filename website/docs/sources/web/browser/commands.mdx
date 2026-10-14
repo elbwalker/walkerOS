@@ -93,19 +93,19 @@ settings control browser-specific behavior:
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector } = await startFlow({
-sources: {
-browser: {
-code: sourceBrowser,
-config: {
-  settings: {
-    elb: 'elb', // Name for the global elb function, or false to install none
-    elbLayer: true, // Enable elbLayer for async command queuing
-    pageview: true, // Trigger a page view event by default
-    prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          elb: 'elb', // Name for the global elb function, or false to install none
+          elbLayer: true, // Enable elbLayer for async command queuing
+          pageview: true, // Trigger a page view event by default
+          prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning
+        },
+      },
+    },
   },
-},
-},
-},
 });`}
   language="javascript"
 />

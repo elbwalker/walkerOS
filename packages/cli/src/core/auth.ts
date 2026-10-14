@@ -3,7 +3,6 @@ import {
   writeConfig,
   clearAuthFields,
   resolveAppUrl,
-  resolveProjectId,
   hasStoredCredential,
   type WalkerOSConfig,
 } from '../lib/config-file.js';
@@ -150,13 +149,4 @@ export function credentialSource(): 'env' | 'config' | null {
   if (process.env.WALKEROS_TOKEN) return 'env';
   if (hasStoredCredential(readConfig())) return 'config';
   return null;
-}
-
-export function requireProjectId(): string {
-  const projectId = resolveProjectId();
-  if (!projectId)
-    throw new Error(
-      'No project selected. Set WALKEROS_PROJECT_ID or configure a default project.',
-    );
-  return projectId;
 }

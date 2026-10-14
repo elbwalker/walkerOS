@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   HEARTBEAT_OPERATION,
   SECRET_VALUES_OPERATION,
@@ -33,30 +30,6 @@ describe('api-paths', () => {
   it('encodes each path parameter once', () => {
     expect(secretValuesUrl('https://app.test', 'proj/1', 'flow%20a')).toBe(
       'https://app.test/api/projects/proj%2F1/flows/flow%2520a/secrets/values',
-    );
-  });
-
-  it('is listed in the CLI client operations manifest for the runner', () => {
-    // __tests__ -> src -> runner -> packages, then into cli.
-    const manifestPath = join(
-      dirname(fileURLToPath(import.meta.url)),
-      '../../../cli/openapi/client-operations.json',
-    );
-    const manifest: unknown = JSON.parse(readFileSync(manifestPath, 'utf-8'));
-    const runnerOps = Array.isArray(manifest)
-      ? manifest.flatMap((entry: unknown) =>
-          entry !== null &&
-          typeof entry === 'object' &&
-          'op' in entry &&
-          'usedBy' in entry &&
-          Array.isArray(entry.usedBy) &&
-          entry.usedBy.includes('runner')
-            ? [entry.op]
-            : [],
-        )
-      : [];
-    expect(runnerOps.sort()).toEqual(
-      [HEARTBEAT_OPERATION, SECRET_VALUES_OPERATION].sort(),
     );
   });
 });

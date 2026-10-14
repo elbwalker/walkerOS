@@ -33,9 +33,9 @@ Annotates events with `user.botScore` (0-99, higher = more automated), `user.bot
 import { transformerBot } from '@walkeros/server-transformer-bot';
 
 await startFlow({
-transformers: {
-bot: { code: transformerBot },
-},
+  transformers: {
+    bot: { code: transformerBot },
+  },
 });`}
 language="typescript"
 />
@@ -149,7 +149,12 @@ The sender declares the transport, the source lifts it into `ingest`, the transf
 3. Point the bot config at `ingest.transport`, with a static entry behind it for senders that carry no annotation.
 
 <CodeSnippet
-  code={`<img src="https://collect.example.com/px.gif?transport=pixel" width="1" height="1" alt="">`}
+  code={`<img
+  src="https://collect.example.com/px.gif?transport=pixel"
+  width="1"
+  height="1"
+  alt=""
+/>`}
   language="html"
 />
 

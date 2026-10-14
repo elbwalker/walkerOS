@@ -5,28 +5,26 @@ export const SERVER_INSTRUCTIONS = `walkerOS is an open-source, privacy-first ev
 - **Never guess package names.** Always use \`package_search\` first to find exact names, then \`package_get\` for details.
 - **Never construct flow configs from memory.** Read \`walkeros://reference/flow-schema\` and use \`package_get\` for package-specific schemas.
 - **Always validate.** Run \`flow_validate\` after every config change. If validation fails, fix and re-validate. By default it checks every flow and step, package settings included; a valid result can still list \`details.skipped\` checks, so read them before trusting it (\`strict: true\` turns warnings and skips into failures: \`valid\` is false).
-- **Simulate before deploying.** Use \`flow_simulate\` to test with mocked API calls before \`flow_bundle\` or \`flow_push\`.
-- **When a request fails,** call \`diagnostics\` to see which MCP/CLI versions, app URL, and backend you are on, plus whether the app is reachable.
+- **Simulate before you build.** Use \`flow_simulate\` to test with mocked API calls before \`flow_bundle\` or \`flow_push\`.
+
+## Two walkerOS MCP servers
+
+This server runs on your machine and works on flow files. Its tools read a file path, an http(s) URL or inline JSON, and validate, simulate, bundle and push flows here. It needs no account and no token.
+
+What the walkerOS app stores (projects, saved flows, deployments, previews, Observe sessions, frames, release history, secrets, feedback) is served by the hosted walkerOS MCP server at \`https://app.walkeros.io/api/mcp\`. Add it to your MCP client as a remote server; it signs you in with OAuth. Both servers offer \`flow_validate\`, \`flow_examples\`, \`flow_load\`, \`package_search\` and \`package_get\`: use the hosted one for a saved flow and this one for a file.
+
+To simulate, bundle or push a saved flow here, ask the hosted \`flow_manage\` for a config link (\`action: "config_url"\`) and pass that URL as the input of \`flow_load\`, \`flow_simulate\`, \`flow_bundle\` or \`flow_push\`. A link lasts about ten minutes; an expired one fails with its HTTP status.
 
 ## Workflow
 
-1. \`auth({ action: "status" })\` — check if logged in, or \`auth({ action: "login" })\` to connect
-2. \`project_manage({ action: "list" })\` — see your projects
-3. \`flow_manage({ action: "list" })\` — see all flows across projects
-4. \`flow_load({ platform: "web" })\` or \`flow_load({ source: "./flow.json" })\` — create or load
-5. \`package_search({ type: "destination", platform: "web" })\` — discover packages
-6. \`package_get({ package: "..." })\` — read schemas, hints, examples
-7. Use the \`add-step\` prompt — guided step addition
-8. Use the \`setup-mapping\` prompt — event transformation config
-9. \`flow_validate({ type: "flow", input: "flow.json" })\` — verify
-10. \`flow_simulate({ configPath: "flow.json", event: "..." })\` — test
-11. \`flow_manage({ action: "update", flowId: "...", content: {...} })\` — save to cloud
-12. \`deploy_manage({ action: "deploy", flowId: "..." })\` — deploy
-13. \`observe_session({ action: "start", flowId: "..." })\` - open an Observe session: a time-boxed window on one flow that runtimes attach to as arms
-14. \`flow_manage({ action: "preview_regrant", flowId: "...", previewId: "...", origins: [...] })\` - mint an activation link; minted while the flow is observed, it pairs with that Observe session automatically, so the previewed page streams into the same feed
-15. \`observe_journeys({ flowId: "..." })\` - read what arrived; it is the only read, and it never judges whether events are correct
-16. \`hub_manage({ action: "releases", flowId: "..." })\` - read what changed across releases and why; \`release_get\` carries a server-computed diff, \`rationale_set\` records why
-17. \`frame_manage({ action: "page", flowId: "...", pageKey: "..." })\` - read the frames of a flow on one page with their marks; read-only, edited in Tag Mode or the app
+1. \`flow_load({ platform: "web" })\` or \`flow_load({ source: "./flow.json" })\`: create or load
+2. \`package_search({ type: "destination", platform: "web" })\`: discover packages
+3. \`package_get({ package: "..." })\`: read schemas, hints, examples
+4. Use the \`add-step\` prompt: guided step addition
+5. Use the \`setup-mapping\` prompt: event transformation config
+6. \`flow_validate({ type: "flow", input: "flow.json" })\`: verify
+7. \`flow_simulate({ configPath: "flow.json", step: "destination.<name>", event: { ... } })\`: test
+8. \`flow_bundle({ configPath: "flow.json" })\`: build
 
 ## Architecture: Source → Collector → Destination(s)
 

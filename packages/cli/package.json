@@ -15,13 +15,15 @@
       "types": "./dist/dev.d.ts",
       "default": "./dist/dev.js"
     },
+    "./validate": {
+      "types": "./dist/validate.d.ts",
+      "default": "./dist/validate.js"
+    },
     "./examples": {
       "types": "./dist/examples/index.d.ts",
       "default": "./dist/examples/index.js"
     },
-    "./examples/*": "./examples/*",
-    "./openapi/spec.json": "./openapi/spec.json",
-    "./openapi/client-operations.json": "./openapi/client-operations.json"
+    "./examples/*": "./examples/*"
   },
   "bin": {
     "walkeros": "./dist/cli.js"
@@ -31,8 +33,6 @@
     "examples/**",
     "!examples/shared/walker.js",
     "!dist/examples/shared/walker.js",
-    "openapi/spec.json",
-    "openapi/client-operations.json",
     "src/telemetry/flow.json",
     "README.md",
     "CHANGELOG.md"
@@ -45,8 +45,6 @@
     "test:debug": "jest --colors --detectOpenHandles --testPathIgnorePatterns '__tests__/e2e/' '__tests__/integration/'",
     "test:integration": "jest --colors --testPathPatterns='__tests__/integration/'",
     "test:e2e": "jest --colors --testPathPatterns='__tests__/e2e/'",
-    "generate:types": "node scripts/generate-client-spec.mjs && openapi-typescript ./openapi/spec.json --default-non-nullable false -o src/types/api.gen.d.ts && prettier --write src/types/api.gen.d.ts ./openapi/spec.json",
-    "generate:types:local": "OPENAPI_SPEC=${WALKEROS_APP_URL:-http://localhost:3000}/api/openapi.json npm run generate:types",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage && rm -rf .temp && rm -rf .tmp",
@@ -69,7 +67,6 @@
     "jsdom": "^29.1.1",
     "npm-package-arg": "^13.0.2",
     "open": "^11.0.0",
-    "openapi-fetch": "^0.17.0",
     "pacote": "^21.0.4",
     "picomatch": "^4.0.4",
     "semver": "^7.7.4",
@@ -107,7 +104,6 @@
     "@walkeros/web-source-datalayer": "4.8.0",
     "@walkeros/web-source-session": "4.8.0",
     "msw": "^2.12.10",
-    "openapi-typescript": "^7.13.0",
     "tsx": "^4.21.0"
   },
   "repository": {

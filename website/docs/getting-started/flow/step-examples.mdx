@@ -62,12 +62,19 @@ Each example has a human-readable name and two fields:
           }
         }
       },
-      "out": [["gtag", "event", "purchase", {
-        "transaction_id": "ORD-123",
-        "value": 149.97,
-        "currency": "EUR",
-        "send_to": "G-DEMO123456"
-      }]]
+      "out": [
+        [
+          "gtag",
+          "event",
+          "purchase",
+          {
+            "transaction_id": "ORD-123",
+            "value": 149.97,
+            "currency": "EUR",
+            "send_to": "G-DEMO123456"
+          }
+        ]
+      ]
     }
   }
 }`}
@@ -96,8 +103,28 @@ Some destinations need to react to walker commands (consent updates, user identi
   "command": "consent",
   "in": { "marketing": true, "functional": true },
   "out": [
-    ["gtag", "consent", "default", { "ad_storage": "denied", "ad_user_data": "denied", "ad_personalization": "denied", "analytics_storage": "denied" }],
-    ["gtag", "consent", "update", { "ad_storage": "granted", "ad_user_data": "granted", "ad_personalization": "granted", "analytics_storage": "granted" }]
+    [
+      "gtag",
+      "consent",
+      "default",
+      {
+        "ad_storage": "denied",
+        "ad_user_data": "denied",
+        "ad_personalization": "denied",
+        "analytics_storage": "denied"
+      }
+    ],
+    [
+      "gtag",
+      "consent",
+      "update",
+      {
+        "ad_storage": "granted",
+        "ad_user_data": "granted",
+        "ad_personalization": "granted",
+        "analytics_storage": "granted"
+      }
+    ]
   ]
 }`}
   language="json"
@@ -142,16 +169,34 @@ Here is a complete flow config with examples on a source, transformer, and desti
           "package": "@walkeros/web-source-browser",
           "examples": {
             "page view": {
-              "trigger": { "type": "load", "options": { "url": "https://example.com/", "title": "Home" } },
+              "trigger": {
+                "type": "load",
+                "options": { "url": "https://example.com/", "title": "Home" }
+              },
               "in": "",
-              "out": [["elb", {
-                "name": "page view",
-                "data": { "domain": "example.com", "title": "Home", "referrer": "", "id": "/" },
-                "context": {},
-                "globals": {},
-                "trigger": "load",
-                "source": { "type": "browser", "platform": "web", "url": "https://example.com/", "referrer": "" }
-              }]]
+              "out": [
+                [
+                  "elb",
+                  {
+                    "name": "page view",
+                    "data": {
+                      "domain": "example.com",
+                      "title": "Home",
+                      "referrer": "",
+                      "id": "/"
+                    },
+                    "context": {},
+                    "globals": {},
+                    "trigger": "load",
+                    "source": {
+                      "type": "browser",
+                      "platform": "web",
+                      "url": "https://example.com/",
+                      "referrer": ""
+                    }
+                  }
+                ]
+              ]
             }
           }
         }
@@ -160,16 +205,37 @@ Here is a complete flow config with examples on a source, transformer, and desti
         "validate": {
           "package": "@walkeros/transformer-validate",
           "config": {
-            "settings": { "contract": [{ "type": "object", "properties": { "data": { "required": ["title"] } } }] }
+            "settings": {
+              "contract": [
+                {
+                  "type": "object",
+                  "properties": { "data": { "required": ["title"] } }
+                }
+              ]
+            }
           },
           "examples": {
             "page view": {
-              "in": { "name": "page view", "entity": "page", "action": "view", "data": { "title": "Home" } },
-              "out": [["return", { "event": {
-                "name": "page view", "entity": "page", "action": "view",
-                "data": { "title": "Home" },
-                "source": { "valid": true }
-              } }]]
+              "in": {
+                "name": "page view",
+                "entity": "page",
+                "action": "view",
+                "data": { "title": "Home" }
+              },
+              "out": [
+                [
+                  "return",
+                  {
+                    "event": {
+                      "name": "page view",
+                      "entity": "page",
+                      "action": "view",
+                      "data": { "title": "Home" },
+                      "source": { "valid": true }
+                    }
+                  }
+                ]
+              ]
             }
           }
         }
@@ -188,7 +254,14 @@ Here is a complete flow config with examples on a source, transformer, and desti
                 "name": "page_view",
                 "data": { "map": { "page_title": "data.title" } }
               },
-              "out": [["gtag", "event", "page_view", { "page_title": "Home", "send_to": "G-DEMO123456" }]]
+              "out": [
+                [
+                  "gtag",
+                  "event",
+                  "page_view",
+                  { "page_title": "Home", "send_to": "G-DEMO123456" }
+                ]
+              ]
             }
           }
         }
@@ -245,22 +318,42 @@ import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const flow = JSON.parse(readFileSync('flow.json', 'utf-8'));
 const ga4 = flow.flows.default.destinations.ga4;
-const examples: Record<string, { in: { name: string }; mapping?: unknown; out: unknown[][] }> = ga4.examples;
+const examples: Record<
+  string,
+  { in: { name: string }; mapping?: unknown; out: unknown[][] }
+> = ga4.examples;
 
-it.each(Object.entries(examples))('ga4 destination: %s', async (name, example) => {
-  // Record every gtag() call instead of loading the real gtag.js
-  const calls: unknown[][] = [];
-  const env = { window: { dataLayer: [], gtag: (...args: unknown[]) => calls.push(['gtag', ...args]) } };
-  const [entity, action] = example.in.name.split(' ');
+it.each(Object.entries(examples))(
+  'ga4 destination: %s',
+  async (name, example) => {
+    // Record every gtag() call instead of loading the real gtag.js
+    const calls: unknown[][] = [];
+    const env = {
+      window: {
+        dataLayer: [],
+        gtag: (...args: unknown[]) => calls.push(['gtag', ...args]),
+      },
+    };
+    const [entity, action] = example.in.name.split(' ');
 
-  const { elb } = await startFlow({
-    destinations: { ga4: { code: destinationGtag, config: { ...ga4.config, mapping: { [entity]: { [action]: example.mapping } } }, env } },
-  });
-  await elb(example.in);
+    const { elb } = await startFlow({
+      destinations: {
+        ga4: {
+          code: destinationGtag,
+          config: {
+            ...ga4.config,
+            mapping: { [entity]: { [action]: example.mapping } },
+          },
+          env,
+        },
+      },
+    });
+    await elb(example.in);
 
-  // calls[0] is the gtag('config', ...) call the destination makes on init
-  expect(calls.slice(1)).toEqual(example.out);
-});`}
+    // calls[0] is the gtag('config', ...) call the destination makes on init
+    expect(calls.slice(1)).toEqual(example.out);
+  },
+);`}
   language="typescript"
 />
 
@@ -309,8 +402,15 @@ Such a package also exports `exportSchemas`, the same map for schemas: every exp
 <CodeSnippet
   code={`// src/dev.ts
 export const exportSchemas = {
-  destinationBigQuery: { settings: bigquery.settings, mapping: bigquery.mapping },
-  destinationPubSub: { settings: pubsub.settings, mapping: pubsub.mapping, setup: pubsub.setup },
+  destinationBigQuery: {
+    settings: bigquery.settings,
+    mapping: bigquery.mapping,
+  },
+  destinationPubSub: {
+    settings: pubsub.settings,
+    mapping: pubsub.mapping,
+    setup: pubsub.setup,
+  },
 };`}
   language="typescript"
 />

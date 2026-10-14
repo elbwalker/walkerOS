@@ -36,7 +36,7 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  // The real narrowing helper: cloud-id resolution reads the flow record through it.
+  // The real narrowing helper: the local runtime reads through it.
   isObject: jest.requireActual('@walkeros/core').isObject,
   mcpResult: jest.fn((result, hints) => ({
     structuredContent: hints ? { ...result, _hints: hints } : result,
@@ -56,7 +56,6 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { simulateDestination } from '@walkeros/cli';
-import { stubClient } from '../support/stub-client.js';
 import {
   __resetBundleCacheForTests,
   getOrBuildBundle,
@@ -76,14 +75,9 @@ function destResult() {
 
 describe('flow_simulate bundle cache', () => {
   let spec: ReturnType<typeof createFlowSimulateToolSpec>;
-  let getFlow: jest.Mock;
 
   beforeEach(async () => {
-    getFlow = jest.fn();
-    spec = createFlowSimulateToolSpec(
-      stubClient({ getFlow }),
-      createLocalRuntime(),
-    );
+    spec = createFlowSimulateToolSpec(createLocalRuntime());
     jest.clearAllMocks();
     await __resetBundleCacheForTests();
     mockSimulateDestination.mockResolvedValue(destResult());
@@ -159,24 +153,5 @@ describe('flow_simulate bundle cache', () => {
     const firstOpts = mockSimulateDestination.mock.calls[0][2];
     const secondOpts = mockSimulateDestination.mock.calls[1][2];
     expect(secondOpts.bundlePath).not.toBe(firstOpts.bundlePath);
-  });
-
-  it('keys by resolved config content, so a cloud id whose content changes rebuilds', async () => {
-    getFlow.mockResolvedValueOnce({ config: { version: 4, flows: { a: {} } } });
-    await spec.handler({
-      configPath: 'flow_abc',
-      event: '{"name":"page view"}',
-      step: 'destination.gtag',
-    });
-
-    // Same id, different resolved content -> must rebuild.
-    getFlow.mockResolvedValueOnce({ config: { version: 4, flows: { b: {} } } });
-    await spec.handler({
-      configPath: 'flow_abc',
-      event: '{"name":"page view"}',
-      step: 'destination.gtag',
-    });
-
-    expect(bundleMock).toHaveBeenCalledTimes(2);
   });
 });

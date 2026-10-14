@@ -45,11 +45,10 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 | `bundle`   | Generate JS bundle from config                              | ✅    |
 | `push`     | Execute with real API calls (or `--simulate` for mocked)    | ⚠️    |
 | `setup`    | Run a component's `setup()` to provision external resources | ⚠️    |
-| `deploy`   | Deploy flows to cloud                                       | ⚠️    |
-| `previews` | Manage preview bundles for testing on live sites            | ⚠️    |
-| `observe`  | Start a live observation session for a flow (app login)     | ⚠️    |
 | `validate` | Validate configs/events                                     | ✅    |
 | `cache`    | Manage caching                                              | ✅    |
+| `auth`     | Log in, log out, check identity, print the access token     | ✅    |
+| `api`      | Call the walkerOS app API, or list its operations           | ⚠️    |
 
 For detailed command reference, see
 [commands-reference.md](commands-reference.md).
@@ -66,7 +65,9 @@ For detailed command reference, see
 3. Simulate: walkeros push flow.json -e event.json --simulate destination.demo
 4. Fix issues, repeat 2-3
 5. Push test: walkeros push flow.json -e event.json
-6. Deploy: walkeros deploy start <flowId>
+6. Deploy: in the walkerOS app, or
+   walkeros api POST /api/projects/{projectId}/flows/<flowId>/deploy
+   (see the CI recipe in the CLI docs)
 ```
 
 ### Multi-Flow Development
@@ -323,38 +324,28 @@ From an AI assistant the equivalent tool is `flow_simulate`. A few specifics:
   scrubbed of credentials like the CLI output.
 - **Sources are simulatable as a step**, including the `@walkeros/source-demo`
   demo source.
-- **`configPath` accepts a cloud flow id** (`flow_...` / `cfg_...`), resolved
-  the same way `flow_load` does, so you can simulate a saved flow without a file
-  round-trip. Repeated simulations of the same configuration reuse a prebuilt
-  bundle for faster runs; local file paths always rebuild. `flow_bundle` accepts
-  a cloud flow id the same way.
+- **`configPath` is a file path, an http(s) URL or inline JSON.** Repeated
+  simulations of the same inline configuration reuse a prebuilt bundle for
+  faster runs; a file path or URL always rebuilds.
+- **A flow saved in the walkerOS app** runs locally through a config link: the
+  hosted walkerOS MCP server's `flow_manage` (`action: "config_url"`) returns a
+  URL that lasts about ten minutes, and `flow_simulate`, `flow_bundle`,
+  `flow_push` and `flow_load` take it as their config input.
 
-`flow_load` loads a flow from a local path, URL, inline JSON, or a cloud
-flow/config ID (`flow_...` / `cfg_...`). Configs returned by `flow_load` and
-`flow_manage` are round-trip safe: structural values (package names, platform,
-IDs) come back literally, so a returned config can be edited and sent back to
-`flow_manage({ action: "update" })` unchanged.
+`flow_load` loads a flow from a local path, URL or inline JSON. Configs returned
+by `flow_load` are round-trip safe: structural values (package names, platform,
+IDs) come back literally, so a returned config can be edited and written back
+unchanged.
 
-When an MCP request fails, the `diagnostics` tool (read-only, no parameters,
-works logged out) reports the MCP and CLI versions, the resolved app URL, app
-`/api/health` reachability, the API contract verdict against that app, and which
-source served the last package lookup. From a terminal, `walkeros diagnostics`
-(or `--json`) prints the same facts for the CLI:
+From a terminal, `walkeros diagnostics` (or `--json`) reports the CLI version,
+the app URL and where it comes from, and whether the app answers its health
+route:
 
 ```text
 cli 4.8.0
 app https://app.walkeros.io (default)
 health reachable, status ok, app 3f2a91c
-contract: in-sync (server 4.7.0+5e6f7a8b, client 4.7.0+1a2b3c4d, 55 operations)
 ```
-
-The verdict compares, operation by operation, what this client calls with the
-live `/api/openapi.json`: `in-sync`, `changed` (operations differ with the same
-floor, direction not determined) and `server-older` (both with the changed or
-missing operations and the commands that call them), `client-outdated` (naming
-the version the server requires), `unknown` (naming the request that failed), or
-`in-process` on the hosted MCP door. The `walkeros://reference/openapi` resource
-serves the live document itself.
 
 ### Validate flow config
 
@@ -835,17 +826,18 @@ Use absolute or relative paths in `flow.<name>.config.bundle.packages`:
 }
 ```
 
-### CLI Prints "Upgrade Required" and Exits With Code 2
+### An App Answers 426
 
-The walkerOS app requires a newer `@walkeros/cli` version for the endpoint you
-just called. Upgrade and retry:
+The walkerOS app answers `426 Upgrade Required` to a CLI below its minimum
+version. `walkeros api` prints the answer body, which carries the upgrade
+message and `minVersion`, and exits 1. Upgrade the CLI and retry:
 
 ```bash
 npm install -g @walkeros/cli@latest
 ```
 
-See [Upgrading](https://walkeros.io/docs/upgrading) for the full
-version-negotiation rules.
+See [Upgrading](https://www.walkeros.io/docs/upgrading) for the answer body and
+the upgrade checklist.
 
 ---
 
@@ -862,9 +854,10 @@ version-negotiation rules.
 
 ## Networking
 
-Outbound requests to a configured `WALKEROS_APP_URL` carry
-`X-WalkerOS-Client: cli` (or `mcp`) and `X-WalkerOS-Client-Version` headers so
-the host can attribute usage and enforce minimum versions. No PII.
+Outbound requests to the walkerOS app (`WALKEROS_APP_URL`, default
+`https://app.walkeros.io`) carry `X-WalkerOS-Client: cli` and
+`X-WalkerOS-Client-Version` headers so the host can attribute usage and enforce
+its minimum version. No PII.
 
 ## Telemetry
 

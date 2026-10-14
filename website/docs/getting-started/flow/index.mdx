@@ -59,9 +59,9 @@ const flow = await startFlow({
   sources: {
     browser: {
       code: sourceBrowser,
-      config: { settings: { pageview: true } }
-    }
-  }
+      config: { settings: { pageview: true } },
+    },
+  },
 });`}
   language="typescript"
 />
@@ -695,17 +695,17 @@ const { collector, elb } = await startFlow({
     http: {
       code: sourceExpress,
       config: {
-        settings: { paths: ['/collect'], port: 8080 }
-      }
-    }
+        settings: { paths: ['/collect'], port: 8080 },
+      },
+    },
   },
   destinations: {
     console: {
       code: destinationDemo,
       config: {
-        settings: { name: 'Logger' }
-      }
-    }
+        settings: { name: 'Logger' },
+      },
+    },
   },
 });
 

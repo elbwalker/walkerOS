@@ -1,6 +1,7 @@
 /**
- * The app operations the runner calls, as `"<METHOD> <path template>"`. The
- * CLI's `openapi/client-operations.json` lists both with `usedBy` `runner`.
+ * The app operations the runner calls, as `"<METHOD> <path template>"`. They
+ * are the runner's fixed interface: the app keeps both in its public API set
+ * for runner and automation tokens alike.
  *
  * The only file in the runner that names an app path.
  */

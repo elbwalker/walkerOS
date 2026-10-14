@@ -1,10 +1,8 @@
 import { createLocalRuntime } from '../../runtime/local.js';
 import { HINT_OUT_OF_PROCESS } from '../../runtime/types.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   MAX_PACKAGE_LOOKUPS,
   createFlowExamplesToolSpec,
-  registerFlowExamplesTool,
 } from '../../tools/examples.js';
 import { ExamplesListOutputShape } from '../../schemas/output.js';
 import type { ToolSpec } from '../../tool-spec.js';
@@ -61,15 +59,6 @@ import { loadJsonConfig } from '@walkeros/cli';
 import { fetchPackage } from '@walkeros/core';
 const mockLoadJsonConfig = jest.mocked(loadJsonConfig);
 const mockFetchPackage = jest.mocked(fetchPackage);
-
-/** The config the first `registerTool` call passed, narrowed. */
-function firstRegisteredConfig(
-  calls: readonly unknown[],
-): Record<string, unknown> {
-  const first = calls[0];
-  if (!Array.isArray(first)) throw new Error('No tool was registered');
-  return record(first[1]);
-}
 
 function parse(text: string): unknown {
   return JSON.parse(text);
@@ -163,10 +152,7 @@ describe('flow_examples tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    const server = new McpServer({ name: 'test', version: '0.0.0' });
-    const registerTool = jest.spyOn(server, 'registerTool');
-    registerFlowExamplesTool(server, createLocalRuntime());
-    expect(firstRegisteredConfig(registerTool.mock.calls).outputSchema).toBe(
+    expect(createFlowExamplesToolSpec(createLocalRuntime()).outputSchema).toBe(
       ExamplesListOutputShape,
     );
   });

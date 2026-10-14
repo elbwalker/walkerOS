@@ -29,39 +29,38 @@ functions you call in a sandbox, not as round-trips through the model context.
 
 ## The Seven Pure Tools
 
-These walkerOS MCP tools are pure and composable: same input, same output, no
-auth, no cloud side effects. Safe to call freely from code.
+These tools of the local walkerOS MCP server (`@walkeros/mcp`) are pure and
+composable: same input, same output, no auth, no side effects in any account.
+Safe to call freely from code.
 
-| Tool (fully-qualified)    | Purpose                                             | Verbose output worth filtering  |
-| ------------------------- | --------------------------------------------------- | ------------------------------- |
-| `walkeros:flow_validate`  | Validate a flow or step config; return issues       | small                           |
-| `walkeros:flow_simulate`  | Run a flow against an event, mock destination calls | **yes** (per-destination calls) |
-| `walkeros:flow_bundle`    | Bundle a flow config to a JS artifact               | medium (bundle/meta)            |
-| `walkeros:flow_examples`  | Fetch canonical flow/step examples                  | **yes** (many examples)         |
-| `walkeros:package_search` | Find packages by type/platform/keyword              | **yes** (catalog)               |
-| `walkeros:package_get`    | Read a package's schemas, hints, examples           | **yes** (full schemas)          |
-| `walkeros:diagnostics`    | Report MCP/CLI versions, app URL, reachability      | small                           |
+| Tool (fully-qualified)         | Purpose                                             | Verbose output worth filtering  |
+| ------------------------------ | --------------------------------------------------- | ------------------------------- |
+| `walkeros-flow:flow_validate`  | Validate a flow or step config; return issues       | small                           |
+| `walkeros-flow:flow_simulate`  | Run a flow against an event, mock destination calls | **yes** (per-destination calls) |
+| `walkeros-flow:flow_bundle`    | Bundle a flow config to a JS artifact               | medium (bundle/meta)            |
+| `walkeros-flow:flow_examples`  | Fetch canonical flow/step examples                  | **yes** (many examples)         |
+| `walkeros-flow:flow_load`      | Load a flow config, or start a new one              | medium (the whole config)       |
+| `walkeros-flow:package_search` | Find packages by type/platform/keyword              | **yes** (catalog)               |
+| `walkeros-flow:package_get`    | Read a package's schemas, hints, examples           | **yes** (full schemas)          |
 
-To test an event against a flow, use `walkeros:flow_simulate`: it runs the event
-through the flow with destination calls **mocked**, so nothing leaves the
-sandbox. Do not use `walkeros:flow_push` for this (see below).
+To test an event against a flow, use `walkeros-flow:flow_simulate`: it runs the
+event through the flow with destination calls **mocked**, so nothing leaves the
+sandbox. Do not use `walkeros-flow:flow_push` for this (see below).
 
-Always use the **fully-qualified `walkeros:<tool>`** name (Agent Skills
+Always use the **fully-qualified `<server>:<tool>`** name (Agent Skills
 best-practice) so the call is unambiguous when multiple MCP servers are bound.
+`walkeros-flow` is the name the walkerOS plugin and the documented MCP config
+give the local server; the hosted walkerOS MCP server is bound as `walkeros`.
 
 ### Out of scope for this pattern
 
-The twelve cloud/auth/side-effect tools (`walkeros:auth`,
-`walkeros:project_manage`, `walkeros:flow_manage`, `walkeros:deploy_manage`,
-`walkeros:secret_manage`, `walkeros:observe_session`,
-`walkeros:observe_journeys`, `walkeros:hub_manage`, `walkeros:frame_manage`,
-`walkeros:feedback`, `walkeros:flow_load`, `walkeros:flow_push`) carry
-authentication, cloud state, or side effects. `walkeros:flow_push` in particular
-sends a **real event to real destinations** (real API calls to live endpoints),
-so calling it "freely" would produce real, duplicated sends; use
-`walkeros:flow_simulate` to test without sending. Do **not** drive these tools
-from this code-execution filtering pattern; they belong in an interactive,
-authorized session.
+`walkeros-flow:flow_push` sends a **real event to real destinations** (real API
+calls to live endpoints), so calling it "freely" would produce real, duplicated
+sends; use `walkeros-flow:flow_simulate` to test without sending. The tools for
+what the walkerOS app stores (projects, saved flows, deployments, secrets,
+Observe) live on the hosted walkerOS MCP server and act with the person's
+authorization there. Do **not** drive these tools from this code-execution
+filtering pattern; they belong in an interactive, authorized session.
 
 ## The Recommended Pattern
 
@@ -85,7 +84,7 @@ const flow = await readFile('flow.json', 'utf8');
 // 1. Validate first; bail with one line if the config is broken. Branch on
 //    `code`, never on `message`. `strict: true` turns warnings and skipped
 //    checks (`details.skipped`) into failures: `valid` is false, as CLI --strict.
-const v = await mcp.call('walkeros:flow_validate', {
+const v = await mcp.call('walkeros-flow:flow_validate', {
   type: 'flow',
   input: flow,
   strict: true,
@@ -98,7 +97,7 @@ if (!valid) {
 }
 
 // 2. Simulate one event through the flow; output is verbose (every destination).
-const sim = await mcp.call('walkeros:flow_simulate', {
+const sim = await mcp.call('walkeros-flow:flow_simulate', {
   configPath: 'flow.json',
   event: 'product add',
 });
@@ -115,9 +114,10 @@ return failed.length
   : 'simulate ok for all destinations';
 ```
 
-The same shape applies to `walkeros:package_search` / `walkeros:package_get`
-(filter a catalog or a schema down to the one field the user asked about) and
-`walkeros:flow_examples` (pick the one matching example).
+The same shape applies to `walkeros-flow:package_search` /
+`walkeros-flow:package_get` (filter a catalog or a schema down to the one field
+the user asked about) and `walkeros-flow:flow_examples` (pick the one matching
+example).
 
 ## Responsibility Boundary
 

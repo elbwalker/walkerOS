@@ -11,15 +11,13 @@ const baseSyntax = baseConfig.flatMap((block) => {
   return Array.isArray(rule) ? rule.slice(1) : [];
 });
 
-// App operations go through the CLI's typed client (`apiRequest`), so the
-// compiler checks each against the contract.
+// The local server calls no app: it names no app route.
 const apiPathMessage =
-  "Call the app through apiRequest('<METHOD> <path>') from @walkeros/cli, not a string path.";
-const openapiFetchArgument =
-  'CallExpression[callee.type="MemberExpression"][callee.property.name=/^(GET|POST|PUT|PATCH|DELETE)$/] > Literal.arguments:first-child';
+  '@walkeros/mcp names no app route: cloud tools live in the hosted walkerOS MCP server.';
 const apiPathSyntax = [
   {
-    selector: `Literal[value=/^\\/api\\//]:not(${openapiFetchArgument}):not(TSLiteralType > Literal):not(TSPropertySignature > Literal.key)`,
+    selector:
+      'Literal[value=/^\\/api\\//]:not(TSLiteralType > Literal):not(TSPropertySignature > Literal.key)',
     message: apiPathMessage,
   },
   {
@@ -27,14 +25,6 @@ const apiPathSyntax = [
     message: apiPathMessage,
   },
 ];
-
-// The CLI's raw fetch helpers stay public API, but the MCP calls the app
-// through apiRequest.
-const rawFetchHelpers = {
-  group: ['@walkeros/cli'],
-  importNames: ['apiFetch', 'publicFetch', 'deployFetch'],
-  message: "Call the app through apiRequest from '@walkeros/cli' instead.",
-};
 
 const tests = ['src/**/__tests__/**', 'src/**/*.test.ts'];
 const devZones = ['src/dev.ts', 'src/examples/**', 'src/schemas/**'];
@@ -56,15 +46,8 @@ export default [
     rules: { 'no-restricted-syntax': ['error', ...apiPathSyntax] },
   },
   {
-    files: ['src/**/*.ts'],
-    ignores: tests,
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [rawFetchHelpers] }],
-    },
-  },
-  {
     // Capability fence: only the runtimes and the local stdio door reach the
-    // machine directly, so a hosted runtime can withhold that access.
+    // machine directly, so a runtime with `load` only can withhold that access.
     files: ['src/**/*.ts'],
     ignores: [
       'src/runtime/**',
@@ -105,7 +88,6 @@ export default [
           ],
           patterns: [
             { regex: '(^|/)runtime/(local|bundle-cache)(\\.js)?$', message },
-            rawFetchHelpers,
           ],
         },
       ],

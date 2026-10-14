@@ -9,6 +9,7 @@ const config = {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@walkeros/cli$': '<rootDir>/../../cli/src/',
     '^@walkeros/cli/dev$': '<rootDir>/../../cli/src/dev',
+    '^@walkeros/cli/validate$': '<rootDir>/../../cli/src/validate',
   },
 };
 

@@ -44,13 +44,9 @@ npx walkeros --version`}
 | `setup` | Run the optional `setup()` lifecycle on one component | Provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook registrations) |
 | `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
-| `auth` | Authentication and identity | Log in, log out, check identity |
-| `projects` | Manage walkerOS projects | Create, list, update, delete projects |
-| `flows` | Manage walkerOS flows | Create, list, update, delete, duplicate flows |
-| `deploy` | Create and manage deployments | Deploy flows through the walkerOS app or self-hosted |
-| `previews` | Manage preview bundles | Test flow changes on live sites before deploying |
-| `observe` | Open an Observe session on a flow | Watch a running flow's live events from the terminal |
-| `diagnostics` | Show the CLI version, the app URL, app health, and the API contract verdict | See which backend you are on and whether this CLI matches it |
+| `auth` | Authentication and identity | Log in, log out, check identity, print the access token |
+| `api` | Send an authenticated request to the walkerOS app API, or list its operations | Manage projects, flows and deployments from scripts and CI |
+| `diagnostics` | Show the CLI version, the app URL and whether the app answers | See which app you are on and whether it is reachable |
 
 The `push` command accepts either a config JSON or a pre-built bundle as input.
 
@@ -1536,7 +1532,7 @@ The entry validator:
 
 ## Auth commands
 
-The `auth` command group manages authentication with the walkerOS app. Authentication is required for app commands (`projects`, `flows`, `deploy`).
+The `auth` command group manages your sign-in to the walkerOS app, which `walkeros api` uses.
 
 ### Login
 
@@ -1610,6 +1606,17 @@ Project: proj_def456
 | `-v, --verbose` | Verbose output |
 | `-s, --silent` | Suppress output |
 
+### Token
+
+Print the current access token and a newline on stdout, refreshing the session when needed, so any HTTP client can call the app:
+
+<CodeSnippet
+  code={`curl -H "Authorization: Bearer $(walkeros auth token)" https://app.walkeros.io/api/projects`}
+  language="bash"
+/>
+
+It exits 3 when there is no credential, and 4 when a refresh cannot reach the app.
+
 ### Token resolution
 
 The CLI resolves a credential in this order, first match wins:
@@ -1617,525 +1624,73 @@ The CLI resolves a credential in this order, first match wins:
 1. `WALKEROS_TOKEN` environment variable. Used as-is, never refreshed.
 2. A static `token` in the config file, written by an older CLI. Honored until it expires, with a one-line notice pointing at `walkeros auth login`.
 3. The OAuth session in the config file, written by `auth login`. Refreshed automatically when the access token is close to expiry.
-4. Nothing, and app commands report "Not authenticated. Run `walkeros auth login` first."
+4. Nothing: `walkeros api` exits 3 and asks for `walkeros auth login` or `WALKEROS_TOKEN`.
 
 A refresh that cannot reach the app is reported as such and leaves the saved session in place, so the next command tries again rather than sending you back to the browser.
 
-## Projects commands
+## API command
 
-The `projects` command group manages walkerOS app projects. All commands require authentication (see [Auth commands](#auth-commands)).
-
-### List projects
+`walkeros api` sends one authenticated request to the walkerOS app API and prints the answer. It reaches every operation of the app's public API (projects, flows, deployments, previews, secrets, Observe sessions and more) without a command of its own for each: you name the method and the path. The app validates every request; the CLI never does.
 
 <CodeSnippet
-  code={`walkeros projects list`}
+  code={`walkeros api <METHOD> <path> [--data <json|@file|->] [--header 'Name: value']... [--project <id>] [--yes]`}
   language="bash"
 />
+
+- The method is `GET`, `POST`, `PUT`, `PATCH` or `DELETE`.
+- The answer body is printed on stdout unchanged as it arrives, streamed answers such as a deployment stream included.
+- Query parameters ride in the path: `'/api/projects/{projectId}/flows?limit=10'`.
+- `{projectId}` is filled from `--project`, else from `WALKEROS_PROJECT_ID`. Any other `{...}` left in the path is a usage error.
+- `DELETE` needs `--yes`, because a command run through a shell skips an agent host's per-tool approval.
+- The request is sent with the credential from [Token resolution](#token-resolution).
 
 | Option | Description |
 |--------|-------------|
-| `--cursor <c>` | Resume from a pagination cursor returned by a previous list call |
-| `--limit <n>` | Maximum number of projects to return |
-
-### Get project details
-
-<CodeSnippet
-  code={`# Get by explicit ID
-walkeros projects get proj_abc123
-
-# Uses WALKEROS_PROJECT_ID if omitted
-walkeros projects get`}
-  language="bash"
-/>
-
-### Create a project
-
-<CodeSnippet
-  code={`walkeros projects create "My Analytics Project"`}
-  language="bash"
-/>
-
-### Update a project
-
-<CodeSnippet
-  code={`walkeros projects update proj_abc123 --name "New Name"`}
-  language="bash"
-/>
-
-### Delete a project
-
-<CodeSnippet
-  code={`walkeros projects delete proj_abc123`}
-  language="bash"
-/>
-
-### Common options
-
-All `projects` subcommands support:
-
-| Option | Description |
-|--------|-------------|
-| `-o, --output <path>` | Write result to file |
-| `--json` | Output as JSON |
-| `-v, --verbose` | Verbose output |
-| `-s, --silent` | Suppress output |
-
-## Flows commands
-
-The `flows` command group manages flow configurations within a project. All commands require authentication and a project context (either `--project` or `WALKEROS_PROJECT_ID`).
-
-### List flows
-
-<CodeSnippet
-  code={`walkeros flows list`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `--cursor <c>` | Resume from a pagination cursor returned by a previous list call |
-| `--limit <n>` | Maximum number of flows to return |
-| `--sort <field>` | Sort by: `name`, `updated_at`, `created_at` |
-| `--order <dir>` | Sort order: `asc`, `desc` |
-| `--include-deleted` | Include soft-deleted flows |
-
-### Get a flow
-
-Retrieves a flow with its full `Flow.Json` content.
-
-<CodeSnippet
-  code={`walkeros flows get cfg_abc123`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-
-### Create a flow
-
-<CodeSnippet
-  code={`# With inline JSON
-walkeros flows create "My Flow" --content '{"version":4,"flows":{"default":{"config":{"platform":"server"}}}}'
-
-# From a file
-walkeros flows create "My Flow" --content ./flow.json
-
-# Via stdin
-cat flow.json | walkeros flows create "My Flow"`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `-c, --content <content>` | Flow.Json as JSON string, file path or URL |
-
-### Update a flow
-
-<CodeSnippet
-  code={`# Update name only
-walkeros flows update cfg_abc123 --name "Updated Flow"
-
-# Update content
-walkeros flows update cfg_abc123 --content '{"version":4,"flows":{"default":{"config":{"platform":"server"}}}}'
-
-# Update content from a file
-walkeros flows update cfg_abc123 --content ./flow.json`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `--name <name>` | New flow name |
-| `-c, --content <content>` | New Flow.Json as JSON string, file path or URL |
-
-### Delete a flow
-
-Soft-deletes a flow configuration.
-
-<CodeSnippet
-  code={`walkeros flows delete cfg_abc123`}
-  language="bash"
-/>
-
-### Duplicate a flow
-
-Creates a copy of an existing flow configuration.
-
-<CodeSnippet
-  code={`walkeros flows duplicate cfg_abc123 --name "Flow Copy"`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `--name <name>` | Name for the copy (defaults to "Copy of ...") |
-
-### Common options
-
-All `flows` subcommands support:
-
-| Option | Description |
-|--------|-------------|
-| `-o, --output <path>` | Write result to file |
-| `--json` | Output as JSON |
-| `-v, --verbose` | Verbose output |
-| `-s, --silent` | Suppress output |
-
-## Deploy commands
-
-The `deploy` command group handles deploying flows through the walkerOS app or managing self-hosted deployments with heartbeat registration. All commands require authentication.
-
-### deploy create
-
-Create a new deployment. The CLI infers the deployment type (`web` or `server`) from the flow configuration.
-
-<CodeSnippet
-  code={`# From a local config file
-walkeros deploy create flow.json
-
-# From a remote flow ID
-walkeros deploy create cfg_abc123
-
-# With a specific flow name (multi-config flows)
-walkeros deploy create flow.json --flow production`}
-  language="bash"
-/>
-
-On success, the CLI displays the deployment ID, slug, and type. It also shows example commands for running the deployment locally or via Docker. The create response does not include a deploy token: deploy tokens are minted separately, so the Docker instructions tell you to create one in the app (Settings, Self-hosted deploy token) and set it as `WALKEROS_DEPLOY_TOKEN`.
-
-| Option | Description |
-|--------|-------------|
-| `--label <string>` | Human-readable label for the deployment |
-| `-f, --flow <name>` | Flow name for multi-flow configs |
-| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `-o, --output <path>` | Write result to file |
-| `--json` | Output as JSON |
-| `-v, --verbose` | Verbose output |
-| `-s, --silent` | Suppress output |
-
-### deploy start
-
-Deploy a remote flow through the walkerOS app. Auto-detects whether to use web (script hosting) or server (container) deployment based on the flow content. Streams deployment progress via SSE.
-
-<CodeSnippet
-  code={`# Deploy a flow
-walkeros deploy start cfg_abc123
-
-# Deploy a specific config in a multi-config flow
-walkeros deploy start cfg_abc123 --flow production
-
-# Deploy without waiting for completion
-walkeros deploy start cfg_abc123 --no-wait`}
-  language="bash"
-/>
-
-Output (web deployment):
-```
-Building bundle...
-Publishing to web...
-✓ Published: https://cdn.walkeros.io/proj_xxx/walker.js
-```
-
-Output (server deployment):
-```
-Building bundle...
-Deploying container...
-Starting container...
-✓ Active: https://collect-abc123.walkeros.io
-```
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `-f, --flow <name>` | Flow name for multi-config flows |
-| `--no-wait` | Return immediately after triggering (do not stream progress) |
-| `--timeout <seconds>` | Override the client-side wait budget (defaults to 12 minutes, which covers the server's full deploy budget) |
-| `-o, --output <path>` | Write result to file |
-| `--json` | Output as JSON |
-| `-v, --verbose` | Verbose output |
-| `-s, --silent` | Suppress output |
-
-By default `deploy start` streams progress until the deploy completes. The
-client-side wait budget defaults to 12 minutes so a slow but healthy long
-deploy is never aborted early and misread as a failure in CI; `--timeout`
-overrides it. Each invocation sends a fresh idempotency key, so retrying after
-a failed attempt starts a new deploy instead of replaying the previous result.
-
-When a deploy fails, the CLI prints a stable, machine-readable `error.code`
-alongside the message so CI can branch on the code without matching prose. A
-rate-limited trigger (`429`) is reported as retryable with the `Retry-After`
-hint; under `--wait` the CLI honors one bounded retry automatically.
-
-### deploy list
-
-List all deployments in a project.
-
-<CodeSnippet
-  code={`walkeros deploy list
-
-# Filter by type
-walkeros deploy list --type server
-
-# Filter by status
-walkeros deploy list --status active`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `--cursor <c>` | Resume from a pagination cursor returned by a previous list call |
-| `--limit <n>` | Maximum number of deployments to return |
-| `--type <type>` | Filter by type: `web`, `server` |
-| `--status <status>` | Filter by status |
-
-### deploy status
-
-Get deployment details by ID or slug.
-
-<CodeSnippet
-  code={`walkeros deploy status dep_abc123
-
-# Or by slug
-walkeros deploy status my-collector`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID |
-
-### deploy delete
-
-Delete a deployment by ID or slug.
-
-<CodeSnippet
-  code={`walkeros deploy delete dep_abc123`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID |
-| `--json` | Output as JSON |
-
-### Common options
-
-All `deploy` subcommands support:
-
-| Option | Description |
-|--------|-------------|
-| `-o, --output <path>` | Write result to file |
-| `--json` | Output as JSON |
-| `-v, --verbose` | Verbose output |
-| `-s, --silent` | Suppress output |
-
-## Previews command
-
-The `previews` command group manages preview bundles: short-lived flow bundles
-used to test configuration changes on a real production site before deploying.
-Creating a preview mints an app-signed, origin-bound activation grant; opening
-`?elbPreview={grant}` on your site verifies the grant locally, with no network
-round trip, and swaps in the preview bundle for that browser for the life of
-the preview session. Activation links minted for an Observe session
-additionally carry an `elbPreviewSession` companion grant, which the previewed
-page uses to forward server-bound events to that session's isolated container.
-
-All commands require authentication and a project (set via `WALKEROS_PROJECT_ID`
-or `--project`).
-
-### How activation works
-
-A managed web bundle that supports preview activation is produced by the wrap
-step's `preview` option, which bakes in a public key keyring, the issuing
-environment, and an opaque per-project binding (never a project ID or secret).
-The emitted bundle imports `browserSwapActivator` from `@walkeros/core` to
-verify an activation grant and swap in the preview artifact. `preview` is the
-current wrap option for this; it replaces the earlier `previewOrigin` /
-`previewScope` options. A companion `previewGrantTargets` option exists for the
-preview artifact itself: it forwards the stored grant as an
-`X-Walkeros-Preview` header to named server-bound destinations, so a server
-flow can be previewed too. `preview` and `previewGrantTargets` are mutually
-exclusive on a single wrap invocation: a host bundle activates a preview, a
-preview artifact injects its grant, not both.
-
-### previews list
-
-List all previews for a flow.
-
-<CodeSnippet
-  code={`walkeros previews list <flowId> [--project <projectId>]`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID (overrides default) |
-
-### previews get
-
-Get details for a single preview.
-
-<CodeSnippet
-  code={`walkeros previews get <flowId> <previewId> [--project <projectId>]`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--project <id>` | Project ID (overrides default) |
-
-### previews create
-
-Create a preview bundle for a specific flow settings entry.
-
-<CodeSnippet
-  code={`walkeros previews create <flowId> [options]`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `-f, --flow <name>` | Flow settings name (resolved to an ID) |
-| `-s, --settings-id <id>` | Flow settings ID (alternative to `--flow`) |
-| `-u, --url <siteUrl>` | Your site URL; prints a ready-to-open activation URL on stdout |
-| `--project <id>` | Project ID (overrides default) |
-
-Without `--url`, the CLI prints the activation fragment (`?elbPreview=...`) to
-stdout: append it to any URL on your site to activate preview mode. With
-`--url`, it prints an activation URL for your site on stdout, plus a
-deactivation URL on stderr. Most modern terminals make the URL clickable.
-
-You must provide either `--flow` or `--settings-id` to pick which flow settings
-the preview should bundle.
-
-### previews delete
-
-Delete a preview. Removes both the DB row and the S3 bundle immediately; the
-production walker on visitors' browsers self-heals on the next page load by
-clearing the stored `elbPreview` grant and loading the production flow.
-
-<CodeSnippet
-  code={`walkeros previews delete <flowId> <previewId> [options]`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `-y, --yes` | Skip confirmation (required to run non-interactively) |
-| `--project <id>` | Project ID (overrides default) |
-
-### Example
-
-<CodeSnippet
-  code={`# Create a preview for the \`demo\` flow settings with a ready-to-open URL
-walkeros previews create flow_abc123 \\
-  --flow demo \\
-  --url https://example.com
-
-# List previews for a flow
-walkeros previews list flow_abc123
-
-# Delete when you're done
-walkeros previews delete flow_abc123 prv_xyz456 --yes`}
-  language="bash"
-/>
-
-## Observe command
-
-The `observe` command group opens an Observe session: a time-boxed window on one
-flow that runtimes attach to as arms. A preview arm streams from a browser, a
-container arm runs server-side, and both feed one shared journeys feed. See
-[Observe](/docs/getting-started/observe) for how a flow connects to an observer
-in the first place.
-
-Requires authentication and a project (set via `WALKEROS_PROJECT_ID` or
-`--project`).
-
-### observe start
-
-Mint an Observe session for a flow and print the attach info for each arm.
-
-<CodeSnippet
-  code={`walkeros observe start <flowId> [options]`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `-f, --flow <name>` | Flow settings name, which also picks the arms (auto-resolved when the flow has exactly one) |
-| `--project <id>` | Project ID (overrides default) |
-| `--level <level>` | Observation detail level: `off`, `standard`, or `trace` |
-| `--replace` | Replace an existing active session for this flow |
-| `--no-wait` | Do not wait for the session to settle |
-| `--timeout <seconds>` | Seconds to wait for the session to settle (default: 300) |
-| `--json` | Output the session as JSON |
-
-`--level` steers the provisioned container arm; the web arm's observation detail
-does not follow it.
-
-The observed settings picks the arms: a web settings attaches the preview arm,
-plus the container arm of any server flow it references; a server settings
-attaches the container arm alone.
-
-A settled session renders both arms. An arm this session did not attach renders
-as `Web: no web part` or `Server: no server part` in place of its block, so the
-output below is the both-arms case:
-
-<CodeSnippet
-  code={`Observe session ses_abc123 (live)
-
-  Web
-    Bundle URL: https://cdn.test/preview/proj_test/walker.k9x2m4p7abcd.js
-    Credential: obsw_pb_x.ses_abc123.sec_1
-    Activate:   https://shop.example/?elbPreview=header.payload.signature&elbObserve=obsw_pb_x.ses_abc123.sec_1
-
-  Server
-    Flow:       server
-    Endpoint:   https://obs-ses-abc123.containers.test
-    Env:
-      WALKEROS_OBSERVER_URL=https://observer.test
-      WALKEROS_DEPLOYMENT_ID=ses_abc123
-      WALKEROS_INGEST_TOKEN=srv_ingest_tok
-
-  Expires:  <ISO timestamp>
-  Records:  42
-
-  The session lives server-side; closing this terminal does not end it.
-  Sessions idle out server-side when no tab or traffic keeps them alive.`}
-  language="text"
-/>
-
-Open the `Activate:` URL on your site to attach the web arm: the link carries
-the session credential, so the page starts posting records without any further
-setup. Export the three `WALKEROS_*` variables into a server runtime to attach a
-runtime the app did not provision; both arms then feed the same journeys feed.
-
-That block goes to stderr. Stdout carries the live server endpoint alone, so it
-pipes cleanly:
-
-<CodeSnippet
-  code={`ENDPOINT=$(walkeros observe start flow_abc123 --flow web)`}
-  language="bash"
-/>
-
-`--json` prints the whole session to stdout instead, for scripts that need the
-credential or the expiry.
+| `-d, --data <body>` | Request body: inline JSON, `@file.json`, or `-` for stdin. Sent as `Content-Type: application/json` unless a `--header` sets another. `GET` takes no body |
+| `-H, --header <header>` | Extra header `'Name: value'`, repeatable (for example `Idempotency-Key`) |
+| `-p, --project <id>` | Fills `{projectId}` (default: `WALKEROS_PROJECT_ID`) |
+| `-y, --yes` | Confirm a `DELETE` |
 
 ### Exit codes
 
 | Code | Meaning |
 |------|---------|
-| `0` | Session settled (or `--no-wait` returned the mint immediately) |
-| `1` | Session failed to arm, or `--timeout` elapsed while it was still arming |
+| `0` | The app answered with any 2xx status |
+| `1` | The app answered with any other HTTP status. The error body is still printed on stdout, and one line on stderr names the status and the app's message |
+| `2` | Usage error (unknown method, `DELETE` without `--yes`, an unfilled placeholder, an unreadable `--data` file). Nothing is sent |
+| `3` | No credential, or the app answered 401 |
+| `4` | The app could not be reached, or the connection broke while the answer was arriving |
 
-A timeout is not a teardown: the session keeps arming server-side, and it is the
-app or a re-run of `observe start` that reports where it landed.
+### List operations
+
+`walkeros api ls [filter] [--json]` lists the public operations from the app's live `/api/openapi.json`, one line per operation with its method, path and summary. The filter matches method, path and summary, ignoring case. `--json` prints each operation with its parameters and the schemas it references, ready for a script or an agent to build a request from. Listing needs no sign-in; it exits 0 (also when nothing matches), 1 when the app answers with an error or with no OpenAPI document, and 4 when the app cannot be reached.
+
+### Examples
+
+<CodeSnippet
+  code={`# Find the operations for flows
+walkeros api ls flows
+
+# List your projects
+walkeros api GET /api/projects
+
+# List the flows of one project
+walkeros api GET /api/projects/{projectId}/flows --project proj_x7y8z9
+
+# Save a flow's config to a file (WALKEROS_PROJECT_ID set)
+walkeros api GET /api/projects/{projectId}/flows/flow_a1b2c3d4 | jq .config > flow.json
+
+# Create a flow from a file that names "name" and "config"
+walkeros api POST /api/projects/{projectId}/flows --data @flow-record.json
+
+# Delete a preview
+walkeros api DELETE /api/projects/{projectId}/flows/flow_a1b2c3d4/previews/prv_x --yes`}
+  language="bash"
+/>
+
+The flow answer is the saved record; its `config` field is the flow config, ready for `walkeros validate`, `walkeros push --simulate` or `walkeros bundle`. To deploy a flow from CI, see [Deploy from CI](#deploy-from-ci).
+
+Managing flows, deployments, previews and Observe interactively belongs to the walkerOS app or the hosted MCP server (see [MCP](/docs/apps/mcp)).
 
 ## Running a built flow
 
@@ -2272,24 +1827,28 @@ npx serve dist/web -l 3000`}
 Create `demo.html`:
 
 <CodeSnippet
-  code={`<!DOCTYPE html>
+  code={`<!doctype html>
 <html>
-<head>
-  <script src="http://localhost:3000/walker.js"></script>
-</head>
-<body>
-  <div data-elb="promotion" data-elb-promotion="name:Get Started" data-elbaction="load:view">
-    <h1>Welcome to walkerOS</h1>
-    <button data-elbaction="click:cta">Start Tracking</button>
-  </div>
+  <head>
+    <script src="http://localhost:3000/walker.js"></script>
+  </head>
+  <body>
+    <div
+      data-elb="promotion"
+      data-elb-promotion="name:Get Started"
+      data-elbaction="load:view"
+    >
+      <h1>Welcome to walkerOS</h1>
+      <button data-elbaction="click:cta">Start Tracking</button>
+    </div>
 
-  <script>
-    // Manual tracking, once the page has loaded and track() exists
-    window.addEventListener('load', function () {
-      track('custom event', { action: 'demo', value: 42 });
-    });
-  </script>
-</body>
+    <script>
+      // Manual tracking, once the page has loaded and track() exists
+      window.addEventListener('load', function () {
+        track('custom event', { action: 'demo', value: 42 });
+      });
+    </script>
+  </body>
 </html>`}
   language="html"
 />
@@ -2432,10 +1991,9 @@ These options work with all commands:
 
 | Variable | Purpose |
 |----------|---------|
-| `WALKEROS_TOKEN` | Automation token (`wos_pat_...`) for app commands, from Account then Automation tokens. Overrides the `auth login` session |
-| `WALKEROS_PROJECT_ID` | Default project ID for `projects`, `flows`, and `deploy` commands |
+| `WALKEROS_TOKEN` | Access token for `walkeros api` (an automation or service-account token, `wos_pat_...`). Overrides the `auth login` session |
+| `WALKEROS_PROJECT_ID` | Fills `{projectId}` in a `walkeros api` path |
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
-| `WALKEROS_DEPLOY_TOKEN` | Deploy token for container heartbeat authentication |
 | `WALKEROS_OBSERVE_LEVEL` | Baseline telemetry level for `runneros start` (`off`, `standard`, or `trace`). Invalid values are warned about and ignored. |
 | `BUILD_MANIFEST_URL` | Manifest location read by a bare `walkeros bundle --manifest` |
 | `BUNDLER_STRICT_RANGES` | Set to `0` to bypass strict range validation when the npm registry is unreachable during a build |
@@ -2445,9 +2003,9 @@ The runtime reads its own variables, see the [runtime environment variables](/do
 ## Diagnostics command
 
 `walkeros diagnostics` reports the CLI version, the app URL and where it comes
-from (`env`, `config` or `default`), the app's public health route, and the API
-contract verdict against that app. It sends no credential, so it works logged
-out, and it exits 0 whatever the verdict.
+from (`env`, `config` or `default`), and whether the app answers its public
+health route. It sends no credential, so it works logged out, and it exits 0
+whether or not the app answers.
 
 <CodeSnippet
   code={`walkeros diagnostics
@@ -2459,55 +2017,22 @@ walkeros diagnostics --json`}
 cli 4.8.0
 app https://app.walkeros.io (default)
 health reachable, status ok, app 3f2a91c
-contract: in-sync (server 4.7.0+5e6f7a8b, client 4.7.0+1a2b3c4d, 55 operations)
 ```
 
-`--json` prints the same report as one object, `{ cli, appUrl, app, contract }`,
-where `contract` carries the verdict with every operation it names. The MCP
-`diagnostics` tool reports the same verdict in its `contract` block.
+`--json` prints the same report as one object, `{ cli, appUrl, app }`.
 
-## API version compatibility
+## Minimum client version
 
-The app labels its API contract `<floor>+<hash>`, for example `4.7.0+1a2b3c4d`.
-The floor is the lowest client release the contract works with; the hash names
-the exact document. Each CLI and MCP release carries the operations it calls
-and their shape, and compares them one by one with the live app's
-`/api/openapi.json`. Operations no walkerOS client calls never count, and
-neither do the documentation keywords `description`, `summary`, `title`,
-`example`, `examples` and `externalDocs` or an operation's `tags`. Two labels
-with the same floor can therefore differ in their hash while the verdict is
-`in-sync`.
+The CLI sends three headers on every request to the walkerOS app:
 
-| Verdict | Line | Means |
-|---------|------|-------|
-| `in-sync` | `contract: in-sync (server 4.7.0+5e6f7a8b, client 4.7.0+1a2b3c4d, 55 operations)` | Every operation this client calls has the shape it was built with. |
-| `changed` | `contract: changed (server 4.7.0+9f8e7d6c, client 4.7.0+1a2b3c4d); changed: GET /api/projects/{projectId}/frames` | Operations this client calls differ from the server's, and the server's `<floor>+<hash>` label names a floor not below the client's, usually the same one. When the server's floor is higher, the server is the newer deploy: upgrade the client. With the same floor a hash has no order, so the server may be a newer or an older deploy. |
-| `server-older` | `contract: server-older (server 4.6.1, client 4.7.0+1a2b3c4d); not offered (1): GET /api/projects/{projectId}/frames (mcp frame_manage)` | The server lacks operations this client calls, listed with the commands and tools that call them, or changed some and names a lower floor or none. A label without `+<hash>`, such as `4.7.1`, predates floors. |
-| `client-outdated` | `contract: client-outdated (https://app.walkeros.io requires @walkeros/cli >= 4.9.0; this is 4.8.0)` | The server's `minSupportedClient` is above this client's version. |
-| `unknown` | `contract: unknown (GET https://app.walkeros.io/api/health: timeout after 5000 ms)` | The health route or the OpenAPI document could not be read. |
-| `in-process` | `contract: in-process (server 4.7.0+1a2b3c4d)` | The MCP tool runs inside the app it reports (the hosted door). |
-
-Official clients (CLI, MCP) send three headers on every request
-to the walkerOS app so the server can tell them apart and enforce minimum
-versions per endpoint:
-
-- `User-Agent`: e.g. `walkeros-cli/1.4.0 (node/18.19.0; linux)`
-- `X-WalkerOS-Client`: `cli` or `mcp`
+- `User-Agent`: `walkeros-cli/<version>`
+- `X-WalkerOS-Client`: `cli`
 - `X-WalkerOS-Client-Version`: the installed package version
 
-If you call an endpoint that has been updated in a way that requires a newer
-client, the app responds with `426 Upgrade Required`. The CLI prints the
-required minimum version and the upgrade command, then exits with code 2:
-
-```
-Error: This walkerOS app endpoint requires @walkeros/cli >= 1.5.0
-(you have 1.4.0). Upgrade with: npm install -g @walkeros/cli@latest
-See https://walkeros.io/docs/upgrading for details.
-```
-
-The MCP server surfaces the same information in tool error responses so AI
-assistants can tell the user to upgrade. See
-[Upgrading](/docs/upgrading) for the full version-negotiation rules.
+The app keeps one minimum client version. It answers a request from an older
+CLI with `426 Upgrade Required` and a body that names the version to upgrade
+to. `walkeros api` prints that body on stdout like any other error answer and
+exits 1. See [Upgrading](/docs/upgrading) for the body and what to do.
 
 ## CI/CD integration
 
@@ -2539,6 +2064,34 @@ jobs:
           path: dist/`}
   language="yaml"
 />
+
+### Deploy from CI
+
+A CI job deploys a flow saved in the walkerOS app with `walkeros api` and a service-account token in `WALKEROS_TOKEN`. The deploy request answers a `deploymentId`; the job then reads the deployment until its status is `published` (a web flow), `active` (a server flow) or `failed`:
+
+<CodeSnippet
+  code={`- name: Deploy the flow
+  env:
+    WALKEROS_TOKEN: \${{ secrets.WALKEROS_TOKEN }}
+    WALKEROS_PROJECT_ID: proj_x7y8z9
+    FLOW_ID: flow_a1b2c3d4
+  run: |
+    set -euo pipefail
+    DEPLOYMENT=$(walkeros api POST "/api/projects/{projectId}/flows/$FLOW_ID/deploy" \\
+      --header "Idempotency-Key: $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" | jq -r .deploymentId)
+    for attempt in $(seq 1 72); do
+      STATUS=$(walkeros api GET "/api/projects/{projectId}/deployments/$DEPLOYMENT" | jq -r .status)
+      case "$STATUS" in
+        published|active) echo "Deployed: $STATUS"; exit 0 ;;
+        failed) walkeros api GET "/api/projects/{projectId}/deployments/$DEPLOYMENT" | jq .error; exit 1 ;;
+      esac
+      sleep 10
+    done
+    echo "Deployment $DEPLOYMENT did not finish within 12 minutes"; exit 1`}
+  language="yaml"
+/>
+
+The `Idempotency-Key` stays the same within one workflow attempt, so a deploy request sent again in that attempt answers the same deployment instead of starting a second one; a re-run of the workflow is a new attempt and deploys again. A non-2xx answer makes `walkeros api` exit 1, which fails the step through `set -e`, with the server's error on the log. A flow with several named settings answers `400 AMBIGUOUS_CONFIG`; deploy one of them with `POST /api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy`.
 
 ### Docker Build
 
@@ -2604,10 +2157,13 @@ lsof -ti:8080 | xargs kill`}
 
 ### Authentication Issues
 
-If app commands fail with authentication errors:
+If `walkeros api` exits 3, it has no credential or the app answered 401:
 
 <CodeSnippet
-  code={`# Check current identity
+  code={`# Check for a credential
+walkeros auth token >/dev/null && echo signed in
+
+# Check current identity
 walkeros auth whoami
 
 # Re-authenticate

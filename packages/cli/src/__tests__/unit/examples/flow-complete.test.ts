@@ -187,7 +187,9 @@ describe('flow-complete manifest', () => {
   it('teaches only real commands', () => {
     for (const { command } of flowCompleteCli) {
       expect(command).toMatch(/^(walkeros|runneros) /);
-      expect(command).not.toMatch(/^walkeros (simulate|run) /);
+      expect(command).not.toMatch(
+        /^walkeros (simulate|run|projects|flows|deploy|deployments|previews|secrets|observe|journeys|hub|frames|feedback) /,
+      );
     }
   });
 
@@ -377,7 +379,15 @@ describe('flow-complete.md', () => {
   it('uses only real commands', () => {
     expect(lines.length).toBeGreaterThan(0);
     for (const line of lines)
-      expect(line).not.toMatch(/^walkeros (simulate|run) /);
+      expect(line).not.toMatch(
+        /^walkeros (simulate|run|projects|flows|deploy|deployments|previews|secrets|observe|journeys|hub|frames|feedback) /,
+      );
+  });
+
+  it('teaches no removed MCP tool', () => {
+    expect(guide).not.toMatch(
+      /\b(project_manage|flow_manage|deploy_manage|observe_session)\b/,
+    );
   });
 
   it.each(lines.filter((line) => line.includes('--simulate')))(

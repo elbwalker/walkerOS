@@ -1747,7 +1747,6 @@ const teaching = {
     useCases: ['observability'],
     note: 'A web flow reports to Observe through a public url and binding.',
     docs: [],
-    cli: ['walkeros observe start <flowId>'],
   },
   'observe-level': {
     pointer: '/flows/server/config/observe/level',
@@ -1773,9 +1772,8 @@ const teaching = {
     note: 'The log level comes from the flow variable, so LOG_LEVEL changes it per environment.',
     docs: [{ page: 'collector/logger' }],
     cli: [
-      `walkeros flows create flow-complete -c ${FILE}`,
-      `walkeros deploy create ${FILE}`,
-      'walkeros deploy start <flowId>',
+      'walkeros api GET /api/projects/{projectId}/flows',
+      "walkeros api POST /api/projects/{projectId}/flows/<flowId>/deploy --header 'Idempotency-Key: <key>'",
     ],
   },
 } satisfies Record<string, TeachingEntry>;
@@ -2244,12 +2242,14 @@ export const flowCompleteCli: CliEntry[] = [
   },
   { command: 'walkeros cache info', chapter: 'build-run' },
   {
-    command: `walkeros flows create flow-complete -c ${FILE}`,
+    command: 'walkeros api GET /api/projects/{projectId}/flows',
     chapter: 'operate',
   },
-  { command: `walkeros deploy create ${FILE}`, chapter: 'operate' },
-  { command: 'walkeros deploy start <flowId>', chapter: 'operate' },
-  { command: 'walkeros observe start <flowId>', chapter: 'operate' },
+  {
+    command:
+      "walkeros api POST /api/projects/{projectId}/flows/<flowId>/deploy --header 'Idempotency-Key: <key>'",
+    chapter: 'operate',
+  },
 ];
 
 export const flowCompleteManifest = {

@@ -34,24 +34,24 @@ sends HTTP requests using Node.js built-in modules (`http`/`https`).
 <CodeSnippet
   code={`// Simple POST request
 const response = await sendServer('https://api.example.com/events', {
-name: 'page view',
-data: { url: '/home' },
+  name: 'page view',
+  data: { url: '/home' },
 });
 
 // With custom options
 const response = await sendServer(url, data, {
-method: 'PUT',
-headers: {
-Authorization: 'Bearer token',
-'Content-Type': 'application/json',
-},
-timeout: 10000, // 10 seconds
+  method: 'PUT',
+  headers: {
+    Authorization: 'Bearer token',
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000, // 10 seconds
 });
 
 if (response.ok) {
-console.log('Data sent successfully:', response.data);
+  console.log('Data sent successfully:', response.data);
 } else {
-console.error('Send failed:', response.error);
+  console.error('Send failed:', response.error);
 }`}
   language="javascript"
 />
@@ -60,9 +60,9 @@ console.error('Send failed:', response.error);
 
 <CodeSnippet
   code={`interface SendServerOptions {
-headers?: Record<string, string>; // Custom HTTP headers
-method?: string; // HTTP method (default: 'POST')
-timeout?: number; // Request timeout in milliseconds (default: 5000)
+  headers?: Record<string, string>; // Custom HTTP headers
+  method?: string; // HTTP method (default: 'POST')
+  timeout?: number; // Request timeout in milliseconds (default: 5000)
 }`}
   language="typescript"
 />
@@ -71,9 +71,9 @@ timeout?: number; // Request timeout in milliseconds (default: 5000)
 
 <CodeSnippet
   code={`interface SendResponse {
-ok: boolean; // Indicates if the request was successful (2xx status)
-data?: unknown; // Parsed response data (if available)
-error?: string; // Error message (if request failed)
+  ok: boolean; // Indicates if the request was successful (2xx status)
+  data?: unknown; // Parsed response data (if available)
+  error?: string; // Error message (if request failed)
 }`}
   language="typescript"
 />
@@ -93,8 +93,8 @@ const fullHash = await getHashServer('user123@example.com');
 
 // Generate shortened hash for anonymization
 const userFingerprint = await getHashServer(
-userAgent + language + ipAddress + date.getDate(),
-16,
+  userAgent + language + ipAddress + date.getDate(),
+  16,
 );
 // Returns 16-character hash like '47e0bdd10f04ef13'
 
@@ -118,34 +118,34 @@ This function is commonly used for:
   code={`import { sendServer, getHashServer } from '@walkeros/server-core';
 
 async function processUserEvent(event, userInfo) {
-// Anonymize user identification
-const anonymousUserId = await getHashServer(
-\`\${userInfo.email}\${userInfo.deviceId}\`,
-16,
-);
+  // Anonymize user identification
+  const anonymousUserId = await getHashServer(
+    \`\${userInfo.email}\${userInfo.deviceId}\`,
+    16,
+  );
 
-// Prepare event with anonymized data
-const processedEvent = {
-...event,
-user: {
-...event.user,
-id: anonymousUserId,
-},
-};
+  // Prepare event with anonymized data
+  const processedEvent = {
+    ...event,
+    user: {
+      ...event.user,
+      id: anonymousUserId,
+    },
+  };
 
-// Send to analytics service
-const result = await sendServer(
-'https://analytics.example.com/collect',
-processedEvent,
-{
-headers: {
-'X-API-Key': process.env.ANALYTICS_API_KEY,
-},
-timeout: 8000,
-},
-);
+  // Send to analytics service
+  const result = await sendServer(
+    'https://analytics.example.com/collect',
+    processedEvent,
+    {
+      headers: {
+        'X-API-Key': process.env.ANALYTICS_API_KEY,
+      },
+      timeout: 8000,
+    },
+  );
 
-return result;
+  return result;
 }`}
   language="javascript"
 />
@@ -154,13 +154,13 @@ return result;
 
 <CodeSnippet
   code={`async function createSessionId(request) {
-const fingerprint = [
-request.headers['user-agent'],
-request.ip.replace(/\\.\\d+$/, '.0'), // Anonymize IP
-new Date().toDateString(), // Daily rotation
-].join('|');
+  const fingerprint = [
+    request.headers['user-agent'],
+    request.ip.replace(/\\.\\d+$/, '.0'), // Anonymize IP
+    new Date().toDateString(), // Daily rotation
+  ].join('|');
 
-return await getHashServer(fingerprint, 20);
+  return await getHashServer(fingerprint, 20);
 }`}
   language="javascript"
 />
@@ -171,18 +171,18 @@ Server utilities include comprehensive error handling:
 
 <CodeSnippet
   code={`try {
-const response = await sendServer(url, data, { timeout: 5000 });
+  const response = await sendServer(url, data, { timeout: 5000 });
 
-if (response.ok) {
-// Success - response.data contains the result
-console.log('Success:', response.data);
-} else {
-// Request completed but with error status
-console.warn('Request failed:', response.error);
-}
+  if (response.ok) {
+    // Success - response.data contains the result
+    console.log('Success:', response.data);
+  } else {
+    // Request completed but with error status
+    console.warn('Request failed:', response.error);
+  }
 } catch (error) {
-// Network error, timeout, or other exception
-console.error('Network error:', error.message);
+  // Network error, timeout, or other exception
+  console.error('Network error:', error.message);
 }`}
   language="javascript"
 />
@@ -208,18 +208,18 @@ For high-volume scenarios, consider batching:
 
 <CodeSnippet
   code={`const events = [
-/* ... multiple events ... */
+  /* ... multiple events ... */
 ];
 
 const response = await sendServer(
-'/api/events/batch',
-{
-events,
-timestamp: Date.now(),
-},
-{
-timeout: 10000,
-},
+  '/api/events/batch',
+  {
+    events,
+    timestamp: Date.now(),
+  },
+  {
+    timeout: 10000,
+  },
 );`}
   language="javascript"
 />
@@ -242,11 +242,11 @@ const apiKey = process.env.ANALYTICS_API_KEY;
 const saltedHash = await getHashServer(\`\${userData}\${process.env.HASH_SALT}\`);
 
 await sendServer('https://secure-api.example.com/events', data, {
-headers: {
-Authorization: \`Bearer \${apiKey}\`,
-'Content-Type': 'application/json',
-},
-timeout: 5000,
+  headers: {
+    Authorization: \`Bearer \${apiKey}\`,
+    'Content-Type': 'application/json',
+  },
+  timeout: 5000,
 });`}
   language="javascript"
 />
@@ -262,18 +262,20 @@ import { sendServer, getHashServer } from '@walkeros/server-core';
 
 // collector: the running collector, from startFlow or a step's context
 async function processServerSideEvent(rawEvent, clientIP, collector) {
-// Use core utilities for data processing
-const processedData = await getMappingValue(rawEvent, mappingConfig, { collector });
-const safeIP = anonymizeIP(clientIP);
+  // Use core utilities for data processing
+  const processedData = await getMappingValue(rawEvent, mappingConfig, {
+    collector,
+  });
+  const safeIP = anonymizeIP(clientIP);
 
-// Use server utilities for transmission
-const sessionId = await getHashServer(\`\${safeIP}\${userAgent}\`, 16);
+  // Use server utilities for transmission
+  const sessionId = await getHashServer(\`\${safeIP}\${userAgent}\`, 16);
 
-return await sendServer(endpoint, {
-...processedData,
-sessionId,
-ip: safeIP,
-});
+  return await sendServer(endpoint, {
+    ...processedData,
+    sessionId,
+    ip: safeIP,
+  });
 }`}
   language="javascript"
 />

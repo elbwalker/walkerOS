@@ -1,22 +1,11 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
 import { mergeConfigSchema } from '@walkeros/core/dev';
-import {
-  fetchCatalog,
-  normalizePlatform,
-  getPackageBaseUrl,
-  CLIENT_HEADER,
-} from '../catalog.js';
+import { fetchCatalog, normalizePlatform, CLIENT_HEADER } from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
 import { recordField, stringField } from './narrow.js';
 import { parseToolInput } from './parse-input.js';
-
-// `getPackageBaseUrl` lives in ../catalog.js because both these tools and the
-// catalog resources resolve the same app-primary base URL. Re-exported here so
-// existing importers of `tools/package.js` keep working.
-export { getPackageBaseUrl };
 
 // ---------- package_search ----------
 
@@ -61,6 +50,8 @@ export function createPackageSearchToolSpec(): ToolSpec {
     title: SEARCH_TITLE,
     description: SEARCH_DESCRIPTION,
     inputSchema: searchInputSchema,
+    // No outputSchema: browse mode returns {catalog, count}, lookup returns
+    // metadata; the two shapes are incompatible.
     annotations: searchAnnotations,
     handler: (input) => packageSearchHandlerBody(input),
   };
@@ -70,15 +61,10 @@ async function packageSearchHandlerBody(input: unknown) {
   const parsed = parseToolInput(searchInputSchema, input);
   if (!parsed.ok) return parsed.error;
   const { package: packageName, type, platform, version } = parsed.data;
-  const baseUrl = getPackageBaseUrl();
 
   // Browse mode: no package specified → return catalog
   if (!packageName) {
-    const { entries, warnings } = await fetchCatalog({
-      type,
-      platform,
-      baseUrl,
-    });
+    const { entries, warnings } = await fetchCatalog({ type, platform });
     const result = { catalog: entries, count: entries.length };
     return mcpResult(result, {
       next: ['Use package_get for schemas and examples'],
@@ -90,7 +76,6 @@ async function packageSearchHandlerBody(input: unknown) {
   try {
     const info = await fetchPackage(packageName, {
       version,
-      baseUrl,
       client: CLIENT_HEADER,
     });
 
@@ -113,21 +98,6 @@ async function packageSearchHandlerBody(input: unknown) {
       'Package not found. Use package_search without parameters to browse available packages.',
     );
   }
-}
-
-export function registerPackageSearchTool(server: McpServer) {
-  const spec = createPackageSearchToolSpec();
-  server.registerTool(
-    spec.name,
-    {
-      title: spec.title,
-      description: spec.description,
-      inputSchema: spec.inputSchema,
-      // No outputSchema: browse mode returns {catalog, count}, lookup returns metadata — incompatible shapes
-      annotations: spec.annotations,
-    },
-    (args) => packageSearchHandlerBody(args),
-  );
 }
 
 // ---------- package_get ----------
@@ -167,6 +137,7 @@ export function createPackageGetToolSpec(): ToolSpec {
     title: GET_TITLE,
     description: GET_DESCRIPTION,
     inputSchema: getInputSchema,
+    // No outputSchema: removed to avoid SDK -32602 crashes on unexpected field values
     annotations: getAnnotations,
     handler: (input) => packageGetHandlerBody(input),
   };
@@ -215,12 +186,10 @@ async function packageGetHandlerBody(input: unknown) {
   const parsed = parseToolInput(getInputSchema, input);
   if (!parsed.ok) return parsed.error;
   const { package: packageName, version, section } = parsed.data;
-  const baseUrl = getPackageBaseUrl();
 
   try {
     const info = await fetchPackage(packageName, {
       version,
-      baseUrl,
       client: CLIENT_HEADER,
     });
 
@@ -272,19 +241,4 @@ async function packageGetHandlerBody(input: unknown) {
       'Use package_search to browse available package names.',
     );
   }
-}
-
-export function registerGetPackageSchemaTool(server: McpServer) {
-  const spec = createPackageGetToolSpec();
-  server.registerTool(
-    spec.name,
-    {
-      title: spec.title,
-      description: spec.description,
-      inputSchema: spec.inputSchema,
-      // No outputSchema: removed to avoid SDK -32602 crashes on unexpected field values
-      annotations: spec.annotations,
-    },
-    (args) => packageGetHandlerBody(args),
-  );
 }

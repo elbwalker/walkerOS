@@ -1,37 +1,56 @@
 import { whoami } from '../../../commands/auth/index.js';
-import { setupMockApiClient } from '../../helpers/mock-api-client.js';
-
-jest.mock('../../../core/api-client.js');
-
-const { GET: mockGet } = setupMockApiClient();
 
 describe('whoami', () => {
-  afterEach(() => jest.clearAllMocks());
+  const originalEnv = process.env;
+  const originalFetch = globalThis.fetch;
 
-  it('calls GET /api/auth/whoami', async () => {
-    mockGet.mockResolvedValue({
-      data: {
-        userId: 'usr_1',
-        email: 'test@example.com',
-        projectId: null,
-      },
-    });
+  beforeEach(() => {
+    process.env = {
+      ...originalEnv,
+      WALKEROS_TOKEN: 'wos_pat_test',
+      WALKEROS_APP_URL: 'https://app.example.test',
+    };
+  });
+  afterEach(() => {
+    process.env = originalEnv;
+    globalThis.fetch = originalFetch;
+  });
 
-    const result = await whoami();
-
-    expect(mockGet).toHaveBeenCalledWith('/api/auth/whoami');
-    expect(result).toEqual({
+  it('reads GET /api/auth/whoami with the token', async () => {
+    let seen: { url: string; auth: string | null } | undefined;
+    globalThis.fetch = async (input, init) => {
+      seen = {
+        url: String(input),
+        auth: new Headers(init?.headers).get('Authorization'),
+      };
+      return new Response(
+        JSON.stringify({
+          userId: 'usr_1',
+          email: 'test@example.com',
+          projectId: null,
+        }),
+        { status: 200 },
+      );
+    };
+    await expect(whoami()).resolves.toEqual({
       userId: 'usr_1',
       email: 'test@example.com',
       projectId: null,
     });
+    expect(seen).toEqual({
+      url: 'https://app.example.test/api/auth/whoami',
+      auth: 'Bearer wos_pat_test',
+    });
   });
 
-  it('throws on error response', async () => {
-    mockGet.mockResolvedValue({
-      error: { error: { message: 'Not authenticated' } },
-    });
-
-    await expect(whoami()).rejects.toThrow('Not authenticated');
+  it('throws the app error message', async () => {
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          error: { code: 'UNAUTHORIZED', message: 'Token expired' },
+        }),
+        { status: 401 },
+      );
+    await expect(whoami()).rejects.toThrow('Token expired');
   });
 });
