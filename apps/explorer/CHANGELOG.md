@@ -1,5 +1,26 @@
 # @walkeros/explorer
 
+## 4.8.1
+
+### Patch Changes
+
+- f0ae073: Adds the `on-event` design token: text on an event-colour fill, such
+  as a tag card's Done button. Dark ink on the dark event colours, white on the
+  light ones, both above 4.5:1.
+
+  Adds `EventLog` to the design components: the walkerOS events of a session,
+  newest first, beside the selected event as fields or as JSON, with copy and
+  clear.
+
+- Updated dependencies [7df8a2e]
+- Updated dependencies [1062e99]
+- Updated dependencies [7df8a2e]
+  - @walkeros/collector@4.8.1
+  - @walkeros/core@4.8.1
+  - @walkeros/web-source-browser@4.8.1
+  - @walkeros/web-core@4.8.1
+  - @walkeros/web-destination-gtag@4.8.1
+
 ## 4.8.0
 
 ### Minor Changes

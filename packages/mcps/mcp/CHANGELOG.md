@@ -1,5 +1,31 @@
 # @walkeros/mcp
 
+## 4.8.1
+
+### Patch Changes
+
+- 3fe7668: `frame_manage` returns the frames a frame shows as `links` and its
+  variant group as `variantSetId`. `parentId`, `extends` and `placements` are
+  gone from its output, from the exported frame types and from what the CLI's
+  `listFrames`, `listPageFrames` and `getFrame` return. A page read returns that
+  page's frames only. `FRAME_HINT_EXTENDS_BASE` is now
+  `FRAME_HINT_FOLLOW_LINKS`. Needs the walkerOS app release that serves links.
+- 3018f06: The `walkeros://reference/examples` resource now ships inside the
+  package, so it also works when a host bundles the MCP server. Before, a
+  bundled server answered `Example not found` instead of the complete flow
+  example, because it looked the file up on disk at runtime.
+- c2c0937: New `walkeros api` sends any request to the walkerOS app API,
+  `walkeros api ls` lists its operations, `walkeros auth token` prints your
+  token. The typed remote commands (projects, flows, deploy, previews, observe,
+  feedback) and their programmatic functions are gone. The local MCP server
+  keeps the flow tools; saved flows and deployments move to the hosted server at
+  app.walkeros.io/api/mcp.
+- Updated dependencies [3fe7668]
+- Updated dependencies [c2c0937]
+- Updated dependencies [1062e99]
+  - @walkeros/cli@4.8.1
+  - @walkeros/core@4.8.1
+
 ## 4.8.0
 
 ### Minor Changes

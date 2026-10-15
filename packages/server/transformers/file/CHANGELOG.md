@@ -1,5 +1,12 @@
 # @walkeros/server-transformer-file
 
+## 4.8.1
+
+### Patch Changes
+
+- Updated dependencies [1062e99]
+  - @walkeros/core@4.8.1
+
 ## 4.8.0
 
 ### Patch Changes

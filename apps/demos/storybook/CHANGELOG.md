@@ -1,5 +1,16 @@
 # @walkeros/storybook-demo
 
+## 4.8.1
+
+### Patch Changes
+
+- Updated dependencies [f0ae073]
+- Updated dependencies [1062e99]
+- Updated dependencies [7df8a2e]
+  - @walkeros/explorer@4.8.1
+  - @walkeros/core@4.8.1
+  - @walkeros/web-source-browser@4.8.1
+
 ## 4.8.0
 
 ### Patch Changes
