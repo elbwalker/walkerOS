@@ -90,7 +90,7 @@ export const transformerRedact: Transformer.Init<Types> = (context) => {
       }
 
       return { event };
-    }
+    },
   };
 };`}
   language="typescript"
@@ -166,11 +166,11 @@ await startFlow({
       code: transformerRedact,
       config: {
         settings: {
-          removeFields: ['email', 'phone']
-        }
-      }
-    }
-  }
+          removeFields: ['email', 'phone'],
+        },
+      },
+    },
+  },
 });`}
   language="typescript"
 />
@@ -269,8 +269,8 @@ describe('Redact Transformer', () => {
   it('removes specified fields', () => {
     const transformer = transformerRedact(
       createTransformerContext({
-        settings: { removeFields: ['email'] }
-      })
+        settings: { removeFields: ['email'] },
+      }),
     );
 
     const event = { data: { id: '123', email: 'test@example.com' } };

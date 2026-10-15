@@ -128,7 +128,10 @@ import {
   addPlugin,
   addGlobalContexts,
 } from '@snowplow/browser-tracker';
-import { SnowplowEcommercePlugin, setPageType } from '@snowplow/browser-plugin-snowplow-ecommerce';
+import {
+  SnowplowEcommercePlugin,
+  setPageType,
+} from '@snowplow/browser-plugin-snowplow-ecommerce';
 import { LinkClickTrackingPlugin } from '@snowplow/browser-plugin-link-click-tracking';
 
 const { elb } = await startFlow({
@@ -203,7 +206,10 @@ const { elb } = await startFlow({
           "appId": "my-app",
           "plugins": [
             { "code": "$code:SnowplowEcommercePlugin" },
-            { "code": "$code:LinkClickTrackingPlugin", "config": { "trackContent": true } }
+            {
+              "code": "$code:LinkClickTrackingPlugin",
+              "config": { "trackContent": true }
+            }
           ]
         }
       }
@@ -448,8 +454,12 @@ The package exports pre-defined Snowplow schema URIs for use in custom mappings:
 
 <CodeSnippet
   code={`import {
-  SCHEMAS, ACTIONS, WEB_SCHEMAS, CONSENT_SCHEMAS,
-  MEDIA_SCHEMAS, MEDIA_ACTIONS
+  SCHEMAS,
+  ACTIONS,
+  WEB_SCHEMAS,
+  CONSENT_SCHEMAS,
+  MEDIA_SCHEMAS,
+  MEDIA_ACTIONS,
 } from '@walkeros/web-destination-snowplow';
 
 SCHEMAS.PRODUCT;

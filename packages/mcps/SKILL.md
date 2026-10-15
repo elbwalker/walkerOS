@@ -13,29 +13,34 @@ Tools       →  execute operations (flow_validate, flow_simulate, flow_bundle, 
 Packages    →  provide specifics  (hints, schemas, examples per step)
 ```
 
+`@walkeros/mcp` is the local server: it works on files, URLs and inline JSON on
+the user's machine. The tools for what the walkerOS app stores (projects, saved
+flows, deployments, previews, secrets, Observe) live in the hosted walkerOS MCP
+server at `https://app.walkeros.io/api/mcp`, which the walkerOS app owns; this
+folder has none. The five shared tools (`flow_validate`, `flow_examples`,
+`flow_load`, `package_search`, `package_get`), the reference resources and the
+prompts are exported as plain specs from `@walkeros/mcp/specs`, so a host can
+register the same code on its own server.
+
 ## Packages
 
-| Package                                            | Purpose                                                                |
-| -------------------------------------------------- | ---------------------------------------------------------------------- |
-| `mcp/` (`@walkeros/mcp`)                           | Main server: flow dev tools, reference resources, prompts, unified API |
-| `source-browser/` (`@walkeros/mcp-source-browser`) | Tagging MCP server for source browser                                  |
+| Package                                            | Purpose                                                |
+| -------------------------------------------------- | ------------------------------------------------------ |
+| `mcp/` (`@walkeros/mcp`)                           | Local server: flow tools, reference resources, prompts |
+| `source-browser/` (`@walkeros/mcp-source-browser`) | Tagging MCP server for source browser                  |
 
 ## Tools (in `@walkeros/mcp`)
 
-| Tool             | Description                                                                     |
-| ---------------- | ------------------------------------------------------------------------------- |
-| `flow_load`      | Load existing or create new flow configuration                                  |
-| `flow_validate`  | Validate events, flows, mappings, or contracts                                  |
-| `flow_bundle`    | Bundle flow into deployable JavaScript                                          |
-| `flow_simulate`  | Simulate events through a flow (mocked API calls)                               |
-| `flow_push`      | Push real events through a flow (real API calls)                                |
-| `flow_examples`  | List step examples in a flow                                                    |
-| `package_search` | Browse or look up walkerOS packages                                             |
-| `package_get`    | Fetch package schemas, hints, and examples                                      |
-| `auth`           | Device-code login/logout/status for walkerOS cloud                              |
-| `project_manage` | Manage walkerOS projects (list/get/create/update/delete/set_default)            |
-| `flow_manage`    | Manage flows and previews (list/get/create/update/delete/duplicate/preview\_\*) |
-| `deploy_manage`  | Manage deployments (deploy/list/get/delete)                                     |
+| Tool             | Description                                       |
+| ---------------- | ------------------------------------------------- |
+| `flow_load`      | Load existing or create new flow configuration    |
+| `flow_validate`  | Validate events, flows, mappings, or contracts    |
+| `flow_bundle`    | Bundle flow into deployable JavaScript            |
+| `flow_simulate`  | Simulate events through a flow (mocked API calls) |
+| `flow_push`      | Push real events through a flow (real API calls)  |
+| `flow_examples`  | List step examples in a flow                      |
+| `package_search` | Browse or look up walkerOS packages               |
+| `package_get`    | Fetch package schemas, hints, and examples        |
 
 ## Resources
 
@@ -47,7 +52,7 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 | `walkeros://reference/consent`     | Consent model (destination and field level)                 |
 | `walkeros://reference/variables`   | Variable patterns ($var/$env/$code/$store)                  |
 | `walkeros://reference/contract`    | Event schemas, wildcards, inheritance                       |
-| `walkeros://reference/openapi`     | OpenAPI 3.1 specification                                   |
+| `walkeros://reference/examples`    | A complete, tested flow config (flow-complete.json)         |
 | `walkeros://reference/packages`    | Full package catalog                                        |
 | `walkeros://schema/{packageName}`  | Per-package JSON schemas                                    |
 
@@ -61,14 +66,16 @@ Packages    →  provide specifics  (hints, schemas, examples per step)
 
 ## Networking
 
-Outbound requests to a configured `WALKEROS_APP_URL` carry an
-`X-Walkeros-Client: walkeros-mcp/{version}` header so the host can attribute
-usage. No PII; the header is the only client identifier.
+The local server calls no walkerOS app API; only opted-in usage telemetry,
+through the CLI's telemetry emitter, reaches the app. Package lookups go to npm
+and jsDelivr with an `X-Walkeros-Client: walkeros-mcp/{version}` header. No PII;
+the header is the only client identifier.
 
 ## Conventions
 
 - Each package is registered in `walkerOS/package.json` workspaces
-- Each package is registered in `.claude-plugin/plugin.json` mcpServers
+- `@walkeros/mcp` is registered in `.claude-plugin/plugin.json` mcpServers as
+  `walkeros-flow`, next to the hosted server as `walkeros`
 - Shared MCP utility code (`mcpResult`/`mcpError`) lives in `@walkeros/core`
 - Domain schemas are owned by each package, not shared between MCP servers
 - Cross-package data access uses `@walkeros/cli` typed functions

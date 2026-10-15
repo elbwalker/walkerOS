@@ -38,7 +38,9 @@ const { collector, elb } = await startFlow({
     gtag: {
       code: destinationGtag,
       config: {
-        settings: { /* custom config */ },
+        settings: {
+          /* custom config */
+        },
       },
     },
   },
@@ -116,10 +118,10 @@ the running instance.
 
 <CodeSnippet
   code={`elb('walker on', {
-type: 'run',
-rules: function (_, context) {
-console.log('run with', { instance: context.collector });
-},
+  type: 'run',
+  rules: function (_, context) {
+    console.log('run with', { instance: context.collector });
+  },
 });`}
   language="javascript"
 />
@@ -143,13 +145,13 @@ by consent name.
 
 <CodeSnippet
   code={`function onConsent(consent, context) {
-console.log('consent with', { consent, instance: context.collector });
-if (consent.marketing) elb('walker user', readFromStorage());
+  console.log('consent with', { consent, instance: context.collector });
+  if (consent.marketing) elb('walker user', readFromStorage());
 }
 
 elb('walker on', {
-type: 'consent',
-rules: { marketing: onConsent },
+  type: 'consent',
+  rules: { marketing: onConsent },
 });`}
   language="javascript"
 />
@@ -184,13 +186,13 @@ User IDs are added to each event.
 
 <CodeSnippet
   code={`{
-"event": "entity action",
-"user": {
-"id": "us3r",
-"device": "c00k13",
-"session": "s3ss10n"
-}
-// other properties omitted
+  "event": "entity action",
+  "user": {
+    "id": "us3r",
+    "device": "c00k13",
+    "session": "s3ss10n"
+  }
+  // other properties omitted
 }`}
   language="javascript"
 />
@@ -359,60 +361,60 @@ following function signatures:
 <CodeSnippet
   code={`// Push
 function prePush(params, event, options) {
-return params.fn(event, options);
+  return params.fn(event, options);
 }
 function postPush(params, event, options) {
-console.log('default return result', params.result);
-return params.result;
+  console.log('default return result', params.result);
+  return params.result;
 }
 
 // DestinationInit
 function preDestinationInit(params, context) {
-return params.fn(context);
+  return params.fn(context);
 }
 function postDestinationInit(params, context) {
-console.log('default return result', params.result);
-return params.result;
+  console.log('default return result', params.result);
+  return params.result;
 }
 
 // DestinationPush
 function preDestinationPush(params, event, context) {
-return params.fn(event, context);
+  return params.fn(event, context);
 }
 function postDestinationPush(params, event, context) {
-return params.result;
+  return params.result;
 }
 
 // DestinationPushBatch
 function preDestinationPushBatch(params, batch, context) {
-return params.fn(batch, context);
+  return params.fn(batch, context);
 }
 function postDestinationPushBatch(params, batch, context) {
-return params.result;
+  return params.result;
 }
 
 // StoreGet
 function preStoreGet(params, key) {
-return params.fn(key);
+  return params.fn(key);
 }
 function postStoreGet(params, key) {
-return params.result;
+  return params.result;
 }
 
 // StoreSet
 function preStoreSet(params, key, value, ttl) {
-return params.fn(key, value, ttl);
+  return params.fn(key, value, ttl);
 }
 function postStoreSet(params, key, value, ttl) {
-return params.result;
+  return params.result;
 }
 
 // StoreDelete
 function preStoreDelete(params, key) {
-return params.fn(key);
+  return params.fn(key);
 }
 function postStoreDelete(params, key) {
-return params.result;
+  return params.result;
 }`}
   language="javascript"
 />
@@ -424,21 +426,21 @@ Add hooks during collector initialization or via the `hook` command:
 <CodeSnippet
   code={`// Add hooks during initialization
 const { collector } = await startFlow({
-hooks: {
-prePush: (params, ...args) => {
-window.elbTimer = Date.now();
-return params.fn(...args);
-},
-},
+  hooks: {
+    prePush: (params, ...args) => {
+      window.elbTimer = Date.now();
+      return params.fn(...args);
+    },
+  },
 });
 
 // Add hooks via command
 elb('walker hook', {
-name: 'postPush',
-fn: function (params, ...args) {
-console.log('walker exec time', Date.now() - window.elbTimer);
-return params.result;
-},
+  name: 'postPush',
+  fn: function (params, ...args) {
+    console.log('walker exec time', Date.now() - window.elbTimer);
+    return params.result;
+  },
 });
 
 elb({ name: 'page view' });

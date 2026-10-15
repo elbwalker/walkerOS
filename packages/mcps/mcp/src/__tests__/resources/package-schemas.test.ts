@@ -1,4 +1,5 @@
-import { registerPackageSchemaResources } from '../../resources/package-schemas.js';
+import { PACKAGE_SCHEMA_RESOURCE } from '../../resources/package-schemas.js';
+import { registerResourceSpec } from '../../server.js';
 import { fetchPackageSchema } from '@walkeros/core';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
@@ -8,7 +9,10 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 import { record, str } from '../support/tool-result.js';
 
+// Partial: registering through the server module loads the tools, which need
+// the rest of core.
 jest.mock('@walkeros/core', () => ({
+  ...jest.requireActual('@walkeros/core'),
   fetchPackageSchema: jest.fn(),
 }));
 
@@ -25,7 +29,6 @@ jest.mock('../../catalog.js', () => ({
     ],
     warnings: [],
   }),
-  getPackageBaseUrl: jest.fn(() => undefined),
 }));
 
 const mockFetchPackageSchema = jest.mocked(fetchPackageSchema);
@@ -65,7 +68,7 @@ describe('package-schemas resource', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     server = createServer();
-    registerPackageSchemaResources(server.server);
+    registerResourceSpec(server.server, PACKAGE_SCHEMA_RESOURCE);
   });
 
   it('should register with correct name and metadata', () => {

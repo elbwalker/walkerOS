@@ -5,15 +5,11 @@ import type { BundleStats, PushResult } from '@walkeros/cli';
  * The capability seam between the flow tools and the machine they run on.
  *
  * Every file read, URL fetch, bundle, simulation and push a tool performs goes
- * through a `FlowRuntime` and nothing else, so the runtime alone decides what
- * the process it lives in may do:
- *
- * - `createLocalRuntime()` keeps every capability. It is for the user's own
- *   machine (stdio, the developer CLI), where the user is responsible for what
- *   runs there.
- * - `createHostedRuntime(client)` is least privilege for a shared, network
- *   reached process: it loads inline JSON and saved flow ids only, refuses
- *   local paths and URLs, and has no `bundle`, `simulate` or `push` at all.
+ * through a `FlowRuntime` and nothing else. A runtime decides what the process
+ * it lives in may read and run. `createLocalRuntime()` keeps every capability
+ * for the user's own machine; a host that must not read files or URLs or run
+ * flows passes a runtime with `load` only, and the tools that need more
+ * refuse.
  *
  * A tool whose operation the runtime does not provide refuses with a hint that
  * names only out-of-process routes.
@@ -21,8 +17,7 @@ import type { BundleStats, PushResult } from '@walkeros/cli';
 export interface FlowRuntime {
   /**
    * Resolve a config input to parsed JSON. Local: a file path, an http(s) URL
-   * or inline JSON. Hosted: inline JSON or a saved `flow_`/`cfg_` id; a local
-   * path or URL is refused with a `RuntimeRefusal`.
+   * or inline JSON. An input the runtime refuses throws a `RuntimeRefusal`.
    */
   load(input: string): Promise<unknown>;
   /**
@@ -130,14 +125,12 @@ export function refusalHint(error: unknown, fallback: string): string {
 }
 
 /**
- * Every route named here runs outside the tool's process: the app's own deploy
- * pipeline, or the caller's own machine. A refused
- * caller is never pointed at another in-process route, such as saving the
- * flow and simulating it by id, which would be the same execution one step
- * later.
+ * Every route named here runs outside the tool's process, on the caller's own
+ * machine. A refused caller is never pointed at another in-process route,
+ * which would be the same execution one step later.
  */
 export const HINT_OUT_OF_PROCESS =
-  'Build and deploy through the app with deploy_manage. To simulate, validate or bundle, use the walkerOS CLI on your own machine.';
+  'To simulate, bundle or push, use the local walkerOS MCP server or the walkerOS CLI on your own machine.';
 
 /** The refusal a tool raises when its runtime does not provide an operation. */
 export function unavailableOperation(
@@ -150,7 +143,7 @@ export function unavailableOperation(
         ? 'Simulating'
         : 'Running';
   return new RuntimeRefusal(
-    `${verb} a flow is not available on the hosted walkerOS MCP server.`,
+    `${verb} a flow is not available on this server.`,
     HINT_OUT_OF_PROCESS,
   );
 }

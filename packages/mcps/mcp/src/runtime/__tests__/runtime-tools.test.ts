@@ -1,12 +1,12 @@
-// The flow tools must refuse machine capability under the hosted runtime and
-// behave unchanged under the local one. `@walkeros/cli` is mocked so a refusal
-// can be told apart from a call that reached the cli layer, and so importing
-// the cli root does not pull chalk (ESM only) into jest.
+// The flow tools must refuse machine capability under a runtime with `load`
+// only and behave unchanged under the local one. `@walkeros/cli` is mocked so a
+// refusal can be told apart from a call that reached the cli layer, and so
+// importing the cli root does not pull chalk (ESM only) into jest.
+jest.mock('@walkeros/cli/validate', () => ({ validate: jest.fn() }));
 jest.mock('@walkeros/cli', () => ({
   loadJsonConfig: jest.fn(),
   loadConfig: jest.fn(),
   collectKnownSecrets: jest.fn(() => []),
-  validate: jest.fn(),
   bundle: jest.fn(),
   push: jest.fn(),
   simulateSource: jest.fn(),
@@ -36,22 +36,35 @@ jest.mock('@walkeros/cli/dev', () => {
 });
 
 import * as cli from '@walkeros/cli';
+import { validate } from '@walkeros/cli/validate';
 import { createFlowExamplesToolSpec } from '../../tools/examples.js';
 import { createFlowValidateToolSpec } from '../../tools/validate.js';
 import { createFlowBundleToolSpec } from '../../tools/bundle.js';
 import { createFlowSimulateToolSpec } from '../../tools/simulate.js';
 import { createFlowPushToolSpec } from '../../tools/push.js';
 import { createFlowLoadToolSpec } from '../../tools/flow-load.js';
-import { createHostedRuntime } from '../hosted.js';
 import { createLocalRuntime } from '../local.js';
-import type { FlowRuntime } from '../types.js';
-import { stubClient } from '../../__tests__/support/stub-client.js';
+import { RuntimeRefusal, type FlowRuntime } from '../types.js';
 import { isErrorResult } from '../../__tests__/support/tool-result.js';
 
-const client = stubClient();
-const hosted = createHostedRuntime(client);
+/**
+ * A host that must not read files or URLs or run flows: inline JSON only. A
+ * path or URL is withheld on principle; a bare string simply names nothing.
+ */
+const loadOnly: FlowRuntime = {
+  load: async (input) => {
+    const trimmed = input.trim();
+    if (trimmed.startsWith('{')) return JSON.parse(trimmed);
+    if (trimmed.includes('/'))
+      throw new RuntimeRefusal(
+        'Files and URLs are not available here.',
+        'Pass the flow inline as JSON.',
+      );
+    throw new Error(`Cannot resolve "${trimmed}" here.`);
+  },
+};
 const local = createLocalRuntime();
-const mocked = jest.mocked(cli);
+const mocked = { ...jest.mocked(cli), validate: jest.mocked(validate) };
 const EVENT = { name: 'order complete' };
 const INLINE = '{"version":4,"flows":{}}';
 
@@ -68,7 +81,7 @@ function isRefusal(res: unknown): boolean {
     !!res &&
     typeof res === 'object' &&
     isErrorResult(res) &&
-    /hosted/i.test(JSON.stringify(res))
+    /not available/i.test(JSON.stringify(res))
   );
 }
 
@@ -105,7 +118,7 @@ const readTools: Row[] = [
   },
   {
     name: 'flow_load',
-    make: (rt) => createFlowLoadToolSpec(client, rt),
+    make: (rt) => createFlowLoadToolSpec(rt),
     inline: { source: INLINE },
     path: { source: '/etc/passwd' },
     url: { source: 'http://169.254.169.254/' },
@@ -113,17 +126,17 @@ const readTools: Row[] = [
   },
 ];
 
-// Tools that BUILD or RUN a flow. The hosted runtime provides none of these.
+// Tools that BUILD or RUN a flow. A runtime with `load` only provides none.
 const execTools: Omit<Row, 'path' | 'url'>[] = [
   {
     name: 'flow_bundle',
-    make: (rt) => createFlowBundleToolSpec(client, rt),
+    make: (rt) => createFlowBundleToolSpec(rt),
     inline: { configPath: INLINE },
     ran: 'bundle',
   },
   {
     name: 'flow_simulate',
-    make: (rt) => createFlowSimulateToolSpec(client, rt),
+    make: (rt) => createFlowSimulateToolSpec(rt),
     inline: { configPath: INLINE, step: 'destination.x', event: EVENT },
     ran: 'simulateDestination',
   },
@@ -148,11 +161,11 @@ const PACKAGE_VECTOR = JSON.stringify({
   },
 });
 
-describe('read tools under the hosted runtime', () => {
+describe('read tools under a runtime with load only', () => {
   it.each(readTools)(
     '$name refuses a local file path',
     async ({ make, path, ran }) => {
-      expect(isRefusal(await make(hosted).handler(path))).toBe(true);
+      expect(isRefusal(await make(loadOnly).handler(path))).toBe(true);
       expect(mocked[ran]).not.toHaveBeenCalled();
     },
   );
@@ -160,17 +173,17 @@ describe('read tools under the hosted runtime', () => {
   it.each(readTools)(
     '$name refuses an http URL',
     async ({ make, url, ran }) => {
-      expect(isRefusal(await make(hosted).handler(url))).toBe(true);
+      expect(isRefusal(await make(loadOnly).handler(url))).toBe(true);
       expect(mocked[ran]).not.toHaveBeenCalled();
     },
   );
 
   it.each(readTools)('$name accepts inline JSON', async ({ make, inline }) => {
-    expect(isRefusal(await make(hosted).handler(inline))).toBe(false);
+    expect(isRefusal(await make(loadOnly).handler(inline))).toBe(false);
   });
 
   it('flow_validate hands the cli the parsed document, never the raw input', async () => {
-    await createFlowValidateToolSpec(hosted).handler({
+    await createFlowValidateToolSpec(loadOnly).handler({
       type: 'flow',
       input: INLINE,
     });
@@ -181,8 +194,8 @@ describe('read tools under the hosted runtime', () => {
     );
   });
 
-  it('flow_validate keeps the event-name shorthand hosted, reading nothing', async () => {
-    await createFlowValidateToolSpec(hosted).handler({
+  it('flow_validate keeps the event-name shorthand, reading nothing', async () => {
+    await createFlowValidateToolSpec(loadOnly).handler({
       type: 'event',
       input: 'page view',
     });
@@ -194,20 +207,21 @@ describe('read tools under the hosted runtime', () => {
     expect(mocked.loadJsonConfig).not.toHaveBeenCalled();
   });
 
-  it('flow_validate surfaces a failed saved-id lookup instead of masking it as a name', async () => {
-    const failing = createHostedRuntime(
-      stubClient({
-        getFlow: async () => {
-          throw new Error('Flow not found');
-        },
-      }),
-    );
-    const res = await createFlowValidateToolSpec(failing).handler({
-      type: 'flow',
+  it('flow_validate surfaces a RuntimeRefusal instead of masking it as an event name', async () => {
+    const refusing: FlowRuntime = {
+      load: async () => {
+        throw new RuntimeRefusal(
+          'Saved flow flow_missing could not be read.',
+          'Check the flow id.',
+        );
+      },
+    };
+    const res = await createFlowValidateToolSpec(refusing).handler({
+      type: 'event',
       input: 'flow_missing',
     });
     expect(isErrorResult(res)).toBe(true);
-    expect(JSON.stringify(res)).toMatch(/Flow not found/);
+    expect(JSON.stringify(res)).toMatch(/could not be read/);
     expect(mocked.validate).not.toHaveBeenCalled();
   });
 
@@ -239,7 +253,7 @@ describe('read tools under the hosted runtime', () => {
     );
   });
 
-  it('flow_validate suggests no in-process next step under the hosted runtime', async () => {
+  it('flow_validate suggests no in-process next step under a runtime with load only', async () => {
     mocked.validate.mockResolvedValueOnce({
       valid: true,
       type: 'flow',
@@ -247,7 +261,7 @@ describe('read tools under the hosted runtime', () => {
       warnings: [],
       details: {},
     });
-    const res = await createFlowValidateToolSpec(hosted).handler({
+    const res = await createFlowValidateToolSpec(loadOnly).handler({
       type: 'flow',
       input: INLINE,
     });
@@ -255,11 +269,11 @@ describe('read tools under the hosted runtime', () => {
   });
 });
 
-describe('build/run tools under the hosted runtime', () => {
+describe('build/run tools under a runtime with load only', () => {
   it.each(execTools)(
     '$name refuses even valid inline JSON',
     async ({ make, inline, ran }) => {
-      expect(isRefusal(await make(hosted).handler(inline))).toBe(true);
+      expect(isRefusal(await make(loadOnly).handler(inline))).toBe(true);
       expect(mocked[ran]).not.toHaveBeenCalled();
     },
   );
@@ -267,7 +281,7 @@ describe('build/run tools under the hosted runtime', () => {
   it.each(execTools)(
     '$name refuses a flow naming an arbitrary package',
     async ({ make, inline, ran }) => {
-      const res = await make(hosted).handler({
+      const res = await make(loadOnly).handler({
         ...inline,
         configPath: PACKAGE_VECTOR,
       });
@@ -279,7 +293,7 @@ describe('build/run tools under the hosted runtime', () => {
   it.each(execTools)(
     '$name refuses a saved flow id',
     async ({ make, inline, ran }) => {
-      const res = await make(hosted).handler({
+      const res = await make(loadOnly).handler({
         ...inline,
         configPath: 'flow_saved',
       });
@@ -291,11 +305,11 @@ describe('build/run tools under the hosted runtime', () => {
   it.each(execTools)(
     '$name hint names only out-of-process routes',
     async ({ make, inline }) => {
-      const text = JSON.stringify(await make(hosted).handler(inline));
+      const text = JSON.stringify(await make(loadOnly).handler(inline));
       expect(text).not.toMatch(
         /save the flow|by its flow_ id|flow_simulate|flow_push|flow_bundle/i,
       );
-      expect(text).toMatch(/deploy_manage/);
+      expect(text).toMatch(/walkerOS CLI/);
     },
   );
 });

@@ -1,7 +1,7 @@
 {
   "name": "walkeros",
-  "version": "0.2.0",
-  "description": "Skills and MCP tools for walkerOS - the open-source event data collection platform. Learn architecture, create sources/destinations/transformers, validate events, bundle flows, and manage projects via API.",
+  "version": "0.3.0",
+  "description": "Skills and MCP tools for walkerOS - the open-source event data collection platform. Learn architecture, create sources/destinations/transformers, validate events, bundle flows locally, and manage projects and deployments through the hosted walkerOS MCP server.",
   "author": {
     "name": "elbwalker",
     "url": "https://github.com/elbwalker"
@@ -50,11 +50,11 @@
   "mcpServers": {
     "walkeros-flow": {
       "command": "npx",
-      "args": ["@walkeros/mcp"],
-      "env": {
-        "WALKEROS_TOKEN": "",
-        "WALKEROS_PROJECT_ID": ""
-      }
+      "args": ["@walkeros/mcp"]
+    },
+    "walkeros": {
+      "type": "http",
+      "url": "https://app.walkeros.io/api/mcp"
     }
   }
 }

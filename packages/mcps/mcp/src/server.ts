@@ -1,36 +1,17 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
-import type { ToolClient } from './tool-client.js';
-import { registerFlowValidateTool } from './tools/validate.js';
-import { registerFlowBundleTool } from './tools/bundle.js';
-import { registerFlowSimulateTool } from './tools/simulate.js';
-import { registerFlowPushTool } from './tools/push.js';
-import { registerFlowExamplesTool } from './tools/examples.js';
 import {
-  registerPackageSearchTool,
-  registerGetPackageSchemaTool,
-} from './tools/package.js';
-import { registerFlowLoadTool } from './tools/flow-load.js';
-import { registerFeedbackTool } from './tools/feedback.js';
-import { registerDiagnosticsTool } from './tools/diagnostics.js';
-import { registerAuthTool } from './tools/auth.js';
-import { registerProjectManageTool } from './tools/project-manage.js';
-import { registerFlowManageTool } from './tools/flow-manage.js';
-import { registerDeployTool } from './tools/deploy-manage.js';
-import { registerSecretManageTool } from './tools/secret-manage.js';
-import { registerObserveJourneysTool } from './tools/observe-journeys.js';
-import { registerObserveSessionTool } from './tools/observe-session.js';
-import { registerHubManageTool } from './tools/hub-manage.js';
-import { registerFrameManageTool } from './tools/frame-manage.js';
-import { registerPackageSchemaResources } from './resources/package-schemas.js';
-import { registerReferenceResources } from './resources/references.js';
-import { registerAddStepPrompt } from './prompts/add-step.js';
-import { registerSetupMappingPrompt } from './prompts/setup-mapping.js';
-import { registerManageContractPrompt } from './prompts/manage-contract.js';
+  McpServer,
+  ResourceTemplate,
+} from '@modelcontextprotocol/sdk/server/mcp.js';
+
+import { isObject } from '@walkeros/core';
+
+import { createToolHandlers } from './tool-handlers.js';
+import type { ToolSpec } from './tool-spec.js';
+import { KNOWLEDGE_RESOURCES, PROMPTS } from './specs.js';
+import type { PromptSpec, ResourceSpec } from './knowledge-spec.js';
 import { SERVER_INSTRUCTIONS } from './instructions.js';
 import { createMcpEmitter, type McpEmitter } from './telemetry.js';
 import type { FlowRuntime } from './runtime/types.js';
-import { createHostedRuntime } from './runtime/hosted.js';
 
 export interface Logger {
   debug?(message: string, meta?: Record<string, unknown>): void;
@@ -40,19 +21,10 @@ export interface Logger {
 }
 
 export interface CreateServerOptions {
-  client: ToolClient;
-  logger?: Logger;
+  /** Required: the runtime decides what the process may read and run. */
+  runtime: FlowRuntime;
   version?: string;
-  catalogBaseUrl?: string;
-  /**
-   * The capability runtime the flow tools read, build and run flows through.
-   * Omitted, the HOSTED runtime is used, the safe default for any shared or
-   * network-reached process: inline JSON and saved flow ids only, no local
-   * files, no URLs, no in-process bundle, simulate or push. Pass
-   * `createLocalRuntime()` only on the user's own machine (stdio, the CLI) to
-   * keep local file, URL and execution behaviour. See `FlowRuntime`.
-   */
-  runtime?: FlowRuntime;
+  logger?: Logger;
 }
 
 /**
@@ -75,58 +47,97 @@ export function __resetMcpEmitterSingletonForTesting(): void {
   currentEmitter = undefined;
 }
 
-/**
- * Minimal shape of a `_registeredTools` entry we rely on for handler
- * wrapping. Typed locally to avoid leaking SDK internals while keeping
- * strict typing on the handler signature.
- */
-type WrappableRegisteredTool = {
-  handler: (...args: unknown[]) => unknown;
-};
-
-type RegisteredToolsRecord = Record<string, WrappableRegisteredTool>;
+/** An MCP tool answers a failure as a result flagged `isError`. */
+function isToolError(result: unknown): boolean {
+  return isObject(result) && result.isError === true;
+}
 
 /**
- * Wrap every already-registered tool handler with telemetry. The wrapper
- * emits `cmd invoke` with outcome + timing, swallowing any telemetry error
- * so it never surfaces to the tool caller. We look up the emitter lazily at
- * call time so wrapping can happen before the emitter is created.
+ * Run one tool call and record its outcome: an answer flagged `isError` and a
+ * throw are failures. Telemetry never reaches the caller: an emit that fails
+ * is dropped, a throw is re-thrown unchanged. Each handler is wrapped when it
+ * is registered, never by patching the SDK's registry. The emitter is looked
+ * up at call time, so wrapping happens before the emitter exists.
  */
-function wrapRegisteredToolsWithTelemetry(server: McpServer): void {
-  const internal = server as unknown as {
-    _registeredTools: RegisteredToolsRecord;
+export async function trackInvoke<T>(
+  tool: string,
+  run: () => Promise<T>,
+  emitter: () => McpEmitter | undefined = getMcpEmitterSingleton,
+): Promise<T> {
+  const start = Date.now();
+  const record = (outcome: 'success' | 'error') => {
+    emitter()
+      ?.emitInvoke(tool, outcome, Date.now() - start)
+      .catch(() => {});
   };
-  const tools = internal._registeredTools;
-  if (!tools) return;
-  for (const [toolName, tool] of Object.entries(tools)) {
-    const original = tool.handler;
-    tool.handler = async (...args: unknown[]): Promise<unknown> => {
-      const start = Date.now();
-      try {
-        const result = await original(...args);
-        const emitter = currentEmitter;
-        if (emitter) {
-          emitter
-            .emitInvoke(toolName, 'success', Date.now() - start)
-            .catch(() => {});
-        }
-        return result;
-      } catch (err) {
-        const emitter = currentEmitter;
-        if (emitter) {
-          emitter
-            .emitInvoke(toolName, 'error', Date.now() - start)
-            .catch(() => {});
-        }
-        throw err;
-      }
-    };
+  try {
+    const result = await run();
+    record(isToolError(result) ? 'error' : 'success');
+    return result;
+  } catch (error) {
+    record('error');
+    throw error;
   }
+}
+
+/** The one registration path: the spec's own metadata and handler. */
+function registerToolSpec(server: McpServer, spec: ToolSpec): void {
+  server.registerTool(
+    spec.name,
+    {
+      title: spec.title,
+      description: spec.description,
+      inputSchema: spec.inputSchema,
+      ...(spec.outputSchema ? { outputSchema: spec.outputSchema } : {}),
+      annotations: spec.annotations,
+    },
+    (args) => trackInvoke(spec.name, () => spec.handler(args)),
+  );
+}
+
+/** A knowledge resource, static or templated, as the spec describes it. */
+export function registerResourceSpec(
+  server: McpServer,
+  spec: ResourceSpec,
+): void {
+  if (spec.kind === 'static') {
+    server.registerResource(
+      spec.name,
+      spec.uri,
+      { description: spec.description, mimeType: spec.mimeType },
+      async (uri) => ({
+        contents: [{ uri: uri.toString(), ...(await spec.read()) }],
+      }),
+    );
+    return;
+  }
+  server.registerResource(
+    spec.name,
+    new ResourceTemplate(spec.uriTemplate, {
+      list: async () => ({ resources: await spec.list() }),
+    }),
+    {
+      title: spec.title,
+      description: spec.description,
+      mimeType: spec.mimeType,
+    },
+    async (uri, variables) => ({
+      contents: [{ uri: uri.toString(), ...(await spec.read(variables)) }],
+    }),
+  );
+}
+
+/** A prompt with its description, arguments and handler. */
+export function registerPromptSpec(server: McpServer, spec: PromptSpec): void {
+  server.registerPrompt(
+    spec.name,
+    { description: spec.description, argsSchema: spec.argsSchema },
+    (args) => spec.handler(args),
+  );
 }
 
 export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
   const packageVersion = opts.version ?? '0.0.0';
-  const runtime = opts.runtime ?? createHostedRuntime(opts.client);
   const server = new McpServer(
     {
       name: 'walkeros-flow',
@@ -135,35 +146,11 @@ export function createWalkerOSMcpServer(opts: CreateServerOptions): McpServer {
     { instructions: SERVER_INSTRUCTIONS },
   );
 
-  registerAuthTool(server, opts.client);
-  registerProjectManageTool(server, opts.client);
-  registerFlowManageTool(server, opts.client);
-  registerDeployTool(server, opts.client);
-  registerSecretManageTool(server, opts.client);
-  registerObserveSessionTool(server, opts.client);
-  registerObserveJourneysTool(server, opts.client);
-  registerHubManageTool(server, opts.client);
-  registerFrameManageTool(server, opts.client);
-  registerFeedbackTool(server, opts.client);
-  registerDiagnosticsTool(server, opts.client, packageVersion);
+  for (const spec of Object.values(createToolHandlers(opts.runtime)))
+    registerToolSpec(server, spec);
 
-  registerFlowValidateTool(server, runtime);
-  registerFlowBundleTool(server, opts.client, runtime);
-  registerFlowSimulateTool(server, opts.client, runtime);
-  registerFlowPushTool(server, runtime);
-  registerFlowExamplesTool(server, runtime);
-  registerFlowLoadTool(server, opts.client, runtime);
-
-  registerPackageSearchTool(server);
-  registerGetPackageSchemaTool(server);
-
-  registerPackageSchemaResources(server);
-  registerReferenceResources(server, opts.client);
-  registerAddStepPrompt(server);
-  registerSetupMappingPrompt(server);
-  registerManageContractPrompt(server);
-
-  wrapRegisteredToolsWithTelemetry(server);
+  for (const spec of KNOWLEDGE_RESOURCES) registerResourceSpec(server, spec);
+  for (const spec of PROMPTS) registerPromptSpec(server, spec);
 
   // MCP SDK fires `oninitialized` after the `initialized` notification, which
   // follows a successful `initialize` request. At that point `getClientVersion`

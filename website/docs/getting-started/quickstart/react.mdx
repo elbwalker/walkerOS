@@ -210,7 +210,13 @@ Use the `elb` function for custom events:
 <CodeSnippet
   code={`import type { FormEvent } from 'react';
 
-function CheckoutForm({ total, itemCount }: { total: number; itemCount: number }) {
+function CheckoutForm({
+  total,
+  itemCount,
+}: {
+  total: number;
+  itemCount: number;
+}) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     window.elb({

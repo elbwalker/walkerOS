@@ -23,33 +23,6 @@ export type {
 export { logoutCommand, logout } from './commands/logout/index.js';
 export { whoamiCommand } from './commands/auth/index.js';
 export {
-  listProjectsCommand,
-  getProjectCommand,
-  createProjectCommand,
-  updateProjectCommand,
-  deleteProjectCommand,
-} from './commands/projects/index.js';
-export {
-  listFlowsCommand,
-  getFlowCommand,
-  createFlowCommand,
-  updateFlowCommand,
-  deleteFlowCommand,
-  duplicateFlowCommand,
-} from './commands/flows/index.js';
-export {
-  deployCommand,
-  getDeploymentCommand,
-} from './commands/deploy/index.js';
-export {
-  createDeployCommand,
-  listDeploymentsCommand,
-  getDeploymentBySlugCommand,
-  createDeploymentCommand,
-  deleteDeploymentCommand,
-} from './commands/deployments/index.js';
-export { feedbackCommand } from './commands/feedback/index.js';
-export {
   telemetryStatusCommand,
   telemetryEnableCommand,
   telemetryDisableCommand,
@@ -109,46 +82,10 @@ export {
   resolveAccessToken,
   getAuthHeaders,
   credentialSource,
-  requireProjectId,
 } from './core/auth.js';
 export { startDeviceAuthorization } from './core/oauth-client.js';
 export type { DeviceAuthorization } from './core/oauth-client.js';
-export {
-  apiFetch,
-  publicFetch,
-  deployFetch,
-  mergeAuthHeaders,
-} from './core/http.js';
-export { createApiClient } from './core/api-client.js';
-export { apiRequest, operationUrl } from './core/api-request.js';
-export type {
-  ApiAuth,
-  ApiRequestInit,
-  ApiTransport,
-  OperationKey,
-  ResponseJson,
-} from './core/api-request.js';
-export {
-  fetchHealth,
-  fetchOpenApi,
-  compareContract,
-  formatContract,
-  canonicalContractHash,
-  bakedContractVersion,
-  bakedContractHash,
-  bakedClientOperations,
-} from './core/contract.js';
-export type {
-  HealthResult,
-  OpenApiResult,
-  ClientOperation,
-  ContractVerdict,
-  ContractClient,
-  MissingOperation,
-  ContractComparison,
-  CompareContractInput,
-} from './core/contract.js';
-export { ApiError, throwApiError } from './core/api-error.js';
+export { ApiError } from './core/api-error.js';
 export type { ApiErrorDetail } from './core/api-error.js';
 export {
   setClientContext,
@@ -157,118 +94,10 @@ export {
   clientContextHeaders,
 } from './core/client-context.js';
 export type { ClientType, ClientContext } from './core/client-context.js';
-export {
-  listProjects,
-  getProject,
-  createProject,
-  updateProject,
-  deleteProject,
-} from './commands/projects/index.js';
-export type { ListProjectsOptions } from './commands/projects/index.js';
+export { appFetch, appErrorMessage } from './core/app-fetch.js';
+export type { AppFetchInit } from './core/app-fetch.js';
+export { APP_PATHS } from './core/app-paths.js';
 export { whoami } from './commands/auth/index.js';
-export { feedback } from './commands/feedback/index.js';
-export {
-  listFlows,
-  listAllFlows,
-  getFlow,
-  createFlow,
-  updateFlow,
-  deleteFlow,
-  duplicateFlow,
-} from './commands/flows/index.js';
-export { deploy, getDeployment } from './commands/deploy/index.js';
-export {
-  listDeployments,
-  getDeploymentBySlug,
-  createDeployment,
-  deleteDeployment,
-  deleteDeploymentByFlowId,
-  DeploymentAmbiguityError,
-  DEPLOYMENT_STATUSES,
-  DEPLOYMENT_TYPES,
-  isDeploymentStatus,
-} from './commands/deployments/index.js';
-export type {
-  DeploymentSummaryForFlow,
-  DeploymentStatus,
-  DeploymentType,
-} from './commands/deployments/index.js';
-export {
-  listPreviews,
-  getPreview,
-  createPreview,
-  deletePreview,
-  regrantPreview,
-} from './commands/previews/index.js';
-export type {
-  ListPreviewsOptions,
-  GetPreviewOptions,
-  CreatePreviewOptions,
-  DeletePreviewOptions,
-  RegrantPreviewOptions,
-} from './commands/previews/index.js';
-export { listJourneys } from './commands/journeys/index.js';
-export type { ListJourneysOptions } from './commands/journeys/index.js';
-export {
-  startObserveSession,
-  getObserveSession,
-  endObserveSession,
-} from './commands/observe/index.js';
-export type {
-  StartObserveSessionOptions,
-  GetObserveSessionOptions,
-  EndObserveSessionOptions,
-} from './commands/observe/index.js';
-export {
-  listReleases,
-  getRelease,
-  listStepHistory,
-  setReleaseRationale,
-  listThreads,
-  createThread,
-  addThreadMessage,
-  listKnowledge,
-} from './commands/hub/index.js';
-export type {
-  ListReleasesOptions,
-  GetReleaseOptions,
-  ReleaseRef,
-  ReleaseIndexResponse,
-  ReleaseRationaleSummary,
-  ReleaseDiffResponse,
-  ReleaseDetailResponse,
-  ListStepHistoryOptions,
-  SetReleaseRationaleOptions,
-  ListThreadsOptions,
-  CreateThreadOptions,
-  AddThreadMessageOptions,
-  ListKnowledgeOptions,
-  ThreadAnchorType,
-  ThreadStatus,
-} from './commands/hub/index.js';
-export {
-  listFrames,
-  listPageFrames,
-  getFrame,
-} from './commands/frames/index.js';
-export type {
-  ListFramesOptions,
-  ListPageFramesOptions,
-  GetFrameOptions,
-} from './commands/frames/index.js';
-export {
-  listSecrets,
-  createSecret,
-  updateSecret,
-  deleteSecret,
-} from './commands/secrets/index.js';
-export type {
-  ListSecretsOptions,
-  CreateSecretOptions,
-  UpdateSecretOptions,
-  DeleteSecretOptions,
-} from './commands/secrets/index.js';
-export type { FeedbackOptions } from './commands/feedback/index.js';
 export {
   readConfig,
   writeConfig,
@@ -276,19 +105,9 @@ export {
   deleteConfig,
   resolveToken,
   resolveAppUrl,
-  setDefaultProject,
-  getDefaultProject,
-  resolveProjectId,
-  setFeedbackPreference,
-  getFeedbackPreference,
 } from './lib/config-file.js';
 export { VERSION } from './version.js';
 export type { WalkerOSConfig } from './lib/config-file.js';
-export type { ListFlowsOptions, ProjectFlows } from './commands/flows/index.js';
-export type { DeployOptions } from './commands/deploy/index.js';
-export type { ListDeploymentsOptions } from './commands/deployments/index.js';
-export { parseSSEEvents } from './core/sse.js';
-export type { SSEEvent, SSEParseResult } from './core/sse.js';
 
 // === Utilities ===
 // Export utilities for programmatic usage

@@ -166,20 +166,20 @@ Sources are configured in `startFlow`:
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
-sources: {
-browser: {
-code: sourceBrowser,
-config: {
-  settings: {
-    pageview: true,
-    prefix: 'data-elb',
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+          prefix: 'data-elb',
+        },
+      },
+    },
   },
-},
-},
-},
-destinations: {
-/* your destinations */
-},
+  destinations: {
+    /* your destinations */
+  },
 });
 
 // elb is now browser.push (enhanced with DOM commands)
@@ -200,10 +200,10 @@ await elb({ name: 'product view', data: { id: 'P123', name: 'Laptop' } });`}
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
-sources: {
-browser: { code: sourceBrowser },
-dataLayer: { code: sourceDataLayer, primary: true }, // Override
-},
+  sources: {
+    browser: { code: sourceBrowser },
+    dataLayer: { code: sourceDataLayer, primary: true }, // Override
+  },
 });
 
 // elb is now dataLayer.push instead of browser.push`}
@@ -216,15 +216,15 @@ Sources can react to collector events via the optional `on` method:
 
 <CodeSnippet
   code={`const mySource: Source.Init = async (config, env) => {
-return {
-type: 'custom',
-config,
-on: async (event, context) => {
-if (event === 'consent') {
-  // React to consent changes
-}
-},
-};
+  return {
+    type: 'custom',
+    config,
+    on: async (event, context) => {
+      if (event === 'consent') {
+        // React to consent changes
+      }
+    },
+  };
 };`}
   language="typescript"
 />

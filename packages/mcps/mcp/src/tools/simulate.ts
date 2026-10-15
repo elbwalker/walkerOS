@@ -1,15 +1,12 @@
 import { z } from 'zod';
 import { schemas } from '@walkeros/cli/dev';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { filterValues, mcpResult, mcpError } from '@walkeros/core';
 import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
 import { FLOW_SIMULATE_DESCRIPTION } from './simulate-description.js';
 
-import type { ToolClient } from '../tool-client.js';
 import type { ToolSpec } from '../tool-spec.js';
 import { parseToolInput } from './parse-input.js';
-import { resolveConfigPath } from './resolve-config-path.js';
 import { readRun, scrubbed, scrubbedError } from './egress.js';
 import {
   refusalHint,
@@ -114,17 +111,15 @@ const annotations = {
   openWorldHint: true,
 } as const;
 
-export function createFlowSimulateToolSpec(
-  client: ToolClient,
-  runtime: FlowRuntime,
-): ToolSpec {
+export function createFlowSimulateToolSpec(runtime: FlowRuntime): ToolSpec {
   return {
     name: 'flow_simulate',
     title: TITLE,
     description: FLOW_SIMULATE_DESCRIPTION,
     inputSchema,
+    outputSchema: SimulateOutputShape,
     annotations,
-    handler: (input) => flowSimulateHandlerBody(client, runtime, input),
+    handler: (input) => flowSimulateHandlerBody(runtime, input),
   };
 }
 
@@ -141,11 +136,7 @@ function toProperties(
   return properties;
 }
 
-async function flowSimulateHandlerBody(
-  client: ToolClient,
-  runtime: FlowRuntime,
-  input: unknown,
-) {
+async function flowSimulateHandlerBody(runtime: FlowRuntime, input: unknown) {
   const parsed = parseToolInput(inputSchema, input);
   if (!parsed.ok) return parsed.error;
   const {
@@ -212,31 +203,26 @@ async function flowSimulateHandlerBody(
       throw new Error('command applies to destination steps only.');
     }
 
-    // Accept a cloud flow/config id as configPath, resolving it to inline JSON.
-    const resolvedConfigPath = await resolveConfigPath(client, configPath);
     // Read once: the simulation runs on exactly the config whose secrets
     // mask the result.
-    const run = await readRun(runtime, resolvedConfigPath);
+    const run = await readRun(runtime, configPath);
     known = run.knownSecrets;
 
-    const result: Simulation.Result = await runtime.simulate(
-      resolvedConfigPath,
-      {
-        stepType,
-        stepId,
-        event: resolvedEvent,
-        flow,
-        ingest,
-        state: state && {
-          consent: state.consent,
-          user: toProperties(state.user),
-          globals: toProperties(state.globals),
-          timing: state.timing,
-        },
-        command,
-        config: run.config,
+    const result: Simulation.Result = await runtime.simulate(configPath, {
+      stepType,
+      stepId,
+      event: resolvedEvent,
+      flow,
+      ingest,
+      state: state && {
+        consent: state.consent,
+        user: toProperties(state.user),
+        globals: toProperties(state.globals),
+        timing: state.timing,
       },
-    );
+      command,
+      config: run.config,
+    });
 
     const success = !result.error;
     const errorMessage = result.error?.message;
@@ -386,25 +372,5 @@ function notReceived(result: Simulation.Result): string {
     '(1) mapping rules do not match the event name or ignore it, ' +
     '(2) policy redacted required fields, ' +
     '(3) a before chain stopped the event.'
-  );
-}
-
-export function registerFlowSimulateTool(
-  server: McpServer,
-  client: ToolClient,
-  runtime: FlowRuntime,
-) {
-  const spec = createFlowSimulateToolSpec(client, runtime);
-  server.registerTool(
-    spec.name,
-    {
-      title: spec.title,
-      description: spec.description,
-      inputSchema: spec.inputSchema,
-      // outputSchema is wire-only; not part of ToolSpec
-      outputSchema: SimulateOutputShape,
-      annotations: spec.annotations,
-    },
-    (args) => flowSimulateHandlerBody(client, runtime, args),
   );
 }

@@ -3,11 +3,10 @@ import { readConfig } from '../lib/config-file.js';
 /**
  * One-time informational notice inviting the user to opt in to anonymous
  * telemetry. Non-blocking. Writes nothing to disk. Suppressed on subsequent
- * runs by the presence of a config file (created by login, project
- * defaults, feedback preferences, or an explicit `walkeros telemetry
- * enable`). If the user never creates a config for any other reason, the
- * notice keeps appearing. That is acceptable: the notice is a one-line
- * informational message, not a prompt.
+ * runs by the presence of a config file (created by login or an explicit
+ * `walkeros telemetry enable`). If the user never creates a config for any
+ * other reason, the notice keeps appearing. That is acceptable: the notice
+ * is a one-line informational message, not a prompt.
  */
 export function maybePrintFirstRunNotice(): void {
   if (readConfig()) return;

@@ -73,9 +73,13 @@ await startFlow({
   transformers: {
     fingerprint: {
       code: transformerFingerprint,
-      config: { settings: { /* ... */ } }
-    }
-  }
+      config: {
+        settings: {
+          /* ... */
+        },
+      },
+    },
+  },
 });`}
   language="typescript"
 />

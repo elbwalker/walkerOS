@@ -1,10 +1,4 @@
-import {
-  ApiError,
-  throwApiError,
-  throwApiResponseError,
-  handleCliError,
-  EXIT_RETRYABLE,
-} from '../api-error';
+import { ApiError, handleCliError, EXIT_RETRYABLE } from '../api-error';
 
 describe('ApiError', () => {
   it('should carry code, message, and details', () => {
@@ -37,77 +31,6 @@ describe('ApiError', () => {
     expect(err.status).toBe(429);
     expect(err.retryable).toBe(true);
     expect(err.retryAfterSeconds).toBe(30);
-  });
-});
-
-describe('throwApiResponseError', () => {
-  function fakeResponse(status: number, retryAfter?: string): Response {
-    const headers = new Headers();
-    if (retryAfter !== undefined) headers.set('Retry-After', retryAfter);
-    return { status, headers } as unknown as Response;
-  }
-
-  it('marks a 429 with numeric Retry-After as retryable with a wait hint', () => {
-    const response = fakeResponse(429, '30');
-    const body = {
-      error: { code: 'RATE_LIMITED', message: 'Too many deploys' },
-    };
-
-    try {
-      throwApiResponseError(response, body, 'Deploy failed');
-      throw new Error('expected throw');
-    } catch (e) {
-      const err = e as ApiError;
-      expect(err).toBeInstanceOf(ApiError);
-      expect(err.status).toBe(429);
-      expect(err.retryable).toBe(true);
-      expect(err.retryAfterSeconds).toBe(30);
-      expect(err.code).toBe('RATE_LIMITED');
-    }
-  });
-
-  it('treats a 503 with Retry-After as retryable', () => {
-    const response = fakeResponse(503, '5');
-    try {
-      throwApiResponseError(response, {}, 'Service unavailable');
-      throw new Error('expected throw');
-    } catch (e) {
-      const err = e as ApiError;
-      expect(err.status).toBe(503);
-      expect(err.retryable).toBe(true);
-      expect(err.retryAfterSeconds).toBe(5);
-    }
-  });
-
-  it('marks a 409 (already in progress) as non-retryable', () => {
-    const response = fakeResponse(409);
-    const body = {
-      error: { code: 'DEPLOY_IN_PROGRESS', message: 'Already deploying' },
-    };
-    try {
-      throwApiResponseError(response, body, 'Deploy failed');
-      throw new Error('expected throw');
-    } catch (e) {
-      const err = e as ApiError;
-      expect(err.status).toBe(409);
-      expect(err.retryable).toBe(false);
-      expect(err.code).toBe('DEPLOY_IN_PROGRESS');
-    }
-  });
-
-  it('handles an HTTP-date Retry-After value', () => {
-    const future = new Date(Date.now() + 12_000).toUTCString();
-    const response = fakeResponse(429, future);
-    try {
-      throwApiResponseError(response, {}, 'Deploy failed');
-      throw new Error('expected throw');
-    } catch (e) {
-      const err = e as ApiError;
-      expect(err.retryable).toBe(true);
-      // Allow a little slack for clock/rounding.
-      expect(err.retryAfterSeconds).toBeGreaterThanOrEqual(10);
-      expect(err.retryAfterSeconds).toBeLessThanOrEqual(13);
-    }
   });
 });
 
@@ -168,49 +91,5 @@ describe('handleCliError machine-readable output', () => {
   it('falls back to code=UNKNOWN for a plain Error', () => {
     expect(() => handleCliError(new Error('boom'))).toThrow('__exit__:1');
     expect(output()).toMatch(/^error: code=UNKNOWN\b/m);
-  });
-});
-
-describe('throwApiError', () => {
-  it('should extract structured error from openapi-fetch error object', () => {
-    const apiError = {
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Request validation failed',
-        details: {
-          errors: [
-            {
-              path: 'config.version',
-              message: 'Only version 3 is supported.',
-            },
-          ],
-        },
-      },
-    };
-
-    expect(() => throwApiError(apiError, 'Failed to create flow')).toThrow(
-      ApiError,
-    );
-
-    try {
-      throwApiError(apiError, 'Failed to create flow');
-    } catch (e) {
-      const err = e as ApiError;
-      expect(err.message).toBe('Request validation failed');
-      expect(err.code).toBe('VALIDATION_ERROR');
-      expect(err.details).toEqual([
-        { path: 'config.version', message: 'Only version 3 is supported.' },
-      ]);
-    }
-  });
-
-  it('should fall back to generic message when error has no structure', () => {
-    expect(() => throwApiError({}, 'Failed to create flow')).toThrow(
-      'Failed to create flow',
-    );
-  });
-
-  it('should handle null/undefined error', () => {
-    expect(() => throwApiError(null, 'Fallback')).toThrow('Fallback');
   });
 });

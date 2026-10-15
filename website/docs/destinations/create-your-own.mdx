@@ -209,7 +209,10 @@ export const destinationBigquery: Destination.Instance<
     if (!settings) return;
     // Create dataset and table if missing. Idempotent: re-running is a no-op.
     // Return any structured result the operator may want to inspect.
-    return { datasetCreated: settings.datasetId, tableCreated: settings.tableId };
+    return {
+      datasetCreated: settings.datasetId,
+      tableCreated: settings.tableId,
+    };
   },
 
   push(event, { config }) {
@@ -228,7 +231,11 @@ A flow config opts in via `config.setup`, here for the BigQuery destination of `
       "package": "@walkeros/server-destination-gcp",
       "config": {
         "setup": true,
-        "settings": { "projectId": "my-proj", "datasetId": "events", "tableId": "raw" }
+        "settings": {
+          "projectId": "my-proj",
+          "datasetId": "events",
+          "tableId": "raw"
+        }
       }
     }
   }

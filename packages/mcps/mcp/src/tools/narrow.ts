@@ -1,8 +1,8 @@
 /**
- * Structural reads of values the tools receive untyped: app responses
- * (`ToolClient` returns `unknown`) and loaded configs. Each reader checks the
- * shape it returns, so a field that is not what a tool expects reads as
- * absent instead of being asserted into place.
+ * Structural reads of values the tools receive untyped: loaded configs and
+ * package metadata. Each reader checks the shape it returns, so a field that
+ * is not what a tool expects reads as absent instead of being asserted into
+ * place.
  */
 import type { Flow } from '@walkeros/core';
 import { schemas, type z } from '@walkeros/core/dev';
@@ -27,11 +27,6 @@ export function recordField(
   if (!isRecord(value)) return undefined;
   const field = value[key];
   return isRecord(field) ? field : undefined;
-}
-
-/** The fields of an object response to spread into a result; none otherwise. */
-export function fieldsOf(value: unknown): Record<string, unknown> {
-  return isRecord(value) ? value : {};
 }
 
 /**

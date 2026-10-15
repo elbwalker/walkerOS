@@ -1,6 +1,3 @@
-import { apiRequest } from '@walkeros/cli';
-import type { ResponseJson } from '@walkeros/cli';
-
 // __VERSION__ is replaced at build time by tsup's `define` (see tsup.config.ts).
 // In tests, it's set on globalThis (see src/__tests__/support/version.ts).
 declare const __VERSION__: string;
@@ -11,22 +8,6 @@ const WALKEROS_JSON_PATH = 'dist/walkerOS.json';
 const CACHE_TTL = 5 * 60 * 1000;
 
 export const CLIENT_HEADER = 'walkeros-mcp/' + __VERSION__;
-
-/**
- * Resolve the walkerOS app base URL for MCP outbound calls.
- *
- * Env-only by design: the MCP runs in an editor with explicit `.mcp.json`
- * env. No config-file precedence (which is what `@walkeros/cli`'s
- * `resolveAppUrl()` does for the `walkeros` CLI binary). Hard-cut:
- * `APP_URL` is no longer recognized.
- *
- * Lives here (not in tools/package.ts) because both the package tools and the
- * catalog resources need to resolve the same app-primary base URL. This is an
- * in-package helper, not a cross-package registry.
- */
-export function getPackageBaseUrl(): string | undefined {
-  return process.env.WALKEROS_APP_URL || undefined;
-}
 
 export interface CatalogEntry {
   name: string;
@@ -41,34 +22,12 @@ export interface CatalogResult {
   warnings: string[];
 }
 
-/**
- * Provenance of the most recent `fetchCatalog` call. Module-scoped and
- * last-call-wins: the stdio MCP is a single process, so the diagnostics tool
- * reads which source (`app` vs `npm` fallback) served the last catalog fetch,
- * how many entries it produced, and whether any were dropped (partial).
- * `undefined` until the first fetch.
- */
-export interface LastCatalogFetchInfo {
-  source: 'app' | 'npm';
-  count: number;
-  partial: boolean;
-  timestamp: number;
-}
-
-let lastFetchInfo: LastCatalogFetchInfo | undefined;
-
-export function getLastCatalogSource(): LastCatalogFetchInfo | undefined {
-  return lastFetchInfo;
-}
-
-// Cache keyed by effective source (app baseUrl or 'npm'). The tool reads
-// app-primary and the resources read npm-primary; a shared cache let one
-// source's result leak into the other. Only complete, non-empty results are
-// cached, so a transient empty/partial fetch never freezes for the TTL.
-const cache = new Map<string, { entries: CatalogEntry[]; timestamp: number }>();
+// Only complete, non-empty results are cached, so a transient empty or
+// partial fetch never freezes for the TTL.
+let cached: { entries: CatalogEntry[]; timestamp: number } | undefined;
 
 export function clearCatalogCache() {
-  cache.clear();
+  cached = undefined;
 }
 
 export function normalizePlatform(platform?: unknown): string[] {
@@ -93,102 +52,31 @@ interface SourceResult {
 export async function fetchCatalog(filters?: {
   type?: string;
   platform?: string;
-  baseUrl?: string;
 }): Promise<CatalogResult> {
-  const sourceKey = filters?.baseUrl ?? 'npm';
-  const warnings: string[] = [];
-
-  const cached = cache.get(sourceKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    lastFetchInfo = {
-      source: filters?.baseUrl ? 'app' : 'npm',
-      count: cached.entries.length,
-      partial: false,
-      timestamp: Date.now(),
-    };
-    return { entries: applyFilters(cached.entries, filters), warnings };
+    return { entries: applyFilters(cached.entries, filters), warnings: [] };
   }
-
   let result: SourceResult;
-  // Which source actually served. Starts as the requested source, flips to
-  // 'npm' when an app fetch fails over to the npm fallback.
-  let servedBy: 'app' | 'npm' = filters?.baseUrl ? 'app' : 'npm';
-  if (filters?.baseUrl) {
-    try {
-      result = await fetchCatalogFrom(filters.baseUrl, filters);
-    } catch {
-      warnings.push(
-        'app catalog endpoint unavailable, fell back to npm; results may be incomplete',
-      );
-      servedBy = 'npm';
-      try {
-        result = await fetchFromNpm();
-      } catch {
-        lastFetchInfo = {
-          source: 'npm',
-          count: 0,
-          partial: true,
-          timestamp: Date.now(),
-        };
-        return { entries: [], warnings };
-      }
-    }
-  } else {
-    try {
-      result = await fetchFromNpm();
-    } catch {
-      lastFetchInfo = {
-        source: 'npm',
-        count: 0,
-        partial: true,
-        timestamp: Date.now(),
-      };
-      return { entries: [], warnings };
-    }
+  try {
+    result = await fetchFromNpm();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return {
+      entries: [],
+      warnings: [
+        `npm package search failed (${reason}); the package catalog is empty. Try again, or use package_get with an exact package name.`,
+      ],
+    };
   }
-
+  const warnings: string[] = [];
   const dropped = result.requested - result.entries.length;
-  if (dropped > 0) {
+  if (dropped > 0)
     warnings.push(
       `${dropped} package(s) could not be enriched and were omitted`,
     );
-  }
-
-  lastFetchInfo = {
-    source: servedBy,
-    count: result.entries.length,
-    partial: !result.complete,
-    timestamp: Date.now(),
-  };
-
-  // Only freeze a complete, non-empty result. Empty or partial fetches must
-  // retry on the next call rather than serve a stale shortfall for the TTL.
-  if (result.entries.length > 0 && result.complete) {
-    cache.set(sourceKey, { entries: result.entries, timestamp: Date.now() });
-  }
-
+  if (result.entries.length > 0 && result.complete)
+    cached = { entries: result.entries, timestamp: Date.now() };
   return { entries: applyFilters(result.entries, filters), warnings };
-}
-
-async function fetchCatalogFrom(
-  baseUrl: string,
-  filters?: { type?: string; platform?: string },
-): Promise<SourceResult> {
-  const res = await apiRequest('GET /api/packages', {
-    auth: 'none',
-    baseUrl,
-    query: {
-      type: filters?.type || undefined,
-      platform: filters?.platform || undefined,
-    },
-    signal: AbortSignal.timeout(15000),
-    headers: { 'X-Walkeros-Client': CLIENT_HEADER },
-  });
-  if (!res.ok) throw new Error(`Catalog fetch failed: ${res.status}`);
-
-  const data: ResponseJson<'GET /api/packages', 200> = await res.json();
-  const entries: CatalogEntry[] = data.catalog;
-  return { entries, complete: entries.length > 0, requested: entries.length };
 }
 
 async function fetchFromNpm(): Promise<SourceResult> {

@@ -4,10 +4,7 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import { mergeAuthHeaders } from '../core/http.js';
-import { resolveAccessToken } from '../core/auth.js';
-import { resolveAppUrl } from '../lib/config-file.js';
-import { requireSecureUrl } from '../lib/secure-url.js';
+import { fetchFailureReason } from '../core/fetch-failure.js';
 
 /**
  * Check if a string is a valid URL
@@ -24,18 +21,17 @@ export function isUrl(str: string): boolean {
   }
 }
 
-/**
- * Whether a URL points at the configured walkerOS app.
- *
- * Compares origins rather than prefixes: a host such as
- * `https://app.walkeros.io.example.com` starts with the app URL but belongs to
- * somebody else, and the port is part of who a host is.
- */
-function isAppOrigin(url: string): boolean {
-  try {
-    return new URL(url).origin === new URL(resolveAppUrl()).origin;
-  } catch {
-    return false;
+/** A config input named an http(s) URL that could not be read. */
+export class ConfigFetchError extends Error {
+  readonly url: string;
+  /** The HTTP status, when the host answered. */
+  readonly status?: number;
+
+  constructor(message: string, url: string, status?: number) {
+    super(message);
+    this.name = 'ConfigFetchError';
+    this.url = url;
+    this.status = status;
   }
 }
 
@@ -43,25 +39,28 @@ function isAppOrigin(url: string): boolean {
  * Fetch content from a URL as a string.
  * Shared helper for all URL-loading paths.
  *
- * The session bearer goes to the walkerOS app and nowhere else. A config input
- * is any URL the person names, so attaching auth to all of them would hand
- * their walkerOS session to whichever host they were pointed at.
+ * A plain GET with no credential for every host: a config input is any URL
+ * the person names, and a link to a saved flow carries its own signature.
  *
  * @param url - HTTP/HTTPS URL to fetch
  * @returns Response body as a string
- * @throws Error if fetch fails or response is not OK
+ * @throws ConfigFetchError if the host cannot be reached or answers non-OK
  */
 export async function fetchContentString(url: string): Promise<string> {
-  const token = isAppOrigin(url) ? await resolveAccessToken() : null;
-  // Only when a bearer is going along: an unauthenticated config download is
-  // the person naming any URL they like, and http is theirs to choose.
-  if (token) requireSecureUrl(url);
-  const response = await fetch(url, {
-    headers: mergeAuthHeaders(token),
-  });
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (error) {
+    throw new ConfigFetchError(
+      `Could not reach ${url}: ${fetchFailureReason(error)}`,
+      url,
+    );
+  }
   if (!response.ok) {
-    throw new Error(
-      `Failed to fetch ${url}: ${response.status} ${response.statusText}`,
+    throw new ConfigFetchError(
+      `Failed to fetch ${url}: ${response.status} ${response.statusText}`.trimEnd(),
+      url,
+      response.status,
     );
   }
   return response.text();
@@ -175,13 +174,10 @@ export async function loadConfig<T = unknown>(
     // Distinguish between JSON parse errors and resolution errors
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    // Re-throw resolution errors (file not found, fetch failed) as-is
-    if (
-      errorMessage.includes('not found') ||
-      errorMessage.includes('Failed to fetch')
-    ) {
+    // Re-throw resolution errors (a URL that could not be read, a file not
+    // found) as-is
+    if (error instanceof ConfigFetchError || errorMessage.includes('not found'))
       throw error;
-    }
 
     // JSON-looking inline content with parse errors
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {

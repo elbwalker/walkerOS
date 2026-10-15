@@ -1,45 +1,31 @@
-import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackageSchema } from '@walkeros/core';
-import { fetchCatalog, getPackageBaseUrl } from '../catalog.js';
+import { fetchCatalog } from '../catalog.js';
+import type { TemplateResourceSpec } from '../knowledge-spec.js';
 
-export function registerPackageSchemaResources(server: McpServer) {
-  const template = new ResourceTemplate('walkeros://schema/{packageName}', {
-    list: async () => {
-      const { entries } = await fetchCatalog({ baseUrl: getPackageBaseUrl() });
-      return {
-        resources: entries.map((pkg) => ({
-          uri: `walkeros://schema/${encodeURIComponent(pkg.name)}`,
-          name: pkg.name,
-          description: `Schema and examples for ${pkg.name}`,
-          mimeType: 'application/json' as const,
-        })),
-      };
-    },
-  });
-
-  server.registerResource(
-    'package-schema',
-    template,
-    {
-      title: 'walkerOS Package Schema',
-      description:
-        'JSON Schema and configuration examples for walkerOS packages',
+export const PACKAGE_SCHEMA_RESOURCE: TemplateResourceSpec = {
+  kind: 'template',
+  name: 'package-schema',
+  uriTemplate: 'walkeros://schema/{packageName}',
+  title: 'walkerOS Package Schema',
+  description: 'JSON Schema and configuration examples for walkerOS packages',
+  mimeType: 'application/json',
+  async list() {
+    const { entries } = await fetchCatalog();
+    return entries.map((pkg) => ({
+      uri: `walkeros://schema/${encodeURIComponent(pkg.name)}`,
+      name: pkg.name,
+      description: `Schema and examples for ${pkg.name}`,
       mimeType: 'application/json',
-    },
-    async (uri, { packageName }) => {
-      const info = await fetchPackageSchema(
-        decodeURIComponent(packageName as string),
-      );
-      return {
-        contents: [
-          {
-            uri: uri.toString(),
-            mimeType: 'application/json' as const,
-            text: JSON.stringify(info, null, 2),
-          },
-        ],
-      };
-    },
-  );
-}
+    }));
+  },
+  async read(variables) {
+    const value = variables.packageName;
+    const packageName = Array.isArray(value) ? value[0] : value;
+    if (!packageName) throw new Error('packageName is required');
+    const info = await fetchPackageSchema(decodeURIComponent(packageName));
+    return {
+      text: JSON.stringify(info, null, 2),
+      mimeType: 'application/json',
+    };
+  },
+};

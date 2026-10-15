@@ -6,10 +6,13 @@ export function isStdinPiped(): boolean {
   return !process.stdin.isTTY;
 }
 
-export async function readStdin(): Promise<string> {
+export async function readStdin(
+  stream: NodeJS.ReadableStream = process.stdin,
+): Promise<string> {
   const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
+  for await (const chunk of stream) {
+    // A stream may yield strings as well as buffers.
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
   }
   const content = Buffer.concat(chunks).toString('utf-8');
   if (!content.trim()) {

@@ -1,6 +1,5 @@
 import { createLocalRuntime } from '../../runtime/local.js';
 import { createFlowLoadToolSpec } from '../../tools/flow-load.js';
-import { stubClient } from '../support/stub-client.js';
 import { structured, record, textOf } from '../support/tool-result.js';
 
 jest.mock('@walkeros/cli', () => ({
@@ -8,7 +7,7 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  // The real narrowing helper: cloud-id resolution reads the flow record through it.
+  // The real narrowing helper: the local runtime reads through it.
   isObject: jest.requireActual('@walkeros/core').isObject,
   mcpResult: jest.fn((result, hints) => ({
     content: [
@@ -37,7 +36,7 @@ jest.mock('@walkeros/core', () => ({
 }));
 
 import { loadJsonConfig } from '@walkeros/cli';
-// Pull the real v4 schema via the `/dev` entry — separate from the mocked
+// Pull the real v4 schema via the `/dev` entry, separate from the mocked
 // `@walkeros/core` main entry, so the schema bypasses the mock above.
 import { schemas } from '@walkeros/core/dev';
 const FlowJsonSchema = schemas.FlowJsonSchema;
@@ -53,7 +52,7 @@ describe('flow_load tool', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    spec = createFlowLoadToolSpec(stubClient(), createLocalRuntime());
+    spec = createFlowLoadToolSpec(createLocalRuntime());
   });
 
   it('registers with correct name and annotations', () => {
@@ -130,7 +129,7 @@ describe('flow_load tool', () => {
     expect(structured(result)).toMatchObject(mockConfig);
   });
 
-  it('redacts loaded config identically to flow_manage get (structural keys literal, values wrapped)', async () => {
+  it('redacts the loaded config (structural keys literal, values wrapped)', async () => {
     const loaded = {
       version: 4,
       flows: {
@@ -150,7 +149,7 @@ describe('flow_load tool', () => {
     const result = await spec.handler({ source: './flow.json' });
     const out = structured(result);
 
-    // Structural keys literal — same rule as flow_manage get.
+    // Structural keys literal.
     expect(out.version).toBe(4);
     expect(at(out, 'flows', 'default', 'config', 'platform')).toBe('web');
     expect(at(out, 'flows', 'default', 'destinations', 'demo', 'package')).toBe(
@@ -191,149 +190,17 @@ describe('flow_load tool', () => {
     expect(serverParse.success).toBe(true);
   });
 
-  describe('load by flow/cfg ID via ToolClient', () => {
-    it('routes a cfg_ source through client.getFlow, not loadJsonConfig', async () => {
-      const getFlow = jest.fn().mockResolvedValue({
-        id: 'cfg_abc',
-        name: 'My Flow',
-        config: { version: 4, flows: {} },
-      });
-      spec = createFlowLoadToolSpec(
-        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
-        createLocalRuntime(),
+  describe('a flow_ or cfg_ shaped source', () => {
+    it('is read through the runtime like any path, and reaches no app', async () => {
+      mockLoadJsonConfig.mockRejectedValue(
+        new Error('Configuration file not found: /work/flow_abc123'),
       );
 
-      const result = await spec.handler({ source: 'cfg_abc' });
+      const result = await spec.handler({ source: 'flow_abc123' });
 
-      expect(getFlow).toHaveBeenCalledTimes(1);
-      expect(getFlow).toHaveBeenCalledWith({
-        flowId: 'cfg_abc',
-        projectId: 'proj_default',
-      });
-      expect(mockLoadJsonConfig).not.toHaveBeenCalled();
-      expect(record(result).isError).toBeUndefined();
-      expect(structured(result)).toMatchObject({
-        version: 4,
-        flows: {},
-      });
-    });
-
-    it('routes a flow_ source through client.getFlow, not loadJsonConfig', async () => {
-      const getFlow = jest.fn().mockResolvedValue({
-        id: 'flow_xyz',
-        config: { version: 4, flows: {} },
-      });
-      spec = createFlowLoadToolSpec(
-        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
-        createLocalRuntime(),
-      );
-
-      const result = await spec.handler({ source: 'flow_xyz' });
-
-      expect(getFlow).toHaveBeenCalledTimes(1);
-      expect(getFlow).toHaveBeenCalledWith({
-        flowId: 'flow_xyz',
-        projectId: 'proj_default',
-      });
-      expect(mockLoadJsonConfig).not.toHaveBeenCalled();
-      expect(record(result).isError).toBeUndefined();
-    });
-
-    it.each([
-      ['./flow.json', './flow.json'],
-      ['https://example.com/flow.json', 'https://example.com/flow.json'],
-      ['{"version":4,"flows":{}}', '{"version":4,"flows":{}}'],
-    ])('routes non-ID source %s to loadJsonConfig', async (source) => {
-      const getFlow = jest.fn();
-      mockLoadJsonConfig.mockResolvedValue({ version: 4, flows: {} });
-      spec = createFlowLoadToolSpec(
-        stubClient({ getFlow }),
-        createLocalRuntime(),
-      );
-
-      await spec.handler({ source });
-
-      expect(mockLoadJsonConfig).toHaveBeenCalledWith(source);
-      expect(getFlow).not.toHaveBeenCalled();
-    });
-
-    it('errors with NO_DEFAULT_PROJECT message when no default project and an ID source', async () => {
-      const getFlow = jest.fn();
-      spec = createFlowLoadToolSpec(
-        stubClient({ getFlow, getDefaultProject: () => null }),
-        createLocalRuntime(),
-      );
-
-      const result = await spec.handler({ source: 'cfg_abc' });
-
+      expect(mockLoadJsonConfig).toHaveBeenCalledWith('flow_abc123');
       expect(record(result).isError).toBe(true);
-      const parsed = record(JSON.parse(textOf(result)));
-      expect(parsed.error).toContain('No project selected');
-      expect(parsed.error).not.toContain('Flow not found');
-      expect(getFlow).not.toHaveBeenCalled();
-    });
-
-    it('surfaces a NOT_FOUND-style error for a non-existent ID, not a file-not-found message', async () => {
-      const getFlow = jest
-        .fn()
-        .mockRejectedValue(new Error('Flow not found: cfg_missing'));
-      spec = createFlowLoadToolSpec(
-        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
-        createLocalRuntime(),
-      );
-
-      const result = await spec.handler({ source: 'cfg_missing' });
-
-      expect(record(result).isError).toBe(true);
-      const parsed = record(JSON.parse(textOf(result)));
-      expect(parsed.error).toContain('Flow not found');
-      expect(parsed.error).not.toContain('Configuration file not found');
-      expect(parsed.hint ?? '').not.toContain('configPath');
-    });
-
-    it('redacts the ID-loaded config: structural keys literal, values wrapped', async () => {
-      const getFlow = jest.fn().mockResolvedValue({
-        id: 'cfg_abc',
-        config: {
-          version: 4,
-          flows: {
-            default: {
-              config: { platform: 'web' },
-              destinations: {
-                demo: {
-                  package: '@walkeros/destination-demo',
-                  config: { settings: { apiKey: 'secret' } },
-                },
-              },
-            },
-          },
-        },
-      });
-      spec = createFlowLoadToolSpec(
-        stubClient({ getFlow, getDefaultProject: () => 'proj_default' }),
-        createLocalRuntime(),
-      );
-
-      const result = await spec.handler({ source: 'cfg_abc' });
-      const out = structured(result);
-
-      expect(out.version).toBe(4);
-      expect(at(out, 'flows', 'default', 'config', 'platform')).toBe('web');
-      expect(
-        at(out, 'flows', 'default', 'destinations', 'demo', 'package'),
-      ).toBe('@walkeros/destination-demo');
-      expect(
-        at(
-          out,
-          'flows',
-          'default',
-          'destinations',
-          'demo',
-          'config',
-          'settings',
-          'apiKey',
-        ),
-      ).toBe('<user_data>secret</user_data>');
+      expect(textOf(result)).toContain('Configuration file not found');
     });
   });
 });

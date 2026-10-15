@@ -1,58 +1,38 @@
 jest.mock('@walkeros/cli', () => ({
-  validate: jest.fn(),
   bundle: jest.fn(),
-  simulate: jest.fn(),
   push: jest.fn(),
-  examples: jest.fn(),
-  flowLoad: jest.fn(),
-  loadFlow: jest.fn(),
-  listReleases: jest.fn(),
-  getRelease: jest.fn(),
-  listStepHistory: jest.fn(),
-  setReleaseRationale: jest.fn(),
-  listThreads: jest.fn(),
-  createThread: jest.fn(),
-  addThreadMessage: jest.fn(),
-  listKnowledge: jest.fn(),
-  listFrames: jest.fn(),
-  listPageFrames: jest.fn(),
-  getFrame: jest.fn(),
+  loadJsonConfig: jest.fn(),
+  loadConfig: jest.fn(),
+  collectKnownSecrets: jest.fn(),
+  simulateSource: jest.fn(),
+  simulateTransformer: jest.fn(),
+  simulateCollector: jest.fn(),
+  simulateDestination: jest.fn(),
 }));
 
 import { createToolHandlers } from '../index.js';
-import { stubClient } from './support/stub-client.js';
-import { isErrorResult } from './support/tool-result.js';
+import { createLocalRuntime } from '../runtime/local.js';
+import { isErrorResult, textOf } from './support/tool-result.js';
 
 describe('createToolHandlers', () => {
-  it('returns specs for all 19 tools keyed by name', () => {
-    const specs = createToolHandlers(stubClient());
+  it('returns specs for the eight local tools keyed by name', () => {
+    const specs = createToolHandlers(createLocalRuntime());
     expect(Object.keys(specs).sort()).toEqual(
       [
-        'auth',
-        'deploy_manage',
-        'diagnostics',
-        'feedback',
         'flow_bundle',
         'flow_examples',
         'flow_load',
-        'flow_manage',
         'flow_push',
         'flow_simulate',
         'flow_validate',
-        'frame_manage',
-        'hub_manage',
-        'observe_journeys',
-        'observe_session',
         'package_get',
         'package_search',
-        'project_manage',
-        'secret_manage',
       ].sort(),
     );
   });
 
   it('each spec has name, title, description, inputSchema, annotations, handler', () => {
-    const specs = createToolHandlers(stubClient());
+    const specs = createToolHandlers(createLocalRuntime());
     for (const [key, spec] of Object.entries(specs)) {
       expect(spec.name).toBe(key);
       expect(typeof spec.title).toBe('string');
@@ -63,14 +43,15 @@ describe('createToolHandlers', () => {
     }
   });
 
-  it('defaults to the hosted runtime, so building a flow is refused', async () => {
-    const specs = createToolHandlers(stubClient());
-    const res = await specs['flow_simulate'].handler({
+  it('a runtime with load only refuses to simulate, naming no hosted server', async () => {
+    const specs = createToolHandlers({ load: async () => ({}) });
+    const res = await specs.flow_simulate.handler({
       configPath: '{"version":4,"flows":{}}',
       step: 'destination.x',
       event: { name: 'order complete' },
     });
     expect(isErrorResult(res)).toBe(true);
-    expect(JSON.stringify(res)).toMatch(/hosted/i);
+    expect(textOf(res)).toMatch(/not available on this server/);
+    expect(textOf(res)).not.toMatch(/hosted/i);
   });
 });

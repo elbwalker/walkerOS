@@ -8,15 +8,14 @@ const baseSyntax = baseConfig.flatMap((block) => {
   return Array.isArray(rule) ? rule.slice(1) : [];
 });
 
-// App operations go through the typed client (`apiRequest`, or the
-// openapi-fetch client), so the compiler checks each against the contract.
+// The CLI calls a fixed set of app operations, named in one file, so the app
+// can keep each one in its public API set.
 const apiPathMessage =
-  "Call the app through apiRequest('<METHOD> <path>') or the typed openapi-fetch client, not a string path.";
-const openapiFetchArgument =
-  'CallExpression[callee.type="MemberExpression"][callee.property.name=/^(GET|POST|PUT|PATCH|DELETE)$/] > Literal.arguments:first-child';
+  'The CLI names app paths only in src/core/app-paths.ts (its fixed operations); walkeros api takes its path from the person.';
 const apiPathSyntax = [
   {
-    selector: `Literal[value=/^\\/api\\//]:not(${openapiFetchArgument}):not(TSLiteralType > Literal):not(TSPropertySignature > Literal.key)`,
+    selector:
+      'Literal[value=/^\\/api\\//]:not(TSLiteralType > Literal):not(TSPropertySignature > Literal.key)',
     message: apiPathMessage,
   },
   {
@@ -32,7 +31,7 @@ export default [
   ...baseConfig,
   {
     files: ['src/**/*.ts'],
-    ignores: [...tests, ...devZones],
+    ignores: [...tests, ...devZones, 'src/core/app-paths.ts'],
     rules: {
       'no-restricted-syntax': ['error', ...baseSyntax, ...apiPathSyntax],
     },
@@ -68,27 +67,6 @@ export default [
             'Dynamic import() in the bundle codegen must use a literal specifier so esbuild can statically analyse and DCE it.',
         },
         ...apiPathSyntax,
-      ],
-    },
-  },
-  {
-    // The raw fetch helpers stay public API (re-exported by src/index.ts),
-    // but app calls outside src/core go through apiRequest.
-    files: ['src/**/*.ts'],
-    ignores: ['src/core/**', 'src/index.ts', ...tests],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              regex: '(^|/)core/http(\\.js)?$',
-              importNames: ['apiFetch', 'publicFetch', 'deployFetch'],
-              message:
-                'Call the app through apiRequest from core/api-request instead.',
-            },
-          ],
-        },
       ],
     },
   },

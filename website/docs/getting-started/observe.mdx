@@ -169,9 +169,7 @@ receive the same flow records via `observers`:
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
-  observers: [
-    (state) => console.log('flow state', state.stepId, state.phase),
-  ],
+  observers: [(state) => console.log('flow state', state.stepId, state.phase)],
 });`}
   language="typescript"
 />

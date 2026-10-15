@@ -1,9 +1,9 @@
-import { registerReferenceResources } from '../../resources/references.js';
+import { KNOWLEDGE_RESOURCES } from '../../specs.js';
+import { registerResourceSpec } from '../../server.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { record, rows, str } from '../support/tool-result.js';
-import { stubClient } from '../support/stub-client.js';
 
 jest.mock('../../catalog.js', () => ({
   fetchCatalog: jest.fn().mockResolvedValue({
@@ -18,7 +18,6 @@ jest.mock('../../catalog.js', () => ({
     ],
     warnings: [],
   }),
-  getPackageBaseUrl: jest.fn(() => undefined),
 }));
 
 /**
@@ -27,7 +26,7 @@ jest.mock('../../catalog.js', () => ({
  */
 async function connectedClient(): Promise<Client> {
   const server = new McpServer({ name: 'test', version: '0.0.0' });
-  registerReferenceResources(server, stubClient());
+  for (const spec of KNOWLEDGE_RESOURCES) registerResourceSpec(server, spec);
   const [clientTransport, serverTransport] =
     InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0' });
@@ -171,10 +170,6 @@ describe('reference resources', () => {
   });
 
   describe('already-automated resources', () => {
-    it('should register openapi resource', async () => {
-      expect(await hasResource('openapi')).toBe(true);
-    });
-
     it('should register packages resource', async () => {
       expect(await hasResource('packages')).toBe(true);
     });

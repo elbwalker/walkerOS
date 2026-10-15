@@ -15,8 +15,11 @@ jest.mock('@walkeros/cli/dev', () => ({
   },
 }));
 
-jest.mock('@walkeros/cli', () => ({
+jest.mock('@walkeros/cli/validate', () => ({
   validate: jest.fn(),
+}));
+
+jest.mock('@walkeros/cli', () => ({
   // The local runtime resolves the input through this loader first.
   loadJsonConfig: jest.fn(async (input: string) => JSON.parse(input)),
 }));
@@ -24,7 +27,7 @@ jest.mock('@walkeros/cli', () => ({
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { createFlowValidateToolSpec } from '../../tools/validate';
 import { structured, rows, str } from '../support/tool-result.js';
-import { validate } from '@walkeros/cli';
+import { validate } from '@walkeros/cli/validate';
 
 const mockValidate = jest.mocked(validate);
 
@@ -52,7 +55,7 @@ describe('flow_validate leaves issue messages literal', () => {
     });
 
     expect(structured(r).errors).toHaveLength(2);
-    // Validation messages are tool-generated, not echoed user input — literal
+    // Validation messages are tool-generated, not echoed user input: literal
     // like `path`, never wrapped in <user_data>.
     expect(rows(structured(r).errors)[0]?.message).toBe(
       'expected object, got string',

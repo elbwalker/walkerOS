@@ -1,7 +1,6 @@
-import { validate } from '@walkeros/cli';
-import type { ValidateResult } from '@walkeros/cli';
+import { validate } from '@walkeros/cli/validate';
+import type { ValidateResult } from '@walkeros/cli/validate';
 import { schemas } from '@walkeros/cli/dev';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { ValidateOutputShape } from '../schemas/output.js';
 
@@ -12,7 +11,6 @@ import {
   RuntimeRefusal,
   type FlowRuntime,
 } from '../runtime/types.js';
-import { isCloudId } from '../cloud-flow.js';
 
 type ValidateType = 'contract' | 'event' | 'flow' | 'mapping';
 
@@ -20,8 +18,9 @@ type ValidateType = 'contract' | 'event' | 'flow' | 'mapping';
  * Resolve the validate input through the runtime. For `type: 'event'`, a bare
  * string the runtime cannot resolve is the event-name shorthand and becomes
  * `{ name }`; the shorthand reads nothing, so it holds under every runtime.
- * Every other failure surfaces: a `RuntimeRefusal` (a policy decision), a
- * failed saved-id lookup, and any load error for a flow, mapping or contract.
+ * Every other failure surfaces: a `RuntimeRefusal` (a refused input, or a
+ * reference the host recognised but could not read), and any load error for a
+ * flow, mapping or contract.
  */
 async function loadValidateInput(
   runtime: FlowRuntime,
@@ -34,20 +33,30 @@ async function loadValidateInput(
   try {
     return await runtime.load(input);
   } catch (error) {
-    if (error instanceof RuntimeRefusal || isCloudId(trimmed)) throw error;
+    if (error instanceof RuntimeRefusal) throw error;
     if (looksLikeJson) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to parse ${type}. ${message}`);
     }
-    if (type === 'event') return { name: trimmed };
+    if (type === 'event' && !isHttpUrl(trimmed)) return { name: trimmed };
     throw error;
+  }
+}
+
+/** A URL names a document to read; a read that failed is never an event name. */
+function isHttpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
   }
 }
 
 const TITLE = 'Validate Flow';
 const DESCRIPTION =
   'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
-  'Accepts JSON strings, file paths, or URLs as input; on the hosted server only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
+  'Accepts inline JSON, or a reference this server can read (on your own machine a file path or an http(s) URL). ' +
   "With only type and input, a flow runs every check on every flow and step, including each package's settings schema (fetched from the package CDN; offline: true skips that and says so). " +
   'flow and path narrow the run; strict turns warnings and skips into failures: valid is false. ' +
   'Returns valid, errors and warnings with stable codes, and details.scope (what was checked), details.skipped (checks that could not run) and details.deferred (values known only at runtime).';
@@ -67,6 +76,7 @@ export function createFlowValidateToolSpec(runtime: FlowRuntime): ToolSpec {
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
+    outputSchema: ValidateOutputShape,
     annotations,
     handler: (input) => flowValidateHandlerBody(runtime, input),
   };
@@ -126,34 +136,15 @@ async function flowValidateHandlerBody(runtime: FlowRuntime, input: unknown) {
               }
             : { next };
     // Validation `message` and `path` are tool-generated, not echoed user
-    // input — both stay literal, never wrapped in <user_data>.
+    // input: both stay literal, never wrapped in <user_data>.
     return mcpResult(result, hints);
   } catch (error) {
     return mcpError(
       error,
       refusalHint(
         error,
-        'Check the input parameter — expected a JSON string, file path, or URL',
+        'Check the input parameter: expected a JSON string, file path, or URL',
       ),
     );
   }
-}
-
-export function registerFlowValidateTool(
-  server: McpServer,
-  runtime: FlowRuntime,
-) {
-  const spec = createFlowValidateToolSpec(runtime);
-  server.registerTool(
-    spec.name,
-    {
-      title: spec.title,
-      description: spec.description,
-      inputSchema: spec.inputSchema,
-      // outputSchema is wire-only; not part of ToolSpec
-      outputSchema: ValidateOutputShape,
-      annotations: spec.annotations,
-    },
-    (args) => flowValidateHandlerBody(runtime, args),
-  );
 }

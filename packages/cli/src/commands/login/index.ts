@@ -12,7 +12,8 @@ import {
   getConfigPath,
 } from '../../lib/config-file.js';
 import { requireSecureUrl } from '../../lib/secure-url.js';
-import { apiRequest } from '../../core/api-request.js';
+import { appFetch } from '../../core/app-fetch.js';
+import { APP_PATHS } from '../../core/app-paths.js';
 import type { GlobalOptions } from '../../types/global.js';
 
 /**
@@ -175,9 +176,9 @@ async function fetchEmail(
   fetchFn: typeof globalThis.fetch,
 ): Promise<string | undefined> {
   try {
-    const response = await apiRequest('GET /api/auth/whoami', {
-      auth: { token: accessToken },
+    const response = await appFetch(APP_PATHS.whoami, {
       baseUrl: appUrl,
+      token: accessToken,
       fetch: fetchFn,
       signal: AbortSignal.timeout(WHOAMI_TIMEOUT_MS),
     });
@@ -208,8 +209,8 @@ async function persistSession(
     token: undefined,
   });
 
-  // Unconditional: a stale address is worse than none, since `walkeros
-  // feedback` sends it as the reporter's identity.
+  // Unconditional: a stale address is worse than none, since it names the
+  // account this session belongs to.
   const email = await fetchEmail(appUrl, tokens.accessToken, fetchFn);
   writeConfig({ email });
 }

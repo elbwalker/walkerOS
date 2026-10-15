@@ -12,14 +12,6 @@ export {
   getAuthHeaders,
   credentialSource,
 } from './auth.js';
-export {
-  apiFetch,
-  publicFetch,
-  deployFetch,
-  mergeAuthHeaders,
-} from './http.js';
-export { parseSSEEvents } from './sse.js';
-export type { SSEEvent, SSEParseResult } from './sse.js';
 export * from './event-validation.js';
 export * from './package-path.js';
 export * from './import-specifier.js';

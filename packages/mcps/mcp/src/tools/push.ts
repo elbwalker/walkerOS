@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { PushResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { mcpError } from '@walkeros/core';
 import { PushOutputShape } from '../schemas/output.js';
@@ -19,7 +18,7 @@ const TITLE = 'Push Events';
 const DESCRIPTION =
   'Push a real event through a walkerOS flow to actual destinations. ' +
   'Makes real API calls to real endpoints. ' +
-  'Best suited for server-side flows — web flows should use flow_simulate for testing.';
+  'Best suited for server-side flows; web flows should use flow_simulate for testing.';
 
 const inputSchema = {
   configPath: schemas.PushInputShape.configPath,
@@ -45,6 +44,7 @@ export function createFlowPushToolSpec(runtime: FlowRuntime): ToolSpec {
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
+    outputSchema: PushOutputShape,
     annotations,
     handler: (input) => flowPushHandlerBody(runtime, input),
   };
@@ -100,20 +100,4 @@ async function flowPushHandlerBody(
       known,
     );
   }
-}
-
-export function registerFlowPushTool(server: McpServer, runtime: FlowRuntime) {
-  const spec = createFlowPushToolSpec(runtime);
-  server.registerTool(
-    spec.name,
-    {
-      title: spec.title,
-      description: spec.description,
-      inputSchema: spec.inputSchema,
-      // outputSchema is wire-only; not part of ToolSpec
-      outputSchema: PushOutputShape,
-      annotations: spec.annotations,
-    },
-    (args) => flowPushHandlerBody(runtime, args),
-  );
 }

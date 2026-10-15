@@ -31,7 +31,15 @@ Add a `@walkeros/transformer-validate` step, point its `contract` setting at the
   code={`{
   "version": 4,
   "contract": {
-    "web": { "events": { "order": { "complete": { "properties": { "data": { "required": ["total", "currency"] } } } } } }
+    "web": {
+      "events": {
+        "order": {
+          "complete": {
+            "properties": { "data": { "required": ["total", "currency"] } }
+          }
+        }
+      }
+    }
   },
   "flows": {
     "default": {
@@ -39,18 +47,22 @@ Add a `@walkeros/transformer-validate` step, point its `contract` setting at the
       "transformers": {
         "validate": {
           "package": "@walkeros/transformer-validate",
-          "config": { "settings": {
-            "contract": ["$contract.web"],
-            "format": true,
-            "mode": "strict",
-            "output": { "isValid": "source.valid", "errors": "validation" }
-          } }
+          "config": {
+            "settings": {
+              "contract": ["$contract.web"],
+              "format": true,
+              "mode": "strict",
+              "output": { "isValid": "source.valid", "errors": "validation" }
+            }
+          }
         }
       },
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
-          "config": { "settings": { "ga4": { "measurementId": "G-DEMO123456" } } },
+          "config": {
+            "settings": { "ga4": { "measurementId": "G-DEMO123456" } }
+          },
           "before": "validate"
         }
       }

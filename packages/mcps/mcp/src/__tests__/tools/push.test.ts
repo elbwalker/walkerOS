@@ -1,9 +1,5 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { createLocalRuntime } from '../../runtime/local.js';
-import {
-  createFlowPushToolSpec,
-  registerFlowPushTool,
-} from '../../tools/push.js';
+import { createFlowPushToolSpec } from '../../tools/push.js';
 import { PushOutputShape } from '../../schemas/output.js';
 
 jest.mock('@walkeros/cli/dev', () => jest.requireActual('@walkeros/cli/dev'));
@@ -67,11 +63,7 @@ describe('flow_push tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    const server = new McpServer({ name: 'test', version: '0.0.0' });
-    const registerTool = jest.spyOn(server, 'registerTool');
-    registerFlowPushTool(server, createLocalRuntime());
-    const call: unknown[] = registerTool.mock.calls[0] ?? [];
-    expect(record(call[1]).outputSchema).toBe(PushOutputShape);
+    expect(spec.outputSchema).toBe(PushOutputShape);
   });
 
   it('calls push with correct params', async () => {

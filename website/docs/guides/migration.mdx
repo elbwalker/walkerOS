@@ -76,7 +76,7 @@ import type { WalkerOS } from '@walkeros/core';`}
 
 <CodeSnippet
   code={`const walker = Walkerjs({
-destinations: [destinationGoogleGA4],
+  destinations: [destinationGoogleGA4],
 });`}
   language="typescript"
 />
@@ -85,24 +85,24 @@ destinations: [destinationGoogleGA4],
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
-sources: {
-browser: {
-code: sourceBrowser,
-config: {
-  settings: { scope: document.body },
-},
-},
-},
-destinations: {
-gtag: {
-code: destinationGtag,
-config: {
-  settings: {
-    ga4: { measurementId: 'G-XXXXXXXXXX' },
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: { scope: document.body },
+      },
+    },
   },
-},
-},
-},
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          ga4: { measurementId: 'G-XXXXXXXXXX' },
+        },
+      },
+    },
+  },
 });`}
   language="typescript"
 />
@@ -137,24 +137,24 @@ Configure all sources and destinations in a single `startFlow` call:
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
-sources: {
-browser: {
-code: sourceBrowser,
-config: {
-  settings: { scope: document.body },
-},
-},
-},
-destinations: {
-gtag: {
-code: destinationGtag,
-config: {
-  settings: {
-    ga4: { measurementId: 'G-XXXXXXXXXX' },
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: { scope: document.body },
+      },
+    },
   },
-},
-},
-},
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          ga4: { measurementId: 'G-XXXXXXXXXX' },
+        },
+      },
+    },
+  },
 });`}
   language="typescript"
 />

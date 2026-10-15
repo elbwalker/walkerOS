@@ -1,12 +1,8 @@
 import { createLocalRuntime } from '../../runtime/local.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import {
-  createFlowValidateToolSpec,
-  registerFlowValidateTool,
-} from '../../tools/validate.js';
+import { createFlowValidateToolSpec } from '../../tools/validate.js';
 import { structured, record, rows, textOf } from '../support/tool-result.js';
 import { ValidateOutputShape } from '../../schemas/output.js';
-import type { ValidateResult } from '@walkeros/cli';
+import type { ValidateResult } from '@walkeros/cli/validate';
 
 jest.mock('@walkeros/cli/dev', () => ({
   schemas: {
@@ -24,8 +20,11 @@ jest.mock('@walkeros/cli/dev', () => ({
   },
 }));
 
-jest.mock('@walkeros/cli', () => ({
+jest.mock('@walkeros/cli/validate', () => ({
   validate: jest.fn(),
+}));
+
+jest.mock('@walkeros/cli', () => ({
   loadJsonConfig: jest.fn(),
 }));
 
@@ -56,7 +55,8 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import { validate, loadJsonConfig } from '@walkeros/cli';
+import { validate } from '@walkeros/cli/validate';
+import { loadJsonConfig } from '@walkeros/cli';
 const mockValidate = jest.mocked(validate);
 const mockLoadJsonConfig = jest.mocked(loadJsonConfig);
 
@@ -91,19 +91,7 @@ describe('flow_validate tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    // The mocked input shape is not a zod shape, so the SDK's own
-    // registration would reject it: capture the config without registering.
-    const server = new McpServer({ name: 'test', version: '0.0.0' });
-    const placeholder = new McpServer({
-      name: 'scratch',
-      version: '0.0.0',
-    }).registerTool('placeholder', {}, () => ({ content: [] }));
-    const registerTool = jest
-      .spyOn(server, 'registerTool')
-      .mockReturnValue(placeholder);
-    registerFlowValidateTool(server, createLocalRuntime());
-    const call: unknown[] = registerTool.mock.calls[0] ?? [];
-    expect(record(call[1]).outputSchema).toBe(ValidateOutputShape);
+    expect(spec.outputSchema).toBe(ValidateOutputShape);
   });
 
   it('calls validate with correct params', async () => {

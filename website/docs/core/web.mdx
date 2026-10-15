@@ -113,7 +113,7 @@ triggers.
 <CodeSnippet
   code={`const promoElement = document.getElementById('promotion');
 if (isVisible(promoElement)) {
-// Element is rendered and nothing else is painted over it
+  // Element is rendered and nothing else is painted over it
 }`}
   language="javascript"
 />
@@ -189,10 +189,10 @@ const session = sessionStart();
 
 // Custom session configuration
 const session = sessionStart({
-storage: true,
-domain: '.example.com',
-maxAge: 1440, // 24 hours
-sampling: 1.0, // 100% sampling
+  storage: true,
+  domain: '.example.com',
+  maxAge: 1440, // 24 hours
+  sampling: 1.0, // 100% sampling
 });`}
   language="javascript"
 />
@@ -228,8 +228,8 @@ await sendWeb(url, data, { transport: 'xhr' });
 
 // With custom headers
 await sendWeb(url, data, {
-headers: { Authorization: 'Bearer token' },
-method: 'PUT',
+  headers: { Authorization: 'Bearer token' },
+  method: 'PUT',
 });`}
   language="javascript"
 />
@@ -243,9 +243,9 @@ uses the modern Fetch API with advanced options.
 
 <CodeSnippet
   code={`await sendWebAsFetch(url, data, {
-credentials: 'include',
-noCors: true,
-headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  noCors: true,
+  headers: { 'Content-Type': 'application/json' },
 });`}
   language="javascript"
 />
@@ -258,7 +258,7 @@ Beacon API for reliable data transmission, especially during page unload.
 <CodeSnippet
   code={`// Reliable sending during page unload
 window.addEventListener('beforeunload', () => {
-sendWebAsBeacon('/analytics/pageview', { duration: Date.now() - startTime });
+  sendWebAsBeacon('/analytics/pageview', { duration: Date.now() - startTime });
 });`}
   language="javascript"
 />
@@ -284,8 +284,8 @@ hashes using the Web Crypto API.
 <CodeSnippet
   code={`// Generate hash for fingerprinting
 const userFingerprint = await getHashWeb(
-navigator.userAgent + navigator.language + screen.width,
-16,
+  navigator.userAgent + navigator.language + screen.width,
+  16,
 );
 // Returns shortened hash like '47e0bdd10f04ef13'`}
   language="javascript"
@@ -297,15 +297,15 @@ navigator.userAgent + navigator.language + screen.width,
 
 <CodeSnippet
   code={`interface SendWebOptions {
-headers?: Record<string, string>;
-method?: string; // Default: 'POST'
-transport?: 'fetch' | 'beacon' | 'xhr'; // Default: 'fetch'
+  headers?: Record<string, string>;
+  method?: string; // Default: 'POST'
+  transport?: 'fetch' | 'beacon' | 'xhr'; // Default: 'fetch'
 }
 
 interface SendWebOptionsFetch extends SendWebOptions {
-credentials?: 'omit' | 'same-origin' | 'include';
-noCors?: boolean;
-timeout?: number; // Abort the request after this many ms (default 10000)
+  credentials?: 'omit' | 'same-origin' | 'include';
+  noCors?: boolean;
+  timeout?: number; // Abort the request after this many ms (default 10000)
 }`}
   language="typescript"
 />
@@ -314,10 +314,10 @@ timeout?: number; // Abort the request after this many ms (default 10000)
 
 <CodeSnippet
   code={`interface SessionConfig {
-storage?: boolean; // Enable storage persistence
-domain?: string; // Cookie domain
-maxAge?: number; // Session duration in minutes
-sampling?: number; // Sampling rate (0-1)
+  storage?: boolean; // Enable storage persistence
+  domain?: string; // Cookie domain
+  maxAge?: number; // Session duration in minutes
+  sampling?: number; // Sampling rate (0-1)
 }`}
   language="typescript"
 />

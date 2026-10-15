@@ -190,10 +190,15 @@ One store instance is exactly one mode.
 ## API
 
 <CodeSnippet
-  code={`const file = await store.get('walker.js');           // StoreValue | undefined
-await store.set('data.json', { ok: true });          // structured value
-await store.set('walker.js', new Uint8Array([/*…*/])); // file mode: raw bytes
-await store.delete('old-file.txt');                   // void`}
+  code={`const file = await store.get('walker.js'); // StoreValue | undefined
+await store.set('data.json', { ok: true }); // structured value
+await store.set(
+  'walker.js',
+  new Uint8Array([
+    /*…*/
+  ]),
+); // file mode: raw bytes
+await store.delete('old-file.txt'); // void`}
   language="typescript"
 />
 

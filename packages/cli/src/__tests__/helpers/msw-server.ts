@@ -1,4 +1,4 @@
 import { setupServer } from 'msw/node';
-import { handlers } from './msw-handlers.js';
 
-export const server = setupServer(...handlers);
+/** Shared msw server with no default handlers: each test adds its own. */
+export const server = setupServer();

@@ -1,10 +1,9 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
 import type { Flow, WalkerOSPackage } from '@walkeros/core';
-import { resolveExportName, selectDevExamples } from '@walkeros/cli';
+import { resolveExportName, selectDevExamples } from '@walkeros/cli/dev';
 import { ExamplesListOutputShape } from '../schemas/output.js';
-import { getPackageBaseUrl, CLIENT_HEADER } from '../catalog.js';
+import { CLIENT_HEADER } from '../catalog.js';
 
 import type { ToolSpec } from '../tool-spec.js';
 import { parseToolInput } from './parse-input.js';
@@ -25,7 +24,7 @@ const DESCRIPTION =
   'Inline examples on a step take precedence; steps without inline examples ' +
   'fall back to the examples shipped by their referenced package. ' +
   'Each result is tagged with its source ("inline" or "package"). ' +
-  'On the hosted server configPath accepts only inline JSON or a saved flow id (flow_ or cfg_), no file paths or URLs. ' +
+  'configPath: inline JSON, or a reference this server can read (locally a file path or an http(s) URL). ' +
   'Use this to discover available test fixtures and simulation data.';
 
 const inputSchema = {
@@ -33,7 +32,7 @@ const inputSchema = {
     .string()
     .min(1)
     .describe(
-      'Inline JSON string, file path, or URL of a flow configuration (hosted server: inline JSON or a saved flow id only)',
+      'A flow configuration: inline JSON, or a reference this server can read (locally a file path or an http(s) URL).',
     ),
   flow: z.string().optional().describe('Flow name for multi-flow configs'),
   step: z
@@ -67,6 +66,7 @@ export function createFlowExamplesToolSpec(runtime: FlowRuntime): ToolSpec {
     title: TITLE,
     description: DESCRIPTION,
     inputSchema,
+    outputSchema: ExamplesListOutputShape,
     annotations,
     handler: (input) => flowExamplesHandlerBody(runtime, input),
   };
@@ -157,15 +157,11 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
     // Pull a referenced package's shipped examples via the same path
     // package_get uses. A failed fetch must not break the whole tool: the
     // step is skipped and inline examples from other steps still return.
-    const baseUrl = getPackageBaseUrl();
     const loadPackage = async (
       packageName: string,
     ): Promise<WalkerOSPackage | undefined> => {
       try {
-        return await fetchPackage(packageName, {
-          baseUrl,
-          client: CLIENT_HEADER,
-        });
+        return await fetchPackage(packageName, { client: CLIENT_HEADER });
       } catch {
         // Swallow: graceful fallback skip for this package.
       }
@@ -276,26 +272,7 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
   } catch (error) {
     return mcpError(
       error,
-      refusalHint(error, 'Check configPath — expected a flow.json file'),
+      refusalHint(error, 'Check configPath: expected a flow.json file'),
     );
   }
-}
-
-export function registerFlowExamplesTool(
-  server: McpServer,
-  runtime: FlowRuntime,
-) {
-  const spec = createFlowExamplesToolSpec(runtime);
-  server.registerTool(
-    spec.name,
-    {
-      title: spec.title,
-      description: spec.description,
-      inputSchema: spec.inputSchema,
-      // outputSchema is wire-only; not part of ToolSpec
-      outputSchema: ExamplesListOutputShape,
-      annotations: spec.annotations,
-    },
-    (args) => flowExamplesHandlerBody(runtime, args),
-  );
 }

@@ -19,15 +19,21 @@ const common = {
     '@walkeros/cli',
     '@walkeros/core',
   ],
+  // The examples reference ships inside the package: a host that bundles the
+  // server has no @walkeros/cli on disk to read it from.
+  noExternal: ['@walkeros/cli/examples/flow-complete.json'],
   define: {
     __VERSION__: JSON.stringify(version),
   },
 };
 
 export default defineConfig([
+  // The main and the spec entry share chunks, so both carry one
+  // RuntimeRefusal class and an instanceof check holds across them.
   {
     ...common,
-    entry: { index: 'src/index.ts' },
+    entry: { index: 'src/index.ts', specs: 'src/specs.ts' },
+    splitting: true,
   },
   {
     ...common,

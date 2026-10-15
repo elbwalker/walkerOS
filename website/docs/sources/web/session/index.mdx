@@ -94,9 +94,9 @@ that either carries marketing parameters or arrives from another host:
   code={`// Simplified: when a page load starts a session
 const [navigation] = performance.getEntriesByType('navigation');
 const isNewSession =
-  navigation?.type === 'navigate' &&            // a plain navigation
-  (hasMarketingParameters(location.href) ||     // UTM parameters or a click ID
-    referrerHostname !== location.hostname);    // another site or subdomain, or no referrer (direct)`}
+  navigation?.type === 'navigate' && // a plain navigation
+  (hasMarketingParameters(location.href) || // UTM parameters or a click ID
+    referrerHostname !== location.hostname); // another site or subdomain, or no referrer (direct)`}
   language="typescript"
 />
 

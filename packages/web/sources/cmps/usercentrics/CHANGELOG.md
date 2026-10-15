@@ -1,5 +1,14 @@
 # @walkeros/web-source-cmp-usercentrics
 
+## 4.8.1
+
+### Patch Changes
+
+- Updated dependencies [7df8a2e]
+- Updated dependencies [1062e99]
+  - @walkeros/collector@4.8.1
+  - @walkeros/core@4.8.1
+
 ## 4.8.0
 
 ### Patch Changes

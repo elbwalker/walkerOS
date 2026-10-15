@@ -907,16 +907,16 @@ walkeros cache info
     from the flow variable, so LOG_LEVEL changes it per environment.
 - **CI:** `walkeros validate packages/cli/examples/flow-complete.json --strict`
   plus the step examples as fixtures.
-- **CLI (app-bound, need a login; listed, not run for this guide):**
+- **CLI (app-bound, need a login or WALKEROS_TOKEN; listed, not run for this
+  guide):**
 
 ```bash
-walkeros flows create flow-complete -c packages/cli/examples/flow-complete.json
-walkeros deploy create packages/cli/examples/flow-complete.json
-walkeros deploy start <flowId>
-walkeros observe start <flowId>
+walkeros api GET /api/projects/{projectId}/flows
+walkeros api POST /api/projects/{projectId}/flows/<flowId>/deploy --header 'Idempotency-Key: <key>'
 ```
 
-- **MCP:** `flow_manage`, `deploy_manage`, `observe_session`, `flow_validate`
-  then `flow_simulate` then `flow_push` as the agent loop.
+- **MCP:** on your machine `flow_validate`, then `flow_simulate`, then
+  `flow_push` as the agent loop; saved flows, deployments and Observe through
+  the hosted walkerOS MCP server.
 - **In GTM:** preview mode and container versions.
 - **Docs:** `collector/logger`.

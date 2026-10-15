@@ -1,7 +1,6 @@
 /**
- * The flow_simulate tool description, shared by the registered tool and the
- * declarative `TOOL_DEFINITIONS` registry (which must not import the tool's
- * node-only code).
+ * The flow_simulate tool description, kept apart from the tool module so that
+ * module stays the only place that imports node-only code.
  */
 export const FLOW_SIMULATE_DESCRIPTION =
   'Simulate events through a walkerOS flow without making real API calls. ' +

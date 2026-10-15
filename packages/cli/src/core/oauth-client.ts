@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { requireSecureUrl } from '../lib/secure-url.js';
-import { apiRequest } from './api-request.js';
-import type { ApiTransport } from './api-request.js';
+import { appErrorMessage, appFetch } from './app-fetch.js';
+import { APP_PATHS } from './app-paths.js';
 
 /**
  * OAuth 2.1 client for the walkerOS authorization server.
@@ -104,6 +104,10 @@ function errorCode(body: unknown): string | null {
   return parsed.success ? parsed.data.error : null;
 }
 
+/**
+ * The OAuth error first, then the app's own error envelope (a version floor
+ * answers with one), then the bare status.
+ */
 function describe(response: Response, body: unknown): string {
   const parsed = ErrorSchema.safeParse(body);
   if (parsed.success) {
@@ -111,7 +115,7 @@ function describe(response: Response, body: unknown): string {
       ? `${parsed.data.error}: ${parsed.data.error_description}`
       : parsed.data.error;
   }
-  return `HTTP ${response.status}`;
+  return appErrorMessage(body) ?? `HTTP ${response.status}`;
 }
 
 /**
@@ -121,19 +125,25 @@ function describe(response: Response, body: unknown): string {
  * rather than a hop, because following one would hand the token (or the code
  * that buys it) to whichever host the answer named.
  */
-function credentialTransport(
+function postForm(
   appUrl: string,
+  path: string,
+  form: Record<string, string>,
   fetchFn: typeof fetch,
   signal?: AbortSignal,
-): ApiTransport {
-  return {
-    auth: 'none',
+): Promise<Response> {
+  return appFetch(path, {
+    method: 'POST',
     baseUrl: requireSecureUrl(appUrl),
-    fetch: fetchFn,
-    headers: { Accept: 'application/json' },
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams(form).toString(),
     redirect: 'error',
-    ...(signal ? { signal } : {}),
-  };
+    fetch: fetchFn,
+    signal,
+  });
 }
 
 function toTokenSet(body: unknown): TokenSet {
@@ -157,20 +167,19 @@ export async function startDeviceAuthorization(
   appUrl: string,
   fetchFn: typeof fetch = globalThis.fetch,
 ): Promise<DeviceAuthorization> {
-  const response = await apiRequest('POST /api/oauth/device_authorization', {
-    ...credentialTransport(
-      appUrl,
-      fetchFn,
-      AbortSignal.timeout(DEVICE_AUTHORIZATION_TIMEOUT_MS),
-    ),
-    form: {
+  const response = await postForm(
+    appUrl,
+    APP_PATHS.deviceAuthorization,
+    {
       client_id: CLI_CLIENT_ID,
       scope: CLI_SCOPE,
       // RFC 8707. The token comes back bound to the API, so a leaked CLI token
       // cannot be replayed against the MCP resource.
       resource: `${appUrl}/api`,
     },
-  });
+    fetchFn,
+    AbortSignal.timeout(DEVICE_AUTHORIZATION_TIMEOUT_MS),
+  );
 
   const body = await readJson(response);
   if (!response.ok) throw new Error(describe(response, body));
@@ -207,14 +216,17 @@ export async function pollDeviceToken(
 ): Promise<DevicePoll> {
   let response: Response;
   try {
-    response = await apiRequest('POST /api/oauth/token', {
-      ...credentialTransport(appUrl, fetchFn, signal),
-      form: {
+    response = await postForm(
+      appUrl,
+      APP_PATHS.token,
+      {
         grant_type: DEVICE_CODE_GRANT,
         device_code: deviceCode,
         client_id: CLI_CLIENT_ID,
       },
-    });
+      fetchFn,
+      signal,
+    );
   } catch (error) {
     // Only an abort of the caller's own signal is an outcome rather than a
     // fault: the authorization is untouched, so it is still pending and the
@@ -263,18 +275,17 @@ export async function refreshTokens(
   refreshToken: string,
   fetchFn: typeof fetch = globalThis.fetch,
 ): Promise<TokenSet | null> {
-  const response = await apiRequest('POST /api/oauth/token', {
-    ...credentialTransport(
-      appUrl,
-      fetchFn,
-      AbortSignal.timeout(REFRESH_TIMEOUT_MS),
-    ),
-    form: {
+  const response = await postForm(
+    appUrl,
+    APP_PATHS.token,
+    {
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
       client_id: CLI_CLIENT_ID,
     },
-  });
+    fetchFn,
+    AbortSignal.timeout(REFRESH_TIMEOUT_MS),
+  );
 
   const body = await readJson(response);
 
@@ -297,18 +308,17 @@ export async function revokeRefreshToken(
   fetchFn: typeof fetch = globalThis.fetch,
 ): Promise<void> {
   try {
-    await apiRequest('POST /api/oauth/revoke', {
-      ...credentialTransport(
-        appUrl,
-        fetchFn,
-        AbortSignal.timeout(REVOKE_TIMEOUT_MS),
-      ),
-      form: {
+    await postForm(
+      appUrl,
+      APP_PATHS.revoke,
+      {
         token: refreshToken,
         token_type_hint: 'refresh_token',
         client_id: CLI_CLIENT_ID,
       },
-    });
+      fetchFn,
+      AbortSignal.timeout(REVOKE_TIMEOUT_MS),
+    );
   } catch {
     // Offline, or the server is down. The local credential is still cleared.
   }

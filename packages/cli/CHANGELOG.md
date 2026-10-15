@@ -1,5 +1,34 @@
 # @walkeros/cli
 
+## 4.8.1
+
+### Patch Changes
+
+- 3fe7668: `frame_manage` returns the frames a frame shows as `links` and its
+  variant group as `variantSetId`. `parentId`, `extends` and `placements` are
+  gone from its output, from the exported frame types and from what the CLI's
+  `listFrames`, `listPageFrames` and `getFrame` return. A page read returns that
+  page's frames only. `FRAME_HINT_EXTENDS_BASE` is now
+  `FRAME_HINT_FOLLOW_LINKS`. Needs the walkerOS app release that serves links.
+- c2c0937: New `walkeros api` sends any request to the walkerOS app API,
+  `walkeros api ls` lists its operations, `walkeros auth token` prints your
+  token. The typed remote commands (projects, flows, deploy, previews, observe,
+  feedback) and their programmatic functions are gone. The local MCP server
+  keeps the flow tools; saved flows and deployments move to the hosted server at
+  app.walkeros.io/api/mcp.
+- 1062e99: walker.js and every web bundle the CLI builds now carry the Tag Mode
+  loader, `moin()` from `@walkeros/core`. It stays idle unless the walkerOS app
+  opens your page for Tag Mode (`?elbMoin`), then loads the Tag Mode script from
+  `cdn.walkeros.io`. Without that host in your CSP's `script-src`, it loads
+  nothing (a `'strict-dynamic'` policy admits it through walker.js's nonce).
+- Updated dependencies [7df8a2e]
+- Updated dependencies [1062e99]
+  - @walkeros/collector@4.8.1
+  - @walkeros/core@4.8.1
+  - @walkeros/server-core@4.8.1
+  - @walkeros/transformer-validate@4.8.1
+  - @walkeros/server-destination-api@4.8.1
+
 ## 4.8.0
 
 ### Patch Changes

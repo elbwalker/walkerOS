@@ -163,292 +163,82 @@ runneros start flow.tar.gz
 
 ---
 
-## deploy
+## api
 
-Deploy flows to walkerOS cloud. Auto-detects web (CDN hosting) or server
-(container) from the flow config.
+Send one authenticated request to the walkerOS app API and print the answer. The
+CLI knows no app operation of its own: name the method and the path, and the app
+validates the request. Projects, flows, deployments, previews, secrets and
+Observe sessions are all reached this way.
 
-### Subcommands
-
-| Subcommand | Purpose                          |
-| ---------- | -------------------------------- |
-| `start`    | Deploy a flow (streams progress) |
-| `status`   | Get deployment details           |
-| `list`     | List all deployments             |
-| `create`   | Create a deployment record       |
-| `delete`   | Delete a deployment              |
-
-### deploy start
+### Usage
 
 ```bash
-walkeros deploy start <flowId> [options]
+walkeros api <METHOD> <path> [options]
+walkeros api ls [filter] [--json]
 ```
 
-| Option              | Description                                  |
-| ------------------- | -------------------------------------------- |
-| `--project <id>`    | Project ID (defaults to WALKEROS_PROJECT_ID) |
-| `-f, --flow <name>` | Flow name for multi-config flows             |
-| `--no-wait`         | Return immediately without streaming         |
-| `--timeout <sec>`   | Override the wait budget (default: 12 min)   |
-| `--json`            | JSON output                                  |
-| `-v, --verbose`     | Verbose logging                              |
-| `-s, --silent`      | Silent mode                                  |
+The method is `GET`, `POST`, `PUT`, `PATCH` or `DELETE`. Query parameters ride
+in the path. The answer body is printed on stdout unchanged as it arrives,
+streamed answers included.
 
-Progress is streamed via SSE:
+### Options
 
-```
-Building bundle...
-Deploying container...
-Starting container...
-✓ Active: https://collect-abc123.walkeros.io
-```
+| Option                  | Description                                                                |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `-d, --data <body>`     | Request body: inline JSON, `@file.json`, or `-` for stdin (not on `GET`)   |
+| `-H, --header <header>` | Extra header `'Name: value'`, repeatable (e.g. `Idempotency-Key`)          |
+| `-p, --project <id>`    | Fills `{projectId}` in the path (default: `WALKEROS_PROJECT_ID`)           |
+| `-y, --yes`             | Confirm a `DELETE`; without it a `DELETE` is a usage error and is not sent |
 
-For multi-config flows, use `--flow` to specify which config to deploy. Without
-it, the command errors with the available config names.
+### Exit codes
 
-### deploy status
+| Code | Meaning                                                                        |
+| ---- | ------------------------------------------------------------------------------ |
+| 0    | Any 2xx answer                                                                 |
+| 1    | Any other HTTP status: the error body on stdout, one line on stderr            |
+| 2    | Usage error, nothing is sent                                                   |
+| 3    | No credential, or the app answered 401                                         |
+| 4    | The app could not be reached, or the connection broke while the answer arrived |
 
-```bash
-walkeros deploy status <id-or-slug> [options]
-```
+### api ls
 
-| Option           | Description |
-| ---------------- | ----------- |
-| `--project <id>` | Project ID  |
-| `--json`         | JSON output |
-
-### deploy list
-
-```bash
-walkeros deploy list [options]
-```
-
-| Option              | Description                 |
-| ------------------- | --------------------------- |
-| `--project <id>`    | Project ID                  |
-| `--type <type>`     | Filter: `web` or `server`   |
-| `--status <status>` | Filter by deployment status |
-| `--json`            | JSON output                 |
-
-### deploy delete
-
-```bash
-walkeros deploy delete <id-or-slug> [options]
-```
+`walkeros api ls [filter]` lists the public operations from the app's live
+`/api/openapi.json`; the filter matches method, path and summary. `--json`
+prints each operation with its parameters and the schemas it references. It
+needs no sign-in.
 
 ### Examples
 
 ```bash
-# Deploy a flow and watch progress
-walkeros deploy start flow_abc123
+# Find the deployment operations
+walkeros api ls deploy
 
-# Deploy specific config from multi-config flow
-walkeros deploy start flow_abc123 --flow production
+# List the flows of a project
+walkeros api GET /api/projects/{projectId}/flows --project proj_x7y8z9
 
-# Deploy without waiting
-walkeros deploy start flow_abc123 --no-wait
-
-# Check status later
-walkeros deploy status dep_xyz789
-
-# List server deployments
-walkeros deploy list --type server
+# Save a flow's config to a file (WALKEROS_PROJECT_ID set)
+walkeros api GET /api/projects/{projectId}/flows/flow_a1b2c3d4 | jq .config > flow.json
 ```
 
-### Prerequisites
-
-- **Authentication:** Run `walkeros auth login`, or set `WALKEROS_TOKEN` to an
-  automation token
-- **Project:** Set `WALKEROS_PROJECT_ID` or use `--project`
-- **Flow must exist:** Create via the app UI or API first
-- **Server flows need an HTTP source** with `port` setting for health checks
+To deploy a saved flow from CI, see "Deploy from CI" in the
+[CLI docs](https://www.walkeros.io/docs/apps/cli#deploy-from-ci).
 
 ---
 
-## previews
+## auth
 
-Manage preview bundles: short-lived flow bundles used to test configuration
-changes on a real production site before deploying. Creating a preview mints an
-app-signed, origin-bound activation grant (30-day CDN bundle); visiting any page
-of your site with `?elbPreview={grant}` verifies the grant locally and activates
-preview mode for that browser, for the life of the preview session. The
-production walker self-heals on a deleted preview by clearing the stored grant
-and loading production.
+Manage the sign-in that `walkeros api` uses.
 
-A managed bundle that supports preview activation is built with the wrap step's
-`preview` option (public keyring + issuer + opaque project binding); the emitted
-bundle imports `browserSwapActivator` from `@walkeros/core` to verify and swap
-in the preview artifact. `preview` replaces the earlier `previewOrigin` /
-`previewScope` wrap options. A companion `previewGrantTargets` option exists for
-the preview artifact itself: it forwards the stored grant as an
-`X-Walkeros-Preview` header to named server-bound destinations, so a server flow
-can be previewed too. `preview` and `previewGrantTargets` are mutually exclusive
-on a single wrap invocation: a host bundle activates a preview, a preview
-artifact injects its grant, not both. In both variants the Tag Mode loader
-(`moin()` from `@walkeros/core`) runs first, before the preview block; the
-internal `moin` wrap option names a non-production Tag Mode target and is set
-only by the app's stage deploys.
+| Subcommand | Purpose                                                                    |
+| ---------- | -------------------------------------------------------------------------- |
+| `login`    | Sign in through the browser (device authorization); stores a session       |
+| `logout`   | Revoke the stored session and remove it from disk                          |
+| `whoami`   | Show the signed-in identity                                                |
+| `token`    | Print the current access token (refreshed when needed) for any HTTP client |
 
-### Subcommands
-
-| Subcommand | Purpose                                     |
-| ---------- | ------------------------------------------- |
-| `list`     | List previews for a flow                    |
-| `get`      | Get a single preview's details              |
-| `create`   | Create a preview bundle for a flow settings |
-| `delete`   | Delete a preview (DB row + CDN bundle)      |
-
-### previews list
-
-```bash
-walkeros previews list <flowId> [--project <projectId>]
-```
-
-### previews get
-
-```bash
-walkeros previews get <flowId> <previewId> [--project <projectId>]
-```
-
-### previews create
-
-```bash
-walkeros previews create <flowId> [options]
-```
-
-| Option                   | Description                                           |
-| ------------------------ | ----------------------------------------------------- |
-| `-f, --flow <name>`      | Flow settings name (resolved to an ID)                |
-| `-s, --settings-id <id>` | Flow settings ID (alternative to `--flow`)            |
-| `-u, --url <siteUrl>`    | Your site URL; prints a full activation URL on stdout |
-| `--project <id>`         | Project ID (overrides default)                        |
-
-The human-readable summary (preview id, creator, bundle URL, activate and
-deactivate lines) goes to stderr; stdout carries only the machine-readable
-activation URL. Activation URLs are always app-minted and origin-bound, so the
-CLI never builds one client-side (the API response carries no raw token to build
-one from). With `--url`, the grant is minted for that origin: stdout is the full
-activation URL, and stderr includes a `?elbPreview=off` deactivation URL.
-Without `--url`, the server may not have minted a grant for any site yet; stdout
-is then empty and the summary points at re-running with `--url`.
-
-### previews delete
-
-```bash
-walkeros previews delete <flowId> <previewId> [options]
-```
-
-| Option           | Description                                           |
-| ---------------- | ----------------------------------------------------- |
-| `-y, --yes`      | Skip confirmation (required to run non-interactively) |
-| `--project <id>` | Project ID (overrides default)                        |
-
-### Example
-
-```bash
-# Create a preview for the `demo` flow settings with a full activation URL
-walkeros previews create flow_abc123 \
-  --flow demo \
-  --url https://example.com
-
-# List previews
-walkeros previews list flow_abc123
-
-# Delete when done
-walkeros previews delete flow_abc123 prv_xyz456 --yes
-```
-
-### Prerequisites
-
-- **Authentication:** `walkeros auth login`, or `WALKEROS_TOKEN` set to an
-  automation token
-- **Project:** `WALKEROS_PROJECT_ID` or `--project`
-- **Target site** must be running a walkerOS-built `walker.js` with the preview
-  preflight baked in (all bundles from `@walkeros/cli >= 3.0` include it)
-
----
-
-## observe
-
-Start a live observation session for a flow and print the attach info for both
-arms: the web activation link and the server environment trio. The session is
-minted via the app's authenticated boundary; the mint response usually comes
-back `arming`, so the command polls until the session settles (or `--no-wait`
-skips the wait).
-
-### observe start
-
-```bash
-walkeros observe start <flowId> [options]
-```
-
-| Option                | Description                                                      |
-| --------------------- | ---------------------------------------------------------------- |
-| `-f, --flow <name>`   | Flow settings name (auto-resolved when the flow has exactly one) |
-| `--project <id>`      | Project ID (overrides default)                                   |
-| `--level <level>`     | Observation detail level: `off`, `standard`, or `trace`          |
-| `--replace`           | Replace an existing active session for this flow                 |
-| `--no-wait`           | Do not wait for the session to settle                            |
-| `--timeout <seconds>` | Seconds to wait for the session to settle (default: 300)         |
-| `--json`              | Output the raw session as JSON                                   |
-
-### Output
-
-The human-readable session report goes to stderr; stdout carries only the live
-server endpoint (when armed) for scripting:
-
-```
-Observe session ses_abc123 (live)
-
-  Web
-    Bundle URL: https://cdn.test/preview/proj_test/walker.k9x2m4p7abcd.js
-    Credential: obsw_pb1.ses_abc123.webtok
-    Activate:   https://shop.example/?elbPreview=eyJncjRudA.gr4nt.s1g&elbObserve=obsw_pb1.ses_abc123.webtok
-
-  Server
-    Flow:       server
-    Endpoint:   https://obs-ses-abc123.containers.test
-    Env:
-      WALKEROS_OBSERVER_URL=https://observer.test
-      WALKEROS_DEPLOYMENT_ID=ses_abc123
-      WALKEROS_INGEST_TOKEN=srv_ingest_tok
-
-  Expires:  2026-07-19T00:00:00.000Z
-  Records:  42
-
-  The session lives server-side; closing this terminal does not end it.
-  Sessions idle out server-side when no tab or traffic keeps them alive.
-```
-
-### Semantics
-
-- **Activation URL is app-minted.** Grants are app-signed and origin-bound, and
-  the link already carries the `elbObserve` credential companion, so the
-  observed tab picks up the session credential from the link itself. The CLI
-  echoes the URL verbatim and never builds one client-side. When no link is
-  minted yet, the report says so; when the deployed web bundle cannot verify
-  grants, it points at redeploying the web flow first.
-- **The env trio is the session's identity.** Export `WALKEROS_OBSERVER_URL`,
-  `WALKEROS_DEPLOYMENT_ID`, and `WALKEROS_INGEST_TOKEN` into a server runtime
-  (read via `observeFromEnv`) to feed that exact session.
-- **Waiting heartbeats the session.** Each poll tick also POSTs the session
-  heartbeat so the idle reaper cannot claim the session while you set up.
-  Heartbeats extend grace, never gate: failures are swallowed, and session
-  liveness never depends on this process.
-- **Sessions are server-managed.** Closing the terminal or abandoning the wait
-  never ends a session; sessions idle out server-side when no tab or traffic
-  keeps them alive, and every session carries an expiry.
-- **Exit codes.** A wait that expires with the session still `arming` exits 1
-  (the session keeps arming server-side); a `failed` session exits 1. With no
-  resolvable credentials at all, the command prints a login CTA
-  (`walkeros auth login`) and exits 0 without a network call; a 401 despite a
-  token still fails loudly.
-
-### Prerequisites
-
-- **Authentication:** `walkeros auth login`, or `WALKEROS_TOKEN` set to an
-  automation token
-- **Project:** `WALKEROS_PROJECT_ID` or `--project`
+`walkeros auth token` exits 3 without a credential and 4 when a refresh cannot
+reach the app. `WALKEROS_TOKEN` (an automation or service-account token,
+`wos_pat_...`) overrides the stored session, which suits CI.
 
 ---
 

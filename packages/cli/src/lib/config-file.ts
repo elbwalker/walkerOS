@@ -10,7 +10,6 @@ import {
 import { randomBytes } from 'crypto';
 import { join } from 'path';
 import { homedir } from 'os';
-import { notAuthenticatedError } from '../core/api-error.js';
 
 export interface WalkerOSConfig {
   /**
@@ -171,80 +170,12 @@ export function deleteConfig(): boolean {
 }
 
 /**
- * Set the anonymous feedback preference in the config.
- * Does nothing when no config exists (avoids creating a skeleton config).
- */
-export function setFeedbackPreference(anonymous: boolean): void {
-  const config = readConfig();
-  if (!config) return;
-  writeConfig({ ...config, anonymousFeedback: anonymous });
-}
-
-/**
- * Get the anonymous feedback preference from the config.
- * Returns undefined when not set or no config exists.
- */
-export function getFeedbackPreference(): boolean | undefined {
-  const config = readConfig();
-  return config?.anonymousFeedback;
-}
-
-/**
  * Whether a config holds a login: a legacy static `token` or an OAuth
- * `accessToken`. The one rule for a stored credential, shared by
- * `credentialSource()` and `setDefaultProject()`.
+ * `accessToken`. The one rule for a stored credential, used by
+ * `credentialSource()`.
  */
 export function hasStoredCredential(config: WalkerOSConfig | null): boolean {
   return Boolean(config?.token || config?.accessToken);
-}
-
-/**
- * Set the default project ID in the config.
- *
- * Needs a credential: `WALKEROS_TOKEN`, or a stored login. An env-only setup
- * gets a config file that holds just the default. Refuses while
- * `WALKEROS_PROJECT_ID` names another project, because the variable takes
- * precedence (see `resolveProjectId`) and the write would change nothing.
- */
-export function setDefaultProject(projectId: string): void {
-  if (!process.env.WALKEROS_TOKEN && !hasStoredCredential(readConfig()))
-    throw notAuthenticatedError();
-  const envProjectId = process.env.WALKEROS_PROJECT_ID;
-  if (envProjectId && envProjectId !== projectId)
-    throw new Error(
-      `WALKEROS_PROJECT_ID is set to ${envProjectId} and takes precedence over the default project, so ${projectId} would not be used. ` +
-        'Pass projectId on each call, or unset WALKEROS_PROJECT_ID to change the default.',
-    );
-  writeConfig({ defaultProjectId: projectId });
-}
-
-/**
- * Get the default project ID from the config, or null if not set.
- */
-export function getDefaultProject(): string | null {
-  const config = readConfig();
-  return config?.defaultProjectId ?? null;
-}
-
-/**
- * The project a call without a `projectId` works on: `WALKEROS_PROJECT_ID`,
- * then the config's default, or null when neither names one. The one
- * resolution `requireProjectId()` and the local MCP door share.
- */
-export function resolveProjectId(): string | null {
-  return process.env.WALKEROS_PROJECT_ID || getDefaultProject();
-}
-
-/**
- * Remove the default project ID from the config.
- * Does nothing when no config exists. Used to drop a stale default after the
- * project it pointed at has been deleted.
- */
-export function clearDefaultProject(): void {
-  const config = readConfig();
-  if (!config) return;
-  const { defaultProjectId: _removed, ...rest } = config;
-  replaceConfigFile(rest);
 }
 
 /**
@@ -264,14 +195,6 @@ export function resolveToken(): {
   if (config?.token) return { token: config.token, source: 'config' };
 
   return null;
-}
-
-/**
- * Resolve the deploy token for container/heartbeat auth.
- * Only checks WALKEROS_DEPLOY_TOKEN env var (never stored in config file).
- */
-export function resolveDeployToken(): string | null {
-  return process.env.WALKEROS_DEPLOY_TOKEN ?? null;
 }
 
 /**
