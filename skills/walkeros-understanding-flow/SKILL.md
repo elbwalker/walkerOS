@@ -143,7 +143,7 @@ no `next`, no `before`; they sit alongside the pipeline rather than inside it.
 - Implementations: `@walkeros/server-store-fs` (async, filesystem),
   `@walkeros/server-store-s3` (async, S3-compatible),
   `@walkeros/server-store-gcs`, `@walkeros/server-store-sheets`. The collector
-  ships a built-in in-memory cache tier — enable it on any store via
+  ships a built-in in-memory cache tier; enable it on any store via
   `Flow.Store.cache` instead of declaring a separate memory store.
 
 ```json
@@ -732,10 +732,11 @@ every destination needs belongs in `collector.next`, not repeated in each
 
 - **Source-level:** `source.config.mapping` and `source.config.consent` -
   applied before the source chain; blocks event entirely
-- **Destination-level:** `destination.config.mapping` and
-  `destination.config.consent` - applied after the destination chain; skips only
-  that destination, queues denied events (after `collector.next`, so a replay
-  never re-runs it)
+- **Destination-level:** `destination.config.consent` is checked first, before
+  the destination chain (`destination.before`): it skips only that destination
+  and queues denied events (after `collector.next`, so a replay never re-runs
+  it). `destination.config.mapping` is applied after the destination chain, so a
+  rename in the chain changes which rule matches
 
 ### Canvas rendering rules (for UI graph visualization)
 

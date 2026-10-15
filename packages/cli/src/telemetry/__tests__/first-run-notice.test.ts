@@ -32,7 +32,7 @@ describe('maybePrintFirstRunNotice (opt-in)', () => {
   });
 
   it('does not print a second time if a config exists', () => {
-    writeConfig({ token: 'x' });
+    writeConfig({ appUrl: 'https://app.example.test' });
     const errSpy = jest
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true);

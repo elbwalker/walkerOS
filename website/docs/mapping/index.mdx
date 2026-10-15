@@ -44,9 +44,9 @@ Everything in walkerOS mapping is built from two building blocks:
   config field accepts a value (`data`, `map.*`, `policy.*`, `set[]`, …), you
   write a `Mapping.Value`. There are eight forms (path, constant, map, loop,
   set, fn, condition, consent).
-- **[Mapping.Rule](./rule.mdx)**: the object on a destination's
+- **[Mapping.Rule](./rule.mdx)**: the object on a source's or destination's
   `mapping[entity][action]`. It composes values into a complete rule
-  (`name`, `data`, `condition`, `consent`, `policy`, `batch`, `ignore`, `skip`,
+  (`name`, `data`, `condition`, `policy`, `batch`, `ignore`, `silent`,
   `settings`).
 
 When a destination doc shows `data: any`, the value you put there is a
@@ -148,7 +148,9 @@ the collector:
 />
 
 Both mappings are independent. The same event can be transformed differently at
-each stage.
+each stage. An event that matches no destination rule still reaches the
+destination, under its own name; see
+[how destinations consume a rule](./rule.mdx#how-destinations-consume-a-rule).
 
 ## See also
 

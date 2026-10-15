@@ -7,11 +7,7 @@ export * from './utils.js';
 export * from './local-packages.js';
 export * from './input-detector.js';
 export * from './stdin.js';
-export {
-  resolveAccessToken,
-  getAuthHeaders,
-  credentialSource,
-} from './auth.js';
+export { resolveAccessToken } from './auth.js';
 export * from './event-validation.js';
 export * from './package-path.js';
 export * from './import-specifier.js';

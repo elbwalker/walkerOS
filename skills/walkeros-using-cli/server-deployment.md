@@ -7,8 +7,8 @@ collection flow.
 
 - walkerOS CLI installed: `npm install -g @walkeros/cli`
 - A walkerOS project (create at app.walkeros.io or via API)
-- Authentication: `walkeros auth login`, or `WALKEROS_TOKEN` set to an
-  automation token (`wos_pat_...`) from Account, Automation tokens
+- Authentication: `WALKEROS_TOKEN` set to a token (`wos_pat_...`) from Account >
+  Automation tokens
 - `WALKEROS_PROJECT_ID` set, or `--project` on every `walkeros api` call
 
 ## 1. Create the Flow Config

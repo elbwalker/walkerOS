@@ -1,6 +1,6 @@
 {
   "$generated": "Generated file. Do not edit by hand. Regenerate via: npm run generate:skills-index",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "count": 22,
   "skills": [
     {

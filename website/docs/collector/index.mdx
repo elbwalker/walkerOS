@@ -12,28 +12,16 @@ export const collectorSchema = schemas.CollectorSchemas.initConfigJsonSchema;
 
 # Collector
 
-The collector is the central **processing engine** of walkerOS that receives
-events from sources, **enriches** them with additional data, applies consent
-rules, and **routes** them to destinations. It acts as the **intelligent
-middleware** between event capture and event delivery.
+The collector is the processing engine of walkerOS. It sits between event
+capture and event delivery: it receives events from sources, enriches them with
+additional data, applies consent rules and routes them to destinations.
 
 #### What it does
 
-The Collector transforms raw events into enriched, compliant data streams by:
-
-* **Event processing** - Validates, normalizes, and enriches incoming events
-* **Consent management** - Applies privacy rules and user consent preferences
-* **Data enrichment** - Adds session data, user context, and custom properties
-* **Destination routing** - Sends processed events to configured analytics
-  platforms
-
-#### Key features
-
-* **Compatibility** - Works in both web browsers and server environments
-* **Privacy-first** - Built-in consent management and data protection
-* **Event validation** - Ensures data quality and consistency
-* **Flexible routing** - Send events to multiple destinations simultaneously
-* **Delivery status** - Built-in per-source and per-destination delivery tracking
+The collector validates and normalizes incoming events and applies privacy
+rules and the user's consent preferences. It adds its globals, user and consent
+state to every event, then sends the processed events to the configured
+destinations.
 
 #### Role in architecture
 
@@ -126,7 +114,7 @@ const { collector, elb } = await startFlow({
     },
   },
   logger: {
-    level: 'DEBUG', // Show all logs (ERROR, INFO, DEBUG)
+    level: 'DEBUG', // Show all logs (ERROR, WARN, INFO, DEBUG)
   },
 });`}
   language="typescript"
@@ -134,7 +122,7 @@ const { collector, elb } = await startFlow({
 
 ## Event transformation
 
-The collector works with **mapping** to transform events as they flow through the system. Mapping is configured at the destination level and controls how walkerOS events are converted to vendor-specific formats.
+The collector uses mapping to transform events as they flow through the system. Mapping is configured at the destination level and controls how walkerOS events are converted to vendor-specific formats.
 
 <FlowMap
   sources={{ default: { label: 'walkerOS', text: 'Event' } }}
@@ -169,7 +157,7 @@ For example, transforming a `product add` event into GA4's `add_to_cart`:
   language="typescript"
 />
 
-[**Learn more about mapping →**](/docs/mapping)
+[Learn more about mapping](/docs/mapping)
 
 ## Collector chain (`next`)
 
@@ -229,8 +217,7 @@ completed event. What the chain does reaches every destination:
 
 ## Status
 
-The collector tracks delivery metrics on `collector.status`, giving you real-time
-visibility into event flow without external monitoring:
+The collector tracks delivery metrics on `collector.status`:
 
 <CodeSnippet
   code={`const { collector } = await startFlow({
@@ -273,7 +260,8 @@ const avgMs = ga4.duration / (ga4.count + ga4.failed);`}
 `collector.status.failed` is the single counter for any walkerOS-internal
 pipeline failure. Contributing sites:
 
-* a destination's `push` threw or returned an error,
+* a destination's `push` threw, or the destination reported an error through
+  `context.reportError`,
 * an exception escaped the inner pipeline of `collector.push` or
   `collector.command` (any uncaught error inside the boundary),
 * mapping outer-wrap failures (an internal throw inside
@@ -283,7 +271,7 @@ pipeline failure. Contributing sites:
 * transformer init failures,
 * destination init failures.
 
-Rejected client input does NOT increment `status.failed` either. An event
+Rejected client input does not increment `status.failed`. An event
 the pipeline declares invalid (a missing or malformed `name`) resolves as
 `{ ok: false, invalid: true, error }`, logs one warn without a stack, and
 counts on `collector.status.sources.<id>.rejected`. That keeps `failed` a
@@ -291,7 +279,7 @@ measure of walkerOS faults rather than of whatever the public internet
 posts at a collector endpoint.
 
 User-supplied callback throws are visibility-only: they log at error
-level but do NOT increment `status.failed`. This keeps the counter a
+level but do not increment `status.failed`. This keeps the counter a
 clean pipeline-health signal. Sites in this group:
 
 * `on` subscriptions (`destination.on`, `source.on`, consent rules,
@@ -301,12 +289,12 @@ clean pipeline-health signal. Sites in this group:
 In both cases the collector logs at error level:
 
 <CodeSnippet
-  code={`// destination-side failure
+  code={`// destination-side failure (event: the event name)
 logger.scope('<destination type>').error('Push failed', { error, event });
 
-// collector-side boundary failure
-logger.error('push failed', { event, ingest, error });
-logger.error('command failed', { command, data, error });
+// collector-side boundary failure (event: the event name)
+logger.error('push failed', { error, event });
+logger.error('command failed', { error, command });
 
 // pipeline-internal failures (counted)
 logger.error('mapping processing failed', { event, error });
@@ -320,7 +308,8 @@ logger
   .error('transformer init failed', { transformer, error });
 logger.scope('<destination type>').error('destination init failed', { error });
 
-// user-callback failures (logged, NOT counted)
+// user-callback failures (logged, NOT counted; event: the whole event)
+logger.error('mapping rule condition failed', { event, mappingKey, error });
 logger.error('mapping condition failed', { event, error });
 logger.error('mapping fn failed', { event, error });
 logger.error('mapping validate failed', { event, error });
@@ -329,31 +318,39 @@ logger.scope('on').error('on callback failed', { kind, error });`}
 />
 
 A source whose `init()` throws stays with `config.init === false`
-instead of being marked initialized. Operators reading
-`source.config.init` see the source visibly stuck, not falsely healthy.
+instead of being marked initialized, so `source.config.init` shows that the
+source did not start.
 
 Alarm on the ratio of `status.failed` to `status.in`. The log message text
 plus structured fields are enough to filter destination vs boundary
 failures downstream.
 
-**PII note.** Boundary error logs include the full failing event payload so
-operators can reproduce. If your event payloads carry sensitive data,
-configure redaction at the logger layer; do not parse and rewrite at every
-call site.
+**Personal data in logs.** The push, command and destination failure logs
+carry the event name and the error message, never the event's data. The
+mapping logs (`mapping processing failed` and the callback failures) carry the
+whole event, including `user` and `data`. If your events carry personal data,
+redact it in a custom logger `handler`; do not parse and rewrite at every call
+site.
 
 ### Fatal errors
 
 Throw `FatalError` (exported from `@walkeros/core`) for invariant
 violations or operator-initiated aborts that must crash the host process.
 Standard `Error` is absorbed by the boundary catch, logged, and counted.
-`FatalError` bypasses the catch and propagates, so a supervisor (CLI
-runner, Express server, container orchestrator) can terminate cleanly.
+`FatalError` bypasses the boundary catch of `collector.push` and
+`collector.command` and propagates, so a supervisor (CLI runner, Express
+server, container orchestrator) can terminate cleanly. It propagates when
+thrown in a source (its factory or `init`), in a transformer's `init` or in an
+`on` handler. Thrown inside a destination (its `init`, its `push` or a mapping
+callback of its rules) or in a transformer's `push`, it is handled like any
+other error thrown there and does not propagate.
 
 <CodeSnippet
   code={`import { FatalError } from '@walkeros/core';
 
+// in a source's or transformer's init
 if (!config.apiKey) {
-  throw new FatalError('apiKey missing — refusing to start');
+  throw new FatalError('apiKey missing, refusing to start');
 }`}
   language="typescript"
 />
@@ -382,14 +379,16 @@ metaDrops?.dlq ?? 0; // monotonic count of evicted DLQ entries`}
 
 ## Buffer bounds
 
-The collector keeps three internal buffers per process. Each is size-bounded
+The collector keeps four internal buffers per process. Each is size-bounded
 with a configurable cap; on overflow the oldest entries are evicted (FIFO),
-the corresponding `dropped` counter is incremented, and a warning is logged
-once per overflow window.
+the corresponding `dropped` counter is incremented, and a warning is logged.
+The collector buffers and the DLQ warn once per overflow window; the consent
+queue warns on every eviction.
 
 | Buffer                  | Purpose                                              | Default cap | Config                              |
 | ----------------------- | ---------------------------------------------------- | ----------- | ----------------------------------- |
 | `collector.queue`       | Replay buffer for late-registered destinations       | 1000        | `Collector.Config.queueMax`         |
+| `collector.preRunQueue` | Events pushed before the collector runs              | 1000        | `Collector.Config.queueMax`         |
 | `destination.queuePush` | Per-destination consent-denied buffer                | 1000        | `Destination.Config.queueMax`       |
 | `destination.dlq`       | Per-destination dead-letter queue of failed pushes   | 100         | `Destination.Config.dlqMax`         |
 
@@ -424,6 +423,9 @@ key with `stepId()` from `@walkeros/core`):
 // registration.
 const collectorDrops =
   collector.status.dropped[stepId('collector')]?.queue ?? 0;
+
+// Events dropped before the collector ran
+const preRunDrops = collector.status.dropped['collector.preRun']?.queue ?? 0;
 
 // Destination drops by buffer:
 //  - queue: consent-denied events evicted from the destination's queuePush

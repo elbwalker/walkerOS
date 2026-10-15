@@ -12,24 +12,10 @@ import {
   readConfig,
   writeConfig,
   writeTelemetryOnlyConfig,
-  hasStoredCredential,
   getConfigPath,
-  type WalkerOSConfig,
 } from '../../../lib/config-file.js';
 
 const testDir = join(tmpdir(), `config-file-test-${Date.now()}`);
-
-describe('hasStoredCredential', () => {
-  const cases: Array<[string, WalkerOSConfig | null, boolean]> = [
-    ['a legacy static token', { token: 'sk' }, true],
-    ['an OAuth access token', { accessToken: 'at' }, true],
-    ['a telemetry-only config', { telemetryEnabled: true }, false],
-    ['no config', null, false],
-  ];
-  it.each(cases)('%s', (_label, config, expected) => {
-    expect(hasStoredCredential(config)).toBe(expected);
-  });
-});
 
 describe('WalkerOSConfig telemetry fields', () => {
   const originalEnv = process.env;
@@ -46,8 +32,6 @@ describe('WalkerOSConfig telemetry fields', () => {
 
   it('persists installationId and telemetryEnabled through write/read', () => {
     writeConfig({
-      token: 't',
-      email: 'e',
       appUrl: 'u',
       installationId: 'abc-123',
       telemetryEnabled: false,
@@ -57,11 +41,9 @@ describe('WalkerOSConfig telemetry fields', () => {
     expect(cfg?.telemetryEnabled).toBe(false);
   });
 
-  it('allows telemetry-only config without token/email (anonymous install)', () => {
+  it('allows a telemetry-only config (anonymous install)', () => {
     writeTelemetryOnlyConfig({ installationId: 'xyz-789' });
-    const cfg = readConfig();
-    expect(cfg?.installationId).toBe('xyz-789');
-    expect(cfg?.token).toBeUndefined();
+    expect(readConfig()).toEqual({ installationId: 'xyz-789' });
   });
 });
 
@@ -87,35 +69,35 @@ describe('config-file permissions', () => {
   }
 
   it('writes the config readable only by its owner', () => {
-    writeConfig({ token: 'sk-test-123' });
+    writeConfig({ appUrl: 'https://a.example.test' });
     expect(modeOf(getConfigPath())).toBe(0o600);
   });
 
   it('creates the config directory traversable only by its owner', () => {
-    writeConfig({ token: 'sk-test-123' });
+    writeConfig({ appUrl: 'https://a.example.test' });
     expect(modeOf(join(modeDir, 'walkeros'))).toBe(0o700);
   });
 
   it('writes through a temp path of its own, leaving another writer\u2019s alone', () => {
-    // Only the token refresh takes the config lock, so two ordinary writers
-    // (a login and a `telemetry enable`, say) can be in here at once. On one
-    // shared name they would write over each other's temp file and rename it
-    // twice, and the slower one would fail outright when the faster renamed
-    // the file out from under its `chmod`.
+    // Nothing locks the config, so two writers (two `telemetry` commands,
+    // say) can be in here at once. On one shared name they would write over
+    // each other's temp file and rename it twice, and the slower one would
+    // fail outright when the faster renamed the file out from under its
+    // `chmod`.
     mkdirSync(join(modeDir, 'walkeros'), { recursive: true });
     const otherWriterTemp = `${getConfigPath()}.tmp`;
     writeFileSync(otherWriterTemp, 'another writer');
 
-    writeConfig({ token: 'sk-test-123' });
+    writeConfig({ appUrl: 'https://a.example.test' });
 
     expect(readFileSync(otherWriterTemp, 'utf-8')).toBe('another writer');
     expect(modeOf(getConfigPath())).toBe(0o600);
-    expect(readConfig()?.token).toBe('sk-test-123');
+    expect(readConfig()?.appUrl).toBe('https://a.example.test');
   });
 
   it('leaves no temp file behind', () => {
-    writeConfig({ token: 'sk-test-123' });
-    writeConfig({ token: 'sk-test-456' });
+    writeConfig({ appUrl: 'https://a.example.test' });
+    writeConfig({ appUrl: 'https://b.example.test' });
 
     expect(readdirSync(join(modeDir, 'walkeros'))).toEqual(['config.json']);
   });

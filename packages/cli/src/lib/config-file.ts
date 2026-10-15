@@ -3,7 +3,6 @@ import {
   writeFileSync,
   mkdirSync,
   unlinkSync,
-  existsSync,
   chmodSync,
   renameSync,
 } from 'fs';
@@ -11,20 +10,12 @@ import { randomBytes } from 'crypto';
 import { join } from 'path';
 import { homedir } from 'os';
 
+/**
+ * The CLI's own settings. It holds no credential: the CLI authenticates with
+ * WALKEROS_TOKEN only, and sign-in fields an older CLI left in the file are
+ * never read.
+ */
 export interface WalkerOSConfig {
-  /**
-   * Static bearer written by the pre-OAuth CLI. Honored until it expires, and
-   * the first use in a process prints a one-line notice naming
-   * `walkeros auth login`, which replaces it with a refreshable session.
-   */
-  token?: string;
-  /** Short-lived bearer from the device authorization grant. */
-  accessToken?: string;
-  /** ISO 8601 instant at which `accessToken` stops being accepted. */
-  accessTokenExpiresAt?: string;
-  /** Single-use credential that buys a new `accessToken`. */
-  refreshToken?: string;
-  email?: string;
   appUrl?: string;
   anonymousFeedback?: boolean;
   defaultProjectId?: string;
@@ -75,14 +66,14 @@ export function readConfig(): WalkerOSConfig | null {
  * Replace the config file wholesale, atomically and with 0600 permissions.
  *
  * A reader that catches the file mid-write would see truncated JSON and treat
- * the person as logged out, so the content is written to a temp file and
- * renamed, which is atomic within a directory.
+ * the file as missing, so the content is written to a temp file and renamed,
+ * which is atomic within a directory.
  *
- * The temp path is unique per write. Only the token refresh holds the config
- * lock, so two ordinary writers (a login and a `telemetry enable`, say) can be
- * in here at once: on one shared name they would write over each other's temp
- * file and rename it twice, and the slower one would fail outright when the
- * faster renamed the file out from under its `chmod`.
+ * The temp path is unique per write. Nothing locks the file, so two writers
+ * (two `telemetry` commands, say) can be in here at once: on one shared name
+ * they would write over each other's temp file and rename it twice, and the
+ * slower one would fail outright when the faster renamed the file out from
+ * under its `chmod`.
  */
 function replaceConfigFile(config: WalkerOSConfig): void {
   const dir = getConfigDir();
@@ -112,35 +103,13 @@ function replaceConfigFile(config: WalkerOSConfig): void {
  * Merge `config` into the stored config and write the result.
  *
  * Merging rather than replacing, because the file holds fields owned by
- * unrelated commands: a writer that knows only about tokens would otherwise
- * drop `defaultProjectId`, `installationId`, `telemetryEnabled` and
- * `anonymousFeedback` every time somebody logs in.
+ * unrelated commands: a writer that knows only about telemetry would otherwise
+ * drop `appUrl`, `defaultProjectId` and `anonymousFeedback`.
  *
- * A key passed explicitly as `undefined` is removed from the written file,
- * which is how login drops the legacy static token it replaces.
+ * A key passed explicitly as `undefined` is removed from the written file.
  */
 export function writeConfig(config: WalkerOSConfig): void {
   replaceConfigFile({ ...(readConfig() ?? {}), ...config });
-}
-
-/**
- * Remove every credential field, keeping the rest of the config.
- *
- * Used when the stored session is known to be dead, so the next command can
- * say "run `walkeros auth login`" instead of failing against the API.
- */
-export function clearAuthFields(): void {
-  const config = readConfig();
-  if (!config) return;
-  const {
-    token: _token,
-    accessToken: _accessToken,
-    accessTokenExpiresAt: _accessTokenExpiresAt,
-    refreshToken: _refreshToken,
-    email: _email,
-    ...rest
-  } = config;
-  replaceConfigFile(rest);
 }
 
 /**
@@ -155,46 +124,6 @@ export function writeTelemetryOnlyConfig(partial: {
   telemetryEnabled?: boolean;
 }): void {
   writeConfig(partial);
-}
-
-/**
- * Delete the config file (logout)
- */
-export function deleteConfig(): boolean {
-  const configPath = getConfigPath();
-  if (existsSync(configPath)) {
-    unlinkSync(configPath);
-    return true;
-  }
-  return false;
-}
-
-/**
- * Whether a config holds a login: a legacy static `token` or an OAuth
- * `accessToken`. The one rule for a stored credential, used by
- * `credentialSource()`.
- */
-export function hasStoredCredential(config: WalkerOSConfig | null): boolean {
-  return Boolean(config?.token || config?.accessToken);
-}
-
-/**
- * Resolve the API token using priority order:
- * 1. WALKEROS_TOKEN env var
- * 2. Config file (~/.config/walkeros/config.json)
- * 3. null (not authenticated)
- */
-export function resolveToken(): {
-  token: string;
-  source: 'env' | 'config';
-} | null {
-  const envToken = process.env.WALKEROS_TOKEN;
-  if (envToken) return { token: envToken, source: 'env' };
-
-  const config = readConfig();
-  if (config?.token) return { token: config.token, source: 'config' };
-
-  return null;
 }
 
 /**

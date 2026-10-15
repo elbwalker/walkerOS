@@ -9,18 +9,6 @@ declare module '@walkeros/core' {
 export { bundleCommand } from './commands/bundle/index.js';
 export { pushCommand } from './commands/push/index.js';
 export { validateCommand } from './commands/validate/index.js';
-export {
-  loginCommand,
-  login,
-  completeDeviceLogin,
-} from './commands/login/index.js';
-export type {
-  LoginOptions,
-  LoginResult,
-  CompleteDeviceLoginOptions,
-  DeviceLoginResult,
-} from './commands/login/index.js';
-export { logoutCommand, logout } from './commands/logout/index.js';
 export { whoamiCommand } from './commands/auth/index.js';
 export {
   telemetryStatusCommand,
@@ -78,13 +66,7 @@ export type {
   SimulateCollectorOptions,
 } from './commands/push/index.js';
 export { validate } from './commands/validate/index.js';
-export {
-  resolveAccessToken,
-  getAuthHeaders,
-  credentialSource,
-} from './core/auth.js';
-export { startDeviceAuthorization } from './core/oauth-client.js';
-export type { DeviceAuthorization } from './core/oauth-client.js';
+export { resolveAccessToken } from './core/auth.js';
 export { ApiError } from './core/api-error.js';
 export type { ApiErrorDetail } from './core/api-error.js';
 export {
@@ -98,14 +80,7 @@ export { appFetch, appErrorMessage } from './core/app-fetch.js';
 export type { AppFetchInit } from './core/app-fetch.js';
 export { APP_PATHS } from './core/app-paths.js';
 export { whoami } from './commands/auth/index.js';
-export {
-  readConfig,
-  writeConfig,
-  clearAuthFields,
-  deleteConfig,
-  resolveToken,
-  resolveAppUrl,
-} from './lib/config-file.js';
+export { readConfig, writeConfig, resolveAppUrl } from './lib/config-file.js';
 export { VERSION } from './version.js';
 export type { WalkerOSConfig } from './lib/config-file.js';
 

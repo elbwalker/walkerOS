@@ -48,7 +48,7 @@ describe('telemetry commands', () => {
     });
 
     it('reports "not yet chosen" when config exists but field is absent', () => {
-      writeConfig({ token: 'x' });
+      writeConfig({ appUrl: 'https://app.example.test' });
       telemetryStatusCommand();
       expect(stdoutText()).toMatch(/not yet/i);
     });

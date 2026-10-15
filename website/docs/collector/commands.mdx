@@ -8,9 +8,13 @@ package: '@walkeros/collector'
 
 # Collector commands
 
-The collector provides a core event processing engine that manages destinations,
-consent, user data, and custom properties. Commands are executed through the
-`elb` function, which the collector also exposes as `collector.elb`.
+Walker commands manage the collector's destinations, consent, user data and
+custom properties. Commands are executed through the
+collector's `elb` function, `collector.elb`. On a web page the browser source's
+`elb` passes them on as well. The `elb` that `startFlow` returns is the
+[primary source's](/docs/sources#primary-source) push: it handles commands
+when that source does, as the browser source does, and it is `collector.elb`
+when the flow has no sources.
 
 Unknown walker commands log a warning and return `{ ok: false }`. Commands like
 `walker init` are browser-specific and handled by the browser source before
@@ -50,8 +54,9 @@ const { collector, elb } = await startFlow({
 
 :::tip
 
-For dynamic scenarios requiring runtime destination addition, use
-`elb('walker destination')` command or `collector.addDestination()`. See destination-specific documentation for
+To add a destination at runtime, use the `walker destination` command,
+`elb('walker destination', { code: destinationGtag, config: {} })`, or
+`collector.addDestination()`. See destination-specific documentation for
 configuration options.
 
 :::
@@ -113,8 +118,9 @@ The `context` object has the same shape for every action:
 
 ### run
 
-With each `run`, the on-event will be called. Use `context.collector` to access
-the running instance.
+With each `run`, the on-event will be called. A handler registered after the
+collector started is also called once right away. Use `context.collector` to
+access the running instance.
 
 <CodeSnippet
   code={`elb('walker on', {
@@ -129,8 +135,12 @@ the running instance.
 Every time the `run` command is called, the function will be executed:
 
 <CodeSnippet
-  code={`// Setup collector with browser source
-const { collector } = await startFlow({ run: true });
+  code={`const { elb } = await startFlow({ run: true });
+
+elb('walker on', {
+  type: 'run',
+  rules: (_, context) => console.log('run with', { instance: context.collector }),
+});
 // Output: run with { instance: { ... } }
 elb('walker run');
 // Output: run with { instance: { ... } }`}
@@ -186,7 +196,7 @@ User IDs are added to each event.
 
 <CodeSnippet
   code={`{
-  "event": "entity action",
+  "name": "entity action",
   "user": {
     "id": "us3r",
     "device": "c00k13",
@@ -217,7 +227,9 @@ You can also set user identity declaratively from the DOM with the
 
 ## custom
 
-Set custom properties that are added to each event processed by the collector.
+Set custom properties on the collector (`collector.custom`), for values that
+are not event data. They are not added to events; `on('custom')` subscribers
+and the `on` handlers of sources and destinations receive them.
 
 <CodeSnippet
   code={`elb('walker custom', { key: 'value' });`}
@@ -246,6 +258,35 @@ reach one already waiting, whether it waits for consent, for a destination's
 A transformer that runs before the collector, in a source's `next` chain, sees
 the event before enrichment and therefore before the base globals are merged.
 
+## config
+
+Change the collector's configuration at runtime. The keys given are merged
+into the current configuration; an array, such as the collector chain `next`,
+is replaced as a whole. The new value applies to later events.
+
+<CodeSnippet
+  code={`elb('walker config', { next: ['validate'] });`}
+  language="javascript"
+/>
+
+## run {#run-command}
+
+Start the collector, or start a new run. `startFlow` sends the first run
+unless it is called with `run: false`. A run accepts state to set first, any
+of `consent`, `user`, `globals` and `custom`; its `globals` replace the current
+globals on top of `globalsStatic`.
+
+<CodeSnippet
+  code={`elb('walker run', { globals: { pagegroup: 'checkout' } });`}
+  language="javascript"
+/>
+
+Each run discards the events that wait in a destination's consent queue and the
+collector's replay buffer, delivers events pushed before the first run (see
+[Pre-run events](#pre-run-events)) and calls the `run` handlers. With
+`history` on, the browser source starts a run on every route change
+([browser source commands](/docs/sources/web/browser/commands#run)).
+
 ## State delivery
 
 State commands (`consent`, `user`, `globals`, `custom`) set values on the
@@ -268,8 +309,10 @@ This gives five practical guarantees:
   `require` only delays when its first `on` delivery lands. A dependent source
   reacts to state correctly whether or not it declares `require`.
 * **Before the first push.** A destination's `on` handler receives the current
-  state before any event is delivered to it. The collector waits for an async
-  handler to finish, up to the destination's `config.timeout`, before it
+  state before any event is delivered to it. This needs an `init` method on the
+  destination: without one, its `on` handler is never called, while the state
+  command still reports the destination under `done`. The collector waits for
+  an async handler to finish, up to the destination's `config.timeout`, before it
   delivers events. If the handler does not finish in that time, or fails, the
   destination's events stay in its queue instead of going out without the
   state, until a later delivery of the state finishes. Those held events are
@@ -311,20 +354,22 @@ await elb('walker run'); // 'page view' is delivered now`}
   enrichment are applied when the event is replayed, not when it is held.
 * **Exactly-once.** A second `run` does not re-deliver events an earlier run
   already replayed.
-* **Bounded.** The buffer holds at most `queueMax` events (default `1000`,
-  shared with the destination replay buffer) and drops the oldest entries on
-  overflow. Each hold and drop is logged at `debug` level.
+* **Bounded.** The buffer holds at most `queueMax` events (default `1000`, the
+  same setting that caps the collector's replay buffer) and drops the oldest
+  entries on overflow. A drop is counted on
+  `collector.status.dropped['collector.preRun'].queue` and logged once per
+  overflow at `warn` level; each hold is logged at `debug` level.
 
 Commands are unaffected: they continue to apply immediately, as described above.
 
 ## hook
 
-Hooks customize the default behavior of the collector. Available hooks include
-`Push`, `DestinationInit`, `DestinationPush`, `StoreGet`, `StoreSet`, and
-`StoreDelete`. Hooks allow for validation, manipulation, or cancellation of
-default behavior.
+Hooks run before and after the collector's own functions and can validate,
+change or cancel what those functions do. Available hooks include `Push`,
+`DestinationInit`, `DestinationPush`, `StoreGet`, `StoreSet`, and
+`StoreDelete`.
 
-Add hooks to the collector to customize or enhance default processing.
+Add a hook with the `hook` command:
 
 <CodeSnippet
   code={`elb('walker hook', { name: '<moment>', fn: hookFn });`}
@@ -333,14 +378,17 @@ Add hooks to the collector to customize or enhance default processing.
 
 ### Moments
 
-The overall function execution order is as follows:
+A pre-hook runs before its function and a post-hook right after the function
+returns. Most of these functions are async, so a post-hook runs before their
+work has finished and `params.result` is the pending promise: await it to read
+the outcome. For one event, the moments run in this order:
 
 1. prePush
-2. preDestinationInit
-3. postDestinationInit
-4. preDestinationPush or preDestinationPushBatch
-5. postDestinationPush or postDestinationPushBatch
-6. postPush
+2. postPush (the push is still running)
+3. preDestinationInit
+4. postDestinationInit
+5. preDestinationPush or preDestinationPushBatch
+6. postDestinationPush or postDestinationPushBatch
 
 Others are:
 
@@ -353,8 +401,8 @@ Others are:
 
 ### Function signatures
 
-In general, `params` will be prefixed as a parameter, containing `fn` which is
-the original function and `result` for the post-hooks. A post-hook's return
+Every hook receives `params` as its first argument: `params.fn` is the
+original function, and post-hooks also get `params.result`. A post-hook's return
 value replaces the result, so return `params.result` to keep it. Use the
 following function signatures:
 
@@ -363,9 +411,10 @@ following function signatures:
 function prePush(params, event, options) {
   return params.fn(event, options);
 }
-function postPush(params, event, options) {
-  console.log('default return result', params.result);
-  return params.result;
+async function postPush(params, event, options) {
+  const result = await params.result;
+  console.log('default return result', result);
+  return result;
 }
 
 // DestinationInit
@@ -437,9 +486,10 @@ const { collector } = await startFlow({
 // Add hooks via command
 elb('walker hook', {
   name: 'postPush',
-  fn: function (params, ...args) {
+  fn: async function (params, ...args) {
+    const result = await params.result;
     console.log('walker exec time', Date.now() - window.elbTimer);
-    return params.result;
+    return result;
   },
 });
 
@@ -447,5 +497,17 @@ elb({ name: 'page view' });
 
 // Output:
 // walker exec time 1`}
+  language="javascript"
+/>
+
+## shutdown
+
+Stop the collector: sources are destroyed first, then pending batches are
+flushed (up to 5 seconds each) and destinations, transformers and stores are
+destroyed, in that order. A second `walker shutdown` does nothing. The runner
+sends it when the process exits; in the browser nothing sends it.
+
+<CodeSnippet
+  code={`await elb('walker shutdown');`}
   language="javascript"
 />
