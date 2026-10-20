@@ -44,17 +44,19 @@ event name. An array means "try each in order, first matching rule wins". A
 this order:
 
 1. If the mapping has a key for the event's entity, only that entity is
-   searched: its exact action, else its `'*'` action.
+   searched: the rules under the exact action when that action has a key,
+   otherwise the rules under the entity's `'*'` action.
 2. If the mapping has no key for the entity, the `'*'` entity is searched the
-   same way: the exact action, else `'*'`.
+   same way: the rules under the exact action when that action has a key,
+   otherwise the rules under `'*'`.
 3. If no rule was found (no key matched, or no condition passed), the `'*'` →
    `'*'` rule is tried.
 
-Two consequences are easy to miss. A `'*'` → `click` rule is used only for
-entities that have no key of their own: with `product: { view: ... }` in the
-mapping, a `product click` skips it and falls through to `'*'` → `'*'`. And
-when every rule of an exact match fails its condition, the lookup goes straight
-to `'*'` → `'*'` and skips the entity's own `'*'` rule.
+So a `'*'` → `click` rule is used only for entities that have no key of their
+own: with `product: { view: ... }` in the mapping, a `product click` skips it
+and falls through to `'*'` → `'*'`. And when every rule under an exact action
+fails its condition, the lookup goes straight to `'*'` → `'*'` and skips the
+entity's own `'*'` rule.
 
 In this example the entity's own key wins: `product *` is used and `* click`
 is never consulted.
@@ -138,7 +140,8 @@ are what force the flush.
 Batching works only on a destination that implements `pushBatch`; its page
 says whether it does. On any other destination `batch` has no effect and every
 event goes to `push` right away. Pending batches are flushed when the collector
-shuts down (`walker shutdown`, which the runner sends on exit), waiting up to 5
+shuts down ([`walker shutdown`](/docs/collector/commands#shutdown), which the
+runner sends on exit), waiting up to 5
 seconds per batch. In the browser nothing sends `walker shutdown`, so events
 still waiting in a batch when the page unloads are not sent. The
 [`pushBatch` contract](/docs/destinations/create-your-own#the-pushbatch-function-optional)
@@ -261,7 +264,8 @@ Resolves the matching rule for an event based on `event.name` (the
 `{ eventMapping, mappingKey }` where `eventMapping` is the matched
 `Mapping.Rule` and `mappingKey` is the lookup key that matched (including
 wildcards). When no rule matches, `eventMapping` is undefined and `mappingKey`
-is an empty string. Pass the `collector` when rules have conditions: it is
+is an empty string. When there is no mapping, or the event name is a single
+word with no action, the result is `{}`. Pass the `collector` when rules have conditions: it is
 the conditions' context, and without it a condition that throws is not logged
 but rejects the call.
 

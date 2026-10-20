@@ -143,13 +143,13 @@ an ESM `flow.mjs` plus a `node_modules/` traced by `@vercel/nft`, all inside
 
 ## Troubleshooting
 
-| Symptom                       | Cause                                    | Fix                                                          |
-| ----------------------------- | ---------------------------------------- | ------------------------------------------------------------ |
-| Health check fails            | Runner health server not starting        | Check `PORT` env var is set and not conflicting              |
-| Container starts then crashes | No HTTP source configured                | Add `@walkeros/server-source-express` as source              |
-| Bundle is tiny (<1KB)         | Destinations nested inside `server` key  | Move sources/destinations to flow level, alongside `server`  |
-| Port mismatch                 | Config port doesn't match container PORT | Ensure config has `port: 8080` — runtime overrides it        |
-| 403 on startup                | Deployer token lacks permissions         | Check deployer role on flow GET and runners heartbeat routes |
+| Symptom                       | Cause                                                                                         | Fix                                                                                                        |
+| ----------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Health check fails            | Runner health server not starting                                                             | Check `PORT` env var is set and not conflicting                                                            |
+| Container starts then crashes | No HTTP source configured                                                                     | Add `@walkeros/server-source-express` as source                                                            |
+| Bundle is tiny (<1KB)         | Destinations nested inside `server` key                                                       | Move sources/destinations to flow level, alongside `server`                                                |
+| Port mismatch                 | Config port doesn't match container PORT                                                      | Ensure config has `port: 8080` — runtime overrides it                                                      |
+| 403 on startup                | The runtime was started with a person's token, or its deploy token was regenerated or revoked | Use the current deploy token from the flow's self-hosted settings; runner routes accept runner tokens only |
 
 ## Related
 

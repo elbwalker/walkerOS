@@ -364,8 +364,9 @@ Commands are unaffected: they continue to apply immediately, as described above.
 
 ## hook
 
-Hooks run before and after the collector's own functions and can validate,
-change or cancel what those functions do. Available hooks include `Push`,
+Hooks run before and after collector operations, such as a push, a command or
+a destination's push, and can validate, change or cancel them. Available hooks
+include `Push`,
 `DestinationInit`, `DestinationPush`, `StoreGet`, `StoreSet`, and
 `StoreDelete`.
 
@@ -379,9 +380,9 @@ Add a hook with the `hook` command:
 ### Moments
 
 A pre-hook runs before its function and a post-hook right after the function
-returns. Most of these functions are async, so a post-hook runs before their
-work has finished and `params.result` is the pending promise: await it to read
-the outcome. For one event, the moments run in this order:
+returns. When the function is async, the post-hook runs before its work has
+finished and `params.result` is the pending promise: await it to read the
+outcome. For one event, the moments run in this order:
 
 1. prePush
 2. postPush (the push is still running)
@@ -505,9 +506,10 @@ elb({ name: 'page view' });
 Stop the collector: sources are destroyed first, then pending batches are
 flushed (up to 5 seconds each) and destinations, transformers and stores are
 destroyed, in that order. A second `walker shutdown` does nothing. The runner
-sends it when the process exits; in the browser nothing sends it.
+sends it when the process exits; in the browser nothing sends it. Outside the
+runner, send it from your own exit handler with `collector.command`:
 
 <CodeSnippet
-  code={`await elb('walker shutdown');`}
+  code={`await collector.command('shutdown');`}
   language="javascript"
 />

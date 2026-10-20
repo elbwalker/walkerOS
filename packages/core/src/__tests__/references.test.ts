@@ -5,6 +5,7 @@ import {
   REF_ENV,
   REF_CONTRACT,
   REF_FLOW,
+  REF_FLOW_INLINE,
   REF_STORE,
   REF_SECRET,
   REF_CODE_PREFIX,
@@ -111,6 +112,35 @@ describe('REF_FLOW', () => {
     expect('prefix$flow.server.url'.match(REF_FLOW)).toBeNull();
     expect('$flow.server.url suffix'.match(REF_FLOW)).toBeNull();
   });
+
+  test('a hyphen belongs to the flow name, the first dot starts the path', () => {
+    const m = '$flow.tracking-server.url'.match(REF_FLOW)!;
+    expect(m[1]).toBe('tracking-server');
+    expect(m[2]).toBe('url');
+
+    const short = '$flow.a-b.url'.match(REF_FLOW)!;
+    expect(short[1]).toBe('a-b');
+    expect(short[2]).toBe('url');
+
+    expect('$flow.a-b'.match(REF_FLOW)?.[1]).toBe('a-b');
+  });
+
+  test('a name starts with a letter or _', () => {
+    expect('$flow.-server.url'.match(REF_FLOW)).toBeNull();
+    expect('$flow.1server.url'.match(REF_FLOW)).toBeNull();
+  });
+});
+
+describe('REF_FLOW_INLINE', () => {
+  test('captures name and path of each reference inside a longer string', () => {
+    const matches = [
+      ...'to $flow.tracking-server.url or $flow.web'.matchAll(REF_FLOW_INLINE),
+    ];
+    expect(matches.map((m) => [m[1], m[2]])).toEqual([
+      ['tracking-server', 'url'],
+      ['web', undefined],
+    ]);
+  });
 });
 
 describe('scanFlowRefs', () => {
@@ -136,11 +166,11 @@ describe('scanFlowRefs', () => {
     expect(refs.has('c')).toBe(true);
   });
 
-  it('matches the resolver name grammar (hyphen is a boundary)', () => {
-    // hyphen ends the name: $flow.a-2 captures `a`, not `a-2`
+  it('matches the resolver name grammar (hyphen is part of the name)', () => {
+    // $flow.a-2 captures `a-2`, not `a`
     const hyphen = scanFlowRefs('$flow.a-2');
-    expect(hyphen.has('a')).toBe(true);
-    expect(hyphen.has('a-2')).toBe(false);
+    expect(hyphen.has('a-2')).toBe(true);
+    expect(hyphen.has('a')).toBe(false);
 
     // leading digit is not a valid name: no capture
     const leadingDigit = scanFlowRefs('$flow.1abc');
@@ -191,6 +221,8 @@ describe('core barrel re-exports', () => {
     ['REF_ENV'],
     ['REF_CONTRACT'],
     ['REF_FLOW'],
+    ['REF_FLOW_INLINE'],
+    ['REF_FLOW_NAME'],
     ['REF_STORE'],
     ['REF_SECRET'],
     ['REF_CODE_PREFIX'],

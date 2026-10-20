@@ -688,6 +688,43 @@ describe('validateFlowConfig', () => {
         ),
       ).toHaveLength(0);
     });
+
+    // A hyphenated flow name, referenced from the web flow.
+    const hyphenated = (flowName: string) =>
+      JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            web: {
+              config: {
+                platform: 'web',
+                settings: { backend: '$flow.tracking-server.url' },
+              },
+            },
+            [flowName]: {
+              config: { platform: 'server', url: 'https://api.test' },
+            },
+          },
+        },
+        null,
+        2,
+      );
+
+    it('accepts a reference to an existing hyphenated flow', () => {
+      const result = validateFlowConfig(hyphenated('tracking-server'));
+      expect(
+        result.warnings.filter((w) => w.message.includes('$flow')),
+      ).toEqual([]);
+    });
+
+    it('names a missing hyphenated flow in full', () => {
+      const result = validateFlowConfig(hyphenated('server'));
+      const messages = result.warnings.map((w) => w.message);
+      expect(messages).toContain(
+        'Unknown flow "$flow.tracking-server". Defined: web, server',
+      );
+      expect(messages.some((m) => m.includes('"$flow.tracking"'))).toBe(false);
+    });
   });
 
   // --- Colon-instead-of-dot typo detection ---
@@ -772,6 +809,31 @@ describe('validateFlowConfig', () => {
       expect(warning).toBeDefined();
       if (!warning) throw new Error('warning expected');
       expect(warning.message).toMatch(/\$flow\.server/);
+    });
+
+    it('suggests a hyphenated $flow name in full', () => {
+      const json = JSON.stringify(
+        {
+          version: 4,
+          flows: {
+            web: {
+              config: {
+                platform: 'web',
+                settings: { url: '$flow:tracking-server' },
+              },
+            },
+            'tracking-server': {
+              config: { platform: 'server', url: 'https://api.test' },
+            },
+          },
+        },
+        null,
+        2,
+      );
+      const result = validateFlowConfig(json);
+      expect(result.warnings.map((w) => w.message)).toContain(
+        'Malformed reference "$flow:tracking-server", use a dot, not a colon: "$flow.tracking-server".',
+      );
     });
 
     it('warns on $secret:NAME and suggests $secret.NAME', () => {

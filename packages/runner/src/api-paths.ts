@@ -1,7 +1,7 @@
 /**
  * The app operations the runner calls, as `"<METHOD> <path template>"`. They
- * are the runner's fixed interface: the app keeps both in its public API set
- * for runner and automation tokens alike.
+ * are the runner's fixed interface: the app serves both to runner tokens only,
+ * on its runner door, outside its public API set.
  *
  * The only file in the runner that names an app path.
  */

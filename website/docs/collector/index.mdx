@@ -12,9 +12,9 @@ export const collectorSchema = schemas.CollectorSchemas.initConfigJsonSchema;
 
 # Collector
 
-The collector is the processing engine of walkerOS. It sits between event
-capture and event delivery: it receives events from sources, enriches them with
-additional data, applies consent rules and routes them to destinations.
+The collector is the processing engine of walkerOS: it receives events from
+sources, enriches them with additional data, applies consent rules and routes
+them to destinations.
 
 #### What it does
 
@@ -122,7 +122,7 @@ const { collector, elb } = await startFlow({
 
 ## Event transformation
 
-The collector uses mapping to transform events as they flow through the system. Mapping is configured at the destination level and controls how walkerOS events are converted to vendor-specific formats.
+The collector uses mapping to transform events as they flow through the system. Sources and destinations each have their own mapping; a destination's mapping controls how walkerOS events are converted to vendor-specific formats.
 
 <FlowMap
   sources={{ default: { label: 'walkerOS', text: 'Event' } }}
@@ -341,9 +341,12 @@ Standard `Error` is absorbed by the boundary catch, logged, and counted.
 `collector.command` and propagates, so a supervisor (CLI runner, Express
 server, container orchestrator) can terminate cleanly. It propagates when
 thrown in a source (its factory or `init`), in a transformer's `init` or in an
-`on` handler. Thrown inside a destination (its `init`, its `push` or a mapping
-callback of its rules) or in a transformer's `push`, it is handled like any
-other error thrown there and does not propagate.
+`on` handler. Thrown in a destination's `init` or `push`, or in a
+transformer's `push`, it is handled like any other error thrown there and does
+not propagate. Thrown in a mapping callback of a destination, it does not
+propagate either, but it fails that destination's push and the event goes to
+its dead-letter queue. An ordinary error there drops only the value, or, in a
+rule `condition`, makes that rule not match.
 
 <CodeSnippet
   code={`import { FatalError } from '@walkeros/core';

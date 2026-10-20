@@ -1,4 +1,5 @@
 import type { editor } from 'monaco-editor';
+import { REF_FLOW_NAME } from '@walkeros/core';
 import {
   syntaxFunction,
   syntaxKeyword,
@@ -27,7 +28,8 @@ export interface WalkerOSReference {
 // in @walkeros/core, but relaxed here because the decorator scans free-form
 // substrings inside quoted JSON/TS strings rather than whole-string values.
 // Name regex allows trailing dot + optional name/path so that prefix-only
-// typing (e.g. `"$var."`) still lights up for IntelliSense.
+// typing (e.g. `"$var."`) still lights up for IntelliSense. The `$flow` name
+// is REF_FLOW_NAME itself, made optional.
 export const REFERENCE_PATTERNS: Array<{
   type: ReferenceType;
   regex: RegExp;
@@ -52,7 +54,7 @@ export const REFERENCE_PATTERNS: Array<{
   { type: 'store', regex: /\$store\.(\w*)/g, className: 'elb-ref-store' },
   {
     type: 'flow',
-    regex: /\$flow\.(\w*(?:\.[\w.]*)?)/g,
+    regex: new RegExp(`\\$flow\\.((?:${REF_FLOW_NAME})?(?:\\.[\\w.]*)?)`, 'g'),
     className: 'elb-ref-flow',
   },
   { type: 'code', regex: /\$code:/g, className: 'elb-ref-code' },

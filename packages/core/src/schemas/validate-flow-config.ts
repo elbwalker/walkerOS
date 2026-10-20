@@ -9,6 +9,8 @@ import {
   REF_CODE_PREFIX,
   REF_CONTRACT,
   REF_FLOW,
+  REF_FLOW_INLINE,
+  REF_FLOW_NAME,
   REF_SECRET,
   REF_STORE,
 } from '../references';
@@ -229,15 +231,14 @@ const STORE_INLINE_REGEX = /\$store\.([a-zA-Z_][a-zA-Z0-9_]*)/g;
 // so we use a looser pattern here to detect malformed cases too.
 const ENV_LOOSE_REGEX = /\$env\.([A-Za-z_]\w*)(=[^"}\s]*)?/g;
 
-// Inline variant of REF_FLOW. Captures $flow.NAME(.path)? anywhere in text.
-// Path portion stops at JSON delimiters (quote, brace, whitespace).
-const FLOW_INLINE_REGEX =
-  /\$flow\.([a-zA-Z_][a-zA-Z0-9_]*)(?:\.([a-zA-Z0-9_.]+))?/g;
-
 // Scans for $<prefix>:<name> where <prefix> is a reference type that uses a dot.
+// A flow name follows REF_FLOW_NAME, so a hyphenated one is suggested whole.
 // Excludes $code: (legitimate code-payload prefix) and $env.NAME:default
 // (which has the dot before the colon, so it doesn't match this pattern).
-const COLON_TYPO_REGEX = /\$(var|store|flow|secret):([a-zA-Z_][a-zA-Z0-9_]*)/g;
+const COLON_TYPO_REGEX = new RegExp(
+  `\\$(?:(var|store|secret):([a-zA-Z_][a-zA-Z0-9_]*)|(flow):(${REF_FLOW_NAME}))`,
+  'g',
+);
 
 // Inline variant of REF_SECRET for scanning anywhere in JSON text.
 // Source-of-truth REF_SECRET in references.ts is anchored (^...$) and
@@ -428,7 +429,8 @@ const WHOLE_VALUE_REFERENCES: ReadonlyArray<{
   {
     prefix: '$flow.',
     regex: REF_FLOW,
-    grammar: 'a flow name, then an optional dot path of letters, digits and _',
+    grammar:
+      'a flow name of letters, digits, _ and -, then an optional dot path of letters, digits and _',
   },
   {
     prefix: '$store.',
@@ -729,8 +731,8 @@ function checkColonTypos(
 ): void {
   forEachMatch(strings, COLON_TYPO_REGEX, (match, at, offset) => {
     const full = match[0];
-    const prefix = match[1];
-    const name = match[2];
+    const prefix = match[1] ?? match[3];
+    const name = match[2] ?? match[4];
     issues.push({
       message: `Malformed reference "${full}", use a dot, not a colon: "$${prefix}.${name}".`,
       severity: 'warning',
@@ -768,7 +770,7 @@ function checkFlowReferences(
   const flowNames = context.flowNames ?? [];
   if (flowNames.length === 0) return;
 
-  forEachMatch(strings, FLOW_INLINE_REGEX, (match, at, offset) => {
+  forEachMatch(strings, REF_FLOW_INLINE, (match, at, offset) => {
     const full = match[0];
     const name = match[1];
     if (flowNames.includes(name)) return;

@@ -72,6 +72,12 @@ describe('findWalkerOSReferences', () => {
     expect(matches[0].name).toBe('server.url');
   });
 
+  it('finds $flow. references to a hyphenated flow name', () => {
+    const matches = findWalkerOSReferences('"$flow.tracking-server.url"');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].name).toBe('tracking-server.url');
+  });
+
   it('finds $flow. prefix only', () => {
     const refs = findWalkerOSReferences('"$flow."');
     expect(refs).toHaveLength(1);

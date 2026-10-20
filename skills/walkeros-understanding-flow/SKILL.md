@@ -734,9 +734,10 @@ every destination needs belongs in `collector.next`, not repeated in each
   applied before the source chain; blocks event entirely
 - **Destination-level:** `destination.config.consent` is checked first, before
   the destination chain (`destination.before`): it skips only that destination
-  and queues denied events (after `collector.next`, so a replay never re-runs
-  it). `destination.config.mapping` is applied after the destination chain, so a
-  rename in the chain changes which rule matches
+  and queues denied events. The queue sits after `collector.next`, so a replay
+  of a queued event never re-runs `collector.next`; it does run
+  `destination.before`. `destination.config.mapping` is applied after the
+  destination chain, so a rename in the chain changes which rule matches
 
 ### Canvas rendering rules (for UI graph visualization)
 
