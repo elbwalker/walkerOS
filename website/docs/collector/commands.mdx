@@ -139,7 +139,8 @@ Every time the `run` command is called, the function will be executed:
 
 elb('walker on', {
   type: 'run',
-  rules: (_, context) => console.log('run with', { instance: context.collector }),
+  rules: (_, context) =>
+    console.log('run with', { instance: context.collector }),
 });
 // Output: run with { instance: { ... } }
 elb('walker run');
@@ -506,10 +507,15 @@ elb({ name: 'page view' });
 Stop the collector: sources are destroyed first, then pending batches are
 flushed (up to 5 seconds each) and destinations, transformers and stores are
 destroyed, in that order. A second `walker shutdown` does nothing. The runner
-sends it when the process exits; in the browser nothing sends it. Outside the
-runner, send it from your own exit handler with `collector.command`:
+sends it on `SIGTERM` and `SIGINT`; in the browser nothing sends it. Outside the
+runner, send it with `collector.command` and await it before the process exits,
+for example from a signal handler. Node's `exit` event cannot wait for the
+flush, so pending batches sent from there are lost:
 
 <CodeSnippet
-  code={`await collector.command('shutdown');`}
+  code={`process.on('SIGTERM', async () => {
+  await collector.command('shutdown');
+  process.exit(0);
+});`}
   language="javascript"
 />

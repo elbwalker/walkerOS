@@ -120,7 +120,7 @@ function formatUnresolvedFlowMessage(
   const target = path
     ? `flows.${flowName}.config.${path}`
     : `flows.${flowName}.config`;
-  return `${ref} is empty. Set ${target}, or run \`walkeros deploy ${flowName}\` first.`;
+  return `${ref} is empty. Set ${target}.`;
 }
 
 /**

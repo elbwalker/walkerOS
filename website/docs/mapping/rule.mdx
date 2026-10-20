@@ -187,8 +187,11 @@ await getMappingEvent(
 
 Two flags control destination behaviour and they are not interchangeable:
 
-- `ignore: true`: the rule matched but **nothing happens**. No data transform,
-  no destination call, no side effects. Use for suppression. The push result
+- `ignore: true`: the rule matched and the destination's `push()` is **not**
+  called, so nothing is sent and the rule's `name` and `data` are not applied.
+  What runs before the rule is applied still runs: the destination's `init` on
+  its first event, its `before` chain, the destination-level `policy` and
+  `data`, and the rule's `policy`. Use for suppression. The push result
   still lists the destination under `done`, and its status counts the event.
 - `silent: true`: the rule matched and the destination's `push()` **is** called
   with the rule. On a destination that reads `silent`, `settings.identify`,

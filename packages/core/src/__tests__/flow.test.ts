@@ -2680,8 +2680,9 @@ describe('$flow references', () => {
       strictFlowRefs: false,
       onWarning: (msg) => warnings.push(msg),
     });
-    expect(warnings.length).toBe(1);
-    expect(warnings[0]).toMatch(/\$flow\.server\.url/);
+    expect(warnings).toEqual([
+      '$flow.server.url is empty. Set flows.server.config.url.',
+    ]);
     // Resolved value remains the original $flow string in soft mode
     expect(web.destinations?.api.config).toEqual({
       settings: { url: '$flow.server.url' },
