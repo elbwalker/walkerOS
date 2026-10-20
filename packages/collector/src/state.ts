@@ -38,7 +38,8 @@ export function runStepState<E extends WalkerOS.DeepPartialEvent>(
 
 /**
  * A build without state ignores a step's `state` (e.g. on a destination
- * added at runtime): warned, never silent. Stays in that lean bundle.
+ * added at runtime): an ERROR (a config value without effect), never
+ * silent. Stays in that lean bundle.
  */
 export function warnStateOff(
   collector: Collector.Instance,
@@ -49,5 +50,5 @@ export function warnStateOff(
     !(typeof __WALKEROS_STATE__ === 'undefined' || __WALKEROS_STATE__) &&
     state !== undefined
   )
-    collector.logger.warn(`state: not in this build, ${step} state ignored`);
+    collector.logger.error(`state: not in this build, ${step} state ignored`);
 }

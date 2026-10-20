@@ -290,7 +290,7 @@ export async function startFlow<
   if (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__) {
     installObserve(instance, config);
   } else if (config.observe) {
-    instance.logger.warn('observe: not in this build, config ignored');
+    instance.logger.error('observe: not in this build, config ignored');
   }
 
   // Initialize sources; the collector's elb adapter is already available

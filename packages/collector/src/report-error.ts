@@ -6,9 +6,8 @@ import type {
   StepKind,
   WalkerOS,
 } from '@walkeros/core';
-import { stepId } from '@walkeros/core';
-import { pushBounded, resetOverflowFlag, warnOverflowOnce } from './buffers';
-import { recordStepOutcome, resolveBreakerConfig } from './breaker';
+import { reportCause, stepId, toFailureReason } from '@walkeros/core';
+import { recordFailure } from './outcome';
 
 /**
  * Maximum number of failed-push entries retained per destination DLQ before
@@ -50,68 +49,6 @@ export function bumpDropped(
   const entry = status.dropped[id];
   entry[buffer] = (entry[buffer] ?? 0) + n;
   return entry[buffer]!;
-}
-
-/**
- * Routes a single event/error pair to a destination's DLQ with the bounded
- * write, overflow-warn-once, and full failure accounting (`destStatus.failed`
- * + `collector.status.failed`). This mirrors the batch flush's `routeToDlq`
- * for the single-event case: write to the DLQ AND bump the failed counters in
- * one place. (The per-event in-band push path bumps `failed` later in the
- * aggregation pass instead, so it does NOT call this; this helper is for the
- * out-of-band `reportError(err, event)` seam that has no aggregation pass.)
- */
-function routeEventToDlq(
-  collector: Collector.Instance,
-  destination: Destination.Instance,
-  destId: string,
-  event: WalkerOS.Event,
-  err: unknown,
-  logger: Logger.Instance,
-): void {
-  const dlq = (destination.dlq = destination.dlq || []);
-  const dlqBound = { max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX };
-  const dlqResult = pushBounded(dlq, [event, err], dlqBound);
-  if (dlqResult.dropped > 0) {
-    const droppedCount = bumpDropped(
-      collector.status,
-      stepId('destination', destId),
-      'dlq',
-      dlqResult.dropped,
-    );
-    warnOverflowOnce(
-      dlq,
-      logger,
-      'destination.dlq overflow; oldest entries dropped',
-      {
-        buffer: 'dlq',
-        destination: destId,
-        cap: dlqBound.max,
-        droppedCount,
-      },
-    );
-  } else if (dlq.length < dlqBound.max) {
-    resetOverflowFlag(dlq);
-  }
-  const destStatus = ensureDestStatus(collector, destId);
-  destStatus.failed++;
-  destStatus.dlqSize = dlq.length;
-  collector.status.failed++;
-
-  // A connection-level error that DLQs a specific event is a transport
-  // failure: feed it to the circuit breaker so the gate picks it up.
-  // Presence-gated and keyed on the canonical stepId (matching the push gate).
-  const breakerConfig = resolveBreakerConfig(destination.config.breaker);
-  if (breakerConfig) {
-    const canonicalId = destination.config.id || destId;
-    recordStepOutcome(
-      collector.status.breakers,
-      stepId('destination', canonicalId),
-      'transport-failure',
-      breakerConfig.threshold,
-      breakerConfig.cooldown,
-    );
-  }
 }
 
 /**
@@ -159,14 +96,11 @@ export function errorMeta(err: unknown): {
  *   `logger.error`. Does NOT bump `failed` (no event lost at this instant;
  *   counting it against `failed` would double-count the next push that hits
  *   the broken writer and gets DLQ'd).
- * - event-bearing (`reportError(err, event)`): route the event through the
- *   same DLQ + failure accounting an in-band push failure uses (for a
- *   destination). A step kind without a DLQ (or a destination not passed)
- *   still gets `failed`-counted and logged, never silently dropped.
- *
- * The with-event path deliberately funnels through the normal failure
- * accounting so that when circuit-breaker accounting is later attached to that
- * path, `reportError(err, event)` picks it up with no further wiring here.
+ * - event-bearing (`reportError(err, event)`): the event goes through the
+ *   one outcome sink an in-band push failure uses (`recordFailure`: counters,
+ *   DLQ, breaker, Observe, one cause line), for a destination. A step kind
+ *   without a DLQ (or a destination not passed) still gets `failed`-counted
+ *   and one cause line, never silently dropped.
  */
 export function buildReportError(
   collector: Collector.Instance,
@@ -180,16 +114,26 @@ export function buildReportError(
     try {
       if (event) {
         if (destination) {
-          routeEventToDlq(collector, destination, id, event, err, logger);
+          recordFailure(collector, destination, id, [event], err, {
+            message: 'report error',
+          });
         } else {
           // No DLQ buffer for this step kind: still account + surface the
           // lost event so it is never silent.
           collector.status.failed++;
+          const reason = toFailureReason(err);
+          reportCause(
+            collector,
+            logger,
+            { step: key, code: reason.code, status: reason.status },
+            'report error',
+            {
+              event: event.name,
+              retryable: reason.retryable,
+              error: reason.message,
+            },
+          );
         }
-        logger.error('report error', {
-          ...errorMeta(err),
-          event: event.name,
-        });
         return;
       }
 

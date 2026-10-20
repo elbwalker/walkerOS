@@ -143,10 +143,15 @@ describe('destination snowplow', () => {
 
     await elb(getEvent());
 
-    // logger.throw logs error and throws, collector catches and logs
+    // logger.throw only throws; the collector catches and writes the one line
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[snowplow]'),
-      'Config settings collectorUrl missing',
+      'ERROR',
+      expect.stringContaining('destination init failed'),
+      expect.objectContaining({
+        type: 'snowplow',
+        error: 'Config settings collectorUrl missing',
+      }),
     );
     consoleErrorSpy.mockRestore();
   });
@@ -2943,9 +2948,14 @@ describe('destination snowplow', () => {
 
       await elb(getEvent());
 
+      // The destination throws; the collector writes the one line for it.
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[snowplow]'),
-        'tracker.newTracker is required for browser-tracker mode',
+        'ERROR',
+        expect.stringContaining('destination init failed'),
+        expect.objectContaining({
+          type: 'snowplow',
+          error: 'tracker.newTracker is required for browser-tracker mode',
+        }),
       );
       consoleErrorSpy.mockRestore();
     });
@@ -2968,9 +2978,15 @@ describe('destination snowplow', () => {
 
       await elb(getEvent());
 
+      // The destination throws; the collector writes the one line for it.
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[snowplow]'),
-        'tracker.trackSelfDescribingEvent is required for browser-tracker mode',
+        'ERROR',
+        expect.stringContaining('destination init failed'),
+        expect.objectContaining({
+          type: 'snowplow',
+          error:
+            'tracker.trackSelfDescribingEvent is required for browser-tracker mode',
+        }),
       );
       consoleErrorSpy.mockRestore();
     });

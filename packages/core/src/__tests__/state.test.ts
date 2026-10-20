@@ -149,7 +149,7 @@ describe('applyState', () => {
     expect(store._data.size).toBe(0);
   });
 
-  test('key that does not resolve warns and skips the entry', async () => {
+  test('key that does not resolve is reported at ERROR and skips the entry', async () => {
     const store = createMockStore();
     const getStore = makeGetStore({ sessions: store });
     const collector = createMockCollector({ stores: { sessions: store } });
@@ -175,9 +175,13 @@ describe('applyState', () => {
     );
 
     expect(store._data.size).toBe(0);
-    expect(collector.logger.warn).toHaveBeenCalledWith(
-      '[state] key did not resolve',
-      { mode: 'set', store: 'sessions', key: 'event.user.session' },
+    expect(collector.logger.error).toHaveBeenCalledWith(
+      '[state] set key did not resolve, entry skipped',
+      {
+        step: 'store.sessions',
+        code: 'mapping',
+        mappingKey: 'event.user.session',
+      },
     );
   });
 
@@ -662,7 +666,7 @@ describe('applyState resolves against { event, ingest }', () => {
     expect(await store.get('s1')).toBe('g1');
   });
 
-  test('a bare path no longer resolves and warns', async () => {
+  test('a bare path no longer resolves and is reported', async () => {
     const { store, getStore, collector } = setup();
 
     await applyState(
@@ -681,9 +685,9 @@ describe('applyState resolves against { event, ingest }', () => {
     );
 
     expect(store._data.size).toBe(0);
-    expect(collector.logger.warn).toHaveBeenCalledWith(
-      '[state] key did not resolve',
-      { mode: 'set', store: 'registry', key: 'user.session' },
+    expect(collector.logger.error).toHaveBeenCalledWith(
+      '[state] set key did not resolve, entry skipped',
+      { step: 'store.registry', code: 'mapping', mappingKey: 'user.session' },
     );
   });
 

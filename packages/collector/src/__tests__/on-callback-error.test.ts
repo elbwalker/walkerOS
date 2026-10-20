@@ -55,9 +55,9 @@ describe('on.ts user-callback throws (Category B)', () => {
       },
     } as unknown as Destination.Instance;
 
-    callDestinationOn(collector, destination, 'd1', 'consent', {
-      marketing: true,
-    });
+    // A failed on(consent) is consent-not-applied (destination-outcome-state
+    // test f); every other type keeps the user-code line.
+    callDestinationOn(collector, destination, 'd1', 'user', { id: 'u1' });
 
     expect(collector.status.failed).toBe(0);
     const errorCall = findLoggerError(collector, 'on callback failed');

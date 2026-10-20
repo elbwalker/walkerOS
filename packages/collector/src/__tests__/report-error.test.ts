@@ -179,30 +179,41 @@ describe('reportError', () => {
       expect(c.status.failed).toBe(1);
     });
 
-    test('event-bearing log meta carries the transport code when present', async () => {
-      const c = await collector({});
-      const logger = createMockLogger();
+    test('the event-bearing line goes through the cause log: one line per cause, no payload', async () => {
+      const lines: Array<{ message: string; context: unknown }> = [];
+      const c = await collector({
+        logger: {
+          handler: (_level, message, context) => {
+            lines.push({ message, context });
+          },
+        },
+      });
       const dlq: Destination.DLQ = [];
       const reportError = buildReportError(
         c,
         'destination',
         'bigquery',
-        logger,
+        createMockLogger(),
         makeDestination(dlq),
       );
 
-      const err: Error & { code?: number } = Object.assign(
-        new Error('append failed'),
-        { code: 14 },
-      );
+      reportError(new Error('append failed'), event);
+      reportError(new Error('append failed'), event);
 
-      reportError(err, event);
-
-      expect(logger.error).toHaveBeenCalledWith('report error', {
-        error: 'append failed',
-        code: 14,
-        event: event.name,
-      });
+      expect(lines).toEqual([
+        {
+          message:
+            'report error (repeats within a minute are counted in status.destinations.bigquery.failed)',
+          context: {
+            step: 'destination.bigquery',
+            code: 'transport',
+            retryable: true,
+            event: event.name,
+            error: 'append failed',
+          },
+        },
+      ]);
+      expect(c.status.destinations.bigquery.failed).toBe(2);
     });
   });
 

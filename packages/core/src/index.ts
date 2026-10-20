@@ -36,6 +36,20 @@ export * from './trim';
 export * from './tryCatch';
 export * from './fatalError';
 export * from './invalidEventError';
+export { StepError, toFailureReason } from './stepError';
+export type {
+  FailureReason,
+  QueueReason,
+  QueuedReason,
+  StepErrorOptions,
+} from './stepError';
+export { createCauseLog, reportCause } from './causeLog';
+export type {
+  CauseKey,
+  CauseLog,
+  CauseLogOptions,
+  CauseLogger,
+} from './causeLog';
 export * from './useHooks';
 export * from './telemetry';
 export * from './telemetryResolver';
@@ -101,6 +115,7 @@ export {
 export * from './state';
 export * from './step-entry';
 export * from './transformer-mapping';
+export * from './mapping-no-ops';
 export * from './examples/formatOut';
 export {
   REF_VAR_FULL,

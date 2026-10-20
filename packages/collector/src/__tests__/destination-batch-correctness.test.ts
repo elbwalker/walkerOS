@@ -16,18 +16,6 @@ import type { Destination, Logger, WalkerOS } from '@walkeros/core';
 import { createEvent, createIngest, Level } from '@walkeros/core';
 import { pushToDestinations, startFlow } from '..';
 
-// Capture WARN-level log messages (+ their context) via a custom handler.
-function makeWarnCapture(): {
-  warnings: Array<{ message: string; context: Logger.LogContext }>;
-  handler: Logger.Handler;
-} {
-  const warnings: Array<{ message: string; context: Logger.LogContext }> = [];
-  const handler: Logger.Handler = (level, message, context) => {
-    if (level === Level.WARN) warnings.push({ message, context });
-  };
-  return { warnings, handler };
-}
-
 describe('Destination batch correctness (PROD-004)', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -425,8 +413,11 @@ describe('Destination batch correctness (PROD-004)', () => {
     expect(destStatus.count).toBe(0);
   });
 
-  it('caps the DLQ at dlqMax on a whole-batch failure, counts the overflow dropped, and warns once', async () => {
-    const { warnings, handler } = makeWarnCapture();
+  it('caps the DLQ at dlqMax on a whole-batch failure, counts the overflow dropped, and logs it once', async () => {
+    const warnings: Array<{ message: string; context: Logger.LogContext }> = [];
+    const handler: Logger.Handler = (level, message, context) => {
+      if (level === Level.ERROR) warnings.push({ message, context });
+    };
     const mockPushBatch = jest.fn(() => {
       throw new Error('whole batch boom');
     });
@@ -445,8 +436,7 @@ describe('Destination batch correctness (PROD-004)', () => {
 
     const { collector } = await startFlow({
       destinations: { d: { code: dest } },
-      // Default log level is ERROR; raise to WARN so the overflow warn surfaces.
-      logger: { level: 'WARN', handler },
+      logger: { handler },
     });
 
     for (let i = 0; i < 5; i++) {
@@ -478,14 +468,14 @@ describe('Destination batch correctness (PROD-004)', () => {
     expect(collector.status.destinations['d'].failed).toBe(5);
     expect(collector.status.destinations['d'].dlqSize).toBe(2);
 
-    // Overflow warn fired exactly once, with the cap + cumulative drop count.
-    const overflowWarns = warnings.filter((w) =>
-      /destination\.dlq overflow/.test(w.message),
+    // The eviction is one ERROR cause line (replay material lost), with the
+    // cap and the cumulative drop count.
+    const overflow = warnings.filter((w) => w.context.code === 'dlq-overflow');
+    expect(overflow.length).toBe(1);
+    expect(overflow[0].message).toContain(
+      'destination.dlq full (dlqMax 2): oldest failed entries dropped',
     );
-    expect(overflowWarns.length).toBe(1);
-    expect(overflowWarns[0].context.buffer).toBe('dlq');
-    expect(overflowWarns[0].context.cap).toBe(2);
-    expect(overflowWarns[0].context.droppedCount).toBe(3);
+    expect(overflow[0].context.count).toBe(3);
   });
 
   it('a returned BatchOutcome DLQs only the failed entries and counts the rest delivered', async () => {

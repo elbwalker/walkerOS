@@ -15,9 +15,15 @@ import type { Logger } from '@walkeros/core';
  *
  * Caller responsibility: increment the appropriate status counter
  * under `status.dropped[stepId]` (see `stepId()` in @walkeros/core)
- * and emit the warn-once-on-transition log. The helper stays pure: no logger
+ * and emit the once-on-transition log. The helper stays pure: no logger
  * coupling, no collector reference.
  */
+
+/**
+ * Default bound of a destination's `queuePush` and of its queued `on()`
+ * lifecycle deliveries.
+ */
+export const DEFAULT_QUEUE_MAX = 1_000;
 
 /**
  * The collector queue bound. `collector()` seeds `config.queueMax`, so a
@@ -98,22 +104,25 @@ export function pushBounded<T>(
 const overflowState = new WeakMap<object, boolean>();
 
 /**
- * Emit a warn-once log on the transition into overflow. Subsequent drops
- * within the same overflow window stay silent until the buffer drains
- * (the caller signals "below-cap again" by calling `resetOverflow`).
+ * Emit a log once on the transition into overflow, at the buffer's level:
+ * INFO for the replay buffer (no present destination loses an event), DEBUG
+ * for the consent wait (unmet consent is never above DEBUG). Subsequent
+ * drops within the same overflow window stay silent until the buffer drains
+ * (the caller signals "below-cap again" by calling `resetOverflowFlag`).
  *
  * The cumulative drop counter is still incremented on every drop by the
  * caller, so operators retain rate signal via `collector.status.dropped[stepId]`.
  */
-export function warnOverflowOnce(
+export function logOverflowOnce(
   buffer: object,
   logger: Logger.Instance,
+  level: 'info' | 'debug',
   message: string,
   context: Record<string, unknown>,
 ): void {
   if (overflowState.get(buffer)) return;
   overflowState.set(buffer, true);
-  logger.warn(message, context);
+  logger[level](message, context);
 }
 
 /**

@@ -37,8 +37,8 @@ export type LogFn = (
 ) => void;
 
 /**
- * Throw function signature - logs error then throws
- * Returns never as it always throws
+ * Throw function signature: throws an Error with the message, never logs
+ * (the catching collector logs the failure once). Returns never.
  */
 export type ThrowFn = (message: string | Error, context?: unknown) => never;
 
@@ -90,8 +90,8 @@ export interface Instance {
   debug: LogFn;
 
   /**
-   * Log an error message and throw an Error
-   * Combines logging and throwing in one call
+   * Throw an Error with the message. Does not log: the collector's catch
+   * writes the one line for the failure.
    */
   throw: ThrowFn;
 

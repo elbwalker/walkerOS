@@ -88,6 +88,45 @@ describe('getMappingEvent', () => {
     });
   });
 
+  test('tries entity action, entity *, * action, * * in that order (E22)', async () => {
+    const R: Mapping.Rule = { name: 'r' };
+    expect(
+      await getMappingEvent(
+        { name: 'product click' },
+        { product: { view: {} }, '*': { click: R } },
+      ),
+    ).toStrictEqual({ eventMapping: R, mappingKey: '* click' });
+
+    const failing = jest.fn(() => false);
+    const S: Mapping.Rule = { name: 's' };
+    const T: Mapping.Rule = { name: 't' };
+    expect(
+      await getMappingEvent(
+        { name: 'product click' },
+        {
+          product: { click: { condition: failing }, '*': S },
+          '*': { '*': T },
+        },
+      ),
+    ).toStrictEqual({ eventMapping: S, mappingKey: 'product *' });
+    expect(failing).toHaveBeenCalledTimes(1);
+
+    // A tier whose async conditions all fail falls through as well, and
+    // every condition runs once.
+    const gated = jest.fn(async () => false);
+    const actionWildcard: Mapping.Rule = { name: 'action' };
+    expect(
+      await getMappingEvent(
+        { name: 'product click' },
+        {
+          product: { click: { condition: gated }, '*': { condition: gated } },
+          '*': { click: actionWildcard, '*': T },
+        },
+      ),
+    ).toStrictEqual({ eventMapping: actionWildcard, mappingKey: '* click' });
+    expect(gated).toHaveBeenCalledTimes(2);
+  });
+
   test('an unmatched * * rule runs its condition once', async () => {
     const condition = jest.fn(() => false);
     const mapping: Mapping.Rules = { '*': { '*': { condition } } };
@@ -217,7 +256,7 @@ describe('getMappingEvent', () => {
     ];
 
     test.each(throwing)(
-      'a %s throwing condition is logged and counts as no match',
+      'a %s throwing condition fails the event instead of falling through',
       async (_, condition) => {
         const collector = createMockCollector();
         const fallback: Mapping.Rule = { name: 'fallback' };
@@ -225,12 +264,18 @@ describe('getMappingEvent', () => {
           order: { complete: [{ condition, name: 'broken' }, fallback] },
         };
 
-        const result = await getMappingEvent(event, mapping, collector);
-        expect(result.eventMapping).toBe(fallback);
-        expect(collector.logger.error).toHaveBeenCalledWith(
-          'mapping rule condition failed',
-          { event, mappingKey: 'order complete', error: boom },
+        const failure = await getMappingEvent(event, mapping, collector).then(
+          () => undefined,
+          (err: unknown) => err,
         );
+        expect(failure).toBeInstanceOf(core.StepError);
+        expect(failure).toMatchObject({
+          code: 'mapping',
+          retryable: false,
+          message: 'mapping rule condition failed at "order complete": boom',
+        });
+        // The caller reports the failed event; the lookup logs nothing.
+        expect(collector.logger.error).not.toHaveBeenCalled();
       },
     );
 

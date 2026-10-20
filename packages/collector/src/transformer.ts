@@ -48,6 +48,7 @@ import {
   isObject,
   startChain,
   stepId,
+  tryCatch,
   tryCatchAsync,
   useHooks,
   compileCache,
@@ -58,11 +59,16 @@ import {
   processEventMapping,
   getTransformerMapping,
   getTransformerMappingWarnings,
+  getRouteGraph,
+  reportCause,
+  StepError,
+  toFailureReason,
 } from '@walkeros/core';
-import { journeyFields, stepError, stepState } from './observerEmit';
+import { journeyFields, observerStepError, stepState } from './observerEmit';
 import { getCacheStore } from './cache';
 import { buildReportError, errorMeta } from './report-error';
 import { compileStepState, runStepState, warnStateOff } from './state';
+import { asStepError } from './outcome';
 
 /**
  * Extracts chain property from definition and merges into config.
@@ -126,7 +132,7 @@ export async function initTransformers(
         'Transformer',
       );
       if (!validation.ok) {
-        collector.logger.warn(
+        collector.logger.error(
           `Transformer ${transformerId} invalid (${validation.code}): ${validation.reason}. Skipping.`,
         );
         continue;
@@ -189,10 +195,13 @@ export async function initTransformers(
 
     // Declarative mapping: `config.mapping` wins over the step level, like
     // `state`. Fields that do nothing here, or a mapping next to `code`,
-    // are warned about once per init.
+    // are reported once per init at ERROR (a config value without effect).
+    // Build flag: CLI bundles check this at build time and fold it out.
     const stepMapping = getTransformerMapping(transformerDef);
-    for (const warning of getTransformerMappingWarnings(transformerDef)) {
-      collector.logger.warn(`Transformer ${transformerId}: ${warning}`);
+    if (typeof __WALKEROS_VALIDATE__ === 'undefined' || __WALKEROS_VALIDATE__) {
+      for (const warning of getTransformerMappingWarnings(transformerDef)) {
+        collector.logger.error(`Transformer ${transformerId}: ${warning}`);
+      }
     }
 
     // Synthesize a passthrough instance when `code` is absent.
@@ -427,10 +436,88 @@ export async function transformerPush(
       journey,
     );
     errState.durationMs = finished - started;
-    errState.error = stepError(err);
+    errState.error = observerStepError(err, 'transformer');
     emitStep(collector, errState);
     throw err;
   }
+}
+
+/** Transformer ids already reported as missing, per collector. */
+const missingReported = new WeakMap<Collector.Instance, Set<string>>();
+
+/**
+ * A chain names a transformer that does not exist: one ERROR per id per
+ * collector, at registration (`checkChainTargets`) or at the first event
+ * that meets it (a route swapped in at runtime), never per event. The copy
+ * goes on without it.
+ */
+function reportMissingTransformer(
+  collector: Collector.Instance,
+  id: string,
+  at: string,
+): void {
+  let reported = missingReported.get(collector);
+  if (!reported) {
+    reported = new Set();
+    missingReported.set(collector, reported);
+  }
+  if (reported.has(id)) return;
+  reported.add(id);
+  collector.logger.error(
+    `Transformer not found: ${id} (named in ${at}); the chain goes on without it`,
+  );
+}
+
+/**
+ * Registration check of a chain: every transformer a route can reach must
+ * exist. Reports each missing id once (see `reportMissingTransformer`).
+ */
+export function checkChainTargets(
+  collector: Collector.Instance,
+  at: string,
+  route: Transformer.Route | undefined,
+): void {
+  if (route === undefined) return;
+  const transformers = collector.transformers || {};
+  // A route that does not compile fails where it runs, with its own error.
+  const nodes = tryCatch(getRouteGraph, () => [])(route, transformers);
+  for (const node of nodes) {
+    for (const id of node.targets) {
+      if (!transformers[id]) reportMissingTransformer(collector, id, at);
+    }
+  }
+}
+
+/**
+ * Report a transformer that failed (threw, or could not start) and hand the
+ * failure to the chain result: counted in `status.failed`, one cause line
+ * under the transformer's step. An unknown throw is code `transformer`.
+ */
+function transformerFailure(
+  collector: Collector.Instance,
+  transformerId: string,
+  transformerType: string | undefined,
+  err: unknown,
+  message: string,
+): Transformer.ChainFailure {
+  const reason = toFailureReason(asStepError(err, 'transformer'));
+  collector.status.failed++;
+  reportCause(
+    collector,
+    collector.logger,
+    {
+      step: stepId('transformer', transformerId),
+      code: reason.code,
+      status: reason.status,
+    },
+    message,
+    {
+      type: transformerType,
+      retryable: reason.retryable,
+      error: reason.message,
+    },
+  );
+  return { by: transformerId, reason };
 }
 
 /**
@@ -589,10 +676,12 @@ async function runForks(
   let lastRespond = respond;
   let allStopped = results.length > 0;
   let droppedBy: string | undefined;
+  let failure: Transformer.ChainFailure | undefined;
   results.forEach((result, index) => {
     if (copies[index].respond !== undefined && result.respond)
       lastRespond = result.respond;
     if (!result.stopped) allStopped = false;
+    if (!failure && result.failure) failure = result.failure;
     // A dropped or stopped copy (route stop or cache.stop halt) ends here.
     if (result.stopped || result.copies.length === 0) {
       if (droppedBy === undefined) droppedBy = result.droppedBy;
@@ -607,9 +696,14 @@ async function runForks(
       respond: lastRespond,
       ...(allStopped ? { stopped: true as const } : {}),
       ...(droppedBy !== undefined ? { droppedBy } : {}),
+      ...(failure ? { failure } : {}),
     };
   }
-  return finished(survivors, lastRespond);
+  // The copies that finished go on; one that failed still fails the push.
+  return {
+    ...finished(survivors, lastRespond),
+    ...(failure ? { failure } : {}),
+  };
 }
 
 /** Walks one copy to its end: loops `advanceChain`, runs each member. */
@@ -712,7 +806,11 @@ async function runMember(
   });
 
   if (!transformer) {
-    collector.logger.warn(`Transformer not found: ${transformerName}`);
+    reportMissingTransformer(
+      collector,
+      transformerName,
+      chainContext ?? 'a chain',
+    );
     return goOn();
   }
 
@@ -740,26 +838,39 @@ async function runMember(
     ingest._meta.hops++;
     ingest._meta.path.push(transformerName);
 
-    // Initialize transformer if needed. The wrap surfaces a thrown init
-    // (misconfiguration, missing env, etc.) with full cause via the scoped
-    // logger and counts it on `status.failed`. A non-throw `false` return
-    // from transformerInit itself flows through the same early return below.
+    // Initialize transformer if needed. A thrown init (misconfiguration,
+    // missing env) and an init that returned `false` (bundled code is not
+    // typechecked; runtime guard) both fail the copy: counted on
+    // `status.failed`, one cause line, and the push answers `ok: false`.
+    let initError: unknown;
     const isInitialized = await tryCatchAsync(
       transformerInit,
       (err: unknown): boolean => {
         if (err instanceof FatalError) throw err;
-        collector.status.failed++;
-        collector.logger
-          .scope(`transformer:${transformer.type || 'unknown'}`)
-          .error('transformer init failed', {
-            transformer: transformerName,
-            ...errorMeta(err),
-          });
+        initError = err;
         return false;
       },
     )(collector, transformer, transformerName);
 
-    if (!isInitialized) return halt({ copies: [], respond: currentRespond });
+    if (!isInitialized) {
+      const err =
+        initError ??
+        new StepError(
+          'init returned false: throw a StepError that names the missing setting',
+          { code: 'not-ready' },
+        );
+      return halt({
+        copies: [],
+        respond: currentRespond,
+        failure: transformerFailure(
+          collector,
+          transformerName,
+          transformer.type,
+          err,
+          'transformer init failed',
+        ),
+      });
+    }
 
     // Path-specific mock check (takes precedence)
     if (
@@ -792,6 +903,8 @@ async function runMember(
         compiledTCache,
         tCacheStore,
         createMappingRoot(ingest, processedEvent),
+        undefined,
+        collector,
       );
 
       if (cacheResult?.status === 'HIT' && cacheResult.value) {
@@ -876,13 +989,18 @@ async function runMember(
     );
   }
 
-  // Run the transformer
+  // Run the transformer. A throw is a failure, not a drop: the copy ends
+  // and the push answers `ok: false` naming the transformer.
+  let failure: Transformer.ChainFailure | undefined;
   const result = await tryCatchAsync(transformerPush, (err) => {
-    collector.status.failed++;
-    collector.logger
-      .scope(`transformer:${transformer.type || 'unknown'}`)
-      .error('Push failed', errorMeta(err));
-    return false as const; // Stop chain on error
+    failure = transformerFailure(
+      collector,
+      transformerName,
+      transformer.type,
+      err,
+      'Push failed',
+    );
+    return undefined;
   })(
     collector,
     transformer,
@@ -892,7 +1010,9 @@ async function runMember(
     currentRespond,
   );
 
-  // Returned false, or threw and was converted to false above.
+  if (failure) return halt({ copies: [], respond: currentRespond, failure });
+
+  // Returned false: a deliberate drop.
   if (result === false) {
     return halt({
       copies: [],

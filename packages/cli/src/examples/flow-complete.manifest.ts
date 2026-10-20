@@ -2057,6 +2057,10 @@ export const flowCompleteCoverage = {
     queueMax: {
       excluded: 'the default bound fits; dlqMax is the knob this file turns',
     },
+    consentDenied: {
+      excluded:
+        'walkeros bundle sets it for server flows; this web example keeps the default queue',
+    },
     name: RUNTIME('name'),
     release: {
       excluded: 'set by walkeros bundle --release, never written by hand',

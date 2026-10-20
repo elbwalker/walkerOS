@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn } from './lifecycle';
+import type { FailureReason } from '../stepError';
 import type { Ingest } from './ingest';
 import type { Config as MappingConfig } from './mapping';
 import type { MatchExpression } from './matcher';
@@ -213,8 +214,10 @@ export interface ChainCopy<E = WalkerOS.DeepPartialEvent> {
  * with the ingest it finished with. The next position goes on with each
  * pair.
  *
- * - dropped (a transformer returned `false` or threw): `copies` empty,
- *   `droppedBy` names the transformer.
+ * - dropped (a transformer returned `false`): `copies` empty, `droppedBy`
+ *   names the transformer.
+ * - failed (a transformer threw, or its `init` threw or returned `false`):
+ *   `failure` names it and carries the reason; not a drop.
  * - route `stop`: `copies` empty, `stopped: true`; `droppedBy` names the
  *   transformer whose route stopped it, absent for the start route.
  * - `cache.stop: true` HIT: `copies` holds the cached copy, `stopped: true`.
@@ -227,6 +230,18 @@ export interface ChainResult {
   stopped?: true;
   /** Transformer that dropped or stopped the chain. */
   droppedBy?: string;
+  /**
+   * A transformer that threw or could not start: the failed copy ends (not
+   * a drop), and the position answers `ok: false` with this reason. Other
+   * copies of a fork still go on in `copies`.
+   */
+  failure?: ChainFailure;
+}
+
+/** A transformer in a chain that failed: its id and why. */
+export interface ChainFailure {
+  by: string;
+  reason: FailureReason;
 }
 
 /**

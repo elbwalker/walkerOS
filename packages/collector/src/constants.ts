@@ -10,6 +10,7 @@ export const Commands: Record<CommandTypes, Collector.CommandType> = {
   Custom: 'custom',
   Destination: 'destination',
   Elb: 'elb',
+  Flush: 'flush',
   Globals: 'globals',
   Hook: 'hook',
   Init: 'init',

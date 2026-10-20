@@ -144,13 +144,13 @@ describe('mapping-only transformer steps', () => {
   });
 });
 
-describe('transformer mapping init warnings', () => {
+describe('transformer mapping init notices (ERROR: config without effect)', () => {
   function collectWarnings() {
     const warnings: string[] = [];
     const handler: Logger.Handler = (level, message) => {
-      if (level === Level.WARN) warnings.push(message);
+      if (level === Level.ERROR) warnings.push(message);
     };
-    return { warnings, logger: { level: 'WARN' as const, handler } };
+    return { warnings, logger: { level: 'ERROR' as const, handler } };
   }
 
   it('names every field that does nothing at the transformer position, array rules included', async () => {

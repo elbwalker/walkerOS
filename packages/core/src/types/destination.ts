@@ -10,6 +10,7 @@ import type {
 } from '.';
 import type { DestroyFn, SetupFn } from './lifecycle';
 import type { Ingest } from './ingest';
+import type { FailureReason, QueuedReason } from '../stepError';
 import type { ConfigTypes, EntryTypes, TypedStepEntry } from './util';
 
 /**
@@ -97,9 +98,21 @@ export type Credentials<T extends TypesGeneric = Types> = T['credentials'];
  */
 export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
+/**
+ * An event waiting in a destination's `queuePush`, with why it waits:
+ * `consent` (its required consent is not granted) or `held` (a state
+ * delivery to the destination is running or failed). An entry seeded from
+ * the collector's replay buffer has no reason yet. The entry object keeps its
+ * identity across drain and requeue; the event inside is copied.
+ */
+export interface Queued {
+  event: WalkerOS.Event;
+  reason?: 'consent' | 'held';
+}
+
 export interface Instance<T extends TypesGeneric = Types> {
   config: Config<T>;
-  queuePush?: WalkerOS.Events;
+  queuePush?: Queued[];
   queueOn?: Array<{ type: On.Types; data?: unknown }>;
   dlq?: DLQ;
   batches?: BatchRegistry<Mapping<T>>;
@@ -411,11 +424,22 @@ export interface BatchRegistry<Mapping> {
     batchFn: () => void;
     /**
      * Force a flush of the current batch immediately. Used by shutdown
-     * drain and by tests for deterministic flushing without timer
-     * advancement. Resolves after the underlying `pushBatch` settles.
+     * drain, `walker flush` and by tests for deterministic flushing without
+     * timer advancement. Resolves after the underlying `pushBatch` settles,
+     * with what that flush did (nothing when the batch was empty).
      */
-    flush: () => Promise<void>;
+    flush: () => Promise<BatchFlushOutcome | void>;
   };
+}
+
+/**
+ * What one batch flush did: entries delivered and failed, and the reason of
+ * a failure when any entry failed.
+ */
+export interface BatchFlushOutcome {
+  delivered: number;
+  failed: number;
+  reason?: FailureReason;
 }
 
 export type Data =
@@ -427,10 +451,15 @@ export interface Ref {
   type: string; // Destination type ("gtag", "meta", "bigquery")
   data?: unknown; // Response from push()
   error?: unknown; // Error if failed
+  /**
+   * Why the destination did not deliver now: a `FailureReason` under
+   * `failed`, a `QueuedReason` under `queued`.
+   */
+  reason?: FailureReason | QueuedReason;
 }
 
 export type Push = {
-  queuePush?: WalkerOS.Events;
+  queuePush?: Queued[];
   error?: unknown;
 };
 

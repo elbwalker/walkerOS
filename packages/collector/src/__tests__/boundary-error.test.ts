@@ -103,7 +103,7 @@ describe('push boundary', () => {
     // the ingest payload are deliberately absent; see the context-shape tests
     // below for why.
     expect(errorMock).toHaveBeenCalledWith(
-      'push failed',
+      'push failed at source.test-source',
       expect.objectContaining({
         event: 'page view',
         error: 'boom',
@@ -136,7 +136,13 @@ describe('push boundary', () => {
       .error as jest.Mock;
     const context: unknown = errorMock.mock.calls[0][1];
 
-    expect(context).toEqual({ error: 'boom', event: 'order complete' });
+    expect(context).toEqual({
+      step: 'collector',
+      code: 'transport',
+      retryable: true,
+      error: 'boom',
+      event: 'order complete',
+    });
     // What actually reaches Loki and the on-disk jsonl is the serialized
     // form, so assert on that too: no PII, whatever the key names.
     expect(JSON.stringify(context)).not.toContain('buyer@example.com');

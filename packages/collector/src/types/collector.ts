@@ -24,6 +24,7 @@ export type CommandTypes =
   | 'Custom'
   | 'Destination'
   | 'Elb'
+  | 'Flush'
   | 'Globals'
   | 'Hook'
   | 'Init'

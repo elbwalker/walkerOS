@@ -1,8 +1,8 @@
 import type { Collector, Elb, Logger, WalkerOS } from '@walkeros/core';
-import { assign, createLogger } from '@walkeros/core';
+import { assign, createCauseLog, createLogger } from '@walkeros/core';
 import { commonHandleCommand, prepareEvent } from './handle';
 import { initDestinations } from './destination';
-import { initTransformers } from './transformer';
+import { checkChainTargets, initTransformers } from './transformer';
 import { createPush } from './push';
 import { createCommand } from './command';
 import { createElb } from './elb';
@@ -18,6 +18,7 @@ export async function collector(
     sessionStatic: {},
     run: true,
     queueMax: 1_000,
+    consentDenied: 'queue',
   };
 
   const config: Collector.Config = assign(defaultConfig, initConfig, {
@@ -47,6 +48,8 @@ export async function collector(
     hooks: initConfig.hooks || {},
     observers: new Set(),
     logger,
+    // The one cause log: every failure line, one per cause per minute.
+    causeLog: createCauseLog(logger),
     on: {},
     queue: [],
     preRunQueue: [],
@@ -113,7 +116,7 @@ export async function collector(
     // these raw references with the actual Store.Instance objects.
     resolveStoreReferences(rawStores, collector.stores, initConfig);
   } else if (Object.keys(rawStores).length > 0) {
-    logger.warn('stores: not in this build, config ignored');
+    logger.error('stores: not in this build, config ignored');
   }
 
   // Create default cache store for steps that use cache without explicit store.
@@ -135,6 +138,34 @@ export async function collector(
     collector,
     initConfig.transformers || {},
   );
+
+  // Registration check of every chain known now: each transformer it names
+  // must exist (one ERROR per missing id, not one per event).
+  checkChainTargets(collector, 'collector.next', config.next);
+  for (const [id, destination] of Object.entries(collector.destinations)) {
+    checkChainTargets(
+      collector,
+      `destination.${id}.before`,
+      destination.config.before,
+    );
+    checkChainTargets(
+      collector,
+      `destination.${id}.next`,
+      destination.config.next,
+    );
+  }
+  for (const [id, transformer] of Object.entries(collector.transformers)) {
+    checkChainTargets(
+      collector,
+      `transformer.${id}.before`,
+      transformer.config.before,
+    );
+    checkChainTargets(
+      collector,
+      `transformer.${id}.next`,
+      transformer.config.next,
+    );
+  }
 
   return collector;
 }

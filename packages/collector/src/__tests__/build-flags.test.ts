@@ -29,13 +29,16 @@ function setFlag(flag: BuildFlag, value: boolean | undefined): void {
   globalThis[flag] = value;
 }
 
-/** Capture WARN-level messages via an injected logger handler. */
-function warnCapture(): { warns: string[]; logger: Logger.Config } {
-  const warns: string[] = [];
+/**
+ * Capture ERROR-level messages via an injected logger handler: a lean build
+ * ignoring configured features is a config value without effect (ERROR).
+ */
+function errorCapture(): { errors: string[]; logger: Logger.Config } {
+  const errors: string[] = [];
   const handler: Logger.Handler = (level, message) => {
-    if (level === Level.WARN) warns.push(message);
+    if (level === Level.ERROR) errors.push(message);
   };
-  return { warns, logger: { level: 'WARN', handler } };
+  return { errors, logger: { level: 'ERROR', handler } };
 }
 
 interface ApiEnv extends Destination.BaseEnv {
@@ -59,9 +62,9 @@ afterEach(() => {
 });
 
 describe('__WALKEROS_OBSERVE__ false', () => {
-  it('installs no telemetry for config.observe, warns, and keeps caller observers', async () => {
+  it('installs no telemetry for config.observe, logs an ERROR, and keeps caller observers', async () => {
     setFlag('__WALKEROS_OBSERVE__', false);
-    const { warns, logger } = warnCapture();
+    const { errors, logger } = errorCapture();
     const observer: ObserverFn = () => undefined;
 
     const { collector } = await startFlow({
@@ -77,7 +80,7 @@ describe('__WALKEROS_OBSERVE__ false', () => {
 
     expect([...collector.observers]).toEqual([observer]);
     expect(collector.observeLevel).toBeUndefined();
-    expect(warns).toContain('observe: not in this build, config ignored');
+    expect(errors).toContain('observe: not in this build, config ignored');
   });
 
   it('skips trace-level call capture and hands the destination its env untouched', async () => {
@@ -119,9 +122,9 @@ describe('__WALKEROS_OBSERVE__ false', () => {
 });
 
 describe('__WALKEROS_STORES__ false', () => {
-  it('skips declared stores with a warning and keeps the default __cache', async () => {
+  it('skips declared stores with an ERROR and keeps the default __cache', async () => {
     setFlag('__WALKEROS_STORES__', false);
-    const { warns, logger } = warnCapture();
+    const { errors, logger } = errorCapture();
     const storeCode: Store.Init = () => {
       throw new Error('a declared store must not initialize');
     };
@@ -132,7 +135,7 @@ describe('__WALKEROS_STORES__ false', () => {
     });
 
     expect(Object.keys(collector.stores)).toEqual(['__cache']);
-    expect(warns).toContain('stores: not in this build, config ignored');
+    expect(errors).toContain('stores: not in this build, config ignored');
 
     await elb('walker shutdown');
     expect(collector.hasShutdown).toBe(true);
@@ -190,9 +193,9 @@ describe('__WALKEROS_STORES__ false', () => {
 });
 
 describe('__WALKEROS_STATE__ false', () => {
-  it('ignores step state and warns once per step that carries it', async () => {
+  it('ignores step state and logs an ERROR once per step that carries it', async () => {
     setFlag('__WALKEROS_STATE__', false);
-    const { warns, logger } = warnCapture();
+    const { errors, logger } = errorCapture();
     const read: WalkerOS.Event[] = [];
     const sourceCode: Source.Init<
       Source.Types<unknown, unknown, Collector.PushFn>
@@ -235,7 +238,7 @@ describe('__WALKEROS_STATE__ false', () => {
 
     expect(read).toHaveLength(2);
     expect(read.every((event) => event.data?.fetched === undefined)).toBe(true);
-    expect(warns).toEqual(
+    expect(errors).toEqual(
       expect.arrayContaining([
         'state: not in this build, source.seeder state ignored',
         'state: not in this build, transformer.stasher state ignored',
@@ -244,9 +247,9 @@ describe('__WALKEROS_STATE__ false', () => {
     );
   });
 
-  it('warns for a runtime destination that carries state', async () => {
+  it('logs an ERROR for a runtime destination that carries state', async () => {
     setFlag('__WALKEROS_STATE__', false);
-    const { warns, logger } = warnCapture();
+    const { errors, logger } = errorCapture();
 
     const { elb } = await startFlow({ logger });
     await elb('walker destination', {
@@ -255,7 +258,7 @@ describe('__WALKEROS_STATE__ false', () => {
       state: { mode: 'set', key: 'event.user.id', value: 'event.data.x' },
     });
 
-    expect(warns).toContain(
+    expect(errors).toContain(
       'state: not in this build, destination.late state ignored',
     );
   });
@@ -269,7 +272,7 @@ describe('__WALKEROS_VALIDATE__ false', () => {
 
   it('registers a transformer entry without runtime validation', async () => {
     setFlag('__WALKEROS_VALIDATE__', false);
-    const { warns, logger } = warnCapture();
+    const { errors, logger } = errorCapture();
 
     const { collector } = await startFlow({
       logger,
@@ -277,11 +280,11 @@ describe('__WALKEROS_VALIDATE__ false', () => {
     });
 
     expect(collector.transformers.bad).toBeDefined();
-    expect(warns).toEqual([]);
+    expect(errors).toEqual([]);
   });
 
   it('flag absent: the same entry is validated and skipped', async () => {
-    const { warns, logger } = warnCapture();
+    const { errors, logger } = errorCapture();
 
     const { collector } = await startFlow({
       logger,
@@ -289,6 +292,6 @@ describe('__WALKEROS_VALIDATE__ false', () => {
     });
 
     expect(collector.transformers.bad).toBeUndefined();
-    expect(warns[0]).toMatch(/^Transformer bad invalid \(UNKNOWN_KEY\)/);
+    expect(errors[0]).toMatch(/^Transformer bad invalid \(UNKNOWN_KEY\)/);
   });
 });

@@ -1,5 +1,5 @@
 import type { Collector, FlowState, Ingest, WalkerOS } from '@walkeros/core';
-import { emitStep } from '@walkeros/core';
+import { emitStep, StepError, toFailureReason } from '@walkeros/core';
 
 /** Journey-correlation trio shared by every FlowState-stamping site. */
 export interface JourneyFields {
@@ -96,12 +96,24 @@ export function buildBaseState(
 
 /**
  * The error a `FlowState` carries: name and message for an `Error`, the
- * message alone for anything else thrown.
+ * message alone for anything else thrown, plus the failure code, whether a
+ * retry can help and the HTTP status. A throw that is not a `StepError` gets
+ * `code` (`transport` unless the position says otherwise).
  */
-export function stepError(err: unknown): NonNullable<FlowState['error']> {
-  return err instanceof Error
-    ? { name: err.name, message: err.message }
-    : { message: String(err) };
+export function observerStepError(
+  err: unknown,
+  code = 'transport',
+): NonNullable<FlowState['error']> {
+  const message = err instanceof Error ? err.message : String(err);
+  const reason = toFailureReason(
+    err instanceof StepError ? err : new StepError(message, { code }),
+  );
+  return {
+    ...(err instanceof Error ? { name: err.name, message } : { message }),
+    code: reason.code,
+    retryable: reason.retryable,
+    ...(reason.status !== undefined ? { status: reason.status } : {}),
+  };
 }
 
 /**
@@ -123,6 +135,7 @@ export function emit(
  *   `collector.next`); `by` is the transformer id, `'route'` when omitted.
  * - `consent`: the source's `config.consent` is not granted; `required` is
  *   that requirement and `consent` the state it was checked against.
+ * - `ignored`: a source mapping rule with `ignore: true` matched.
  */
 export type CollectorDrop =
   | { reason: 'dropped'; at: string; by?: string }
@@ -131,7 +144,8 @@ export type CollectorDrop =
       at: string;
       required: WalkerOS.Consent;
       consent: WalkerOS.Consent;
-    };
+    }
+  | { reason: 'ignored'; at: string };
 
 /**
  * A drop at a collector-owned position: the event never reaches the
@@ -163,6 +177,8 @@ export function emitCollectorDrop(
   if (drop.reason === 'consent') {
     state.consent = { ...drop.consent };
     state.meta = { at: drop.at, required: { ...drop.required } };
+  } else if (drop.reason === 'ignored') {
+    state.meta = { at: drop.at };
   } else {
     state.meta = { by: drop.by ?? 'route', at: drop.at };
   }

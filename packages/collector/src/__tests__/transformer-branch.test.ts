@@ -348,11 +348,11 @@ describe('chain branching', () => {
       undefined,
     );
 
-    // One rule for every unknown id in a route: warn and continue with the
-    // event the router returned.
+    // One rule for every unknown id in a route: one ERROR per id, and the
+    // copy continues with the event the router returned.
     expect(result.copies[0].event).toEqual({});
-    expect(collector.logger.warn).toHaveBeenCalledWith(
-      'Transformer not found: nonexistent-parser',
+    expect(collector.logger.error).toHaveBeenCalledWith(
+      'Transformer not found: nonexistent-parser (named in a chain); the chain goes on without it',
     );
   });
 

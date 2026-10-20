@@ -118,7 +118,12 @@ describe('store records', () => {
     const error = states.find((s) => s.phase === 'error');
     expect(error?.stepId).toBe('store.kv');
     expect(error?.meta).toEqual({ op: 'get', key: 'k' });
-    expect(error?.error).toEqual({ name: 'TypeError', message: 'store down' });
+    expect(error?.error).toEqual({
+      name: 'TypeError',
+      message: 'store down',
+      code: 'transport',
+      retryable: true,
+    });
     expect(typeof error?.durationMs).toBe('number');
   });
 });
@@ -149,19 +154,25 @@ describe('error projection', () => {
     )?.error;
   }
 
-  it('keeps the name of an Error', async () => {
+  it('keeps the name of an Error, with the failure code of the position', async () => {
     class VendorError extends Error {
       name = 'VendorError';
     }
     expect(await errorOf(new VendorError('rejected'))).toEqual({
       name: 'VendorError',
       message: 'rejected',
+      code: 'transformer',
+      retryable: false,
     });
   });
 
   it('has no name for a non-Error throw', async () => {
     const error = await errorOf('boom');
-    expect(error).toEqual({ message: 'boom' });
+    expect(error).toEqual({
+      message: 'boom',
+      code: 'transformer',
+      retryable: false,
+    });
     expect(error).not.toHaveProperty('name');
   });
 });

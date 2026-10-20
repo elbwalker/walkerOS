@@ -29,7 +29,7 @@ import { processConsent } from './consent';
 import { on, onApplyDeferred, startRunRedelivery, enterCascade } from './on';
 import type { DestinationDelivery } from './on';
 import { reconcilePending } from './pending';
-import { destroyAllSteps } from './shutdown';
+import { destroyAllSteps, flushDestinationBatches } from './shutdown';
 import type { RunState } from './types/collector';
 
 // Replaced at build time by tsup's `define` (see packages/config/tsup).
@@ -136,6 +136,12 @@ export async function commonHandleCommand(
           onData = data;
           shouldNotify = true;
         }
+        break;
+
+      case Const.Commands.Flush:
+        // Deliver every pending destination batch now (a page going away),
+        // through the same flush shutdown uses. The collector keeps running.
+        result = await flushDestinationBatches(collector);
         break;
 
       case Const.Commands.Hook:

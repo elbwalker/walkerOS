@@ -53,16 +53,22 @@ describe('invalid inbound events', () => {
     },
   );
 
-  it('logs one warn carrying only the reason', async () => {
+  it('logs one warn per source and window, carrying only the reason', async () => {
     const collector = await createTestCollector(records);
 
+    await collector.push({}, { id: 'web' });
     await collector.push({}, { id: 'web' });
 
     expect(records).toEqual([
       {
         level: Level.WARN,
-        message: 'invalid event rejected',
-        context: { error: 'Event name is required' },
+        message:
+          'invalid event rejected (repeats within a minute are counted in status.sources.web.rejected)',
+        context: {
+          step: 'source.web',
+          code: 'invalid',
+          error: 'Event name is required',
+        },
       },
     ]);
   });
