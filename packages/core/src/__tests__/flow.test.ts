@@ -2560,6 +2560,29 @@ describe('$flow references', () => {
     }
   });
 
+  test('resolves a flow name with a hyphen', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        'tracking-server': {
+          config: { platform: 'server', url: 'https://collect.example.com' },
+        },
+        web: {
+          config: { platform: 'web' },
+          destinations: {
+            api: {
+              config: { settings: { url: '$flow.tracking-server.url' } },
+            },
+          },
+        },
+      },
+    };
+    const web = getFlowSettings(config, 'web');
+    expect(web.destinations?.api.config).toEqual({
+      settings: { url: 'https://collect.example.com' },
+    });
+  });
+
   test('throws on unknown flow name', () => {
     const config: Flow.Json = {
       version: 4,
@@ -2657,8 +2680,9 @@ describe('$flow references', () => {
       strictFlowRefs: false,
       onWarning: (msg) => warnings.push(msg),
     });
-    expect(warnings.length).toBe(1);
-    expect(warnings[0]).toMatch(/\$flow\.server\.url/);
+    expect(warnings).toEqual([
+      '$flow.server.url is empty. Set flows.server.config.url.',
+    ]);
     // Resolved value remains the original $flow string in soft mode
     expect(web.destinations?.api.config).toEqual({
       settings: { url: '$flow.server.url' },

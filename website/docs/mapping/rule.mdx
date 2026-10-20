@@ -37,14 +37,29 @@ that take values) accepts any form documented in
 
 ## How destinations consume a rule
 
-When an event reaches a destination, the collector looks up
-`mapping[event.entity][event.action]`. An array means "try each in order, first
-matching rule wins". A wildcard `'*'` on either entity or action acts as a
-fallback.
+When an event reaches a destination, the collector picks one rule from
+`mapping[entity][action]`, where entity and action are the two words of the
+event name. An array means "try each in order, first matching rule wins". A
+`'*'` key on the entity or the action level is a wildcard. The lookup runs in
+this order:
 
-:::info Mapping wildcards differ from contract wildcards
-Mapping wildcards are **first-match**: once `entity.action` (or its `entity.*` / `*.action` / `*.*` fallback) hits, no other rule is consulted. [Contract wildcards](/docs/getting-started/flow/contract#wildcard-inheritance) are **additive**: every matching level merges in. The two systems intentionally pick different defaults: mapping selects a single transformation target, contract accumulates requirements.
-:::
+1. If the mapping has a key for the event's entity, only that entity is
+   searched: the rules under the exact action when that action has a key,
+   otherwise the rules under the entity's `'*'` action.
+2. If the mapping has no key for the entity, the `'*'` entity is searched the
+   same way: the rules under the exact action when that action has a key,
+   otherwise the rules under `'*'`.
+3. If no rule was found (no key matched, or no condition passed), the `'*'` →
+   `'*'` rule is tried.
+
+So a `'*'` → `click` rule is used only for entities that have no key of their
+own: with `product: { view: ... }` in the mapping, a `product click` skips it
+and falls through to `'*'` → `'*'`. And when every rule under an exact action
+fails its condition, the lookup goes straight to `'*'` → `'*'` and skips the
+entity's own `'*'` rule.
+
+In this example the entity's own key wins: `product *` is used and `* click`
+is never consulted.
 
 <LiveCode
   language="typescript"
@@ -71,21 +86,43 @@ await getMappingEvent(
   fn={logEvent}
 />
 
+An event that matches no rule is still sent. The destination's `push` receives
+it under its own name with no rule (`context.rule` is undefined), and
+`context.data` holds only what the destination-level `data` and `include`
+produce. What the destination sends for an unmapped event depends on the
+destination; its page says. No setting sends only mapped events. To get that,
+ignore everything with a catch-all rule and map the events you want:
+
+```typescript
+{
+  '*': { '*': { ignore: true } },
+  order: { complete: { name: 'purchase' } },
+}
+```
+
+With the catch-all in place, an event whose specific rules all fail their
+condition is ignored too (step 3).
+
+:::info Mapping wildcards differ from contract wildcards
+Mapping wildcards are **first-match**: the lookup above picks one rule and no other rule is consulted. [Contract wildcards](/docs/getting-started/flow/contract#wildcard-inheritance) are **additive**: every matching level merges in. The two systems intentionally pick different defaults: mapping selects a single transformation target, contract accumulates requirements.
+:::
+
 A rule's `condition` is checked while matching: the first rule whose
 `condition` passes is used; if none passes, the `*` → `*` rule applies, if there
 is one. A condition may be async: conditions are awaited one by one, in rule
 order. A condition that throws is logged and counts as no match. Once a rule matches, the collector runs `policy` (event-level), resolves
 `data`, then hands the result to the destination's `push` (or buffers it when
-`batch` is set). A rule-level `consent` is not checked: gate a destination with
-`config.consent`, or a single value with a `consent` entry.
+`batch` is set and the destination batches). A rule-level `consent` is not
+checked: gate a destination with `config.consent`, or a single value with a
+`consent` entry.
 
 A `policy` entry that resolves to nothing removes the field. That is how a
 consent-gated entry redacts a value when consent is denied.
 
 ### Batch scheduling
 
-`batch` accepts a number (debounce `wait` window in ms, legacy form) or an
-object `{ wait?, size?, age? }` for finer control:
+`batch` accepts a number (the debounce `wait` window in ms) or an object
+`{ wait?, size?, age? }` for finer control:
 
 - `wait` (ms): debounce window. The timer resets on every push.
 - `size`: hard count cap. Flushes immediately at this many events.
@@ -99,6 +136,16 @@ destination's events into one shared buffer with no rule needed. Defaults when
 batching is enabled: `size: 1000`, `age: 30000`. `wait` is a hint, not a hard
 delay: when events keep arriving faster than `wait`, the `size` and `age` caps
 are what force the flush.
+
+Batching works only on a destination that implements `pushBatch`; its page
+says whether it does. On any other destination `batch` has no effect and every
+event goes to `push` right away. Pending batches are flushed when the collector
+shuts down ([`walker shutdown`](/docs/collector/commands#shutdown), which the
+runner sends on exit), waiting up to 5
+seconds per batch. In the browser nothing sends `walker shutdown`, so events
+still waiting in a batch when the page unloads are not sent. The
+[`pushBatch` contract](/docs/destinations/create-your-own#the-pushbatch-function-optional)
+covers what the destination receives.
 
 ## Conditional rules
 
@@ -136,17 +183,24 @@ await getMappingEvent(
   fn={logEvent}
 />
 
-## Ignore vs skip
+## Ignore vs silent {#ignore-vs-skip}
 
 Two flags control destination behaviour and they are not interchangeable:
 
-- `ignore: true`: the rule matched but **nothing happens**. No data transform,
-  no destination call, no side effects. Use for suppression.
-- `skip: true`: the rule matched and the destination's `push()` **is** called.
-  `settings.identify`, `settings.revenue`, `settings.group`, and other side
-  effects still run. Only the destination's default forwarding call (e.g.
-  `track()`, `capture()`, `event()`) is suppressed. Use for "identify without
-  an event" style flows.
+- `ignore: true`: the rule matched and the destination's `push()` is **not**
+  called, so nothing is sent and the rule's `name` and `data` are not applied.
+  What runs before the rule is applied still runs: the destination's `init` on
+  its first event, its `before` chain, the destination-level `policy` and
+  `data`, and the rule's `policy`. Use for suppression. The push result
+  still lists the destination under `done`, and its status counts the event.
+- `silent: true`: the rule matched and the destination's `push()` **is** called
+  with the rule. On a destination that reads `silent`, `settings.identify`,
+  `settings.revenue`, `settings.group`, and other side effects still run and
+  only the default forwarding call (e.g. `track()`, `capture()`, `event()`) is
+  suppressed. Use for "identify without an event" style flows. A destination
+  that does not read `silent`, such as gtag, Meta or the API destinations,
+  sends the event as usual; the destination's page says whether it supports
+  it.
 
 If both are set on the same rule, `ignore` wins.
 
@@ -181,19 +235,20 @@ await getMappingEvent(
 {
   user: {
     login: {
-      skip: true,
+      silent: true,
       settings: { identify: { map: { user: 'data.id' } } },
     },
   },
 }
 ```
 
-The example runs the destination's `identify()` side effect on `user login`
-events but skips the default forwarding call.
+On a destination that reads `silent`, such as Amplitude, the example runs the
+`identify()` side effect on `user login` events but skips the default
+forwarding call.
 
 ## API reference
 
-The two functions below power mapping resolution. Destinations and sources call
+The two functions below resolve mappings. Destinations and sources call
 them through the collector, but they are exported for direct use in custom
 transformers or tests.
 
@@ -203,13 +258,19 @@ transformers or tests.
 getMappingEvent(
   event: WalkerOS.PartialEvent,
   mapping?: Mapping.Rules,
+  collector?: Collector.Instance,
 ): Promise<Mapping.Result>
 ```
 
 Resolves the matching rule for an event based on `event.name` (the
-`"entity action"` string). Returns `{ eventMapping, mappingKey }` where
-`eventMapping` is the matched `Mapping.Rule` and `mappingKey` is the lookup key
-that matched (including wildcards).
+`"entity action"` string), in the lookup order above. Returns
+`{ eventMapping, mappingKey }` where `eventMapping` is the matched
+`Mapping.Rule` and `mappingKey` is the lookup key that matched (including
+wildcards). When no rule matches, `eventMapping` is undefined and `mappingKey`
+is an empty string. When there is no mapping, or the event name is a single
+word with no action, the result is `{}`. Pass the `collector` when rules have conditions: it is
+the conditions' context, and without it a condition that throws is not logged
+but rejects the call.
 
 ### getMappingValue
 
@@ -237,7 +298,10 @@ await getMappingValue(event, 'data.id', { collector });
 
 ### Source mapping
 
-Normalize events before they reach the collector:
+Normalize events before they reach the collector. At a source a rule renames
+the event (`name`), edits it (`policy`) or drops it (`ignore`); `data`,
+`include`, `batch`, `settings` and `silent` have no effect there, because only
+the edited event moves on. A dropped event's push result is `{ ok: true }`.
 
 <CodeSnippet
   code={`await startFlow({
@@ -310,32 +374,35 @@ The same event can be transformed at both stations:
 
 ## Patching package-shipped rules
 
-Some packages (such as `@walkeros/transformer-ga4`) ship their own default
-mapping rules. Normally, a user rule at the same key replaces the default in
-full. Two keywords change that:
+`@walkeros/transformer-ga4` ships its own default mapping rules. Normally, a
+user rule at the same key replaces the default in full. Two keywords change
+that:
 
 ### `extend` (config layer)
 
-`extend` holds a **partial rule** that is deep-merged onto the package-shipped
+`extend` holds a partial rule that is deep-merged onto the package-shipped
 default at the same key instead of replacing it. The merge happens once at
 init, before any event is evaluated. A `null` value clears an inherited field.
 
 Use `extend` when you want to add or override one field of a default rule while
-inheriting the rest unchanged.
+inheriting the rest unchanged. Only a package that ships defaults merges
+`extend`, so it has an effect in `@walkeros/transformer-ga4`'s
+`settings.mapping` and is ignored in any other rule.
 
 ### `remove` (output layer)
 
-`remove` is a list of **dotted paths** stripped from the produced data payload
+`remove` is a list of dotted paths stripped from the produced data payload
 after evaluation, regardless of how each field was produced (`map`, `fn`,
-`include`, etc.). Applied last, so it always wins.
+`include`, etc.). It is applied last, so it always wins.
 
 Use `remove` when you must not emit a field (PII, a vendor-reserved parameter)
-but do not want to rewrite the full rule.
+but do not want to rewrite the full rule. `remove` works in every rule,
+including a destination's own mapping.
 
 ### Mode switching
 
-A rule that has **neither** `extend` nor `remove` keeps today's replace
-behavior. Presence of either keyword activates merge mode for that rule.
+A rule that has **neither** `extend` nor `remove` replaces the default in
+full. Presence of either keyword activates merge mode for that rule.
 
 ### Example: patch a GA4 decoder rule
 

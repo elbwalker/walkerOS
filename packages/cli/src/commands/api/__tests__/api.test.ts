@@ -134,7 +134,9 @@ describe('walkeros api: exit codes by answer', () => {
       await runApi({ method: 'GET', path: '/api/x', header: [] }, io),
     ).toBe(EXIT.auth);
     expect(calls()).toBe(0);
-    expect(err.text()).toMatch(/walkeros auth login|WALKEROS_TOKEN/);
+    expect(err.text()).toBe(
+      'walkeros api: no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app\n',
+    );
   });
 
   it('prints a non-JSON error body exactly as it came', async () => {
@@ -256,6 +258,22 @@ describe('walkeros api: usage errors exit 2 and send nothing', () => {
     expect(calls()).toBe(0);
     expect(err.text()).toMatch(/plain http/);
   });
+
+  it.each(['Authorization: Bearer x', 'authorization: Bearer x'])(
+    'a token in a header: %s',
+    async (header) => {
+      delete process.env.WALKEROS_TOKEN;
+      const calls = countRequests();
+      const { io, err } = streams();
+      expect(
+        await runApi({ method: 'GET', path: '/api/x', header: [header] }, io),
+      ).toBe(EXIT.usage);
+      expect(calls()).toBe(0);
+      expect(err.text()).toBe(
+        'walkeros api: set the token with WALKEROS_TOKEN, not with an Authorization header\n',
+      );
+    },
+  );
 });
 
 describe('walkeros api: the request', () => {

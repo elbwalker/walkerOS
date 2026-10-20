@@ -50,7 +50,7 @@ afterEach(() => {
   // Listeners outlive a test on the shared jsdom window: drop every one the
   // loader added, so a later ping reaches only the loader under test.
   for (const [type, listener] of listen.mock.calls)
-    if (type === 'message') window.removeEventListener(type, listener);
+    if (type === 'message') window.removeEventListener(type, listener, true);
   jest.restoreAllMocks();
 });
 
@@ -158,6 +158,7 @@ describe('arming', () => {
       expect(frame('self')).toHaveBeenCalledWith(
         'message',
         expect.any(Function),
+        true,
       );
     });
   });
@@ -229,13 +230,30 @@ describe('the ping', () => {
     expect(script.parentNode).toBe(document.head);
   });
 
+  it('hears the ping on a page that stops every message from an origin it does not know', () => {
+    // A site that screens messages by origin, added before the loader is.
+    const firewall = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin)
+        event.stopImmediatePropagation();
+    };
+    window.addEventListener('message', firewall);
+    try {
+      setSearch('?elbMoin');
+      moin(T);
+      ping(T.app, { elbMoin: 1, file: FILE });
+      expect(scripts()).toHaveLength(1);
+    } finally {
+      window.removeEventListener('message', firewall);
+    }
+  });
+
   it('accepts only the first ping', () => {
     const drop = jest.spyOn(window, 'removeEventListener');
     moin(T);
     ping(T.app, { elbMoin: 1, file: FILE });
     ping(T.app, { elbMoin: 1, file: 'B'.repeat(64) });
     expect(scripts()).toHaveLength(1);
-    expect(drop).toHaveBeenCalledWith('message', messageListeners()[0]);
+    expect(drop).toHaveBeenCalledWith('message', messageListeners()[0], true);
   });
 
   it('trusts the production target by default', () => {

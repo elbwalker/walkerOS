@@ -245,8 +245,6 @@ Capture works whenever the destination reaches its callable through the env. Ser
 
 The batched poster stamps each record with a monotonic `seq` before sending. A dropped or rejected POST is never re-sequenced, so a gap in `seq` at the observer makes lost telemetry visible instead of silent. The poster also splits a batch by real UTF-8 byte size (`maxBodyBytes`, default 60000) rather than letting an oversized body fail with a 413.
 
-## Starting an Observe session
-
 ## Next steps
 
 - [Deploy](/docs/getting-started/deploy): take the flow to production first

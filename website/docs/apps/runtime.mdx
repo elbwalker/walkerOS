@@ -176,7 +176,7 @@ fails to import with a syntax error. Either way nothing is bundled.
 | `WALKEROS_FLOW_RELEASE` | none | Release the loaded flow must carry, or the runtime refuses to start. The walkerOS app sets it when it deploys a flow |
 | `WALKEROS_FLOW_NAME` | none | Flow name the loaded flow must carry, checked only together with `WALKEROS_FLOW_RELEASE`. The walkerOS app sets it |
 | `WALKEROS_DEPLOY_TOKEN` | none | Runner token. Takes precedence over `WALKEROS_TOKEN` |
-| `WALKEROS_TOKEN` | none | Runner token (`wos_run_...`) or automation token (`wos_pat_...`) |
+| `WALKEROS_TOKEN` | none | Runner token (`wos_run_...`) from the flow's self-hosted settings in the app. A person's automation token is refused by the runner routes |
 | `WALKEROS_APP_URL` | `https://app.walkeros.io` | App API base URL |
 | `WALKEROS_HEARTBEAT_INTERVAL` | `60` | Seconds between heartbeats. Values below `10`, or not a number, are clamped to `10` |
 | `WALKEROS_CACHE_DIR` | `$XDG_CACHE_HOME/walkeros`, else `~/.cache/walkeros` | Where the runtime persists recent errors between restarts. `CACHE_DIR` is read as a fallback |

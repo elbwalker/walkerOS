@@ -13,7 +13,7 @@ the tested example flow, so each one is a real part of a working setup.
 
 ## Connection rules
 
-Sources, transformers, collectors, and destinations connect in specific ways. This table summarizes every valid connection:
+This table lists every valid connection between sources, transformers, the collector and destinations:
 
 | From | To | Field | Notes |
 |------|----|-------|-------|
@@ -70,7 +70,8 @@ runs `dedup` before the collector:
 <FlowSlice feature="source-next" />
 
 The collector chain runs once per event, for every destination: `fingerprint`
-and `bot` always, `enrich` for everything but impressions.
+and `bot` always, `enrich` for everything but events from the `impression` and
+`visible` triggers.
 
 <FlowSlice feature="collector-next" />
 
@@ -99,7 +100,7 @@ Every chain field (`source.before`, `source.next`, `transformer.before`, `transf
 type Route = string | Route[] | RouteConfig;
 ```
 
-A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, `stop`, or none of them (pure gate that only filters by `match`). `match` is optional on `next`, `one`, `many` and `stop`; omit it to always match. A pure gate requires `match`.
+A `string` names a transformer (or a path, see below). A `Route[]` runs each entry in order as a pipeline. A `RouteConfig` is a disjoint union: it sets **exactly one** of `next`, `one`, `many`, `stop`, or none of them (a bare gate, `{ "match": ... }` alone). `match` is optional on `next`, `one`, `many` and `stop`; omit it to always match. A bare gate requires `match` and selects nothing, whether its match passes or fails: on its own it neither runs a step nor drops the event. Only `stop` drops. As a `one` entry, a matching bare gate ends the dispatch without running anything.
 
 At every position, `match` reads the same root: `{ ingest, event }`. Use `ingest.*` for request context and `event.*` for the event as it is at that point (at `source.before`, the source's raw output). Each route is evaluated only when the event reaches it.
 
@@ -213,7 +214,7 @@ What a stop means depends on the position it is resolved in:
 |----------|-------------------------|
 | `source.before`, `source.next` | The event never reaches the collector. The push result is `{ ok: true, dropped: true }` |
 | `transformer.before`, `transformer.next`, a transformer result `{ next }` | The running copy ends; the position that started the chain applies its own meaning |
-| `collector.next` | No destination receives the event |
+| `collector.next` | No destination receives the event. The push result is `{ ok: true, dropped: true }` |
 | `destination.before` | This destination skips the event; other destinations are unaffected |
 | `destination.next` | The post-push chain ends; delivery already happened |
 
@@ -232,8 +233,8 @@ Drop product impressions everywhere:
 
 Drop events for some vendors only: in the complete example, Meta, Piwik PRO and
 Data Manager name `eventFilter` as their `before`. Its own `next` is a `stop`
-with an `or` match: impressions, likely bots and events that failed the
-contract. Pub/Sub does not name it, so the warehouse keeps every event.
+with an `or` match: events from the `impression` and `visible` triggers, likely
+bots and events that failed the contract. Pub/Sub does not name it, so the warehouse keeps every event.
 
 <FlowSlice feature="event-filter" />
 

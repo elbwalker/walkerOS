@@ -9,7 +9,7 @@ const baseSyntax = baseConfig.flatMap((block) => {
 });
 
 // The runner names app paths in src/api-paths.ts only: its fixed interface,
-// which the app keeps in its public API set.
+// which the app serves to runner tokens only.
 const apiPathMessage =
   'Build app URLs in src/api-paths.ts, which names the operation.';
 const apiPathSyntax = [

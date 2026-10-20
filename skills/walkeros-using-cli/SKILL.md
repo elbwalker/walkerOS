@@ -47,7 +47,7 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 | `setup`    | Run a component's `setup()` to provision external resources | ⚠️    |
 | `validate` | Validate configs/events                                     | ✅    |
 | `cache`    | Manage caching                                              | ✅    |
-| `auth`     | Log in, log out, check identity, print the access token     | ✅    |
+| `auth`     | Check who the token in `WALKEROS_TOKEN` belongs to          | ✅    |
 | `api`      | Call the walkerOS app API, or list its operations           | ⚠️    |
 
 For detailed command reference, see

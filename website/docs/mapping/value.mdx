@@ -30,7 +30,7 @@ export const logValue = async (input, config, log) => {
 # Mapping.Value
 
 `Mapping.Value` is what you put into any mapping field that expects a value:
-`data`, every entry under `map`, entries in `set[]`, keys under `policy`, and
+`data`, every entry under `map`, entries in `set[]`, each `policy` entry, and
 anywhere a destination rule field accepts `any`. It is polymorphic: a value can
 be a simple string path, an object with one of several transforming keys, or an
 array of those, which is a fallback chain: the first entry that resolves wins.
@@ -50,7 +50,7 @@ as `Value = ValueType | Array<ValueType>`, where `ValueType` is either a string
 | [Set](#set)                     | `{ set: [Value, Value, …] }`              | Builds an array from several values, in order. Use when the destination expects a list.       |
 | [Fn](#fn)                       | `{ fn: (value, context) => … }`          | Runs a custom function on the event. Use only when no declarative form fits.                  |
 | [Condition](#condition)         | `{ condition, value }`                    | Gates the value on a predicate. Use for branching logic inside a single rule.                 |
-| [Consent](#consent)             | `{ consent: {…}, value }`                 | Gates the value on consent states. Use to make individual fields privacy-aware.               |
+| [Consent](#consent)             | `{ key, consent: {…} }`                   | Gates the value on consent states. Use to make individual fields privacy-aware.               |
 
 A `ValueConfig` uses one producer plus optional filters. `key`, `fn`, `map`,
 `loop` and `set` each produce the value, so set exactly one. If you set several,
@@ -219,7 +219,7 @@ shape.
 | `logger`    | `Logger.Instance`               | yes      | Use for `info`/`warn`/`error`/`debug`      |
 | `consent`   | `WalkerOS.Consent` (optional)   | no       | Resolved consent at this evaluation point  |
 
-One-arg callbacks like `(value) => value.toUpperCase()` continue to work,
+One-argument callbacks like `(value) => value.toUpperCase()` work too;
 TypeScript ignores the unused `context` argument.
 
 <LiveCode
@@ -251,6 +251,9 @@ Only produce output when `condition(event)` returns truthy.
 ## Consent
 
 Only produce output when the required consent states are granted on the event.
+When consent is denied, the producer does not run and the result is `value` if
+set, otherwise nothing. A `value` next to `consent` is therefore a fallback,
+not a gated value.
 
 <LiveCode
   language="typescript"

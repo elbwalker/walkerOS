@@ -44,7 +44,7 @@ npx walkeros --version`}
 | `setup` | Run the optional `setup()` lifecycle on one component | Provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook registrations) |
 | `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
-| `auth` | Authentication and identity | Log in, log out, check identity, print the access token |
+| `auth` | Authentication and identity | Check who the token in `WALKEROS_TOKEN` belongs to |
 | `api` | Send an authenticated request to the walkerOS app API, or list its operations | Manage projects, flows and deployments from scripts and CI |
 | `diagnostics` | Show the CLI version, the app URL and whether the app answers | See which app you are on and whether it is reachable |
 
@@ -1530,62 +1530,26 @@ The entry validator:
 3. Loads the package's settings schema at the pinned version (from the CDN, or from disk for a local `path`)
 4. Checks the resolved `config.settings` against it, following the placeholder rule; `--path` runs only this check (`details.scope.checks` is `["entry:settings"]`)
 
-## Auth commands
+## Authentication
 
-The `auth` command group manages your sign-in to the walkerOS app, which `walkeros api` uses.
-
-### Login
-
-Log in to walkerOS through the RFC 8628 device authorization grant. The CLI asks the app for a one-time code, opens your browser on the approval page, and polls until you approve. No password reaches the CLI and no local callback server is opened, so this works the same over SSH, inside Docker and in a cloud IDE.
+The CLI authenticates to the walkerOS app with one credential: the `WALKEROS_TOKEN` environment variable. Create a token in the app under Account > Automation tokens.
 
 <CodeSnippet
-  code={`walkeros auth login`}
+  code={`read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN
+walkeros auth whoami`}
   language="bash"
 />
 
-Output:
-```
-! Your one-time code: ABCD-1234
-  Authorize here: https://app.walkeros.io/oauth/device?user_code=ABCD-1234
+- In a shell, read the token without echoing it, as above. Never type it inline: an inline value lands in your shell history.
+- In CI, set `WALKEROS_TOKEN` to your automation token from the secret store.
+- Set it only for the commands that call the app (`walkeros api`, `walkeros auth whoami`). `push` and `setup` run step package code in the same process.
+- Without a token, a command that calls the app stops with `no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app`.
 
-  Opening browser...
-  Waiting for authorization... (press Ctrl+C to cancel)
-
-✓ Logged in as user@example.com
-  Session stored in ~/.config/walkeros/config.json
-```
-
-The session is stored in `~/.config/walkeros/config.json` with `0600` permissions: a short-lived access token, its expiry, and a refresh token the CLI rotates on its own, so a login lasts until you log out. Several walkerOS processes can share one config file, so a refresh runs under a lock beside it (`config.json.lock`) and exactly one of them spends the single-use refresh token.
-
-The connection appears in the app under Account, Connected apps, where disconnecting it stops the CLI on its next call.
-
-For a machine with nobody to approve anything, set `WALKEROS_TOKEN` to an automation token instead (Account, then Automation tokens). It is used as-is and never refreshed.
-
-| Option | Description |
-|--------|-------------|
-| `--url <url>` | Custom app URL (default: `https://app.walkeros.io`) |
-| `--json` | Output as JSON |
-| `-v, --verbose` | Verbose output |
-| `-s, --silent` | Suppress output |
-
-### Logout
-
-Revoke the stored refresh token, then remove the credentials from disk. Revocation runs first, because deleting the file alone would leave a credential alive on the server that nothing can reach to retire; it is best effort, so a logout with no network still clears the machine.
-
-<CodeSnippet
-  code={`walkeros auth logout`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `--json` | Output as JSON |
-| `-v, --verbose` | Verbose output |
-| `-s, --silent` | Suppress output |
+An older CLI kept a sign-in in `~/.config/walkeros/config.json` (`token`, `accessToken`, `accessTokenExpiresAt`, `refreshToken`, `email`). These fields are no longer read and can be deleted.
 
 ### Whoami
 
-Show the current authenticated user's identity, including email, user ID, and project ID (if the token is project-scoped).
+Show who the token belongs to: email and user ID.
 
 <CodeSnippet
   code={`walkeros auth whoami`}
@@ -1596,7 +1560,6 @@ Output:
 ```
 user@example.com
 User: usr_abc123
-Project: proj_def456
 ```
 
 | Option | Description |
@@ -1605,28 +1568,6 @@ Project: proj_def456
 | `--json` | Output as JSON |
 | `-v, --verbose` | Verbose output |
 | `-s, --silent` | Suppress output |
-
-### Token
-
-Print the current access token and a newline on stdout, refreshing the session when needed, so any HTTP client can call the app:
-
-<CodeSnippet
-  code={`curl -H "Authorization: Bearer $(walkeros auth token)" https://app.walkeros.io/api/projects`}
-  language="bash"
-/>
-
-It exits 3 when there is no credential, and 4 when a refresh cannot reach the app.
-
-### Token resolution
-
-The CLI resolves a credential in this order, first match wins:
-
-1. `WALKEROS_TOKEN` environment variable. Used as-is, never refreshed.
-2. A static `token` in the config file, written by an older CLI. Honored until it expires, with a one-line notice pointing at `walkeros auth login`.
-3. The OAuth session in the config file, written by `auth login`. Refreshed automatically when the access token is close to expiry.
-4. Nothing: `walkeros api` exits 3 and asks for `walkeros auth login` or `WALKEROS_TOKEN`.
-
-A refresh that cannot reach the app is reported as such and leaves the saved session in place, so the next command tries again rather than sending you back to the browser.
 
 ## API command
 
@@ -1642,7 +1583,7 @@ A refresh that cannot reach the app is reported as such and leaves the saved ses
 - Query parameters ride in the path: `'/api/projects/{projectId}/flows?limit=10'`.
 - `{projectId}` is filled from `--project`, else from `WALKEROS_PROJECT_ID`. Any other `{...}` left in the path is a usage error.
 - `DELETE` needs `--yes`, because a command run through a shell skips an agent host's per-tool approval.
-- The request is sent with the credential from [Token resolution](#token-resolution).
+- The request is sent with the token from `WALKEROS_TOKEN` (see [Authentication](#authentication)).
 
 | Option | Description |
 |--------|-------------|
@@ -1663,7 +1604,7 @@ A refresh that cannot reach the app is reported as such and leaves the saved ses
 
 ### List operations
 
-`walkeros api ls [filter] [--json]` lists the public operations from the app's live `/api/openapi.json`, one line per operation with its method, path and summary. The filter matches method, path and summary, ignoring case. `--json` prints each operation with its parameters and the schemas it references, ready for a script or an agent to build a request from. Listing needs no sign-in; it exits 0 (also when nothing matches), 1 when the app answers with an error or with no OpenAPI document, and 4 when the app cannot be reached.
+`walkeros api ls [filter] [--json]` lists the public operations from the app's live `/api/openapi.json`, one line per operation with its method, path and summary. The filter matches method, path and summary, ignoring case. `--json` prints each operation with its parameters and the schemas it references, ready for a script or an agent to build a request from. Listing needs no token; it exits 0 (also when nothing matches), 1 when the app answers with an error or with no OpenAPI document, and 4 when the app cannot be reached.
 
 ### Examples
 
@@ -1991,7 +1932,7 @@ These options work with all commands:
 
 | Variable | Purpose |
 |----------|---------|
-| `WALKEROS_TOKEN` | Access token for `walkeros api` (an automation or service-account token, `wos_pat_...`). Overrides the `auth login` session |
+| `WALKEROS_TOKEN` | The token for `walkeros api` and `walkeros auth whoami` (an automation token, `wos_pat_...`) |
 | `WALKEROS_PROJECT_ID` | Fills `{projectId}` in a `walkeros api` path |
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
 | `WALKEROS_OBSERVE_LEVEL` | Baseline telemetry level for `runneros start` (`off`, `standard`, or `trace`). Invalid values are warned about and ignored. |
@@ -2004,7 +1945,7 @@ The runtime reads its own variables, see the [runtime environment variables](/do
 
 `walkeros diagnostics` reports the CLI version, the app URL and where it comes
 from (`env`, `config` or `default`), and whether the app answers its public
-health route. It sends no credential, so it works logged out, and it exits 0
+health route. It sends no credential, so it works without a token, and it exits 0
 whether or not the app answers.
 
 <CodeSnippet
@@ -2067,7 +2008,7 @@ jobs:
 
 ### Deploy from CI
 
-A CI job deploys a flow saved in the walkerOS app with `walkeros api` and a service-account token in `WALKEROS_TOKEN`. The deploy request answers a `deploymentId`; the job then reads the deployment until its status is `published` (a web flow), `active` (a server flow) or `failed`:
+A CI job deploys a flow saved in the walkerOS app with `walkeros api` and an automation token in `WALKEROS_TOKEN`. The deploy request answers a `deploymentId`; the job then reads the deployment until its status is `published` (a web flow), `active` (a server flow) or `failed`:
 
 <CodeSnippet
   code={`- name: Deploy the flow
@@ -2160,17 +2101,11 @@ lsof -ti:8080 | xargs kill`}
 If `walkeros api` exits 3, it has no credential or the app answered 401:
 
 <CodeSnippet
-  code={`# Check for a credential
-walkeros auth token >/dev/null && echo signed in
-
-# Check current identity
+  code={`# Check who the token belongs to
 walkeros auth whoami
 
-# Re-authenticate
-walkeros auth login
-
-# Or use an automation token from Account, Automation tokens
-export WALKEROS_TOKEN=wos_pat_xxx`}
+# Set a token from Account > Automation tokens, without echoing it
+read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN`}
   language="bash"
 />
 

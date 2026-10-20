@@ -66,7 +66,7 @@
             "properties": {
               "command": {
                 "type": "string",
-                "description": "CLI command, space-joined for subcommands (e.g. 'bundle', 'projects list', 'auth login'). Set on source.command when source.type = 'cli'."
+                "description": "CLI command, space-joined for subcommands (e.g. 'bundle', 'projects list', 'api'). Set on source.command when source.type = 'cli'."
               },
               "tool": {
                 "type": "string",

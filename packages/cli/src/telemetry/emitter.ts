@@ -179,10 +179,10 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
 /**
  * Resolve the telemetry ingest endpoint.
  *
- * Reuses `resolveAppUrl()` from `lib/config-file` so a single
- * `walkeros auth login` (which writes `appUrl` to the user config) wires
- * telemetry alongside auth. Order: env (`WALKEROS_APP_URL`) > user config
- * (`~/.config/walkeros/config.json:appUrl`) > undefined (telemetry no-ops).
+ * Reuses `resolveAppUrl()` from `lib/config-file`, so telemetry goes to the
+ * same app as every other CLI request. Order: env (`WALKEROS_APP_URL`) > user
+ * config (`~/.config/walkeros/config.json:appUrl`) > undefined (telemetry
+ * no-ops).
  *
  * Hard-cut: `TELEMETRY_ENDPOINT` is no longer recognized.
  */

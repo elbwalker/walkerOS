@@ -30,7 +30,7 @@ describe('getInstallationId (read-only)', () => {
   });
 
   it('returns undefined when config has no installationId', () => {
-    writeConfig({ token: 'x' });
+    writeConfig({ appUrl: 'https://app.example.test' });
     expect(getInstallationId()).toBeUndefined();
   });
 

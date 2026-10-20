@@ -13,9 +13,7 @@ import { pushCommand } from './commands/push/index.js';
 import { setupCommand } from './commands/setup/index.js';
 import { validateCommand } from './commands/validate/index.js';
 import { registerCacheCommand } from './commands/cache.js';
-import { loginCommand } from './commands/login/index.js';
-import { logoutCommand } from './commands/logout/index.js';
-import { authTokenCommand, whoamiCommand } from './commands/auth/index.js';
+import { whoamiCommand } from './commands/auth/index.js';
 import { registerApiCommand } from './commands/api/index.js';
 import { diagnosticsCommand } from './commands/diagnostics/index.js';
 import {
@@ -264,36 +262,6 @@ const authCmd = program
   .description('Authentication and identity');
 
 authCmd
-  .command('login')
-  .description('Log in to walkerOS via browser')
-  .option('--url <url>', 'custom app URL')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (options) => {
-    await loginCommand({
-      url: options.url,
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
-    });
-  });
-
-authCmd
-  .command('logout')
-  .description('Remove stored credentials')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (options) => {
-    await logoutCommand({
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
-    });
-  });
-
-authCmd
   .command('whoami')
   .description('Show current user identity')
   .option('-o, --output <path>', 'output file path')
@@ -307,13 +275,6 @@ authCmd
       verbose: options.verbose,
       silent: options.silent,
     });
-  });
-
-authCmd
-  .command('token')
-  .description('Print the current access token, for any HTTP client')
-  .action(async () => {
-    process.exitCode = await authTokenCommand();
   });
 
 // Any app API operation, by method and path
@@ -356,7 +317,7 @@ registerCacheCommand(program);
 // Telemetry hooks - populate cmdPath/cmdStart for action-bound commands.
 program.hook('preAction', (_thisCmd, actionCmd) => {
   cmdStart = Date.now();
-  // Space-joined command path: `walkeros auth login` → "auth login".
+  // Space-joined command path: `walkeros auth whoami` → "auth whoami".
   const parts: string[] = [];
   let cur: Command | null = actionCmd;
   while (cur && cur.name() !== 'walkeros') {

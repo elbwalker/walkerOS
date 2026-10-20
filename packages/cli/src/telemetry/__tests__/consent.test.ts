@@ -26,7 +26,7 @@ describe('isTelemetryEnabled', () => {
   });
 
   it('is disabled when config exists but telemetryEnabled is absent', () => {
-    writeConfig({ token: 'x' });
+    writeConfig({ appUrl: 'https://app.example.test' });
     expect(isTelemetryEnabled()).toBe(false);
   });
 

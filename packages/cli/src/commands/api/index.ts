@@ -46,7 +46,7 @@ export interface ApiRequestOptions {
 
 /** Shown when there is no credential to send. */
 export const NOT_SIGNED_IN =
-  'not signed in: run walkeros auth login, or set WALKEROS_TOKEN';
+  'no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app';
 
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 /** Error bodies are read back for the stderr line; a bigger one is not parsed. */
@@ -109,7 +109,12 @@ function parseHeaders(values: readonly string[]): Record<string, string> {
   for (const value of values) {
     const colon = value.indexOf(':');
     if (colon <= 0) throw new UsageError(`a header is 'Name: value': ${value}`);
-    headers[value.slice(0, colon).trim()] = value.slice(colon + 1).trim();
+    const name = value.slice(0, colon).trim();
+    if (name.toLowerCase() === 'authorization')
+      throw new UsageError(
+        'set the token with WALKEROS_TOKEN, not with an Authorization header',
+      );
+    headers[name] = value.slice(colon + 1).trim();
   }
   return headers;
 }
@@ -230,14 +235,8 @@ export async function runApi(
     return EXIT.usage;
   }
 
-  let token: string | null;
-  try {
-    token = await resolveAccessToken();
-  } catch (error) {
-    line(io.stderr, messageOf(error));
-    return EXIT.unreachable;
-  }
-  if (!token && !hasHeader(request.headers, 'Authorization')) {
+  const token = resolveAccessToken();
+  if (!token) {
     line(io.stderr, NOT_SIGNED_IN);
     return EXIT.auth;
   }

@@ -227,18 +227,18 @@ To deploy a saved flow from CI, see "Deploy from CI" in the
 
 ## auth
 
-Manage the sign-in that `walkeros api` uses.
+The CLI authenticates with `WALKEROS_TOKEN` only: a token from Account >
+Automation tokens in the app (`wos_pat_...`). Read it without echoing it
+(`read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN`), never inline; in CI set it
+from the secret store; set it only for the commands that call the app. Without
+it, `walkeros api` exits 3 with
+`no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app`.
+Sign-in fields an older CLI left in `~/.config/walkeros/config.json` are no
+longer read and can be deleted.
 
-| Subcommand | Purpose                                                                    |
-| ---------- | -------------------------------------------------------------------------- |
-| `login`    | Sign in through the browser (device authorization); stores a session       |
-| `logout`   | Revoke the stored session and remove it from disk                          |
-| `whoami`   | Show the signed-in identity                                                |
-| `token`    | Print the current access token (refreshed when needed) for any HTTP client |
-
-`walkeros auth token` exits 3 without a credential and 4 when a refresh cannot
-reach the app. `WALKEROS_TOKEN` (an automation or service-account token,
-`wos_pat_...`) overrides the stored session, which suits CI.
+| Subcommand | Purpose                       |
+| ---------- | ----------------------------- |
+| `whoami`   | Show who the token belongs to |
 
 ---
 

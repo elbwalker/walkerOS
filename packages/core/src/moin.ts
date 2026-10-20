@@ -41,10 +41,12 @@ export interface MoinGlobals {
     addEventListener(
       type: 'message',
       listener: (event: MoinMessage) => void,
+      capture?: boolean,
     ): void;
     removeEventListener(
       type: 'message',
       listener: (event: MoinMessage) => void,
+      capture?: boolean,
     ): void;
   };
   URLSearchParams?: new (init: string) => { has(name: string): boolean };
@@ -87,13 +89,17 @@ export function runMoin(g: MoinGlobals, target: MoinTarget): void {
       if (Reflect.get(data, 'elbMoin') !== 1) return;
       const file: unknown = Reflect.get(data, 'file');
       if (typeof file !== 'string' || !FILE.test(file)) return;
-      win.removeEventListener('message', onMessage);
+      win.removeEventListener('message', onMessage, true);
       void injectScript(
         `${target.base}${file}.js`,
         `sha384-${file.replace(/-/g, '+').replace(/_/g, '/')}`,
       );
     };
-    win.addEventListener('message', onMessage);
+    // In the capture phase: a site that screens messages by origin and stops
+    // the ones it does not know would otherwise keep the app's ping from the
+    // loader. On the window, a capture listener runs before every listener of
+    // the bubble phase.
+    win.addEventListener('message', onMessage, true);
   } catch {
     // A broken page global leaves the loader off.
   }

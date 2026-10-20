@@ -1,3 +1,4 @@
+import { NOT_SIGNED_IN } from '../../../commands/api/index.js';
 import { whoami } from '../../../commands/auth/index.js';
 
 describe('whoami', () => {
@@ -24,18 +25,13 @@ describe('whoami', () => {
         auth: new Headers(init?.headers).get('Authorization'),
       };
       return new Response(
-        JSON.stringify({
-          userId: 'usr_1',
-          email: 'test@example.com',
-          projectId: null,
-        }),
+        JSON.stringify({ userId: 'usr_1', email: 'test@example.com' }),
         { status: 200 },
       );
     };
     await expect(whoami()).resolves.toEqual({
       userId: 'usr_1',
       email: 'test@example.com',
-      projectId: null,
     });
     expect(seen).toEqual({
       url: 'https://app.example.test/api/auth/whoami',
@@ -52,5 +48,10 @@ describe('whoami', () => {
         { status: 401 },
       );
     await expect(whoami()).rejects.toThrow('Token expired');
+  });
+
+  it('refuses without WALKEROS_TOKEN, with the line the api command prints', async () => {
+    delete process.env.WALKEROS_TOKEN;
+    await expect(whoami()).rejects.toThrow(NOT_SIGNED_IN);
   });
 });
