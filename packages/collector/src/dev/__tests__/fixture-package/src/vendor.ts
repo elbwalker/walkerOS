@@ -1,4 +1,5 @@
 import { isObject, StepError } from '@walkeros/core';
+import type { Collector } from '@walkeros/core';
 import type { Destination } from '@walkeros/core';
 
 export interface Vendor {
@@ -106,4 +107,48 @@ export const consentIgnoring: Destination.Instance<Types> = {
   ...vendorGlobal,
   type: 'consent-ignoring',
   on: undefined,
+};
+
+/** Whether a page's vendor script fired `error`, per collector (one page). */
+const scriptFailed = new WeakMap<Collector.Instance, boolean>();
+
+/**
+ * Loads its vendor script as loadVendor does (marked, awaited): a push
+ * waits for the script and fails `vendor-timeout` at a short deadline (jsdom
+ * never loads it), and once the script fired `error` every push fails
+ * `vendor-not-loaded`: two causes, one line each.
+ */
+export const scriptVendor: Destination.Instance<Types> = {
+  type: 'script-vendor',
+  config: {},
+  init: ({ collector }) => {
+    const script = document.createElement('script');
+    script.src = 'https://vendor.example/sdk.js';
+    script.setAttribute('data-walkeros-vendor', '');
+    script.addEventListener('error', () => scriptFailed.set(collector, true));
+    document.head.appendChild(script);
+  },
+  push: async (_, { collector, rule }) => {
+    if (rule?.silent) return;
+    if (scriptFailed.get(collector))
+      throw new StepError('Vendor script failed to load', {
+        code: 'vendor-not-loaded',
+      });
+    await new Promise<never>((__, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new StepError('Vendor script did not load within 50ms', {
+              code: 'vendor-timeout',
+            }),
+          ),
+        50,
+      ),
+    );
+  },
+  on: (type, { env, data }) => {
+    const vendor = env.vendor;
+    if (type !== 'consent' || !isVendor(vendor) || !isObject(data)) return;
+    vendor.consent(data.marketing === true);
+  },
 };

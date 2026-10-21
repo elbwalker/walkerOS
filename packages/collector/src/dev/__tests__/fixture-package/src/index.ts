@@ -127,3 +127,17 @@ export const swallowing: Destination.Instance<Types> = {
       );
   },
 };
+
+/** Logs its own ERROR line next to the collector's: two lines for one cause (item 2). */
+export const loud: Destination.Instance<Types> = {
+  ...good,
+  type: 'loud',
+  push: async (event, context) => {
+    try {
+      await good.push(event, context);
+    } catch (error) {
+      context.logger.error('Vendor request failed');
+      throw error;
+    }
+  },
+};

@@ -9,6 +9,7 @@ import {
   echoing,
   floating,
   good,
+  loud,
   rawHttps,
   swallowing,
 } from './fixture-package/src';
@@ -26,6 +27,7 @@ import {
   consentAware,
   consentIgnoring,
   initCalling,
+  scriptVendor,
   swallowingSdk,
   vendorGlobal,
 } from './fixture-package/src/vendor';
@@ -119,6 +121,17 @@ describe('conformance kit', () => {
         examples: { ...fixtures.examples, silent },
       }),
     ).rejects.toMatchObject({ items: [11] });
+  });
+
+  it("fails item 2 for a destination that logs its own line next to the collector's", async () => {
+    await expect(
+      conformance('destination', loud, { profile: 'http', ...fixtures }),
+    ).rejects.toMatchObject({
+      items: [2],
+      message: expect.stringContaining(
+        'HTTP 500 writes 2 ERROR lines for transport',
+      ),
+    });
   });
 
   it('refuses fake timers with a clear message', async () => {
@@ -487,6 +500,21 @@ describe('conformance kit, vendor-global profile', () => {
         message: expect.stringMatching(/item 5: init makes 1 /),
       });
     });
+  });
+
+  it('counts item 2 per cause: a vendor-timeout line before the script error does not count', async () => {
+    await expect(
+      conformance('destination', scriptVendor, {
+        ...options,
+        schema: { type: 'object', properties: {} },
+        settings: {},
+        examples: {
+          pageView: { in: event },
+          silent: examples.silent,
+          revoke: examples.revoke,
+        },
+      }),
+    ).resolves.toBeUndefined();
   });
 
   describe('item 8 runs a revoke gated on its keys, granted first (I1)', () => {

@@ -9,7 +9,7 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import type { JSONSchema } from '@walkeros/core/dev';
-import { getEvent, isObject, Level, StepError } from '@walkeros/core';
+import { getEvent, isObject, Level, StepError, stepId } from '@walkeros/core';
 import type { Answer, EnvAnswer } from './boundary';
 import type {
   ExamplesEnv,
@@ -165,6 +165,22 @@ function contextOf(options: ConformanceOptions): Context {
 
 const errorsIn = (logs: LogLine[]) =>
   logs.filter((line) => line.level === Level.ERROR).length;
+
+/**
+ * ERROR lines of the cause under test (item 2): the step's cause-log lines
+ * with that code, read from their structured context, plus lines without a
+ * code (the cause log always writes one, so such a line is the step's own
+ * report of the failure). Lines of other causes do not count.
+ */
+function causeLines(logs: LogLine[], code: string): number {
+  const step = stepId('destination', STEP_ID);
+  return logs.filter(
+    ({ level, context }) =>
+      level === Level.ERROR &&
+      (context.code === undefined ||
+        (context.code === code && context.step === step)),
+  ).length;
+}
 
 function textOf(value: unknown): string {
   if (typeof value === 'string') return value;
@@ -474,9 +490,9 @@ function reportProblem(label: string, run: DestinationRun): Problem {
   if (!run.dlq.length) return `${label} leaves the DLQ empty`;
   // The whole session: a destination initialized inside startFlow writes
   // its one line there, and the run's retry of the same cause is suppressed.
-  const errors = errorsIn(run.sessionLogs);
+  const errors = causeLines(run.sessionLogs, reason.code);
   if (errors !== 1)
-    return `${label} writes ${errors} ERROR lines instead of the collector's one`;
+    return `${label} writes ${errors} ERROR lines for ${reason.code} instead of the collector's one`;
   return undefined;
 }
 
@@ -739,10 +755,10 @@ async function vendorFailureProblem(
       return `a push after the vendor script failed is not reported vendor-not-loaded (${show(reason)})`;
     const dlq = session.collector.destinations[STEP_ID]?.dlq ?? [];
     if (!dlq.length) return 'the vendor-not-loaded event is not in the DLQ';
-    const errors = errorsIn(session.logs);
+    const errors = causeLines(session.logs, reason.code);
     return errors === 1
       ? undefined
-      : `vendor-not-loaded writes ${errors} ERROR lines instead of the collector's one`;
+      : `vendor-not-loaded writes ${errors} ERROR lines for ${reason.code} instead of the collector's one`;
   } finally {
     await session.close();
   }
