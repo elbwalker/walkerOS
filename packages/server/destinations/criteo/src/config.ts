@@ -4,7 +4,7 @@ import { StepError } from '@walkeros/core';
 export const DEFAULT_URL = 'https://widget.criteo.com/m/event?version=s2s_v0';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
-  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { partnerId, callerId } = settings;
 
   if (!partnerId || !callerId) {

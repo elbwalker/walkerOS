@@ -18,7 +18,7 @@ export const destinationCustomerIo: Destination = {
 
   init({ config: partialConfig, env }) {
     const config = getConfig(partialConfig);
-    const settings = config.settings as Settings;
+    const settings = config.settings!;
 
     // Use env mocks if provided (testing), otherwise create real SDK clients
     const envTyped = env as
@@ -77,10 +77,12 @@ export const destinationCustomerIo: Destination = {
   },
 
   async destroy({ config }) {
-    const settings = (config?.settings || {}) as Settings;
+    const settings = config?.settings;
     // TrackClient has no flush -- just clear references
-    settings._trackClient = undefined;
-    settings._apiClient = undefined;
+    if (settings) {
+      settings._trackClient = undefined;
+      settings._apiClient = undefined;
+    }
   },
 };
 

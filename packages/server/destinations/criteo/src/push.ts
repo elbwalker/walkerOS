@@ -9,7 +9,12 @@ import type {
   Settings,
 } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
+import {
+  createMappingRoot,
+  getMappingValue,
+  isObject,
+  StepError,
+} from '@walkeros/core';
 import { getHashServer, sendServer } from '@walkeros/server-core';
 import { DEFAULT_URL } from './config';
 
@@ -110,7 +115,13 @@ const send: PushFn = async function (
     user_data,
     ip,
     userAgent,
-  } = config.settings as Settings;
+  } = config.settings ?? {};
+
+  // init() validates these; a destination that skipped it is not ready.
+  if (!partnerId || !callerId)
+    throw new StepError('Config settings missing, init() not run', {
+      code: 'not-ready',
+    });
 
   const eventData = isObject(data) ? data : {};
   const userDataCustom = user_data

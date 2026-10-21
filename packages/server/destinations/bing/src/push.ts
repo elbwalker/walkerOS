@@ -32,7 +32,7 @@ const send: PushFn = async function (
     continueOnValidationError,
     ip,
     userAgent,
-  } = config.settings as Settings;
+  } = config.settings!;
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data

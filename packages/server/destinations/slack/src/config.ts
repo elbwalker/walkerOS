@@ -6,7 +6,7 @@ export function getConfig(
   partialConfig: PartialConfig = {},
   logger: Logger.Instance,
 ): Config {
-  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { token, webhookUrl, channel } = settings;
 
   if (!token && !webhookUrl)
@@ -27,6 +27,6 @@ export function getConfig(
 
   return {
     ...partialConfig,
-    settings: { ...settings } as Settings,
+    settings,
   };
 }

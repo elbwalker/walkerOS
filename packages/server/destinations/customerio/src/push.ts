@@ -40,7 +40,7 @@ export const push: PushFn = async function (
   event,
   { config, rule, data, collector, env },
 ) {
-  const settings = config.settings as Settings;
+  const settings = config.settings!;
   const envTyped = env as
     | {
         trackClient?: CustomerIoTrackClientMock;
@@ -151,7 +151,7 @@ export const push: PushFn = async function (
             customerId,
             deviceId,
             platform,
-            isObject(r.data) ? (r.data as Record<string, unknown>) : undefined,
+            isObject(r.data) ? r.data : undefined,
           ),
         );
       }

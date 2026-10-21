@@ -5,9 +5,7 @@ import {
   isObject,
   isString,
   isThenable,
-  reportCause,
   StepError,
-  stepId,
 } from '@walkeros/core';
 
 type PeopleObjectOp =
@@ -81,7 +79,7 @@ async function applyPeople(
             props: Record<string, unknown>,
             cb: MixpanelCallback,
           ) => void
-        )(distinctId, bag as Record<string, unknown>, cb),
+        )(distinctId, bag, cb),
       ),
     );
   }
@@ -143,7 +141,7 @@ async function applyGroupProfile(
             props: Record<string, unknown>,
             cb: MixpanelCallback,
           ) => void
-        )(key, id, bag as Record<string, unknown>, cb),
+        )(key, id, bag, cb),
       ),
     );
   }
@@ -179,7 +177,7 @@ async function applyGroupProfile(
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, logger, id },
+  { config, rule, data, collector, logger },
 ) {
   const settings = config.settings!;
   const client = settings.client;
@@ -216,16 +214,22 @@ export const push: PushFn = async function (
   }
 
   // 3. People operations - require distinct_id
-  if (distinctId && mappingSettings.people !== undefined) {
-    const resolved = await getMappingValue(event, mappingSettings.people, {
-      collector,
-    });
-    if (isObject(resolved)) {
+  if (mappingSettings.people !== undefined) {
+    const resolved = distinctId
+      ? await getMappingValue(event, mappingSettings.people, { collector })
+      : undefined;
+    if (distinctId && isObject(resolved)) {
       await applyPeople(
         client,
         distinctId,
         resolved as Record<string, unknown>,
       );
+    } else {
+      // Nothing to address: a deliberate skip, named by its mapping key.
+      logger.debug('Mixpanel skipped people: identify resolved to nothing', {
+        event: event.name,
+        mappingKey: distinctId ? 'people' : 'identify',
+      });
     }
   }
 
@@ -256,13 +260,10 @@ export const push: PushFn = async function (
     );
     if (isObject(resolved)) {
       // A group profile without key and id has nothing to address: the event
-      // still goes out, and the cause log reports the dropped operation once.
-      await applyGroupProfile(client, resolved as Record<string, unknown>, () =>
-        reportCause(
-          collector,
-          logger,
-          { step: stepId('destination', id), code: 'mapping' },
-          'Mixpanel group profile skipped: key and id must resolve to strings',
+      // still goes out, and the skip is a deliberate decision (DEBUG).
+      await applyGroupProfile(client, resolved, () =>
+        logger.debug(
+          'Mixpanel skipped groupProfile: groupProfile resolved to nothing',
           { event: event.name, mappingKey: 'groupProfile' },
         ),
       );

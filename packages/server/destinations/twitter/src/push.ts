@@ -50,7 +50,20 @@ const send: PushFn = async function (
     user_data,
     ip,
     userAgent: userAgentSetting,
-  } = config.settings as Settings;
+  } = config.settings ?? {};
+
+  // init() validates these; a destination that skipped it is not ready.
+  if (
+    !pixelId ||
+    !defaultEventId ||
+    !consumerKey ||
+    !consumerSecret ||
+    !accessToken ||
+    !accessTokenSecret
+  )
+    throw new StepError('Config settings missing, init() not run', {
+      code: 'not-ready',
+    });
 
   // Resolve user data from settings-level mapping
   const userDataCustom = user_data

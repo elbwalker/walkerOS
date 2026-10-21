@@ -4,6 +4,8 @@ import type {
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
 import type {
+  Block,
+  KnownBlock,
   WebClient,
   ChatPostMessageArguments,
   ChatPostMessageResponse,
@@ -13,8 +15,8 @@ import type {
   ConversationsOpenResponse,
 } from '@slack/web-api';
 
-/** A single Block Kit block (kept loose -- Slack does not export a union type). */
-export type SlackBlock = Record<string, unknown>;
+/** A single Block Kit block, as the Slack SDK types it. */
+export type SlackBlock = KnownBlock | Block;
 
 export interface Settings {
   // --- Auth (exactly one required) ---

@@ -175,7 +175,16 @@ const send: PushFn = async function (
     );
   }
 
-  const accessToken = await getAccessToken(authClient);
+  // The auth error stays on `cause`; the message names only the step.
+  let accessToken: string;
+  try {
+    accessToken = await getAccessToken(authClient);
+  } catch (error) {
+    throw new StepError('Data Manager authentication failed', {
+      code: 'transport',
+      cause: error,
+    });
+  }
 
   const fetchFn = env?.fetch || fetch;
   const endpoint = `${url}/events:ingest`;

@@ -12,7 +12,7 @@ function getSettings(settings: Partial<Settings> | undefined): Settings {
   const { url, appId } = settings || {};
   if (!url || !appId)
     throw new StepError('Config settings missing, init() not run', {
-      code: 'config',
+      code: 'not-ready',
     });
   return { ...settings, url: normalizeUrl(url), appId };
 }
@@ -37,7 +37,7 @@ export const push: PushFn = async function (
 
   if ('invalid' in result) throw invalid(result.invalid);
 
-  // A skip is deliberate (no rule for the event, a silent rule): no request.
+  // A skip is deliberate (a silent rule with nothing else to send): no request.
   if ('hits' in result) await sendHits(result.hits, settings, env, logger);
 };
 

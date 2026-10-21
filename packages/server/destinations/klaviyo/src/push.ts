@@ -48,7 +48,7 @@ export const push: PushFn = async function (
   event,
   { config, rule, data, collector, env },
 ) {
-  const settings = config.settings as Settings;
+  const settings = config.settings!;
 
   // Resolve SDK instances: prefer env mocks (testing), fall back to real
   const envTyped = env as

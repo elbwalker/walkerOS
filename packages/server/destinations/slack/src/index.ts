@@ -19,7 +19,7 @@ export const destinationSlack: Destination = {
 
   init({ config: partialConfig, logger, env }) {
     const config = getConfig(partialConfig, logger);
-    const settings = config.settings as Settings;
+    const settings = config.settings!;
 
     // Webhook mode -- nothing to initialize.
     if (settings.webhookUrl) return config;

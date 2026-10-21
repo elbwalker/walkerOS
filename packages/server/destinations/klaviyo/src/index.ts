@@ -18,7 +18,7 @@ export const destinationKlaviyo: Destination = {
 
   init({ config: partialConfig, env }) {
     const config = getConfig(partialConfig);
-    const settings = config.settings as Settings;
+    const settings = config.settings!;
 
     // Use env mocks if provided (testing), otherwise create real SDK instances
     const envTyped = env as

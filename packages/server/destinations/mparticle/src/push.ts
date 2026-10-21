@@ -3,7 +3,7 @@ import type {
   WalkerOS,
   Mapping as WalkerOSMapping,
 } from '@walkeros/core';
-import { getMappingValue, isObject } from '@walkeros/core';
+import { getMappingValue, isObject, StepError } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import type {
   CommerceEventData,
@@ -32,7 +32,6 @@ const send: PushFn = async function (
   event,
   { config, rule, data, env, logger, collector },
 ) {
-  const settings = config.settings as Settings;
   const {
     apiKey,
     apiSecret,
@@ -43,7 +42,13 @@ const send: PushFn = async function (
     consent,
     ip: ipSetting,
     sourceRequestId: sourceRequestIdSetting,
-  } = settings;
+  } = config.settings ?? {};
+
+  // init() validates these; a destination that skipped it is not ready.
+  if (!apiKey || !apiSecret)
+    throw new StepError('Config settings missing, init() not run', {
+      code: 'not-ready',
+    });
 
   const ruleSettings: Mapping = (rule?.settings || {}) as Mapping;
 

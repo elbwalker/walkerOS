@@ -14,7 +14,7 @@ export function getConfig(
   env: Env | undefined,
   logger: Logger.Instance,
 ): Config {
-  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { apiKey } = settings;
 
   if (!apiKey)
