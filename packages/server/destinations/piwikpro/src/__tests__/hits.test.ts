@@ -48,7 +48,7 @@ describe('buildHits', () => {
 
   /** The hits of a successful build, as parameter maps. */
   function params(result: BuildResult): Array<Map<string, string>> {
-    if ('skip' in result) throw new Error(`unexpected skip: ${result.skip}`);
+    if (!('hits' in result)) throw new Error('unexpected unsent result');
     return result.hits.map((hit) => new Map(hit));
   }
 
@@ -95,30 +95,11 @@ describe('buildHits', () => {
   });
 
   it.each<[string, WalkerOS.Event, Rule | undefined, string]>([
-    ['an unmapped event', event('promotion visible'), undefined, 'unmapped'],
-    [
-      'an unnamed rule without a goal',
-      event('promotion visible'),
-      { settings: { customDimensions: { '1': 'data.name' } } },
-      'unmapped',
-    ],
-    [
-      'a method outside the table',
-      otherEvent('setUserId'),
-      { name: 'setUserId' },
-      'unknown method setUserId',
-    ],
     [
       'silent without a goal',
       otherEvent('trackEvent'),
       { name: 'trackEvent', silent: true },
       'silent',
-    ],
-    [
-      'a missing page url',
-      event('page view', { source: { type: 'collector' } }),
-      undefined,
-      'missing url',
     ],
   ])('skips %s', async (_, event, rule, skip) => {
     expect(await buildHits({ event, rule }, settings, collector)).toEqual({
@@ -126,7 +107,38 @@ describe('buildHits', () => {
     });
   });
 
-  it('skips an invalid method call with its reason', async () => {
+  it.each<[string, WalkerOS.Event, Rule | undefined, string]>([
+    [
+      'a method outside the table',
+      otherEvent('setUserId'),
+      { name: 'setUserId' },
+      'unknown method setUserId',
+    ],
+    [
+      'a missing page url',
+      event('page view', { source: { type: 'collector' } }),
+      undefined,
+      'missing url',
+    ],
+    [
+      'an unmapped event',
+      event('promotion visible'),
+      undefined,
+      'no rule maps the event',
+    ],
+    [
+      'an unnamed rule without a goal',
+      event('promotion visible'),
+      { settings: { customDimensions: { '1': 'data.name' } } },
+      'no rule maps the event',
+    ],
+  ])('rejects %s', async (_, event, rule, invalid) => {
+    expect(await buildHits({ event, rule }, settings, collector)).toEqual({
+      invalid,
+    });
+  });
+
+  it('rejects an invalid method call with its reason', async () => {
     expect(
       await buildHits(
         {
@@ -137,7 +149,7 @@ describe('buildHits', () => {
         settings,
         collector,
       ),
-    ).toEqual({ skip: 'trackEvent: category missing' });
+    ).toEqual({ invalid: 'trackEvent: category missing' });
   });
 
   const goalRule: Rule = {
@@ -207,7 +219,7 @@ describe('buildHits', () => {
       settings,
       collector,
     );
-    if ('skip' in result) throw new Error(result.skip);
+    if (!('hits' in result)) throw new Error('unexpected unsent result');
     const [hit] = result.hits;
     expect(hit.filter(([key]) => key === 'url')).toEqual([
       ['url', 'https://example.com/a.pdf'],

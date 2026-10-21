@@ -158,3 +158,35 @@ export const purchaseWithTwclid: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends nothing to X. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request to X.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * No user identifier -- X cannot match the event to a person, so the push
+ * fails with missing-input instead of counting as delivered. One per event
+ * name above, so every example's event without identifiers has its declared
+ * outcome.
+ */
+function withoutIdentifier(name: string, timestamp: number): Flow.StepExample {
+  const [entity, action] = name.split(' ');
+  return {
+    public: false,
+    description: `A ${name} event without a user identifier cannot be sent to X: the push fails with missing-input instead of counting as delivered.`,
+    in: { name, entity, action, timestamp },
+    out: [],
+    outcome: { status: 'failed', code: 'missing-input', retryable: false },
+  };
+}
+
+export const noIdentifierOrder = withoutIdentifier(
+  'order complete',
+  1700000991000,
+);
+export const noIdentifierForm = withoutIdentifier('form submit', 1700000992000);

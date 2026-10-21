@@ -35,7 +35,12 @@ function buildEventType(name: string): EventType {
   return { tracking_type: 'Custom', custom_event_name: name };
 }
 
-export const push: PushFn = async function (
+// A silent rule has no reddit call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, data, ingest, env, logger, collector },
 ) {

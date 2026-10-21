@@ -211,3 +211,12 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends nothing to Meta. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request to Meta.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};

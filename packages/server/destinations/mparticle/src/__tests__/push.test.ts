@@ -227,6 +227,6 @@ describe('push', () => {
         logger: createMockLogger(),
         id: 'test-mparticle',
       }),
-    ).rejects.toThrow('Config settings apiKey missing');
+    ).rejects.toThrow('Config settings apiKey, apiSecret missing');
   });
 });

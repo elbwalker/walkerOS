@@ -202,3 +202,32 @@ export const ga4PageView: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends nothing to the Data Manager API. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description:
+    'A rule with silent: true sends no request to the Data Manager API.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * No transaction id -- an order complete event without data has no
+ * transactionId, which Data Manager requires, so the push fails with
+ * missing-input instead of counting as delivered.
+ */
+export const orderWithoutTransactionId: Flow.StepExample = {
+  public: false,
+  description:
+    'An order complete event without a transaction id cannot be sent to the Data Manager API: the push fails with missing-input instead of counting as delivered.',
+  in: {
+    name: 'order complete',
+    entity: 'order',
+    action: 'complete',
+    timestamp: 1700000991000,
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
+};

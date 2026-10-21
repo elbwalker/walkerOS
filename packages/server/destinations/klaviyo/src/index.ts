@@ -4,6 +4,7 @@ import type {
   KlaviyoEventsApiMock,
   KlaviyoProfilesApiMock,
 } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig } from './config';
 import { push } from './push';
 
@@ -15,8 +16,8 @@ export const destinationKlaviyo: Destination = {
 
   config: {},
 
-  init({ config: partialConfig, logger, env }) {
-    const config = getConfig(partialConfig, logger);
+  init({ config: partialConfig, env }) {
+    const config = getConfig(partialConfig);
     const settings = config.settings as Settings;
 
     // Use env mocks if provided (testing), otherwise create real SDK instances
@@ -40,7 +41,10 @@ export const destinationKlaviyo: Destination = {
           session,
         ) as KlaviyoProfilesApiMock;
       } catch (err) {
-        logger.throw(`Failed to initialize Klaviyo SDK: ${err}`);
+        throw new StepError('Failed to initialize Klaviyo SDK', {
+          code: 'config',
+          cause: err,
+        });
       }
     }
 

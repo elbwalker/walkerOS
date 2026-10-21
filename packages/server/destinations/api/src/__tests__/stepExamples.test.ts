@@ -22,7 +22,12 @@ describe('Step Examples', () => {
     mockSendServer.mockResolvedValue({});
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+  // Non-public examples (silent, failures) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each(published)('%s', async (name, example) => {
     const event = example.in as WalkerOS.Event;
     const mapping = example.mapping;
 

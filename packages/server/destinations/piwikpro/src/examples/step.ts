@@ -392,11 +392,58 @@ export const anonymous: StepExample = {
   ]),
 };
 
-export const unmappedSkip: StepExample = {
+export const unmappedEvent: StepExample = {
   title: 'Unmapped event',
   description:
-    'An event without a rule name that is not a page view is skipped, so nothing is sent.',
+    'An event without a rule name that is not a page view has nothing to send: the push fails with missing-input. To keep such events out without a failure, ignore them with a rule.',
   public: false,
   in: event('promotion visible'),
   out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
 };
+
+export const silentRule: StepExample = {
+  title: 'Silent rule',
+  description:
+    'A rule with silent: true and no goal sends no request: nothing is left to send, and that is not a failure.',
+  public: false,
+  in: event('page view'),
+  mapping: { silent: true },
+  out: [],
+};
+
+export const missingUrl: StepExample = {
+  title: 'Event without a page url',
+  description:
+    'An event without a page url cannot become a Tracking API request: the push fails with missing-input instead of counting as delivered.',
+  public: false,
+  in: event('page view', { source: { type: 'collector' } }),
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
+};
+
+/**
+ * The event of a mapped example without the data its rule reads: Piwik PRO
+ * cannot build the request, so the push fails with missing-input instead of
+ * counting as delivered.
+ */
+function withoutInput(target: StepExample): StepExample {
+  const { name } = target.in;
+  return {
+    title: `${target.title ?? name} without input`,
+    description: `A ${name} event without the data its rule reads cannot become a Tracking API request: the push fails with missing-input instead of counting as delivered.`,
+    public: false,
+    in: { ...target.in, data: {}, user: {}, globals: {}, context: {} },
+    mapping: target.mapping,
+    out: [],
+    outcome: { status: 'failed', code: 'missing-input', retryable: false },
+  };
+}
+
+export const siteSearchWithoutInput = withoutInput(siteSearch);
+export const trackLinkWithoutInput = withoutInput(trackLink);
+export const productViewWithoutInput = withoutInput(ecommerceProductDetailView);
+export const addToCartWithoutInput = withoutInput(ecommerceAddToCart);
+export const removeFromCartWithoutInput = withoutInput(ecommerceRemoveFromCart);
+export const cartUpdateWithoutInput = withoutInput(ecommerceCartUpdate);
+export const orderWithoutInput = withoutInput(ecommerceOrder);

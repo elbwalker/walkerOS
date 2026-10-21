@@ -364,17 +364,19 @@ describe('Server Destination Twitter', () => {
     expect(twclidId).toEqual({ twclid: 'raw-twclid-value' });
   });
 
-  test('no primary identifier - event is skipped', async () => {
+  test('no primary identifier - event fails with missing-input', async () => {
     const event = createEvent({
       name: 'form submit',
       user: { id: 'user-123' },
     });
     const config: Config = { settings: baseSettings };
 
-    await destination.push(
-      event,
-      createMockContext({ config, env: testEnv, id: 'test-twitter' }),
-    );
+    await expect(
+      destination.push(
+        event,
+        createMockContext({ config, env: testEnv, id: 'test-twitter' }),
+      ),
+    ).rejects.toMatchObject({ code: 'missing-input' });
 
     expect(mockSendServer).not.toHaveBeenCalled();
   });

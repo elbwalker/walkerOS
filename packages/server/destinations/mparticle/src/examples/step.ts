@@ -232,3 +232,12 @@ export const identityAndAttributes: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends nothing to mParticle. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request to mParticle.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};

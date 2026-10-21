@@ -58,7 +58,7 @@ describe('Server Destination Snapchat', () => {
         logger: createMockLogger(),
         id: 'test-snapchat',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, pixelId missing');
   });
 
   test('init - missing pixelId throws', async () => {

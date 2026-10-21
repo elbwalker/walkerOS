@@ -1,4 +1,5 @@
 import type { Destination, Settings, SlackClientMock } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig } from './config';
 import { push } from './push';
 
@@ -37,7 +38,10 @@ export const destinationSlack: Destination = {
         ...(retryConfig !== undefined ? { retryConfig } : {}),
       });
     } catch (err) {
-      logger.throw(`Failed to initialize Slack WebClient: ${err}`);
+      throw new StepError('Failed to initialize Slack WebClient', {
+        code: 'config',
+        cause: err,
+      });
     }
 
     return config;

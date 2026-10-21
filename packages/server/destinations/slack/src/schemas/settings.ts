@@ -65,8 +65,11 @@ export const SettingsSchema = z
       .describe('Retry policy passed to WebClient. Default: "default".')
       .optional(),
   })
+  .strict()
   .refine((v) => Boolean(v.token) !== Boolean(v.webhookUrl), {
     message: 'Provide exactly one of `token` or `webhookUrl`.',
-  });
+  })
+  // The same rule in JSON Schema: each alternative requires one credential.
+  .meta({ oneOf: [{ required: ['token'] }, { required: ['webhookUrl'] }] });
 
 export type Settings = z.infer<typeof SettingsSchema>;

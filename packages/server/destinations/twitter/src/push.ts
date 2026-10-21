@@ -15,6 +15,7 @@ import {
   isNumber,
   isObject,
   isString,
+  StepError,
 } from '@walkeros/core';
 import { sendServer, getHashServer } from '@walkeros/server-core';
 import OAuth from 'oauth-1.0a';
@@ -27,7 +28,12 @@ function normalizeString(value: unknown): string | undefined {
   return undefined;
 }
 
-export const push: PushFn = async function (
+// A silent rule has no twitter call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, rule, data, ingest, env, logger, collector },
 ) {
@@ -121,12 +127,15 @@ export const push: PushFn = async function (
     identifiers.push({ user_agent: userAgent });
   }
 
-  // Skip event if no primary identifier is present
+  // An event without a primary identifier cannot be matched by X
   const hasPrimary = identifiers.some(
     (id) =>
       'twclid' in id || 'hashed_email' in id || 'hashed_phone_number' in id,
   );
-  if (!hasPrimary) return;
+  if (!hasPrimary)
+    throw new StepError('No primary identifier to send the event with', {
+      code: 'missing-input',
+    });
 
   // Resolve per-event mapping settings
   const mappingSettings = (rule?.settings || {}) as Mapping;

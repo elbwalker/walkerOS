@@ -1,24 +1,22 @@
-import { createMockLogger } from '@walkeros/core';
 import { getConfig } from '../config';
 
 describe('getConfig', () => {
   test('throws when apiKey is missing', () => {
-    expect(() => getConfig({}, createMockLogger())).toThrow(
-      'Config settings apiKey missing',
+    expect(() => getConfig({})).toThrow(
+      'Config settings apiKey, apiSecret missing',
     );
   });
 
   test('throws when apiSecret is missing', () => {
-    expect(() =>
-      getConfig({ settings: { apiKey: 'key' } }, createMockLogger()),
-    ).toThrow('Config settings apiSecret missing');
+    expect(() => getConfig({ settings: { apiKey: 'key' } })).toThrow(
+      'Config settings apiSecret missing',
+    );
   });
 
   test('applies defaults for pod and environment', () => {
-    const config = getConfig(
-      { settings: { apiKey: 'key', apiSecret: 'secret' } },
-      createMockLogger(),
-    );
+    const config = getConfig({
+      settings: { apiKey: 'key', apiSecret: 'secret' },
+    });
     expect(config.settings).toEqual({
       apiKey: 'key',
       apiSecret: 'secret',
@@ -28,17 +26,14 @@ describe('getConfig', () => {
   });
 
   test('preserves custom pod and environment', () => {
-    const config = getConfig(
-      {
-        settings: {
-          apiKey: 'key',
-          apiSecret: 'secret',
-          pod: 'eu1',
-          environment: 'development',
-        },
+    const config = getConfig({
+      settings: {
+        apiKey: 'key',
+        apiSecret: 'secret',
+        pod: 'eu1',
+        environment: 'development',
       },
-      createMockLogger(),
-    );
+    });
     expect(config.settings.pod).toBe('eu1');
     expect(config.settings.environment).toBe('development');
   });

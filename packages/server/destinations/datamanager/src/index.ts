@@ -1,4 +1,5 @@
 import type { DestinationInterface } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig } from './config';
 import { push } from './push';
 import { createAuthClient } from './auth';
@@ -12,7 +13,7 @@ export const destinationDataManager: DestinationInterface = {
 
   async init({ config: partialConfig, env, logger }) {
     // getConfig validates required fields and returns ValidatedConfig
-    const config = getConfig(partialConfig, logger);
+    const config = getConfig(partialConfig);
 
     // Keep an injected client (tests, simulate); create one only when none is given.
     if (env?.authClient) return { ...config, env };
@@ -23,9 +24,10 @@ export const destinationDataManager: DestinationInterface = {
 
       return { ...config, env: { ...env, authClient } };
     } catch (error) {
-      logger.throw(
-        `Data Manager authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      throw new StepError('Data Manager authentication failed', {
+        code: 'config',
+        cause: error,
+      });
     }
   },
 

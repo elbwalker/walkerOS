@@ -57,7 +57,7 @@ describe('Server Destination Reddit', () => {
         logger: createMockLogger(),
         id: 'test-reddit',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, pixelId missing');
     await expect(
       destination.init({
         config: { settings: { accessToken, pixelId: '' } },

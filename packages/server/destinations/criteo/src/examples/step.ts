@@ -280,3 +280,12 @@ export const pageView: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends nothing to Criteo. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request to Criteo.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};

@@ -1,10 +1,7 @@
 import type { Config, Settings, PartialConfig } from './types';
-import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 
-export function getConfig(
-  partialConfig: PartialConfig = {},
-  logger: Logger.Instance,
-): Config {
+export function getConfig(partialConfig: PartialConfig = {}): Config {
   const settings = (partialConfig.settings || {}) as Partial<Settings>;
   const {
     pixelId,
@@ -15,13 +12,26 @@ export function getConfig(
     accessTokenSecret,
   } = settings;
 
-  if (!pixelId) logger.throw('Config settings pixelId missing');
-  if (!eventId) logger.throw('Config settings eventId missing');
-  if (!consumerKey) logger.throw('Config settings consumerKey missing');
-  if (!consumerSecret) logger.throw('Config settings consumerSecret missing');
-  if (!accessToken) logger.throw('Config settings accessToken missing');
-  if (!accessTokenSecret)
-    logger.throw('Config settings accessTokenSecret missing');
+  if (
+    !pixelId ||
+    !eventId ||
+    !consumerKey ||
+    !consumerSecret ||
+    !accessToken ||
+    !accessTokenSecret
+  ) {
+    const missing = [
+      ...(pixelId ? [] : ['pixelId']),
+      ...(eventId ? [] : ['eventId']),
+      ...(consumerKey ? [] : ['consumerKey']),
+      ...(consumerSecret ? [] : ['consumerSecret']),
+      ...(accessToken ? [] : ['accessToken']),
+      ...(accessTokenSecret ? [] : ['accessTokenSecret']),
+    ];
+    throw new StepError(`Config settings ${missing.join(', ')} missing`, {
+      code: 'config',
+    });
+  }
 
   const settingsConfig: Settings = {
     ...settings,

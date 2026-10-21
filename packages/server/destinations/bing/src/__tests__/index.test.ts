@@ -58,7 +58,7 @@ describe('Server Destination Bing', () => {
         logger: createMockLogger(),
         id: 'test-bing',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, tagId missing');
   });
 
   test('init - missing tagId throws', async () => {

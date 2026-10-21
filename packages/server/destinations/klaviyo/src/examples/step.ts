@@ -491,3 +491,44 @@ export const numericUniqueId: KlaviyoStepExample = {
     ],
   ],
 };
+
+/** A silent rule sends nothing to Klaviyo. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends nothing to Klaviyo.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * No identity -- Klaviyo needs a profile identifier for the event, so the
+ * push fails with missing-input instead of counting as delivered. One per
+ * event name above, so every example's event without identity has its
+ * declared outcome.
+ */
+function withoutIdentity(name: string, timestamp: number): Flow.StepExample {
+  const [entity, action] = name.split(' ');
+  return {
+    public: false,
+    description: `A ${name} event without a profile identifier cannot be sent to Klaviyo: the push fails with missing-input instead of counting as delivered.`,
+    in: { name, entity, action, timestamp },
+    out: [],
+    outcome: { status: 'failed', code: 'missing-input', retryable: false },
+  };
+}
+
+export const noIdentityOrderComplete = withoutIdentity(
+  'order complete',
+  1700000991000,
+);
+export const noIdentityProductView = withoutIdentity(
+  'product view',
+  1700000991001,
+);
+export const noIdentityPageView = withoutIdentity('page view', 1700000991002);
+export const noIdentityNewsletterSignup = withoutIdentity(
+  'newsletter signup',
+  1700000991003,
+);
+export const noIdentityUserLogin = withoutIdentity('user login', 1700000991004);

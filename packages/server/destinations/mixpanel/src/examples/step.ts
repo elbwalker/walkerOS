@@ -416,3 +416,49 @@ export const wildcardIgnored: MixpanelStepExample = {
   mapping: { ignore: true },
   out: [],
 };
+
+/** A silent rule sends nothing to Mixpanel. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends nothing to Mixpanel.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The event of a people or group profile example without the data its rule
+ * reads: no distinct id and no group key resolve, so there is nothing to
+ * address. A rule that only addresses profiles has nothing else to send, so
+ * it returns normally; that is a declared skip, not a failure.
+ */
+function skipWithoutInput(
+  target: MixpanelStepExample,
+  name: string,
+  timestamp: number,
+): MixpanelStepExample {
+  const [entity, action] = name.split(' ');
+  return {
+    public: false,
+    description: `A ${name} event without the data its rule reads has no profile or group to address: nothing is sent, and that is not a failure.`,
+    in: { name, entity, action, timestamp },
+    mapping: target.mapping,
+    out: [],
+  };
+}
+
+export const userLoginPeopleSetSkip = skipWithoutInput(
+  userLoginPeopleSet,
+  'user login',
+  1700000991000,
+);
+export const allPeopleOperationsSkip = skipWithoutInput(
+  allPeopleOperations,
+  'profile update',
+  1700000992000,
+);
+export const companyGroupProfileSkip = skipWithoutInput(
+  companyGroupProfile,
+  'company update',
+  1700000993000,
+);

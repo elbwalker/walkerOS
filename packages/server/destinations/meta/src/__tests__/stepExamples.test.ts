@@ -70,11 +70,16 @@ describe('Step Examples', () => {
     );
   }
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+  // Non-public examples (silent, failures) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each(published)('%s', async (name, example) => {
     expect(await run(example, example.mapping)).toEqual(example.out);
   });
 
-  it.each(Object.entries(examples.step))(
+  it.each(published)(
     '%s works with serialized functions',
     async (name, example) => {
       expect(await run(example, serializeMapping(example.mapping))).toEqual(

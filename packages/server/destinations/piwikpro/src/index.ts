@@ -13,8 +13,8 @@ export const destinationPiwikPro: Destination = {
 
   env: { sendServer },
 
-  async init({ config, logger }) {
-    return getConfig(config, logger);
+  async init({ config }) {
+    return getConfig(config);
   },
 
   push,

@@ -65,7 +65,7 @@ describe('Server Destination Meta', () => {
         logger: createMockLogger(),
         id: 'test-meta',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, pixelId missing');
     await expect(
       destination.init({
         config: { settings: { accessToken, pixelId: '' } },
@@ -159,6 +159,7 @@ describe('Server Destination Meta', () => {
       settings: { accessToken, pixelId, user_data: { em: 'user.email' } },
     };
     const { collector } = await startFlow();
+    const report = jest.spyOn(collector.causeLog!, 'report');
     const rule: Rule = {
       data: {
         map: {
@@ -182,14 +183,14 @@ describe('Server Destination Meta', () => {
       }),
     );
 
-    expect(logger.warn).toHaveBeenCalledTimes(1);
-    expect(logger.warn).toHaveBeenCalledWith(
+    expect(report).toHaveBeenCalledTimes(1);
+    expect(report).toHaveBeenCalledWith(
+      { step: 'destination.test-meta', code: 'mapping' },
       expect.stringContaining('dropped'),
-      {
-        keys: ['email'],
-      },
+      { event: 'entity action', keys: ['email'] },
+      'warn',
     );
-    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain(
+    expect(JSON.stringify(report.mock.calls)).not.toContain(
       'private@example.com',
     );
 

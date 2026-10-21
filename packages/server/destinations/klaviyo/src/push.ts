@@ -11,11 +11,42 @@ import {
   isString,
   isArray,
   isNumber,
+  StepError,
 } from '@walkeros/core';
+
+/**
+ * One call to the SDK, awaited. A failure becomes a StepError with a fixed
+ * message: the SDK's own error stays on `cause`, never in the message.
+ */
+async function sdk(
+  message: string,
+  call: () => Promise<unknown>,
+): Promise<void> {
+  try {
+    await call();
+  } catch (error) {
+    throw new StepError(message, {
+      code: 'transport',
+      status: statusOf(error),
+      cause: error,
+    });
+  }
+}
+
+/** The HTTP status of a failed request (an Axios error), when it has one. */
+function statusOf(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null || !('response' in error))
+    return undefined;
+  const { response } = error;
+  if (typeof response !== 'object' || response === null) return undefined;
+  return 'status' in response && typeof response.status === 'number'
+    ? response.status
+    : undefined;
+}
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, env, logger },
+  { config, rule, data, collector, env },
 ) {
   const settings = config.settings as Settings;
 
@@ -29,10 +60,10 @@ export const push: PushFn = async function (
   const eventsApi = envTyped?.eventsApi || settings._eventsApi;
   const profilesApi = envTyped?.profilesApi || settings._profilesApi;
 
-  if (!eventsApi || !profilesApi) {
-    logger.warn('Klaviyo API instances not initialized');
-    return;
-  }
+  if (!eventsApi || !profilesApi)
+    throw new StepError('Klaviyo API instances not initialized', {
+      code: 'not-ready',
+    });
 
   const state: RuntimeState = settings._state || {};
   const mappingSettings = rule?.settings || {};
@@ -53,13 +84,10 @@ export const push: PushFn = async function (
       )
     : undefined;
 
-  if (!email && !externalId && !phoneNumber) {
-    logger.warn(
-      'Klaviyo requires at least one profile identifier; skipping event',
-      { event: event.name },
-    );
-    return;
-  }
+  if (!email && !externalId && !phoneNumber)
+    throw new StepError('Klaviyo requires at least one profile identifier', {
+      code: 'missing-input',
+    });
 
   // Build profile identifier object
   const profileIdentifiers: Record<string, string> = {};
@@ -154,7 +182,9 @@ export const push: PushFn = async function (
       },
     };
 
-    await eventsApi.createEvent(eventBody);
+    await sdk('Klaviyo createEvent failed', () =>
+      eventsApi.createEvent(eventBody),
+    );
   }
 
   settings._state = state;
@@ -244,7 +274,9 @@ async function applyIdentify(
     },
   };
 
-  await profilesApi.createOrUpdateProfile(body);
+  await sdk('Klaviyo createOrUpdateProfile failed', () =>
+    profilesApi.createOrUpdateProfile(body),
+  );
 
   state.lastIdentity = {
     email: profileIdentifiers.email,

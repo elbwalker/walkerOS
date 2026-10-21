@@ -4,17 +4,16 @@ import type {
   PartialConfig,
   EventSource,
 } from './types';
-import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 
-export function getConfig(
-  partialConfig: PartialConfig = {},
-  logger: Logger.Instance,
-): ValidatedConfig {
+export function getConfig(partialConfig: PartialConfig = {}): ValidatedConfig {
   const settings = (partialConfig.settings || {}) as Partial<Settings>;
   const { destinations, eventSource = 'WEB' } = settings;
 
   if (!destinations || destinations.length === 0)
-    logger.throw('Config settings destinations missing or empty');
+    throw new StepError('Config settings destinations missing or empty', {
+      code: 'config',
+    });
 
   const settingsConfig: Settings & { eventSource: EventSource } = {
     ...settings,

@@ -58,7 +58,7 @@ describe('Server Destination Criteo', () => {
         logger: createMockLogger(),
         id: 'test-criteo',
       }),
-    ).rejects.toThrow('Config settings partnerId missing');
+    ).rejects.toThrow('Config settings partnerId, callerId missing');
   });
 
   test('init - missing callerId throws', async () => {

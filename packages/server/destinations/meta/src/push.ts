@@ -6,14 +6,25 @@ import type {
   Env,
 } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
+import {
+  createMappingRoot,
+  getMappingValue,
+  isObject,
+  reportCause,
+  stepId,
+} from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashEvent } from './hash';
 import { getUnknownUserDataKeys } from './userData';
 
-export const push: PushFn = async function (
+// A silent rule has no meta call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
-  { config, rule, data, ingest, collector, env, logger },
+  { config, rule, data, ingest, collector, env, logger, id },
 ) {
   const {
     accessToken,
@@ -63,9 +74,13 @@ export const push: PushFn = async function (
   // Unknown keys are never hashed, so drop them instead of sending cleartext
   const unknownKeys = getUnknownUserDataKeys(mappedUserData);
   if (unknownKeys.length)
-    logger.warn(
+    reportCause(
+      collector,
+      logger,
+      { step: stepId('destination', id), code: 'mapping' },
       'Unknown Meta user_data keys dropped, use parameter names such as em and ph',
-      { keys: unknownKeys },
+      { event: event.name, keys: unknownKeys },
+      'warn',
     );
 
   const userData: CustomerInformationParameters = Object.fromEntries(

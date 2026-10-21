@@ -4,6 +4,7 @@ import type {
   CustomerIoTrackClientMock,
   CustomerIoApiClientMock,
 } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig } from './config';
 import { push } from './push';
 
@@ -15,8 +16,8 @@ export const destinationCustomerIo: Destination = {
 
   config: {},
 
-  init({ config: partialConfig, logger, env }) {
-    const config = getConfig(partialConfig, logger);
+  init({ config: partialConfig, env }) {
+    const config = getConfig(partialConfig);
     const settings = config.settings as Settings;
 
     // Use env mocks if provided (testing), otherwise create real SDK clients
@@ -40,7 +41,10 @@ export const destinationCustomerIo: Destination = {
         });
         settings._trackClient = trackClient as CustomerIoTrackClientMock;
       } catch (err) {
-        logger.throw(`Failed to initialize Customer.io TrackClient: ${err}`);
+        throw new StepError('Failed to initialize Customer.io TrackClient', {
+          code: 'config',
+          cause: err,
+        });
       }
     }
 
@@ -56,7 +60,10 @@ export const destinationCustomerIo: Destination = {
         });
         settings._apiClient = apiClient as CustomerIoApiClientMock;
       } catch (err) {
-        logger.throw(`Failed to initialize Customer.io APIClient: ${err}`);
+        throw new StepError('Failed to initialize Customer.io APIClient', {
+          code: 'config',
+          cause: err,
+        });
       }
     }
 

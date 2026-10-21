@@ -23,7 +23,12 @@ import {
   buildScreenViewEvent,
 } from './batch';
 
-export const push: PushFn = async function (
+// A silent rule has no mparticle call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, rule, data, env, logger, collector },
 ) {

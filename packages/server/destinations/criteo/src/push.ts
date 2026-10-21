@@ -91,7 +91,12 @@ function toItems(raw: unknown): CriteoItem[] | undefined {
   return items.length ? items : undefined;
 }
 
-export const push: PushFn = async function (
+// A silent rule has no criteo call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, rule, data, ingest, env, logger, collector },
 ) {

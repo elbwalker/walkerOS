@@ -56,7 +56,7 @@ describe('Server Destination LinkedIn', () => {
         logger: createMockLogger(),
         id: 'test-linkedin',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, conversionRuleId missing');
   });
 
   test('init - missing conversionRuleId throws', async () => {
@@ -261,7 +261,7 @@ describe('Server Destination LinkedIn', () => {
     expect(userIds[0].idValue).toBe('already-hashed-value');
   });
 
-  test('no userIds skips - event without email or li_fat_id does not call sendServer', async () => {
+  test('no userIds fails - event without email or li_fat_id is not sent', async () => {
     const event = createEvent({
       name: 'form submit',
       user: { id: 'user-123' },
@@ -270,14 +270,16 @@ describe('Server Destination LinkedIn', () => {
       settings: { accessToken, conversionRuleId, apiVersion: '202604' },
     };
 
-    await destination.push(
-      event,
-      createMockContext({
-        config,
-        env: testEnv,
-        id: 'test-linkedin',
-      }),
-    );
+    await expect(
+      destination.push(
+        event,
+        createMockContext({
+          config,
+          env: testEnv,
+          id: 'test-linkedin',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'missing-input' });
 
     expect(mockSendServer).not.toHaveBeenCalled();
   });

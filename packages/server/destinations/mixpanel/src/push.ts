@@ -1,5 +1,14 @@
 import type { MixpanelCallback, MixpanelClient, PushFn } from './types';
-import { getMappingValue, isArray, isObject, isString } from '@walkeros/core';
+import {
+  getMappingValue,
+  isArray,
+  isObject,
+  isString,
+  isThenable,
+  reportCause,
+  StepError,
+  stepId,
+} from '@walkeros/core';
 
 type PeopleObjectOp =
   | 'set'
@@ -30,12 +39,23 @@ const GROUP_OBJECT_OPS: GroupObjectOp[] = [
 /**
  * Wraps a Mixpanel SDK callback-based call in a Promise.
  */
-function wrapCallback(fn: (cb: MixpanelCallback) => void): Promise<void> {
+function wrapCallback(fn: (cb: MixpanelCallback) => unknown): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    fn((err) => {
-      if (err) reject(err);
-      else resolve();
-    });
+    // The SDK's own error stays on `cause`, never in the message.
+    const fail = (error: unknown) =>
+      reject(
+        new StepError('Mixpanel request failed', {
+          code: 'transport',
+          cause: error,
+        }),
+      );
+    try {
+      const answer = fn((err) => (err ? fail(err) : resolve()));
+      // An injected client may answer with a promise instead of the callback.
+      if (isThenable(answer)) answer.then(() => resolve(), fail);
+    } catch (error) {
+      fail(error);
+    }
   });
 }
 
@@ -54,15 +74,15 @@ async function applyPeople(
     const bag = resolved[op];
     if (!isObject(bag) || Object.keys(bag).length === 0) continue;
     promises.push(
-      wrapCallback((cb) => {
+      wrapCallback((cb) =>
         (
           client.people[op] as (
             id: string,
             props: Record<string, unknown>,
             cb: MixpanelCallback,
           ) => void
-        )(distinctId, bag as Record<string, unknown>, cb);
-      }),
+        )(distinctId, bag as Record<string, unknown>, cb),
+      ),
     );
   }
 
@@ -71,9 +91,7 @@ async function applyPeople(
   if (unsetVal !== undefined) {
     if (isString(unsetVal)) {
       promises.push(
-        wrapCallback((cb) => {
-          client.people.unset(distinctId, unsetVal, cb);
-        }),
+        wrapCallback((cb) => client.people.unset(distinctId, unsetVal, cb)),
       );
     } else if (isArray(unsetVal)) {
       const names = (unsetVal as unknown[]).filter((v): v is string =>
@@ -81,9 +99,7 @@ async function applyPeople(
       );
       if (names.length > 0) {
         promises.push(
-          wrapCallback((cb) => {
-            client.people.unset(distinctId, names, cb);
-          }),
+          wrapCallback((cb) => client.people.unset(distinctId, names, cb)),
         );
       }
     }
@@ -92,9 +108,7 @@ async function applyPeople(
   // Handle delete_user
   if (resolved.delete_user === true) {
     promises.push(
-      wrapCallback((cb) => {
-        client.people.delete_user(distinctId, cb);
-      }),
+      wrapCallback((cb) => client.people.delete_user(distinctId, cb)),
     );
   }
 
@@ -107,9 +121,13 @@ async function applyPeople(
 async function applyGroupProfile(
   client: MixpanelClient,
   resolved: Record<string, unknown>,
+  dropped: () => void,
 ): Promise<void> {
   const { key, id } = resolved as { key?: unknown; id?: unknown };
-  if (!isString(key) || key === '' || !isString(id) || id === '') return;
+  if (!isString(key) || key === '' || !isString(id) || id === '') {
+    dropped();
+    return;
+  }
 
   const promises: Promise<void>[] = [];
 
@@ -117,7 +135,7 @@ async function applyGroupProfile(
     const bag = resolved[op];
     if (!isObject(bag) || Object.keys(bag).length === 0) continue;
     promises.push(
-      wrapCallback((cb) => {
+      wrapCallback((cb) =>
         (
           client.groups[op] as (
             gk: string,
@@ -125,8 +143,8 @@ async function applyGroupProfile(
             props: Record<string, unknown>,
             cb: MixpanelCallback,
           ) => void
-        )(key, id, bag as Record<string, unknown>, cb);
-      }),
+        )(key, id, bag as Record<string, unknown>, cb),
+      ),
     );
   }
 
@@ -135,9 +153,7 @@ async function applyGroupProfile(
   if (unsetVal !== undefined) {
     if (isString(unsetVal)) {
       promises.push(
-        wrapCallback((cb) => {
-          client.groups.unset(key, id, unsetVal, cb);
-        }),
+        wrapCallback((cb) => client.groups.unset(key, id, unsetVal, cb)),
       );
     } else if (isArray(unsetVal)) {
       const names = (unsetVal as unknown[]).filter((v): v is string =>
@@ -145,9 +161,7 @@ async function applyGroupProfile(
       );
       if (names.length > 0) {
         promises.push(
-          wrapCallback((cb) => {
-            client.groups.unset(key, id, names, cb);
-          }),
+          wrapCallback((cb) => client.groups.unset(key, id, names, cb)),
         );
       }
     }
@@ -156,9 +170,7 @@ async function applyGroupProfile(
   // Handle delete
   if (resolved.delete === true) {
     promises.push(
-      wrapCallback((cb) => {
-        client.groups.delete_group(key, id, cb);
-      }),
+      wrapCallback((cb) => client.groups.delete_group(key, id, cb)),
     );
   }
 
@@ -167,14 +179,14 @@ async function applyGroupProfile(
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, logger },
+  { config, rule, data, collector, logger, id },
 ) {
   const settings = config.settings!;
   const client = settings.client;
-  if (!client) {
-    logger.throw('Mixpanel client not initialized');
-    return;
-  }
+  if (!client)
+    throw new StepError('Mixpanel client not initialized', {
+      code: 'not-ready',
+    });
 
   const mappingSettings = rule?.settings || {};
 
@@ -200,9 +212,7 @@ export const push: PushFn = async function (
 
   // 2. Alias - fire before people/track (legacy identity merge)
   if (distinctId && alias) {
-    await wrapCallback((cb) => {
-      client.alias(distinctId!, alias!, cb);
-    });
+    await wrapCallback((cb) => client.alias(distinctId!, alias!, cb));
   }
 
   // 3. People operations - require distinct_id
@@ -245,7 +255,17 @@ export const push: PushFn = async function (
       },
     );
     if (isObject(resolved)) {
-      await applyGroupProfile(client, resolved as Record<string, unknown>);
+      // A group profile without key and id has nothing to address: the event
+      // still goes out, and the cause log reports the dropped operation once.
+      await applyGroupProfile(client, resolved as Record<string, unknown>, () =>
+        reportCause(
+          collector,
+          logger,
+          { step: stepId('destination', id), code: 'mapping' },
+          'Mixpanel group profile skipped: key and id must resolve to strings',
+          { event: event.name, mappingKey: 'groupProfile' },
+        ),
+      );
     }
   }
 
@@ -272,13 +292,11 @@ export const push: PushFn = async function (
 
     if (useImport) {
       const timestamp = event.timestamp || Date.now();
-      await wrapCallback((cb) => {
-        client.import(eventName, timestamp, properties, cb);
-      });
+      await wrapCallback((cb) =>
+        client.import(eventName, timestamp, properties, cb),
+      );
     } else {
-      await wrapCallback((cb) => {
-        client.track(eventName, properties, cb);
-      });
+      await wrapCallback((cb) => client.track(eventName, properties, cb));
     }
   }
 };

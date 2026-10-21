@@ -477,10 +477,13 @@ describe('Server Destination Data Manager', () => {
       expect(requestBody.testEventCode).toBe('TEST12345');
     });
 
-    test('throws error on API failure', async () => {
+    test.each([
+      [400, false],
+      [503, true],
+    ])('API failure %i has retryable %s', async (status, retryable) => {
       mockFetch.mockResolvedValue({
         ok: false,
-        status: 400,
+        status,
         text: async () => 'Invalid request',
       });
 
@@ -496,7 +499,11 @@ describe('Server Destination Data Manager', () => {
             id: 'test-dm',
           }),
         ),
-      ).rejects.toThrow('Data Manager API error (400)');
+      ).rejects.toMatchObject({
+        message: `Data Manager API error (${status})`,
+        status,
+        retryable,
+      });
     });
 
     test('throws error on validation errors', async () => {
@@ -526,7 +533,7 @@ describe('Server Destination Data Manager', () => {
             id: 'test-dm',
           }),
         ),
-      ).rejects.toThrow('Validation errors');
+      ).rejects.toThrow('Data Manager rejected the event');
     });
 
     test('uses custom URL when provided', async () => {

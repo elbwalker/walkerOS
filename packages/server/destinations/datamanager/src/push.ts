@@ -1,17 +1,27 @@
 import type { PushFn } from './types';
 import type { IngestEventsRequest, IngestEventsResponse } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
+import {
+  createMappingRoot,
+  getMappingValue,
+  isObject,
+  StepError,
+} from '@walkeros/core';
 import { formatEvent, formatConsent } from './format';
 import { getAccessToken } from './auth';
 import { getConfig } from './config';
 
-export const push: PushFn = async function (
+// A silent rule has no Data Manager call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
-  { config, rule, data, ingest, collector, env, logger },
+  { config, data, ingest, collector, env, logger },
 ) {
   // Validate config and get typed settings
-  const validatedConfig = getConfig(config, logger);
+  const validatedConfig = getConfig(config);
   const {
     destinations,
     eventSource,
@@ -119,7 +129,9 @@ export const push: PushFn = async function (
 
   // Validate required fields before API call
   if (!dataManagerEvent.transactionId) {
-    logger.throw('transactionId is required');
+    throw new StepError('transactionId is required', {
+      code: 'missing-input',
+    });
   }
 
   // Check if any destination is GA4 (requires eventName)
@@ -128,7 +140,9 @@ export const push: PushFn = async function (
   );
 
   if (hasGA4Destination && !dataManagerEvent.eventName) {
-    logger.throw('eventName is required for GA4 destinations');
+    throw new StepError('eventName is required for GA4 destinations', {
+      code: 'missing-input',
+    });
   }
 
   // Build API request. Encoding is pinned to HEX because all hashing in this
@@ -155,18 +169,13 @@ export const push: PushFn = async function (
 
   const authClient = env?.authClient;
   if (!authClient) {
-    return logger.throw(
+    throw new StepError(
       'Auth client not initialized. Ensure init() was called successfully.',
+      { code: 'not-ready' },
     );
   }
 
-  let accessToken: string;
-  try {
-    accessToken = await getAccessToken(authClient);
-  } catch (error) {
-    logger.error('Authentication failed', { error });
-    throw error;
-  }
+  const accessToken = await getAccessToken(authClient);
 
   const fetchFn = env?.fetch || fetch;
   const endpoint = `${url}/events:ingest`;
@@ -178,18 +187,31 @@ export const push: PushFn = async function (
     validateOnly,
   });
 
-  const response = await fetchFn(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-  });
+  // A transport failure keeps the fetch error as `cause`, never in the message.
+  let response: Response;
+  try {
+    response = await fetchFn(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+  } catch (error) {
+    throw new StepError('Data Manager request failed', {
+      code: 'transport',
+      cause: error,
+    });
+  }
 
   if (!response.ok) {
-    const errorText = await response.text();
-    logger.throw(`Data Manager API error (${response.status}): ${errorText}`);
+    // The API's answer stays on the error body, never in the message.
+    throw new StepError(`Data Manager API error (${response.status})`, {
+      code: 'transport',
+      status: response.status,
+      body: await response.text(),
+    });
   }
 
   const result: IngestEventsResponse = await response.json();
@@ -201,9 +223,11 @@ export const push: PushFn = async function (
 
   // If validation errors exist, throw them
   if (result.validationErrors && result.validationErrors.length > 0) {
-    logger.throw(
-      `Validation errors: ${JSON.stringify(result.validationErrors)}`,
-    );
+    throw new StepError('Data Manager rejected the event', {
+      code: 'transport',
+      retryable: false,
+      body: result.validationErrors,
+    });
   }
 };
 

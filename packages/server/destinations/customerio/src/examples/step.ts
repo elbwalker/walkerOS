@@ -308,3 +308,52 @@ export const wildcardIgnored: CustomerIoStepExample = {
   mapping: { ignore: true },
   out: [],
 };
+
+/** A silent rule sends nothing to Customer.io. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends nothing to Customer.io.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * No identity -- Customer.io needs a customerId or anonymousId for the event, so the
+ * push fails with missing-input instead of counting as delivered. One per
+ * event name above, so every example's event without identity has its
+ * declared outcome.
+ */
+function withoutIdentity(name: string, timestamp: number): Flow.StepExample {
+  const [entity, action] = name.split(' ');
+  return {
+    public: false,
+    description: `A ${name} event without a customerId or anonymousId cannot be sent to Customer.io: the push fails with missing-input instead of counting as delivered.`,
+    in: { name, entity, action, timestamp },
+    out: [],
+    outcome: { status: 'failed', code: 'missing-input', retryable: false },
+  };
+}
+
+export const noIdentityProductView = withoutIdentity(
+  'product view',
+  1700000991000,
+);
+export const noIdentityOrderComplete = withoutIdentity(
+  'order complete',
+  1700000991001,
+);
+export const noIdentityPageView = withoutIdentity('page view', 1700000991002);
+export const noIdentityUserLogin = withoutIdentity('user login', 1700000991003);
+export const noIdentityUserDelete = withoutIdentity(
+  'user delete',
+  1700000991004,
+);
+export const noIdentityUserSuppress = withoutIdentity(
+  'user suppress',
+  1700000991005,
+);
+export const noIdentityUserUnsuppress = withoutIdentity(
+  'user unsuppress',
+  1700000991006,
+);

@@ -293,3 +293,12 @@ export const deployNotification: SlackStepExample = {
     ],
   ],
 };
+
+/** A silent rule posts nothing to Slack. */
+export const silentRule: SlackStepExample = {
+  public: false,
+  description: 'A rule with silent: true posts no message to Slack.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};
