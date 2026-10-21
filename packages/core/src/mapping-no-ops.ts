@@ -52,14 +52,14 @@ export const MAPPING_NO_OPS: Record<
   },
 };
 
-/** What applies at a position, for the message that names a no-op. */
+/** What applies at a position, and the fix, for the message that names a no-op. */
 const APPLIES: Record<MappingPosition, string> = {
   transformer:
     "only `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply",
   source:
-    "only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply",
+    "only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`",
   destination:
-    "a rule's `extend` is merged only by a package onto its own shipped rules; write the fields on the rule itself",
+    "a rule's `extend` applies only inside a package's own `settings.mapping` (today `@walkeros/transformer-ga4`), merged onto its shipped rules; write the fields on the rule itself",
 };
 
 /**
@@ -71,8 +71,24 @@ export function getMappingNoOpPaths(
   mapping: unknown,
   field: string,
 ): string[] {
+  return getMappingKeyPaths(mapping, field, MAPPING_NO_OPS[position]);
+}
+
+/**
+ * Dotted paths of the `keys` set in a step config, rooted at `field`:
+ * config-level keys (any config key, `batch` included), then each mapping
+ * rule's keys. Rules in array form are indexed.
+ */
+export function getMappingKeyPaths(
+  mapping: unknown,
+  field: string,
+  keys: {
+    config: ReadonlyArray<string>;
+    rule: ReadonlyArray<keyof Mapping.Rule>;
+  },
+): string[] {
   if (!isObject(mapping)) return [];
-  const { config, rule: ruleKeys } = MAPPING_NO_OPS[position];
+  const { config, rule: ruleKeys } = keys;
   const paths: string[] = [];
   for (const key of config) {
     if (mapping[key] !== undefined) paths.push(`${field}.${key}`);

@@ -41,6 +41,7 @@ import { createTracePoller, type TracePollerHandle } from './trace-poller.js';
 import { fetchSecrets } from './secrets-fetcher.js';
 import { RunnerAuthError } from './runner-auth-error.js';
 import type { ErrorRing, LogRing } from './log-ring.js';
+import type { FlowLogger } from './runtime-logging.js';
 import { VERSION } from './version.js';
 
 export interface PipelineOptions {
@@ -55,6 +56,14 @@ export interface PipelineOptions {
    * the handler controls visibility; ERROR is always emitted into the ring.
    */
   loggerConfig?: Logger.Config;
+  /**
+   * The flow logger contract handed to the bundle beside `loggerConfig`: a
+   * forced level (`--verbose`) and the hook that receives the flow's own
+   * logger settings, so the flow's level and format win.
+   */
+  flowLogger?: FlowLogger;
+  /** The output format in effect, for lines written around the logger. */
+  format?: () => Logger.Format;
   errorRing?: ErrorRing;
   logRing?: LogRing;
   /**
@@ -87,7 +96,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   // emit('error', ...) on a detached tick) must land in the net rather than
   // crash the container before the guards are up. The degrade hook is wired in
   // once the health server exists; the listeners stay registered from here.
-  const guards = registerProcessGuards(logger);
+  const guards = registerProcessGuards(logger, undefined, options.format);
 
   // The artifact this container was deployed to run. Read before the secrets
   // are injected into the environment, so a secret cannot replace it.
@@ -153,7 +162,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
     : undefined;
 
   // Load flow
-  const runtimeConfig: RuntimeConfig = { port };
+  const runtimeConfig: RuntimeConfig = { port, ...options.flowLogger };
   let handle: FlowHandle;
   try {
     handle = await loadFlow(
@@ -348,12 +357,50 @@ export interface ProcessGuardDeps {
   logger: Logger.Instance;
   exit: (code: number) => void;
   /**
+   * The output format in effect. In JSON mode a failed guard writes one
+   * fixed, pre-serialized line, so the stream stays one JSON object per line.
+   */
+  format?: () => Logger.Format;
+  /**
    * Fed by BOTH guard handlers on every out-of-band error so a windowed
    * counter can auto-degrade `/ready` after a sustained loop (and so a later
    * task's collector `reportError` can route into the same counter). Optional
    * because the handler bodies stay unit-testable without a real server.
    */
   onOutOfBandError?: () => void;
+}
+
+/**
+ * The line a failed guard writes in JSON mode: fixed and pre-serialized,
+ * without the error text, so nothing in it can fail to serialize or carry a
+ * secret.
+ */
+const GUARD_FAILED_JSON_LINE =
+  '{"severity":"ERROR","message":"[runner] Process guard handler failed (continuing)"}\n';
+
+/**
+ * The fallback when a guard's own logging throws: never a re-entrant
+ * `deps.logger`. Text mode prints the error with bare `console.error`.
+ */
+function reportGuardFailure(guardError: unknown, deps: ProcessGuardDeps): void {
+  if (deps.format?.() === 'json') process.stderr.write(GUARD_FAILED_JSON_LINE);
+  else console.error('Process guard handler failed (continuing):', guardError);
+}
+
+/**
+ * Handle a Node process warning (`process.on('warning')`, for example a
+ * `MetadataLookupWarning`): log it at WARN through the logger, masked and
+ * in the flow's format. Never throws (it is a registered listener).
+ */
+export function handleProcessWarning(
+  warning: Error,
+  deps: ProcessGuardDeps,
+): void {
+  try {
+    deps.logger.warn(`${warning.name}: ${warning.message}`);
+  } catch (guardError) {
+    reportGuardFailure(guardError, deps);
+  }
 }
 
 /**
@@ -365,7 +412,7 @@ export interface ProcessGuardDeps {
  * throw: if the logger or the degrade chain throws synchronously, the escape
  * would itself become an uncaught error and crash the process, the exact
  * failure this guard exists to prevent. The whole body is therefore wrapped;
- * the fallback uses bare `console.error` (never a re-entrant `deps.logger`).
+ * the fallback never re-enters `deps.logger` (see `reportGuardFailure`).
  */
 export function handleUnhandledRejection(
   reason: unknown,
@@ -379,7 +426,7 @@ export function handleUnhandledRejection(
     );
     deps.onOutOfBandError?.();
   } catch (guardError) {
-    console.error('Process guard handler failed (continuing):', guardError);
+    reportGuardFailure(guardError, deps);
   }
 }
 
@@ -391,7 +438,7 @@ export function handleUnhandledRejection(
  *
  * This IS the registered `uncaughtException` listener, so the body must never
  * throw (see `handleUnhandledRejection`): a throw escaping here is fatal. The
- * whole body is wrapped; the fallback uses bare `console.error`.
+ * whole body is wrapped; the fallback never re-enters `deps.logger`.
  */
 export function handleUncaughtException(
   error: Error,
@@ -401,7 +448,7 @@ export function handleUncaughtException(
     deps.logger.error(`Uncaught exception (continuing): ${error.message}`);
     deps.onOutOfBandError?.();
   } catch (guardError) {
-    console.error('Process guard handler failed (continuing):', guardError);
+    reportGuardFailure(guardError, deps);
   }
 }
 
@@ -443,6 +490,7 @@ const noopGuardHandle: ProcessGuardHandle = {
 export function registerProcessGuards(
   logger: Logger.Instance,
   onOutOfBandError?: () => void,
+  format?: () => Logger.Format,
 ): ProcessGuardHandle {
   if (processGuardsRegistered) {
     if (processGuardDeps && onOutOfBandError)
@@ -455,6 +503,7 @@ export function registerProcessGuards(
     logger,
     exit: (code) => process.exit(code),
     onOutOfBandError,
+    format,
   };
   processGuardDeps = deps;
 
@@ -464,6 +513,7 @@ export function registerProcessGuards(
   process.on('uncaughtException', (error) =>
     handleUncaughtException(error, deps),
   );
+  process.on('warning', (warning) => handleProcessWarning(warning, deps));
 
   return {
     setOnOutOfBandError(next) {

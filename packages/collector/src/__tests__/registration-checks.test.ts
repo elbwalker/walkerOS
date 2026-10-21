@@ -110,8 +110,8 @@ describe('mapping keys with no effect at their position (D4)', () => {
     });
 
     expect(lines).toEqual([
-      "Destination d: `config.mapping.page.view.extend` does nothing at the destination position; a rule's `extend` is merged only by a package onto its own shipped rules; write the fields on the rule itself.",
-      "Source probe: `config.mapping.page.view.data` does nothing at the source position; only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply.",
+      "Destination d: `config.mapping.page.view.extend` does nothing at the destination position; a rule's `extend` applies only inside a package's own `settings.mapping` (today `@walkeros/transformer-ga4`), merged onto its shipped rules; write the fields on the rule itself.",
+      "Source probe: `config.mapping.page.view.data` does nothing at the source position; only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`.",
     ]);
 
     await elb({ name: 'page view', data: { id: 1 } });

@@ -225,12 +225,14 @@ describe('setupCommand: init → setup → destroy lifecycle (Bug G)', () => {
     expect(destroyCall?.config).toEqual(setupCall?.config);
   });
 
-  test('init returning false aborts: setup does NOT run, destroy does NOT run', async () => {
+  test('init returning false fails as not-ready: setup does NOT run, destroy does NOT run', async () => {
     mockLoad(buildFlow('@walkeros/__test-init-aborts-destination'));
 
-    await setupCommand({ target: 'destination.d', logger });
+    await expect(
+      setupCommand({ target: 'destination.d', logger }),
+    ).rejects.toThrow('setup: destination.d init failed (not-ready)');
 
-    // Only init was called; setup and destroy skipped because init aborted.
+    // Only init was called; setup and destroy skipped because init failed.
     expect(calls.map((c) => c.fn)).toEqual(['init']);
   });
 

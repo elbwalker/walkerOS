@@ -36,6 +36,12 @@ export const LoggerConfigSchema = z
       .union([z.number(), z.enum(['ERROR', 'WARN', 'INFO', 'DEBUG'])])
       .optional()
       .describe('Minimum log level (default: ERROR)'),
+    format: z
+      .enum(['text', 'json'])
+      .optional()
+      .describe(
+        "Output format of a server flow's log lines: text (default) or json, one JSON object per line. Web flows reject it.",
+      ),
     handler: LoggerHandlerSchema.optional().describe(
       'Custom log handler function',
     ),
@@ -44,5 +50,5 @@ export const LoggerConfigSchema = z
     id: 'LoggerConfig',
     title: 'Logger.Config',
     description:
-      'Logger configuration (level, handler) to override the collector defaults',
+      'Logger configuration (level, format, handler) to override the collector defaults',
   });

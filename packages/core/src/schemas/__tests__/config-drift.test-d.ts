@@ -30,6 +30,7 @@ import type * as TransformerTypes from '../../types/transformer';
 import type * as StoreTypes from '../../types/store';
 import type * as CollectorTypes from '../../types/collector';
 import type * as WalkerOSTypes from '../../types/walkeros';
+import type { Flow } from '../../types/flow';
 
 import type { ConfigSchema as DestConfigSchema } from '../destination';
 import type { ConfigSchema as SourceConfigSchema } from '../source';
@@ -40,6 +41,9 @@ import type {
   InitConfigSchema as CollectorInitConfigSchema,
 } from '../collector';
 import type { SourceFieldsSchema, UserFieldsSchema } from '../walkeros';
+import type { CodeSchema, ContractRuleSchema } from '../flow';
+import type { STEP_FUNCTION_KEYS } from '../../step-entry';
+import type { CONTRACT_RULE_KEYS } from '../../contract';
 
 import type { IsExactly, Expect } from './type-utils';
 
@@ -100,3 +104,27 @@ type _sourceEventCheck = Expect<
 type _UserEventZodKeys = keyof z.infer<typeof UserFieldsSchema>;
 type _UserEventTsKeys = keyof WalkerOSTypes.UserFields;
 type _userEventCheck = Expect<IsExactly<_UserEventZodKeys, _UserEventTsKeys>>;
+
+// Flow.Code (inline code, closed): the step functions `STEP_FUNCTION_KEYS`
+// lists plus `type`.
+type _CodeZodKeys = keyof z.infer<typeof CodeSchema>;
+type _CodeTsKeys = keyof Flow.Code;
+type _codeCheck = Expect<IsExactly<_CodeZodKeys, _CodeTsKeys>>;
+
+// Flow.ContractRule (closed): the keys `CONTRACT_RULE_KEYS` lists.
+type _ContractRuleZodKeys = keyof z.infer<typeof ContractRuleSchema>;
+type _ContractRuleTsKeys = keyof Flow.ContractRule;
+type _contractRuleCheck = Expect<
+  IsExactly<_ContractRuleZodKeys, _ContractRuleTsKeys>
+>;
+
+// The two key lists name every key of their type, no more.
+type _stepFunctionKeysCheck = Expect<
+  IsExactly<
+    (typeof STEP_FUNCTION_KEYS)[number],
+    Exclude<keyof Flow.Code, 'type'>
+  >
+>;
+type _contractRuleKeysCheck = Expect<
+  IsExactly<(typeof CONTRACT_RULE_KEYS)[number], keyof Flow.ContractRule>
+>;

@@ -159,11 +159,17 @@ export const REFERENCE_RESOURCES: readonly StaticResourceSpec[] = [
     name: 'packages',
     uri: 'walkeros://reference/packages',
     description:
-      'Complete walkerOS package catalog: all sources, destinations, transformers, and stores',
+      'Complete walkerOS package catalog: all sources, destinations, transformers, and stores, as { catalog, count, warnings? }. A failed npm search answers an empty catalog with a warning that says so.',
     mimeType: JSON_MIME,
     read: async () => {
-      const { entries } = await fetchCatalog();
-      return json(entries);
+      // The same fields package_search's browse mode answers: a failed npm
+      // search is a warning next to an empty catalog, never a silent [].
+      const { entries, warnings } = await fetchCatalog();
+      return json({
+        catalog: entries,
+        count: entries.length,
+        ...(warnings.length > 0 ? { warnings } : {}),
+      });
     },
   },
 ];

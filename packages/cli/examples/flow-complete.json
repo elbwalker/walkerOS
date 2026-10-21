@@ -515,15 +515,13 @@
               "dataLayer": {
                 "add_to_cart": {
                   "name": "product add",
-                  "data": {
-                    "map": {
-                      "id": "data.items.0.item_id",
-                      "name": "data.items.0.item_name",
-                      "price": "data.items.0.price",
-                      "quantity": {
-                        "key": "data.items.0.quantity",
-                        "value": 1
-                      }
+                  "policy": {
+                    "data.id": "data.items.0.item_id",
+                    "data.name": "data.items.0.item_name",
+                    "data.price": "data.items.0.price",
+                    "data.quantity": {
+                      "key": "data.items.0.quantity",
+                      "value": 1
                     }
                   }
                 }

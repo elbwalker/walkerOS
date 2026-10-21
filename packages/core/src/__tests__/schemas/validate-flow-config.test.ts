@@ -1613,7 +1613,7 @@ describe('validateFlowConfig', () => {
       ['$secret.api_key', 'grammar'],
       ['$store.cache.key', 'grammar'],
       ['$flow.server.settings.my-key', 'grammar'],
-    ])('warns on %s (%s)', (value, kind) => {
+    ])('rejects %s (%s)', (value, kind) => {
       const result = validateFlowConfig(
         JSON.stringify(flowWithSetting({ url: value }), null, 2),
       );
@@ -1621,12 +1621,14 @@ describe('validateFlowConfig', () => {
         kind === 'inline'
           ? 'resolve only as the whole value'
           : 'does not match the';
-      const warning = result.warnings.find((w) => w.message.includes(text));
-      expect(warning).toBeDefined();
-      expect(warning?.path).toBe(
+      const error = result.errors.find((e) => e.message.includes(text));
+      expect(error).toBeDefined();
+      expect(error?.code).toBe('MALFORMED_REFERENCE');
+      expect(error?.path).toBe(
         'flows.web.destinations.api.config.settings.url',
       );
-      expect(warning?.line).toBeGreaterThan(1);
+      expect(error?.line).toBeGreaterThan(1);
+      expect(result.valid).toBe(false);
     });
 
     it('points a longer $flow string at $var or $env composition', () => {
@@ -1638,15 +1640,15 @@ describe('validateFlowConfig', () => {
         ),
       );
       expect(
-        result.warnings.some((w) =>
-          w.message.includes(
+        result.errors.some((e) =>
+          e.message.includes(
             'To build a longer string, compose with $var or $env.',
           ),
         ),
       ).toBe(true);
     });
 
-    it('does not warn on prose that mentions a reference', () => {
+    it('does not reject prose that mentions a reference', () => {
       const result = validateFlowConfig(
         JSON.stringify(
           {
@@ -1680,8 +1682,8 @@ describe('validateFlowConfig', () => {
       );
       expect(result.errors).toEqual([]);
       expect(
-        result.warnings.some((w) =>
-          /whole value|does not match the/.test(w.message),
+        result.errors.some((e) =>
+          /whole value|does not match the/.test(e.message),
         ),
       ).toBe(false);
     });
@@ -1692,13 +1694,13 @@ describe('validateFlowConfig', () => {
       ['https://$env.HOST:x.example/collect'],
       ['$var.base/collect'],
       ['$code:(e) => "$flow.x"'],
-    ])('does not warn on %s', (value) => {
+    ])('does not reject %s', (value) => {
       const result = validateFlowConfig(
         JSON.stringify(flowWithSetting({ url: value }), null, 2),
       );
       expect(
-        result.warnings.some((w) =>
-          /whole value|does not match the/.test(w.message),
+        result.errors.some((e) =>
+          /whole value|does not match the/.test(e.message),
         ),
       ).toBe(false);
     });
@@ -1789,9 +1791,9 @@ describe('validateFlowConfig', () => {
           2,
         );
       }
-      const warned = (json: string) =>
-        validateFlowConfig(json).warnings.some((w) =>
-          /whole value|does not match the/.test(w.message),
+      const rejected = (json: string) =>
+        validateFlowConfig(json).errors.some((e) =>
+          /whole value|does not match the/.test(e.message),
         );
 
       it.each([
@@ -1814,7 +1816,7 @@ describe('validateFlowConfig', () => {
         ['a settings description', { settings: { description: bad } }],
         ['a settings title', { settings: { title: bad } }],
       ])('checks %s', (_label, overrides) => {
-        expect(warned(flowWith(overrides))).toBe(true);
+        expect(rejected(flowWith(overrides))).toBe(true);
       });
 
       it.each([
@@ -1831,7 +1833,7 @@ describe('validateFlowConfig', () => {
         ['a root title', { root: { title: bad } }],
         ['nothing but the contract', {}],
       ])('skips %s', (_label, overrides) => {
-        expect(warned(flowWith(overrides))).toBe(false);
+        expect(rejected(flowWith(overrides))).toBe(false);
       });
 
       it('skips a step settings.contract schema but checks settings.title', () => {
@@ -1840,8 +1842,8 @@ describe('validateFlowConfig', () => {
           description: 'Read from $store.x.y',
           properties: { id: { type: 'string', description: bad } },
         };
-        expect(warned(flowWith({ settings: { contract } }))).toBe(false);
-        expect(warned(flowWith({ settings: { contract, title: bad } }))).toBe(
+        expect(rejected(flowWith({ settings: { contract } }))).toBe(false);
+        expect(rejected(flowWith({ settings: { contract, title: bad } }))).toBe(
           true,
         );
       });

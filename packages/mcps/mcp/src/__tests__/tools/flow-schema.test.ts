@@ -175,11 +175,10 @@ describe('reference resources', () => {
     });
 
     it('packages resource returns catalog entries', async () => {
-      const parsed = await readReference('packages');
+      const parsed = record(await readReference('packages'));
 
-      expect(Array.isArray(parsed)).toBe(true);
-      expect(parsed).toHaveLength(1);
-      expect(rows(parsed)[0]?.name).toBe('@walkeros/test-pkg');
+      expect(parsed.count).toBe(1);
+      expect(rows(parsed.catalog)[0]?.name).toBe('@walkeros/test-pkg');
     });
   });
 });

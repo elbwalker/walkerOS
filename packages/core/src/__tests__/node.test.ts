@@ -1,6 +1,13 @@
 import os from 'os';
 import { Level } from '../types/logger';
-import { createCLILogger, getTmpPath } from '../node';
+import type { LogEntry } from '../node';
+import {
+  createCLILogger,
+  createCLILoggerConfig,
+  getTmpPath,
+  MAX_JSON_LINE_BYTES,
+} from '../node';
+import { createLogger } from '../logger';
 
 describe('createCLILogger', () => {
   let errorSpy: jest.SpyInstance;
@@ -155,6 +162,160 @@ describe('createCLILogger', () => {
 
       expect(lines).toEqual(['Output: ./dist/flow.mjs']);
     });
+  });
+});
+
+describe('createCLILogger format json', () => {
+  let errorSpy: jest.SpyInstance;
+  let logSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+
+  const parse = (call: unknown[]): Record<string, unknown> => {
+    const parsed: unknown = JSON.parse(String(call[0]));
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+      throw new Error('not a JSON object');
+    return Object.fromEntries(Object.entries(parsed));
+  };
+
+  it('prints one JSON object with exactly severity, message, scope, context and time', () => {
+    createCLILogger({ format: 'json' })
+      .scope('gcp-bigquery')
+      .error('connection error', { code: 'transport', status: 503 });
+
+    const line = parse(errorSpy.mock.calls[0]);
+    expect(Object.keys(line).sort()).toEqual([
+      'context',
+      'message',
+      'scope',
+      'severity',
+      'time',
+    ]);
+    expect(line).toMatchObject({
+      severity: 'ERROR',
+      message: '[gcp-bigquery] connection error',
+      scope: 'gcp-bigquery',
+      context: { code: 'transport', status: 503 },
+    });
+    expect(new Date(String(line.time)).toISOString()).toBe(line.time);
+  });
+
+  it('masks known and pattern secrets in the message and in nested context', () => {
+    createCLILogger({
+      format: 'json',
+      knownSecrets: ['value-123456', '98765432'],
+    }).error('auth failed with value-123456 "quoted"\nnext', {
+      nested: {
+        token: 'value-123456',
+        key: 'sk-abcdefghijklmnopqrstuvwxyz123456',
+      },
+      port: 98765432,
+    });
+
+    const raw = String(errorSpy.mock.calls[0][0]);
+    expect(raw).not.toContain('value-123456');
+    expect(raw).not.toContain('sk-abcdefghijklmnopqrstuvwxyz123456');
+    const line = parse(errorSpy.mock.calls[0]);
+    expect(line.message).toBe('auth failed with *** "quoted"\nnext');
+    expect(line.context).toMatchObject({ port: '***' });
+  });
+
+  it('caps a line above 32 KiB with contextTruncated, and it still parses', () => {
+    createCLILogger({ format: 'json' }).error('big', {
+      rows: 'x"'.repeat(MAX_JSON_LINE_BYTES),
+    });
+
+    const raw = String(errorSpy.mock.calls[0][0]);
+    expect(Buffer.byteLength(raw)).toBeLessThanOrEqual(MAX_JSON_LINE_BYTES);
+    const line = parse(errorSpy.mock.calls[0]);
+    expect(line.contextTruncated).toBe(true);
+    expect(typeof line.context).toBe('string');
+    expect(String(line.context).startsWith('{"rows":"x\\"')).toBe(true);
+  });
+
+  it('sends ERROR and WARN to stderr, INFO and DEBUG to stdout', () => {
+    const logger = createCLILogger({ format: 'json', verbose: true });
+    logger.error('e');
+    logger.warn('w');
+    logger.info('i');
+    logger.debug('d');
+
+    expect(errorSpy.mock.calls.map((call) => parse(call).severity)).toEqual([
+      'ERROR',
+      'WARNING',
+    ]);
+    expect(logSpy.mock.calls.map((call) => parse(call).severity)).toEqual([
+      'INFO',
+      'DEBUG',
+    ]);
+  });
+
+  it('reads a function-form format per line', () => {
+    let format: 'text' | 'json' = 'text';
+    const logger = createCLILogger({ format: () => format });
+    logger.error('first');
+    format = 'json';
+    logger.error('second');
+
+    expect(errorSpy.mock.calls[0][0]).toBe('first');
+    expect(parse(errorSpy.mock.calls[1]).message).toBe('second');
+  });
+
+  it('keeps text mode and the json option as they were', () => {
+    const logger = createCLILogger();
+    logger.warn('plain', { a: 1 });
+    expect(logSpy).toHaveBeenCalledWith('plain {"a":1}');
+
+    const machine = createCLILogger({ json: true, format: 'json' });
+    machine.error('hidden');
+    machine.info('hidden');
+    machine.json({ ok: true });
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenLastCalledWith(
+      JSON.stringify({ ok: true }, null, 2),
+    );
+  });
+
+  it('hands onLine the text line and the structured entry, in both formats', () => {
+    const taps: Array<[Level, string, LogEntry]> = [];
+    const logger = createLogger(
+      createCLILoggerConfig({
+        onLine: (level, message, entry) => taps.push([level, message, entry]),
+      }),
+    ).scope('collector');
+    logger.error('Push failed', {
+      code: 'transport',
+      status: 503,
+      retryable: true,
+      suppressed: 2,
+    });
+
+    expect(taps).toEqual([
+      [
+        Level.ERROR,
+        '[collector] Push failed {"code":"transport","status":503,"retryable":true,"suppressed":2}',
+        {
+          severity: 'ERROR',
+          message: '[collector] Push failed',
+          scope: 'collector',
+          context: {
+            code: 'transport',
+            status: 503,
+            retryable: true,
+            suppressed: 2,
+          },
+          time: expect.any(String),
+        },
+      ],
+    ]);
   });
 });
 

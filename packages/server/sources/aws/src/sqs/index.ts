@@ -251,7 +251,9 @@ export const sourceSqs: Source.Init<Types> = async (context) => {
           stopped = true;
           break;
         }
-        logger.error('SQS receive error (will retry)', { error });
+        // Self-healing: nothing was received, so nothing is lost; the loop
+        // retries. WARN: worth acting on if it repeats, intent still met.
+        logger.warn('SQS receive error (will retry)', { error });
         // Backoff before retry to avoid tight-looping on persistent errors.
         await new Promise((r) => setTimeout(r, RECEIVE_RETRY_BACKOFF_MS));
       }

@@ -151,6 +151,30 @@ describe('heartbeat', () => {
     );
   });
 
+  it.each([500, 429, 400])(
+    'warns, without an auth hint, when a beat is rejected with %s',
+    async (status) => {
+      globalThis.fetch = jest.fn().mockResolvedValue({ status, ok: false });
+
+      const heartbeat = createHeartbeat(
+        {
+          appUrl: 'http://localhost:3000',
+          token: 'sk-walkeros-test',
+          projectId: 'proj_1',
+          intervalMs: 60000,
+        },
+        mockLogger,
+      );
+
+      await heartbeat.sendOnce();
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        `Heartbeat rejected (${status}); its counters carry over to the next beat.`,
+      );
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    },
+  );
+
   it('logs debug on network error (no status)', async () => {
     globalThis.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
 

@@ -13,6 +13,7 @@ import {
   generateWrapEntryServer,
   bundleCore,
   generateCacheKeyContent,
+  applyCollectorDefaults,
 } from '../bundler';
 import { cacheBuild, getBuildCachePath } from '../../../core/build-cache.js';
 import { tmpRunDir } from '../../../core/tmp-names.js';
@@ -730,6 +731,8 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
       ...(opts.include ? { include: opts.include } : {}),
     };
     const versionsHash = opts.versionsHash ?? (await getHashServer('', 12));
+    // The key bundleCore takes: after the collector defaults it bakes in.
+    applyCollectorDefaults(opts.flowSettings);
     await cacheBuild(
       generateCacheKeyContent(opts.flowSettings, buildOptions, versionsHash),
       opts.bundleText ?? '// cached server bundle\n',
@@ -1413,10 +1416,12 @@ describe('bundleCore provenance', () => {
 
     expect(expectedDigest).toMatch(/^[0-9a-f]{12}$/);
     expect(flowSettings.collector).toEqual({
+      consentDenied: 'skip',
       name: 'default',
       release: expectedDigest,
     });
     expect(JSON.parse(mockCacheBuild.mock.calls[0][0]).flow.collector).toEqual({
+      consentDenied: 'skip',
       name: 'default',
       release: expectedDigest,
     });
@@ -1435,10 +1440,10 @@ describe('bundleCore provenance', () => {
     expect(flowSettings.collector?.release).toBe(expected);
   });
 
-  it('leaves the collector untouched without provenance (push and simulate)', async () => {
+  it('bakes only the collector defaults without provenance (push and simulate)', async () => {
     const { flowSettings, buildOptions } = build();
     await bundleCore(flowSettings, buildOptions, logger, false);
-    expect(flowSettings.collector).toBeUndefined();
+    expect(flowSettings.collector).toEqual({ consentDenied: 'skip' });
   });
 });
 

@@ -18,7 +18,7 @@ export interface ValueTrace {
 }
 
 /** The keys a value config is made of; an object with none of them has no operator. */
-const VALUE_KEYS = [
+export const VALUE_KEYS = [
   'condition',
   'consent',
   'fn',
@@ -28,6 +28,18 @@ const VALUE_KEYS = [
   'set',
   'validate',
   'value',
+] as const satisfies ReadonlyArray<keyof Mapping.ValueConfig>;
+
+/**
+ * The producers of a value, in the order `processMappingValue` tries them:
+ * the first one set runs, the rest never do.
+ */
+export const VALUE_PRODUCERS = [
+  'loop',
+  'map',
+  'set',
+  'key',
+  'fn',
 ] as const satisfies ReadonlyArray<keyof Mapping.ValueConfig>;
 
 /**
@@ -172,8 +184,9 @@ async function processMappingValue(
 
       let mappingValue: unknown = isDefined(staticValue) ? staticValue : value;
 
-      // One producer per value, in this order; the rest never run. A producer
-      // that yields nothing leaves the result to the `value` fallback.
+      // One producer per value, in the order of VALUE_PRODUCERS; the rest
+      // never run. A producer that yields nothing leaves the result to the
+      // `value` fallback.
       if (loop) {
         const [scope, itemMapping] = loop;
         const data =

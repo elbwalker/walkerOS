@@ -376,6 +376,46 @@ describe('Config Loader', () => {
       ).toThrow(/platform/i);
     });
 
+    test('the bundle preflight stops a flow validate rejects, naming every path (D4, E26)', () => {
+      const code = { type: 'd', push: '$code:(event) => {}' };
+      const config = {
+        version: 4,
+        flows: {
+          'tracking-server': {
+            config: { platform: 'server', url: 'https://collect.example.com' },
+          },
+          web: {
+            config: { platform: 'web' },
+            sources: {
+              s: {
+                code,
+                config: { mapping: { page: { view: { data: 'data' } } } },
+              },
+            },
+            destinations: {
+              api: {
+                code,
+                config: { settings: { url: '$flow. tracking-server.url' } },
+              },
+            },
+          },
+        },
+      };
+
+      expect(() =>
+        loadBundleConfig(config, {
+          configPath: '/test/config.json',
+          flowName: 'web',
+        }),
+      ).toThrow(
+        [
+          'Invalid configuration:',
+          "  - flows.web.sources.s: `config.mapping.page.view.data` does nothing at the source position; only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`.",
+          '  - flows.web.destinations.api.config.settings.url: "$flow. tracking-server.url" does not match the $flow.NAME grammar',
+        ].join('\n'),
+      );
+    });
+
     test('returns empty array for non-Flow.Json config', () => {
       const oldFormatConfig = {
         flow: { platform: 'web' },

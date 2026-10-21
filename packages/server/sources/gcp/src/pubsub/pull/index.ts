@@ -175,7 +175,9 @@ export const sourcePubSubPull: Source.Init<Types> = async (context) => {
           `Run "walkeros setup source.${id}" to create it. Original: ${err.message}`,
       );
     } else {
-      logger.error('Pub/Sub subscription stream error (SDK will retry)', {
+      // Self-healing: the SDK reconnects and no message is acked, so none
+      // is lost. WARN: worth acting on if it repeats, intent still met.
+      logger.warn('Pub/Sub subscription stream error (SDK will retry)', {
         error: err.message,
       });
     }

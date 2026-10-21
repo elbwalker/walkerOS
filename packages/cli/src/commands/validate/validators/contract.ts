@@ -1,19 +1,14 @@
-import { isObject } from '@walkeros/core';
+import { CONTRACT_RULE_KEYS, isObject } from '@walkeros/core';
 import type {
   ValidateResult,
   ValidationError,
   ValidationWarning,
 } from '../types.js';
 
+const KNOWN_KEYS = new Set<string>(CONTRACT_RULE_KEYS);
+
+/** Event parts once offered as contract sections; nothing enforces them. */
 const SECTION_KEYS = ['globals', 'context', 'custom', 'user', 'consent'];
-const KNOWN_KEYS = new Set([
-  'extend',
-  'tagging',
-  'description',
-  'events',
-  'schema',
-  ...SECTION_KEYS,
-]);
 
 export function validateContract(input: unknown): ValidateResult {
   const errors: ValidationError[] = [];
@@ -67,7 +62,9 @@ export function validateContract(input: unknown): ValidateResult {
     const keys = Object.keys(obj);
     const unknownKeys = keys.filter((k) => !KNOWN_KEYS.has(k));
     const hasKnownKey = keys.some((k) => KNOWN_KEYS.has(k));
-    const objectValuedUnknown = unknownKeys.filter((k) => isObject(obj[k]));
+    const objectValuedUnknown = unknownKeys.filter(
+      (k) => isObject(obj[k]) && !SECTION_KEYS.includes(k),
+    );
 
     // Check for flat entity-action maps (object-valued keys without known keys)
     if (!hasKnownKey && objectValuedUnknown.length > 0) {
@@ -81,11 +78,14 @@ export function validateContract(input: unknown): ValidateResult {
       continue;
     }
 
-    // Warn on unknown keys
+    // Unknown keys are errors: the contract schema is closed, and the
+    // validate transformer would never apply them.
     for (const key of unknownKeys) {
-      warnings.push({
+      errors.push({
         path: `${name}.${key}`,
-        message: `Unknown contract key "${key}" is ignored`,
+        message: SECTION_KEYS.includes(key)
+          ? `Contract section "${key}" is not enforced: the validate transformer reads only "events" and "schema". Put the rule into "schema" (a JSON Schema for the whole event), for example "schema": { "properties": { "${key}": { ... } } }.`
+          : `Unknown contract key "${key}" is not supported. Known keys: ${[...KNOWN_KEYS].join(', ')}.`,
         code: 'UNKNOWN_CONTRACT_KEY',
       });
     }
@@ -123,20 +123,6 @@ export function validateContract(input: unknown): ValidateResult {
           value: obj.extend,
           code: 'INVALID_EXTENDS',
         });
-      }
-    }
-
-    // Validate sections
-    for (const key of SECTION_KEYS) {
-      if (key in obj) {
-        if (typeof obj[key] !== 'object' || obj[key] === null) {
-          errors.push({
-            path: `${name}.${key}`,
-            message: `Section "${key}" must be a JSON Schema object`,
-            value: obj[key],
-            code: 'INVALID_SECTION',
-          });
-        }
       }
     }
 

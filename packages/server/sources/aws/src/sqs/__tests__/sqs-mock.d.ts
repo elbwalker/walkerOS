@@ -33,6 +33,7 @@ declare module '@aws-sdk/client-sqs' {
   ): void;
   export function __setCreateQueueError(err: Error | undefined): void;
   export function __setGetQueueUrlError(err: Error | undefined): void;
+  export function __setReceiveError(err: Error | undefined): void;
   export function __getDeletedReceiptHandles(): string[];
   export function __getMockCalls(): Array<{ method: string; input: unknown }>;
 }

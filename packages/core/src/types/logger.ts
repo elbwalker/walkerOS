@@ -109,6 +109,13 @@ export interface Instance {
 }
 
 /**
+ * Output format of a server terminal logger: one text line per call, or one
+ * JSON object per line (`severity`, `message`, `scope`, `context`, `time`),
+ * which Cloud Run, Loki and Datadog read as structured entries.
+ */
+export type Format = 'text' | 'json';
+
+/**
  * Logger configuration options
  */
 export interface Config {
@@ -117,6 +124,14 @@ export interface Config {
    * @default Level.ERROR
    */
   level?: Level | keyof typeof Level;
+
+  /**
+   * Output format of a server flow's log lines (`@walkeros/core/node`'s
+   * terminal logger, used by `runneros`). Web flows log to the browser
+   * console and reject it.
+   * @default 'text'
+   */
+  format?: Format;
 
   /**
    * Custom log handler function

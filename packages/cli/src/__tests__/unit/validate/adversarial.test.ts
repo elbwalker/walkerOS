@@ -721,7 +721,7 @@ describe('C1 default scope and C5 skips', () => {
   });
 
   it.each([
-    ['f24-unknown-step-keys', 'warnings'],
+    ['f27-only-warning', 'warnings'],
     ['f17-only-skip', 'skips'],
   ])(
     'C7: text output of %s (%s) under --strict exits 2 and never reads as passed',
@@ -775,6 +775,37 @@ describe('C1 default scope and C5 skips', () => {
       }),
     );
     expect(result.details.scope).toMatchObject({ flows: ['a'] });
+  });
+
+  it('an unknown settings key is an error where the package closes its schema, and nothing where it is open', async () => {
+    const result = await validate('flow', {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'server' },
+          destinations: {
+            closed: {
+              package: 'pkg-old',
+              config: { settings: { projectId: 'p', projectld: 'typo' } },
+            },
+            open: {
+              package: 'pkg-x',
+              config: { settings: { id: 'G-ABC123', extra: true } },
+            },
+          },
+        },
+      },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        path: at('flows.a.destinations.closed.config.settings'),
+        code: 'ENTRY_SCHEMA',
+        keyword: 'additionalProperties',
+        message: expect.stringContaining('"projectld"'),
+      }),
+    ]);
+    expect(result.warnings).toEqual([]);
   });
 
   it('N1: a named export of a multi-export package without per-export schemas is a skip, not checked against the default schema', async () => {
@@ -1081,7 +1112,7 @@ describe('C1 default scope and C5 skips', () => {
 
 describe('C4 and C9: strict fails warnings and skips in every entry point', () => {
   it.each([
-    ['f24-unknown-step-keys', 'warnings'],
+    ['f27-only-warning', 'warnings'],
     ['f17-only-skip', 'skips'],
   ])(
     'validate() with strict on %s (%s) is invalid, with no new errors',
@@ -1099,7 +1130,7 @@ describe('C4 and C9: strict fails warnings and skips in every entry point', () =
   );
 
   it.each([
-    ['f24-unknown-step-keys', 'warnings'],
+    ['f27-only-warning', 'warnings'],
     ['f17-only-skip', 'skips'],
   ])('GUARD: without strict %s (%s) stays valid', async (fixture) => {
     const result = await validate('flow', fixturePath(fixture));
@@ -1120,10 +1151,10 @@ describe('C4 and C9: strict fails warnings and skips in every entry point', () =
 });
 
 describe('N12 unknown keys on destinations and stores', () => {
-  it('F24: an unknown top-level key on a destination or store is an UNKNOWN_KEY warning', async () => {
+  it('F24: an unknown top-level key on a destination or store is an UNKNOWN_KEY error', async () => {
     const result = await validate('flow', fixturePath('f24-unknown-step-keys'));
-    expect(result.valid).toBe(true);
-    expect(result.warnings).toEqual(
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           path: 'flows.a.destinations.d.settings',
@@ -1138,19 +1169,18 @@ describe('N12 unknown keys on destinations and stores', () => {
     expect(result.details.scope).toMatchObject({ flows: ['a'] });
   });
 
-  it('F24: --strict exits 2 on the unknown key warnings (its only findings)', async () => {
+  it('F24: the unknown keys are its only findings and fail without --strict', async () => {
     const result = await validate('flow', fixturePath('f24-unknown-step-keys'));
-    expect(result.warnings.map((w) => w.code)).toEqual([
+    expect(result.errors.map((e) => e.code)).toEqual([
       'UNKNOWN_KEY',
       'UNKNOWN_KEY',
     ]);
-    expect(result.details.skipped).toEqual([]);
+    expect(result.warnings).toEqual([]);
     const { exit } = await runCli({
       type: 'flow',
       input: fixturePath('f24-unknown-step-keys'),
-      strict: true,
     });
-    expect(exit).toBe(2);
+    expect(exit).toBe(1);
   });
 });
 

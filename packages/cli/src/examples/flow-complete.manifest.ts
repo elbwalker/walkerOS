@@ -1885,6 +1885,12 @@ export const flowCompleteCoverage = {
     push: 'code-push',
     type: 'code-type',
     init: { excluded: 'the inline pageGroup step needs no setup' },
+    pushBatch: {
+      excluded:
+        'the inline pageGroup step is a transformer; batching is a destination concern',
+    },
+    on: { excluded: 'the inline pageGroup step reacts to no collector event' },
+    destroy: { excluded: 'the inline pageGroup step holds nothing to release' },
   } satisfies Coverage<keyof Flow.Code>,
   source: {
     package: 'step-package',

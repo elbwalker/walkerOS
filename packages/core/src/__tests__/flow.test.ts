@@ -2616,6 +2616,32 @@ describe('$flow references', () => {
     expect(() => getFlowSettings(config, 'web')).toThrow(/url/);
   });
 
+  test('treats an empty value as unresolved, as soft mode does', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        server: {
+          config: {
+            platform: 'server',
+            url: 'https://collect.example.com',
+            settings: { region: '' },
+          },
+        },
+        web: {
+          config: { platform: 'web' },
+          destinations: {
+            api: {
+              config: { settings: { region: '$flow.server.settings.region' } },
+            },
+          },
+        },
+      },
+    };
+    expect(() => getFlowSettings(config, 'web')).toThrow(
+      '$flow.server.settings.region is empty. Set flows.server.config.settings.region.',
+    );
+  });
+
   test('detects cycles', () => {
     const config: Flow.Json = {
       version: 4,

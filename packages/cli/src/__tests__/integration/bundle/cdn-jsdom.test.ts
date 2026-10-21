@@ -146,15 +146,15 @@ describe('CDN bundle — jsdom smoke', () => {
     const fetchCalls: FetchCall[] = [];
     const windowAny = dom.window as unknown as {
       fetch: (url: unknown, init?: { body?: unknown }) => unknown;
-      Response: new (body?: unknown, init?: unknown) => unknown;
       setTimeout: typeof setTimeout;
     };
+    // jsdom has no `Response`: answer with Node's, as a browser would.
     windowAny.fetch = (async (url: unknown, init?: { body?: unknown }) => {
       fetchCalls.push({
         url: String(url),
         body: init?.body != null ? String(init.body) : undefined,
       });
-      return new windowAny.Response('{}', { status: 200 });
+      return new Response('{}', { status: 200 });
     }) as unknown as typeof windowAny.fetch;
 
     dom.window.eval(script);

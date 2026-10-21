@@ -5,10 +5,12 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import type { Flow, MoinTarget, ObserveWeb, PreviewKey } from '@walkeros/core';
 import {
+  getPlatform,
   packageNameToVariable,
   getStepRuntimeProps,
   ENV_MARKER_PREFIX,
   SECRET_MARKER_PREFIX,
+  STEP_FUNCTION_KEYS,
   isPathStepEntry,
   isObject,
 } from '@walkeros/core';
@@ -45,8 +47,8 @@ export {
 };
 
 /**
- * Type guard to check if a code value is an InlineCode object.
- * InlineCode has { push: string, type?: string, init?: string }
+ * Type guard to check if a code value is an InlineCode object: `push`, an
+ * optional `type`, and the other step functions (`STEP_FUNCTION_KEYS`).
  */
 function isInlineCode(code: unknown): code is Flow.Code {
   return (
@@ -67,9 +69,11 @@ function hasCodeReference(code: unknown): boolean {
 
 /**
  * Generates inline code for any component type (source, destination,
- * transformer, store). Handles $code: prefix for push/init functions.
+ * transformer, store). Emits every step function the code defines
+ * (`STEP_FUNCTION_KEYS`: push, pushBatch, init, on, destroy), each with its
+ * $code: prefix removed, so none is dropped on the way into the bundle.
  *
- * @param inline - InlineCode object with push, optional init, optional type
+ * @param inline - InlineCode object with push, optional type and functions
  * @param runtimeProps - The step's runtime fields (`getStepRuntimeProps`),
  *   emitted beside the code. `config` and `env` default to `{}`.
  * @param isDestination - Whether this is a destination (uses different code structure)
@@ -79,9 +83,11 @@ function generateInlineCode(
   runtimeProps: Record<string, unknown>,
   isDestination?: boolean,
 ): string {
-  const pushFn = inline.push.replace('$code:', '');
-  const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
   const typeLine = inline.type ? `type: '${inline.type}',` : '';
+  const functionLines = STEP_FUNCTION_KEYS.flatMap((key) => {
+    const fn = inline[key];
+    return fn ? [`${key}: ${fn.replace('$code:', '')}`] : [];
+  }).join(',\n        ');
 
   const props: Record<string, unknown> = {
     config: {},
@@ -98,8 +104,7 @@ function generateInlineCode(
       code: {
         ${typeLine}
         config: ${processConfigValue(props.config)},
-        ${initFn ? `init: ${initFn},` : ''}
-        push: ${pushFn}
+        ${functionLines}
       },
       ${propLines}
     }`;
@@ -110,8 +115,7 @@ function generateInlineCode(
       code: async (context) => ({
         ${typeLine}
         config: context.config,
-        ${initFn ? `init: ${initFn},` : ''}
-        push: ${pushFn}
+        ${functionLines}
       }),
       ${propLines}
     }`;
@@ -431,8 +435,10 @@ export async function bundleCore(
     );
     const versionsHash = await getHashServer(sortedVersions.join('\n'), 12);
 
-    // Bake provenance before the L1 check and codegen, so the release sits
-    // in both the cache key and the artifact.
+    // Collector defaults, for every call shape (`walkeros push` and simulate
+    // pass no provenance), then provenance: both before the L1 check and
+    // codegen, so they sit in both the cache key and the artifact.
+    applyCollectorDefaults(flowSettings);
     if (provenance) {
       applyCollectorProvenance(
         flowSettings,
@@ -1598,6 +1604,21 @@ export function buildDataPayload(flowSettings: Flow): Record<string, unknown> {
 }
 
 /**
+ * Bake the collector defaults a flow's platform sets: a server collector
+ * skips consent-denied events (`consentDenied: 'skip'`, counted in
+ * `status.destinations[id].skipped`, DEBUG) instead of queueing them, since
+ * no consent change ever reaches a server flow after the event. An authored
+ * `collector.consentDenied` wins; a web flow keeps the collector default
+ * (`'queue'`).
+ */
+export function applyCollectorDefaults(flowSettings: Flow): void {
+  if (getPlatform(flowSettings) !== 'server') return;
+  const collector = flowSettings.collector ?? {};
+  collector.consentDenied ??= 'skip';
+  flowSettings.collector = collector;
+}
+
+/**
  * Bake flow-config provenance onto the collector before codegen.
  *
  * The flow name keys this flow's entry in `event.source.release`; the release
@@ -1838,6 +1859,41 @@ export { startFlow };`;
 }
 
 /**
+ * The runner contract's logger merge, emitted into every server factory
+ * entry: the host (`runneros`) passes `context.logger` (masking, the error
+ * ring tap), optionally `context.logLevel` (a level it forces, `--verbose`)
+ * and `context.onLogger` (receives the flow's own `{ level, format }` before
+ * the collector starts). The flow's level and format win over the host's;
+ * a flow handler runs first, then the host's.
+ */
+const HOST_LOGGER_MERGE = `  // The host's logger (masking, its error ring) joins the flow's own: the
+  // flow's level and format win, unless the host forces a level (--verbose);
+  // the flow's handler runs first, then the host's, so neither replaces the
+  // other. The host learns the flow's settings before the collector starts,
+  // so every line, the first included, has the flow's format.
+  if (context.logger) {
+    const own = config.logger || {};
+    const host = context.logger;
+    if (context.onLogger) context.onLogger({ level: own.level, format: own.format });
+    const level = context.logLevel ?? own.level ?? host.level;
+    const handler = own.handler && host.handler
+      ? (lvl, message, ctx, scope, original) => {
+          try {
+            own.handler(lvl, message, ctx, scope, original);
+          } finally {
+            host.handler(lvl, message, ctx, scope, original);
+          }
+        }
+      : host.handler || own.handler;
+    config.logger = {
+      ...host,
+      ...(level !== undefined ? { level } : {}),
+      ...(own.format ? { format: own.format } : {}),
+      ...(handler ? { handler } : {}),
+    };
+  }`;
+
+/**
  * Generate a stage 2 entry file for server bundles.
  * Imports startFlow and wireConfig from the stage 1 .mjs file,
  * embeds the data payload, and exports a factory function.
@@ -1854,7 +1910,7 @@ const __configData = ${dataPayload};
 export default async function(context = {}) {
   const config = wireConfig(__configData);
 
-  if (context.logger) config.logger = context.logger;
+${HOST_LOGGER_MERGE}
 
   if (context.sourceSettings && config.sources) {
     for (const src of Object.values(config.sources)) {
@@ -2300,7 +2356,7 @@ export function generateWrapEntryServer(stage1Path: string): string {
 export default async function(context = {}) {
   const config = wireConfig(__configData);
 
-  if (context.logger) config.logger = context.logger;
+${HOST_LOGGER_MERGE}
 
   if (context.sourceSettings && config.sources) {
     for (const src of Object.values(config.sources)) {

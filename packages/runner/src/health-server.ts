@@ -160,7 +160,8 @@ function guardPreviewIntake(
       try {
         onPass();
       } catch (error) {
-        logger.info(
+        // The request failed (500): the user's intent is not met, so ERROR.
+        logger.error(
           `${PREVIEW_LOG} flow handler error on ${req.method} ${req.url}: ${
             error instanceof Error ? error.message : String(error)
           }`,

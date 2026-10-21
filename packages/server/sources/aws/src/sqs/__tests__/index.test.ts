@@ -6,6 +6,7 @@ import {
   __setQueueHarness,
   __setReceiveMessagesHarness,
   __setGetQueueUrlError,
+  __setReceiveError,
   __getMockCalls,
   __getDeletedReceiptHandles,
 } from '@aws-sdk/client-sqs';
@@ -153,6 +154,25 @@ describe('SQS source', () => {
     __setGetQueueUrlError(err);
     const ctx = buildContext({});
     await expect(sourceSqs(ctx)).rejects.toThrow(/walkeros setup source\.sqs/);
+  });
+
+  it('logs a transient receive error at WARN: nothing was received, the loop retries', async () => {
+    __setQueueHarness('walkeros-events', {});
+    __setReceiveError(new Error('socket hang up'));
+    const ctx = buildContext({});
+    const warn = jest.spyOn(ctx.logger, 'warn');
+    const error = jest.spyOn(ctx.logger, 'error');
+    const instance = await bootSqs(ctx);
+    try {
+      for (let i = 0; i < 50 && warn.mock.calls.length === 0; i++)
+        await new Promise((r) => setTimeout(r, 10));
+      expect(warn).toHaveBeenCalledWith('SQS receive error (will retry)', {
+        error: 'socket hang up',
+      });
+      expect(error).not.toHaveBeenCalled();
+    } finally {
+      await destroyInstance(instance, ctx);
+    }
   });
 
   it('long-poll loop calls ReceiveMessage with declared maxMessages and waitTimeSeconds', async () => {

@@ -138,10 +138,11 @@ export function buildReportError(
       }
 
       // Orphan / connection-level error: count it under connectionErrors,
-      // not failed.
+      // not failed. No event was lost, so the user acts but intent is still
+      // met: WARN (an event a step fails reports above, at ERROR).
       collector.status.connectionErrors[key] =
         (collector.status.connectionErrors[key] ?? 0) + 1;
-      logger.error('connection error', errorMeta(err));
+      logger.warn('connection error', errorMeta(err));
     } catch {
       // Contained: reportError runs on a detached tick and must never throw.
     }

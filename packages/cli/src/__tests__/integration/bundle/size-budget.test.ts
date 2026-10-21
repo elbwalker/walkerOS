@@ -28,10 +28,11 @@ import { withLocalPackages } from '../../helpers/local-packages.js';
 
 // Budget rule, raw and gzip: the measured size × 1.05, rounded up to the next
 // 1,000 B. Bump only in a PR that names the feature that grew the bundle.
-// Measured 2026-10-02 on the 4.7.0 working tree (minimal flow, every build
-// flag off): 93,207 B raw, 32,366 B gzip (level 9).
-const RAW_BUDGET_BYTES = 98_000;
-const GZIP_BUDGET_BYTES = 34_000;
+// Measured 2026-10-21 on the 4.8.1 working tree (minimal flow, every build
+// flag off): 108,291 B raw, 38,045 B gzip (level 9), grown by the
+// silent-failures failure contract and transport reporting.
+const RAW_BUDGET_BYTES = 114_000;
+const GZIP_BUDGET_BYTES = 40_000;
 
 /** Strings only the observe recorder (connect, poster, call capture) carries. */
 const RECORDER_MARKERS = ['elbObserve', '/ingest/', 'X-Walkeros-Binding'];

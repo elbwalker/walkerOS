@@ -9,9 +9,14 @@ import {
   isObject,
   REF_CONTRACT,
   resolveContracts,
+  SECRET_MARKER_PREFIX,
   validateStepEntry,
 } from '@walkeros/core';
-import { schemas, validateFlowStructure } from '@walkeros/core/dev';
+import {
+  checkStepKeys,
+  schemas,
+  validateFlowStructure,
+} from '@walkeros/core/dev';
 import {
   validateEventAgainstContract,
   type ContractSource,
@@ -63,8 +68,10 @@ const DEPRECATED_PACKAGES: Record<string, string> = {
     'has been removed. Use the built-in cache by omitting cache.store, or remove the store declaration if it was only used as a cache target.',
 };
 
-/** Step sections without their own closed-schema check (transformers have one). */
-const OPEN_STEP_KINDS = [
+/** Step sections and their kind, for the closed key check of every step. */
+const STEP_KINDS = [
+  ['sources', 'Source'],
+  ['transformers', 'Transformer'],
   ['destinations', 'Destination'],
   ['stores', 'Store'],
 ] as const;
@@ -96,8 +103,10 @@ export function validateFlow(
 /**
  * The whole-file run of `validate()`: {@link validateFlow} plus every step
  * with a `package` in scope checked against its package settings schema at
- * the pinned version. Findings are warnings for one minor (D3); a schema
- * that cannot be loaded is a skip; `offline` removes the check and says so.
+ * the pinned version. An unknown settings key is an error where the package
+ * closes its schema (`additionalProperties: false`), as every closed schema
+ * is; other findings are warnings for one minor (D3). A schema that cannot
+ * be loaded is a skip; `offline` removes the check and says so.
  */
 export async function validateFlowWithPackages(
   input: unknown,
@@ -150,7 +159,11 @@ export async function validateFlowWithPackages(
     }
   }
   for (const outcome of await Promise.all(pending)) {
-    result.warnings.push(...outcome.findings);
+    for (const finding of outcome.findings) {
+      if (finding.keyword === 'additionalProperties')
+        result.errors.push(finding);
+      else result.warnings.push(finding);
+    }
     run.skipped.push(...outcome.skipped);
     deferred.push(...outcome.deferred);
     if (outcome.checked) packages.push(outcome.checked);
@@ -159,6 +172,7 @@ export async function validateFlowWithPackages(
   result.details.scope = describeScope(scope, run.checks);
   result.details.deferred = [...(result.details.deferred ?? []), ...deferred];
   if (packages.length > 0) result.details.packages = packages;
+  result.valid = result.errors.length === 0;
   return result;
 }
 
@@ -236,8 +250,16 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
   for (const issue of coreResult.errors) {
     const path = issue.path || 'root';
     if (!inScope(path)) continue;
-    if (path === 'contract' && contractErrors > 0) continue;
-    errors.push({ path, message: issue.message, code: 'SCHEMA_VALIDATION' });
+    if (
+      (path === 'contract' || path.startsWith('contract.')) &&
+      contractErrors > 0
+    )
+      continue;
+    errors.push({
+      path,
+      message: issue.message,
+      code: issue.code ?? 'SCHEMA_VALIDATION',
+    });
   }
   for (const issue of coreResult.warnings) {
     const path = issue.path || 'root';
@@ -254,10 +276,11 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
     });
   }
 
-  // 6. Step entries. Transformers are closed (errors, single source of
-  //    truth in @walkeros/core); an unknown key on a destination or store is
-  //    dropped by the resolver, so it warns (UNKNOWN_KEY) for one minor.
-  //    Removed packages warn (DEPRECATED_PACKAGE) for one minor (D3).
+  // 6. Step entries, closed (single source of truth in @walkeros/core):
+  //    a transformer entry's shape, and an unknown key on a destination or
+  //    store entry or in any step's `config`, which the runtime would
+  //    ignore (UNKNOWN_KEY errors). Removed packages warn
+  //    (DEPRECATED_PACKAGE) for one minor (D3).
   checks.push('flow:steps');
   for (const flowName of scope.flows) {
     const flowValue = flows?.[flowName];
@@ -278,20 +301,13 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
         }
       }
     }
-    for (const [section, kind] of OPEN_STEP_KINDS) {
+    for (const [section, kind] of STEP_KINDS) {
       const steps = flowValue[section];
       if (!isObject(steps)) continue;
       for (const [name, step] of Object.entries(steps)) {
         if (!isObject(step)) continue;
         const at = `flows.${flowName}.${section}.${name}`;
-        for (const key of unknownStepKeys(step, kind)) {
-          warnings.push({
-            path: `${at}.${key}`,
-            message: `Unknown key "${key}" on ${kind} is ignored by the runtime`,
-            suggestion: 'Remove the key, or move it to where it belongs.',
-            code: 'UNKNOWN_KEY',
-          });
-        }
+        errors.push(...checkStepKeys(step, kind, at));
         const pkg = step.package;
         if (typeof pkg === 'string' && pkg in DEPRECATED_PACKAGES) {
           warnings.push({
@@ -302,6 +318,7 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
         }
       }
     }
+    checkWebLoggerFormat(flowName, flowValue, errors);
   }
 
   // 7. Extract flow details
@@ -383,9 +400,10 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
   };
 
   // 10a. The bundler's own structural preflight (identifier names, package
-  //      xor code, per-flow $store targets), so a valid result implies the
-  //      bundle preflight passes. Its warnings (a transformer mapping that
-  //      does nothing) stay warnings: the runtime keeps the step.
+  //      xor code, per-flow $store targets, closed keys, mapping fields that
+  //      do nothing at their position, mapping values, whole-value
+  //      references), so a valid result implies the bundle preflight passes.
+  //      A flow with earlier errors skips it, so nothing is reported twice.
   perFlow(['flow:structure'], (name, flow, file) => {
     const structure = validateFlowStructure({
       ...file,
@@ -542,22 +560,40 @@ function checkResolvedWindowCollector(
 }
 
 /**
- * Top-level keys of a destination or store that the runtime does not know,
- * read through core's closed step-entry check (one source of truth).
+ * `logger.format` chooses text or JSON lines for a server flow's output; a
+ * web flow logs to the browser console, where it has no effect. Checked on
+ * the collector's logger and on every step's `config.logger`.
  */
-function unknownStepKeys(
-  step: Record<string, unknown>,
-  kind: 'Destination' | 'Store',
-): string[] {
-  const unknown: string[] = [];
-  const rest: Record<string, unknown> = { ...step };
-  for (;;) {
-    const verdict = validateStepEntry(rest, kind);
-    if (verdict.code !== 'UNKNOWN_KEY' || verdict.key === undefined) break;
-    unknown.push(verdict.key);
-    Reflect.deleteProperty(rest, verdict.key);
+function checkWebLoggerFormat(
+  flowName: string,
+  flow: Record<string, unknown>,
+  errors: ValidationError[],
+): void {
+  if (!isObject(flow.config) || flow.config.platform !== 'web') return;
+  const at = `flows.${flowName}`;
+  const loggers: Array<[string, unknown]> = [];
+  if (isObject(flow.collector))
+    loggers.push([`${at}.collector.logger`, flow.collector.logger]);
+  for (const [section] of STEP_KINDS) {
+    const steps = flow[section];
+    if (!isObject(steps)) continue;
+    for (const [name, step] of Object.entries(steps)) {
+      if (isObject(step) && isObject(step.config))
+        loggers.push([
+          `${at}.${section}.${name}.config.logger`,
+          step.config.logger,
+        ]);
+    }
   }
-  return unknown;
+  for (const [path, logger] of loggers) {
+    if (!isObject(logger) || logger.format === undefined) continue;
+    errors.push({
+      path: `${path}.format`,
+      message:
+        'logger.format applies to server flows only: a web flow logs to the browser console, which has no output format. Remove it.',
+      code: 'WEB_LOGGER_FORMAT',
+    });
+  }
 }
 
 // --- Deep validation helpers ---
@@ -930,6 +966,21 @@ function lintRoute(
   }
 }
 
+/**
+ * Whether a value holds a `$env` or `$secret` value: resolved to the
+ * resolver's deferred marker, or still written as the reference.
+ */
+function hasRuntimeValue(value: unknown): boolean {
+  if (typeof value === 'string')
+    return (
+      value.includes(ENV_MARKER_PREFIX) ||
+      value.startsWith(SECRET_MARKER_PREFIX) ||
+      /\$(?:env|secret)\./.test(value)
+    );
+  if (Array.isArray(value)) return value.some(hasRuntimeValue);
+  return isObject(value) && Object.values(value).some(hasRuntimeValue);
+}
+
 const VALIDATE_PACKAGE = '@walkeros/transformer-validate';
 
 /** A transformer step that runs `@walkeros/transformer-validate`. */
@@ -1055,6 +1106,19 @@ export function checkValidateStepExamples(
   }
   if (!step.examples) return;
   const contracts = resolution.sources;
+  // A `$env` or `$secret` value in the contract is known only when the
+  // bundle builds or runs; judged on its literal text, JSON Schema would
+  // ignore it. The check is deferred, and the skip says so.
+  if (contracts.some(hasRuntimeValue)) {
+    skipped?.push({
+      path: stepPath,
+      check: 'flow:contract-examples',
+      reason:
+        'the contract uses a $env or $secret value, known only when the bundle builds or runs, so the examples cannot be judged statically',
+      code: 'CONTRACT_NOT_STATIC',
+    });
+    return;
+  }
 
   const mode = settings.mode === 'strict' ? 'strict' : 'pass';
   const format = settings.format === true;

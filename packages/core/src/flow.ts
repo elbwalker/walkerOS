@@ -323,6 +323,13 @@ function resolvePatterns(
           }
         } else {
           resolved = walkPath(resolved, path, `$flow.${flowName}`);
+          // Empty is unresolved, as in soft mode: inlining "" would ship a
+          // value the target flow never set.
+          if (resolved === undefined || resolved === null || resolved === '') {
+            throwError(
+              formatUnresolvedFlowMessage(flowName, path, 'missing-key'),
+            );
+          }
         }
       }
 

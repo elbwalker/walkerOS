@@ -367,6 +367,12 @@ export namespace Flow {
     type?: string;
     /** Optional "$code:..." init function. */
     init?: string;
+    /** Optional "$code:..." batch push function (destinations). */
+    pushBatch?: string;
+    /** Optional "$code:..." event handler (`on('consent')` and others). */
+    on?: string;
+    /** Optional "$code:..." destroy function. */
+    destroy?: string;
   }
 
   /**
@@ -392,7 +398,7 @@ export namespace Flow {
     /**
      * Inline code definition (object form only).
      *
-     * Object: `{push, type?, init?}` for inline code definition.
+     * Object: `{push, type?, init?, pushBatch?, on?, destroy?}` for inline code definition.
      * For named-export selection from a package, use the `import` field with `package`.
      */
     code?: Code;
@@ -487,7 +493,7 @@ export namespace Flow {
     /**
      * Inline code definition (object form only).
      *
-     * Object: `{push, type?, init?}` for inline code definition.
+     * Object: `{push, type?, init?, pushBatch?, on?, destroy?}` for inline code definition.
      * For named-export selection from a package, use the `import` field with `package`.
      */
     code?: Code;
@@ -562,7 +568,7 @@ export namespace Flow {
     /**
      * Inline code definition (object form only).
      *
-     * Object: `{push, type?, init?}` for inline code definition.
+     * Object: `{push, type?, init?, pushBatch?, on?, destroy?}` for inline code definition.
      * For named-export selection from a package, use the `import` field with `package`.
      */
     code?: Code;
@@ -643,7 +649,7 @@ export namespace Flow {
     /**
      * Inline code definition (object form only).
      *
-     * Object: `{push, type?, init?}` for inline code definition.
+     * Object: `{push, type?, init?, pushBatch?, on?, destroy?}` for inline code definition.
      * For named-export selection from a package, use the `import` field with `package`.
      */
     code?: Code;

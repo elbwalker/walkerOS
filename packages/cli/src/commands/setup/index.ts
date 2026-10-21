@@ -1,6 +1,11 @@
 import fs from 'fs-extra';
 import type { Logger } from '@walkeros/core';
-import { ENV_MARKER_PREFIX, SECRET_MARKER_PREFIX } from '@walkeros/core';
+import {
+  ENV_MARKER_PREFIX,
+  SECRET_MARKER_PREFIX,
+  StepError,
+  toFailureReason,
+} from '@walkeros/core';
 import { loadFlowConfig } from '../../config/loader.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { createSuccessOutput, writeResult } from '../../core/output.js';
@@ -159,15 +164,12 @@ type InitOutcome =
 /**
  * Classify the value returned by a destination/source/store `init`
  * implementation:
- *   - `false` → explicit abort, do NOT call setup
+ *   - `false` → the step is not ready (the collector reports it as
+ *               `not-ready`); setup cannot run
  *   - object  → resolved Config, use it as the source of truth for setup
  *               and destroy contexts
  *   - void/undefined → init mutated the input config in place (legal but
  *                       rare); fall through to the original config
- *
- * Mirrors the handling in collector/src/destination.ts:534-540, where
- * `configResult === false` short-circuits and an object replaces the
- * config while undefined keeps the existing one.
  */
 function classifyInitResult(value: unknown): InitOutcome {
   if (value === false) return { kind: 'aborted' };
@@ -175,6 +177,18 @@ function classifyInitResult(value: unknown): InitOutcome {
     return { kind: 'config', config: value };
   }
   return { kind: 'void' };
+}
+
+/**
+ * The error a failed `init` ends setup with: the step, the reason's code and
+ * message (a `StepError`'s own, capped, never its body), so the command
+ * exits non-zero and says why instead of aborting quietly.
+ */
+function initFailed(target: string, error: unknown): Error {
+  const reason = toFailureReason(error);
+  return new Error(
+    `setup: ${target} init failed (${reason.code}): ${reason.message}`,
+  );
 }
 
 export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
@@ -310,19 +324,27 @@ export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
     //   - false  → init explicitly aborted; do NOT run setup
     let resolvedConfig: unknown = resolvedInputConfig;
     if (isLifecycleFn(initFn)) {
-      const initResult = await initFn({
-        id: component.id,
-        config: resolvedInputConfig,
-        env: resolvedEnv,
-        logger: scoped,
-      });
+      const target = `${component.kind}.${component.id}`;
+      let initResult: unknown;
+      try {
+        initResult = await initFn({
+          id: component.id,
+          config: resolvedInputConfig,
+          env: resolvedEnv,
+          logger: scoped,
+        });
+      } catch (error) {
+        throw initFailed(target, error);
+      }
       const outcome = classifyInitResult(initResult);
       if (outcome.kind === 'aborted') {
-        scoped.info(
-          `setup: skipped ${component.kind}.${component.id} (init returned false)`,
+        throw initFailed(
+          target,
+          new StepError(
+            'init returned false, so the step is not ready; its init should throw a StepError that names the missing setting',
+            { code: 'not-ready' },
+          ),
         );
-        await emitSkipEnvelope('init returned false');
-        return;
       }
       if (outcome.kind === 'config') {
         resolvedConfig = outcome.config;

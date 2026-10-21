@@ -174,6 +174,22 @@ export const STEP_OPERATIVE_FIELDS: {
   Store: ['code', 'package', 'import', 'cache'],
 };
 
+export type StepFunctionKey = Exclude<keyof Flow.Code, 'type'>;
+
+/**
+ * The functions inline `code` defines, each a `$code:` string. One list for
+ * `Flow.Code`, the flow schema's `CodeSchema`, the bundler's emitter and
+ * validate. `config-drift.test-d.ts` fails the build when it and `Flow.Code`
+ * drift apart. A plain literal, so a bundle that does not use it drops it.
+ */
+export const STEP_FUNCTION_KEYS = [
+  'push',
+  'pushBatch',
+  'init',
+  'on',
+  'destroy',
+] as const satisfies ReadonlyArray<StepFunctionKey>;
+
 /**
  * Keys accepted on a step entry that are not declared Flow step fields. They
  * are runtime registration keys (`Collector` init shapes) that
@@ -251,7 +267,7 @@ export function validateStepEntry(
       ok: false,
       code: 'INVALID_CODE_SHAPE',
       key: 'code',
-      reason: `code must be an object ({ push, type?, init? }) or a resolved function value.`,
+      reason: `code must be an object ({ push, type?, init?, pushBatch?, on?, destroy? }) or a resolved function value.`,
     };
   }
 
@@ -294,6 +310,18 @@ export function validateStepEntry(
   // for all four kinds. Bundler emits nothing, runtime skips registration.
 
   return { ok: true };
+}
+
+/**
+ * Every top-level key of a step entry the runtime does not know, in entry
+ * order: the keys {@link validateStepEntry} rejects as `UNKNOWN_KEY`.
+ */
+export function getUnknownStepKeys(
+  entry: Record<string, unknown>,
+  kind: Flow.StepKind,
+): string[] {
+  const allowed = allowedKeys(kind);
+  return Object.keys(entry).filter((key) => !allowed.has(key));
 }
 
 export function isPathStepEntry(

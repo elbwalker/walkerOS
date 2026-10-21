@@ -10,6 +10,7 @@ jest.mock('../../../commands/bundle/bundler.js', () => {
 });
 
 import {
+  applyCollectorDefaults,
   applyCollectorProvenance,
   buildDataPayload,
   buildSplitConfigObject,
@@ -1593,6 +1594,41 @@ describe('data payload byte stability', () => {
 
   it('buildDataPayload builds the same object the bundler bakes', () => {
     expect(buildDataPayload(flowSettings)).toEqual(expectedPayload);
+  });
+});
+
+describe('applyCollectorDefaults', () => {
+  const flowOn = (
+    platform: 'web' | 'server',
+    collector?: Flow['collector'],
+  ) => {
+    const flowSettings: Flow = {
+      config: { platform },
+      sources: {},
+      destinations: {},
+    };
+    if (collector) flowSettings.collector = collector;
+    return flowSettings;
+  };
+
+  it('skips consent-denied events in a server flow', () => {
+    const flowSettings = flowOn('server');
+    applyCollectorDefaults(flowSettings);
+    expect(buildDataPayload(flowSettings)).toMatchObject({
+      collector: { consentDenied: 'skip' },
+    });
+  });
+
+  it('keeps an authored consentDenied', () => {
+    const flowSettings = flowOn('server', { consentDenied: 'queue' });
+    applyCollectorDefaults(flowSettings);
+    expect(flowSettings.collector?.consentDenied).toBe('queue');
+  });
+
+  it('leaves a web flow on the collector default (queue)', () => {
+    const flowSettings = flowOn('web');
+    applyCollectorDefaults(flowSettings);
+    expect(flowSettings.collector).toBeUndefined();
   });
 });
 

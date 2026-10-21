@@ -15,6 +15,7 @@ export {
   type ShutdownDeps,
 } from './pipeline.js';
 export { loadFlow, type RuntimeConfig, type FlowHandle } from './runner.js';
+export type { FlowLogger, FlowLoggerSettings } from './runtime-logging.js';
 export {
   resolveBundle,
   isPrebuiltArtifact,

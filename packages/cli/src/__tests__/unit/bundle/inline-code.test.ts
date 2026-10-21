@@ -101,6 +101,64 @@ describe('Inline Code Bundling', () => {
     });
   });
 
+  describe('Every step function survives bundling (E2)', () => {
+    it('emits on, pushBatch and destroy of inline destination code', () => {
+      const flowSettings: Flow = {
+        config: { platform: 'server' },
+        destinations: {
+          console: {
+            code: {
+              type: 'console',
+              init: '$code:() => {}',
+              on: '$code:(type, context) => { console.log(type); }',
+              pushBatch:
+                '$code:(batch) => { console.log(batch.entries.length); }',
+              destroy: '$code:() => { console.log("bye"); }',
+              push: '$code:(event) => { console.log(event.name); }',
+            },
+            config: { batch: 10 },
+          },
+        },
+      };
+
+      const { codeConfigObject: result } = buildSplitConfigObject(
+        flowSettings,
+        new Map<string, Set<string>>(),
+      );
+
+      expect(result).toContain('init: () => {}');
+      expect(result).toContain('on: (type, context) => { console.log(type); }');
+      expect(result).toContain(
+        'pushBatch: (batch) => { console.log(batch.entries.length); }',
+      );
+      expect(result).toContain('destroy: () => { console.log("bye"); }');
+      expect(result).toContain('push: (event) => { console.log(event.name); }');
+      expect(result).not.toContain('$code:');
+    });
+
+    it('emits on of inline source code inside its factory', () => {
+      const flowSettings: Flow = {
+        config: { platform: 'server' },
+        sources: {
+          custom: {
+            code: {
+              push: '$code:(event) => event',
+              on: '$code:(type) => { console.log(type); }',
+            },
+          },
+        },
+      };
+
+      const { codeConfigObject: result } = buildSplitConfigObject(
+        flowSettings,
+        new Map<string, Set<string>>(),
+      );
+
+      expect(result).toContain('code: async (context) => ({');
+      expect(result).toContain('on: (type) => { console.log(type); }');
+    });
+  });
+
   describe('Source with code object', () => {
     it('should generate inline source from code object', () => {
       const flowSettings: Flow = {

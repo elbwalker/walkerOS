@@ -269,7 +269,19 @@ function checkReferences(
   checkEnvReferences(text, strings, warnings);
   checkFlowReferences(text, strings, context, warnings);
   checkSecretReferences(text, parsed, context, errors, warnings);
-  checkWholeValueReferences(text, parsed, warnings);
+  for (const issue of findMalformedReferences(parsed)) {
+    const encoded = JSON.stringify(issue.value);
+    const idx = text.indexOf(encoded);
+    errors.push({
+      message: issue.message,
+      severity: 'error',
+      path: issue.path,
+      code: MALFORMED_REFERENCE,
+      ...(idx === -1
+        ? { line: 1, column: 1 }
+        : offsetToPosition(text, idx, encoded.length)),
+    });
+  }
 }
 
 /** A string value that can carry references, with its place in the text. */
@@ -487,17 +499,28 @@ function isProsePath(path: readonly string[]): boolean {
   return path.length === 7 && path[4] === 'examples';
 }
 
+/** The code of a whole-value reference that would not resolve. */
+export const MALFORMED_REFERENCE = 'MALFORMED_REFERENCE';
+
+/** A string value of a flow file that a check rejects, by its path. */
+export interface FlowValueIssue {
+  /** Dotted path from the config root. */
+  path: string;
+  /** The string as written. */
+  value: string;
+  message: string;
+}
+
 /**
- * Warn on whole-value references that would not resolve: used inside a
- * larger string (they ship as literal text) or malformed (the value starts
- * with the prefix but fails the anchored grammar). Walks parsed string
- * values; `$code:` payloads are code, not references, and are skipped.
+ * Whole-value references that would not resolve: used inside a larger
+ * string (they would ship as literal text) or malformed (the value starts
+ * with the prefix but fails the anchored grammar). One definition for
+ * `validateFlowConfig` (validate, the MCP `flow_validate`, the editor) and
+ * `validateFlowStructure` (the bundle preflight). Walks parsed string
+ * values; `$code:` payloads are code, not references, and prose is skipped.
  */
-function checkWholeValueReferences(
-  text: string,
-  parsed: unknown,
-  warnings: ValidationIssue[],
-): void {
+export function findMalformedReferences(parsed: unknown): FlowValueIssue[] {
+  const issues: FlowValueIssue[] = [];
   walkStringValues(parsed, [], (value, path) => {
     if (value.startsWith(REF_CODE_PREFIX)) return;
     if (isProsePath(path)) return;
@@ -511,18 +534,10 @@ function checkWholeValueReferences(
       } else {
         message = `"${value}" uses ${prefix} inline. ${prefix} references resolve only as the whole value; it would ship as literal text. Use the reference as the entire value, or compose strings with $var or $env.`;
       }
-      const encoded = JSON.stringify(value);
-      const idx = text.indexOf(encoded);
-      warnings.push({
-        message,
-        severity: 'warning',
-        path: path.join('.'),
-        ...(idx === -1
-          ? { line: 1, column: 1 }
-          : offsetToPosition(text, idx, encoded.length)),
-      });
+      issues.push({ path: path.join('.'), value, message });
     }
   });
+  return issues;
 }
 
 function walkStringValues(

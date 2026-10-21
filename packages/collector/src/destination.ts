@@ -23,9 +23,9 @@ import {
   emitStep,
   getId,
   getGrantedConsent,
+  getMappingKeyPaths,
   getMappingNoOpMessage,
   getMappingNoOpPaths,
-  isArray,
   isDefined,
   isFunction,
   isObject,
@@ -2335,19 +2335,10 @@ export function checkDestinationRegistration(
   const logger = collector.logger.scope(destination.type || 'unknown');
 
   if (!destination.pushBatch) {
-    const batchPaths: string[] = [];
-    if (config.batch !== undefined) batchPaths.push('config.batch');
-    for (const [entity, actions] of Object.entries(config.mapping || {})) {
-      for (const [action, value] of Object.entries(actions || {})) {
-        const list = isArray(value) ? value : [value];
-        list.forEach((rule, index) => {
-          if (rule?.batch === undefined) return;
-          batchPaths.push(
-            `config.mapping.${entity}.${action}${isArray(value) ? `[${index}]` : ''}.batch`,
-          );
-        });
-      }
-    }
+    const batchPaths = getMappingKeyPaths(config, 'config', {
+      config: ['batch'],
+      rule: ['batch'],
+    });
     if (batchPaths.length)
       logger.error(
         `Destination ${id}: ${batchPaths.map((path) => `\`${path}\``).join(', ')} has no effect: the destination has no pushBatch, so events go to push one by one`,

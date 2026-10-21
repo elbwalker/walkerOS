@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import type { PipelineOptions } from '../pipeline.js';
 import {
   createOutOfBandErrorTracker,
+  handleProcessWarning,
   handleUnhandledRejection,
   handleUncaughtException,
   registerProcessGuards,
@@ -294,6 +295,45 @@ describe('process error guards', () => {
     });
   });
 
+  describe('JSON mode and process warnings', () => {
+    it('writes one fixed, pre-serialized line when a guard fails in JSON mode', () => {
+      const write = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true);
+      const consoleError = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      try {
+        handleUncaughtException(new Error('stray throw'), {
+          logger: makeThrowingLogger(),
+          exit: jest.fn(),
+          format: () => 'json',
+        });
+        expect(consoleError).not.toHaveBeenCalled();
+        expect(write).toHaveBeenCalledWith(
+          '{"severity":"ERROR","message":"[runner] Process guard handler failed (continuing)"}\n',
+        );
+      } finally {
+        write.mockRestore();
+        consoleError.mockRestore();
+      }
+    });
+
+    it('logs a Node process warning at WARN through the logger', () => {
+      const warn = jest.fn();
+      const base = createLogger({ level: Level.DEBUG });
+      handleProcessWarning(
+        Object.assign(new Error('Failed to access metadata server'), {
+          name: 'MetadataLookupWarning',
+        }),
+        { logger: { ...base, warn }, exit: jest.fn() },
+      );
+      expect(warn).toHaveBeenCalledWith(
+        'MetadataLookupWarning: Failed to access metadata server',
+      );
+    });
+  });
+
   describe('handleUncaughtException', () => {
     it('logs the error and keeps the process serving for non-fatal cases', () => {
       const { logger, errors } = makeLogger();
@@ -342,6 +382,7 @@ describe('process error guards', () => {
   describe('registerProcessGuards', () => {
     let preexistingException: NodeJS.UncaughtExceptionListener[] = [];
     let preexistingRejection: NodeJS.UnhandledRejectionListener[] = [];
+    let preexistingWarning: NodeJS.WarningListener[] = [];
 
     beforeEach(() => {
       // Snapshot any guards the test harness/runner already attached, isolate
@@ -349,6 +390,7 @@ describe('process error guards', () => {
       // test registers fresh.
       preexistingException = process.listeners('uncaughtException');
       preexistingRejection = process.listeners('unhandledRejection');
+      preexistingWarning = process.listeners('warning');
       process.removeAllListeners('uncaughtException');
       process.removeAllListeners('unhandledRejection');
       resetProcessGuardsForTest();
@@ -357,6 +399,9 @@ describe('process error guards', () => {
     afterEach(() => {
       process.removeAllListeners('unhandledRejection');
       process.removeAllListeners('uncaughtException');
+      for (const listener of process.listeners('warning'))
+        if (!preexistingWarning.includes(listener))
+          process.removeListener('warning', listener);
       for (const listener of preexistingException)
         process.on('uncaughtException', listener);
       for (const listener of preexistingRejection)

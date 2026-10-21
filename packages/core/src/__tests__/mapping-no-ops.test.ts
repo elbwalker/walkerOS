@@ -48,7 +48,7 @@ describe('getMappingNoOpPaths', () => {
     expect(
       getMappingNoOpMessage('source', ['config.mapping.page.view.data']),
     ).toBe(
-      "`config.mapping.page.view.data` does nothing at the source position; only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply.",
+      "`config.mapping.page.view.data` does nothing at the source position; only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`.",
     );
   });
 });

@@ -78,6 +78,22 @@ const NAME_MAP_KEYWORDS = new Set([
   'definitions',
 ]);
 
+/**
+ * The keys a named contract rule may carry, one list for the flow schema and
+ * validate; `config-drift.test-d.ts` fails the build when it and
+ * `Flow.ContractRule` drift apart. Sections such as `globals` or `consent`
+ * are not among them: nothing enforces them, so a rule on those event parts
+ * goes into `schema`. A plain literal, so a bundle that does not use it drops
+ * it.
+ */
+export const CONTRACT_RULE_KEYS = [
+  'extend',
+  'tagging',
+  'description',
+  'events',
+  'schema',
+] as const satisfies ReadonlyArray<keyof Flow.ContractRule>;
+
 /** Options for {@link resolveContracts}. */
 export interface ResolveContractsOptions {
   /**

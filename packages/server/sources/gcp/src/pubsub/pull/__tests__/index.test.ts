@@ -169,6 +169,21 @@ describe('Pub/Sub pull source', () => {
     expect(String(firstCall?.[0])).toContain('walkeros setup source.pubsub');
   });
 
+  it('logs a transient stream error at WARN: the SDK reconnects, nothing is lost', async () => {
+    const ctx = buildContext({});
+    const warnSpy = jest.spyOn(ctx.logger, 'warn');
+    const errorSpy = jest.spyOn(ctx.logger, 'error');
+    await sourcePubSubPull(ctx);
+    const err: Error & { code?: number } = new Error('unavailable');
+    err.code = 14;
+    __triggerError(err);
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Pub/Sub subscription stream error (SDK will retry)',
+      { error: 'unavailable' },
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
   it('decodeReturnsNull acks-and-drops via synthetic push', async () => {
     const ctx = buildContext({});
     const instance = await sourcePubSubPull(ctx);

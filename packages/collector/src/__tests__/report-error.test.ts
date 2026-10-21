@@ -49,7 +49,7 @@ describe('reportError', () => {
       const key = stepId('destination', 'bigquery');
       expect(c.status.connectionErrors[key]).toBe(1);
       expect(c.status.failed).toBe(0);
-      expect(logger.error).toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     test('accumulates connectionErrors across repeated orphan reports', async () => {
@@ -72,10 +72,10 @@ describe('reportError', () => {
       expect(c.status.failed).toBe(0);
     });
 
-    test('does not throw when the scoped logger.error throws', async () => {
+    test('does not throw when the scoped logger.warn throws', async () => {
       const c = await collector({});
       const logger = createMockLogger();
-      logger.error.mockImplementation(() => {
+      logger.warn.mockImplementation(() => {
         throw new Error('logger exploded');
       });
       const reportError = buildReportError(
@@ -109,11 +109,13 @@ describe('reportError', () => {
 
       reportError(googleError);
 
-      expect(logger.error).toHaveBeenCalledWith('connection error', {
+      // No event was lost: WARN (Q8), never ERROR.
+      expect(logger.warn).toHaveBeenCalledWith('connection error', {
         error: 'Total timeout of API exceeded 10000 milliseconds',
         name: 'GoogleError',
         code: 4,
       });
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     test('orphan log meta stays lean for a plain Error (no name/code noise)', async () => {
@@ -128,7 +130,7 @@ describe('reportError', () => {
 
       reportError(new Error('stream broken'));
 
-      expect(logger.error).toHaveBeenCalledWith('connection error', {
+      expect(logger.warn).toHaveBeenCalledWith('connection error', {
         error: 'stream broken',
       });
     });
