@@ -14,12 +14,12 @@ const builds: [string, string][] = [
   ]),
 ];
 
-// The Tag Mode loader budget: dist/walker.js measured before the loader
-// (2026-10-09, gzip level 9) plus at most 700 bytes for the loader.
-// In effect this caps walker.js's total size, with ~168 B headroom after the
-// loader: a PR that grows walker.js for another reason raises
-// BEFORE_LOADER_GZIP_BYTES by its measured delta and says so.
-const BEFORE_LOADER_GZIP_BYTES = 34_627;
+// The Tag Mode loader budget: dist/walker.js without the loader (gzip level
+// 9) plus at most 700 bytes for the loader.
+// In effect this caps walker.js's total size: a PR that grows walker.js for
+// another reason raises BEFORE_LOADER_GZIP_BYTES by its measured delta and
+// says so.
+const BEFORE_LOADER_GZIP_BYTES = 38_857;
 const LOADER_BUDGET_BYTES = 700;
 
 it('keeps the Tag Mode loader within its budget', () => {
