@@ -54,7 +54,7 @@ function vendor(url: string | undefined, env?: Env, timeout?: number) {
   return loadVendor(
     url ? `${normalizeUrl(url)}ppms.js` : undefined,
     () => getEnv<Env>(env).window._paq,
-    { timeout },
+    { timeout, document: getEnv<Env>(env).document },
   );
 }
 

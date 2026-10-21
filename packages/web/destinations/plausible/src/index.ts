@@ -64,6 +64,7 @@ function vendor(
     {
       timeout: config.timeout,
       attributes: domain ? { 'data-domain': domain } : undefined,
+      document: getEnv<Env>(env).document,
     },
   );
 }

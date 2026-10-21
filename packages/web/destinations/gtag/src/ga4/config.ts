@@ -42,7 +42,7 @@ export function initGA4(
   // Load the gtag script. `server_container_url` routes measurement data and
   // says nothing about script delivery, so first-party serving needs its own
   // `scriptSrc` pointing at the container's configured tag serving path.
-  if (loadScript) loadGtag(measurementId, scriptSrc, timeout);
+  if (loadScript) loadGtag(measurementId, scriptSrc, timeout, env);
 
   const gtagSettings: WalkerOS.AnyObject = {};
 

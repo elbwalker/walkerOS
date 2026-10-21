@@ -64,7 +64,7 @@ function vendor(
   return loadVendor(
     config.loadScript !== false ? SCRIPT_SRC : undefined,
     () => getEnv(env).window.ttq,
-    { timeout: config.timeout },
+    { timeout: config.timeout, document: getEnv(env).document },
   );
 }
 

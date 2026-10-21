@@ -1,3 +1,5 @@
+import { execFileSync } from 'child_process';
+import path from 'path';
 import { DEFAULT_DESTINATION_TIMEOUT_MS } from '@walkeros/core';
 import { loadVendor, VENDOR_SCRIPT_MARKER } from '../loadVendor';
 
@@ -72,6 +74,41 @@ describe('loadVendor', () => {
     scriptsOf(src).forEach((script) => script.remove());
     loadVendor(src, get);
     expect(scriptsOf(src)).toHaveLength(1);
+  });
+
+  it('injects into the document it is given, which is also the registry', () => {
+    const src = nextSrc();
+    const other = document.implementation.createHTMLDocument('env');
+    loadVendor(src, get, { document: other });
+    loadVendor(src, get, { document: other });
+
+    const injectedThere = Array.from(other.querySelectorAll('script')).filter(
+      (script) => script.getAttribute('src') === src,
+    );
+    expect(injectedThere).toHaveLength(1);
+    expect(injectedThere[0].hasAttribute(VENDOR_SCRIPT_MARKER)).toBe(true);
+    expect(scriptsOf(src)).toEqual([]);
+  });
+
+  it('throws vendor-not-ready naming the src where there is no document at all', () => {
+    // jsdom's global document cannot be removed: plain Node runs the source.
+    const source = path.join(__dirname, '..', 'loadVendor.ts');
+    const script = `
+      const mod = await import(${JSON.stringify(source)});
+      const { loadVendor } = mod.default ?? mod;
+      try { loadVendor('https://vendor.example/sdk.js', () => undefined); }
+      catch (error) { console.log(JSON.stringify({ code: error.code, message: error.message })); }
+    `;
+    const output = execFileSync(
+      process.execPath,
+      ['--import', 'tsx', '--input-type=module', '--eval', script],
+      { cwd: __dirname, encoding: 'utf8' },
+    );
+    expect(JSON.parse(output)).toEqual({
+      code: 'vendor-not-ready',
+      message:
+        'Vendor script https://vendor.example/sdk.js has no document to go into',
+    });
   });
 
   it("adopts another bundle's script that already loaded: ready at once", async () => {

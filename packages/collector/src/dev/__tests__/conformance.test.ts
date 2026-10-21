@@ -646,6 +646,16 @@ describe('conformance kit, vendor-global profile', () => {
       ).resolves.toBeUndefined();
     });
 
+    it('reaches the script error when the examples env carries its own document', async () => {
+      const own = document.implementation.createHTMLDocument('env');
+      await expect(
+        conformance('destination', pageScriptVendor, {
+          ...scriptOptions,
+          env: { ...scriptOptions.env, push: { vendor, document: own } },
+        }),
+      ).resolves.toBeUndefined();
+    });
+
     it('fails item 2 when the push ignores the script error', async () => {
       await expect(
         conformance('destination', pageScriptIgnoring, scriptOptions),

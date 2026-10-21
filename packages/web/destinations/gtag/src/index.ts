@@ -56,14 +56,14 @@ function setupConsentDefault(config: Config, env: Env | undefined): unknown[] {
  * Throws `vendor-not-loaded` once a script the destination loaded failed:
  * gtag replays its stub, so events before that go out as usual.
  */
-function checkScripts(config: Config): void {
+function checkScripts(config: Config, env?: Env): void {
   const { settings = {}, loadScript, timeout } = config;
   const { ga4, ads, gtm } = settings;
   if (!loadScript) return;
   if (ga4?.measurementId && ga4.init !== false)
-    checkGtag(ga4.measurementId, ga4.scriptSrc, timeout);
-  if (ads?.conversionId) checkGtag(ads.conversionId, undefined, timeout);
-  if (gtm?.containerId) gtmVendor(gtm, timeout).check();
+    checkGtag(ga4.measurementId, ga4.scriptSrc, timeout, env);
+  if (ads?.conversionId) checkGtag(ads.conversionId, undefined, timeout, env);
+  if (gtm?.containerId) gtmVendor(gtm, timeout, env).check();
 }
 
 export const destinationGtag: Destination = {
@@ -121,7 +121,7 @@ export const destinationGtag: Destination = {
   },
 
   async push(event, { config, rule = {}, data, env, collector, logger, id }) {
-    checkScripts(config);
+    checkScripts(config, env);
     const { settings = {} } = config;
     const { ga4, ads, gtm } = settings;
     const eventMapping = rule.settings || {};

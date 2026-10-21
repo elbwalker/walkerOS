@@ -24,7 +24,7 @@ export function initAds(
   // Default currency value
   if (!settings.currency) settings.currency = 'EUR';
 
-  if (loadScript) loadGtag(conversionId, undefined, timeout);
+  if (loadScript) loadGtag(conversionId, undefined, timeout, env);
 
   // Initialize gtag infrastructure
   initializeGtag(window);

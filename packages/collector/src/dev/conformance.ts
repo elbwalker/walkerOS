@@ -745,7 +745,9 @@ async function vendorFailureProblem(
   const mapping = mappingOf(primary.example, { event: primary.event });
   const session = await openDestination(step, {
     settings: ctx.options.settings,
-    env: ctx.env,
+    // The page's document replaces an env one, so the script lands where
+    // the kit fires its `error`.
+    env: ctx.env && { ...ctx.env, push: { ...ctx.env.push, document } },
     config: {
       timeout: RUN_TIMEOUT,
       loadScript: true,

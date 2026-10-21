@@ -19,7 +19,7 @@ function vendor(config: Config, env?: Env) {
   return loadVendor(
     config.loadScript ? SCRIPT_SRC : undefined,
     () => getEnv<Env>(env).window.fbq,
-    { timeout: config.timeout },
+    { timeout: config.timeout, document: getEnv<Env>(env).document },
   );
 }
 

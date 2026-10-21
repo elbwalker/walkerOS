@@ -11,6 +11,12 @@ export interface LoadVendorOptions {
    * script is inserted. `src` and the marker cannot be overwritten.
    */
   attributes?: Record<string, string>;
+  /**
+   * The document the script goes into, and whose scripts are the registry:
+   * the destination's env one (`getEnv(env).document`). The global document
+   * without it.
+   */
+  document?: Document;
 }
 
 export interface Vendor<T> {
@@ -47,8 +53,8 @@ const injected = new WeakMap<Element, Injected>();
  * marked script with that src means the src was injected (once per page, a
  * failure is never re-injected), and another document has its own.
  */
-function scriptOf(src: string): HTMLScriptElement | undefined {
-  const marked = document.querySelectorAll<HTMLScriptElement>(
+function scriptOf(doc: Document, src: string): HTMLScriptElement | undefined {
+  const marked = doc.querySelectorAll<HTMLScriptElement>(
     `script[${VENDOR_SCRIPT_MARKER}]`,
   );
   return Array.from(marked).find(
@@ -57,12 +63,13 @@ function scriptOf(src: string): HTMLScriptElement | undefined {
 }
 
 function inject(
+  doc: Document,
   src: string,
   timeout: number,
   attributes: Record<string, string>,
   available: () => boolean,
 ): Injected {
-  const existing = scriptOf(src);
+  const existing = scriptOf(doc, src);
   const known = existing && injected.get(existing);
   if (known) return known;
 
@@ -81,7 +88,7 @@ function inject(
     injected.set(existing, entry);
     return entry;
   }
-  const script = existing ?? document.createElement('script');
+  const script = existing ?? doc.createElement('script');
 
   const settle = (outcome: Outcome) => {
     const waiting = entry.waiting;
@@ -113,7 +120,7 @@ function inject(
     script.src = src;
     script.async = true;
     script.setAttribute(VENDOR_SCRIPT_MARKER, '');
-    document.head.appendChild(script);
+    doc.head.appendChild(script);
   }
 
   return entry;
@@ -138,7 +145,9 @@ const timedOut = (timeout: number) =>
  * its readiness. The deadline runs from the injection and equals the
  * destination's resolved timeout, so an awaited `ready()` settles before the
  * push's own timeout. Without `src` (the page loads the vendor) nothing is
- * injected and there is no deadline.
+ * injected and there is no deadline. A `src` with no document to inject
+ * into (neither `options.document` nor a global one) throws
+ * `vendor-not-ready`.
  */
 export function loadVendor<T>(
   src: string | undefined,
@@ -150,14 +159,23 @@ export function loadVendor<T>(
     return vendor !== undefined && vendor !== null;
   };
 
-  const script = src
-    ? inject(
-        src,
-        resolveDestinationTimeout(options.timeout),
-        options.attributes ?? {},
-        available,
-      )
-    : undefined;
+  let script: Injected | undefined;
+  if (src) {
+    const doc =
+      options.document ??
+      (typeof document !== 'undefined' ? document : undefined);
+    if (!doc)
+      throw new StepError(`Vendor script ${src} has no document to go into`, {
+        code: 'vendor-not-ready',
+      });
+    script = inject(
+      doc,
+      src,
+      resolveDestinationTimeout(options.timeout),
+      options.attributes ?? {},
+      available,
+    );
+  }
 
   const present = (): Promise<T> => {
     const vendor = get();

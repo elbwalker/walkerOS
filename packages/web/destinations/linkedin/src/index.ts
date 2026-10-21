@@ -68,7 +68,7 @@ function vendor(
   return loadVendor(
     config.loadScript ? LINKEDIN_SCRIPT_SRC : undefined,
     () => getEnv(env).window.lintrk,
-    { timeout: config.timeout },
+    { timeout: config.timeout, document: getEnv(env).document },
   );
 }
 

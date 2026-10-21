@@ -51,7 +51,7 @@ function vendor(
       ? config.settings?.scriptUrl || DEFAULT_SCRIPT_URL
       : undefined,
     () => getEnv<Env>(env).window.snowplow,
-    { timeout: config.timeout },
+    { timeout: config.timeout, document: getEnv<Env>(env).document },
   );
 }
 

@@ -1,6 +1,6 @@
 import type { Config, Env, Destination, PianoAnalytics } from './types';
 import { isObject, StepError, stepCall } from '@walkeros/core';
-import { loadVendor } from '@walkeros/web-core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
 
 // Types
 export * as DestinationPiano from './types';
@@ -15,7 +15,7 @@ function vendor(config: Config, env?: Env) {
   return loadVendor(
     config.loadScript ? SCRIPT_SRC : undefined,
     () => resolvePa(env),
-    { timeout: config.timeout },
+    { timeout: config.timeout, document: getEnv(env).document },
   );
 }
 

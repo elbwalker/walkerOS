@@ -6,6 +6,7 @@ import {
   StepError,
   stepCall,
 } from '@walkeros/core';
+import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
 import type {
   Destination,
@@ -58,13 +59,13 @@ function getHeap(env: unknown): HeapSDK | undefined {
 function vendor(
   appId: string | undefined,
   loadScript: boolean | undefined,
-  env: unknown,
+  env: DestinationWeb.Env | undefined,
   timeout?: number,
 ) {
   return loadVendor(
     loadScript && appId ? scriptSrc(appId) : undefined,
     () => getHeap(env),
-    { timeout },
+    { timeout, document: getEnv(env).document },
   );
 }
 

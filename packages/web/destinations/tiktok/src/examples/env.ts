@@ -1,3 +1,4 @@
+import { mockScriptDocument } from '@walkeros/web-core/dev';
 import type { Env, TTQ } from '../types';
 
 const noop = () => {};
@@ -31,12 +32,13 @@ function makeMockTTQ(): TTQ {
   });
 }
 
-/** Minimal web env: window has a mock ttq. */
+/** Minimal web env: window has a mock ttq, document takes the Pixel script. */
 function makeEnv(): Env {
   return {
     window: {
       ttq: makeMockTTQ(),
     },
+    document: mockScriptDocument(),
   };
 }
 

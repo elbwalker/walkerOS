@@ -8,7 +8,11 @@ export interface Vendor {
   consent(granted: boolean): void;
 }
 
-type Types = Destination.Types<{ site?: string }, unknown, { vendor?: Vendor }>;
+type Types = Destination.Types<
+  { site?: string },
+  unknown,
+  { vendor?: Vendor; document?: Document }
+>;
 
 function isVendor(value: unknown): value is Vendor {
   return (
@@ -158,30 +162,32 @@ const failedScripts = new WeakSet<Element>();
 
 /**
  * Injects its marked script once per page, as loadVendor does (a marked
- * script with its src already on the page is the injected one), with
- * `loadScript` on by default. A push calls the stub synchronously and,
- * with `reports`, fails `vendor-not-loaded` once the script fired `error`.
+ * script with its src already on the page is the injected one), into the
+ * env's document where it has one, with `loadScript` on by default. A push
+ * calls the stub synchronously and, with `reports`, fails
+ * `vendor-not-loaded` once the script fired `error`.
  */
 function pageScript(reports: boolean): Destination.Instance<Types> {
   const src = 'https://vendor.example/page.js';
-  const scriptOnPage = () =>
-    Array.from(document.querySelectorAll('script[data-walkeros-vendor]')).find(
+  const scriptOnPage = (doc: Document) =>
+    Array.from(doc.querySelectorAll('script[data-walkeros-vendor]')).find(
       (script) => script.getAttribute('src') === src,
     );
   return {
     ...vendorGlobal,
     type: reports ? 'page-script' : 'page-script-ignoring',
     config: { loadScript: true },
-    init: ({ config }) => {
-      if (!config.loadScript || scriptOnPage()) return;
-      const script = document.createElement('script');
+    init: ({ config, env }) => {
+      const doc = env.document ?? document;
+      if (!config.loadScript || scriptOnPage(doc)) return;
+      const script = doc.createElement('script');
       script.src = src;
       script.setAttribute('data-walkeros-vendor', '');
       script.addEventListener('error', () => failedScripts.add(script));
-      document.head.appendChild(script);
+      doc.head.appendChild(script);
     },
     push: async (event, context) => {
-      const script = scriptOnPage();
+      const script = scriptOnPage(context.env.document ?? document);
       if (reports && script && failedScripts.has(script))
         throw new StepError('Vendor script failed to load', {
           code: 'vendor-not-loaded',

@@ -1,3 +1,4 @@
+import { mockScriptDocument } from '@walkeros/web-core/dev';
 import type { Env } from '../types';
 
 /**
@@ -14,15 +15,7 @@ export const init: Env | undefined = {
   window: {
     // snowplow absent: setup() is expected to install the queue stub.
   },
-  document: {
-    createElement: () => ({
-      src: '',
-      async: false,
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
-  },
+  document: mockScriptDocument(),
 };
 
 export const push: Env = {
@@ -31,15 +24,7 @@ export const push: Env = {
       q: [],
     }),
   },
-  document: {
-    createElement: () => ({
-      src: '',
-      async: false,
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
-  },
+  document: mockScriptDocument(),
 };
 
 export const simulation = [

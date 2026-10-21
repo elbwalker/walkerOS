@@ -61,7 +61,7 @@ function vendor(
   return loadVendor(
     config.loadScript !== false ? PINTEREST_SCRIPT_SRC : undefined,
     () => getEnv(env).window.pintrk,
-    { timeout: config.timeout },
+    { timeout: config.timeout, document: getEnv(env).document },
   );
 }
 

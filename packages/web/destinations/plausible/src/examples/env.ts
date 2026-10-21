@@ -1,3 +1,4 @@
+import { mockScriptDocument } from '@walkeros/web-core/dev';
 import type { Env } from '../types';
 
 /**
@@ -14,16 +15,7 @@ export const init: Env | undefined = {
   window: {
     // plausible absent: init() is expected to install the stub.
   },
-  document: {
-    createElement: () => ({
-      src: '',
-      dataset: {},
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
-    querySelector: () => null,
-  },
+  document: mockScriptDocument(),
 };
 
 export const push: Env = {
@@ -33,16 +25,7 @@ export const push: Env = {
       q: [] as IArguments[],
     }),
   },
-  document: {
-    createElement: () => ({
-      src: '',
-      dataset: {},
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
-    querySelector: () => null,
-  },
+  document: mockScriptDocument(),
 };
 
 /**

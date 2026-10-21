@@ -14,6 +14,7 @@ import type {
   ClaritySDK,
   ConsentV2,
   Destination,
+  Env,
   Mapping,
   Settings,
 } from './types';
@@ -45,11 +46,11 @@ function installStub(): ClarityQueue {
 }
 
 /** The tag script `loadVendor` injects; it replays the stub's queue. */
-function vendor(apiKey: string, timeout?: number) {
+function vendor(apiKey: string, env: Env | undefined, timeout?: number) {
   return loadVendor(
     `${SCRIPT_SRC}${apiKey}?ref=npm`,
     () => getEnv().window.clarity,
-    { timeout },
+    { timeout, document: getEnv<Env>(env).document },
   );
 }
 
@@ -58,12 +59,16 @@ function vendor(apiKey: string, timeout?: number) {
  * through `loadVendor`, so a script that fails to load fails every later
  * call with `vendor-not-loaded`.
  */
-function realClarity(apiKey: string, timeout?: number): ClaritySDK {
-  const loaded = () => vendor(apiKey, timeout).check();
+function realClarity(
+  apiKey: string,
+  env: Env | undefined,
+  timeout?: number,
+): ClaritySDK {
+  const loaded = () => vendor(apiKey, env, timeout).check();
   return {
     init: () => {
       installStub();
-      vendor(apiKey, timeout);
+      vendor(apiKey, env, timeout);
     },
     identify: (...args) => {
       loaded();
@@ -101,12 +106,12 @@ function isClaritySDK(value: unknown): value is ClaritySDK {
  * otherwise the real one.
  */
 function getClarity(
-  env: unknown,
+  env: Env | undefined,
   apiKey: string,
   timeout?: number,
 ): ClaritySDK {
-  const mock = isObject(env) ? env.clarity : undefined;
-  if (mock === undefined) return realClarity(apiKey, timeout);
+  const mock = env?.clarity;
+  if (mock === undefined) return realClarity(apiKey, env, timeout);
   if (isClaritySDK(mock)) return mock;
   throw new StepError('env.clarity is not a Clarity SDK', { code: 'config' });
 }

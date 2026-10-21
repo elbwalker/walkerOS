@@ -10,14 +10,15 @@ const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
  * The GTM container script `loadVendor` injects (once per src and page). The
  * container replays its dataLayer, so it is only watched for a failure.
  */
-export function gtmVendor(settings: GTMSettings, timeout?: number) {
+export function gtmVendor(settings: GTMSettings, timeout?: number, env?: Env) {
   const { containerId = '', dataLayer, domain } = settings;
   const dataLayerName = dataLayer || defaultDataLayer;
   const dl = dataLayerName != defaultDataLayer ? '&l=' + dataLayerName : '';
+  const { window, document } = getEnv<Env>(env);
   return loadVendor(
     (domain || defaultDomain) + containerId + dl,
-    () => getEnv().window[dataLayerName],
-    { timeout },
+    () => window[dataLayerName],
+    { timeout, document },
   );
 }
 
@@ -50,6 +51,6 @@ export function initGTM(
       event: 'gtm.js',
     }),
   ];
-  gtmVendor(settings, timeout);
+  gtmVendor(settings, timeout, env);
   return calls;
 }
