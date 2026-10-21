@@ -9,6 +9,17 @@ const UNAUTHENTICATED_GRPC = 16;
 const PERMISSION_DENIED_HTTP = 403;
 const UNAUTHENTICATED_HTTP = 401;
 
+/**
+ * The gRPC codes the Pub/Sub SDK itself retries a publish on (CANCELLED,
+ * UNKNOWN, DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED, ABORTED, INTERNAL,
+ * UNAVAILABLE, its publisher client config). Any other gRPC code, such as
+ * INVALID_ARGUMENT for an oversize message, fails the same way again.
+ */
+const RETRYABLE_GRPC = [1, 2, 4, 8, 10, 13, 14];
+
+/** gRPC codes run from 0 to 16; a larger one is the HTTP status of a REST call. */
+const MAX_GRPC_CODE = 16;
+
 interface ErrorWithCode {
   code: number;
 }
@@ -193,7 +204,7 @@ const publish: PushFn = async function (
         topicHandle.resumePublishing(orderingKey);
       } catch (resumeErr) {
         logger.debug('Pub/Sub resumePublishing failed', {
-          orderingKey,
+          topic: topicName,
           error:
             resumeErr instanceof Error ? resumeErr.message : String(resumeErr),
         });
@@ -215,8 +226,18 @@ const publish: PushFn = async function (
           `service account roles/pubsub.publisher on this topic.`,
         { code: 'config', cause: err },
       );
-    throw new StepError('Pub/Sub publish failed', {
+    // Retryable as the SDK's own retry decides: by the gRPC code, or by the
+    // HTTP status of a REST call; without a code, a transport failure.
+    if (!hasNumericCode(err))
+      throw new StepError('Pub/Sub publish failed', {
+        code: 'transport',
+        cause: err,
+      });
+    throw new StepError(`Pub/Sub publish failed (code ${err.code})`, {
       code: 'transport',
+      ...(err.code > MAX_GRPC_CODE
+        ? { status: err.code }
+        : { retryable: RETRYABLE_GRPC.includes(err.code) }),
       cause: err,
     });
   }

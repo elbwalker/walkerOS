@@ -10,6 +10,7 @@ import type {
 } from './types';
 import type { Collector, Destination, Logger, WalkerOS } from '@walkeros/core';
 import { getMappingValue, isObject, isString, StepError } from '@walkeros/core';
+import { batchOutcome } from '@walkeros/server-core';
 
 /** The HubSpot batch API takes at most this many events per request. */
 const MAX_BATCH = 500;
@@ -90,7 +91,10 @@ async function prepare(
     const resolved = await getMappingValue(event, identifyMapping, {
       collector,
     });
-    if (isObject(resolved)) await applyIdentify(sdk, resolved, state, logger);
+    const email = isObject(resolved) ? resolved.email : undefined;
+    if (isObject(resolved) && isString(email) && email)
+      await applyIdentify(sdk, resolved, email, state);
+    else skipped(logger, event, 'identify', 'identify');
   }
 
   // 3. The event (unless silent: true)
@@ -193,10 +197,7 @@ export const pushBatch: PushBatchFn = async function (
     }
   }
 
-  // Nothing landed: a whole-batch failure, which the breaker counts.
-  if (failed.length === batch.entries.length && failed.length)
-    throw sendError ?? failed[0].error;
-  if (failed.length) return { failed };
+  return batchOutcome(batch.entries.length, failed, sendError);
 };
 
 /** Settings as init resolved them, the required ones present. */
@@ -246,18 +247,29 @@ function hashProperties(
   }
 }
 
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ * The contact upsert needs the identify mapping's email.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`HubSpot skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
 async function applyIdentify(
   sdk: HubSpotClientMock,
   resolved: WalkerOS.AnyObject,
+  identifyEmail: string,
   state: RuntimeState,
-  logger: Logger.Instance,
 ): Promise<void> {
-  const identifyEmail = isString(resolved.email) ? resolved.email : undefined;
-  if (!identifyEmail) {
-    logger.warn('HubSpot identify requires email; skipping contact upsert');
-    return;
-  }
-
   const rawProperties = isObject(resolved.properties)
     ? toStringProperties(resolved.properties)
     : undefined;

@@ -1,7 +1,7 @@
 import type { PushFn } from './types';
 import { isObject, StepError } from '@walkeros/core';
 import { eventToRow } from './eventToRow';
-import { ensureWriter } from './writer';
+import { appendError, ensureWriter } from './writer';
 
 // A silent rule has no row of its own: nothing to append.
 export const push: PushFn = async function (event, context) {
@@ -51,6 +51,10 @@ const append: PushFn = async function (event, { config, data, logger }) {
       cause: err,
     });
   }
+
+  // The server answered the append with an error status: nothing landed.
+  const failed = appendError(result);
+  if (failed) throw failed;
 
   if (result.rowErrors && result.rowErrors.length > 0)
     // The server rejected the row itself: a retry sends the same row. Its

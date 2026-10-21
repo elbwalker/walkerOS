@@ -1,6 +1,7 @@
 import type { PushBatchFn } from './types';
 import { resolveSettings } from './config';
-import { deliver, toOutcome } from './lib/deliver';
+import { batchOutcome } from '@walkeros/server-core';
+import { deliver } from './lib/deliver';
 
 /**
  * Sends a flushed batch. Resolves when every record landed, returns the
@@ -24,7 +25,7 @@ export const pushBatch: PushBatchFn = async (batch, context) => {
       )
     : [];
 
-  return toOutcome(
+  return batchOutcome(
     batch.entries.length,
     failures.map(({ index, error }) => ({
       index: sending[index].index,

@@ -6,17 +6,18 @@ import { tableExists } from './setup';
 type RunInsert = (args: ReadonlyArray<unknown>) => Promise<void>;
 
 /**
- * Check the table and prepare the insert, once per client: the legacy
- * `schema: 'auto'` creates it, the default path probes it and fails with
- * the setup hint when it is missing. A failed attempt is retried at the next
- * push.
+ * Check a table and prepare its insert: the legacy `schema: 'auto'` creates
+ * the table, the default path probes it and fails with `config` when it is
+ * missing (with the setup hint for the destination's own table, which setup
+ * creates).
  */
 async function prepareTable(
   sqlite: SqliteSettings,
   client: SqliteClient,
   id: string,
+  table: string,
 ): Promise<RunInsert> {
-  const table = sqlite.table ?? 'events';
+  const own = table === (sqlite.table ?? 'events');
   if (sqlite._legacyAutoCreate) {
     try {
       await client.execute(buildCreateTableSql(table));
@@ -38,19 +39,13 @@ async function prepareTable(
     }
     if (!exists)
       throw new StepError(
-        `SQLite table "${table}" not found in ${sqlite.url}. ` +
-          `Run "walkeros setup destination.${id}" to create it.`,
+        own
+          ? `SQLite table "${table}" not found in ${sqlite.url}. ` +
+              `Run "walkeros setup destination.${id}" to create it.`
+          : `SQLite table "${table}" (rule settings.table) not found in ${sqlite.url}.`,
         { code: 'config' },
       );
   }
-  return prepare(client, table);
-}
-
-/** A prepared insert; the driver call may answer synchronously or not. */
-async function prepare(
-  client: SqliteClient,
-  table: string,
-): Promise<RunInsert> {
   try {
     return await client.prepare(buildInsertSql(table));
   } catch (err) {
@@ -61,20 +56,37 @@ async function prepare(
   }
 }
 
-/** The insert of the destination's table, prepared at the first push. */
+/**
+ * The insert of a table, checked and prepared at its first push, once per
+ * table. A failed attempt is retried at the next push.
+ */
 function insertOf(
   sqlite: SqliteSettings,
   client: SqliteClient,
   id: string,
+  table: string,
 ): Promise<RunInsert> {
-  if (!sqlite._ready) {
-    const ready = prepareTable(sqlite, client, id);
-    ready.catch(() => {
-      if (sqlite._ready === ready) sqlite._ready = undefined;
+  const tables = (sqlite._ready ??= new Map());
+  let ready = tables.get(table);
+  if (!ready) {
+    const preparing = prepareTable(sqlite, client, id, table);
+    preparing.catch(() => {
+      if (tables.get(table) === preparing) tables.delete(table);
     });
-    sqlite._ready = ready;
+    tables.set(table, preparing);
+    ready = preparing;
   }
-  return sqlite._ready;
+  return ready;
+}
+
+/**
+ * A constraint violation (a duplicate id under the setup's unique index, a
+ * NOT NULL column) fails the same way on every attempt: not retryable.
+ */
+function isConstraintError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const code: unknown = Reflect.get(error, 'code');
+  return typeof code === 'string' && code.startsWith('SQLITE_CONSTRAINT');
 }
 
 // A silent rule has no INSERT of its own: nothing to write.
@@ -93,13 +105,9 @@ const insert: PushFn = async function (event, { config, rule, logger, id }) {
   const ruleSettings = rule?.settings ?? {};
   const ruleTable = isString(ruleSettings.table) ? ruleSettings.table : '';
 
-  // If the rule overrides the table, we can't reuse the cached prepared statement
-  // (which was bound to the default table). Build an ad-hoc prepared run.
+  // A rule may write to its own table; each table is checked once.
   const effectiveTable = ruleTable || sqlite.table || 'events';
-  const runInsert =
-    ruleTable && ruleTable !== sqlite.table
-      ? await prepare(client, effectiveTable)
-      : (sqlite._runInsert ?? (await insertOf(sqlite, client, id)));
+  const runInsert = await insertOf(sqlite, client, id, effectiveTable);
 
   const row = eventToRow(event);
 
@@ -114,6 +122,7 @@ const insert: PushFn = async function (event, { config, rule, logger, id }) {
     // The collector reports it; the driver's own message stays the cause.
     throw new StepError('SQLite INSERT failed', {
       code: 'transport',
+      retryable: !isConstraintError(error),
       cause: error,
     });
   }

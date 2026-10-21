@@ -10,7 +10,7 @@ export function getConfig(
   env: Env | undefined,
   logger: Logger.Instance,
 ): Config {
-  const settings = partialConfig.settings || ({} as Settings);
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { projectId, bigquery } = settings;
   let { client, location, datasetId, tableId } = settings;
 

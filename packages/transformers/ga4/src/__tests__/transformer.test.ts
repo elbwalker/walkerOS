@@ -166,8 +166,9 @@ describe('transformerGa4', () => {
         });
         const result = await (await transformerGa4(ctx)).push(emptyEvent, ctx);
         expect(result).toBe(false);
-        expect(logger.warn).toHaveBeenCalledTimes(1);
-        expect(String(logger.warn.mock.calls[0][0])).toContain(
+        expect(logger.error).toHaveBeenCalledTimes(1);
+        expect(logger.warn).not.toHaveBeenCalled();
+        expect(String(logger.error.mock.calls[0][0])).toContain(
           `${count} events exceed maxEvents ${maxEvents ?? 100}`,
         );
       },

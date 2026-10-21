@@ -18,6 +18,10 @@ const send: PushFn = async function (
   event,
   { config, data, ingest, env, logger, collector },
 ) {
+  if (!config.settings)
+    throw new StepError('Pinterest settings missing, init() not run', {
+      code: 'not-ready',
+    });
   const {
     accessToken,
     adAccountId,
@@ -29,7 +33,7 @@ const send: PushFn = async function (
     partner_name,
     ip,
     userAgent,
-  } = config.settings!;
+  } = config.settings;
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data

@@ -8,9 +8,8 @@ import type {
 import { isObject, StepError } from '@walkeros/core';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
-  const raw = (partialConfig.settings ?? {}) as Partial<Settings>;
-  const redis: Partial<RedisSettings> =
-    raw.redis ?? ({} as Partial<RedisSettings>);
+  const raw: Partial<Settings> = partialConfig.settings ?? {};
+  const redis: Partial<RedisSettings> = raw.redis ?? {};
 
   if (!redis.streamKey)
     throw new StepError('Config settings redis.streamKey missing', {
@@ -29,7 +28,9 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
 }
 
 export function isRedisEnv(env: unknown): env is Env {
-  if (!isObject(env)) return false;
-  const maybe = env as { Redis?: { Client?: unknown } };
-  return typeof maybe.Redis?.Client === 'function';
+  return (
+    isObject(env) &&
+    isObject(env.Redis) &&
+    typeof env.Redis.Client === 'function'
+  );
 }

@@ -11,6 +11,7 @@ interface MockRowError {
 let nextAppendRowErrors: MockRowError[] | null = null;
 let nextAppendThrow: unknown = null;
 let nextGetResultReject: unknown = null;
+let nextAppendStatus: { code: number; message: string } | null = null;
 let nextCreateStreamConnectionError: unknown = null;
 
 /**
@@ -72,11 +73,20 @@ class MockJSONWriter {
     nextAppendRowErrors = null;
     const queuedReject = nextGetResultReject;
     nextGetResultReject = null;
+    const queuedStatus = nextAppendStatus;
+    nextAppendStatus = null;
     return {
       getResult: async () => {
         // Models a gRPC deadline-exceeded (or any stream error): the append is
         // accepted but getResult() rejects when the stream's deadline fires.
         if (queuedReject !== null) throw queuedReject;
+        // An error status the SDK does not retry resolves with `error` set
+        // and no rowErrors.
+        if (queuedStatus !== null)
+          return {
+            error: queuedStatus,
+            writeStream: 'projects/p/datasets/d/tables/t/streams/_default',
+          };
         return {
           appendResult: { offset: { value: '0' } },
           rowErrors: queuedErrors ?? [],
@@ -190,6 +200,7 @@ function __resetMockCalls() {
   nextAppendRowErrors = null;
   nextAppendThrow = null;
   nextGetResultReject = null;
+  nextAppendStatus = null;
   nextCreateStreamConnectionError = null;
   lastConnection = null;
   allConnections.length = 0;
@@ -240,6 +251,18 @@ function __setNextGetResultReject(err: unknown): void {
 }
 
 /**
+ * Test-only: make the next appendRows().getResult() resolve with an error
+ * status (a quota, a dropped table), as the SDK does for a status it does not
+ * retry. Auto-resets after one use.
+ */
+function __setNextAppendStatus(status: {
+  code: number;
+  message: string;
+}): void {
+  nextAppendStatus = status;
+}
+
+/**
  * Test-only: queue an error for the next createStreamConnection() call so
  * tests can simulate openWriter failures (NotFound, INVALID_ARGUMENT, etc.).
  * Auto-resets after one use.
@@ -260,5 +283,6 @@ export {
   __setNextAppendRowErrors,
   __setNextAppendThrow,
   __setNextGetResultReject,
+  __setNextAppendStatus,
   __setNextOpenWriterError,
 };

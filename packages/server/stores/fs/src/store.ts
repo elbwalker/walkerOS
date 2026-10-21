@@ -20,10 +20,13 @@ function errorCode(err: unknown): string | undefined {
   return typeof err.code === 'string' ? err.code : undefined;
 }
 
-/** The file (or a directory on its path) does not exist: a miss. */
+/**
+ * No file is stored at the key: it does not exist, a directory on its path
+ * is a file, or the key names a directory. A miss.
+ */
 function isMissing(err: unknown): boolean {
   const code = errorCode(err);
-  return code === 'ENOENT' || code === 'ENOTDIR';
+  return code === 'ENOENT' || code === 'ENOTDIR' || code === 'EISDIR';
 }
 
 /** A failed file operation as a StepError, its message without the key. */

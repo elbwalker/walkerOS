@@ -19,9 +19,8 @@ const COMPRESSION_FALLBACK: Record<CompressionType, number> = {
 };
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
-  const raw = (partialConfig.settings ?? {}) as Partial<Settings>;
-  const kafka: Partial<KafkaSettings> =
-    raw.kafka ?? ({} as Partial<KafkaSettings>);
+  const raw: Partial<Settings> = partialConfig.settings ?? {};
+  const kafka: Partial<KafkaSettings> = raw.kafka ?? {};
 
   const { brokers, topic } = kafka;
   if (!brokers || brokers.length === 0 || !topic) {

@@ -1,4 +1,8 @@
-import { createEvent, createMockContext } from '@walkeros/core';
+import {
+  createEvent,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
 import { destinationSQLite } from '..';
 import type { Settings, SqliteClient, SqliteClientFactory } from '../types';
 
@@ -329,5 +333,58 @@ describe('push error handling', () => {
     });
 
     expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  /** A client whose database holds only the events table. */
+  function eventsOnly(run: () => Promise<void>): SqliteClient {
+    return {
+      execute: () => Promise.resolve(),
+      prepare: () => run,
+      query: (_sql, args) =>
+        Promise.resolve(args?.[0] === 'events' ? [{ name: 'events' }] : []),
+      close: () => Promise.resolve(),
+    };
+  }
+
+  it('fails a constraint violation as not retryable', async () => {
+    const violation = Object.assign(new Error('UNIQUE constraint failed'), {
+      code: 'SQLITE_CONSTRAINT_UNIQUE',
+    });
+    const config = await initOf({
+      config: { settings: { sqlite: { url: ':memory:' } } },
+      env: { client: eventsOnly(() => Promise.reject(violation)) },
+      logger: createMockLogger(),
+      id: 'sqlite',
+      collector: createMockContext().collector,
+    });
+    await expect(firstPush(config)).rejects.toMatchObject({
+      code: 'transport',
+      retryable: false,
+      cause: violation,
+    });
+  });
+
+  it('fails a missing rule table with config', async () => {
+    const config = await initOf({
+      config: { settings: { sqlite: { url: ':memory:' } } },
+      env: { client: eventsOnly(() => Promise.resolve()) },
+      logger: createMockLogger(),
+      id: 'sqlite',
+      collector: createMockContext().collector,
+    });
+    if (!config) throw new Error('init returned no config');
+    await expect(
+      destinationSQLite.push(
+        createEvent({ name: 'page view' }),
+        createMockContext({
+          config,
+          id: 'sqlite',
+          rule: { settings: { table: 'orders' } },
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: 'config',
+      message: expect.stringContaining('"orders"'),
+    });
   });
 });

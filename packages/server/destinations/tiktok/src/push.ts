@@ -3,7 +3,6 @@ import type {
   EventContext,
   PushFn,
   RequestBody,
-  Settings,
   UserData,
   Env,
 } from './types';
@@ -36,7 +35,11 @@ const send: PushFn = async function (
     partner_name,
     ip,
     userAgent,
-  } = config.settings as Settings;
+  } = config.settings ?? {};
+  if (!accessToken || !pixelCode)
+    throw new StepError('TikTok settings missing, init() not run', {
+      code: 'not-ready',
+    });
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data

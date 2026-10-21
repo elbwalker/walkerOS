@@ -74,7 +74,7 @@ describe('Firehose pushBatch outcomes', () => {
     });
   });
 
-  test('mixed causes throw the dominant code, retryable only if all are', async () => {
+  test('mixed causes throw the first retryable error', async () => {
     const { result } = await flush(1200, async (_input, call) => {
       if (call === 2)
         throw new ResourceNotFoundException({
@@ -90,10 +90,8 @@ describe('Firehose pushBatch outcomes', () => {
     expect(error).toBeInstanceOf(StepError);
     expect(error).toMatchObject({
       code: 'ServiceUnavailableException',
-      retryable: false,
+      retryable: true,
     });
-    expect(String(error)).toContain('1000 ServiceUnavailableException');
-    expect(String(error)).toContain('200 ResourceNotFoundException');
   });
 
   test('an empty batch makes no call', async () => {

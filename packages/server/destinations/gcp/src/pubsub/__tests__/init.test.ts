@@ -1,9 +1,17 @@
 jest.mock('@google-cloud/pubsub');
 
 import { PubSub } from '@google-cloud/pubsub';
-import { __getMockCalls, __resetMockCalls } from '@google-cloud/pubsub';
+import {
+  __getMockCalls,
+  __resetMockCalls,
+  __setTopicHarness,
+} from '@google-cloud/pubsub';
 import type { Destination, Env, InitSettings, Settings } from '../types';
-import { createMockContext, createMockLogger } from '@walkeros/core';
+import {
+  createEvent,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
 import type { MockLogger } from '@walkeros/core';
 
 interface ResolvedConfigShape {
@@ -159,4 +167,29 @@ describe('Server Destination Pub/Sub init', () => {
       }),
     ).resolves.toBeUndefined();
   });
+
+  test.each([
+    ['INVALID_ARGUMENT, an oversize message', 3, { retryable: false }],
+    ['UNAVAILABLE', 14, { retryable: true }],
+    ['a REST 400', 400, { status: 400, retryable: false }],
+  ])(
+    'a publish failing with %s is retryable as the SDK retries it',
+    async (_name, code, expected) => {
+      const config = await callInit(destination, {
+        projectId: 'p',
+        topic: 'events',
+      });
+      if (!isResolvedConfig(config) || !destination.push)
+        throw new Error('init returned no config');
+      __setTopicHarness({
+        publishError: Object.assign(new Error('rejected'), { code }),
+      });
+      await expect(
+        destination.push(
+          createEvent(),
+          createMockContext({ config, id: 'test-pubsub' }),
+        ),
+      ).rejects.toMatchObject({ code: 'transport', ...expected });
+    },
+  );
 });

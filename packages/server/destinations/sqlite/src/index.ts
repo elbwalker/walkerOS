@@ -1,4 +1,4 @@
-import type { Destination, Env, Settings, SqliteClient } from './types';
+import type { Destination, SqliteClient } from './types';
 import { getConfig, isSqliteEnv } from './config';
 import { createClientFromSettings } from './drivers';
 import { StepError } from '@walkeros/core';
@@ -40,11 +40,10 @@ export const destinationSQLite: Destination = {
 
     // Prefer env-injected client / factory (tests, dependency injection).
     if (isSqliteEnv(env)) {
-      const envTyped = env as Env;
-      if (envTyped.client) {
-        client = envTyped.client;
-      } else if (envTyped.SqliteDriver) {
-        client = await envTyped.SqliteDriver(sqlite.url, sqlite.authToken);
+      if (env.client) {
+        client = env.client;
+      } else if (env.SqliteDriver) {
+        client = await env.SqliteDriver(sqlite.url, sqlite.authToken);
       }
     }
 
@@ -63,7 +62,7 @@ export const destinationSQLite: Destination = {
     // The table check and the prepared insert run at the first push, so
     // init does no query that can fail.
     sqlite._client = client;
-    sqlite._ownedClient = !(isSqliteEnv(env) && (env as Env).client);
+    sqlite._ownedClient = !(isSqliteEnv(env) && env.client);
 
     return config;
   },
@@ -73,8 +72,7 @@ export const destinationSQLite: Destination = {
   },
 
   async destroy({ config }) {
-    const settings = config?.settings as Settings | undefined;
-    const sqlite = settings?.sqlite;
+    const sqlite = config?.settings?.sqlite;
     if (!sqlite) return;
 
     const client = sqlite._client;
@@ -84,7 +82,6 @@ export const destinationSQLite: Destination = {
         await client.close();
       } finally {
         sqlite._client = undefined;
-        sqlite._runInsert = undefined;
         sqlite._ready = undefined;
         sqlite._ownedClient = undefined;
       }

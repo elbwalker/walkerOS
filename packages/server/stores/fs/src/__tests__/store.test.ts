@@ -75,13 +75,19 @@ describe('FsStore', () => {
       expect(await store.get('missing')).toBeUndefined();
     });
 
-    it('throws a StepError for a read that fails, not a miss', async () => {
+    it('returns undefined for a key that names a directory', async () => {
       const store = await createStore(tmpDir);
       await fs.mkdir(path.join(tmpDir, 'folder'));
-      await expect(store.get('folder')).rejects.toMatchObject({
+      expect(await store.get('folder')).toBeUndefined();
+    });
+
+    it('throws a StepError for a read that fails, not a miss', async () => {
+      const store = await createStore(tmpDir);
+      await fs.symlink('loop', path.join(tmpDir, 'loop'));
+      await expect(store.get('loop')).rejects.toMatchObject({
         name: 'StepError',
         code: 'transport',
-        message: 'fs store read failed (EISDIR)',
+        message: 'fs store read failed (ELOOP)',
       });
     });
 

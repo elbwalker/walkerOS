@@ -62,9 +62,11 @@ export interface SqliteSettings {
 
   // Runtime, set during init/setup, not user-facing.
   _client?: SqliteClient;
-  _runInsert?: (args: ReadonlyArray<unknown>) => Promise<void>;
-  /** The table check and insert preparation, run once at the first push. */
-  _ready?: Promise<(args: ReadonlyArray<unknown>) => Promise<void>>;
+  /** Each table's check and insert preparation, run once at its first push. */
+  _ready?: Map<
+    string,
+    Promise<(args: ReadonlyArray<unknown>) => Promise<void>>
+  >;
   _ownedClient?: boolean;
   /**
    * Internal flag set by the migration shim. When true, the first push runs

@@ -1,5 +1,4 @@
-import type { Destination, Logger, WalkerOS } from '@walkeros/core';
-import { StepError } from '@walkeros/core';
+import type { Logger, StepError, WalkerOS } from '@walkeros/core';
 import { PutRecordBatchCommand } from '@aws-sdk/client-firehose';
 import type { Env, Settings } from '../types';
 import type { DeliveryTarget } from '../../lib/errors';
@@ -189,54 +188,4 @@ export async function deliver(
   for (const result of results) failures.push(...result);
 
   return failures.sort((a, b) => a.index - b.index);
-}
-
-/**
- * The error thrown when nothing landed. One shared cause is thrown as is;
- * mixed causes give the most frequent code, retryable only if every record
- * was, with the counts per code in the message.
- */
-export function nothingLanded(failures: readonly DeliveryFailure[]): StepError {
-  const first = failures[0].error;
-  if (failures.every(({ error }) => error === first)) return first;
-
-  const byCode = new Map<string, { count: number; sample: StepError }>();
-  for (const { error } of failures) {
-    const entry = byCode.get(error.code);
-    if (entry) entry.count += 1;
-    else byCode.set(error.code, { count: 1, sample: error });
-  }
-
-  let dominant = { count: 0, sample: first };
-  for (const entry of byCode.values())
-    if (entry.count > dominant.count) dominant = entry;
-
-  const counts = [...byCode.entries()]
-    .map(([code, { count }]) => `${count} ${code}`)
-    .join(', ');
-
-  return new StepError(
-    `${dominant.sample.message} (all ${failures.length} records failed: ${counts})`,
-    {
-      code: dominant.sample.code,
-      status: dominant.sample.status,
-      retryable: failures.every(({ error }) => error.retryable),
-      cause: dominant.sample,
-    },
-  );
-}
-
-/**
- * The collector's reading of a delivery: resolve when everything landed,
- * the failed indices when some did, a throw when none did.
- */
-export function toOutcome(
-  total: number,
-  failures: readonly DeliveryFailure[],
-): void | Destination.BatchOutcome {
-  if (failures.length === 0) return;
-  if (failures.length >= total) throw nothingLanded(failures);
-  return {
-    failed: failures.map(({ index, error }) => ({ index, error })),
-  };
 }

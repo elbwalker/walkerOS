@@ -1,6 +1,5 @@
 import type {
   Destination,
-  Settings,
   Env,
   KafkaClientMock,
   KafkaClientConfig,
@@ -24,8 +23,7 @@ export const destinationKafka: Destination = {
 
   async init({ config: partialConfig, env }) {
     const config = getConfig(partialConfig);
-    const settings = config.settings as Settings;
-    const kafka = settings.kafka;
+    const kafka = config.settings.kafka;
 
     // Skip creation if a producer has already been wired in (testing).
     if (kafka._producer) return config;
@@ -82,14 +80,14 @@ export const destinationKafka: Destination = {
   },
 
   async destroy({ config }) {
-    const settings = config?.settings as Settings | undefined;
-    const producer = settings?.kafka?._producer;
-    if (producer) {
+    const kafka = config?.settings?.kafka;
+    const producer = kafka?._producer;
+    if (kafka && producer) {
       try {
         await producer.disconnect();
       } finally {
-        settings.kafka._producer = undefined;
-        settings.kafka._connected = undefined;
+        kafka._producer = undefined;
+        kafka._connected = undefined;
       }
     }
   },

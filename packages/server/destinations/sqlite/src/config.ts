@@ -12,9 +12,8 @@ export function getConfig(
   partialConfig: PartialConfig = {},
   logger: Logger.Instance,
 ): Config {
-  const raw = (partialConfig.settings ?? {}) as Partial<Settings>;
-  const sqlite: Partial<SqliteSettings> =
-    raw.sqlite ?? ({} as Partial<SqliteSettings>);
+  const raw: Partial<Settings> = partialConfig.settings ?? {};
+  const sqlite: Partial<SqliteSettings> = raw.sqlite ?? {};
 
   if (!sqlite.url)
     throw new StepError('Config settings sqlite.url missing', {
@@ -65,8 +64,5 @@ export function getConfig(
 
 export function isSqliteEnv(env: unknown): env is Env {
   if (!isObject(env)) return false;
-  const maybe = env as { SqliteDriver?: unknown; client?: unknown };
-  return (
-    typeof maybe.SqliteDriver === 'function' || isObject(maybe.client ?? null)
-  );
+  return typeof env.SqliteDriver === 'function' || isObject(env.client ?? null);
 }

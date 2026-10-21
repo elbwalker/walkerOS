@@ -90,6 +90,39 @@ describe('push: actionable error when topic missing', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [
+      'an error no retry fixes (MESSAGE_TOO_LARGE)',
+      Object.assign(new Error('message too large'), {
+        name: 'KafkaJSNonRetriableError',
+        retriable: false,
+      }),
+      false,
+    ],
+    [
+      'retries run out on a retried error',
+      Object.assign(new Error('broker not available'), {
+        name: 'KafkaJSNumberOfRetriesExceeded',
+        retriable: false,
+        retryCount: 5,
+      }),
+      true,
+    ],
+  ])('takes kafkajs retriable for %s', async (_name, error, retryable) => {
+    const producer = makeProducer(() => Promise.reject(error));
+    const context = createMockContext({
+      config: makeConfig(producer),
+      logger: createMockLogger(),
+      id: 'kafka',
+    });
+
+    await expect(push(getEvent(), context)).rejects.toMatchObject({
+      code: 'transport',
+      retryable,
+      cause: error,
+    });
+  });
+
   it('connects once, at the first push', async () => {
     const connect = jest.fn().mockResolvedValue(undefined);
     const producer = { ...makeProducer(() => Promise.resolve([])), connect };

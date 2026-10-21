@@ -1,7 +1,7 @@
 import type { PushBatchFn } from './types';
 import { isObject, StepError } from '@walkeros/core';
 import { eventToRow } from './eventToRow';
-import { ensureWriter } from './writer';
+import { appendError, ensureWriter } from './writer';
 
 /**
  * Batched push using a single appendRows call.
@@ -62,6 +62,11 @@ export const pushBatch: PushBatchFn = async (batch, { config, logger }) => {
       cause: err,
     });
   }
+
+  // The server answered the append with an error status: no row landed, the
+  // whole batch fails.
+  const failed = appendError(result);
+  if (failed) throw failed;
 
   if (result.rowErrors && result.rowErrors.length > 0) {
     // Report per-row failures so the collector DLQs only the failed rows and

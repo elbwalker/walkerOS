@@ -27,6 +27,21 @@ function isUnknownTopicError(err: unknown): boolean {
 }
 
 /**
+ * kafkajs's own classification of a failed send. Its errors carry
+ * `retriable`; its retry wraps an error it gave up on: one no retry fixes
+ * (MESSAGE_TOO_LARGE) stays not retriable, while running out of retries on
+ * one it does retry (KafkaJSNumberOfRetriesExceeded, which carries
+ * `retryCount`) can succeed at a later send. Undefined for any other error.
+ */
+function kafkaRetriable(error: unknown): boolean | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  const retriable: unknown = Reflect.get(error, 'retriable');
+  if (typeof retriable !== 'boolean') return undefined;
+  if (typeof Reflect.get(error, 'retryCount') === 'number') return true;
+  return retriable;
+}
+
+/**
  * The producer's connection, opened once at the first push; a failed
  * connect fails that push and is tried again at the next one.
  */
@@ -124,6 +139,7 @@ const send: PushFn = async function (
       );
     throw new StepError('Kafka push failed', {
       code: 'transport',
+      retryable: kafkaRetriable(error),
       cause: error,
     });
   }

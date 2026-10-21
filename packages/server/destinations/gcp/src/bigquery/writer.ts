@@ -48,7 +48,31 @@ export interface WriteConnection {
 }
 
 /** The fields of an append response that push and pushBatch read. */
-export type AppendOutcome = Pick<AppendResponse, 'rowErrors' | 'appendResult'>;
+export type AppendOutcome = Pick<
+  AppendResponse,
+  'rowErrors' | 'appendResult' | 'error'
+>;
+
+/**
+ * The gRPC statuses the Storage Write SDK retries itself (its stream
+ * connection's `isRetryableError`): ABORTED, UNAVAILABLE, CANCELLED,
+ * INTERNAL, DEADLINE_EXCEEDED.
+ */
+const RETRYABLE_STATUS = [10, 14, 1, 13, 4];
+
+/**
+ * The failure of an append the server answered with an error status: a
+ * quota, a dropped table, a lost permission. Nothing of it was written. The
+ * status message can quote the rows, so only its code is named.
+ */
+export function appendError(outcome: AppendOutcome): StepError | undefined {
+  if (!outcome.error) return undefined;
+  const status = outcome.error.code ?? undefined;
+  return new StepError(`BigQuery append failed (code ${status ?? 'unknown'})`, {
+    code: 'transport',
+    retryable: status !== undefined && RETRYABLE_STATUS.includes(status),
+  });
+}
 
 /** The row writer surface push and pushBatch use. */
 export interface RowWriter {

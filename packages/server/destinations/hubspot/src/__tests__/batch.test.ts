@@ -54,3 +54,52 @@ describe('hubspot config.batch', () => {
     await collector.command('shutdown');
   });
 });
+
+describe('hubspot declared skips', () => {
+  it('says at DEBUG which mapping a declared skip found nothing for', async () => {
+    const lines: Array<[string, unknown]> = [];
+    const { collector } = await startFlow({
+      logger: {
+        level: 'DEBUG',
+        handler: (_level, message, context) => lines.push([message, context]),
+      },
+      destinations: {
+        hubspot: {
+          code: destinationHubspot,
+          config: {
+            settings: { accessToken: 'pat', eventNamePrefix: 'pe1_' },
+            batch: undefined,
+            mapping: {
+              user: {
+                login: {
+                  silent: true,
+                  settings: { identify: { map: { email: 'data.email' } } },
+                },
+              },
+            },
+          },
+          env: { client: clientRecording([]) },
+        },
+      },
+    });
+
+    await collector.push(
+      createEvent({
+        name: 'user login',
+        user: { email: 'a@x.com' },
+        data: {},
+      }),
+    );
+
+    expect(
+      lines.filter(([message]) => message.includes('resolved to nothing')),
+    ).toEqual([
+      [
+        'HubSpot skipped identify: identify resolved to nothing',
+        expect.objectContaining({ event: 'user login' }),
+      ],
+    ]);
+
+    await collector.command('shutdown');
+  });
+});

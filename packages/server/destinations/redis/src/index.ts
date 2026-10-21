@@ -1,7 +1,5 @@
 import type {
   Destination,
-  Settings,
-  Env,
   RedisClientMock,
   RedisClientConstructor,
   RedisClientOptions,
@@ -20,8 +18,7 @@ export const destinationRedis: Destination = {
 
   async init({ config: partialConfig, env, reportError }) {
     const config = getConfig(partialConfig);
-    const settings = config.settings as Settings;
-    const redis = settings.redis;
+    const redis = config.settings.redis;
 
     // Skip creation if a client has already been wired in (testing).
     if (redis._client) return config;
@@ -29,10 +26,7 @@ export const destinationRedis: Destination = {
     let Constructor: RedisClientConstructor | undefined;
 
     // Prefer env-injected constructor (testing, dependency injection).
-    if (isRedisEnv(env)) {
-      const envTyped = env as Env;
-      Constructor = envTyped.Redis?.Client;
-    }
+    if (isRedisEnv(env)) Constructor = env.Redis?.Client;
 
     // Production path: load real ioredis SDK.
     if (!Constructor) {
@@ -79,8 +73,7 @@ export const destinationRedis: Destination = {
   },
 
   async destroy({ config }) {
-    const settings = config?.settings as Settings | undefined;
-    const redis = settings?.redis;
+    const redis = config?.settings?.redis;
     if (!redis) return;
 
     const client = redis._client;

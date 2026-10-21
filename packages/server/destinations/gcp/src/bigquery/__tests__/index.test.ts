@@ -13,6 +13,7 @@ import {
   __setNextAppendRowErrors,
   __setNextAppendThrow,
   __setNextGetResultReject,
+  __setNextAppendStatus,
   __setNextOpenWriterError,
   __getLastConnection,
   __getAllConnections,
@@ -699,6 +700,80 @@ describe('Server Destination BigQuery', () => {
         cause: appendError,
       });
       expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    test.each([
+      ['RESOURCE_EXHAUSTED, a quota', 8, false],
+      ['NOT_FOUND, a dropped table', 5, false],
+      ['UNAVAILABLE with write retries off', 14, true],
+    ])(
+      'an append answered with %s fails push, retryable as the SDK retries it',
+      async (_name, code, retryable) => {
+        const { writer, writeClient } = await openWriter(
+          { projectId, datasetId, tableId },
+          createMockLogger(),
+        );
+        const config: Config = {
+          settings: {
+            client: new BigQuery({ projectId }),
+            projectId,
+            datasetId,
+            tableId,
+            location: 'EU',
+            writer,
+            writeClient,
+          },
+        };
+        __setNextAppendStatus({ code, message: 'row 0 quoted here' });
+
+        const pushing = destination.push(
+          event,
+          createMockContext({ config, env: testEnv, id: 'test-bq' }),
+        );
+        await expect(pushing).rejects.toMatchObject({
+          name: 'StepError',
+          code: 'transport',
+          retryable,
+          message: `BigQuery append failed (code ${code})`,
+        });
+      },
+    );
+
+    test('an append answered with an error status fails the whole batch', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+      const { writer, writeClient } = await openWriter(
+        { projectId, datasetId, tableId },
+        createMockLogger(),
+      );
+      const config: Config = {
+        settings: {
+          client: new BigQuery({ projectId }),
+          projectId,
+          datasetId,
+          tableId,
+          location: 'EU',
+          writer,
+          writeClient,
+        },
+      };
+      __setNextAppendStatus({ code: 7, message: 'permission denied' });
+      const events = [createEvent(), createEvent()];
+
+      await expect(
+        destination.pushBatch(
+          {
+            key: 'k',
+            events,
+            data: events.map(() => undefined),
+            entries: events.map((event) => ({ event })),
+          },
+          createMockContext({ config, env: testEnv, id: 'test-bq' }),
+        ),
+      ).rejects.toMatchObject({
+        code: 'transport',
+        retryable: false,
+        message: 'BigQuery append failed (code 7)',
+      });
     });
 
     test('a deadline-exceeded getResult rejects pushBatch (whole batch DLQ)', async () => {
