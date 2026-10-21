@@ -388,7 +388,7 @@ export interface RuntimeState {
   userIdSet?: boolean;
   /** The initialized adapter instance */
   adapter?: SnowplowAdapter;
-  /** The tracker's own senders are off after a consent revocation */
+  /** Activity pings and the plugin senders with an off switch are off after a consent revocation */
   paused?: boolean;
 }
 

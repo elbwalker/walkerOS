@@ -5,6 +5,7 @@ import { startFlow } from '@walkeros/collector';
 import { createEvent, getEvent, mockEnv } from '@walkeros/core';
 import {
   clearUserData,
+  destinationSnowplow,
   enableAnonymousTracking,
   disableAnonymousTracking,
   SCHEMAS,
@@ -713,6 +714,41 @@ describe('destination snowplow', () => {
         (c) => c.args[0] === 'activateCustomPlugin',
       );
       expect(enableCall).toBeDefined();
+    });
+
+    test('fails init with config when settings.tracker meets URL plugins', async () => {
+      const { elb: push } = await startFlow({
+        destinations: {
+          snowplow: {
+            // The module's own export: StepError's class must be the
+            // collector's, which a requireActual copy is not.
+            code: destinationSnowplow,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                tracker: {
+                  newTracker: () => undefined,
+                  trackSelfDescribingEvent: () => undefined,
+                },
+                plugins: [
+                  {
+                    url: 'https://cdn.example.com/form-tracking.js',
+                    name: ['snowplowFormTracking', 'FormTrackingPlugin'],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      const result = await push(getEvent('page view'));
+      expect(result.ok).toBe(false);
+      expect(result.failed?.snowplow?.reason).toMatchObject({
+        code: 'config',
+        message:
+          'Snowplow loads the URL plugins in settings.plugins (FormTrackingPlugin) only with sp.js, not with settings.tracker: load them on your own tracker, or drop settings.tracker so walkerOS loads them',
+      });
     });
   });
 

@@ -56,11 +56,29 @@ function vendor(
 }
 
 /**
- * Turns the tracker's own senders off on a revocation of the destination's
- * required consent and on again on the next grant: activity pings, and link
- * click tracking where a URL plugin enabled it. The required consent decides
- * on the whole consent state, as it gates the pushes, and only a change that
- * names a required key counts.
+ * The senders a URL plugin's enable method starts, each with the call that
+ * stops it (tracker and plugins 4.8.1). An empty entry is a sender without
+ * an off switch: a revocation cannot stop it.
+ */
+const OFF_SWITCHES = new Map<string, string | undefined>([
+  ['enableLinkClickTracking', 'disableLinkClickTracking'],
+  ['enableFormTracking', 'disableFormTracking'],
+  ['enableButtonClickTracking', 'disableButtonClickTracking'],
+  ['enableYouTubeTracking', 'disableYouTubeTracking'],
+  ['enableErrorTracking', undefined],
+  ['enableFocalMeterIntegration', undefined],
+]);
+
+/**
+ * Follows the destination's required consent with the senders that run
+ * outside walkerOS's pushes. A revocation calls disableActivityTracking
+ * (when activityTracking is set) and the off switch of every sp.js URL
+ * plugin listed in OFF_SWITCHES; the next grant enables them again with
+ * their options. A listed plugin without an off switch (error tracking,
+ * FocalMeter) fails the revocation with `consent-not-applied`. Other
+ * plugins are left as they are. The required consent decides on the whole
+ * consent state, as it gates the pushes, and only a change that names a
+ * required key counts.
  */
 async function followConsent(
   settings: Partial<Settings>,
@@ -76,13 +94,14 @@ async function followConsent(
   const granted = getGrantedConsent(required, consent) !== false;
   if (granted !== Boolean(state.paused)) return;
 
-  const linkClicks = (settings.plugins ?? [])
+  const senders = (settings.plugins ?? [])
     .filter(isUrlBasedPlugin)
-    .filter(
-      (plugin) =>
-        (plugin.enableMethod ?? deriveEnableMethod(plugin.name[1])) ===
-        'enableLinkClickTracking',
-    );
+    .flatMap((plugin) => {
+      const enable = plugin.enableMethod ?? deriveEnableMethod(plugin.name[1]);
+      return OFF_SWITCHES.has(enable)
+        ? [{ plugin, enable, disable: OFF_SWITCHES.get(enable) }]
+        : [];
+    });
   const { activityTracking } = settings;
 
   await stepCall(
@@ -91,17 +110,24 @@ async function followConsent(
         if (granted) adapter.enableActivityTracking(activityTracking);
         else adapter.disableActivityTracking();
       }
-      for (const plugin of linkClicks) {
-        if (!granted) adapter.call('disableLinkClickTracking');
-        else if (plugin.options)
-          adapter.call('enableLinkClickTracking', plugin.options);
-        else adapter.call('enableLinkClickTracking');
+      for (const { plugin, enable, disable } of senders) {
+        if (!disable) continue;
+        if (!granted) adapter.call(disable);
+        else if (plugin.options) adapter.call(enable, plugin.options);
+        else adapter.call(enable);
       }
     },
     'consent-not-applied',
     'Snowplow did not take the consent update',
   );
   state.paused = !granted;
+
+  const unstoppable = senders.filter(({ disable }) => !disable);
+  if (!granted && unstoppable.length)
+    throw new StepError(
+      `Snowplow ${unstoppable.map(({ plugin }) => plugin.name[1]).join(', ')} has no off switch, so it keeps sending after a revocation`,
+      { code: 'consent-not-applied' },
+    );
 }
 
 /**
@@ -279,6 +305,13 @@ export const destinationSnowplow: Destination = {
           'tracker.trackSelfDescribingEvent is required for browser-tracker mode',
           { code: 'config' },
         );
+      // URL plugins load through sp.js, which this mode does not use.
+      const urlPlugins = (settings.plugins ?? []).filter(isUrlBasedPlugin);
+      if (urlPlugins.length)
+        throw new StepError(
+          `Snowplow loads the URL plugins in settings.plugins (${urlPlugins.map((plugin) => plugin.name[1]).join(', ')}) only with sp.js, not with settings.tracker: load them on your own tracker, or drop settings.tracker so walkerOS loads them`,
+          { code: 'config' },
+        );
 
       // Initialize tracker
       await stepCall(
@@ -453,7 +486,8 @@ export const destinationSnowplow: Destination = {
     // Types; tracked as a follow-up. These two `as` casts are that boundary.
     const settings = (context.config?.settings || {}) as Partial<Settings>;
 
-    // The tracker's own senders follow the destination's required consent
+    // Activity pings and the plugin senders with an off switch follow the
+    // destination's required consent
     await followConsent(
       settings,
       context.config.consent,
