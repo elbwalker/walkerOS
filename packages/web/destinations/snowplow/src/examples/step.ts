@@ -460,3 +460,26 @@ export const contextLoop: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends no Snowplow event. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no Snowplow event.',
+  in: getEvent('product view', { timestamp: 1700000405 }),
+  mapping: { name: ACTIONS.PRODUCT_VIEW, silent: true },
+  out: [],
+};
+
+/**
+ * A revocation of the consent the destination requires. Without
+ * settings.consent there is no Enhanced Consent call, so no vendor call is
+ * made and the collector's consent gate stops the sending.
+ */
+export const consentRevoke: Flow.StepExample = {
+  public: false,
+  description:
+    'For a destination with config.consent { marketing: true } and no settings.consent, revoking marketing makes no vendor call: the collector stops sending.',
+  command: 'consent',
+  in: { marketing: false },
+  out: [],
+};

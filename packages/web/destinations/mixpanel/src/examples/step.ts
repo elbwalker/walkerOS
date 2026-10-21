@@ -441,3 +441,37 @@ export const consentGrantOptIn: MixpanelStepExample = {
   settings: {} as Partial<Settings>,
   out: [['mixpanel.opt_in_tracking']],
 };
+
+/** A silent rule sends no track call. */
+export const pageViewSilent: MixpanelStepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no Mixpanel track call.',
+  in: getEvent('page view', { timestamp: 1700000108 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group profile rule of companyUpdateGroupProfile on an update
+ * without data: no group key and id resolve and the rule suppresses the
+ * track, so nothing is sent.
+ */
+export const companyUpdateWithoutData: MixpanelStepExample = {
+  public: false,
+  description:
+    'A silent rule whose group profile mapping finds no group sends nothing, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'company update', entity: 'company', action: 'update' },
+  mapping: {
+    silent: true,
+    settings: {
+      groupProfile: {
+        map: {
+          key: { value: 'company_id' },
+          id: 'data.company_id',
+        },
+      },
+    },
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};

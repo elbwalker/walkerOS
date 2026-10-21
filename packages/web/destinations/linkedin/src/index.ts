@@ -1,7 +1,12 @@
 import type { WalkerOS } from '@walkeros/core';
-import { getMappingValue, isNumber, isObject, isString } from '@walkeros/core';
-import type { DestinationWeb } from '@walkeros/web-core';
-import { getEnv } from '@walkeros/web-core';
+import {
+  getMappingValue,
+  isNumber,
+  isObject,
+  isString,
+  StepError,
+} from '@walkeros/core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
 import type {
   Destination,
   Env,
@@ -55,13 +60,30 @@ function setPartnerGlobals(env: Env | undefined, partnerId: string): void {
   }
 }
 
-function addScript(env: DestinationWeb.Env | undefined): void {
-  const { document } = getEnv(env);
-  const doc = document as Document;
-  const script = doc.createElement('script');
-  script.src = LINKEDIN_SCRIPT_SRC;
-  script.async = true;
-  doc.head.appendChild(script);
+/**
+ * The Insight Tag script `loadVendor` injects with `loadScript`. lintrk
+ * replays its own queue, so it is called synchronously and only a failed
+ * script is reported.
+ */
+function vendor(config: { loadScript?: boolean; timeout?: number }, env?: Env) {
+  return loadVendor(
+    config.loadScript ? LINKEDIN_SCRIPT_SRC : undefined,
+    () => (getEnv(env).window as Env['window']).lintrk,
+    { timeout: config.timeout },
+  );
+}
+
+/** Runs one lintrk call; a throw or a rejection becomes a StepError of `code`. */
+async function call(
+  fn: () => unknown,
+  code: string,
+  message: string,
+): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    throw new StepError(message, { code, cause: error });
+  }
 }
 
 /**
@@ -126,7 +148,8 @@ export const destinationLinkedIn: Destination = {
 
   init({ config, env }) {
     const settings = config.settings;
-    if (!settings?.apiKey) return false;
+    if (!settings?.apiKey)
+      throw new StepError('LinkedIn needs settings.apiKey', { code: 'config' });
 
     setPartnerGlobals(env as Env | undefined, settings.apiKey);
     installLintrkQueue(env as Env | undefined);
@@ -135,33 +158,46 @@ export const destinationLinkedIn: Destination = {
     // plausible / meta). Users who already embed the Insight Tag snippet in
     // their HTML should leave loadScript false - the destination only
     // installs the queue shim and mutates _linkedin_partner_id.
-    if (config.loadScript) addScript(env);
+    vendor(config, env as Env | undefined);
 
     return config;
   },
 
-  async push(event, { rule, env, collector }) {
+  async push(event, { config, rule, env, collector }) {
+    vendor(config, env as Env | undefined).check();
+
     const { window } = getEnv(env);
     const w = window as Env['window'];
     const lintrk = w.lintrk;
-    if (!lintrk) return; // init must have run
-
-    // Honor rule-level silent (core flag at packages/core/src/types/mapping.ts).
-    if (rule?.silent === true) return;
+    if (!lintrk)
+      throw new StepError('LinkedIn Insight Tag not ready: lintrk is missing', {
+        code: 'vendor-not-ready',
+      });
 
     const mappingSettings = (rule?.settings || {}) as Mapping;
-    if (mappingSettings.conversion === undefined) return; // opt-in: no config = no call
 
-    const resolved = await getMappingValue(
-      event as WalkerOS.Event,
-      mappingSettings.conversion,
-      { collector },
-    );
+    // Opt-in: a rule without a conversion makes no call. Honor rule-level
+    // silent (core flag at packages/core/src/types/mapping.ts) the same way.
+    if (rule?.silent !== true && mappingSettings.conversion !== undefined) {
+      const resolved = await getMappingValue(
+        event as WalkerOS.Event,
+        mappingSettings.conversion,
+        { collector },
+      );
 
-    const data = buildLintrkData(resolved);
-    if (!data) return;
+      const data = buildLintrkData(resolved);
+      if (!data)
+        throw new StepError(
+          'LinkedIn conversion mapping resolved to no conversion id',
+          { code: 'missing-input' },
+        );
 
-    lintrk('track', data);
+      await call(
+        () => lintrk('track', data),
+        'transport',
+        'LinkedIn lintrk call failed',
+      );
+    }
   },
 
   on(type, context) {
@@ -170,23 +206,14 @@ export const destinationLinkedIn: Destination = {
     // LinkedIn has no vendor consent mode. The collector's config.consent gate
     // is the sole mechanism for blocking events. This handler exists for a
     // narrow case: config.loadScript was true BUT marketing consent was
-    // initially denied, so init() skipped addScript(). When consent later
-    // grants marketing, we inject the script.
+    // initially denied, so init() did not run. When consent later grants
+    // marketing, the script is injected; loadVendor injects it once per page.
     const consent = context.data as WalkerOS.Consent;
     const config = context.config;
     if (!config?.loadScript) return;
     if (consent.marketing !== true) return;
 
-    // Check whether the script tag is already in the DOM - addScript is not
-    // idempotent, and re-injecting would load the tag twice.
-    const { document } = getEnv(context.env);
-    const doc = document as Document;
-    const existing = doc.querySelector
-      ? doc.querySelector('script[src*="snap.licdn.com"]')
-      : null;
-    if (existing) return;
-
-    addScript(context.env);
+    vendor(config, context.env as Env | undefined);
   },
 };
 

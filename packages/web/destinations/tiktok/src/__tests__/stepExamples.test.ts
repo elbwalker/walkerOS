@@ -14,6 +14,7 @@ type CallRecord = [string, ...unknown[]];
 function spyTtq(env: Env): {
   env: Env;
   collected: () => CallRecord[];
+  reset: () => void;
 } {
   const calls: CallRecord[] = [];
   const ttq = env.window.ttq;
@@ -28,7 +29,7 @@ function spyTtq(env: Env): {
   ttq.identify = record('identify');
   ttq.enableCookie = record('enableCookie');
   ttq.disableCookie = record('disableCookie');
-  return { env, collected: () => calls };
+  return { env, collected: () => calls, reset: () => (calls.length = 0) };
 }
 
 describe('tiktok destination — step examples', () => {
@@ -37,7 +38,7 @@ describe('tiktok destination — step examples', () => {
     async (name, example) => {
       // Fresh clone per test so mutations don't bleed across cases.
       const env = clone(examples.env.push) as Env;
-      const { env: spiedEnv, collected } = spyTtq(env);
+      const { env: spiedEnv, collected, reset } = spyTtq(env);
 
       const dest = jest.requireActual('../').default;
       const { elb } = await startFlow();
@@ -58,7 +59,11 @@ describe('tiktok destination — step examples', () => {
         });
         // Load the gated destination under a prior grant first when the example
         // declares one, so a revoke acts on an already-granted destination.
-        if (example.before) await elb('walker consent', example.before);
+        if (example.before) {
+          await elb('walker consent', example.before);
+          // The example's out is what the revoke itself calls
+          reset();
+        }
         await elb('walker consent', example.in as WalkerOS.Consent);
       } else {
         const event = example.in as WalkerOS.Event;
@@ -79,7 +84,13 @@ describe('tiktok destination — step examples', () => {
       }
 
       // Drop ttq.load — it's an init-time call, not part of per-push `out`.
-      const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+      // Consent examples name the vendor call by its env path (window.ttq.*).
+      const expected = ((example.out ?? []) as ReadonlyArray<CallRecord>).map(
+        ([path, ...args]): CallRecord => [
+          path.replace(/^window\./, ''),
+          ...args,
+        ],
+      );
       const actual = collected().filter(([path]) => path !== 'ttq.load');
 
       expect(actual).toEqual(expected);

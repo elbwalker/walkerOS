@@ -258,7 +258,7 @@ describe('Destination API', () => {
             id: 'test-api',
           }),
         ),
-      ).toThrow('Config settings url missing');
+      ).toThrow('API destination needs settings.url');
     });
 
     test('succeeds when url provided', () => {

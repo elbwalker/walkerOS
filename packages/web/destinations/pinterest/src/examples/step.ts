@@ -326,6 +326,8 @@ export const identifyOnlySilent: Flow.StepExample = {
  */
 export const consentRevoke: Flow.StepExample = {
   public: false,
+  description:
+    'For a destination with config.consent { marketing: true }, revoking marketing makes no vendor call: the destination stops sending track calls itself.',
   command: 'consent',
   in: { marketing: false } as WalkerOS.Consent,
   out: [],
@@ -339,4 +341,38 @@ export const consentGrant: Flow.StepExample = {
   command: 'consent',
   in: { marketing: true } as WalkerOS.Consent,
   out: [],
+};
+
+/** A silent rule sends no track call and no identity. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no pintrk track call.',
+  in: createEvent({ name: 'page view', timestamp: 1700000109 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent identify rule of identifyOnlySilent on an update without data:
+ * no identity resolves and the rule suppresses the track, so nothing is
+ * sent.
+ */
+export const identifyOnlySilentWithoutData: Flow.StepExample = {
+  public: false,
+  description:
+    'A silent rule whose identify mapping finds no email or id sends nothing, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'user update', entity: 'user', action: 'update' },
+  mapping: {
+    silent: true,
+    settings: {
+      identify: {
+        map: {
+          em: 'data.email',
+          external_id: 'data.id',
+        },
+      },
+    },
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
 };

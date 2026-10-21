@@ -1,6 +1,6 @@
 import type { DestinationWeb } from '@walkeros/web-core';
-import { getEnv } from '@walkeros/web-core';
-import { getMappingValue, isObject, isString } from '@walkeros/core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
+import { getMappingValue, isObject, isString, StepError } from '@walkeros/core';
 import type { Collector, WalkerOS } from '@walkeros/core';
 import type {
   Destination,
@@ -34,16 +34,32 @@ function installPintrkQueue(env?: DestinationWeb.Env): void {
 }
 
 /**
- * Insert the Pinterest core.js script tag. Async, non-blocking. Matches the
- * plausible/meta precedent.
+ * The core.js script `loadVendor` injects unless `loadScript` is false.
+ * pintrk replays its own queue, so it is called synchronously and only a
+ * failed script is reported.
  */
-function addScript(env?: DestinationWeb.Env): void {
-  const { document } = getEnv(env);
-  const doc = document as Document;
-  const script = doc.createElement('script');
-  script.src = PINTEREST_SCRIPT_SRC;
-  script.async = true;
-  doc.head.appendChild(script);
+function vendor(
+  config: { loadScript?: boolean; timeout?: number },
+  env?: DestinationWeb.Env,
+) {
+  return loadVendor(
+    config.loadScript !== false ? PINTEREST_SCRIPT_SRC : undefined,
+    () => (getEnv(env).window as Window).pintrk,
+    { timeout: config.timeout },
+  );
+}
+
+/** Runs one pintrk call; a throw or a rejection becomes a StepError of `code`. */
+async function call(
+  fn: () => unknown,
+  code: string,
+  message: string,
+): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    throw new StepError(message, { code, cause: error });
+  }
 }
 
 /**
@@ -85,68 +101,104 @@ export const destinationPinterest: Destination = {
 
   config: {},
 
-  init({ config, env }) {
-    const settings = config.settings;
-    if (!settings?.apiKey) return false;
+  async init({ config, env }) {
+    // A copy, so adding the runtime state below does not write onto the live settings
+    const settings = { ...config.settings };
+    if (!settings.apiKey)
+      throw new StepError('Pinterest needs settings.apiKey', {
+        code: 'config',
+      });
+    const { apiKey } = settings;
 
     const pageview = settings.pageview !== false;
 
     installPintrkQueue(env);
-    if (config.loadScript !== false) addScript(env);
+    vendor(config, env);
 
     const { window } = getEnv(env);
     const pintrk = (window as Window).pintrk as Pintrk;
 
-    pintrk('load', settings.apiKey);
-    if (pageview) pintrk('page');
+    await call(
+      () => pintrk('load', apiKey),
+      'vendor-not-ready',
+      'Pinterest load call failed',
+    );
+    if (pageview)
+      await call(
+        () => pintrk('page'),
+        'vendor-not-ready',
+        'Pinterest page call failed',
+      );
 
     // Seed runtime state (mutation is allowed on Settings._state).
-    settings._state = {
-      lastIdentify: undefined,
-      consentGranted: true,
+    return {
+      ...config,
+      settings: {
+        ...settings,
+        _state: { lastIdentify: undefined, consentGranted: true },
+      },
     };
-
-    return config;
   },
 
   async push(event, { config, rule, data, env, collector }) {
+    vendor(config, env).check();
+
     const settings = (config.settings || {}) as Settings;
     const state = (settings._state ||= { consentGranted: true });
-    if (state.consentGranted === false) return; // Consent revoked - suppress
 
     const { window } = getEnv(env);
     const pintrk = (window as Window).pintrk as Pintrk;
-    if (!pintrk) return;
+    if (!pintrk)
+      throw new StepError('Pinterest Tag not ready: pintrk is missing', {
+        code: 'vendor-not-ready',
+      });
 
-    // 1. Identity - per-event override falls back to destination-level.
-    const identifyMapping =
-      (rule?.settings?.identify as unknown) ?? settings.identify;
-    const identify = await resolveIdentify(event, identifyMapping, collector);
-    if (identify && !identifyEqual(identify, state.lastIdentify)) {
-      pintrk('set', identify);
-      state.lastIdentify = identify;
+    // Consent revoked: suppress. This is the consent state, not a failure.
+    if (state.consentGranted !== false) {
+      // 1. Identity - per-event override falls back to destination-level.
+      const identifyMapping =
+        (rule?.settings?.identify as unknown) ?? settings.identify;
+      const identify = await resolveIdentify(event, identifyMapping, collector);
+      // A silent rule that resolves no identity sends nothing at all
+      if (!identify && rule?.silent === true && identifyMapping !== undefined)
+        throw new StepError(
+          'Pinterest identify resolved to nothing for this event',
+          { code: 'missing-input' },
+        );
+      if (identify && !identifyEqual(identify, state.lastIdentify)) {
+        await call(
+          () => pintrk('set', identify),
+          'transport',
+          'Pinterest set call failed',
+        );
+        state.lastIdentify = identify;
+      }
+
+      // 2. Silent - process identity (above) but suppress the default track.
+      if (rule?.silent !== true) {
+        // 3. Track
+        const eventName = isString(rule?.name)
+          ? (rule!.name as string)
+          : event.name;
+
+        // context.data contains both include-flattened and mapping.data-resolved
+        // properties. Include is the bottom layer, mapping.data wins on conflict.
+        const contextData: Record<string, unknown> = isObject(data)
+          ? (data as Record<string, unknown>)
+          : {};
+
+        const eventData: EventData = {
+          ...(event.id ? { event_id: event.id } : {}),
+          ...contextData,
+        };
+
+        await call(
+          () => pintrk('track', eventName, eventData),
+          'transport',
+          'Pinterest track call failed',
+        );
+      }
     }
-
-    // 2. Silent - process identity (above) but suppress the default track.
-    if (rule?.silent === true) return;
-
-    // 3. Track
-    const eventName = isString(rule?.name)
-      ? (rule!.name as string)
-      : event.name;
-
-    // context.data contains both include-flattened and mapping.data-resolved
-    // properties. Include is the bottom layer, mapping.data wins on conflict.
-    const contextData: Record<string, unknown> = isObject(data)
-      ? (data as Record<string, unknown>)
-      : {};
-
-    const eventData: EventData = {
-      ...(event.id ? { event_id: event.id } : {}),
-      ...contextData,
-    };
-
-    pintrk('track', eventName, eventData);
   },
 
   on(type, context) {

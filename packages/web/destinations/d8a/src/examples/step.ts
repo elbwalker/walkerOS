@@ -175,3 +175,12 @@ export const consentMode: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends no d8a event. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no d8a event.',
+  in: getEvent('page view', { timestamp: 1700000302 }),
+  mapping: { silent: true },
+  out: [],
+};

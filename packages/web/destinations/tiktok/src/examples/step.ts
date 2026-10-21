@@ -389,5 +389,40 @@ export const consentRevokeDisableCookie: TikTokStepExample = {
   before: { marketing: true },
   in: { marketing: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: [['ttq.enableCookie'], ['ttq.disableCookie']],
+  out: [['window.ttq.disableCookie']],
+};
+
+/** A silent rule sends no track call. */
+export const silentRule: TikTokStepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no ttq.track call.',
+  in: getEvent('page view', { timestamp: 1700000600 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * A silent rule that only sets an identity, on an event with no email, phone
+ * or id: nothing resolves and the rule suppresses the track, so nothing is
+ * sent.
+ */
+export const silentIdentifyWithoutData: TikTokStepExample = {
+  public: false,
+  description:
+    'A silent rule whose identify mapping finds no email, phone or id sends nothing, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'user update', entity: 'user', action: 'update' },
+  mapping: {
+    silent: true,
+    settings: {
+      identify: {
+        map: {
+          email: 'data.email',
+          phone_number: 'data.phone',
+          external_id: 'data.id',
+        },
+      },
+    },
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
 };

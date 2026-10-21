@@ -10,29 +10,6 @@ import { getEnv } from '@walkeros/web-core';
 export const DEFAULT_SCRIPT_URL =
   'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@latest/dist/sp.js';
 
-const loadedScripts = new Set<string>();
-
-// For testing: allow resetting loaded scripts
-export function resetLoadedScripts(): void {
-  loadedScripts.clear();
-}
-
-export function addScript(
-  collectorUrl: string,
-  env?: Env,
-  src = DEFAULT_SCRIPT_URL,
-): void {
-  // Prevent loading the same script multiple times
-  if (loadedScripts.has(collectorUrl)) return;
-
-  const { document } = getEnv<Env>(env);
-  const script = document.createElement('script');
-  script.src = src;
-  script.async = true;
-  document.head.appendChild(script);
-  loadedScripts.add(collectorUrl);
-}
-
 export function setup(env?: Env): SnowplowFunction | undefined {
   const { window } = getEnv<Env>(env);
 

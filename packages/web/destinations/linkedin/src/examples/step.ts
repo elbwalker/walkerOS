@@ -203,7 +203,7 @@ export const conversionSilenced: LinkedInStepExample = {
 };
 
 /**
- * Falsy `id` → entire lintrk call is skipped.
+ * Falsy `id` → entire lintrk call is skipped and the push fails missing-input.
  *
  * If the resolved conversion object has no truthy `id`, the destination does
  * NOT call lintrk at all. This protects against misconfigured mappings
@@ -214,6 +214,8 @@ export const conversionSilenced: LinkedInStepExample = {
  */
 export const missingConversionIdIgnored: LinkedInStepExample = {
   public: false,
+  description:
+    'A conversion mapping whose id resolves to nothing makes no lintrk call, so the push fails with missing-input instead of counting as delivered.',
   in: createEvent({ name: 'form submit', timestamp: 1700000106 }),
   mapping: {
     settings: {
@@ -225,6 +227,7 @@ export const missingConversionIdIgnored: LinkedInStepExample = {
     },
   },
   out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
 };
 
 /**
@@ -261,4 +264,18 @@ export const partialFieldsOmitted: LinkedInStepExample = {
       },
     ],
   ],
+};
+
+/**
+ * A revocation of the consent the destination requires. The Insight Tag has
+ * no vendor consent mode, so the collector's consent gate is the only
+ * mechanism and no vendor call is made.
+ */
+export const consentRevoke: LinkedInStepExample = {
+  public: false,
+  description:
+    'For a destination with config.consent { marketing: true }, revoking marketing makes no vendor call: the Insight Tag has no consent mode, the collector stops sending.',
+  command: 'consent',
+  in: { marketing: false },
+  out: [],
 };

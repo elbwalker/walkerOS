@@ -1,4 +1,4 @@
-import type { WalkerOS, Logger } from '@walkeros/core';
+import type { WalkerOS } from '@walkeros/core';
 import type {
   Settings,
   Destination,
@@ -13,10 +13,11 @@ import {
   isCodeBasedPlugin,
   deriveEnableMethod,
 } from './types';
-import { addScript, setup } from './setup';
+import { DEFAULT_SCRIPT_URL, setup } from './setup';
 import { pushSnowplowEvent } from './push';
 import { createQueueAdapter, createBrowserTrackerAdapter } from './adapter';
-import { isObject } from '@walkeros/core';
+import { isObject, StepError } from '@walkeros/core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
 
 // Types
 export * as DestinationSnowplow from './types';
@@ -30,6 +31,41 @@ export {
   MEDIA_SCHEMAS,
   MEDIA_ACTIONS,
 } from './types';
+
+/**
+ * The sp.js script `loadVendor` injects with `loadScript`. The snowplow
+ * function replays its own queue, so it is called synchronously and only a
+ * failed script is reported.
+ */
+function vendor(
+  config: { loadScript?: boolean; timeout?: number; settings?: Settings },
+  env?: Env,
+) {
+  return loadVendor(
+    config.loadScript && !config.settings?.tracker
+      ? config.settings?.scriptUrl || DEFAULT_SCRIPT_URL
+      : undefined,
+    () => getEnv<Env>(env).window.snowplow,
+    { timeout: config.timeout },
+  );
+}
+
+/**
+ * Runs one Snowplow call or block; a throw or a rejection that is not
+ * already a StepError becomes a StepError of `code`.
+ */
+async function guard<T>(
+  fn: () => T | Promise<T>,
+  code: string,
+  message: string,
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof StepError) throw error;
+    throw new StepError(message, { code, cause: error });
+  }
+}
 
 /**
  * Get the Snowplow function from the environment
@@ -182,114 +218,148 @@ export const destinationSnowplow: Destination = {
    * @param context - Initialization context
    * @returns Updated configuration
    */
-  init({ config, env, logger }) {
+  async init({ config, env }) {
     const { settings = {}, loadScript } = config;
     const { collectorUrl, tracker: trackerFunctions } = settings;
 
     // Required collector URL
-    if (!collectorUrl) logger.throw('Config settings collectorUrl missing');
+    if (!collectorUrl)
+      throw new StepError('Snowplow needs settings.collectorUrl', {
+        code: 'config',
+      });
 
     let adapter: SnowplowAdapter | undefined;
 
     if (trackerFunctions) {
       // Browser-tracker mode: use imported functions directly
-      if (!trackerFunctions.newTracker) {
-        logger.throw('tracker.newTracker is required for browser-tracker mode');
-        return false;
-      }
-      if (!trackerFunctions.trackSelfDescribingEvent) {
-        logger.throw(
-          'tracker.trackSelfDescribingEvent is required for browser-tracker mode',
+      if (!trackerFunctions.newTracker)
+        throw new StepError(
+          'tracker.newTracker is required for browser-tracker mode',
+          { code: 'config' },
         );
-        return false;
-      }
+      if (!trackerFunctions.trackSelfDescribingEvent)
+        throw new StepError(
+          'tracker.trackSelfDescribingEvent is required for browser-tracker mode',
+          { code: 'config' },
+        );
 
       // Initialize tracker
-      trackerFunctions.newTracker(settings.trackerName || 'sp', collectorUrl!, {
-        appId: settings.appId || 'walkerOS',
-        platform: settings.platform || 'web',
-        discoverRootDomain: settings.discoverRootDomain,
-        cookieSameSite: settings.cookieSameSite,
-        appVersion: settings.appVersion,
-        contexts: settings.contexts,
-        anonymousTracking: settings.anonymousTracking,
-      });
+      await guard(
+        () =>
+          trackerFunctions.newTracker(
+            settings.trackerName || 'sp',
+            collectorUrl,
+            {
+              appId: settings.appId || 'walkerOS',
+              platform: settings.platform || 'web',
+              discoverRootDomain: settings.discoverRootDomain,
+              cookieSameSite: settings.cookieSameSite,
+              appVersion: settings.appVersion,
+              contexts: settings.contexts,
+              anonymousTracking: settings.anonymousTracking,
+            },
+          ),
+        'vendor-not-ready',
+        'Snowplow newTracker failed',
+      );
 
       // Create adapter from functions
       adapter = createBrowserTrackerAdapter(trackerFunctions);
     } else {
       // URL-based mode: load sp.js script
-      if (loadScript) {
-        addScript(collectorUrl!, env, settings.scriptUrl);
-      }
-
       const snowplow = setup(env);
-      if (!snowplow) return false;
+      if (!snowplow)
+        throw new StepError('Snowplow not ready: window is missing', {
+          code: 'vendor-not-ready',
+        });
+
+      // The script, once per page; a failed one is reported by each push
+      vendor({ ...config, settings }, env);
 
       // Initialize tracker via queue
-      snowplow('newTracker', settings.trackerName || 'sp', collectorUrl!, {
-        appId: settings.appId || 'walkerOS',
-        platform: settings.platform || 'web',
-        discoverRootDomain: settings.discoverRootDomain,
-        cookieSameSite: settings.cookieSameSite,
-        appVersion: settings.appVersion,
-        contexts: settings.contexts,
-        anonymousTracking: settings.anonymousTracking,
-      });
+      await guard(
+        () =>
+          snowplow('newTracker', settings.trackerName || 'sp', collectorUrl, {
+            appId: settings.appId || 'walkerOS',
+            platform: settings.platform || 'web',
+            discoverRootDomain: settings.discoverRootDomain,
+            cookieSameSite: settings.cookieSameSite,
+            appVersion: settings.appVersion,
+            contexts: settings.contexts,
+            anonymousTracking: settings.anonymousTracking,
+          }),
+        'vendor-not-ready',
+        'Snowplow newTracker failed',
+      );
 
       adapter = createQueueAdapter(snowplow);
     }
 
-    if (!adapter) return false;
+    const tracker = adapter;
+    if (!tracker)
+      throw new StepError('Snowplow adapter could not be created', {
+        code: 'vendor-not-ready',
+      });
 
     // Enable activity tracking if configured
     if (settings.activityTracking) {
-      adapter.enableActivityTracking(settings.activityTracking);
+      const activityTracking = settings.activityTracking;
+      await guard(
+        () => tracker.enableActivityTracking(activityTracking),
+        'vendor-not-ready',
+        'Snowplow enableActivityTracking failed',
+      );
     }
 
-    // Load plugins
-    if (settings.plugins) {
-      for (const plugin of settings.plugins) {
-        if (isCodeBasedPlugin(plugin)) {
-          // Code-based plugin: use directly or call factory with config
-          const pluginInstance =
-            typeof plugin.code === 'function' && plugin.config
-              ? (plugin.code as (...args: unknown[]) => BrowserPlugin)(
-                  plugin.config,
-                )
-              : plugin.code;
-          adapter.addPlugin({ plugin: pluginInstance as BrowserPlugin });
-        } else if (isUrlBasedPlugin(plugin)) {
-          // URL-based plugin (sp.js approach only)
-          adapter.addPlugin([plugin.url, plugin.name]);
-          const enableMethod =
-            plugin.enableMethod ?? deriveEnableMethod(plugin.name[1]);
-          if (plugin.options) {
-            adapter.call(enableMethod, plugin.options);
-          } else {
-            adapter.call(enableMethod);
+    await guard(
+      () => {
+        // Load plugins
+        if (settings.plugins) {
+          for (const plugin of settings.plugins) {
+            if (isCodeBasedPlugin(plugin)) {
+              // Code-based plugin: use directly or call factory with config
+              const pluginInstance =
+                typeof plugin.code === 'function' && plugin.config
+                  ? (plugin.code as (...args: unknown[]) => BrowserPlugin)(
+                      plugin.config,
+                    )
+                  : plugin.code;
+              tracker.addPlugin({ plugin: pluginInstance as BrowserPlugin });
+            } else if (isUrlBasedPlugin(plugin)) {
+              // URL-based plugin (sp.js approach only)
+              tracker.addPlugin([plugin.url, plugin.name]);
+              const enableMethod =
+                plugin.enableMethod ?? deriveEnableMethod(plugin.name[1]);
+              if (plugin.options) {
+                tracker.call(enableMethod, plugin.options);
+              } else {
+                tracker.call(enableMethod);
+              }
+            } else {
+              // BrowserPlugin instance
+              tracker.addPlugin({ plugin: plugin as BrowserPlugin });
+            }
           }
-        } else {
-          // BrowserPlugin instance
-          adapter.addPlugin({ plugin: plugin as BrowserPlugin });
         }
-      }
-    }
 
-    // Register global contexts
-    if (settings.globalContexts && settings.globalContexts.length > 0) {
-      adapter.addGlobalContexts(settings.globalContexts);
-    }
+        // Register global contexts
+        if (settings.globalContexts && settings.globalContexts.length > 0) {
+          tracker.addGlobalContexts(settings.globalContexts);
+        }
 
-    // Track page view on init if configured
-    if (settings.trackPageView) {
-      adapter.trackPageView();
-    }
+        // Track page view on init if configured
+        if (settings.trackPageView) {
+          tracker.trackPageView();
+        }
+      },
+      'vendor-not-ready',
+      'Snowplow setup call failed',
+    );
 
     // Store adapter in runtime state
     const updatedSettings = {
       ...settings,
-      _state: { adapter } as RuntimeState,
+      _state: { adapter: tracker } as RuntimeState,
     };
 
     return { ...config, settings: updatedSettings };
@@ -304,16 +374,24 @@ export const destinationSnowplow: Destination = {
    * @param event - The walkerOS event to process
    * @param context - Push context with config, data, rule, and env
    */
-  async push(event, { config, data = {}, rule = {}, logger, collector }) {
+  async push(event, { config, env, data = {}, rule = {}, logger, collector }) {
+    vendor(config, env as Env | undefined).check();
+
     const eventMapping = rule.settings || {};
-    await pushSnowplowEvent(
-      event,
-      eventMapping,
-      data as WalkerOS.AnyObject,
-      collector,
-      rule.name,
-      config,
-      logger,
+    await guard(
+      () =>
+        pushSnowplowEvent(
+          event,
+          eventMapping,
+          data as WalkerOS.AnyObject,
+          collector,
+          rule.name,
+          config,
+          logger,
+          rule.silent === true,
+        ),
+      'transport',
+      'Snowplow call failed',
     );
   },
 
@@ -327,7 +405,7 @@ export const destinationSnowplow: Destination = {
    * @param type - The event type ('consent', 'session', 'ready', 'run')
    * @param context - The destination context with config, data, env, logger
    */
-  on(type, context) {
+  async on(type, context) {
     // Only handle consent events
     if (type !== 'consent' || !isObject(context.data)) return;
 
@@ -370,20 +448,29 @@ export const destinationSnowplow: Destination = {
       baseParams.gdprApplies = consentConfig.gdprApplies;
 
     // Call the appropriate Enhanced Consent plugin method
-    if (allDenied) {
-      // For deny, use required scopes (the ones being denied)
-      snowplow('trackConsentDeny', { ...baseParams, consentScopes: required });
-    } else if (allGranted) {
-      snowplow('trackConsentAllow', {
-        ...baseParams,
-        consentScopes: grantedScopes,
-      });
-    } else {
-      snowplow('trackConsentSelected', {
-        ...baseParams,
-        consentScopes: grantedScopes,
-      });
-    }
+    await guard(
+      () => {
+        if (allDenied) {
+          // For deny, use required scopes (the ones being denied)
+          snowplow('trackConsentDeny', {
+            ...baseParams,
+            consentScopes: required,
+          });
+        } else if (allGranted) {
+          snowplow('trackConsentAllow', {
+            ...baseParams,
+            consentScopes: grantedScopes,
+          });
+        } else {
+          snowplow('trackConsentSelected', {
+            ...baseParams,
+            consentScopes: grantedScopes,
+          });
+        }
+      },
+      'consent-not-applied',
+      'Snowplow did not take the consent update',
+    );
   },
 };
 

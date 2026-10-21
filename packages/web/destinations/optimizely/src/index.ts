@@ -1,5 +1,11 @@
 import type { WalkerOS } from '@walkeros/core';
-import { getMappingValue, isNumber, isObject, isString } from '@walkeros/core';
+import {
+  getMappingValue,
+  isNumber,
+  isObject,
+  isString,
+  StepError,
+} from '@walkeros/core';
 import * as optimizelySDK from '@optimizely/optimizely-sdk';
 import type {
   Destination,
@@ -21,6 +27,19 @@ function getOptimizely(env: Env | undefined): OptimizelySDKType {
   return optimizelySDK as unknown as OptimizelySDKType;
 }
 
+/** Runs one Optimizely call; a throw or a rejection becomes a StepError of `code`. */
+async function call<T>(
+  fn: () => T | Promise<T>,
+  code: string,
+  message: string,
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    throw new StepError(message, { code, cause: error });
+  }
+}
+
 export const destinationOptimizely: Destination = {
   type: 'optimizely',
 
@@ -28,28 +47,54 @@ export const destinationOptimizely: Destination = {
 
   async init({ config, env }) {
     const settings = config.settings;
-    if (!settings?.sdkKey) return false;
+    if (!settings?.sdkKey)
+      throw new StepError('Optimizely needs settings.sdkKey', {
+        code: 'config',
+      });
 
     const sdk = getOptimizely(env as Env | undefined);
 
-    const configManager = sdk.createPollingProjectConfigManager({
-      sdkKey: settings.sdkKey,
-      autoUpdate: settings.autoUpdate ?? true,
-      updateInterval: settings.updateInterval ?? 60000,
-    });
+    const { sdkKey } = settings;
+    const configManager = await call(
+      () =>
+        sdk.createPollingProjectConfigManager({
+          sdkKey,
+          autoUpdate: settings.autoUpdate ?? true,
+          updateInterval: settings.updateInterval ?? 60000,
+        }),
+      'vendor-not-ready',
+      'Optimizely config manager failed to start',
+    );
 
-    const eventProcessor = sdk.createBatchEventProcessor({
-      batchSize: settings.batchSize ?? 10,
-      flushInterval: settings.flushInterval ?? 1000,
-    });
+    const eventProcessor = await call(
+      () =>
+        sdk.createBatchEventProcessor({
+          batchSize: settings.batchSize ?? 10,
+          flushInterval: settings.flushInterval ?? 1000,
+        }),
+      'vendor-not-ready',
+      'Optimizely event processor failed to start',
+    );
 
     const instanceConfig: Record<string, unknown> = {
       projectConfigManager: configManager,
       eventProcessor: eventProcessor,
     };
 
-    const client = sdk.createInstance(instanceConfig);
-    await client.onReady();
+    const client = await call(
+      () => sdk.createInstance(instanceConfig),
+      'vendor-not-ready',
+      'Optimizely client failed to start',
+    );
+    const ready = await call(
+      () => client.onReady(),
+      'vendor-not-ready',
+      'Optimizely client did not become ready',
+    );
+    if (isObject(ready) && ready.success === false)
+      throw new StepError('Optimizely client did not become ready', {
+        code: 'vendor-not-ready',
+      });
 
     const _state: RuntimeState = { client };
 
@@ -61,7 +106,11 @@ export const destinationOptimizely: Destination = {
     const state: RuntimeState = settings._state || {};
     const mappingSettings = rule?.settings || {};
 
-    if (!state.client) return;
+    const { client } = state;
+    if (!client)
+      throw new StepError('Optimizely client is not running', {
+        code: 'not-ready',
+      });
 
     // 1. Resolve userId
     const userIdMapping = settings.userId;
@@ -74,7 +123,13 @@ export const destinationOptimizely: Destination = {
     }
 
     // Fallback: no userId means we cannot create a user context
-    if (!userId) return;
+    if (!userId)
+      throw new StepError(
+        'Optimizely needs a userId, settings.userId resolved to nothing',
+        {
+          code: 'missing-input',
+        },
+      );
 
     // 2. Resolve destination-level attributes
     let baseAttributes: Record<string, unknown> | undefined;
@@ -89,17 +144,24 @@ export const destinationOptimizely: Destination = {
 
     // 3. Create or reuse user context
     if (userId !== state.lastUserId || !state.userContext) {
-      const userContext = state.client.createUserContext(
-        userId,
-        baseAttributes,
+      const userContext = await call(
+        () => client.createUserContext(userId, baseAttributes),
+        'transport',
+        'Optimizely createUserContext failed',
       );
-      if (!userContext) return;
+      if (!userContext)
+        throw new StepError('Optimizely could not create a user context', {
+          code: 'transport',
+        });
       state.userContext = userContext;
       state.lastUserId = userId;
     }
 
     const userContext = state.userContext;
-    if (!userContext) return;
+    if (!userContext)
+      throw new StepError('Optimizely has no user context', {
+        code: 'not-ready',
+      });
 
     // 4. Per-event attributes via setAttribute
     if (mappingSettings.attributes !== undefined) {
@@ -112,7 +174,11 @@ export const destinationOptimizely: Destination = {
         for (const [key, value] of Object.entries(
           resolved as Record<string, unknown>,
         )) {
-          userContext.setAttribute(key, value);
+          await call(
+            () => userContext.setAttribute(key, value),
+            'transport',
+            'Optimizely setAttribute failed',
+          );
         }
       }
     }
@@ -156,14 +222,18 @@ export const destinationOptimizely: Destination = {
         }
       }
 
-      userContext.trackEvent(eventKey, eventTags);
+      await call(
+        () => userContext.trackEvent(eventKey, eventTags),
+        'transport',
+        'Optimizely trackEvent failed',
+      );
     }
 
     // Persist state mutations
     settings._state = state;
   },
 
-  on(type, context) {
+  async on(type, context) {
     if (type !== 'consent' || !context.data) return;
 
     const required = context.config?.consent;
@@ -176,9 +246,14 @@ export const destinationOptimizely: Destination = {
 
     const state = (context.config?.settings as Settings)?._state;
     if (!allGranted && state?.client) {
-      state.client.close();
+      const { client } = state;
       state.client = undefined;
       state.userContext = undefined;
+      await call(
+        () => client.close(),
+        'consent-not-applied',
+        'Optimizely did not stop on the consent revocation',
+      );
     }
   },
 

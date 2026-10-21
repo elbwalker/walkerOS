@@ -13,7 +13,7 @@ import {
   MEDIA_ACTIONS,
 } from '.';
 import { examples } from './dev';
-import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
+import { DEFAULT_SCRIPT_URL } from './setup';
 
 // Step example `.mapping` is typed as `unknown` (it can be any rule shape).
 // Narrow to the destination's Rule type for use in `mappingConfig`.
@@ -143,47 +143,35 @@ describe('destination snowplow', () => {
 
     await elb(getEvent());
 
-    // logger.throw only throws; the collector catches and writes the one line
+    // init throws a StepError; the collector writes the one line
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'ERROR',
       expect.stringContaining('destination init failed'),
       expect.objectContaining({
         type: 'snowplow',
-        error: 'Config settings collectorUrl missing',
+        error: 'Snowplow needs settings.collectorUrl',
       }),
     );
     consoleErrorSpy.mockRestore();
   });
 
   describe('loadScript with scriptUrl', () => {
-    let createdScripts: Array<{ src: string }>;
+    // loadVendor injects into the page's document, once per src
+    const scriptSrcs = () =>
+      Array.from(document.querySelectorAll('script[data-walkeros-vendor]')).map(
+        (script) => script.getAttribute('src'),
+      );
 
-    beforeEach(() => {
-      createdScripts = [];
-      resetLoadedScripts();
-    });
+    const scriptEnv: DestinationSnowplow.Env = {
+      window: {
+        snowplow: Object.assign(() => {}, { q: [] }),
+      },
+    };
 
     test('uses custom scriptUrl when provided', async () => {
       const customScriptUrl =
         'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@3.24.0/dist/sp.js';
-
-      // Create env that captures created scripts
-      const scriptEnv: DestinationSnowplow.Env = {
-        window: {
-          snowplow: Object.assign(() => {}, { q: [] }),
-        },
-        document: {
-          createElement: () => {
-            const element = { src: '', async: false };
-            createdScripts.push(element);
-            return element;
-          },
-          head: {
-            appendChild: () => {},
-          },
-        },
-      };
 
       const destinationWithEnv = {
         ...destination,
@@ -202,28 +190,10 @@ describe('destination snowplow', () => {
 
       await elb(getEvent());
 
-      expect(createdScripts.length).toBeGreaterThan(0);
-      expect(createdScripts[0].src).toBe(customScriptUrl);
+      expect(scriptSrcs()).toContain(customScriptUrl);
     });
 
     test('uses default CDN URL when scriptUrl not provided', async () => {
-      // Create env that captures created scripts
-      const scriptEnv: DestinationSnowplow.Env = {
-        window: {
-          snowplow: Object.assign(() => {}, { q: [] }),
-        },
-        document: {
-          createElement: () => {
-            const element = { src: '', async: false };
-            createdScripts.push(element);
-            return element;
-          },
-          head: {
-            appendChild: () => {},
-          },
-        },
-      };
-
       const destinationWithEnv = {
         ...destination,
         env: scriptEnv,
@@ -240,8 +210,7 @@ describe('destination snowplow', () => {
 
       await elb(getEvent());
 
-      expect(createdScripts.length).toBeGreaterThan(0);
-      expect(createdScripts[0].src).toBe(DEFAULT_SCRIPT_URL);
+      expect(scriptSrcs()).toContain(DEFAULT_SCRIPT_URL);
     });
   });
 

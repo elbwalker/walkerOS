@@ -122,3 +122,12 @@ export const customTransform: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends no request. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request.',
+  in: getEvent('page view', { timestamp: 1700000502 }),
+  mapping: { silent: true },
+  out: [],
+};

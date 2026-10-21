@@ -16,12 +16,7 @@ const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
 
 const noopLogger = createLogger();
 
-/**
- * Unified spy: captures both init-side `script.appendChild` calls and
- * push-side `plausible(...)` calls into a single ordered array. This
- * lets event tests bootstrap with the real init (triggering
- * loadScript) and slice off `initOut.length` to isolate push calls.
- */
+/** Spy: captures push-side `plausible(...)` calls into an ordered array. */
 function spyEnv(): { env: Env; collected: () => CallRecord[] } {
   const calls: CallRecord[] = [];
   const spy = (
@@ -39,25 +34,6 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
       plausible: Object.assign(spy, {
         q: [] as IArguments[],
       }),
-    },
-    document: {
-      createElement: (_tag: string) => ({ src: '', dataset: {} }),
-      head: {
-        appendChild: (script: {
-          src: string;
-          dataset: { domain?: string };
-        }) => {
-          calls.push([
-            'script.appendChild',
-            {
-              src: script.src,
-              domain: script.dataset.domain,
-            },
-          ]);
-          return script;
-        },
-      },
-      querySelector: () => null,
     },
   };
   return { env, collected: () => calls };
@@ -85,7 +61,17 @@ describe('plausible destination -- step examples', () => {
       collector: {} as Destination.Context['collector'],
     });
 
-    expect(collected()).toEqual(initOut);
+    // loadVendor injects into the page's document
+    const scripts = Array.from(
+      document.querySelectorAll<HTMLScriptElement>(
+        'script[data-walkeros-vendor]',
+      ),
+    ).map((script) => [
+      'script.appendChild',
+      { src: script.src, domain: script.dataset.domain },
+    ]);
+
+    expect([...scripts, ...collected()]).toEqual(initOut);
   });
 
   // Plausible takes scalar custom props and revenue as { currency, amount }
@@ -136,7 +122,7 @@ describe('plausible destination -- step examples', () => {
     await elb(event);
 
     const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    const actual = collected().slice(initOut.length);
+    const actual = collected();
 
     expect(actual).toEqual(expected);
   });

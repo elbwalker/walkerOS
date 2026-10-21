@@ -364,3 +364,37 @@ export const consentGrantOptIn: PostHogStepExample = {
   settings: {} as Partial<Settings>,
   out: [['posthog.opt_in_capturing']],
 };
+
+/** A silent rule sends no capture call. */
+export const pageViewSilent: PostHogStepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no PostHog capture call.',
+  in: getEvent('page view', { timestamp: 1700000109 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group rule of groupAssignmentWithProperties on an update
+ * without data: no group type and key resolve and the rule suppresses the
+ * capture, so nothing is sent.
+ */
+export const companyUpdateWithoutData: PostHogStepExample = {
+  public: false,
+  description:
+    'A silent rule whose group mapping finds no group sends nothing, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'company update', entity: 'company', action: 'update' },
+  mapping: {
+    silent: true,
+    settings: {
+      group: {
+        map: {
+          type: { value: 'company' },
+          key: 'data.company_id',
+        },
+      },
+    },
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};

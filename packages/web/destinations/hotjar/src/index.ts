@@ -1,4 +1,4 @@
-import { getMappingValue, isObject, isString } from '@walkeros/core';
+import { getMappingValue, isObject, isString, StepError } from '@walkeros/core';
 import Hotjar from '@hotjar/browser';
 import type { HotjarSDK, Destination, Env, Mapping, Settings } from './types';
 
@@ -13,24 +13,49 @@ function getHotjar(env: Env | undefined): HotjarSDK {
   return env?.hotjar ?? (Hotjar as unknown as HotjarSDK);
 }
 
+/**
+ * Runs one Hotjar call. The SDK reports failure by returning `false` (and
+ * logging to the console), so a `false` or a throw becomes a StepError.
+ */
+async function call(
+  fn: () => unknown,
+  code: string,
+  message: string,
+): Promise<void> {
+  let result: unknown;
+  try {
+    result = await fn();
+  } catch (error) {
+    throw new StepError(message, { code, cause: error });
+  }
+  if (result === false) throw new StepError(message, { code });
+}
+
 export const destinationHotjar: Destination = {
   type: 'hotjar',
 
   config: {},
 
-  init({ config, env }) {
+  async init({ config, env }) {
     const settings = config.settings;
-    if (!settings?.siteId) return false;
+    if (!settings?.siteId)
+      throw new StepError('Hotjar needs settings.siteId', { code: 'config' });
 
     const hotjarVersion = settings.hotjarVersion ?? 6;
     const opts: { debug?: boolean; nonce?: string } = {};
     if (settings.debug !== undefined) opts.debug = settings.debug;
     if (settings.nonce !== undefined) opts.nonce = settings.nonce;
 
-    getHotjar(env).init(
-      settings.siteId,
-      hotjarVersion,
-      Object.keys(opts).length > 0 ? opts : undefined,
+    const { siteId } = settings;
+    await call(
+      () =>
+        getHotjar(env).init(
+          siteId,
+          hotjarVersion,
+          Object.keys(opts).length > 0 ? opts : undefined,
+        ),
+      'vendor-not-ready',
+      'Hotjar init failed',
     );
 
     return config;
@@ -40,6 +65,9 @@ export const destinationHotjar: Destination = {
     const hotjar = getHotjar(env as Env | undefined);
     const settings = (config.settings || {}) as Partial<Settings>;
     const mappingSettings = (rule?.settings || {}) as Mapping;
+
+    // Whether any Hotjar call went out for this event
+    let sent = false;
 
     // 1. Identify -- rule-level override wins over destination-level.
     //    Fires first per Hotjar's guidance so subsequent event calls
@@ -63,7 +91,12 @@ export const destinationHotjar: Destination = {
               userInfo[key] = val;
             }
           }
-          hotjar.identify(userId, userInfo);
+          await call(
+            () => hotjar.identify(userId, userInfo),
+            'transport',
+            'Hotjar identify failed',
+          );
+          sent = true;
         }
       }
     }
@@ -76,15 +109,37 @@ export const destinationHotjar: Destination = {
         { collector },
       );
       if (isString(resolved) && resolved) {
-        hotjar.stateChange(resolved);
+        await call(
+          () => hotjar.stateChange(resolved),
+          'transport',
+          'Hotjar stateChange failed',
+        );
+        sent = true;
       }
     }
 
     // 3. Default event forwarding -- unless rule.silent is set
     if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
-      hotjar.event(eventName);
+      await call(
+        () => hotjar.event(eventName),
+        'transport',
+        'Hotjar event failed',
+      );
+      sent = true;
     }
+
+    // A silent rule that asked for identify or stateChange, which the event
+    // could not resolve, sent nothing at all
+    if (
+      !sent &&
+      (identifyMapping !== undefined ||
+        mappingSettings.stateChange !== undefined)
+    )
+      throw new StepError(
+        'Hotjar identify or stateChange resolved to nothing for this event',
+        { code: 'missing-input' },
+      );
   },
 };
 

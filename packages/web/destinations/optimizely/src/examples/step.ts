@@ -183,3 +183,63 @@ export const consentGranted: OptimizelyStepExample = {
   settings: {} as Partial<Settings>,
   out: [],
 };
+
+/** A silent rule sends no trackEvent. */
+export const silentRule: OptimizelyStepExample = {
+  public: false,
+  description:
+    'A rule with silent: true sends no trackEvent call; the user context the rule settings run on is still created.',
+  in: getEvent('page view', { timestamp: 1700000106 }),
+  mapping: { silent: true },
+  out: [['optimizely.createInstance.createUserContext', 'us3r', {}]],
+};
+
+/** Page view without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnPageView: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'page view', entity: 'page', action: 'view' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+
+/** Product view without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnProductView: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'product view', entity: 'product', action: 'view' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+
+/** Order complete without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnOrderComplete: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'order complete', entity: 'order', action: 'complete' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+
+/** User signup without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnUserSignup: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'user signup', entity: 'user', action: 'signup' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+
+/** Profile update without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnProfileUpdate: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'profile update', entity: 'profile', action: 'update' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};

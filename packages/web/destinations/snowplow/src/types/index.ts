@@ -468,15 +468,6 @@ export interface Settings {
   platform?: string;
 
   /**
-   * Enable automatic page view tracking
-   *
-   * If true, page view events will be tracked automatically.
-   *
-   * @default false
-   */
-  pageViewTracking?: boolean;
-
-  /**
    * Track page view on tracker initialization
    *
    * When true, calls `trackPageView()` immediately after tracker init.

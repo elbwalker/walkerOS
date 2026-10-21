@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@walkeros/core';
-import { getMappingValue, isObject, isString } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
-import { addScript, setup } from './setup';
+import { getMappingValue, isObject, isString, StepError } from '@walkeros/core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
+import { SCRIPT_SRC, setup } from './setup';
 import type {
   Destination,
   IdentifyParams,
@@ -21,7 +21,44 @@ export * as DestinationTikTok from './types';
  */
 function getTTQ(env: unknown): TTQ {
   const { window } = getEnv(env as Parameters<typeof getEnv>[0]);
-  return (window as unknown as { ttq: TTQ }).ttq;
+  const { ttq } = window as unknown as { ttq?: TTQ };
+  if (!ttq)
+    throw new StepError('TikTok Pixel not ready: window.ttq is missing', {
+      code: 'vendor-not-ready',
+    });
+  return ttq;
+}
+
+/**
+ * The Pixel script `loadVendor` injects unless `loadScript` is false. ttq
+ * replays its own queue, so it is called synchronously and only a failed
+ * script is reported.
+ */
+function vendor(
+  config: { loadScript?: boolean; timeout?: number },
+  env: unknown,
+) {
+  return loadVendor(
+    config.loadScript !== false ? SCRIPT_SRC : undefined,
+    () => {
+      const { window } = getEnv(env as Parameters<typeof getEnv>[0]);
+      return (window as unknown as { ttq?: TTQ }).ttq;
+    },
+    { timeout: config.timeout },
+  );
+}
+
+/** Runs one ttq call; a throw or a rejection becomes a StepError of `code`. */
+async function call(
+  fn: () => unknown,
+  code: string,
+  message: string,
+): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    throw new StepError(message, { code, cause: error });
+  }
 }
 
 /**
@@ -32,11 +69,14 @@ function getTTQ(env: unknown): TTQ {
  * The destination never partial-updates identity - TikTok treats each
  * ttq.identify() call as a full replacement of Advanced Matching state.
  */
-function applyIdentify(
+async function applyIdentify(
   ttq: TTQ,
   resolved: Record<string, unknown>,
   lastIdentity: NonNullable<RuntimeState['lastIdentity']> = {},
-): NonNullable<RuntimeState['lastIdentity']> {
+): Promise<{
+  lastIdentity: NonNullable<RuntimeState['lastIdentity']>;
+  resolved: boolean;
+}> {
   const next: NonNullable<RuntimeState['lastIdentity']> = { ...lastIdentity };
   const params: IdentifyParams = {};
   let changed = false;
@@ -53,10 +93,11 @@ function applyIdentify(
 
   // Skip ttq.identify() entirely if the resolved object has no non-empty
   // values (anonymous visitor) or if nothing changed.
-  if (!changed || Object.keys(params).length === 0) return next;
+  if (!changed || Object.keys(params).length === 0)
+    return { lastIdentity: next, resolved: Object.keys(params).length > 0 };
 
-  ttq.identify(params);
-  return next;
+  await call(() => ttq.identify(params), 'transport', 'TikTok identify failed');
+  return { lastIdentity: next, resolved: true };
 }
 
 export const destinationTikTok: Destination = {
@@ -64,16 +105,18 @@ export const destinationTikTok: Destination = {
 
   config: {},
 
-  init({ config, env }) {
-    const settings = config.settings;
-    if (!settings?.apiKey) return false;
+  async init({ config, env }) {
+    // A copy, so the destructure below does not read keys off the live settings
+    const settings = { ...config.settings };
+    if (!settings.apiKey)
+      throw new StepError('TikTok needs settings.apiKey', { code: 'config' });
 
     // Ensure window.ttq exists (queue-based stub) before any call.
     setup(env);
 
     // Load the real TikTok Pixel SDK from the CDN. The queue replays
     // once the script executes.
-    if (config.loadScript !== false) addScript(env);
+    vendor(config, env);
 
     const ttq = getTTQ(env);
 
@@ -89,7 +132,11 @@ export const destinationTikTok: Destination = {
     // TikTok's SDK auto-fires ttq.page() on load; we let it fire (no knob).
     const loadOptions: Record<string, unknown> = { ...passthrough };
 
-    ttq.load(apiKey, loadOptions);
+    await call(
+      () => ttq.load(apiKey, loadOptions),
+      'vendor-not-ready',
+      'TikTok load call failed',
+    );
 
     // Initialize runtime state. Identity is resolved on first push.
     const _state: RuntimeState = { lastIdentity: {} };
@@ -97,11 +144,14 @@ export const destinationTikTok: Destination = {
   },
 
   async push(event, { config, rule, data, env, collector }) {
+    vendor(config, env).check();
     const ttq = getTTQ(env);
     const settings = (config.settings || {}) as Settings;
     const mappingSettings = (rule?.settings || {}) as Mapping;
 
     const state: RuntimeState = settings._state || {};
+    // Whether any ttq call or identity came out of this event
+    let sent = false;
 
     // Identity - rule-level override wins over destination-level.
     // Resolved and diffed against runtime state; only changes fire
@@ -113,11 +163,13 @@ export const destinationTikTok: Destination = {
         collector,
       });
       if (isObject(resolved)) {
-        state.lastIdentity = applyIdentify(
+        const identity = await applyIdentify(
           ttq,
           resolved as Record<string, unknown>,
           state.lastIdentity,
         );
+        state.lastIdentity = identity.lastIdentity;
+        sent = identity.resolved;
       }
     }
 
@@ -129,8 +181,22 @@ export const destinationTikTok: Destination = {
         ? (data as Record<string, unknown>)
         : {};
 
-      ttq.track(eventName, params, { event_id: event.id });
+      await call(
+        () => ttq.track(eventName, params, { event_id: event.id }),
+        'transport',
+        'TikTok track failed',
+      );
+      sent = true;
     }
+
+    // A silent rule that resolved no identity sent nothing at all
+    if (!sent && rule?.silent === true && identifyMapping !== undefined)
+      throw new StepError(
+        'TikTok identify resolved to nothing for this event',
+        {
+          code: 'missing-input',
+        },
+      );
 
     // Persist runtime state mutations. walkerOS destinations are
     // long-lived singletons so mutating settings in place is safe and
@@ -138,7 +204,7 @@ export const destinationTikTok: Destination = {
     settings._state = state;
   },
 
-  on(type, context) {
+  async on(type, context) {
     if (type !== 'consent' || !context.data) return;
     const ttq = getTTQ(context.env);
 
@@ -155,11 +221,11 @@ export const destinationTikTok: Destination = {
       (key) => consent[key] === true,
     );
 
-    if (allGranted) {
-      ttq.enableCookie();
-    } else {
-      ttq.disableCookie();
-    }
+    await call(
+      () => (allGranted ? ttq.enableCookie() : ttq.disableCookie()),
+      'consent-not-applied',
+      'TikTok did not take the consent update',
+    );
   },
 };
 

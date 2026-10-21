@@ -109,53 +109,121 @@ export const MappedGlobalContextSchema = z.object({
 /**
  * Configuration settings schema for Snowplow destination
  */
-export const SettingsSchema = z.object({
-  collectorUrl: z
-    .string()
-    .optional()
-    .describe('Snowplow collector endpoint URL'),
-  appId: z.string().optional().describe('Application identifier'),
-  trackerName: z.string().optional().describe('Tracker instance name'),
-  platform: z.string().optional().describe('Platform identifier'),
-  pageViewTracking: z
-    .boolean()
-    .optional()
-    .describe('Enable automatic page view tracking'),
-  snowplow: SnowplowSettingsSchema.optional().describe(
-    'Snowplow-specific ecommerce configuration',
-  ),
-  // New tracker configuration options
-  discoverRootDomain: z
-    .boolean()
-    .optional()
-    .describe('Discover root domain for cookies'),
-  cookieSameSite: z
-    .enum(['Strict', 'Lax', 'None'])
-    .optional()
-    .describe('Cookie SameSite attribute'),
-  appVersion: z.string().optional().describe('Application version'),
-  contexts: TrackerContextsSchema.optional().describe(
-    'Built-in context entities',
-  ),
-  // Anonymous tracking
-  anonymousTracking: AnonymousTrackingSchema.optional().describe(
-    'Enable anonymous tracking (no user identifiers)',
-  ),
-  // Plugins - validated loosely since BrowserPlugin is complex
-  plugins: z
-    .array(z.union([UrlBasedPluginSchema, z.any()]))
-    .optional()
-    .describe('Snowplow plugins'),
-  // Activity tracking
-  activityTracking: ActivityTrackingSchema.optional().describe(
-    'Page ping configuration',
-  ),
-  // Global contexts - validated loosely to allow functions
-  globalContexts: z
-    .array(z.any())
-    .optional()
-    .describe('Global context entities'),
-});
+export const SettingsSchema = z
+  .object({
+    collectorUrl: z.string().describe('Snowplow collector endpoint URL'),
+    scriptUrl: z
+      .string()
+      .optional()
+      .describe(
+        'URL of the Snowplow JavaScript tracker script, used with loadScript. Defaults to the jsdelivr CDN with the @latest tag; pin a version in production.',
+      ),
+    tracker: z
+      .record(z.string(), z.any())
+      .optional()
+      .describe(
+        'Browser-tracker functions for bundled mode (newTracker, trackSelfDescribingEvent and the optional others), set with $code: references',
+      ),
+    appId: z.string().optional().describe('Application identifier'),
+    trackerName: z.string().optional().describe('Tracker instance name'),
+    platform: z.string().optional().describe('Platform identifier'),
+    snowplow: SnowplowSettingsSchema.optional().describe(
+      'Snowplow-specific ecommerce configuration',
+    ),
+    // New tracker configuration options
+    discoverRootDomain: z
+      .boolean()
+      .optional()
+      .describe('Discover root domain for cookies'),
+    cookieSameSite: z
+      .enum(['Strict', 'Lax', 'None'])
+      .optional()
+      .describe('Cookie SameSite attribute'),
+    appVersion: z.string().optional().describe('Application version'),
+    contexts: TrackerContextsSchema.optional().describe(
+      'Built-in context entities',
+    ),
+    // Anonymous tracking
+    anonymousTracking: AnonymousTrackingSchema.optional().describe(
+      'Enable anonymous tracking (no user identifiers)',
+    ),
+    // Plugins - validated loosely since BrowserPlugin is complex
+    plugins: z
+      .array(z.union([UrlBasedPluginSchema, z.any()]))
+      .optional()
+      .describe('Snowplow plugins'),
+    // Activity tracking
+    activityTracking: ActivityTrackingSchema.optional().describe(
+      'Page ping configuration',
+    ),
+    // Global contexts - validated loosely to allow functions
+    globalContexts: z
+      .array(z.any())
+      .optional()
+      .describe('Global context entities'),
+    trackPageView: z
+      .boolean()
+      .optional()
+      .describe('Call trackPageView once right after the tracker starts'),
+    pageViewEvent: z
+      .string()
+      .optional()
+      .describe(
+        'Event name that calls trackPageView instead of a self-describing event (like page view)',
+      ),
+    userId: z
+      .unknown()
+      .optional()
+      .describe(
+        'walkerOS mapping value resolving to the user id, set once on the first event where it resolves',
+      ),
+    page: z
+      .object({
+        type: z.unknown().describe('Mapping value resolving to the page type'),
+        language: z
+          .unknown()
+          .optional()
+          .describe('Mapping value resolving to the page language'),
+        locale: z
+          .unknown()
+          .optional()
+          .describe('Mapping value resolving to the page locale'),
+      })
+      .optional()
+      .describe('Page context for setPageType (ecommerce plugin)'),
+    consent: z
+      .object({
+        required: z
+          .array(z.string())
+          .optional()
+          .describe('walkerOS consent groups to check'),
+        basisForProcessing: z
+          .string()
+          .optional()
+          .describe('Legal basis for processing under GDPR (default consent)'),
+        consentUrl: z
+          .string()
+          .optional()
+          .describe('URL of the privacy policy or consent document'),
+        consentVersion: z
+          .string()
+          .optional()
+          .describe('Version of the consent document'),
+        domainsApplied: z
+          .array(z.string())
+          .optional()
+          .describe('Domains where this consent applies'),
+        gdprApplies: z
+          .boolean()
+          .optional()
+          .describe('Whether GDPR applies to this user'),
+      })
+      .optional()
+      .describe(
+        'Consent event tracking through the Enhanced Consent plugin, used by the consent handler',
+      ),
+  })
+  .strict();
 
 export type Settings = z.infer<typeof SettingsSchema>;
 export type SnowplowSettings = z.infer<typeof SnowplowSettingsSchema>;

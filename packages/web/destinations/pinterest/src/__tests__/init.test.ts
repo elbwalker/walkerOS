@@ -63,13 +63,14 @@ describe('pinterest destination — init', () => {
     expect(calls).toEqual([['load', '2612345678901']]);
   });
 
-  it('returns false when apiKey is missing', async () => {
+  it('throws a config error when apiKey is missing', async () => {
     const dest = jest.requireActual('../').default;
     const env = clone(examples.env.push) as Env;
-    const result = await dest.init({
-      config: { settings: {} },
-      env,
-    });
-    expect(result).toBe(false);
+    await expect(
+      dest.init({
+        config: { settings: {} },
+        env,
+      }),
+    ).rejects.toMatchObject({ code: 'config' });
   });
 });

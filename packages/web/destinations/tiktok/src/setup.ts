@@ -1,22 +1,8 @@
 import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv } from '@walkeros/web-core';
 
-const DEFAULT_TIKTOK_SRC = 'https://analytics.tiktok.com/i18n/pixel/events.js';
-
-/**
- * Inject the TikTok Pixel CDN script. The real SDK replaces the queueing
- * stub created by setup() with a full implementation.
- */
-export function addScript(
-  env?: DestinationWeb.Env,
-  src = DEFAULT_TIKTOK_SRC,
-): void {
-  const { document } = getEnv(env);
-  const script = (document as Document).createElement('script');
-  script.src = src;
-  script.async = true;
-  (document as Document).head.appendChild(script);
-}
+/** The TikTok Pixel library, loaded through `loadVendor`. */
+export const SCRIPT_SRC = 'https://analytics.tiktok.com/i18n/pixel/events.js';
 
 interface TTQFunction {
   (...args: unknown[]): void;

@@ -22,8 +22,6 @@ export interface Settings {
   batchSize?: number;
   /** Batch event processor: flush interval in ms. Default: 1000. */
   flushInterval?: number;
-  /** Skip ODP manager initialization. Default: true. */
-  skipOdp?: boolean;
   /** Runtime state -- not user-facing. Mutated by init/push. */
   _state?: RuntimeState;
 }
