@@ -167,18 +167,19 @@ const errorsIn = (logs: LogLine[]) =>
   logs.filter((line) => line.level === Level.ERROR).length;
 
 /**
- * ERROR lines of the cause under test (item 2): the step's cause-log lines
- * with that code, read from their structured context, plus lines without a
- * code (the cause log always writes one, so such a line is the step's own
- * report of the failure). Lines of other causes do not count.
+ * ERROR lines of the cause under test (item 2), from their structured
+ * context: the cause log's line for the step and that code, plus every line
+ * that does not come from the cause log (it always writes a `step`), so a
+ * step's own report of the failure counts, coded or not. Cause-log lines of
+ * other causes do not count.
  */
 function causeLines(logs: LogLine[], code: string): number {
   const step = stepId('destination', STEP_ID);
   return logs.filter(
     ({ level, context }) =>
       level === Level.ERROR &&
-      (context.code === undefined ||
-        (context.code === code && context.step === step)),
+      (typeof context.step !== 'string' ||
+        (context.step === step && context.code === code)),
   ).length;
 }
 
@@ -1456,6 +1457,23 @@ type KitArgs =
   | ['store', StoreStep]
   | ['source', SourceStep];
 
+/** Profiles of steps that run in a browser: they need a document. */
+const BROWSER_PROFILES: Profile[] = ['web-sdk', 'vendor-global'];
+
+/**
+ * Refuses a browser profile in a test environment without a document (a
+ * server package on `web-sdk` would skip item 5 by mistake).
+ */
+export function assertProfileEnvironment(
+  profile: Profile,
+  hasDocument = typeof document !== 'undefined',
+): void {
+  if (BROWSER_PROFILES.includes(profile) && !hasDocument)
+    throw new Error(
+      `profile ${profile} is for web steps and needs a document: run it in a jsdom test environment, or use a server profile (http, sdk-env, socket)`,
+    );
+}
+
 const KIND_PROFILES: Record<KitArgs[0], Profile[]> = {
   destination: ['http', 'sdk-env', 'web-sdk', 'vendor-global', 'socket'],
   transformer: ['transformer'],
@@ -1517,6 +1535,7 @@ export async function conformance(...given: ConformanceArgs): Promise<void> {
     throw new Error(
       `profile ${options.profile} is not a ${kind} profile (${KIND_PROFILES[kind].join(', ')})`,
     );
+  assertProfileEnvironment(options.profile);
 
   const args = kitArgs(given);
   const ctx = contextOf(options);

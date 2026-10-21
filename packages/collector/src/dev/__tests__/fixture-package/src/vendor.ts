@@ -193,3 +193,14 @@ function pageScript(reports: boolean): Destination.Instance<Types> {
 
 export const pageScriptVendor = pageScript(true);
 export const pageScriptIgnoring = pageScript(false);
+
+/** Sends "revoked" to its vendor on every consent change, grant included. */
+export const alwaysRevoking: Destination.Instance<Types> = {
+  ...vendorGlobal,
+  type: 'always-revoking',
+  on: (type, { env }) => {
+    const vendor = env.vendor;
+    if (type !== 'consent' || !isVendor(vendor)) return;
+    vendor.consent(false);
+  },
+};

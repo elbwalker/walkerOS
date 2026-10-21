@@ -1,7 +1,7 @@
 import type { Flow, Store, Trigger, WalkerOS } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { startFlow } from '../../flow';
-import { conformance } from '../conformance';
+import { assertProfileEnvironment, conformance } from '../conformance';
 import { fixtures } from './fixtures';
 import {
   batching,
@@ -12,6 +12,7 @@ import {
   good,
   grouping,
   loud,
+  loudCoded,
   rawHttps,
   swallowing,
   swallowingByDefault,
@@ -27,6 +28,7 @@ import { missing, remote } from './fixture-package/src/store';
 import { chatty, forwarding } from './fixture-package/src/source';
 import type { Vendor } from './fixture-package/src/vendor';
 import {
+  alwaysRevoking,
   consentAware,
   consentIgnoring,
   initCalling,
@@ -224,6 +226,30 @@ describe('conformance kit', () => {
         'HTTP 500 writes 2 ERROR lines for transport',
       ),
     });
+  });
+
+  it("fails item 2 for a destination that logs its own coded line next to the collector's", async () => {
+    await expect(
+      conformance('destination', loudCoded, { profile: 'http', ...fixtures }),
+    ).rejects.toMatchObject({
+      items: [2],
+      message: expect.stringContaining(
+        'HTTP 500 writes 2 ERROR lines for transport',
+      ),
+    });
+  });
+
+  it('refuses a browser profile without a document, and nothing else', () => {
+    expect(() => assertProfileEnvironment('web-sdk', false)).toThrow(
+      /profile web-sdk is for web steps and needs a document/,
+    );
+    expect(() => assertProfileEnvironment('vendor-global', false)).toThrow(
+      /profile vendor-global is for web steps and needs a document/,
+    );
+    expect(() => assertProfileEnvironment('sdk-env', false)).not.toThrow();
+    expect(() => assertProfileEnvironment('http', false)).not.toThrow();
+    expect(() => assertProfileEnvironment('web-sdk', true)).not.toThrow();
+    expect(() => assertProfileEnvironment('vendor-global')).not.toThrow();
   });
 
   it('refuses fake timers with a clear message', async () => {
@@ -651,6 +677,15 @@ describe('conformance kit, vendor-global profile', () => {
           },
         }),
       ).rejects.toMatchObject({ items: [8] });
+    });
+
+    it('fails item 8 for a destination that revokes on the grant too', async () => {
+      await expect(
+        conformance('destination', alwaysRevoking, options),
+      ).rejects.toMatchObject({
+        items: [8],
+        message: expect.stringContaining("the grant makes the revoke's calls"),
+      });
     });
 
     it('fails item 8 for a destination that ignores the revocation', async () => {

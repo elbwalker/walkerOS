@@ -170,3 +170,17 @@ export const grouping: Destination.Instance<Types> = {
       await post(requireUrl(context.config), JSON.stringify({ group }));
   },
 };
+
+/** Logs its own coded ERROR line next to the collector's (item 2). */
+export const loudCoded: Destination.Instance<Types> = {
+  ...good,
+  type: 'loud-coded',
+  push: async (event, context) => {
+    try {
+      await good.push(event, context);
+    } catch (error) {
+      context.logger.error('Vendor request failed', { code: 'transport' });
+      throw error;
+    }
+  },
+};

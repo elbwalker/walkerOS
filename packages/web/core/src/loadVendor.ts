@@ -59,20 +59,29 @@ function scriptOf(src: string): HTMLScriptElement | undefined {
 function inject(
   src: string,
   timeout: number,
-  attributes: Record<string, string> = {},
+  attributes: Record<string, string>,
+  available: () => boolean,
 ): Injected {
   const existing = scriptOf(src);
   const known = existing && injected.get(existing);
   if (known) return known;
 
-  // A marked script without state (another bundle's) is watched, not doubled.
-  const script = existing ?? document.createElement('script');
   const entry: Injected = {
     state: 'loading',
     expired: false,
     timeout,
     waiting: [],
   };
+
+  // A marked script without state (another bundle's) is adopted, not
+  // doubled. Its `load` may have fired already: with the vendor there, it is
+  // ready at once; otherwise it is watched like an own script.
+  if (existing && available()) {
+    entry.state = 'loaded';
+    injected.set(existing, entry);
+    return entry;
+  }
+  const script = existing ?? document.createElement('script');
 
   const settle = (outcome: Outcome) => {
     const waiting = entry.waiting;
@@ -136,11 +145,17 @@ export function loadVendor<T>(
   get: () => T | undefined,
   options: LoadVendorOptions = {},
 ): Vendor<T> {
+  const available = () => {
+    const vendor = get();
+    return vendor !== undefined && vendor !== null;
+  };
+
   const script = src
     ? inject(
         src,
         resolveDestinationTimeout(options.timeout),
-        options.attributes,
+        options.attributes ?? {},
+        available,
       )
     : undefined;
 

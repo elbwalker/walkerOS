@@ -74,6 +74,33 @@ describe('loadVendor', () => {
     expect(scriptsOf(src)).toHaveLength(1);
   });
 
+  it("adopts another bundle's script that already loaded: ready at once", async () => {
+    const src = nextSrc();
+    // Another bundle injected and loaded it before this one asks.
+    const foreign = document.createElement('script');
+    foreign.src = src;
+    foreign.setAttribute(VENDOR_SCRIPT_MARKER, '');
+    document.head.appendChild(foreign);
+    sdk = { track: () => undefined };
+
+    await expect(loadVendor(src, get).ready()).resolves.toBe(sdk);
+    expect(scriptsOf(src)).toHaveLength(1);
+  });
+
+  it("watches another bundle's script that has not loaded yet", async () => {
+    const src = nextSrc();
+    const foreign = document.createElement('script');
+    foreign.src = src;
+    foreign.setAttribute(VENDOR_SCRIPT_MARKER, '');
+    document.head.appendChild(foreign);
+
+    const ready = loadVendor(src, get).ready();
+    sdk = { track: () => undefined };
+    fire(src, 'load');
+    await expect(ready).resolves.toBe(sdk);
+    expect(scriptsOf(src)).toHaveLength(1);
+  });
+
   it('resolves with get() after load', async () => {
     const src = nextSrc();
     const ready = loadVendor(src, get).ready();

@@ -684,11 +684,18 @@ export async function checkDestinationExample(
 
   const session = await openDestination(step, setup);
   try {
-    if (revoked.length) await session.run({ command: 'consent', data: grant });
+    const granted = revoked.length
+      ? await session.run({ command: 'consent', data: grant })
+      : undefined;
     const { result, effects } = await session.run(input);
     const problems: string[] = [];
     const out = compareOut(effects, example);
     if (out) problems.push(out);
+    // The grant must not revoke: its calls never equal the revoke's out.
+    if (granted && example.out?.length && isEqual(granted.effects, example.out))
+      problems.push(
+        `the grant makes the revoke's calls (${show(example.out)}): it must not revoke`,
+      );
     const outcome = compareOutcome(outcomeOf(result), example.outcome);
     if (outcome) problems.push(outcome);
     return problems;
