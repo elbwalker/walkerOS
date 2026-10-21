@@ -127,7 +127,7 @@ The server destinations for Segment, RudderStack, Amplitude and PostHog batch by
 
 - **Acknowledgement:** a batched event answers `queued` with the reason `batch`, so a server source acknowledges the producer when the event is queued. A failed flush is reported (one ERROR line with the status, the failed counter, the dead-letter queue) but the message is not redelivered.
 - **Retry budget:** the SDK retries inside the destination's `config.timeout`: a quarter of it per attempt, at most two retries. A value set in the settings wins. RudderStack has a `timeout` setting. Amplitude's requests time out through walkerOS's own transport, and a vendor that never answers fails after the budget.
-- **Deduplication:** each destination passes `event.id` as the vendor's dedup id (`messageId` for Segment and RudderStack, `insert_id` for Amplitude, a UUID derived from `event.id` for PostHog; other call types use `<event id>-<type>`). Delivery is at least once, and the vendor drops duplicates.
+- **Deduplication:** each destination passes `event.id` as the vendor's dedup id (`messageId` for Segment and RudderStack, `insert_id` for Amplitude, a UUID derived from `event.id` on PostHog's `capture` only; other call types of Segment, RudderStack and Amplitude use `<event id>-<type>`). Delivery is at least once, and the vendor drops duplicates.
 
 ## Create your own
 

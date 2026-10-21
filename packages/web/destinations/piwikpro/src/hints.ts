@@ -29,7 +29,7 @@ export const hints: Hint.Hints = {
     ],
   },
   'unmapped-events': {
-    text: 'An event without a rule name that is not a page view sends only its goal when the rule has settings.goalId, and is otherwise skipped with a warning (once per event name, then at debug level). A named rule with silent: true also sends only its goal. To keep other events out of the destination entirely, ignore everything with a wildcard and keep the page view explicitly.',
+    text: 'An event without a rule name that is not a page view sends only its goal when the rule has settings.goalId, and otherwise fails with missing-input; add an ignore: true rule for events you do not send. A named rule with silent: true also sends only its goal. To keep other events out of the destination entirely, ignore everything with a wildcard and keep the page view explicitly.',
     code: [
       {
         lang: 'json',

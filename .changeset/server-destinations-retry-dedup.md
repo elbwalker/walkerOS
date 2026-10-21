@@ -7,5 +7,5 @@
 
 Retries stay inside the destination's `config.timeout`: a quarter of it per
 attempt, at most two retries, and a value set in the settings wins. RudderStack
-gains a `timeout` setting. Each event carries `event.id` as the vendor's dedup
-id, so at-least-once delivery drops duplicates.
+gains a `timeout` setting. Events carry `event.id` as the vendor's dedup id
+(PostHog on `capture` only), so at-least-once delivery drops duplicates.

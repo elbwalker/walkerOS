@@ -218,7 +218,7 @@ see each line.
 | `beacon-rejected` | The browser refused a `sendBeacon` | only up to 64 KiB | Send smaller batches |
 | `consent-not-applied` | A destination's `on('consent')` handler failed | n/a | Fix the handler; the destination's events wait for one window of `config.timeout`, then fail with `blocked` |
 | `dlq-overflow` | A destination's dead-letter queue was full and evicted its oldest entry | n/a | Raise `dlqMax` or fix the failing destination; counted in `status.dropped` |
-| `on-overflow` | A destination's queue of waiting `on()` deliveries was full and dropped the oldest | n/a | Raise `queueMax`; counted in `status.dropped` |
+| `on-overflow` | A destination's queue of waiting `on()` deliveries was full and dropped the oldest | n/a | Raise the destination's own `config.queueMax`; counted in `status.dropped` |
 | `decode` | A store holds a value that cannot be decoded | no | Repair or delete the stored value; the read counts as a miss for that event |
 | `invalid` | An event was rejected as invalid input (a `WARN`) | no | Fix the producer |
 
