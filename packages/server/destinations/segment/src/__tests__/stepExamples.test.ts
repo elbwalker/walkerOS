@@ -29,21 +29,27 @@ function spyEnv(): { env: Env; collected: () => Captured[] } {
   const calls: Captured[] = [];
 
   const analytics: SegmentAnalyticsMock = {
-    track: (params) => {
+    track: (params, callback) => {
       calls.push(['analytics.track', params]);
+      callback?.();
     },
-    identify: (params) => {
+    identify: (params, callback) => {
       calls.push(['analytics.identify', params]);
+      callback?.();
     },
-    group: (params) => {
+    group: (params, callback) => {
       calls.push(['analytics.group', params]);
+      callback?.();
     },
-    page: (params) => {
+    page: (params, callback) => {
       calls.push(['analytics.page', params]);
+      callback?.();
     },
-    screen: (params) => {
+    screen: (params, callback) => {
       calls.push(['analytics.screen', params]);
+      callback?.();
     },
+    flush: () => Promise.resolve(),
     closeAndFlush: () => Promise.resolve(),
   };
 
@@ -86,6 +92,8 @@ describe('segment server destination -- step examples', () => {
     });
 
     await elb(event);
+    // The destination batches by default: send what it holds.
+    await elb('walker flush');
 
     expect(collected()).toEqual(example.out);
   });

@@ -1,7 +1,7 @@
 // Tests that push() surfaces an actionable error when the broker rejects
 // the produce call because the topic does not exist (kafkajs throws
 // KafkaJSProtocolError with code 3 / type UNKNOWN_TOPIC_OR_PARTITION).
-// The destination must log a message pointing the operator at
+// The push must fail with a message pointing the operator at
 // `walkeros setup destination.<id>` instead of swallowing the failure.
 
 import { createMockContext, createMockLogger, getEvent } from '@walkeros/core';
@@ -48,7 +48,7 @@ function makeConfig(producer: KafkaProducerMock): Config {
 }
 
 describe('push: actionable error when topic missing', () => {
-  it('logs walkeros setup hint on UNKNOWN_TOPIC_OR_PARTITION', async () => {
+  it('fails with the walkeros setup hint on UNKNOWN_TOPIC_OR_PARTITION', async () => {
     const send = jest.fn().mockRejectedValue(makeUnknownTopicError());
     const producer = makeProducer(send);
     const logger = createMockLogger();
@@ -58,23 +58,20 @@ describe('push: actionable error when topic missing', () => {
       id: 'kafka',
     });
 
-    await push(getEvent(), context);
-
-    expect(send).toHaveBeenCalledTimes(1);
-    expect(logger.error).toHaveBeenCalledTimes(1);
-
-    const [message, meta] = logger.error.mock.calls[0];
-    expect(typeof message).toBe('string');
-    expect(message).toContain('walkeros-events');
-    expect(message).toContain('walkeros setup destination.kafka');
-
-    expect(meta).toMatchObject({
-      topic: 'walkeros-events',
-      brokers: 'kafka1:9092,kafka2:9092',
+    await expect(push(getEvent(), context)).rejects.toMatchObject({
+      name: 'StepError',
+      code: 'config',
+      retryable: false,
+      message: expect.stringContaining(
+        'Kafka topic "walkeros-events" not found on cluster kafka1:9092,kafka2:9092',
+      ),
     });
+    expect(send).toHaveBeenCalledTimes(1);
+    // The collector writes the one line.
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
-  it('logs the original kafka push failure on unrelated errors', async () => {
+  it('fails with transport on unrelated errors', async () => {
     const unrelated = new Error('socket reset');
     const send = jest.fn().mockRejectedValue(unrelated);
     const producer = makeProducer(send);
@@ -85,11 +82,46 @@ describe('push: actionable error when topic missing', () => {
       id: 'kafka',
     });
 
+    await expect(push(getEvent(), context)).rejects.toMatchObject({
+      code: 'transport',
+      message: 'Kafka push failed',
+      cause: unrelated,
+    });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it('connects once, at the first push', async () => {
+    const connect = jest.fn().mockResolvedValue(undefined);
+    const producer = { ...makeProducer(() => Promise.resolve([])), connect };
+    const context = createMockContext({
+      config: makeConfig(producer),
+      logger: createMockLogger(),
+      id: 'kafka',
+    });
+
+    await push(getEvent(), context);
     await push(getEvent(), context);
 
-    expect(logger.error).toHaveBeenCalledTimes(1);
-    const [message, meta] = logger.error.mock.calls[0];
-    expect(message).toBe('Kafka push failed');
-    expect(meta).toMatchObject({ error: 'socket reset' });
+    expect(connect).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails a push whose connect fails, and connects again at the next', async () => {
+    const connect = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+      .mockResolvedValue(undefined);
+    const producer = { ...makeProducer(() => Promise.resolve([])), connect };
+    const context = createMockContext({
+      config: makeConfig(producer),
+      logger: createMockLogger(),
+      id: 'kafka',
+    });
+
+    await expect(push(getEvent(), context)).rejects.toMatchObject({
+      code: 'transport',
+      message: 'Kafka producer connect failed',
+    });
+    await expect(push(getEvent(), context)).resolves.toBeUndefined();
+    expect(connect).toHaveBeenCalledTimes(2);
   });
 });

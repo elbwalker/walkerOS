@@ -107,6 +107,8 @@ describe('posthog server destination — step examples', () => {
           },
         });
         await elb(event);
+        // The destination batches by default: send what it holds.
+        await elb('walker flush');
       }
 
       expect(collected()).toEqual(example.out);

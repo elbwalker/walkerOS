@@ -39,8 +39,10 @@ export interface Settings {
   /** Enable gzip compression. Default: true. */
   gzip?: boolean;
   /** Runtime state -- not user-facing. Mutated by init/push. */
-  _analytics?: unknown;
+  _analytics?: RudderStackAnalyticsMock;
   _state?: RuntimeState;
+  /** The running flush; the next one waits for it. Runtime only. */
+  _flushing?: Promise<void>;
 }
 
 export interface RuntimeState {
@@ -84,14 +86,35 @@ export interface Env extends DestinationServer.Env {
  * destination actually calls. Tests can provide this via env.analytics
  * instead of the real SDK.
  */
+/** Called once the SDK sent the call, with the error if it failed. */
+export type RudderStackCallback = (error?: Error, data?: unknown) => void;
+
 export interface RudderStackAnalyticsMock {
-  track: (params: Record<string, unknown>) => void;
-  identify: (params: Record<string, unknown>) => void;
-  group: (params: Record<string, unknown>) => void;
-  page: (params: Record<string, unknown>) => void;
-  screen: (params: Record<string, unknown>) => void;
-  alias: (params: Record<string, unknown>) => void;
-  flush: (callback?: (err?: Error, data?: unknown) => void) => Promise<void>;
+  track: (
+    params: Record<string, unknown>,
+    callback?: RudderStackCallback,
+  ) => unknown;
+  identify: (
+    params: Record<string, unknown>,
+    callback?: RudderStackCallback,
+  ) => unknown;
+  group: (
+    params: Record<string, unknown>,
+    callback?: RudderStackCallback,
+  ) => unknown;
+  page: (
+    params: Record<string, unknown>,
+    callback?: RudderStackCallback,
+  ) => unknown;
+  screen: (
+    params: Record<string, unknown>,
+    callback?: RudderStackCallback,
+  ) => unknown;
+  alias: (
+    params: Record<string, unknown>,
+    callback?: RudderStackCallback,
+  ) => unknown;
+  flush: (callback?: RudderStackCallback) => Promise<void>;
 }
 
 export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
@@ -106,6 +129,7 @@ export type Config = {
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;
+export type PushBatchFn = CoreDestination.PushBatchFn<Types>;
 export type PartialConfig = DestinationServer.PartialConfig<Types>;
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 export type Rule = WalkerOSMapping.Rule<Mapping>;

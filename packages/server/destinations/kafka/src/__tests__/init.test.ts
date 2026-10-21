@@ -53,7 +53,7 @@ describe('init', () => {
     ).rejects.toThrow('topic');
   });
 
-  it('creates and connects a producer on valid config', async () => {
+  it('creates a producer on valid config, without connecting it', async () => {
     const logger = makeLogger();
     const result = await destinationKafka.init!({
       config: {

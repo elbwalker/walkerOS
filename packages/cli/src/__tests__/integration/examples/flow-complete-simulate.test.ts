@@ -103,6 +103,7 @@ const INGEST: Record<string, Record<string, unknown>> = {
   'server.destinations.meta.purchase': CHROME,
   'server.destinations.piwikpro.orderWithGoal': CHROME,
   'server.destinations.datamanager.conversionWithGclid': CHROME,
+  'server.destinations.pubsub.everyEvent': CHROME,
 };
 
 /**

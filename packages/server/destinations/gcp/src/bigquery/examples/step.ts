@@ -53,3 +53,12 @@ export const purchase: Flow.StepExample = {
   mapping: undefined,
   out: [['appendRows', [expectedRow(purchaseEvent)]]],
 };
+
+/** A silent rule appends no row. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true appends no row.',
+  in: getEvent('page view', { timestamp: 1700000000500 }),
+  mapping: { silent: true },
+  out: [],
+};

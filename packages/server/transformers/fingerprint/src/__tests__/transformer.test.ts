@@ -11,11 +11,15 @@ import type { FingerprintSettings } from '../types';
 describe('Transformer Fingerprint', () => {
   const mockLogger = createMockLogger();
 
-  const createInitContext = (
-    config: Transformer.Config<Transformer.Types<FingerprintSettings>>,
-  ) =>
+  // Every config gets the required salt.
+  const createInitContext = (config: {
+    settings: Omit<FingerprintSettings, 'salt'>;
+  }) =>
     createMockContext<Transformer.Types<FingerprintSettings>>({
-      config,
+      config: {
+        ...config,
+        settings: { salt: 'test-salt', ...config.settings },
+      },
       logger: mockLogger,
       id: 'test-fingerprint',
     });
@@ -173,7 +177,7 @@ describe('Transformer Fingerprint', () => {
       expect(getByPath(result, 'event.user.hash')).toBeDefined();
     });
 
-    it('should handle undefined ingest', async () => {
+    it('fails with missing-input when every input resolves empty', async () => {
       const initContext = createInitContext({
         settings: {
           fields: ['ingest.ip'],
@@ -185,13 +189,12 @@ describe('Transformer Fingerprint', () => {
 
       const pushContext = createPushContext(undefined);
 
-      const result = await transformer.push(baseEvent, pushContext);
-
-      expect(result).toBeDefined();
-      expect(getByPath(result, 'event.user.hash')).toBeDefined();
+      await expect(
+        transformer.push(baseEvent, pushContext),
+      ).rejects.toMatchObject({ name: 'StepError', code: 'missing-input' });
     });
 
-    it('should handle empty fields array', async () => {
+    it('does not start without an input that tells visitors apart', async () => {
       const initContext = createInitContext({
         settings: {
           fields: [],
@@ -199,15 +202,9 @@ describe('Transformer Fingerprint', () => {
         },
       });
 
-      const transformer = await transformerFingerprint(initContext);
-
-      const pushContext = createPushContext({ ip: '192.168.1.1' });
-
-      const result = await transformer.push(baseEvent, pushContext);
-
-      // Empty fields = hash of empty string
-      expect(result).toBeDefined();
-      expect(getByPath(result, 'event.user.hash')).toBeDefined();
+      expect(() => transformerFingerprint(initContext)).toThrow(
+        expect.objectContaining({ name: 'StepError', code: 'config' }),
+      );
     });
   });
 

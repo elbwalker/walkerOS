@@ -382,3 +382,12 @@ export const batchPost: Flow.StepExample = {
     ],
   ],
 };
+
+export const noRequest: Flow.StepExample = {
+  public: false,
+  description:
+    'An event without a GA4 request in its ingest (the source sets no ingest.url): nothing to decode, so the transformer fails it with missing-input instead of dropping all traffic.',
+  in: { name: 'page view', source: { type: 'express', platform: 'server' } },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
+};

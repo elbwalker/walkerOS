@@ -1,4 +1,5 @@
 import type { Ingest, Transformer } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import { parseRequest, splitBodyLines } from './parse';
 import { mapHitToEvents } from './map';
 import { defaultMapping } from './defaults';
@@ -14,8 +15,8 @@ import type { GA4Request, GA4Settings } from './types';
  * `Record<string, unknown>` per `@walkeros/core`, so each field is
  * narrowed with a `typeof` guard instead of a cast.
  *
- * Returns `null` if `url` is missing or not a string — the caller drops
- * the event in that case.
+ * Returns `null` if `url` is missing or not a string: the caller fails the
+ * event with `missing-input`.
  */
 function readGA4Request(ingest: Ingest): GA4Request | null {
   const url = ingest.url;
@@ -42,11 +43,14 @@ export const transformerGa4: Transformer.Init<
     async push(_event, ctx) {
       const { logger } = ctx;
 
+      // Without a request there is nothing to decode: a wiring mistake (the
+      // source's config.ingest) that would drop all traffic, so it fails.
       const raw = readGA4Request(ctx.ingest);
-      if (!raw) {
-        logger.debug('transformer-ga4: no request in ingest; skipping');
-        return false;
-      }
+      if (!raw)
+        throw new StepError(
+          'transformer-ga4: no GA4 request in ingest (ingest.url missing)',
+          { code: 'missing-input' },
+        );
 
       // Bound the fan-out before decoding: every event becomes a concurrent
       // push, and the source's batch cap does not apply to a raw text body.
@@ -85,9 +89,14 @@ export const transformerGa4: Transformer.Init<
         if (events.length === 1) return { event: events[0] };
         return events.map((event) => ({ event }));
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        logger.error(`transformer-ga4: parse error: ${message}`);
-        return false;
+        // The collector reports it; the message names no request content.
+        throw new StepError(
+          'transformer-ga4: the GA4 request could not be decoded',
+          {
+            code: 'transformer',
+            cause: err,
+          },
+        );
       }
     },
   };

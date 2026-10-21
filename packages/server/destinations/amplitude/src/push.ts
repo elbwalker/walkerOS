@@ -1,8 +1,12 @@
+import type { Collector, Destination, WalkerOS } from '@walkeros/core';
 import type {
   PushFn,
+  PushBatchFn,
   AmplitudeSDK,
   EventOptions,
   IdentifyInstance,
+  Rule,
+  Settings,
 } from './types';
 import {
   getMappingValue,
@@ -11,7 +15,9 @@ import {
   isNumber,
   isObject,
   isString,
+  isThenable,
   flattenIncludeSections,
+  StepError,
 } from '@walkeros/core';
 import * as amplitudeSDK from '@amplitude/analytics-node';
 
@@ -65,6 +71,33 @@ export function getAmplitude(
 ): AmplitudeSDK {
   const amplitude = env?.amplitude as AmplitudeSDK | undefined;
   return amplitude ?? (amplitudeSDK as unknown as AmplitudeSDK);
+}
+
+/**
+ * Hand one call to the SDK; the promise settles once Amplitude answered it.
+ * The SDK resolves the call's promise after the send with a result whose
+ * `code` is the HTTP status (0 for a failed request), never rejecting, so a
+ * code outside 2xx fails. An injected client may answer with a promise of its
+ * own.
+ */
+async function call(message: string, send: () => unknown): Promise<void> {
+  let result: unknown;
+  try {
+    const answer: unknown = await send();
+    result =
+      isObject(answer) && isThenable(answer.promise)
+        ? await answer.promise
+        : answer;
+  } catch (error) {
+    throw new StepError(message, { code: 'transport', cause: error });
+  }
+  const code =
+    isObject(result) && isNumber(result.code) ? result.code : undefined;
+  if (code !== undefined && (code < 200 || code >= 300))
+    throw new StepError(`${message} (code ${code})`, {
+      code: 'transport',
+      status: code || undefined,
+    });
 }
 
 /**
@@ -172,13 +205,32 @@ function buildEventOptions(
   return opts;
 }
 
-export const push: PushFn = async function (
-  event,
-  { config, rule, data, collector, env },
-) {
-  const amp = getAmplitude(env as Record<string, unknown> | undefined);
-  const settings = config.settings!;
+/** A call's outcome, marked as handled until its batch reads it. */
+function held(sent: Promise<void>): Promise<void> {
+  sent.catch(() => undefined);
+  return sent;
+}
+
+/** The settled calls of one event: the first failure, if any. */
+async function delivered(calls: Promise<PromiseSettledResult<void>[]>) {
+  for (const result of await calls)
+    if (result.status === 'rejected') throw result.reason;
+}
+
+/**
+ * Hand the calls of one event to the SDK (identify, group, group identify,
+ * revenue, track); each returned promise settles on its answer.
+ */
+async function enqueue(
+  amp: AmplitudeSDK,
+  event: WalkerOS.Event,
+  rule: Rule | undefined,
+  data: Destination.Data,
+  settings: Partial<Settings>,
+  collector: Collector.Instance,
+): Promise<Promise<void>[]> {
   const mappingSettings = rule?.settings || {};
+  const calls: Promise<void>[] = [];
 
   // 1. Resolve identity -- rule-level override wins over destination-level.
   const identifyMapping = mappingSettings.identify ?? settings.identify;
@@ -215,7 +267,14 @@ export const push: PushFn = async function (
   // 4. Identify operations -- fires amplitude.identify() if op keys are present.
   if (identifyResolved) {
     const id = buildIdentify(amp, identifyResolved);
-    if (id) amp.identify(id, hasEventOptions ? eventOptions : undefined);
+    if (id)
+      calls.push(
+        held(
+          call('Amplitude identify failed', () =>
+            amp.identify(id, hasEventOptions ? eventOptions : undefined),
+          ),
+        ),
+      );
   }
 
   // 5. Group assignment
@@ -228,13 +287,18 @@ export const push: PushFn = async function (
         type?: unknown;
         name?: unknown;
       };
-      if (isString(type) && (isString(name) || isArray(name))) {
-        amp.setGroup(
-          type,
-          name as string | string[],
-          hasEventOptions ? eventOptions : undefined,
+      if (isString(type) && (isString(name) || isArray(name)))
+        calls.push(
+          held(
+            call('Amplitude setGroup failed', () =>
+              amp.setGroup(
+                type,
+                name as string | string[],
+                hasEventOptions ? eventOptions : undefined,
+              ),
+            ),
+          ),
         );
-      }
     }
   }
 
@@ -253,11 +317,17 @@ export const push: PushFn = async function (
       if (isString(type) && isString(name)) {
         const id = buildIdentify(amp, resolved as Record<string, unknown>);
         if (id)
-          amp.groupIdentify(
-            type,
-            name,
-            id,
-            hasEventOptions ? eventOptions : undefined,
+          calls.push(
+            held(
+              call('Amplitude groupIdentify failed', () =>
+                amp.groupIdentify(
+                  type,
+                  name,
+                  id,
+                  hasEventOptions ? eventOptions : undefined,
+                ),
+              ),
+            ),
           );
       }
     }
@@ -275,9 +345,15 @@ export const push: PushFn = async function (
         : [];
     for (const item of items) {
       if (!isObject(item)) continue;
-      amp.revenue(
-        buildRevenue(amp, item),
-        hasEventOptions ? eventOptions : undefined,
+      calls.push(
+        held(
+          call('Amplitude revenue failed', () =>
+            amp.revenue(
+              buildRevenue(amp, item),
+              hasEventOptions ? eventOptions : undefined,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -294,10 +370,99 @@ export const push: PushFn = async function (
         ? (data as Record<string, unknown>)
         : {};
 
-    amp.track(
-      eventType,
-      eventProperties,
-      hasEventOptions ? eventOptions : undefined,
+    calls.push(
+      held(
+        call('Amplitude track failed', () =>
+          amp.track(
+            eventType,
+            eventProperties,
+            hasEventOptions ? eventOptions : undefined,
+          ),
+        ),
+      ),
     );
   }
+
+  return calls;
+}
+
+/** Ask the SDK to send what it holds. */
+async function flush(amp: AmplitudeSDK): Promise<void> {
+  await amp.flush().promise;
+}
+
+/** The settings init resolved, or a StepError. */
+function settingsOf(
+  settings: Partial<Settings> | undefined,
+): Partial<Settings> {
+  if (!settings)
+    throw new StepError('Amplitude settings missing, init() not run', {
+      code: 'not-ready',
+    });
+  return settings;
+}
+
+/** One event: its calls handed to the SDK, sent, and their answers awaited. */
+export const push: PushFn = async function (
+  event,
+  { config, rule, data, collector, env },
+) {
+  const amp = getAmplitude(env as Record<string, unknown> | undefined);
+  const settings = settingsOf(config.settings);
+  const calls = await enqueue(amp, event, rule, data, settings, collector);
+  if (calls.length) {
+    const settled = Promise.allSettled(calls);
+    await flush(amp);
+    await delivered(settled);
+  }
+};
+
+/**
+ * A flushed `config.batch` batch: every entry's calls handed to the SDK, one
+ * flush, and each entry's own outcome from its answers. When nothing landed,
+ * the batch throws.
+ */
+export const pushBatch: PushBatchFn = async function (
+  batch,
+  { config, collector, env },
+) {
+  const amp = getAmplitude(env as Record<string, unknown> | undefined);
+  const settings = settingsOf(config.settings);
+
+  // Each entry's answers, or why its calls could not be handed over.
+  const outcomes: Array<{
+    settled?: Promise<PromiseSettledResult<void>[]>;
+    error?: unknown;
+  }> = [];
+  for (const entry of batch.entries) {
+    try {
+      const calls = await enqueue(
+        amp,
+        entry.event,
+        entry.rule,
+        entry.data,
+        settings,
+        collector,
+      );
+      outcomes.push({ settled: Promise.allSettled(calls) });
+    } catch (error) {
+      outcomes.push({ error });
+    }
+  }
+
+  await flush(amp);
+
+  const failed: Destination.BatchFailure[] = [];
+  for (const [index, { settled, error }] of outcomes.entries()) {
+    if (!settled) failed.push({ index, error });
+    else
+      await delivered(settled).catch((reason: unknown) =>
+        failed.push({ index, error: reason }),
+      );
+  }
+
+  // Nothing landed: a whole-batch failure, which the breaker counts.
+  if (failed.length && failed.length === batch.entries.length)
+    throw failed[0].error;
+  if (failed.length) return { failed };
 };

@@ -15,9 +15,9 @@ import type { PushBatchFn } from './types';
  * would pass the breaker unseen. This destination never returns one.
  */
 export const pushBatch: PushBatchFn = async (batch, { config, logger }) => {
-  // Nothing to send and nothing to report. An insert of no rows would spend a
-  // round trip, and a deduplication token, on an empty block.
-  if (batch.entries.length === 0) return;
-
-  await deliver(batch.entries, config, logger);
+  // A silent rule has no insert of its own. With nothing left to send there is
+  // nothing to report: an insert of no rows would spend a round trip, and a
+  // deduplication token, on an empty block.
+  const entries = batch.entries.filter((entry) => !entry.rule?.silent);
+  if (entries.length) await deliver(entries, config, logger);
 };

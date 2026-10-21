@@ -1,16 +1,16 @@
 import type { Config, Env, PartialConfig, Settings } from './types';
-import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import { PostHog } from 'posthog-node';
 
 export function getConfig(
   partialConfig: PartialConfig = {},
   env: Env | undefined,
-  logger: Logger.Instance,
 ): Config {
-  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { apiKey } = settings;
 
-  if (!apiKey) logger.throw('Config settings apiKey missing');
+  if (!apiKey)
+    throw new StepError('Config settings apiKey missing', { code: 'config' });
 
   // Extract PostHog SDK options from settings
   const options: Record<string, unknown> = {};

@@ -40,8 +40,9 @@ function makeSpyEnv(): SpyEnv {
     };
     if (!existing) state.captured.set(path, file);
     const stream: FileWriteStream = {
-      write(chunk) {
+      write(chunk, callback) {
         file.lines.push(chunk);
+        callback();
         return true;
       },
       end() {

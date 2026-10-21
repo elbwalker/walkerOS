@@ -1,15 +1,18 @@
-import type { Env, SegmentAnalyticsMock } from '../types';
+import type { Env, SegmentAnalyticsMock, SegmentCallback } from '../types';
 
-const noop = () => {};
+/** Every call is delivered: its callback answers without a reason. */
+const delivered = (_params: unknown, callback?: SegmentCallback) =>
+  callback?.();
 const asyncNoop = () => Promise.resolve();
 
 function createMockAnalytics(): SegmentAnalyticsMock {
   return {
-    track: noop,
-    identify: noop,
-    group: noop,
-    page: noop,
-    screen: noop,
+    track: delivered,
+    identify: delivered,
+    group: delivered,
+    page: delivered,
+    screen: delivered,
+    flush: asyncNoop,
     closeAndFlush: asyncNoop,
   };
 }

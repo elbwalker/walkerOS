@@ -6,6 +6,7 @@ import type {
   RedisClientConstructor,
   RedisClientOptions,
 } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig, isRedisEnv } from './config';
 import { push } from './push';
 
@@ -17,8 +18,8 @@ export const destinationRedis: Destination = {
 
   config: {},
 
-  async init({ config: partialConfig, logger, env }) {
-    const config = getConfig(partialConfig, logger);
+  async init({ config: partialConfig, env, reportError }) {
+    const config = getConfig(partialConfig);
     const settings = config.settings as Settings;
     const redis = settings.redis;
 
@@ -44,15 +45,17 @@ export const destinationRedis: Destination = {
         // ioredis exports the class as default (ESM) and as named Redis export.
         Constructor = ioredis.default ?? ioredis.Redis;
       } catch (err) {
-        logger.throw(`Failed to load ioredis: ${String(err)}`);
-        return config;
+        throw new StepError('Failed to load ioredis', {
+          code: 'not-ready',
+          cause: err,
+        });
       }
     }
 
-    if (!Constructor) {
-      logger.throw('ioredis constructor not found');
-      return config;
-    }
+    if (!Constructor)
+      throw new StepError('ioredis constructor not found', {
+        code: 'not-ready',
+      });
 
     let client: RedisClientMock;
     if (redis.url) {
@@ -60,6 +63,10 @@ export const destinationRedis: Destination = {
     } else {
       client = new Constructor(redis.options ?? ({} as RedisClientOptions));
     }
+
+    // ioredis reports a lost connection as an `error` event; without a
+    // listener it is unhandled. A failed XADD still fails its own push.
+    client.on?.('error', (err) => reportError?.(err));
 
     redis._client = client;
     redis._ownedClient = true;
@@ -80,7 +87,11 @@ export const destinationRedis: Destination = {
     // Only close clients the destination created (not user-provided)
     if (client && redis._ownedClient) {
       try {
-        await client.quit();
+        // A client that is not connected would queue QUIT behind its unsent
+        // commands and never answer: close it at once instead.
+        if (client.status && client.status !== 'ready' && client.disconnect)
+          client.disconnect();
+        else await client.quit();
       } finally {
         redis._client = undefined;
         redis._ownedClient = undefined;

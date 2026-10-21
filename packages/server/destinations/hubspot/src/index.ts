@@ -1,60 +1,47 @@
-import type { Destination, Settings, HubSpotClientMock } from './types';
+import type { Destination } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig } from './config';
-import { push, flushBatch } from './push';
+import { push, pushBatch } from './push';
 
 // Types
 export * as DestinationHubspot from './types';
 
+/**
+ * Batching is the collector's `config.batch`: a flushed batch goes out
+ * through the batch API in `pushBatch`, with each entry's own outcome.
+ */
 export const destinationHubspot: Destination = {
   type: 'hubspot',
 
   config: {},
 
-  init({ config: partialConfig, logger, env }) {
-    const config = getConfig(partialConfig, logger);
-    const settings = config.settings as Settings;
+  init({ config: partialConfig, env }) {
+    const config = getConfig(partialConfig);
+    const { settings } = config;
 
     // Use env.client mock if provided (testing), otherwise create real SDK
-    const envClient = (env as { client?: HubSpotClientMock } | undefined)
-      ?.client;
-
-    if (!envClient) {
-      // Production path: create real HubSpot Client instance
+    if (!env?.client) {
       try {
         const { Client } = require('@hubspot/api-client');
         settings._client = new Client({
           accessToken: settings.accessToken,
         });
       } catch (err) {
-        logger.throw(`Failed to initialize HubSpot SDK: ${err}`);
+        throw new StepError('Failed to initialize the HubSpot SDK', {
+          code: 'not-ready',
+          cause: err,
+        });
       }
     }
 
     settings._state = {};
-    if (settings.batch) settings._eventQueue = [];
 
     return config;
   },
 
-  async push(event, context) {
-    return await push(event, context);
-  },
+  push,
 
-  async destroy({ config }) {
-    const settings = (config?.settings || {}) as Settings;
-
-    // Flush remaining queued events in batch mode
-    if (
-      settings.batch &&
-      settings._eventQueue &&
-      settings._eventQueue.length > 0
-    ) {
-      const sdk = settings._client;
-      if (sdk) {
-        await flushBatch(sdk, settings);
-      }
-    }
-  },
+  pushBatch,
 };
 
 export default destinationHubspot;

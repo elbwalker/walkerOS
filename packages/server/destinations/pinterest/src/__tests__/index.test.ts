@@ -61,7 +61,7 @@ describe('Server Destination Pinterest', () => {
         logger: createMockLogger(),
         id: 'test-pinterest',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, adAccountId missing');
     await expect(
       destination.init({
         config: { settings: { accessToken, adAccountId: '' } },

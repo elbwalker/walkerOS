@@ -1,14 +1,12 @@
 import type { Config, Settings, PartialConfig } from './types';
-import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 
-export function getConfig(
-  partialConfig: PartialConfig = {},
-  logger: Logger.Instance,
-): Config {
-  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+export function getConfig(partialConfig: PartialConfig = {}): Config {
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { writeKey } = settings;
 
-  if (!writeKey) logger.throw('Config settings writeKey missing');
+  if (!writeKey)
+    throw new StepError('Config settings writeKey missing', { code: 'config' });
 
   const settingsConfig: Settings = {
     ...settings,

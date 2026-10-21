@@ -93,9 +93,11 @@ describe('init', () => {
   it('refuses a config without settings', async () => {
     const { env } = createStub();
 
-    await expect(destination.init(initContext({}, env))).rejects.toThrow(
-      'Config settings missing',
-    );
+    await expect(destination.init(initContext({}, env))).rejects.toMatchObject({
+      name: 'StepError',
+      code: 'config',
+      message: 'Config settings url missing',
+    });
   });
 
   it('queries nothing', async () => {

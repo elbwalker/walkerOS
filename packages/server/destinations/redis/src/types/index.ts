@@ -24,6 +24,10 @@ export interface RedisClientMock {
   xadd: (...args: XaddArg[]) => Promise<string | null>;
   pipeline: () => RedisPipelineMock;
   quit: () => Promise<string>;
+  /** Closes at once, without waiting for queued commands (ioredis). */
+  disconnect?: () => void;
+  /** The connection state (ioredis): `ready` once it can send. */
+  status?: string;
   on?: (event: string, listener: (...args: unknown[]) => void) => unknown;
 }
 

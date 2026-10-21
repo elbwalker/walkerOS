@@ -203,3 +203,14 @@ export const ignoredEvent: KafkaStepExample = {
   mapping: { ignore: true },
   out: [],
 };
+
+/**
+ * Silent rule -- mapping.silent: true sends no message.
+ */
+export const silentRule: KafkaStepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no message.',
+  in: getEvent('page view', { timestamp: 1700000106 }),
+  mapping: { silent: true },
+  out: [],
+};

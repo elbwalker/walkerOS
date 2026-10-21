@@ -1,10 +1,7 @@
-import {
-  createWriteStream as nodeCreateWriteStream,
-  type WriteStream,
-} from 'node:fs';
+import { createWriteStream as nodeCreateWriteStream } from 'node:fs';
 import { mkdir as nodeMkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { getByPath, isObject } from '@walkeros/core';
+import { getByPath, isObject, isThenable, StepError } from '@walkeros/core';
 import type { WalkerOS } from '@walkeros/core';
 import type { Env, FileWriteStream, Format } from './types';
 
@@ -16,9 +13,30 @@ import type { Env, FileWriteStream, Format } from './types';
 export interface State {
   handles: Map<string, FileWriteStream>;
   fs: NonNullable<Env['fs']>;
+  /** Receives a stream's `error` event (a failed open or write). */
+  onError?: (error: unknown) => void;
 }
 
-export function createState(env: Env | undefined): State {
+/** The code of a failed file operation (`EACCES`, `ENOSPC`), duck-typed. */
+function errorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('code' in error))
+    return undefined;
+  return typeof error.code === 'string' ? error.code : undefined;
+}
+
+/** A failed file operation as a StepError; the path stays in the cause. */
+export function fileError(operation: string, error: unknown): StepError {
+  const code = errorCode(error);
+  return new StepError(
+    `file destination: ${operation} failed${code ? ` (${code})` : ''}`,
+    { code: 'transport', cause: error },
+  );
+}
+
+export function createState(
+  env: Env | undefined,
+  onError?: (error: unknown) => void,
+): State {
   const fsOverride = env?.fs;
   const defaultFs: NonNullable<Env['fs']> = {
     createWriteStream: (path: string, options: { flags: string }) =>
@@ -30,6 +48,7 @@ export function createState(env: Env | undefined): State {
   return {
     handles: new Map(),
     fs: fsOverride ?? defaultFs,
+    onError,
   };
 }
 
@@ -47,9 +66,32 @@ export async function ensureHandle(
   await state.fs.mkdir(dirname(filename) || '.', { recursive: true });
   const handle = state.fs.createWriteStream(filename, {
     flags: 'a',
-  }) as FileWriteStream | WriteStream;
+  });
+  // An unheard `error` event would crash the process. A broken stream is
+  // dropped, so the next event opens the file again.
+  handle.on?.('error', (error) => {
+    if (state.handles.get(filename) === handle) state.handles.delete(filename);
+    state.onError?.(fileError('stream', error));
+  });
   state.handles.set(filename, handle);
   return handle;
+}
+
+/**
+ * Write one line and wait until it is written; a failed write throws. A
+ * node stream answers through the callback; an injected writer (tests,
+ * simulation) may answer with a promise instead.
+ */
+export function writeLine(
+  handle: FileWriteStream,
+  line: string,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const answer: unknown = handle.write(line, (error) =>
+      error ? reject(error) : resolve(),
+    );
+    if (isThenable(answer)) answer.then(() => resolve(), reject);
+  });
 }
 
 /**

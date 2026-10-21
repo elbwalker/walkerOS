@@ -96,10 +96,7 @@ export async function setup(
     );
   }
   if (!client) {
-    const credentials = parseCredentials(
-      resolveCredentials(config, logger),
-      logger,
-    );
+    const credentials = parseCredentials(resolveCredentials(config, logger));
     const clientOptions = {
       projectId,
       ...(credentials !== undefined && typeof credentials !== 'string'

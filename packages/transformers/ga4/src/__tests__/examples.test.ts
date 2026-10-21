@@ -69,7 +69,12 @@ function withoutTimestamp(effects: readonly unknown[]): unknown[] {
 const emptyEvent: WalkerOS.DeepPartialEvent = {};
 
 describe('Step Examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
+  // Non-public examples (failures) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each(published)('%s', async (_name, example) => {
     expect(isGA4Request(example.in)).toBe(true);
     if (!isGA4Request(example.in)) return; // type narrow
 

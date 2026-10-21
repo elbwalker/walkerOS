@@ -10,10 +10,9 @@ import type { Mapping } from '@walkeros/core';
 export interface FingerprintSettings {
   /**
    * Secret key for the hash (HMAC), e.g. "$env.FINGERPRINT_SALT".
-   * Without it the hash can be reversed to the IP by brute force; the
-   * transformer then warns once and hashes unkeyed.
+   * Required: without it the hash could be reversed to the IP by brute force.
    */
-  salt?: string;
+  salt: string;
 
   /**
    * Rotation window in UTC. The same visitor gets a new hash each window.

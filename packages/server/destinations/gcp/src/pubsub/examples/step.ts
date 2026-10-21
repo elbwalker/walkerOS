@@ -201,3 +201,12 @@ export const pageView: Flow.StepExample = {
     ['publishMessage', 'events', { data: expectedPayload(pageEvent) }],
   ],
 };
+
+/** A silent rule publishes no message. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true publishes no message.',
+  in: getEvent('page view', { timestamp: 1700000000500 }),
+  mapping: { silent: true },
+  out: [],
+};

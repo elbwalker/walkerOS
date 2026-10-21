@@ -382,6 +382,43 @@ export const consentForwarding: SegmentStepExample = {
 };
 
 /**
+ * No identity -- neither userId nor anonymousId resolves from the event, so
+ * Segment cannot take it: the push fails with missing-input instead of
+ * counting as delivered. One per event name above, so every example's event
+ * without identity has its declared outcome.
+ */
+function withoutIdentity(name: string, timestamp: number): SegmentStepExample {
+  const [entity, action] = name.split(' ');
+  return {
+    public: false,
+    description: `A ${name} event without userId or anonymousId cannot be sent to Segment: the push fails with missing-input instead of counting as delivered.`,
+    in: { name, entity, action, timestamp },
+    out: [],
+    outcome: { status: 'failed', code: 'missing-input', retryable: false },
+  };
+}
+
+export const noIdentityProduct = withoutIdentity('product view', 1700000110);
+export const noIdentityOrder = withoutIdentity('order complete', 1700000111);
+export const noIdentityPage = withoutIdentity('page view', 1700000112);
+export const noIdentityLogin = withoutIdentity('user login', 1700000113);
+export const noIdentityCompany = withoutIdentity('company update', 1700000114);
+export const noIdentityScreen = withoutIdentity('screen view', 1700000115);
+
+/** A silent rule without identify, group, page or screen calls nothing. */
+export const silentRule: SegmentStepExample = {
+  public: false,
+  description:
+    'A rule with silent: true and no identify, group, page or screen mapping sends nothing to Segment.',
+  in: getEvent('page view', {
+    timestamp: 1700000116,
+    user: { id: 'us3r', session: 's3ss10n' },
+  }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
  * Wildcard ignore -- the event matches a mapping rule with ignore: true.
  * The destination fires zero SDK calls.
  */
@@ -393,5 +430,24 @@ export const wildcardIgnored: SegmentStepExample = {
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: { ignore: true },
+  out: [],
+};
+
+/**
+ * The silent group rule of companyGroup on an event without company data: no
+ * groupId resolves and the rule suppresses the track, so nothing is sent.
+ */
+export const companyGroupWithoutData: SegmentStepExample = {
+  public: false,
+  description:
+    'A silent group rule whose groupId finds no data sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: {
+    name: 'company update',
+    entity: 'company',
+    action: 'update',
+    timestamp: 1700000120,
+    user: { id: 'us3r', session: 's3ss10n' },
+  },
+  mapping: companyGroup.mapping,
   out: [],
 };

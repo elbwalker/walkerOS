@@ -237,3 +237,32 @@ export const consentGrant: PostHogStepExample = {
   settings: {} as Partial<Settings>,
   out: [['client.enable']],
 };
+
+/** A silent rule without identify or group mappings calls nothing. */
+export const silentRule: PostHogStepExample = {
+  public: false,
+  description:
+    'A rule with silent: true and no identify or group mapping sends nothing to PostHog.',
+  in: getEvent('page view', { timestamp: 1700000105 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group identify rule of groupIdentifyWithProperties on an event
+ * without data: no group key resolves and the rule suppresses the capture,
+ * so nothing is sent.
+ */
+export const groupIdentifyWithoutData: PostHogStepExample = {
+  public: false,
+  description:
+    'A silent group rule whose key finds no data sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: {
+    name: 'company update',
+    entity: 'company',
+    action: 'update',
+    timestamp: 1700000106,
+  },
+  mapping: groupIdentifyWithProperties.mapping,
+  out: [],
+};

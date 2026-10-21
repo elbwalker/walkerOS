@@ -7,7 +7,7 @@ import type {
   KafkaProducerMock,
 } from './types';
 import type { Collector } from '@walkeros/core';
-import { getMappingValue, isObject, isString } from '@walkeros/core';
+import { getMappingValue, isObject, isString, StepError } from '@walkeros/core';
 import { getCompressionType } from './config';
 
 const UNKNOWN_TOPIC_CODE = 3;
@@ -26,23 +26,44 @@ function isUnknownTopicError(err: unknown): boolean {
   return err.code === UNKNOWN_TOPIC_CODE || err.type === UNKNOWN_TOPIC_TYPE;
 }
 
-export const push: PushFn = async function (
+/**
+ * The producer's connection, opened once at the first push; a failed
+ * connect fails that push and is tried again at the next one.
+ */
+function connected(
+  kafka: KafkaSettings,
+  producer: KafkaProducerMock,
+): Promise<void> {
+  if (!kafka._connected) {
+    const connecting = producer.connect().catch((error: unknown) => {
+      throw new StepError('Kafka producer connect failed', {
+        code: 'transport',
+        cause: error,
+      });
+    });
+    connecting.catch(() => {
+      if (kafka._connected === connecting) kafka._connected = undefined;
+    });
+    kafka._connected = connecting;
+  }
+  return kafka._connected;
+}
+
+// A silent rule has no message of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, rule, data, collector, env, logger, id },
 ) {
-  const settings = config.settings as { kafka?: KafkaSettings } | undefined;
-  const kafka: KafkaSettings | undefined = settings?.kafka;
-
-  if (!kafka) {
-    logger.warn('Kafka settings missing');
-    return;
-  }
-
-  const producer = kafka._producer;
-  if (!producer) {
-    logger.warn('Kafka producer not initialized');
-    return;
-  }
+  const kafka = config.settings?.kafka;
+  const producer = kafka?._producer;
+  if (!kafka || !producer)
+    throw new StepError('Kafka producer not initialized', {
+      code: 'not-ready',
+    });
 
   // Derive event name (rule.name overrides)
   const eventName = isString(rule?.name) ? rule.name : event.name;
@@ -87,31 +108,24 @@ export const push: PushFn = async function (
 
   if (kafka.timeout !== undefined) record.timeout = kafka.timeout;
 
-  logger.debug('Kafka push', { topic, key, event: eventName });
+  logger.debug('Kafka push', { topic, event: eventName });
 
+  await connected(kafka, producer);
   try {
-    await (producer as KafkaProducerMock).send(record);
+    await producer.send(record);
   } catch (error) {
-    if (isUnknownTopicError(error)) {
-      const brokers = (kafka.brokers ?? []).join(',');
-      logger.error(
-        `Kafka topic "${topic}" not found on cluster ${brokers}. ` +
+    // The collector reports it; the client's own message stays the cause.
+    if (isUnknownTopicError(error))
+      throw new StepError(
+        `Kafka topic "${topic}" not found on cluster ${kafka.brokers.join(',')}. ` +
           `Run "walkeros setup destination.${id}" with explicit ` +
           `{ numPartitions, replicationFactor } to create it.`,
-        {
-          topic,
-          brokers,
-          event: eventName,
-          originalError: error instanceof Error ? error.message : String(error),
-        },
+        { code: 'config', cause: error },
       );
-    } else {
-      logger.error('Kafka push failed', {
-        topic,
-        error: error instanceof Error ? error.message : String(error),
-        event: eventName,
-      });
-    }
+    throw new StepError('Kafka push failed', {
+      code: 'transport',
+      cause: error,
+    });
   }
 };
 

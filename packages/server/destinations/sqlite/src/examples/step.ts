@@ -197,3 +197,14 @@ export const ignoredEvent: SqliteStepExample = {
   mapping: { ignore: true },
   out: [],
 };
+
+/**
+ * Silent rule -- mapping.silent: true writes nothing.
+ */
+export const silentRule: SqliteStepExample = {
+  public: false,
+  description: 'A rule with silent: true inserts no row.',
+  in: getEvent('page view', { timestamp: 1700000105, id: 'evt-6' }),
+  mapping: { silent: true },
+  out: [],
+};

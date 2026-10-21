@@ -1,6 +1,6 @@
 import type { PushFn, Mapping, Settings } from './types';
 import type { Mapping as WalkerOSMapping, Collector } from '@walkeros/core';
-import { getMappingValue, isObject } from '@walkeros/core';
+import { getMappingValue, isObject, StepError } from '@walkeros/core';
 
 const NOT_FOUND_GRPC = 5;
 const NOT_FOUND_HTTP = 404;
@@ -105,14 +105,23 @@ function isMapping(value: unknown): value is Mapping {
   return typeof value === 'object' && value !== null;
 }
 
-export const push: PushFn = async function (
+// A silent rule has no message of its own: nothing to publish.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await publish(event, context);
+};
+
+const publish: PushFn = async function (
   event,
   { config, rule, data, collector, logger, id },
 ) {
   const settings = config.settings;
-  if (!isResolvedSettings(settings)) {
-    return logger.throw('settings missing or incomplete, init() not run');
-  }
+  if (!isResolvedSettings(settings))
+    throw new StepError(
+      'Pub/Sub settings missing or incomplete, init() not run',
+      {
+        code: 'not-ready',
+      },
+    );
 
   const { client, projectId, topic: defaultTopic } = settings;
 
@@ -170,7 +179,6 @@ export const push: PushFn = async function (
   logger.debug('Pub/Sub publish', {
     topic: topicName,
     projectId,
-    orderingKey,
     event: event.name,
   });
 
@@ -192,34 +200,24 @@ export const push: PushFn = async function (
       }
     }
 
-    if (isNotFound(err)) {
-      logger.error(
+    // The collector reports it; the SDK error (with its `code`) stays the
+    // cause. A missing topic and a denied publish are setup steps the
+    // operator has to take, not retried.
+    if (isNotFound(err))
+      throw new StepError(
         `Pub/Sub topic "${topicName}" not found in project "${projectId}". ` +
           `Run "walkeros setup destination.${id}" to create it.`,
-        {
-          topic: topicName,
-          projectId,
-          error: err instanceof Error ? err.message : String(err),
-        },
+        { code: 'config', cause: err },
       );
-    } else if (isPermissionError(err)) {
-      logger.error(
+    if (isPermissionError(err))
+      throw new StepError(
         `Pub/Sub publish denied for topic "${topicName}". Grant the runtime ` +
           `service account roles/pubsub.publisher on this topic.`,
-        {
-          topic: topicName,
-          projectId,
-          error: err instanceof Error ? err.message : String(err),
-        },
+        { code: 'config', cause: err },
       );
-    } else {
-      logger.error('Pub/Sub publish failed', {
-        topic: topicName,
-        projectId,
-        event: event.name,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-    throw err;
+    throw new StepError('Pub/Sub publish failed', {
+      code: 'transport',
+      cause: err,
+    });
   }
 };

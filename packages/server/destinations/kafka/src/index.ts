@@ -7,6 +7,7 @@ import type {
   KafkaClientConstructor,
   ProducerConfig,
 } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig, isKafkaEnv } from './config';
 import { push } from './push';
 import { setup } from './setup';
@@ -21,8 +22,8 @@ export const destinationKafka: Destination = {
 
   setup,
 
-  async init({ config: partialConfig, logger, env }) {
-    const config = getConfig(partialConfig, logger);
+  async init({ config: partialConfig, env }) {
+    const config = getConfig(partialConfig);
     const settings = config.settings as Settings;
     const kafka = settings.kafka;
 
@@ -46,8 +47,10 @@ export const destinationKafka: Destination = {
         };
         Constructor = kafkajs.Kafka;
       } catch (err) {
-        logger.throw(`Failed to load kafkajs: ${String(err)}`);
-        return config;
+        throw new StepError('Failed to load kafkajs', {
+          code: 'not-ready',
+          cause: err,
+        });
       }
     }
 
@@ -68,17 +71,8 @@ export const destinationKafka: Destination = {
       idempotent: kafka.idempotent,
     };
 
-    const producer = client.producer(producerConfig);
-
-    try {
-      await producer.connect();
-    } catch (err) {
-      logger.error('Kafka producer connect failed', { error: String(err) });
-      logger.throw(`Kafka producer connect failed: ${String(err)}`);
-      return config;
-    }
-
-    kafka._producer = producer;
+    // The producer connects at the first push, so init stays offline.
+    kafka._producer = client.producer(producerConfig);
 
     return config;
   },
@@ -95,6 +89,7 @@ export const destinationKafka: Destination = {
         await producer.disconnect();
       } finally {
         settings.kafka._producer = undefined;
+        settings.kafka._connected = undefined;
       }
     }
   },

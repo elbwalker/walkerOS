@@ -1,31 +1,32 @@
 import type { PushFn } from './types';
-import { isObject } from '@walkeros/core';
+import { isObject, StepError } from '@walkeros/core';
 import { eventToRow } from './eventToRow';
 import { ensureWriter } from './writer';
 
-export const push: PushFn = async function (
-  event,
-  { config, rule: _rule, data, logger },
-) {
+// A silent rule has no row of its own: nothing to append.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await append(event, context);
+};
+
+const append: PushFn = async function (event, { config, data, logger }) {
   const settings = config.settings;
-  if (!settings) return logger.throw('settings missing, init() not run');
+  if (!settings)
+    throw new StepError('BigQuery settings missing, init() not run', {
+      code: 'not-ready',
+    });
 
-  if (!settings.writer)
-    return logger.throw('writer is missing, init() not run');
-
-  // Self-heal a writer that the connection's `'error'` handler flagged broken:
-  // exactly one re-open attempt before failing. On a failed re-open this throws,
-  // routing the event to the DLQ in-band (instead of an out-of-band crash) and
-  // feeding the collector's per-destination breaker. Breaker-gated: the
-  // collector does not call push while the breaker is OPEN, so the re-open runs
-  // at most once per admitted push, never in a loop.
-  if (settings.writerBroken) await ensureWriter(settings, logger);
+  // Open the writer at the first push, or self-heal one that the connection's
+  // `'error'` handler flagged broken: exactly one (re-)open attempt before
+  // failing. A failed open throws, routing the event to the DLQ in-band
+  // (instead of an out-of-band crash) and feeding the collector's
+  // per-destination breaker. Breaker-gated: the collector does not call push
+  // while the breaker is OPEN, so the open runs at most once per admitted
+  // push, never in a loop.
+  await ensureWriter(settings, logger);
 
   const { writer, datasetId, tableId } = settings;
-
-  if (!writer) return logger.throw('writer is missing, init() not run');
-  if (!datasetId) return logger.throw('datasetId is missing');
-  if (!tableId) return logger.throw('tableId is missing');
+  if (!writer)
+    throw new StepError('BigQuery writer is missing', { code: 'not-ready' });
 
   const row = isObject(data) ? data : eventToRow(event);
   const rows = [row];
@@ -38,25 +39,26 @@ export const push: PushFn = async function (
 
   let result;
   try {
-    const pending = writer.appendRows(rows);
+    // `appendRows` answers synchronously; an injected writer (tests,
+    // simulation) may answer with a promise, so its answer is awaited.
+    const pending = await writer.appendRows(rows);
     result = await pending.getResult();
   } catch (err) {
-    // Log the failure and rethrow the raw error to the collector/DLQ. Secret
-    // redaction is standardized at the CLI logger handler; the raw error keeps
-    // its `code` so the row stays DLQ-routable.
-    logger.error('BigQuery row append threw', {
-      error: err instanceof Error ? err.message : String(err),
+    // The collector reports it and DLQ-routes the row; the SDK error (with
+    // its `code`) stays the cause.
+    throw new StepError('BigQuery row append threw', {
+      code: 'transport',
+      cause: err,
     });
-    throw err;
   }
 
-  if (result.rowErrors && result.rowErrors.length > 0) {
-    // Single-event push path: throw with row context so the caller sees the failure.
-    const first = result.rowErrors[0];
-    return logger.throw(
-      `BigQuery row append failed: code=${first.code} message=${first.message}`,
+  if (result.rowErrors && result.rowErrors.length > 0)
+    // The server rejected the row itself: a retry sends the same row. Its
+    // message can quote the row, so only the code is named.
+    throw new StepError(
+      `BigQuery row append failed (code ${result.rowErrors[0].code})`,
+      { code: 'transport', retryable: false },
     );
-  }
 
   logger.debug('BigQuery Storage Write API response', {
     ok: true,

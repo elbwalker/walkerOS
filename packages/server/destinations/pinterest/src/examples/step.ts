@@ -347,3 +347,35 @@ export const signup: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends nothing to Pinterest. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request to Pinterest.',
+  in: getEvent('page view', {
+    id: 'a1b2c3d4e5f60006',
+    timestamp: 1700000905,
+  }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/** Pinterest rejects the event in an HTTP 200 body. */
+export const rejectedEvent: Flow.StepExample = {
+  public: false,
+  description:
+    'Pinterest answers HTTP 200 and reports the event as failed: the push fails with transport, not retryable, and the event goes to the DLQ.',
+  in: getEvent('page view', {
+    id: 'a1b2c3d4e5f60007',
+    timestamp: 1700000906,
+  }),
+  respond: {
+    status: 200,
+    body: {
+      num_events_received: 1,
+      num_events_processed: 0,
+      events: [{ status: 'failed', error_message: 'Invalid event_time' }],
+    },
+  },
+  outcome: { status: 'failed', code: 'transport', retryable: false },
+};

@@ -17,3 +17,13 @@ export const writeWithServiceAccount: Flow.StepExample = {
   in: { operation: 'set', key: 'bob', value: { tier: 'silver' } },
   out: [['set', 'bob', '{ tier: "silver" }']],
 };
+
+/** A read that fails is reported, never answered as a miss. */
+export const failedRead: Flow.StepExample = {
+  public: false,
+  description:
+    'The request fails (no connection, a refused or forbidden read): get throws a StepError instead of answering a miss, and the collector reports it.',
+  in: { operation: 'get', key: 'alice' },
+  respond: { error: 'network' },
+  outcome: { status: 'failed', code: 'transport' },
+};

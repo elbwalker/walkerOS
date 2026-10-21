@@ -43,38 +43,21 @@ export const serverFingerprint: Flow.StepExample = {
   ],
 };
 
-export const missingFields: Flow.StepExample = {
+export const missingIngest: Flow.StepExample = {
   public: false,
   description:
-    'Graceful handling when ingest is missing: each empty input logs one warning, and the hash is still generated.',
+    'The ingest carries no ip and no user agent (the source sets no config.ingest): every visitor would get the same hash, so the transformer fails the event with missing-input.',
   in: {
-    name: 'session start',
-    data: { id: 's3ss10n' },
+    name: 'page view',
     id: 'ev-1700000601',
     trigger: 'load',
-    entity: 'session',
-    action: 'start',
+    entity: 'page',
+    action: 'view',
     timestamp: 1700000601,
     source: { type: 'express', platform: 'server' },
   },
-  out: [
-    [
-      'return',
-      {
-        event: {
-          name: 'session start',
-          data: { id: 's3ss10n' },
-          user: { hash: 'e183220b699c10a8' },
-          id: 'ev-1700000601',
-          trigger: 'load',
-          entity: 'session',
-          action: 'start',
-          timestamp: 1700000601,
-          source: { type: 'express', platform: 'server' },
-        },
-      },
-    ],
-  ],
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
 };
 
 export const ipAnonymization: Flow.StepExample = {

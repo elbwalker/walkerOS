@@ -253,15 +253,40 @@ export const objectIdAssociation: HubSpotStepExample = {
 };
 
 /**
- * No identity resolved -- event is skipped with a warning. Neither email
- * nor objectId can be resolved from the event.
+ * No identity resolved -- neither email nor objectId resolves from the
+ * event, so it cannot be associated with a contact: the push fails with
+ * missing-input instead of counting as delivered. One per event name above,
+ * so every example's event without identity has its declared outcome.
  */
-export const noIdentity: HubSpotStepExample = {
+function withoutIdentity(name: string, timestamp: number): HubSpotStepExample {
+  return {
+    public: false,
+    description: `A ${name} event without email or objectId cannot be associated with a HubSpot contact: the push fails with missing-input instead of counting as delivered.`,
+    in: { name, timestamp },
+    out: [],
+    outcome: { status: 'failed', code: 'missing-input', retryable: false },
+  };
+}
+
+export const noIdentity = withoutIdentity('product view', 1700000106);
+export const noIdentityOrder = withoutIdentity('order complete', 1700000108);
+export const noIdentityPage = withoutIdentity('page view', 1700000109);
+export const noIdentityLogin = withoutIdentity('user login', 1700000110);
+
+/**
+ * Silent rule -- no custom event is sent; without an identify mapping there
+ * is no contact upsert either.
+ */
+export const silentRule: HubSpotStepExample = {
   public: false,
-  in: getEvent('product view', {
-    timestamp: 1700000106,
-    user: {},
+  description:
+    'A rule with silent: true sends no HubSpot event; without an identify mapping nothing is called.',
+  in: createEvent({
+    name: 'page view',
+    timestamp: 1700000111,
+    user: { email: 'user@example.com' },
   }),
+  mapping: { silent: true },
   out: [],
 };
 
@@ -277,5 +302,25 @@ export const wildcardIgnored: HubSpotStepExample = {
     user: { email: 'user@example.com' },
   }),
   mapping: { ignore: true },
+  out: [],
+};
+
+/**
+ * The silent identify rule of userLoginIdentify on a login without the email
+ * it maps: no contact can be upserted and the rule suppresses the event, so
+ * nothing is sent.
+ */
+export const userLoginWithoutEmail: HubSpotStepExample = {
+  public: false,
+  description:
+    'A silent identify rule whose email finds no data sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: {
+    name: 'user login',
+    entity: 'user',
+    action: 'login',
+    timestamp: 1700000112,
+    user: { email: 'user@example.com' },
+  },
+  mapping: userLoginIdentify.mapping,
   out: [],
 };

@@ -3,7 +3,6 @@ import type {
   Destination as CoreDestination,
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
-import type { Analytics, AnalyticsSettings } from '@segment/analytics-node';
 
 export interface Settings {
   /** Segment source write key (required). */
@@ -36,8 +35,10 @@ export interface Settings {
   /** Completely disable the SDK. Default: false. */
   disable?: boolean;
   /** Runtime state -- not user-facing. Mutated by init/push. */
-  _analytics?: Analytics;
+  _analytics?: SegmentAnalyticsMock;
   _state?: RuntimeState;
+  /** The running flush; the next one waits for it. Runtime only. */
+  _flushing?: Promise<void>;
 }
 
 export interface RuntimeState {
@@ -80,12 +81,32 @@ export interface Env extends DestinationServer.Env {
  * destination actually calls. Tests can provide this via env.analytics
  * instead of the real SDK.
  */
+/** Called once the SDK delivered the call, with the reason if it failed. */
+export type SegmentCallback = (error?: unknown) => void;
+
 export interface SegmentAnalyticsMock {
-  track: (params: Record<string, unknown>) => void;
-  identify: (params: Record<string, unknown>) => void;
-  group: (params: Record<string, unknown>) => void;
-  page: (params: Record<string, unknown>) => void;
-  screen: (params: Record<string, unknown>) => void;
+  track: (
+    params: Record<string, unknown>,
+    callback?: SegmentCallback,
+  ) => unknown;
+  identify: (
+    params: Record<string, unknown>,
+    callback?: SegmentCallback,
+  ) => unknown;
+  group: (
+    params: Record<string, unknown>,
+    callback?: SegmentCallback,
+  ) => unknown;
+  page: (
+    params: Record<string, unknown>,
+    callback?: SegmentCallback,
+  ) => unknown;
+  screen: (
+    params: Record<string, unknown>,
+    callback?: SegmentCallback,
+  ) => unknown;
+  /** Sends what the SDK holds; resolves once it is delivered. */
+  flush: () => Promise<void>;
   closeAndFlush: (opts?: { timeout?: number }) => Promise<void>;
 }
 
@@ -101,6 +122,7 @@ export type Config = {
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;
+export type PushBatchFn = CoreDestination.PushBatchFn<Types>;
 export type PartialConfig = DestinationServer.PartialConfig<Types>;
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 export type Rule = WalkerOSMapping.Rule<Mapping>;

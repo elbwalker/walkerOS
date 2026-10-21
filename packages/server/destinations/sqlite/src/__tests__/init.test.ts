@@ -1,3 +1,4 @@
+import { createEvent, createMockContext } from '@walkeros/core';
 import { destinationSQLite } from '..';
 import type { Settings, SqliteClient, SqliteClientFactory } from '../types';
 
@@ -43,7 +44,36 @@ function makeClientSpy(): {
   return { client, calls };
 }
 
+/** The first push, which checks the table and prepares the insert. */
+function firstPush(config: Awaited<ReturnType<typeof initOf>>) {
+  if (!config) throw new Error('init returned no config');
+  return destinationSQLite.push(
+    createEvent({ name: 'page view' }),
+    createMockContext({ config, id: 'sqlite' }),
+  );
+}
+
+/** The init the tests call, for the type of its result. */
+const initOf = destinationSQLite.init;
+
 describe('init', () => {
+  it('stays offline: no query, no CREATE TABLE and no prepare', async () => {
+    const logger = makeLogger();
+    const { client, calls } = makeClientSpy();
+    const query = jest.fn(client.query);
+    client.query = query;
+
+    await destinationSQLite.init({
+      config: { settings: { sqlite: { url: ':memory:', schema: 'auto' } } },
+      env: { client },
+      logger,
+      id: 'test',
+    } as never);
+
+    expect(calls).toEqual([]);
+    expect(query).not.toHaveBeenCalled();
+  });
+
   it('throws when url is missing', async () => {
     const logger = makeLogger();
     await expect(
@@ -85,6 +115,8 @@ describe('init', () => {
     const settings = (result as { settings: Settings }).settings;
     expect(settings.sqlite._client).toBe(client);
     expect(settings.sqlite._ownedClient).toBe(false);
+
+    await firstPush(result);
     expect(calls[0].kind).toBe('execute');
     expect(calls[0].sql).toMatch(/^CREATE TABLE IF NOT EXISTS events/);
     expect(calls.some((c) => c.kind === 'prepare')).toBe(true);
@@ -123,7 +155,7 @@ describe('init', () => {
     const logger = makeLogger();
     const { client, calls } = makeClientSpy();
 
-    await destinationSQLite.init({
+    const result = await destinationSQLite.init({
       config: {
         settings: { sqlite: { url: ':memory:', schema: 'manual' } },
         mapping: { page: { view: { name: 'ok' } } },
@@ -132,9 +164,9 @@ describe('init', () => {
       logger,
       id: 'test',
     } as never);
+    await firstPush(result);
 
-    // Init never issues CREATE TABLE under schema=manual. The probe runs once
-    // (table presence check) but no execute is called for table creation.
+    // No CREATE TABLE under schema=manual, and no table probe either.
     const tableCreate = calls.find(
       (c) => c.kind === 'execute' && (c.sql ?? '').startsWith('CREATE TABLE'),
     );
@@ -150,16 +182,20 @@ describe('init', () => {
     const { client } = makeClientSpy();
     // Default makeClientSpy.query returns [], so tableExists -> false.
 
-    await expect(
-      destinationSQLite.init({
-        config: { settings: { sqlite: { url: ':memory:' } } },
-        env: { client },
-        logger,
-        id: 'sqlite',
-      } as never),
-    ).rejects.toThrow(
-      /SQLite table "events" not found.*walkeros setup destination\.sqlite/,
-    );
+    const result = await destinationSQLite.init({
+      config: { settings: { sqlite: { url: ':memory:' } } },
+      env: { client },
+      logger,
+      id: 'sqlite',
+    } as never);
+
+    await expect(firstPush(result)).rejects.toMatchObject({
+      name: 'StepError',
+      code: 'config',
+      message: expect.stringMatching(
+        /SQLite table "events" not found.*walkeros setup destination\.sqlite/,
+      ),
+    });
   });
 
   it('does NOT auto-create when setup: true is configured (table created by setup, not init)', async () => {
@@ -174,7 +210,7 @@ describe('init', () => {
       return [];
     };
 
-    await destinationSQLite.init({
+    const result = await destinationSQLite.init({
       config: {
         settings: { sqlite: { url: ':memory:' } },
         setup: true,
@@ -183,6 +219,7 @@ describe('init', () => {
       logger,
       id: 'sqlite',
     } as never);
+    await firstPush(result);
 
     const tableCreate = calls.find(
       (c) => c.kind === 'execute' && (c.sql ?? '').startsWith('CREATE TABLE'),
@@ -252,7 +289,7 @@ describe('destroy', () => {
 });
 
 describe('push error handling', () => {
-  it('logs and drops on insert failure (does not throw)', async () => {
+  it('fails the push on an insert failure, without a log line of its own', async () => {
     const logger = makeLogger();
     const failingClient: SqliteClient = {
       execute: () => Promise.resolve(),
@@ -285,11 +322,12 @@ describe('push error handling', () => {
         } as never,
         { config, logger, id: 'test' } as never,
       ),
-    ).resolves.toBeUndefined();
+    ).rejects.toMatchObject({
+      name: 'StepError',
+      code: 'transport',
+      message: 'SQLite INSERT failed',
+    });
 
-    expect(logger.error).toHaveBeenCalledWith(
-      'SQLite INSERT failed',
-      expect.any(Object),
-    );
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });

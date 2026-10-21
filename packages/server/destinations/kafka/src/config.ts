@@ -7,8 +7,7 @@ import type {
   CompressionType,
   CompressionTypesMap,
 } from './types';
-import type { Logger } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
+import { isObject, StepError } from '@walkeros/core';
 
 /** Fallback compression codec map when env is not provided. */
 const COMPRESSION_FALLBACK: Record<CompressionType, number> = {
@@ -19,25 +18,26 @@ const COMPRESSION_FALLBACK: Record<CompressionType, number> = {
   zstd: 4,
 };
 
-export function getConfig(
-  partialConfig: PartialConfig = {},
-  logger: Logger.Instance,
-): Config {
+export function getConfig(partialConfig: PartialConfig = {}): Config {
   const raw = (partialConfig.settings ?? {}) as Partial<Settings>;
   const kafka: Partial<KafkaSettings> =
     raw.kafka ?? ({} as Partial<KafkaSettings>);
 
-  if (!kafka.brokers || kafka.brokers.length === 0) {
-    logger.throw('Config settings kafka.brokers missing');
-  }
-  if (!kafka.topic) {
-    logger.throw('Config settings kafka.topic missing');
+  const { brokers, topic } = kafka;
+  if (!brokers || brokers.length === 0 || !topic) {
+    const missing = [
+      ...(brokers && brokers.length ? [] : ['kafka.brokers']),
+      ...(topic ? [] : ['kafka.topic']),
+    ];
+    throw new StepError(`Config settings ${missing.join(', ')} missing`, {
+      code: 'config',
+    });
   }
 
   const kafkaSettings: KafkaSettings = {
     ...kafka,
-    brokers: kafka.brokers as string[],
-    topic: kafka.topic as string,
+    brokers,
+    topic,
     clientId: kafka.clientId ?? 'walkeros',
     acks: kafka.acks ?? -1,
     compression: kafka.compression ?? 'gzip',

@@ -114,3 +114,14 @@ export const ignoredEvent: RedisStepExample = {
   mapping: { ignore: true },
   out: [],
 };
+
+/**
+ * Silent rule -- mapping.silent: true appends nothing.
+ */
+export const silentRule: RedisStepExample = {
+  public: false,
+  description: 'A rule with silent: true appends nothing to the stream.',
+  in: getEvent('page view', { timestamp: 1700000106 }),
+  mapping: { silent: true },
+  out: [],
+};

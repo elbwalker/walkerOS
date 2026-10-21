@@ -125,13 +125,27 @@ describe('storeGcsInit', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should return undefined on error', async () => {
+    it('throws a StepError on a network error, not a miss', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       const store = await createStore();
-      const result = await store.get('fail.txt');
+      await expect(store.get('fail.txt')).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'transport',
+        message: 'GCS request failed',
+      });
+    });
 
-      expect(result).toBeUndefined();
+    it('throws a StepError with the status on a forbidden read', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 403 });
+
+      const store = await createStore();
+      await expect(store.get('secret.txt')).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'transport',
+        status: 403,
+        retryable: false,
+      });
     });
 
     it('should prepend prefix to key', async () => {
@@ -171,6 +185,20 @@ describe('storeGcsInit', () => {
       const store = await createStore();
       expect(await store.get('')).toBeUndefined();
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('set', () => {
+    it('throws a StepError when the upload is refused', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 403 });
+
+      const store = await createStore();
+      await expect(store.set('a.json', { a: 1 })).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'transport',
+        status: 403,
+        message: 'GCS write failed (HTTP 403)',
+      });
     });
   });
 
@@ -220,16 +248,19 @@ describe('storeGcsInit', () => {
       expect(result).toEqual({ name: 'logo', body: bytes });
     });
 
-    it('degrades to undefined on an empty body (does not throw)', async () => {
+    it('throws a decode StepError on an empty body, not a miss', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
       });
       const store = await createStore();
-      await expect(store.get('empty')).resolves.toBeUndefined();
+      await expect(store.get('empty')).rejects.toMatchObject({
+        code: 'decode',
+        retryable: false,
+      });
     });
 
-    it('degrades to undefined on corrupt non-JSON bytes (does not throw)', async () => {
+    it('throws a decode StepError on corrupt non-JSON bytes, not a miss', async () => {
       const corrupt = new TextEncoder().encode('not valid json {');
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -242,7 +273,12 @@ describe('storeGcsInit', () => {
           ),
       });
       const store = await createStore();
-      await expect(store.get('corrupt')).resolves.toBeUndefined();
+      await expect(store.get('corrupt')).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'decode',
+        retryable: false,
+        message: 'GCS value could not be decoded',
+      });
     });
 
     it('should reject path traversal keys', async () => {
@@ -327,10 +363,21 @@ describe('storeGcsInit', () => {
     });
 
     it('should not throw on missing key', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Not Found'));
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
 
       const store = await createStore();
       await expect(store.delete('missing.txt')).resolves.toBeUndefined();
+    });
+
+    it('throws a StepError when the delete fails', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 503 });
+
+      const store = await createStore();
+      await expect(store.delete('old.txt')).rejects.toMatchObject({
+        code: 'transport',
+        status: 503,
+        retryable: true,
+      });
     });
   });
 
@@ -366,10 +413,7 @@ describe('storeGcsInit', () => {
       // HEAD ok, then both subsequent fetches use the cached result
       mockFetch
         .mockResolvedValueOnce({ ok: true, status: 200 })
-        .mockResolvedValueOnce({
-          ok: true,
-          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-        })
+        .mockResolvedValueOnce({ ok: false, status: 404 })
         .mockResolvedValueOnce({ ok: true });
 
       const store = await createStore({ bucket: 'memoize-bucket' });
@@ -384,14 +428,11 @@ describe('storeGcsInit', () => {
 
     it('does not poison the operation on non-404 HEAD failures', async () => {
       // HEAD returns 500: treat as non-fatal (cache true, proceed). The GET
-      // then returns an empty body, which structured mode degrades to a miss
-      // without throwing. The operation completing is what is under test.
+      // then answers 404, a miss. The operation completing is what is under
+      // test.
       mockFetch
         .mockResolvedValueOnce({ ok: false, status: 500 })
-        .mockResolvedValueOnce({
-          ok: true,
-          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-        });
+        .mockResolvedValueOnce({ ok: false, status: 404 });
 
       const store = await createStore({ bucket: 'transient-bucket' });
       const result = await store.get('a.txt');

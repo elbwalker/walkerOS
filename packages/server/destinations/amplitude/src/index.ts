@@ -1,17 +1,18 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { Destination, Env } from './types';
 import { getConfig } from './config';
-import { push, getAmplitude } from './push';
+import { push, pushBatch, getAmplitude } from './push';
 
 export * as DestinationAmplitude from './types';
 
 export const destinationAmplitude: Destination = {
   type: 'amplitude',
 
-  config: {},
+  // Batched by default, at the SDK's own former defaults (200 events, 10 s).
+  config: { batch: { size: 200, wait: 10_000 } },
 
-  async init({ config: partialConfig, env, logger }) {
-    const config = getConfig(partialConfig, logger);
+  async init({ config: partialConfig, env }) {
+    const config = getConfig(partialConfig);
     const amp = getAmplitude(env as Record<string, unknown> | undefined);
 
     // Destructure walkerOS-specific keys; the rest flow through to the SDK.
@@ -23,13 +24,15 @@ export const destinationAmplitude: Destination = {
       ...nodeOptions
     } = config.settings;
 
+    // Each push and each batch flushes the SDK and waits until Amplitude
+    // answered its calls.
     await amp.init(apiKey, nodeOptions).promise;
     return config;
   },
 
-  async push(event, context) {
-    return await push(event, context);
-  },
+  push,
+
+  pushBatch,
 
   on(type, context) {
     if (type !== 'consent' || !context.data) return;

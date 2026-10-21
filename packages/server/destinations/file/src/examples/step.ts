@@ -157,3 +157,13 @@ export const csvObjectCell: FileStepExample = {
     ],
   ],
 };
+
+/** A silent rule writes no line. */
+export const silentRule: FileStepExample = {
+  public: false,
+  description: 'A rule with silent: true writes no line.',
+  in: getEvent('page view', { timestamp: 1700000000000 }),
+  settings: { filename: 'events.jsonl' },
+  mapping: { silent: true },
+  out: [],
+};

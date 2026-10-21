@@ -45,21 +45,25 @@ describe('transformerGa4', () => {
       });
     });
 
-    it('returns false when ingest has no url', async () => {
+    it('fails with missing-input when ingest has no url', async () => {
       const ctx = makeContext({});
       const instance = await transformerGa4(ctx);
-      const result = await instance.push(emptyEvent, ctx);
-      expect(result).toBe(false);
+      await expect(instance.push(emptyEvent, ctx)).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'missing-input',
+        retryable: false,
+      });
     });
 
-    it('returns false when ingest.url is not a string', async () => {
+    it('fails with missing-input when ingest.url is not a string', async () => {
       const ctx = createMockContext<GA4Types>({
         config: {},
         ingest: { ...createIngest('test'), url: 123 },
       });
       const instance = await transformerGa4(ctx);
-      const result = await instance.push(emptyEvent, ctx);
-      expect(result).toBe(false);
+      await expect(instance.push(emptyEvent, ctx)).rejects.toMatchObject({
+        code: 'missing-input',
+      });
     });
 
     it('fan-outs multiple events as array of Results', async () => {
@@ -241,16 +245,6 @@ describe('transformerGa4', () => {
         true,
       );
     });
-
-    it('logs debug when no request is present in ingest', async () => {
-      const logger = createMockLogger();
-      const ctx = makeContext({ logger });
-      await (await transformerGa4(ctx)).push(emptyEvent, ctx);
-      const debugCalls = logger.debug.mock.calls.map((args) => String(args[0]));
-      expect(debugCalls.some((m) => m.includes('no request in ingest'))).toBe(
-        true,
-      );
-    });
   });
 
   describe('Task 26 — try/catch around parseRequest', () => {
@@ -265,7 +259,7 @@ describe('transformerGa4', () => {
       );
     });
 
-    it('catches and logs unexpected parser throws', async () => {
+    it('fails an unexpected parser throw, without a log line of its own', async () => {
       // Force a throw from inside `push` by making `ctx.ingest.url` lookup
       // throw at access time. The try/catch wraps `parseRequest` and the
       // hit-derived steps, but `readGA4Request` runs first and accesses
@@ -286,11 +280,14 @@ describe('transformerGa4', () => {
           logger,
           url: 'https://x/g/collect?v=2&tid=G-X&en=page_view',
         });
-        const result = await (await transformerGa4(ctx)).push(emptyEvent, ctx);
-        expect(result).toBe(false);
-        const errors = logger.error.mock.calls.map((args) => String(args[0]));
-        expect(errors.some((e) => e.includes('parse error'))).toBe(true);
-        expect(errors.some((e) => e.includes('boom'))).toBe(true);
+        await expect(
+          (await transformerGa4(ctx)).push(emptyEvent, ctx),
+        ).rejects.toMatchObject({
+          name: 'StepError',
+          code: 'transformer',
+          message: 'transformer-ga4: the GA4 request could not be decoded',
+        });
+        expect(logger.error).not.toHaveBeenCalled();
       } finally {
         URLSearchParams.prototype.forEach = original;
       }

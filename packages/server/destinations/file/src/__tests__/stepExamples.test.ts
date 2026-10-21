@@ -35,8 +35,9 @@ function makeSpyEnv(): SpyEnv {
         };
         if (!existing) state.captured.set(path, file);
         const stream: FileWriteStream = {
-          write(chunk) {
+          write(chunk, callback) {
             file.lines.push(chunk);
+            callback();
             return true;
           },
           end() {
@@ -62,7 +63,12 @@ function flatten(out: unknown): CallRecord[] {
 }
 
 describe('@walkeros/server-destination-file step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
+  // Non-public examples (silent) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each(published)('%s', async (_name, rawExample) => {
     const example = rawExample as FileStepExample;
     const inEvent = example.in as WalkerOS.Event;
 

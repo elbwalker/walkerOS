@@ -1,6 +1,7 @@
-import type { Destination, Settings, RudderStackAnalyticsMock } from './types';
+import type { Destination } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig } from './config';
-import { push } from './push';
+import { push, pushBatch } from './push';
 
 // Types
 export * as DestinationRudderStack from './types';
@@ -8,18 +9,15 @@ export * as DestinationRudderStack from './types';
 export const destinationRudderStack: Destination = {
   type: 'rudderstack',
 
-  config: {},
+  // Batched by default, at the SDK's own former defaults (20 events, 10 s).
+  config: { batch: { size: 20, wait: 10_000 } },
 
-  init({ config: partialConfig, logger, env }) {
-    const config = getConfig(partialConfig, logger);
-    const settings = config.settings as Settings;
+  init({ config: partialConfig, env }) {
+    const config = getConfig(partialConfig);
+    const { settings } = config;
 
     // Use env.analytics mock if provided (testing), otherwise create real SDK
-    const envAnalytics = (
-      env as { analytics?: RudderStackAnalyticsMock } | undefined
-    )?.analytics;
-
-    if (!envAnalytics) {
+    if (!env?.analytics) {
       // Production path: create real Analytics instance
       try {
         const Analytics = require('@rudderstack/rudder-sdk-node');
@@ -36,14 +34,21 @@ export const destinationRudderStack: Destination = {
           ...sdkOptions
         } = settings;
 
-        // RudderStack uses positional constructor: new Analytics(writeKey, opts)
-        const analytics = new Analytics(writeKey, {
+        // RudderStack uses positional constructor: new Analytics(writeKey, opts).
+        // Each push and each batch flushes the SDK and waits until its calls
+        // are sent. A failed send reaches each call's callback; the error
+        // handler only keeps the SDK from rethrowing it as an unhandled
+        // rejection.
+        settings._analytics = new Analytics(writeKey, {
           dataPlaneUrl,
           ...sdkOptions,
+          errorHandler: () => undefined,
         });
-        settings._analytics = analytics;
       } catch (err) {
-        logger.throw(`Failed to initialize RudderStack SDK: ${err}`);
+        throw new StepError('Failed to initialize the RudderStack SDK', {
+          code: 'not-ready',
+          cause: err,
+        });
       }
     }
 
@@ -52,16 +57,13 @@ export const destinationRudderStack: Destination = {
     return config;
   },
 
-  async push(event, context) {
-    return await push(event, context);
-  },
+  push,
+
+  pushBatch,
 
   async destroy({ config }) {
-    const settings = (config?.settings || {}) as Settings;
-    const analytics = settings._analytics;
-    if (analytics) {
-      await (analytics as unknown as RudderStackAnalyticsMock).flush();
-    }
+    const analytics = config?.settings?._analytics;
+    if (analytics) await analytics.flush();
   },
 };
 

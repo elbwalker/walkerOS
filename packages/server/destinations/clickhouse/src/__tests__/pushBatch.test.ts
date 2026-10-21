@@ -95,7 +95,7 @@ describe('pushBatch', () => {
   });
 
   it.each([
-    ['init never ran', {}, 'Config settings missing'],
+    ['init never ran', {}, 'ClickHouse client missing'],
     ['init left no client', { settings: { url } }, 'ClickHouse client missing'],
   ])('refuses to insert when %s', async (_case, config, message) => {
     await expect(
@@ -140,7 +140,11 @@ describe('whole-batch failure', () => {
 
     await expect(
       destination.pushBatch(batchOf(...entries), batchContext(config)),
-    ).rejects.toMatchObject({ code: '16', message: 'no such column' });
+    ).rejects.toMatchObject({
+      name: 'StepError',
+      code: 'transport',
+      message: 'ClickHouse insert failed (code 16)',
+    });
   });
 
   it('resolves undefined when the insert lands', async () => {
@@ -151,7 +155,7 @@ describe('whole-batch failure', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('logs the failure at error with the code and the row count', async () => {
+  it('writes no failure line of its own: the collector logs it', async () => {
     const config = await bootstrap();
     __failInsert(1, { code: '16' });
 
@@ -159,10 +163,7 @@ describe('whole-batch failure', () => {
       destination.pushBatch(batchOf(...entries), batchContext(config)),
     ).rejects.toBeDefined();
 
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ code: '16', rows: entries.length }),
-    );
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it('stays at debug when the insert lands', async () => {

@@ -1,4 +1,5 @@
-import type { Destination } from './types';
+import type { Destination, Settings } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig } from './config';
 import { push } from './push';
 import { pushBatch } from './pushBatch';
@@ -62,6 +63,10 @@ export const destinationBigQuery: Destination = {
     // (projectId/datasetId/tableId/bigquery/timeout) are immutable post-init, so
     // a re-open targets the same table with the same auth and unary-call
     // deadline.
+    //
+    // The same hook opens the writer at the first push, so init stays
+    // offline: a missing dataset or table, or a failed connection, fails that
+    // push with a StepError the collector reports.
     settings.reopenWriter = () =>
       openWriter(
         {
@@ -75,59 +80,9 @@ export const destinationBigQuery: Destination = {
           env,
         },
         logger,
-      );
-
-    // Open the long-lived JSONWriter on the _default stream.
-    // Hard-fail when the dataset/table is missing.
-    try {
-      const { writer, writeClient, connection, connectionErrorListener } =
-        await openWriter(
-          {
-            projectId: settings.projectId,
-            datasetId: settings.datasetId,
-            tableId: settings.tableId,
-            credentials: settings.credentials,
-            bigquery: settings.bigquery,
-            timeout,
-            onConnectionError,
-            env,
-          },
-          logger,
-        );
-      settings.writer = writer;
-      settings.writeClient = writeClient;
-      settings.connection = connection;
-      settings.connectionErrorListener = connectionErrorListener;
-    } catch (err) {
-      // Log the failure and rethrow the raw error. Secret redaction is
-      // standardized at the CLI logger handler, which scrubs every line before
-      // both stderr and the heartbeat ring, so the destination logs the message
-      // as-is. The raw error keeps its `code` naturally, so it stays
-      // NotFound-classifiable and DLQ-routable.
-      const message = err instanceof Error ? err.message : String(err);
-      if (isNotFound(err)) {
-        const target = `${config.settings.datasetId}.${config.settings.tableId}`;
-        const project = config.settings.projectId;
-        logger.error(
-          `BigQuery dataset or table not found: project="${project}", target="${target}". ` +
-            `Run "walkeros setup destination.${id}" to create them.`,
-          {
-            project,
-            target,
-            error: message,
-          },
-        );
-      } else {
-        // Catch-all so init failures are never silent. The destination is the
-        // layer with the most context about what was attempted (open writer,
-        // resolve stream, build proto descriptor), so it logs here before
-        // re-throwing.
-        logger.error('BigQuery init failed', {
-          error: message,
-        });
-      }
-      throw err;
-    }
+      ).catch((err: unknown) => {
+        throw openError(err, settings, id);
+      });
 
     return config;
   },
@@ -150,6 +105,25 @@ export const destinationBigQuery: Destination = {
     );
   },
 };
+
+/**
+ * A failed writer open as a StepError: a missing dataset or table is a setup
+ * step the operator has to run (not retryable), anything else a connection
+ * failure. The SDK's own error stays the cause.
+ */
+function openError(err: unknown, settings: Settings, id: string): StepError {
+  if (isNotFound(err))
+    return new StepError(
+      `BigQuery dataset or table not found: project="${settings.projectId}", ` +
+        `target="${settings.datasetId}.${settings.tableId}". ` +
+        `Run "walkeros setup destination.${id}" to create them.`,
+      { code: 'config', cause: err },
+    );
+  return new StepError('BigQuery writer could not be opened', {
+    code: 'transport',
+    cause: err,
+  });
+}
 
 // Type predicate for NOT_FOUND-class errors. The Storage Write API surfaces
 // missing datasets/tables as gRPC code 5 (NOT_FOUND) or HTTP 404.

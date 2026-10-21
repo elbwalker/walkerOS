@@ -59,7 +59,9 @@ describe('Server Destination TikTok', () => {
         logger: createMockLogger(),
         id: 'test-tiktok',
       }),
-    ).rejects.toThrow('Config settings pixelCode missing');
+    ).rejects.toThrow(
+      new StepError('Config settings pixelCode missing', { code: 'config' }),
+    );
   });
 
   test('init - missing accessToken throws', async () => {
@@ -72,7 +74,7 @@ describe('Server Destination TikTok', () => {
         logger: createMockLogger(),
         id: 'test-tiktok',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, pixelCode missing');
   });
 
   test('init - valid settings returns config with defaults', async () => {

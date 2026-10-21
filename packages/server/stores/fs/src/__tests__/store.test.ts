@@ -75,16 +75,28 @@ describe('FsStore', () => {
       expect(await store.get('missing')).toBeUndefined();
     });
 
-    it('degrades to undefined on an empty file (does not throw)', async () => {
+    it('throws a StepError for a read that fails, not a miss', async () => {
       const store = await createStore(tmpDir);
-      await fs.writeFile(path.join(tmpDir, 'empty'), '');
-      await expect(store.get('empty')).resolves.toBeUndefined();
+      await fs.mkdir(path.join(tmpDir, 'folder'));
+      await expect(store.get('folder')).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'transport',
+        message: 'fs store read failed (EISDIR)',
+      });
     });
 
-    it('degrades to undefined on corrupt non-JSON bytes (does not throw)', async () => {
+    it.each([
+      ['an empty file', ''],
+      ['corrupt non-JSON bytes', 'not valid json {'],
+    ])('throws a decode StepError on %s, not a miss', async (_, content) => {
       const store = await createStore(tmpDir);
-      await fs.writeFile(path.join(tmpDir, 'corrupt'), 'not valid json {');
-      await expect(store.get('corrupt')).resolves.toBeUndefined();
+      await fs.writeFile(path.join(tmpDir, 'stored'), content);
+      await expect(store.get('stored')).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'decode',
+        retryable: false,
+        message: 'fs store value could not be decoded',
+      });
     });
 
     it('creates intermediate directories', async () => {

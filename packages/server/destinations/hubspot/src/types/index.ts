@@ -79,22 +79,9 @@ export interface Settings {
    */
   defaultProperties?: Record<string, string>;
 
-  /**
-   * Whether to use batch API for events (accumulate and flush).
-   * Default: false (single event sends).
-   */
-  batch?: boolean;
-
-  /**
-   * Batch size before auto-flush. Only used when batch: true.
-   * Default: 50. Max: 500.
-   */
-  batchSize?: number;
-
   /** Runtime state -- not user-facing. Mutated by init/push. */
   _client?: HubSpotClientMock;
   _state?: RuntimeState;
-  _eventQueue?: HubSpotEventRequest[];
 }
 
 export interface RuntimeState {
@@ -151,6 +138,7 @@ export type Config = {
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;
+export type PushBatchFn = CoreDestination.PushBatchFn<Types>;
 export type PartialConfig = DestinationServer.PartialConfig<Types>;
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 export type Rule = WalkerOSMapping.Rule<Mapping>;
