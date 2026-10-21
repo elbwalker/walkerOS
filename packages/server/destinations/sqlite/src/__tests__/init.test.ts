@@ -62,17 +62,17 @@ const initOf = destinationSQLite.init;
 
 describe('init', () => {
   it('stays offline: no query, no CREATE TABLE and no prepare', async () => {
-    const logger = makeLogger();
     const { client, calls } = makeClientSpy();
     const query = jest.fn(client.query);
     client.query = query;
 
-    await destinationSQLite.init({
+    await initOf({
       config: { settings: { sqlite: { url: ':memory:', schema: 'auto' } } },
       env: { client },
-      logger,
+      logger: createMockLogger(),
       id: 'test',
-    } as never);
+      collector: createMockContext().collector,
+    });
 
     expect(calls).toEqual([]);
     expect(query).not.toHaveBeenCalled();
@@ -182,16 +182,16 @@ describe('init', () => {
   });
 
   it('does NOT auto-create when setup is unset and table missing; hard-fails with setup hint', async () => {
-    const logger = makeLogger();
     const { client } = makeClientSpy();
     // Default makeClientSpy.query returns [], so tableExists -> false.
 
-    const result = await destinationSQLite.init({
+    const result = await initOf({
       config: { settings: { sqlite: { url: ':memory:' } } },
       env: { client },
-      logger,
+      logger: createMockLogger(),
       id: 'sqlite',
-    } as never);
+      collector: createMockContext().collector,
+    });
 
     await expect(firstPush(result)).rejects.toMatchObject({
       name: 'StepError',

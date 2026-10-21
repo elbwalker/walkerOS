@@ -18,7 +18,9 @@ export const SettingsSchema = z
       .number()
       .int()
       .positive()
-      .describe('How often (in ms) to flush the event queue. Default: 10000.')
+      .describe(
+        'How long (in ms) the SDK waits before it sends queued events, and before its first retry of a failed request. Default: a tenth of config.timeout (1000 at the 10 s default). A value set here wins.',
+      )
       .optional(),
     flushQueueSize: z
       .number()
@@ -32,7 +34,9 @@ export const SettingsSchema = z
       .number()
       .int()
       .nonnegative()
-      .describe('Max retries on failed flush. Default: 12.')
+      .describe(
+        "Attempts per event, the first send included. Default: as many as end within config.timeout with the SDK's waits, each request bounded by a quarter of it (3 at the 10 s default). A value set here wins.",
+      )
       .optional(),
     useBatch: z
       .boolean()

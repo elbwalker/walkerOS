@@ -32,8 +32,10 @@ export interface Settings {
   maxInternalQueueSize?: number;
   /** Log level. Default: 'info'. */
   logLevel?: string;
-  /** Retry attempts for failed batches. Default: 3. */
+  /** Retries for a failed request. Default: 2, within config.timeout. */
   retryCount?: number;
+  /** Time one request may take (ms). Default: a quarter of config.timeout. */
+  timeout?: number;
   /** Completely disable the SDK. Default: false. */
   enable?: boolean;
   /** Enable gzip compression. Default: true. */

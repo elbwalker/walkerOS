@@ -46,13 +46,17 @@ export const SettingsSchema = z
       .number()
       .int()
       .min(0)
-      .describe('Retry attempts for failed batches. Default: 3.')
+      .describe(
+        "Retries the SDK makes for a failed request. Default: as many as fit config.timeout with the SDK's backoff (one at the 10 s default, two from 24 s). A value set here wins.",
+      )
       .optional(),
     httpRequestTimeout: z
       .number()
       .int()
       .positive()
-      .describe('HTTP request timeout in milliseconds. Default: 10000.')
+      .describe(
+        'Time one request may take, in milliseconds. Default: a quarter of config.timeout (2500 at the 10 s default). A value set here wins.',
+      )
       .optional(),
     disable: z
       .boolean()

@@ -1,5 +1,6 @@
 import type { Destination } from './types';
 import { StepError } from '@walkeros/core';
+import { retryBudget } from '@walkeros/server-core';
 import { getConfig } from './config';
 import { push, pushBatch } from './push';
 
@@ -38,9 +39,18 @@ export const destinationRudderStack: Destination = {
         // Each push and each batch flushes the SDK and waits until its calls
         // are sent. A failed send reaches each call's callback; the error
         // handler only keeps the SDK from rethrowing it as an unhandled
-        // rejection.
+        // rejection. The SDK's own retry ends within config.timeout: a
+        // quarter of it per request, two retries a tenth of it apart. A value
+        // set in the settings wins.
+        const budget = retryBudget(partialConfig.timeout);
         settings._analytics = new Analytics(writeKey, {
           dataPlaneUrl,
+          timeout: budget.attempt,
+          retryCount: budget.retries,
+          axiosRetryConfig: {
+            retryDelay: () => budget.wait,
+            shouldResetTimeout: true,
+          },
           ...sdkOptions,
           errorHandler: () => undefined,
         });

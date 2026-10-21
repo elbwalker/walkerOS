@@ -79,4 +79,49 @@ describe('amplitude send failures', () => {
 
     await collector.command('shutdown');
   });
+
+  it('says at DEBUG which mapping a declared skip found nothing for', async () => {
+    const lines: Array<[string, unknown]> = [];
+    const { collector } = await startFlow({
+      logger: {
+        level: 'DEBUG',
+        handler: (_level, message, context) => lines.push([message, context]),
+      },
+      destinations: {
+        amplitude: {
+          code: destinationAmplitude,
+          config: {
+            settings: { apiKey: 'test' },
+            batch: undefined,
+            mapping: {
+              company: {
+                update: {
+                  silent: true,
+                  settings: {
+                    group: {
+                      map: { type: { value: 'company' }, name: 'data.company' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          env: envFailing(() => false),
+        },
+      },
+    });
+
+    await collector.push(createEvent({ name: 'company update', data: {} }));
+
+    expect(
+      lines.filter(([message]) => message.includes('resolved to nothing')),
+    ).toEqual([
+      [
+        'Amplitude skipped group: group resolved to nothing',
+        expect.objectContaining({ event: 'company update' }),
+      ],
+    ]);
+
+    await collector.command('shutdown');
+  });
 });

@@ -118,4 +118,54 @@ describe('posthog send failures', () => {
 
     await collector.command('shutdown');
   });
+
+  it('says at DEBUG which mapping a declared skip found nothing for', async () => {
+    const lines: Array<[string, unknown]> = [];
+    const { collector } = await startFlow({
+      logger: {
+        level: 'DEBUG',
+        handler: (_level, message, context) => lines.push([message, context]),
+      },
+      destinations: {
+        posthog: {
+          code: destinationPostHog,
+          config: {
+            settings: { apiKey: 'phc_test' },
+            batch: undefined,
+            mapping: {
+              company: {
+                update: {
+                  silent: true,
+                  settings: {
+                    group: {
+                      map: {
+                        type: { value: 'company' },
+                        key: 'data.company_id',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          env: failingEnv({}),
+        },
+      },
+    });
+
+    await collector.push(
+      createEvent({ name: 'company update', user: { id: 'us3r' }, data: {} }),
+    );
+
+    expect(
+      lines.filter(([message]) => message.includes('resolved to nothing')),
+    ).toEqual([
+      [
+        'PostHog skipped group: group resolved to nothing',
+        expect.objectContaining({ event: 'company update' }),
+      ],
+    ]);
+
+    await collector.command('shutdown');
+  });
 });

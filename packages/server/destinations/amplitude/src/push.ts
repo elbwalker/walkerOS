@@ -1,4 +1,4 @@
-import type { Collector, Destination, WalkerOS } from '@walkeros/core';
+import type { Collector, Destination, Logger, WalkerOS } from '@walkeros/core';
 import type {
   PushFn,
   PushBatchFn,
@@ -19,6 +19,7 @@ import {
   flattenIncludeSections,
   StepError,
 } from '@walkeros/core';
+import { batchOutcome } from '@walkeros/server-core';
 import * as amplitudeSDK from '@amplitude/analytics-node';
 
 type IdentifyOpKey =
@@ -66,11 +67,17 @@ const REVENUE_FIELD_MAP: Record<string, RevenueFieldSetter> = {
   receiptSig: 'setReceiptSig',
 };
 
-export function getAmplitude(
-  env: Record<string, unknown> | undefined,
-): AmplitudeSDK {
-  const amplitude = env?.amplitude as AmplitudeSDK | undefined;
-  return amplitude ?? (amplitudeSDK as unknown as AmplitudeSDK);
+/** An injected client (tests, simulation): one that can at least track. */
+function isAmplitudeSDK(value: unknown): value is AmplitudeSDK {
+  return isObject(value) && typeof value.track === 'function';
+}
+
+/** The client of `env.amplitude` when one is injected, else the SDK. */
+export function getAmplitude(env: unknown): AmplitudeSDK {
+  const injected = isObject(env) ? env.amplitude : undefined;
+  return isAmplitudeSDK(injected)
+    ? injected
+    : (amplitudeSDK as unknown as AmplitudeSDK);
 }
 
 /**
@@ -205,6 +212,22 @@ function buildEventOptions(
   return opts;
 }
 
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`Amplitude skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
 /** A call's outcome, marked as handled until its batch reads it. */
 function held(sent: Promise<void>): Promise<void> {
   sent.catch(() => undefined);
@@ -228,6 +251,7 @@ async function enqueue(
   data: Destination.Data,
   settings: Partial<Settings>,
   collector: Collector.Instance,
+  logger: Logger.Instance,
 ): Promise<Promise<void>[]> {
   const mappingSettings = rule?.settings || {};
   const calls: Promise<void>[] = [];
@@ -241,7 +265,7 @@ async function enqueue(
     });
     if (isObject(resolved)) {
       identifyResolved = resolved as Record<string, unknown>;
-    }
+    } else skipped(logger, event, 'identify', 'identify');
   }
 
   // 2. Resolve eventOptions -- rule-level override wins over destination-level.
@@ -264,6 +288,16 @@ async function enqueue(
   );
   const hasEventOptions = Object.keys(eventOptions).length > 0;
 
+  // The id Amplitude deduplicates a call by (insert_id): the event id for
+  // the track call, the event id and the call type for the others, so a
+  // resent event is dropped and the calls of one event are not. A mapped
+  // insert_id wins.
+  const optionsFor = (type?: string): EventOptions | undefined => {
+    if (!event.id) return hasEventOptions ? eventOptions : undefined;
+    const insert_id = type ? `${event.id}-${type}` : event.id;
+    return { insert_id, ...eventOptions };
+  };
+
   // 4. Identify operations -- fires amplitude.identify() if op keys are present.
   if (identifyResolved) {
     const id = buildIdentify(amp, identifyResolved);
@@ -271,7 +305,7 @@ async function enqueue(
       calls.push(
         held(
           call('Amplitude identify failed', () =>
-            amp.identify(id, hasEventOptions ? eventOptions : undefined),
+            amp.identify(id, optionsFor('identify')),
           ),
         ),
       );
@@ -282,24 +316,20 @@ async function enqueue(
     const resolved = await getMappingValue(event, mappingSettings.group, {
       collector,
     });
-    if (isObject(resolved)) {
-      const { type, name } = resolved as {
-        type?: unknown;
-        name?: unknown;
-      };
-      if (isString(type) && (isString(name) || isArray(name)))
-        calls.push(
-          held(
-            call('Amplitude setGroup failed', () =>
-              amp.setGroup(
-                type,
-                name as string | string[],
-                hasEventOptions ? eventOptions : undefined,
-              ),
-            ),
+    const type = isObject(resolved) ? resolved.type : undefined;
+    const name = isObject(resolved) ? resolved.name : undefined;
+    if (
+      isString(type) &&
+      (isString(name) || (isArray(name) && name.every(isString)))
+    )
+      calls.push(
+        held(
+          call('Amplitude setGroup failed', () =>
+            amp.setGroup(type, name, optionsFor('group')),
           ),
-        );
-    }
+        ),
+      );
+    else skipped(logger, event, 'group', 'group');
   }
 
   // 6. Group identify (properties on the group)
@@ -309,28 +339,21 @@ async function enqueue(
       mappingSettings.groupIdentify,
       { collector },
     );
-    if (isObject(resolved)) {
-      const { type, name } = resolved as {
-        type?: unknown;
-        name?: unknown;
-      };
-      if (isString(type) && isString(name)) {
-        const id = buildIdentify(amp, resolved as Record<string, unknown>);
-        if (id)
-          calls.push(
-            held(
-              call('Amplitude groupIdentify failed', () =>
-                amp.groupIdentify(
-                  type,
-                  name,
-                  id,
-                  hasEventOptions ? eventOptions : undefined,
-                ),
-              ),
-            ),
-          );
-      }
-    }
+    const type = isObject(resolved) ? resolved.type : undefined;
+    const name = isObject(resolved) ? resolved.name : undefined;
+    const id =
+      isObject(resolved) && isString(type) && isString(name)
+        ? buildIdentify(amp, resolved)
+        : undefined;
+    if (id && isString(type) && isString(name))
+      calls.push(
+        held(
+          call('Amplitude groupIdentify failed', () =>
+            amp.groupIdentify(type, name, id, optionsFor('groupIdentify')),
+          ),
+        ),
+      );
+    else skipped(logger, event, 'groupIdentify', 'groupIdentify');
   }
 
   // 7. Revenue -- single object or array from loop -> N revenue() calls.
@@ -343,14 +366,15 @@ async function enqueue(
       : isObject(resolved)
         ? [resolved as Record<string, unknown>]
         : [];
-    for (const item of items) {
+    if (!items.some(isObject)) skipped(logger, event, 'revenue', 'revenue');
+    for (const [index, item] of items.entries()) {
       if (!isObject(item)) continue;
       calls.push(
         held(
           call('Amplitude revenue failed', () =>
             amp.revenue(
               buildRevenue(amp, item),
-              hasEventOptions ? eventOptions : undefined,
+              optionsFor(`revenue-${index}`),
             ),
           ),
         ),
@@ -373,11 +397,7 @@ async function enqueue(
     calls.push(
       held(
         call('Amplitude track failed', () =>
-          amp.track(
-            eventType,
-            eventProperties,
-            hasEventOptions ? eventOptions : undefined,
-          ),
+          amp.track(eventType, eventProperties, optionsFor()),
         ),
       ),
     );
@@ -405,11 +425,19 @@ function settingsOf(
 /** One event: its calls handed to the SDK, sent, and their answers awaited. */
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, env },
+  { config, rule, data, collector, env, logger },
 ) {
-  const amp = getAmplitude(env as Record<string, unknown> | undefined);
+  const amp = getAmplitude(env);
   const settings = settingsOf(config.settings);
-  const calls = await enqueue(amp, event, rule, data, settings, collector);
+  const calls = await enqueue(
+    amp,
+    event,
+    rule,
+    data,
+    settings,
+    collector,
+    logger,
+  );
   if (calls.length) {
     const settled = Promise.allSettled(calls);
     await flush(amp);
@@ -424,9 +452,9 @@ export const push: PushFn = async function (
  */
 export const pushBatch: PushBatchFn = async function (
   batch,
-  { config, collector, env },
+  { config, collector, env, logger },
 ) {
-  const amp = getAmplitude(env as Record<string, unknown> | undefined);
+  const amp = getAmplitude(env);
   const settings = settingsOf(config.settings);
 
   // Each entry's answers, or why its calls could not be handed over.
@@ -443,6 +471,7 @@ export const pushBatch: PushBatchFn = async function (
         entry.data,
         settings,
         collector,
+        logger,
       );
       outcomes.push({ settled: Promise.allSettled(calls) });
     } catch (error) {
@@ -461,8 +490,5 @@ export const pushBatch: PushBatchFn = async function (
       );
   }
 
-  // Nothing landed: a whole-batch failure, which the breaker counts.
-  if (failed.length && failed.length === batch.entries.length)
-    throw failed[0].error;
-  if (failed.length) return { failed };
+  return batchOutcome(batch.entries.length, failed);
 };

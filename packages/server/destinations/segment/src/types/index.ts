@@ -28,9 +28,9 @@ export interface Settings {
   flushAt?: number;
   /** Max milliseconds before auto-flush. Default: 10000. */
   flushInterval?: number;
-  /** Retry attempts for failed batches. Default: 3. */
+  /** Retries for a failed request. Default: as many as fit config.timeout. */
   maxRetries?: number;
-  /** HTTP request timeout (ms). Default: 10000. */
+  /** Time one request may take (ms). Default: a quarter of config.timeout. */
   httpRequestTimeout?: number;
   /** Completely disable the SDK. Default: false. */
   disable?: boolean;

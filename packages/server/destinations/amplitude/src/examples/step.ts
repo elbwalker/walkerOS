@@ -23,8 +23,8 @@ export const defaultEventForwarding: AmplitudeStepExample = {
   title: 'Default event',
   description:
     'A walkerOS event forwarded as an Amplitude track call with the event name and empty properties.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
-  out: [['amplitude.track', 'product view', {}]],
+  in: getEvent('product view', { id: 'ev1700000100', timestamp: 1700000100 }),
+  out: [['amplitude.track', 'product view', {}, { insert_id: 'ev1700000100' }]],
 };
 
 /**
@@ -46,7 +46,7 @@ export const destinationLevelInclude: AmplitudeStepExample = {
   title: 'Include data section',
   description:
     'Destination-level include flattens the event data section into prefixed event_properties on every track call.',
-  in: getEvent('product view', { timestamp: 1700000102 }),
+  in: getEvent('product view', { id: 'ev1700000102', timestamp: 1700000102 }),
   configInclude: ['data'],
   out: [
     [
@@ -59,6 +59,7 @@ export const destinationLevelInclude: AmplitudeStepExample = {
         data_size: 'l',
         data_price: 420,
       },
+      { insert_id: 'ev1700000102' },
     ],
   ],
 };
@@ -76,7 +77,7 @@ export const destinationLevelIdentify: AmplitudeStepExample = {
   title: 'Identify per event',
   description:
     'Destination-level identify resolves user_id, device_id, and session_id into the Amplitude EventOptions on every call.',
-  in: getEvent('page view', { timestamp: 1700000104 }),
+  in: getEvent('page view', { id: 'ev1700000104', timestamp: 1700000104 }),
   settings: {
     identify: {
       map: {
@@ -92,6 +93,7 @@ export const destinationLevelIdentify: AmplitudeStepExample = {
       'page view',
       {},
       {
+        insert_id: 'ev1700000104',
         user_id: 'us3r',
         device_id: 'c00k13',
         session_id: 394324160,
@@ -114,6 +116,7 @@ export const userLoginIdentify: AmplitudeStepExample = {
     'A user login maps to amplitude.identify with set, setOnce, and add operations while the default track call is skipped.',
   in: createEvent({
     name: 'user login',
+    id: 'ev1700000105',
     timestamp: 1700000105,
     data: {
       user_id: 'new-user-123',
@@ -166,6 +169,7 @@ export const userLoginIdentify: AmplitudeStepExample = {
         },
       },
       {
+        insert_id: 'ev1700000105-identify',
         user_id: 'new-user-123',
       },
     ],
@@ -186,6 +190,7 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
     'A subscription renewal fires a single amplitude.revenue call with productId, price, and a currency fallback.',
   in: createEvent({
     name: 'subscription renew',
+    id: 'ev1700000107',
     timestamp: 1700000107,
     data: {
       plan_id: 'plan-pro',
@@ -214,6 +219,7 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
         revenueType: 'renewal',
         currency: 'EUR',
       },
+      { insert_id: 'ev1700000107-revenue-0' },
     ],
   ],
 };
@@ -234,7 +240,7 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
   title: 'Multi-product order',
   description:
     'An order with multiple nested products fires one amplitude.revenue per product plus a single track for the order.',
-  in: getEvent('order complete', { timestamp: 1700000108 }),
+  in: getEvent('order complete', { id: 'ev1700000108', timestamp: 1700000108 }),
   mapping: {
     include: ['data', 'globals'],
     settings: {
@@ -268,6 +274,7 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
         revenueType: 'purchase',
         currency: 'EUR',
       },
+      { insert_id: 'ev1700000108-revenue-0' },
     ],
     [
       'amplitude.revenue',
@@ -278,6 +285,7 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
         revenueType: 'purchase',
         currency: 'EUR',
       },
+      { insert_id: 'ev1700000108-revenue-1' },
     ],
     [
       'amplitude.track',
@@ -290,6 +298,7 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
         data_value: 555,
         globals_pagegroup: 'shop',
       },
+      { insert_id: 'ev1700000108' },
     ],
   ],
 };
@@ -304,6 +313,7 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
     'A company update assigns the user to a group and sets group properties via setGroup plus groupIdentify.',
   in: createEvent({
     name: 'company update',
+    id: 'ev1700000109',
     timestamp: 1700000109,
     data: {
       company: 'Acme',
@@ -341,7 +351,12 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
     },
   },
   out: [
-    ['amplitude.setGroup', 'company', 'Acme'],
+    [
+      'amplitude.setGroup',
+      'company',
+      'Acme',
+      { insert_id: 'ev1700000109-group' },
+    ],
     [
       'amplitude.groupIdentify',
       'company',
@@ -355,6 +370,7 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
           founded: 2020,
         },
       },
+      { insert_id: 'ev1700000109-groupIdentify' },
     ],
   ],
 };
@@ -393,6 +409,9 @@ export const eventOptionsTimeInsertId: AmplitudeStepExample = {
   ],
 };
 
+const analyticsDenied: WalkerOS.Consent = { analytics: false };
+const analyticsGranted: WalkerOS.Consent = { analytics: true };
+
 /**
  * Consent revoked -> amplitude.setOptOut(true). After analytics consent is
  * granted (the destination loads), revoking it toggles optOut via the
@@ -409,8 +428,8 @@ export const consentRevokeOptOut: AmplitudeStepExample = {
     'After analytics consent is granted (Amplitude loads), revoking it opts out of tracking via setOptOut(true).',
   command: 'consent',
   before: { analytics: true },
-  in: { analytics: false } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
+  in: analyticsDenied,
+  settings: {},
   out: [
     ['amplitude.setOptOut', false],
     ['amplitude.setOptOut', true],
@@ -425,8 +444,8 @@ export const consentGrantOptIn: AmplitudeStepExample = {
   description:
     'A walker consent command with analytics granted opts back into Amplitude tracking via setOptOut(false).',
   command: 'consent',
-  in: { analytics: true } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
+  in: analyticsGranted,
+  settings: {},
   out: [['amplitude.setOptOut', false]],
 };
 

@@ -47,17 +47,19 @@ export const SettingsSchema = z
     requestTimeout: z
       .number()
       .describe(
-        'Milliseconds before a request to PostHog times out. Default: 10000.',
+        'Milliseconds before a request to PostHog times out. Default: a quarter of config.timeout (2500 at the 10 s default). A value set here wins.',
       )
       .optional(),
     fetchRetryCount: z
       .number()
-      .describe('Retries of a failed request to PostHog. Default: 3.')
+      .describe(
+        'Retries of a failed request to PostHog. Default: 2, which with the default timeout and delay ends within config.timeout. A value set here wins.',
+      )
       .optional(),
     fetchRetryDelay: z
       .number()
       .describe(
-        'Milliseconds between retries of a failed request. Default: 3000.',
+        'Milliseconds between retries of a failed request. Default: a tenth of config.timeout (1000 at the 10 s default). A value set here wins.',
       )
       .optional(),
     debug: z

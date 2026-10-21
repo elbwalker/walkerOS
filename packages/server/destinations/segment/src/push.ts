@@ -1,4 +1,4 @@
-import type { Collector, Destination, WalkerOS } from '@walkeros/core';
+import type { Collector, Destination, Logger, WalkerOS } from '@walkeros/core';
 import type {
   PushFn,
   PushBatchFn,
@@ -16,24 +16,71 @@ import {
   isThenable,
   StepError,
 } from '@walkeros/core';
+import { batchOutcome } from '@walkeros/server-core';
 
 /**
  * Hand one call to the SDK. The promise settles once Segment delivered it:
  * the SDK answers through the callback, with the reason when the delivery
- * failed; an injected client may answer with a promise instead.
+ * failed; an injected client may answer with a promise instead. A call the
+ * SDK refuses at once fails the same way. The promise is marked handled at
+ * once, since its event's outcome reads it only after the flush.
  */
 function call(
   message: string,
   send: (done: SegmentCallback) => unknown,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const fail = (error: unknown) =>
-      reject(new StepError(message, { code: 'transport', cause: error }));
-    const answer: unknown = send((error) =>
-      error === undefined || error === null ? resolve() : fail(error),
-    );
+  const sent = new Promise<void>((resolve, reject) => {
+    const fail = (error: unknown) => reject(failure(message, error));
+    let answer: unknown;
+    try {
+      answer = send((error) =>
+        error === undefined || error === null ? resolve() : fail(error),
+      );
+    } catch (error) {
+      fail(error);
+      return;
+    }
     if (isThenable(answer)) answer.then(() => resolve(), fail);
   });
+  sent.catch(() => undefined);
+  return sent;
+}
+
+/**
+ * A failed delivery: `timeout` when the SDK's last request timed out (it
+ * aborts a request after `httpRequestTimeout`), else `transport`.
+ */
+function failure(message: string, error: unknown): StepError {
+  // A DOMException, from another realm in some runtimes: read by its name.
+  const name: unknown =
+    typeof error === 'object' && error !== null
+      ? Reflect.get(error, 'name')
+      : undefined;
+  const timedOut = name === 'AbortError' || name === 'TimeoutError';
+  return new StepError(message, {
+    code: timedOut ? 'timeout' : 'transport',
+    cause: error,
+  });
+}
+
+/**
+ * The id Segment deduplicates a call by: the event id for the track call,
+ * the event id and the call type for the others, so a resent event is
+ * dropped by Segment and the calls of one event are not.
+ */
+function messageIdOf(event: WalkerOS.Event, type?: string): string | undefined {
+  if (!event.id) return undefined;
+  return type ? `${event.id}-${type}` : event.id;
+}
+
+/** The identity of one call, with the call's own messageId. */
+function withMessageId(
+  identity: Record<string, unknown>,
+  event: WalkerOS.Event,
+  type: string,
+): Record<string, unknown> {
+  const messageId = messageIdOf(event, type);
+  return messageId ? { ...identity, messageId } : identity;
 }
 
 /**
@@ -47,6 +94,22 @@ function flush(settings: Partial<Settings>, sdk: SegmentAnalyticsMock) {
   );
   settings._flushing = flushing.catch(() => undefined);
   return flushing;
+}
+
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`Segment skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
 }
 
 /** The settled calls of one event: the first failure, if any. */
@@ -67,6 +130,7 @@ async function enqueue(
   settings: Partial<Settings>,
   sdk: SegmentAnalyticsMock,
   collector: Collector.Instance,
+  logger: Logger.Instance,
 ): Promise<Promise<void>[]> {
   const state: RuntimeState = settings._state || {};
   settings._state = state;
@@ -109,13 +173,14 @@ async function enqueue(
       calls.push(
         applyIdentify(
           sdk,
-          resolved as Record<string, unknown>,
-          identity,
+          resolved,
+          withMessageId(identity, event, 'identify'),
           state,
           timestamp,
           context,
         ),
       );
+    else skipped(logger, event, 'identify', 'identify');
   }
 
   // 3. Group -- rule-level overrides destination-level
@@ -124,50 +189,49 @@ async function enqueue(
     const resolved = await getMappingValue(event, groupMapping, {
       collector,
     });
-    if (isObject(resolved))
+    if (isObject(resolved) && isString(resolved.groupId))
       calls.push(
         applyGroup(
           sdk,
-          resolved as Record<string, unknown>,
-          identity,
+          resolved,
+          withMessageId(identity, event, 'group'),
           state,
           timestamp,
           context,
         ),
       );
+    else skipped(logger, event, 'group', 'group');
   }
 
   // 4. Page (the call is not awaited here: it is delivered at the flush)
-  if (mappingSettings.page !== undefined)
-    calls.push(
-      (
-        await applyPage(
-          sdk,
-          mappingSettings.page,
-          event,
-          identity,
-          collector,
-          timestamp,
-          context,
-        )
-      ).sent,
+  if (mappingSettings.page !== undefined) {
+    const { sent } = await applyPage(
+      sdk,
+      mappingSettings.page,
+      event,
+      withMessageId(identity, event, 'page'),
+      collector,
+      timestamp,
+      context,
     );
+    if (sent) calls.push(sent);
+    else skipped(logger, event, 'page', 'page');
+  }
 
   // 5. Screen
-  if (mappingSettings.screen !== undefined)
-    calls.push(
-      (
-        await applyScreen(
-          sdk,
-          mappingSettings.screen,
-          event,
-          identity,
-          collector,
-          timestamp,
-          context,
-        )
-      ).sent,
+  if (mappingSettings.screen !== undefined) {
+    const { sent } = await applyScreen(
+      sdk,
+      mappingSettings.screen,
+      event,
+      withMessageId(identity, event, 'screen'),
+      collector,
+      timestamp,
+      context,
     );
+    if (sent) calls.push(sent);
+    else skipped(logger, event, 'screen', 'screen');
+  }
 
   // 6. Track (unless silent: true)
   if (rule?.silent !== true) {
@@ -180,6 +244,8 @@ async function enqueue(
       properties,
       timestamp,
     };
+    const messageId = messageIdOf(event);
+    if (messageId) params.messageId = messageId;
     if (context) params.context = context;
 
     calls.push(call('Segment track failed', (done) => sdk.track(params, done)));
@@ -204,11 +270,19 @@ function sdkOf(
 /** One event: its calls handed to the SDK, sent, and their deliveries awaited. */
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, env },
+  { config, rule, data, collector, env, logger },
 ) {
   const settings = config.settings ?? {};
   const sdk = sdkOf(config.settings, env);
-  const calls = await enqueue(event, rule, data, settings, sdk, collector);
+  const calls = await enqueue(
+    event,
+    rule,
+    data,
+    settings,
+    sdk,
+    collector,
+    logger,
+  );
   if (calls.length) {
     const settled = Promise.allSettled(calls);
     await flush(settings, sdk);
@@ -223,7 +297,7 @@ export const push: PushFn = async function (
  */
 export const pushBatch: PushBatchFn = async function (
   batch,
-  { config, collector, env },
+  { config, collector, env, logger },
 ) {
   const settings = config.settings ?? {};
   const sdk = sdkOf(config.settings, env);
@@ -242,6 +316,7 @@ export const pushBatch: PushBatchFn = async function (
         settings,
         sdk,
         collector,
+        logger,
       );
       outcomes.push({ settled: Promise.allSettled(calls) });
     } catch (error) {
@@ -260,10 +335,7 @@ export const pushBatch: PushBatchFn = async function (
       );
   }
 
-  // Nothing landed: a whole-batch failure, which the breaker counts.
-  if (failed.length && failed.length === batch.entries.length)
-    throw failed[0].error;
-  if (failed.length) return { failed };
+  return batchOutcome(batch.entries.length, failed);
 };
 
 function resolveString(value: unknown): string | undefined {

@@ -27,11 +27,12 @@ export const defaultCapture: PostHogStepExample = {
   title: 'Default capture',
   description:
     'A walker event becomes a PostHog capture call with the user id as distinctId and no extra properties.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { id: 'ev1700000100', timestamp: 1700000100 }),
   out: [
     [
       'client.capture',
       {
+        uuid: 'b8a7f21f-1a9f-8aa7-8480-8d16fb64c44c',
         distinctId: 'us3r',
         event: 'product view',
         properties: {},
@@ -48,12 +49,13 @@ export const captureWithInclude: PostHogStepExample = {
   title: 'Capture with include',
   description:
     'Destination-level include flattens data and globals sections into prefixed PostHog event properties.',
-  in: getEvent('order complete', { timestamp: 1700000101 }),
+  in: getEvent('order complete', { id: 'ev1700000101', timestamp: 1700000101 }),
   configInclude: ['data', 'globals'],
   out: [
     [
       'client.capture',
       {
+        uuid: 'a5a5ede9-4f3b-85f4-b30f-3da8773fabfa',
         distinctId: 'us3r',
         event: 'order complete',
         properties: {
@@ -184,6 +186,7 @@ export const captureWithGroupContext: PostHogStepExample = {
   description:
     'A destination-level group mapping attaches the resolved group context to every PostHog capture call.',
   in: getEvent('page view', {
+    id: 'ev1700000104',
     timestamp: 1700000104,
     globals: { pagegroup: 'docs', company_id: 'company_123' },
   }),
@@ -199,6 +202,7 @@ export const captureWithGroupContext: PostHogStepExample = {
     [
       'client.capture',
       {
+        uuid: 'c6a47305-44fc-8835-b15f-3f494c1f9e20',
         distinctId: 'us3r',
         event: 'page view',
         properties: {},
@@ -207,6 +211,9 @@ export const captureWithGroupContext: PostHogStepExample = {
     ],
   ],
 };
+
+const analyticsDenied: WalkerOS.Consent = { analytics: false };
+const analyticsGranted: WalkerOS.Consent = { analytics: true };
 
 /**
  * Consent revoked - after analytics consent is granted (PostHog loads and is
@@ -220,8 +227,8 @@ export const consentRevoke: PostHogStepExample = {
     'A walker consent command with analytics denied calls client.disable on the PostHog client.',
   command: 'consent',
   before: { analytics: true },
-  in: { analytics: false } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
+  in: analyticsDenied,
+  settings: {},
   out: [['client.enable'], ['client.disable']],
 };
 
@@ -233,8 +240,8 @@ export const consentGrant: PostHogStepExample = {
   description:
     'A walker consent command with analytics granted calls client.enable on the PostHog client.',
   command: 'consent',
-  in: { analytics: true } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
+  in: analyticsGranted,
+  settings: {},
   out: [['client.enable']],
 };
 

@@ -21,7 +21,7 @@ export const destinationPostHog: Destination = {
   pushBatch,
 
   async destroy({ config }) {
-    const client = (config?.settings as Settings | undefined)?.client;
+    const client = config?.settings?.client;
     if (client) {
       await client.shutdown();
     }
