@@ -1,5 +1,6 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
 import { destinationMatomo } from '..';
 import { examples, schemas } from '../dev';
 
@@ -11,6 +12,7 @@ describe('matomo conformance', () => {
   it('conforms', async () => {
     await conformance('destination', destinationMatomo, {
       profile: 'vendor-global',
+      page,
       examples: examples.step,
       schema: schemas.settings,
       settings: { siteId: '1', url: 'https://analytics.example.com/' },

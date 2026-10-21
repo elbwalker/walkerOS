@@ -28,6 +28,7 @@
   "devDependencies": {
     "@walkeros/collector": "4.8.1",
     "@walkeros/core": "4.8.1",
+    "@walkeros/web-core": "4.8.1",
     "@walkeros/web-source-browser": "4.8.1",
     "@walkeros/web-source-session": "4.8.1",
     "@swc/jest": "^0.2.39",

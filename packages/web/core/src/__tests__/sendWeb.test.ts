@@ -158,7 +158,9 @@ describe('sendWeb', () => {
       new Error('getaddrinfo ENOTFOUND vendor.example?key=secret'),
       { code: 'ENOTFOUND' },
     );
-    mockFetch.mockRejectedValueOnce(new TypeError('fetch failed', { cause }));
+    mockFetch.mockRejectedValueOnce(
+      Object.assign(new TypeError('fetch failed'), { cause }),
+    );
     await expect(
       sendWeb(url, data, { transport: 'fetch' }),
     ).rejects.toMatchObject({

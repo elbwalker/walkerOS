@@ -146,8 +146,8 @@ describe('express input hygiene', () => {
         expect(response.headers.get('content-type')).toContain(
           'application/json',
         );
-        const body: { success: boolean } = await response.json();
-        expect(body.success).toBe(false);
+        const body: unknown = await response.json();
+        expect(body).toMatchObject({ success: false });
         expect(mockPush).not.toHaveBeenCalled();
       } finally {
         await close();
@@ -164,8 +164,8 @@ describe('express input hygiene', () => {
         body: `{"pad":"${'x'.repeat(1024 * 1024 + 64)}"}`,
       });
       expect(response.status).toBe(413);
-      const body: { success: boolean } = await response.json();
-      expect(body.success).toBe(false);
+      const body: unknown = await response.json();
+      expect(body).toMatchObject({ success: false });
     } finally {
       await close();
     }
@@ -271,7 +271,7 @@ describe('express input hygiene', () => {
       expect(response.headers.get('content-type')).toContain(
         'application/json',
       );
-      const body: { success: boolean; error: string } = await response.json();
+      const body: unknown = await response.json();
       expect(body).toEqual({ success: false, error: 'Not found' });
       expect(mockPush).not.toHaveBeenCalled();
     } finally {
@@ -416,7 +416,7 @@ describe('express input hygiene', () => {
       try {
         const response = await postEvent(url);
         expect(response.status).toBe(500);
-        const body: { success: boolean; error: string } = await response.json();
+        const body: unknown = await response.json();
         expect(body).toEqual({
           success: false,
           error: 'Internal server error',
@@ -441,8 +441,8 @@ describe('express input hygiene', () => {
         expect(response.headers.get('content-type')).toContain(
           'application/json',
         );
-        const body: { success: boolean } = await response.json();
-        expect(body.success).toBe(false);
+        const body: unknown = await response.json();
+        expect(body).toMatchObject({ success: false });
         expect(logger.error).toHaveBeenCalledWith(fault);
         expect(logger.debug).not.toHaveBeenCalled();
       } finally {

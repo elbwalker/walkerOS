@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { injectScript } from '../inject-script';
+import { injectScript } from '../injectScript';
 
 beforeEach(() => {
   document.head.innerHTML = '';

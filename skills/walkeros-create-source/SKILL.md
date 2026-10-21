@@ -853,7 +853,8 @@ Canonical references:
 6. **Conformance** - run the source with
    `conformance('source', source, options)` from `@walkeros/collector/dev`
    (profile `source`, `createTrigger` for how to feed it); it runs on a real
-   collector.
+   collector. A web source may pass `page` from `@walkeros/web-core/dev`; the
+   kit requires it only for the browser profiles `web-sdk` and `vendor-global`.
 
 ### Gate: Tests Pass
 

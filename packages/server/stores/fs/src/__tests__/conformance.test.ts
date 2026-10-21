@@ -1,6 +1,6 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
-import { serializeStoreValue } from '@walkeros/core';
+import { serializeStoreValue } from '@walkeros/core/node';
 import { storeFsInit } from '..';
 import { examples, schemas } from '../dev';
 import type { FsStoreEnv } from '../types';

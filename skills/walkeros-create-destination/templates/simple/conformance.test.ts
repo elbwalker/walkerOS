@@ -1,5 +1,6 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
 import { destinationVendor } from '..';
 import { examples, schemas } from '../dev';
 
@@ -14,6 +15,10 @@ import { examples, schemas } from '../dev';
  * - `vendor-global` a vendor script that defines a global (this template)
  * - `socket`        a long-lived connection
  *
+ * The browser profiles (`web-sdk`, `vendor-global`) run on a page: pass `page`
+ * from `@walkeros/web-core/dev`. A server destination drops the import and
+ * the `page` line.
+ *
  * `examples.step` must carry, besides the happy-path examples: a `silent`
  * example (`public: false`, `out: []`), a consent revocation example when the
  * vendor has a consent switch, and a failure example (`outcome`) for each
@@ -27,6 +32,7 @@ describe('vendor conformance', () => {
   it('conforms', async () => {
     await conformance('destination', destinationVendor, {
       profile: 'vendor-global',
+      page,
       examples: examples.step,
       schema: schemas.settings,
       settings: { apiKey: 'test-key' },

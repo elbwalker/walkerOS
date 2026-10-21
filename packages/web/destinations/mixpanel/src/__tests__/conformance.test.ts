@@ -1,5 +1,6 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
 import { destinationMixpanel } from '..';
 import { examples, schemas } from '../dev';
 
@@ -38,6 +39,7 @@ describe('mixpanel conformance', () => {
   it('conforms', async () => {
     await conformance('destination', destinationMixpanel, {
       profile: 'web-sdk',
+      page,
       examples: examples.step,
       schema: schemas.settings,
       settings: {

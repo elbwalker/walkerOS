@@ -536,6 +536,45 @@ describe('Server Destination Data Manager', () => {
       ).rejects.toThrow('Data Manager rejected the event');
     });
 
+    test('delivers a 2xx answer without a request id', async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+
+      await expect(
+        destination.push(
+          getEvent('page view'),
+          createMockContext({
+            config: defaultConfig,
+            env: { authClient: mockAuthClient, fetch: mockFetch },
+            logger: mockLogger,
+            id: 'test-dm',
+          }),
+        ),
+      ).resolves.toBeUndefined();
+    });
+
+    test.each([null, 'accepted'])(
+      'throws on an unreadable answer (%p)',
+      async (answer) => {
+        mockFetch.mockResolvedValue({ ok: true, json: async () => answer });
+
+        await expect(
+          destination.push(
+            getEvent('page view'),
+            createMockContext({
+              config: defaultConfig,
+              env: { authClient: mockAuthClient, fetch: mockFetch },
+              logger: mockLogger,
+              id: 'test-dm',
+            }),
+          ),
+        ).rejects.toMatchObject({
+          message: 'Data Manager answered with an unreadable body',
+          code: 'transport',
+          retryable: false,
+        });
+      },
+    );
+
     test('uses custom URL when provided', async () => {
       const event = getEvent('page view');
 

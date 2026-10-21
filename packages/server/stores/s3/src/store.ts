@@ -1,9 +1,9 @@
 import { S3mini } from 's3mini';
+import { StepError } from '@walkeros/core';
 import {
   serializeStoreValue,
   deserializeStoreValue,
-  StepError,
-} from '@walkeros/core';
+} from '@walkeros/core/node';
 import type { Store } from '@walkeros/core';
 import type { S3StoreSettings, Types } from './types';
 

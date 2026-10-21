@@ -1,5 +1,5 @@
 import { startFlow } from '@walkeros/collector';
-import { moin } from '@walkeros/core';
+import { moin } from '@walkeros/web-core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { sourceSession } from '@walkeros/web-source-session';
 import { dataLayerDestination } from './destination';

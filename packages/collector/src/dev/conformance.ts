@@ -10,7 +10,7 @@ import type {
 } from '@walkeros/core';
 import type { JSONSchema } from '@walkeros/core/dev';
 import { getEvent, isObject, Level, StepError, stepId } from '@walkeros/core';
-import type { Answer, EnvAnswer } from './boundary';
+import type { EnvAnswer } from './boundary';
 import type {
   ExamplesEnv,
   LogLine,
@@ -25,6 +25,7 @@ import {
   isEvent,
   isStoreOperation,
   mappingOf,
+  onPage,
   openDestination,
   openSource,
   openStore,
@@ -39,7 +40,6 @@ import {
   sourceConfig,
   STEP_ID,
   timersAreFake,
-  VENDOR_SCRIPT_MARKER,
 } from './runExamples';
 
 /**
@@ -77,6 +77,11 @@ export interface ConformanceOptions {
   passThrough?: string[];
   /** Sources: the package's `createTrigger`, which feeds the examples. */
   createTrigger?: Trigger.CreateFn;
+  /**
+   * The page a web step runs on: `page` from `@walkeros/web-core/dev`. The
+   * browser profiles (`web-sdk`, `vendor-global`) require it.
+   */
+  page?: Flow.StepPage;
 }
 
 /** Every failed check of one conformance run: `items` lists their numbers. */
@@ -414,7 +419,7 @@ function pureJson(settings: Record<string, unknown>): boolean {
 }
 
 /** The failures item 2 answers at the fetch boundary, one run each. */
-const failureAnswers: Array<{ label: string; answer: Answer }> = [
+const failureAnswers: Array<{ label: string; answer: Flow.StepAnswer }> = [
   { label: 'HTTP 500', answer: { status: 500, body: { error: 'busy' } } },
   { label: 'a network error', answer: { error: 'network' } },
   { label: 'a timeout', answer: { error: 'timeout' } },
@@ -456,6 +461,7 @@ async function runDestination(
   const mapping = mappingOf(target.example, { event: target.event });
   const session = await openDestination(step, {
     env: ctx.runEnv,
+    page: ctx.options.page,
     ...setup,
     config: {
       timeout: RUN_TIMEOUT,
@@ -660,6 +666,7 @@ async function destinationItem(
         for (const problem of await checkDestinationExample(step, example, {
           settings: options.settings,
           env: options.env,
+          page: options.page,
         }))
           problems.push(`example ${name}: ${problem}`);
       }
@@ -684,6 +691,7 @@ async function destinationItem(
           checkDestinationExample(step, example, {
             settings: options.settings,
             env: ctx.runEnv ? options.env : undefined,
+            page: options.page,
           }),
       );
 
@@ -707,6 +715,7 @@ async function destinationItem(
         for (const problem of await checkDestinationExample(step, example, {
           settings: options.settings,
           env: ctx.runEnv ? options.env : undefined,
+          page: options.page,
         }))
           problems.push(`example ${name}: ${problem}`);
       }
@@ -731,6 +740,7 @@ async function declaredFailures(
     for (const problem of await checkDestinationExample(step, example, {
       settings: ctx.options.settings,
       env: ctx.options.env,
+      page: ctx.options.page,
     }))
       problems.push(`example ${name}: ${problem}`);
   return problems.length ? problems.join(', ') : undefined;
@@ -745,9 +755,11 @@ async function vendorFailureProblem(
   const mapping = mappingOf(primary.example, { event: primary.event });
   const session = await openDestination(step, {
     settings: ctx.options.settings,
+    env: ctx.env,
+    page: ctx.options.page,
     // The page's document replaces an env one, so the script lands where
     // the kit fires its `error`.
-    env: ctx.env && { ...ctx.env, push: { ...ctx.env.push, document } },
+    pageGlobals: true,
     config: {
       timeout: RUN_TIMEOUT,
       loadScript: true,
@@ -758,9 +770,7 @@ async function vendorFailureProblem(
     await session.run({ event: primary.event });
     if (!session.scripts().marked) return declaredFailures(step, ctx);
 
-    document
-      .querySelectorAll(`script[${VENDOR_SCRIPT_MARKER}]`)
-      .forEach((script) => script.dispatchEvent(new Event('error')));
+    session.boundary.page?.failScripts();
     const run = await session.run({ event: primary.event });
     const reason = run.result.failed?.[STEP_ID]?.reason;
     if (reason?.code !== 'vendor-not-loaded')
@@ -787,6 +797,7 @@ async function batchProblem(
   const session = await openDestination(step, {
     settings: ctx.options.settings,
     env: ctx.runEnv,
+    page: ctx.options.page,
     config: {
       timeout: RUN_TIMEOUT,
       batch: { size: 1000, wait: 60_000 },
@@ -1359,6 +1370,7 @@ async function sourceItem(
   const start = async (setup: Setup) => {
     const thrown: unknown[] = [];
     const session = await openSource(step, {
+      page: options.page,
       ...setup,
       initError: (error) => thrown.push(error),
     }).catch((error: unknown) => {
@@ -1402,7 +1414,8 @@ async function sourceItem(
     }
 
     case 7: {
-      if (!options.createTrigger)
+      const { createTrigger } = options;
+      if (!createTrigger)
         return 'sources run their examples through the package createTrigger: pass it';
       const found: string[] = [];
       let planted = 0;
@@ -1411,32 +1424,34 @@ async function sourceItem(
         if (!hasCanary(input)) continue;
         planted++;
         const logs: LogLine[] = [];
-        const instance = await options.createTrigger(
-          sourceConfig(
-            step,
-            { env: options.env, settings: options.settings },
-            [],
-            logs,
-          ),
-        );
-        try {
-          await instance
-            .trigger(
-              example.trigger?.type,
-              example.trigger?.options,
-            )(input)
-            .then(
-              (result) => {
-                if (hasCanary(isObject(result) ? result.error : undefined))
-                  found.push('the answered error');
-              },
-              (error: unknown) => {
-                if (hasCanary(error)) found.push('the thrown error message');
-              },
-            );
-        } finally {
-          await instance.flow?.collector.command('shutdown');
-        }
+        await onPage(options.page, async () => {
+          const instance = await createTrigger(
+            sourceConfig(
+              step,
+              { env: options.env, settings: options.settings },
+              [],
+              logs,
+            ),
+          );
+          try {
+            await instance
+              .trigger(
+                example.trigger?.type,
+                example.trigger?.options,
+              )(input)
+              .then(
+                (result) => {
+                  if (hasCanary(isObject(result) ? result.error : undefined))
+                    found.push('the answered error');
+                },
+                (error: unknown) => {
+                  if (hasCanary(error)) found.push('the thrown error message');
+                },
+              );
+          } finally {
+            await instance.flow?.collector.command('shutdown');
+          }
+        });
         found.push(...leaks(logs));
       }
       if (!planted)
@@ -1459,22 +1474,12 @@ type KitArgs =
   | ['store', StoreStep]
   | ['source', SourceStep];
 
-/** Profiles of steps that run in a browser: they need a document. */
-const BROWSER_PROFILES: Profile[] = ['web-sdk', 'vendor-global'];
-
 /**
- * Refuses a browser profile in a test environment without a document (a
- * server package on `web-sdk` would skip item 5 by mistake).
+ * Profiles of steps that run in a browser: they run on the step's page, so
+ * a server package on `web-sdk` cannot skip item 5 by mistake, and items 2,
+ * 6 and 8 never run without the page's scripts.
  */
-export function assertProfileEnvironment(
-  profile: Profile,
-  hasDocument = typeof document !== 'undefined',
-): void {
-  if (BROWSER_PROFILES.includes(profile) && !hasDocument)
-    throw new Error(
-      `profile ${profile} is for web steps and needs a document: run it in a jsdom test environment, or use a server profile (http, sdk-env, socket)`,
-    );
-}
+const BROWSER_PROFILES: Profile[] = ['web-sdk', 'vendor-global'];
 
 const KIND_PROFILES: Record<KitArgs[0], Profile[]> = {
   destination: ['http', 'sdk-env', 'web-sdk', 'vendor-global', 'socket'],
@@ -1537,7 +1542,10 @@ export async function conformance(...given: ConformanceArgs): Promise<void> {
     throw new Error(
       `profile ${options.profile} is not a ${kind} profile (${KIND_PROFILES[kind].join(', ')})`,
     );
-  assertProfileEnvironment(options.profile);
+  if (BROWSER_PROFILES.includes(options.profile) && !options.page)
+    throw new Error(
+      `profile ${options.profile} runs on a page: pass page from @walkeros/web-core/dev`,
+    );
 
   const args = kitArgs(given);
   const ctx = contextOf(options);

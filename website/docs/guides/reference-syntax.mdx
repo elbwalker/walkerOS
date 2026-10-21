@@ -31,8 +31,8 @@ Every reference follows that rule. There are no exceptions.
 ```
 $var.name              look up variables[name] (whole-string returns native type)
 $var.name.deep.path    walk a dotted path inside the variable
-$env.NAME              read process.env[NAME]
-$env.NAME:default      read process.env[NAME] with a literal fallback
+$env.NAME              read environment variable NAME (web: bundle time, server: run time)
+$env.NAME:default      read NAME with a literal fallback
 $contract.name         inject a whole named contract entry
 $contract.name.events  walk the contract path
 $store.id              inject a store instance (resolved at bundle time)
@@ -127,8 +127,11 @@ prefix or suffix rule.
 
 ## `$env.`: environment variables {#env--environment-variables}
 
-Read from `process.env` at runtime. Optionally provide a literal fallback with
-the `:default` suffix.
+A web flow reads the value at bundle time, from its build environment (see
+below), and the bundle fails if the variable is not set. A server flow's bundle
+reads `process.env` when it runs; an unset variable resolves to `undefined`, and
+inside a longer string it becomes the text `undefined`. On both platforms the
+`:default` suffix gives a literal fallback for an unset variable.
 
 ```json
 {

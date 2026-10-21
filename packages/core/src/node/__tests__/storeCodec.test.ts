@@ -2,7 +2,7 @@ import {
   serializeStoreValue,
   deserializeStoreValue,
   StoreCodecError,
-} from '../codec';
+} from '../storeCodec';
 import type { StoreValue } from '../../types/store';
 
 describe('store codec', () => {

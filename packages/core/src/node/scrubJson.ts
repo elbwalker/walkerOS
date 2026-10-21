@@ -1,4 +1,4 @@
-import { MIN_KNOWN_LEN, scrubSecrets, type ScrubOptions } from './redactLine';
+import { MIN_KNOWN_LEN, scrubSecrets, type ScrubOptions } from '../redactLine';
 import { toPrintable } from './toPrintable';
 
 /**

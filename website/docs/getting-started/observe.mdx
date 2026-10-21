@@ -34,6 +34,7 @@ Add the public connect pair to `startFlow`:
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
+import { pageObserveSlot } from '@walkeros/web-core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { elb } = await startFlow({
@@ -43,10 +44,16 @@ const { elb } = await startFlow({
   observe: {
     url: 'https://observer.example.com', // public, safe to commit
     binding: 'pb_x', // public project binding, safe to commit
+    slot: pageObserveSlot(), // keeps the session credential in this browser
   },
 });`}
   language="typescript"
 />
+
+`slot` is required in a browser: a web `observe` without it logs one error line
+naming `pageObserveSlot` and Observe stays off. The `observe` block under
+`collector` in a flow file cannot carry a slot, so use `config.observe` (bundled
+mode below) or a hand-written `startFlow` as shown.
 
 Then open your dev URL with a session credential appended:
 
@@ -105,7 +112,8 @@ Build once:
 
 <CodeSnippet code={`walkeros bundle flow.json -o ./dist/walker.js`} language="bash" />
 
-The bundle carries only the public pair. `url` and `binding` must both be set:
+The CLI adds the browser slot to the bundle, so a bundle needs an up-to-date
+CLI. The bundle carries only the public pair. `url` and `binding` must both be set:
 a partial pair warns at build time and wires nothing. Activation works exactly
 as in integrated mode, via the `?elbObserve=` parameter on any page that loads
 the bundle.

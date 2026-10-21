@@ -2,15 +2,14 @@
  * @jest-environment jsdom
  * @jest-environment-options {"url": "https://shop.example.com/page"}
  */
-// Core's jest defaults to jsdom at https://example.com (web.config); the
+// web-core's jest defaults to jsdom at https://example.com (web.config); the
 // options docblock pins this suite's origin so aud checks are realistic.
 // jsdom has no crypto.subtle and no TextEncoder: inject webcrypto, use Buffer.
 import { webcrypto } from 'node:crypto';
 import {
   browserSwapActivator,
-  parseGrant,
   type SwapActivatorConfig,
-} from '../preview';
+} from '../previewActivator';
 
 const crypto = webcrypto;
 const NOW = 1_700_000_000_000;
@@ -165,7 +164,7 @@ describe('browserSwapActivator', () => {
 
   it('self-heals when the preview script neither loads nor errors (hung CDN), via the swap timeout', async () => {
     // No autoResolveScripts here: the injected <script> is left in place with
-    // no load/error ever dispatched, so only preview.ts's real SWAP_TIMEOUT_MS
+    // no load/error ever dispatched, so only the activator's real SWAP_TIMEOUT_MS
     // fallback (5s) can settle this promise. Real timers, not fake ones: the
     // activator awaits the real crypto verify BEFORE it registers the swap
     // setTimeout, so faking timers races that await (a slow runner advances the
@@ -375,12 +374,5 @@ describe('browserSwapActivator', () => {
       expect(await browserSwapActivator(cfg)).toBe(false);
       expect(localStorage.getItem('elbObserve')).toBeNull();
     });
-  });
-});
-
-describe('parseGrant art charset', () => {
-  it('rejects a grant whose art escapes the /preview/ path prefix (path traversal)', async () => {
-    const { sign } = await setup();
-    expect(parseGrant(await sign({ art: '../../evil' }))).toBeNull();
   });
 });

@@ -1,11 +1,17 @@
+// What a Headers takes; the DOM lib's HeadersInit is not in a server program.
+type HeadersInput = ConstructorParameters<typeof Headers>[0];
+
 /**
  * Normalize headers from any RequestInit format to a plain object.
  */
-function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
+function normalizeHeaders(headers?: HeadersInput): Record<string, string> {
   if (!headers) return {};
   if (headers instanceof Headers) return Object.fromEntries(headers.entries());
   if (Array.isArray(headers)) return Object.fromEntries(headers);
-  return headers;
+  const normalized: Record<string, string> = {};
+  for (const [name, value] of Object.entries(headers))
+    if (value !== undefined) normalized[name] = value;
+  return normalized;
 }
 
 /**
@@ -15,7 +21,7 @@ function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
  */
 export function mergeAuthHeaders(
   token: string | null | undefined,
-  headers?: HeadersInit,
+  headers?: HeadersInput,
 ): Record<string, string> {
   const normalized = normalizeHeaders(headers);
   if (token) normalized.Authorization = `Bearer ${token}`;

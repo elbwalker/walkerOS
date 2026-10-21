@@ -35,7 +35,14 @@ const RAW_BUDGET_BYTES = 114_000;
 const GZIP_BUDGET_BYTES = 40_000;
 
 /** Strings only the observe recorder (connect, poster, call capture) carries. */
-const RECORDER_MARKERS = ['elbObserve', '/ingest/', 'X-Walkeros-Binding'];
+const RECORDER_MARKERS = [
+  'credential binding mismatch',
+  '/ingest/',
+  'X-Walkeros-Binding',
+];
+
+/** The page's Observe slot (web-core), imported only by an observed entry. */
+const SLOT_MARKER = 'elbObserve';
 
 /**
  * One string per other build flag that only its guarded code carries: store
@@ -103,6 +110,7 @@ describe('CDN bundle size budget', () => {
   it('cdn target ships no unused feature and no unresolved build flag', () => {
     for (const marker of [...RECORDER_MARKERS, ...FEATURE_MARKERS])
       expect(cdn).not.toContain(marker);
+    expect(cdn).not.toContain(SLOT_MARKER);
     expect(cdn).not.toMatch(UNRESOLVED_FLAG);
   });
 
@@ -112,6 +120,7 @@ describe('CDN bundle size budget', () => {
       'utf8',
     );
     for (const marker of RECORDER_MARKERS) expect(text).toContain(marker);
+    expect(text).toContain(SLOT_MARKER);
     for (const marker of FEATURE_MARKERS) expect(text).not.toContain(marker);
     expect(text).not.toMatch(UNRESOLVED_FLAG);
   }, 120000);
@@ -178,7 +187,7 @@ describe('CDN bundle size budget', () => {
       const plain = await readFile(plainPath, 'utf8');
       const observed = await readFile(observedPath, 'utf8');
 
-      for (const marker of RECORDER_MARKERS) {
+      for (const marker of [...RECORDER_MARKERS, SLOT_MARKER]) {
         expect(plain).not.toContain(marker);
         expect(observed).toContain(marker);
       }

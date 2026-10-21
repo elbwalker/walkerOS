@@ -131,8 +131,9 @@ examples as well.
 real collector against its step examples and checks the failure contract in one
 call. The `profile` states what the step talks to: for destinations `http`,
 `sdk-env`, `web-sdk` (a web SDK started in `init`), `vendor-global` or `socket`;
-`transformer` and `source` for those kinds. `runExamples` runs the examples
-alone.
+`transformer` and `source` for those kinds. A web step passes `page` from
+`@walkeros/web-core/dev`, the browser it runs on; the browser profiles fail
+without it. `runExamples` runs the examples alone.
 
 ### Rule 4: Test First, Watch It Fail
 

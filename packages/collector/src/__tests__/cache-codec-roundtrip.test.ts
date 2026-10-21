@@ -3,12 +3,14 @@ import {
   createMappingRoot,
   checkCache,
   compileCache,
-  serializeStoreValue,
-  deserializeStoreValue,
   storeCache,
   wrapCacheEnvelope,
   readCacheEnvelope,
 } from '@walkeros/core';
+import {
+  serializeStoreValue,
+  deserializeStoreValue,
+} from '@walkeros/core/node';
 import { createCacheStore } from '../cache-store';
 import type { Store, Transformer, WalkerOS } from '@walkeros/core';
 

@@ -1,5 +1,6 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
 import { destinationPiwikPro } from '..';
 import { examples, schemas } from '../dev';
 
@@ -11,6 +12,7 @@ describe('piwikpro conformance', () => {
   it('conforms', async () => {
     await conformance('destination', destinationPiwikPro, {
       profile: 'vendor-global',
+      page,
       examples: examples.step,
       schema: schemas.settings,
       settings: {

@@ -29,6 +29,20 @@ export const examples: Flow.StepExamples = {
   },
 };
 
+/**
+ * A page without a DOM for the browser profiles: the vendor fixtures call
+ * their vendor only, never a page transport or script. The real page is
+ * `page` from `@walkeros/web-core/dev`, whose tests run it.
+ */
+export const blankPage: Flow.StepPage = {
+  open: () => ({
+    globals: {},
+    scripts: () => ({ marked: 0, unmarked: 0 }),
+    failScripts: () => undefined,
+    close: () => undefined,
+  }),
+};
+
 export const fixtures = {
   schema,
   examples,

@@ -335,9 +335,9 @@ a complete test suite showing:
 4. **Return value testing** - Verify `event`, `void`, or `false` returns
 5. **Conformance** - `conformance('transformer', transformer, options)` from
    `@walkeros/collector/dev` (profile `transformer`) runs it on a real
-   collector. A transformer whose input is the ingest and not an event declares
-   its failure with a `missing-input` example (an event as `in`, `out: []`, a
-   description).
+   collector. A transformer needs no `page`. A transformer whose input is the
+   ingest and not an event declares its failure with a `missing-input` example
+   (an event as `in`, `out: []`, a description).
 
 ### Gate: Tests Pass
 

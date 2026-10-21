@@ -1,8 +1,8 @@
 import type { Flow, Store, Trigger, WalkerOS } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { startFlow } from '../../flow';
-import { assertProfileEnvironment, conformance } from '../conformance';
-import { fixtures } from './fixtures';
+import { conformance } from '../conformance';
+import { blankPage, fixtures } from './fixtures';
 import {
   batching,
   batchingByDefault,
@@ -32,9 +32,6 @@ import {
   consentAware,
   consentIgnoring,
   initCalling,
-  pageScriptIgnoring,
-  pageScriptVendor,
-  scriptVendor,
   swallowingSdk,
   vendorGlobal,
 } from './fixture-package/src/vendor';
@@ -237,19 +234,6 @@ describe('conformance kit', () => {
         'HTTP 500 writes 2 ERROR lines for transport',
       ),
     });
-  });
-
-  it('refuses a browser profile without a document, and nothing else', () => {
-    expect(() => assertProfileEnvironment('web-sdk', false)).toThrow(
-      /profile web-sdk is for web steps and needs a document/,
-    );
-    expect(() => assertProfileEnvironment('vendor-global', false)).toThrow(
-      /profile vendor-global is for web steps and needs a document/,
-    );
-    expect(() => assertProfileEnvironment('sdk-env', false)).not.toThrow();
-    expect(() => assertProfileEnvironment('http', false)).not.toThrow();
-    expect(() => assertProfileEnvironment('web-sdk', true)).not.toThrow();
-    expect(() => assertProfileEnvironment('vendor-global')).not.toThrow();
   });
 
   it('refuses fake timers with a clear message', async () => {
@@ -522,7 +506,25 @@ describe('conformance kit, vendor-global profile', () => {
       simulation: ['call:vendor.track', 'call:vendor.consent'],
     },
     examples,
+    page: blankPage,
   };
+
+  it('refuses a browser profile without a page', async () => {
+    const { page, ...withoutPage } = options;
+    await expect(
+      conformance('destination', vendorGlobal, withoutPage),
+    ).rejects.toThrow(
+      'profile vendor-global runs on a page: pass page from @walkeros/web-core/dev',
+    );
+    await expect(
+      conformance('destination', vendorGlobal, {
+        ...withoutPage,
+        profile: 'web-sdk',
+      }),
+    ).rejects.toThrow(
+      'profile web-sdk runs on a page: pass page from @walkeros/web-core/dev',
+    );
+  });
 
   it('passes a vendor destination that passes consent to the vendor', async () => {
     await expect(
@@ -616,52 +618,6 @@ describe('conformance kit, vendor-global profile', () => {
       ).rejects.toMatchObject({
         items: [5],
         message: expect.stringMatching(/item 5: init makes 1 /),
-      });
-    });
-  });
-
-  it('counts item 2 per cause: a vendor-timeout line before the script error does not count', async () => {
-    await expect(
-      conformance('destination', scriptVendor, {
-        ...options,
-        schema: { type: 'object', properties: {} },
-        settings: {},
-        examples: {
-          pageView: { in: event },
-          silent: examples.silent,
-          revoke: examples.revoke,
-        },
-      }),
-    ).resolves.toBeUndefined();
-  });
-
-  describe('a script injected once per page, loadScript on by default (item 2)', () => {
-    // No declared failure example: item 2 must reach the script error itself.
-    const { unreachable, ...scriptExamples } = examples;
-    const scriptOptions = { ...options, examples: scriptExamples };
-
-    it('reaches the script error although item 1 injected the src first', async () => {
-      await expect(
-        conformance('destination', pageScriptVendor, scriptOptions),
-      ).resolves.toBeUndefined();
-    });
-
-    it('reaches the script error when the examples env carries its own document', async () => {
-      const own = document.implementation.createHTMLDocument('env');
-      await expect(
-        conformance('destination', pageScriptVendor, {
-          ...scriptOptions,
-          env: { ...scriptOptions.env, push: { vendor, document: own } },
-        }),
-      ).resolves.toBeUndefined();
-    });
-
-    it('fails item 2 when the push ignores the script error', async () => {
-      await expect(
-        conformance('destination', pageScriptIgnoring, scriptOptions),
-      ).rejects.toMatchObject({
-        items: [2],
-        message: expect.stringContaining('is not reported vendor-not-loaded'),
       });
     });
   });

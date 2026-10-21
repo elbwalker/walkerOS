@@ -1,5 +1,5 @@
 import type { PushFn } from './types';
-import type { IngestEventsRequest, IngestEventsResponse } from './types';
+import type { IngestEventsRequest } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
 import {
   createMappingRoot,
@@ -223,11 +223,20 @@ const send: PushFn = async function (
     });
   }
 
-  const result: IngestEventsResponse = await response.json();
+  const result: unknown = await response.json();
+  if (!isIngestAnswer(result)) {
+    // Google answered 2xx: a retry would send events it already accepted.
+    throw new StepError('Data Manager answered with an unreadable body', {
+      code: 'transport',
+      retryable: false,
+      body: result,
+    });
+  }
 
   logger.debug('API response', {
     status: response.status,
-    requestId: result.requestId,
+    requestId:
+      typeof result.requestId === 'string' ? result.requestId : undefined,
   });
 
   // If validation errors exist, throw them
@@ -256,4 +265,21 @@ async function resolveClient(
   if (setting === false) return undefined;
   const value = await getMappingValue(root, setting ?? fallback, { collector });
   return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
+/**
+ * What push reads from an events.ingest answer: an object, with validation
+ * errors only under validateOnly. The request id is only logged.
+ */
+interface IngestAnswer {
+  requestId?: unknown;
+  validationErrors?: unknown[];
+}
+
+function isIngestAnswer(value: unknown): value is IngestAnswer {
+  return (
+    isObject(value) &&
+    (value.validationErrors === undefined ||
+      Array.isArray(value.validationErrors))
+  );
 }

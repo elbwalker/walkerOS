@@ -42,8 +42,9 @@ Stores hold one canonical value type: structured data (`StoreValue`), with
 binary (`Uint8Array`) as a first-class leaf. `StoreValue` is
 `string | number | boolean | null | Uint8Array | StoreValue[] | { [key: string]: StoreValue }`
 (`undefined` is reserved as the "miss" sentinel and is never a stored value). A
-shared core codec (`serializeStoreValue` / `deserializeStoreValue`) round-trips
-that value to and from each backing.
+shared codec in `@walkeros/core/node` (`serializeStoreValue` /
+`deserializeStoreValue`, Node only, `StoreCodecError` on a bad value)
+round-trips that value to and from each backing.
 
 `Store.Config.file?: boolean` (default `false`) picks the mode, decided once at
 init:

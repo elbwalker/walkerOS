@@ -44,6 +44,18 @@ describe('generateWebEntry observe connect codegen', () => {
     expect(startFlowIdx).toBeGreaterThan(observeIdx);
   });
 
+  it('passes the page slot beside the public pair, imported from web-core', () => {
+    const out = wrapWebEntryFor(flowWithObserve);
+    // The web arm reads its credential through the slot port; without it the
+    // collector logs an ERROR and Observe stays off.
+    expect(out).toContain(
+      "import { pageObserveSlot } from '@walkeros/web-core';",
+    );
+    expect(out).toContain(
+      'config.observe = { ...{"url":"https://obs.example","binding":"pb_x"}, slot: pageObserveSlot() };',
+    );
+  });
+
   it('never emits a token or obsw_ secret literal into the bundle', () => {
     const out = wrapWebEntryFor(flowWithObserve);
     expect(out).not.toMatch(/obsw_/);

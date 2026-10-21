@@ -1,9 +1,43 @@
+import { builtinModules } from 'node:module';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import jest from 'eslint-plugin-jest';
 import globals from 'globals';
 import tsParser from '@typescript-eslint/parser';
 import awaitSend from './rules/await-send.mjs';
 import noSilentReturn from './rules/no-silent-return.mjs';
+
+// The platform boundary, checked by `npm run check:platform`. A web package
+// uses no Node name, a server package no browser name, a neutral package
+// neither. TypeScript cannot hold the line alone: @types/node declares
+// localStorage and navigator, and @types/jsdom brings the DOM into any program
+// that loads it.
+export const browserGlobals = [
+  'window',
+  'self',
+  'document',
+  'location',
+  'history',
+  'localStorage',
+  'sessionStorage',
+  'navigator',
+  'XMLHttpRequest',
+];
+export const nodeGlobals = [
+  'Buffer',
+  'process',
+  'require',
+  'module',
+  '__dirname',
+  '__filename',
+  'global',
+  'setImmediate',
+  'clearImmediate',
+];
+export const nodeBuiltins = [...builtinModules];
+
+// Tests run in Node under jest, so the platform bans on globals and imports
+// skip them.
+export const testFiles = ['**/__tests__/**', '**/*.test.{js,ts,tsx}'];
 
 // walkerOS rules for the delivery contract. At `warn` while the step packages
 // migrate onto it; `error` once every package is migrated.

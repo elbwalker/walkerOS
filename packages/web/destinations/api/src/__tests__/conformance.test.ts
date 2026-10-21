@@ -1,5 +1,6 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
 import { destinationAPI } from '..';
 import { examples, schemas } from '../dev';
 
@@ -11,6 +12,7 @@ describe('api conformance', () => {
   it('conforms', async () => {
     await conformance('destination', destinationAPI, {
       profile: 'http',
+      page,
       examples: examples.step,
       schema: schemas.settings,
       settings: { url: 'https://api.example.com/events' },

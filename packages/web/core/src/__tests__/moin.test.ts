@@ -2,14 +2,9 @@
  * @jest-environment jsdom
  * @jest-environment-options {"url": "https://shop.example.com/page"}
  */
-import {
-  MOIN_PARAM,
-  MOIN_PRODUCTION,
-  moin,
-  runMoin,
-  type MoinGlobals,
-  type MoinTarget,
-} from '../moin';
+import type { MoinTarget } from '@walkeros/core';
+import { MOIN_PARAM, MOIN_PRODUCTION } from '@walkeros/core';
+import { moin, runMoin } from '../moin';
 
 const T: MoinTarget = {
   app: 'https://app.test',
@@ -135,27 +130,23 @@ describe('arming', () => {
   });
 
   describe('frames', () => {
-    // A frame window: the parameter is present, so only the top check decides.
-    function frame(top: 'self' | 'other') {
-      const addEventListener = jest.fn();
-      const frameWindow: MoinGlobals['window'] = {
-        top: null,
-        location: { search: '?elbMoin' },
-        sessionStorage: window.sessionStorage,
-        addEventListener,
-        removeEventListener: jest.fn(),
-      };
-      frameWindow.top = top === 'self' ? frameWindow : window;
-      runMoin({ window: frameWindow, URLSearchParams }, T);
-      return addEventListener;
-    }
-
     it('stays off in a sub-frame', () => {
-      expect(frame('other')).not.toHaveBeenCalled();
+      const iframe = document.createElement('iframe');
+      document.body.appendChild(iframe);
+      const frame = iframe.contentWindow;
+      if (!frame) throw new Error('the iframe has no window');
+      // The tab flag arms the frame, so only the top check decides.
+      frame.sessionStorage.setItem(MOIN_PARAM, '1');
+      const frameListen = jest.spyOn(frame, 'addEventListener');
+      runMoin(frame, T);
+      expect(frameListen).not.toHaveBeenCalled();
+      expect(Reflect.get(frame, GUARD)).toBeUndefined();
     });
 
     it('arms the same window when it is the top frame', () => {
-      expect(frame('self')).toHaveBeenCalledWith(
+      setSearch('?elbMoin');
+      runMoin(window, T);
+      expect(listen).toHaveBeenCalledWith(
         'message',
         expect.any(Function),
         true,
@@ -164,42 +155,31 @@ describe('arming', () => {
   });
 
   describe('broken globals', () => {
-    class BrokenParams {
-      constructor() {
-        throw new Error('broken polyfill');
-      }
-      has(): boolean {
-        return false;
-      }
-    }
-
     const fail = (): never => {
       throw new Error('broken page');
     };
 
-    function broken(part: 'params' | 'top' | 'listener'): MoinGlobals {
-      const frameWindow: MoinGlobals['window'] = {
-        top: null,
-        location: { search: '?elbMoin' },
-        sessionStorage: window.sessionStorage,
-        addEventListener: part === 'listener' ? fail : jest.fn(),
-        removeEventListener: jest.fn(),
-      };
-      if (part === 'top')
-        Object.defineProperty(frameWindow, 'top', { get: fail });
-      else frameWindow.top = frameWindow;
-      return {
-        window: frameWindow,
-        URLSearchParams: part === 'params' ? BrokenParams : URLSearchParams,
-      };
-    }
+    beforeEach(() => setSearch('?elbMoin'));
 
-    it.each(['params', 'top', 'listener'] as const)(
-      'never throws when %s throws',
-      (part) => {
-        expect(() => runMoin(broken(part), T)).not.toThrow();
-      },
-    );
+    it('never throws when URLSearchParams throws', () => {
+      jest.spyOn(window, 'URLSearchParams').mockImplementation(fail);
+      expect(() => moin(T)).not.toThrow();
+      expect(messageListeners()).toHaveLength(0);
+    });
+
+    it('never throws when the top check throws', () => {
+      const page = new Proxy(window, {
+        get: (target, key) =>
+          key === 'top' ? fail() : Reflect.get(target, key),
+      });
+      expect(() => runMoin(page, T)).not.toThrow();
+      expect(messageListeners()).toHaveLength(0);
+    });
+
+    it('never throws when adding the listener throws', () => {
+      listen.mockImplementation(fail);
+      expect(() => moin(T)).not.toThrow();
+    });
   });
 
   it('lets only the first loader on a page arm', () => {

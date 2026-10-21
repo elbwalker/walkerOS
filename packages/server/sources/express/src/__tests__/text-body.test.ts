@@ -176,8 +176,8 @@ describe('express text/plain bodies', () => {
       });
 
       expect(response.status).toBe(400);
-      const body: { success: boolean } = await response.json();
-      expect(body.success).toBe(false);
+      const body: unknown = await response.json();
+      expect(body).toMatchObject({ success: false });
       expect(harness.received).toEqual([]);
       expect(harness.collector.status.sources.express?.rejected).toBe(1);
     } finally {

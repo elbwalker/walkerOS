@@ -88,11 +88,11 @@ export const SECRET_MARKER_PREFIX = '__WALKEROS_SECRET:';
 export interface ResolveOptions {
   deferred?: boolean;
   /**
-   * The only source for non-deferred `$env` references. When set, `$env.NAME`
-   * reads this map (then the inline `:default`) and never `process.env`.
-   * Build tooling passes it so a web bundle cannot pick up whatever happens
-   * to be in the building process's environment. When omitted, `process.env`
-   * is used.
+   * The only source for non-deferred `$env` references: `$env.NAME` reads
+   * this map, then the inline `:default`, and never the ambient environment
+   * (`process.env`). Without it, a non-deferred `$env.NAME` takes its default
+   * or throws `FlowReferenceError`. A runtime that means its own environment
+   * passes it explicitly (`{ env: process.env }`).
    */
   env?: Readonly<Record<string, string | undefined>>;
   /**
@@ -180,8 +180,8 @@ export type FlowConfigResolver = (flowName: string) => unknown;
  *   (object, array, number, boolean, string). Inline interpolation requires a
  *   scalar (string/number/boolean) and throws on objects/arrays. Resolution is
  *   recursive (variables may reference other variables) with cycle detection.
- * - $env.NAME or $env.NAME:default → Look up `options.env` (or process.env when
- *   no env map is given) for non-secret config
+ * - $env.NAME or $env.NAME:default → Look up `options.env` for non-secret
+ *   config, never the ambient environment
  * - $secret.NAME → Managed secret. In deferred (server) mode emits a marker the
  *   bundler turns into a runtime process.env read; the deploy pipeline injects
  *   the secret value. Throws in non-deferred (web) mode. Use for credentials.
@@ -409,10 +409,7 @@ function resolvePatterns(
           ? `${ENV_MARKER_PREFIX}${name}:${defaultValue}`
           : `${ENV_MARKER_PREFIX}${name}`;
       }
-      const source =
-        options?.env ??
-        (typeof process !== 'undefined' ? process.env : undefined);
-      const found = source?.[name];
+      const found = options?.env?.[name];
       if (found !== undefined) return found;
       if (defaultValue !== undefined) {
         return defaultValue;

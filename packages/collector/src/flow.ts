@@ -3,13 +3,13 @@ import type {
   Destination,
   Elb,
   EmitFn,
+  ObserveSlot,
   ObserverFn,
   Source,
   Store,
   Transformer,
 } from '@walkeros/core';
 import {
-  OBSERVE_STORAGE_KEY,
   createBatchedPoster,
   createTelemetryObserver,
   parseObserveCredential,
@@ -17,112 +17,6 @@ import {
 import type { StartFlow } from './types';
 import { collector } from './collector';
 import { initSources } from './source';
-
-// Structural slices of the browser globals the web-arm credential read
-// touches. The collector runs platform-neutral, so window/URLSearchParams
-// are read off globalThis behind guards -- the same pattern core's
-// preview.ts activator uses. On a server runtime both lookups resolve to
-// undefined and the web arm reads "absent" (zero work).
-interface ObserveGlobals {
-  window?: {
-    location: { href: string; search: string };
-    history: { replaceState(data: unknown, title: string, url: string): void };
-    localStorage: {
-      getItem(key: string): string | null;
-      setItem(key: string, value: string): void;
-      removeItem(key: string): void;
-    };
-  };
-  URLSearchParams?: new (init: string) => {
-    getAll(name: string): string[];
-    delete(name: string): void;
-    toString(): string;
-  };
-}
-
-const G = globalThis as ObserveGlobals;
-
-/**
- * Last `elbObserve` URL param value, or null. The param name and the
- * storage slot share the `elbObserve` key by design (the preview activator
- * ferries the former into the latter). Never throws.
- */
-function readObserveParam(): string | null {
-  const win = G.window;
-  const USP = G.URLSearchParams;
-  if (!win || !USP) return null;
-  try {
-    const search = new USP(win.location.search.replace(/^\?/, ''));
-    const values = search.getAll(OBSERVE_STORAGE_KEY);
-    return values.length > 0 ? (values[values.length - 1] ?? null) : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Stored `elbObserve` slot, or null. Never throws (Safari private mode). */
-function readObserveSlot(): string | null {
-  try {
-    return G.window?.localStorage.getItem(OBSERVE_STORAGE_KEY) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function writeObserveSlot(value: string): void {
-  try {
-    G.window?.localStorage.setItem(OBSERVE_STORAGE_KEY, value);
-  } catch {
-    // Slot persistence is best-effort; the session still attaches this page.
-  }
-}
-
-/**
- * CAS-style slot clear: remove the slot only when it still holds exactly
- * `expected`, so a credential re-minted by another tab (or a later
- * activation) is never destroyed by a stale poster's self-heal.
- */
-function clearObserveSlotIf(expected: string): void {
-  try {
-    const win = G.window;
-    if (!win) return;
-    if (win.localStorage.getItem(OBSERVE_STORAGE_KEY) === expected) {
-      win.localStorage.removeItem(OBSERVE_STORAGE_KEY);
-    }
-  } catch {
-    // Storage unavailable: nothing to heal.
-  }
-}
-
-/**
- * Remove the `elbObserve` param from the address bar after it has been
- * persisted to the slot, keeping every other param and the hash intact.
- * Same history.replaceState mechanics as core preview.ts's stripParam, but
- * scoped to the one param this wiring owns.
- */
-function stripObserveParam(): void {
-  const win = G.window;
-  const USP = G.URLSearchParams;
-  if (!win || !USP) return;
-  try {
-    const href = win.location.href;
-    const hashIdx = href.indexOf('#');
-    const hash = hashIdx >= 0 ? href.slice(hashIdx) : '';
-    const withoutHash = hashIdx >= 0 ? href.slice(0, hashIdx) : href;
-    const qIdx = withoutHash.indexOf('?');
-    const path = qIdx >= 0 ? withoutHash.slice(0, qIdx) : withoutHash;
-    const params = new USP(qIdx >= 0 ? withoutHash.slice(qIdx + 1) : '');
-    params.delete(OBSERVE_STORAGE_KEY);
-    const query = params.toString();
-    win.history.replaceState(
-      {},
-      '',
-      `${path}${query ? `?${query}` : ''}${hash}`,
-    );
-  } catch {
-    // A page that forbids history writes still attaches; the param stays.
-  }
-}
 
 /**
  * Stamp the runtime's release provenance onto every posted record. Like
@@ -146,6 +40,27 @@ function withFlowId(post: EmitFn, flowId: string | undefined): EmitFn {
 }
 
 /**
+ * Run one call into a caller-supplied `ObserveSlot`. The slot is caller code
+ * on the advisory path: a throwing or non-conforming one (e.g.
+ * `slot: pageObserveSlot`, not called) logs one ERROR line and returns
+ * undefined, so the caller turns Observe off and the flow runs on.
+ */
+function callSlot<T>(
+  instance: Collector.Instance,
+  call: () => T,
+): { value: T } | undefined {
+  try {
+    return { value: call() };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    instance.logger.error(
+      `observe: the slot failed, Observe is off: ${reason}`,
+    );
+    return undefined;
+  }
+}
+
+/**
  * Install the advisory observation channel configured on `initConfig`: an
  * `observe` connect config attaches a telemetry poster for its arm. Runs
  * after the collector instance exists and before `command('run')`, so
@@ -163,25 +78,36 @@ function installObserve(
   const flowId = instance.name ?? 'default';
 
   if ('binding' in observe) {
-    // Web arm: the credential arrives out-of-band via the elbObserve URL
-    // param (or the storage slot the preview activator ferries it into).
+    // Web arm: the credential arrives out-of-band and the slot reads it
+    // (`pageObserveSlot()` from @walkeros/web-core: the elbObserve URL param,
+    // or the storage slot the preview activator ferries it into). The type
+    // requires the slot; a JS or JSON caller can still omit it, so its
+    // absence is an ERROR at the default level, never a silent no-op.
+    const slot: ObserveSlot | undefined = observe.slot;
+    if (!slot) {
+      instance.logger.error(
+        'observe: a web observe config needs slot: pageObserveSlot() from @walkeros/web-core',
+      );
+      return;
+    }
+
     // Truly absent means zero work: no parse, no storage write, no observer.
-    const param = readObserveParam();
-    const raw = param ?? readObserveSlot();
-    if (!raw) return;
+    const read = callSlot(instance, () => slot.read());
+    if (!read?.value) return;
+    const { raw, fromUrl } = read.value;
 
     // A present-but-broken credential is warned, never silently dropped;
     // only the truly-absent case above is silent (zero-work contract).
     const credential = parseObserveCredential(raw);
     if (!credential) {
-      if (param === null) {
+      if (fromUrl) {
+        // URL-sourced garbage never touches stored state (anti-griefing).
+        instance.logger.warn('observe: malformed credential ignored');
+      } else {
         // Slot-sourced garbage: stored state clears on its own failure, so
         // self-heal instead of warning on every pageview.
         instance.logger.warn('observe: malformed stored credential cleared');
-        clearObserveSlotIf(raw);
-      } else {
-        // URL-sourced garbage never touches stored state (anti-griefing).
-        instance.logger.warn('observe: malformed credential ignored');
+        callSlot(instance, () => slot.clear(raw));
       }
       return;
     }
@@ -192,10 +118,9 @@ function installObserve(
       return;
     }
 
-    writeObserveSlot(raw);
-    // The credential is persisted; a URL-borne copy is now redundant and,
-    // being a bearer credential, must not linger in the address bar.
-    if (param !== null) stripObserveParam();
+    // Persist the credential; a URL-borne copy is then redundant and, being
+    // a bearer credential, the slot strips it from the address bar.
+    if (!callSlot(instance, () => slot.keep(raw, fromUrl))) return;
 
     let observer: ObserverFn | undefined;
     const post = createBatchedPoster({
@@ -207,8 +132,9 @@ function installObserve(
         // The observer rejected this credential (session ended or token
         // revoked): self-heal the slot -- CAS, only while it still holds
         // exactly this credential -- and detach, so posting stops and the
-        // next pageview is back on the silent zero-work path.
-        clearObserveSlotIf(raw);
+        // next pageview is back on the silent zero-work path. A throwing
+        // clear is reported and never skips the detach.
+        callSlot(instance, () => slot.clear(raw));
         if (observer) instance.observers.delete(observer);
       },
     });

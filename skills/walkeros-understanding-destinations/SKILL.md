@@ -193,7 +193,8 @@ example.
 `@walkeros/collector/dev` runs a destination on a real collector against its
 step examples and fails with every broken item of the contract at once. Pick the
 `profile` by what the destination talks to: `http`, `sdk-env`, `web-sdk` (a web
-SDK started in `init`), `vendor-global`, `socket`. See
+SDK started in `init`), `vendor-global`, `socket`. A web destination also passes
+`page` from `@walkeros/web-core/dev`. See
 [create-destination](../walkeros-create-destination/SKILL.md).
 
 ## Batch scheduling

@@ -1,5 +1,6 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
 import { destinationD8a } from '..';
 import { examples, schemas } from '../dev';
 
@@ -11,6 +12,7 @@ describe('d8a conformance', () => {
   it('conforms', async () => {
     await conformance('destination', destinationD8a, {
       profile: 'web-sdk',
+      page,
       examples: examples.step,
       schema: schemas.settings,
       settings: {

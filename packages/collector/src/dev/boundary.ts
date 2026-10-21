@@ -3,24 +3,13 @@ import { isObject, isThenable, parseCallPath } from '@walkeros/core';
 
 /**
  * The network boundary the runner and the conformance kit control: the
- * global `fetch`, `navigator.sendBeacon` and `XMLHttpRequest`, for web and
- * server alike (`sendServer` and `sendWeb` run on them). Each is replaced for
- * the duration of one run and restored after it. Every request is answered
- * by the boundary and recorded, so a request that never shows up here
- * escaped it (its own `https.request`).
+ * global `fetch`, for web and server alike (`sendServer` runs on it), and on
+ * a web step's page (`Flow.StepPage`, from `@walkeros/web-core/dev`) the
+ * page's own transports, which answer through `record`. Each is replaced
+ * for the duration of one run and restored after it. Every request is
+ * answered by the boundary and recorded, so a request that never shows up
+ * here escaped it (its own `https.request`).
  */
-
-/** How the boundary answers one request. */
-export interface Answer {
-  status?: number;
-  body?: unknown;
-  /** The status text, which failure answers use to echo a canary. */
-  statusText?: string;
-  /** A network error, or no answer at all. */
-  error?: 'network' | 'timeout';
-  /** Answer one macrotask late (the floating-send check). */
-  late?: boolean;
-}
 
 /** One request the boundary answered. */
 export interface Request {
@@ -34,12 +23,14 @@ export interface Boundary {
   requests: Request[];
   /** The phase recorded with each request; the kit sets `init` during init. */
   phase: string;
+  /** The page the step runs on, opened on this boundary's `record`. */
+  page?: Flow.StepPageSession;
   /** Requests whose answer is still outstanding. */
   pending(): number;
   restore(): void;
 }
 
-type Answers = (index: number) => Answer;
+type Answers = (index: number) => Flow.StepAnswer;
 
 type BodyMethod<K extends keyof Response> = ReturnType<
   Extract<Response[K], () => unknown>
@@ -49,7 +40,7 @@ type BodyMethod<K extends keyof Response> = ReturnType<
 class KitResponse implements Response {
   readonly headers = new Headers();
   readonly redirected = false;
-  readonly type: ResponseType = 'basic';
+  readonly type: Response['type'] = 'basic';
   readonly url = '';
   readonly body = null;
   readonly bodyUsed = false;
@@ -131,10 +122,17 @@ function replace(target: object, key: string, value: unknown): () => void {
   };
 }
 
-/** Install the boundary; `answers(n)` answers the n-th request (0-based). */
-export function installBoundary(answers: Answers = () => ({})): Boundary {
+/**
+ * Install the boundary; `answers(n)` answers the n-th request (0-based). With
+ * a page, the step's page is opened on it and closed at restore.
+ */
+export function installBoundary(
+  answers: Answers = () => ({}),
+  page?: Flow.StepPage,
+): Boundary {
   const requests: Request[] = [];
   const closers: Array<() => void> = [];
+  const restores: Array<() => void> = [];
   const boundary: Boundary = {
     requests,
     phase: 'push',
@@ -145,11 +143,21 @@ export function installBoundary(answers: Answers = () => ({})): Boundary {
     },
   };
 
-  const record = (effect: Flow.StepEffect): [Request, Answer] => {
+  const track = (effect: Flow.StepEffect): [Request, Flow.StepAnswer] => {
     const request: Request = { effect, phase: boundary.phase, settled: false };
     const answer = answers(requests.length);
     requests.push(request);
     return [request, answer];
+  };
+
+  const record: Flow.StepRecord = (effect) => {
+    const [request, answer] = track(effect);
+    return {
+      answer,
+      settle: () => {
+        request.settled = true;
+      },
+    };
   };
 
   const kitFetch = (
@@ -157,7 +165,7 @@ export function installBoundary(answers: Answers = () => ({})): Boundary {
     init?: RequestInit,
   ): Promise<Response> => {
     const initRecord = recordedInit(init);
-    const [request, answer] = record(
+    const [request, answer] = track(
       initRecord
         ? ['fetch', urlOf(input), initRecord]
         : ['fetch', urlOf(input)],
@@ -195,68 +203,13 @@ export function installBoundary(answers: Answers = () => ({})): Boundary {
     });
   };
 
-  const kitBeacon = (url: string, data?: unknown): boolean => {
-    const [request, answer] = record(['sendBeacon', url, data]);
-    request.settled = true;
-    return !answer.error && (answer.status ?? 200) < 400;
-  };
-
-  // Synchronous by default, as sendWeb opens it; the async form answers late.
-  class KitXMLHttpRequest {
-    status = 0;
-    statusText = '';
-    response: unknown = '';
-    responseText = '';
-    readyState = 0;
-    onload: (() => void) | null = null;
-    onerror: (() => void) | null = null;
-    onreadystatechange: (() => void) | null = null;
-    private method = 'GET';
-    private url = '';
-    private async = true;
-
-    open(method: string, url: string, async = true) {
-      this.method = method;
-      this.url = url;
-      this.async = async;
-      this.readyState = 1;
-    }
-    setRequestHeader() {}
-    addEventListener(type: string, listener: () => void) {
-      if (type === 'load') this.onload = listener;
-      if (type === 'error') this.onerror = listener;
-    }
-    send(body?: unknown) {
-      const [request, answer] = record([
-        'XMLHttpRequest',
-        this.method,
-        this.url,
-        body,
-      ]);
-      const settle = () => {
-        request.settled = true;
-        this.readyState = 4;
-        if (answer.error) {
-          if (!this.async) throw new Error('NetworkError');
-          this.onerror?.();
-          return;
-        }
-        this.status = answer.status ?? 200;
-        this.statusText = answer.statusText ?? '';
-        this.responseText = bodyText(answer.body);
-        this.response = this.responseText;
-        this.onreadystatechange?.();
-        this.onload?.();
-      };
-      if (this.async) macrotask().then(settle);
-      else settle();
-    }
+  // Opened first: a page that cannot open leaves nothing replaced.
+  const opened = page?.open(record);
+  restores.push(replace(globalThis, 'fetch', kitFetch));
+  if (opened) {
+    boundary.page = opened;
+    restores.push(() => opened.close());
   }
-
-  const restores = [replace(globalThis, 'fetch', kitFetch)];
-  restores.push(replace(globalThis, 'XMLHttpRequest', KitXMLHttpRequest));
-  if (typeof navigator !== 'undefined')
-    restores.push(replace(navigator, 'sendBeacon', kitBeacon));
 
   return boundary;
 }

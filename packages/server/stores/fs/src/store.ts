@@ -1,11 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { Store } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import {
   serializeStoreValue,
   deserializeStoreValue,
-  StepError,
-} from '@walkeros/core';
+} from '@walkeros/core/node';
 import type { FsStoreEnv, FsStoreFs, FsStoreSettings } from './types';
 
 function isValidKey(key: string): boolean {

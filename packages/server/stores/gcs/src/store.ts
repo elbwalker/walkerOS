@@ -1,9 +1,9 @@
 import type { Logger, Store } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import {
   serializeStoreValue,
   deserializeStoreValue,
-  StepError,
-} from '@walkeros/core';
+} from '@walkeros/core/node';
 import type {
   GcsStoreSettings,
   ServiceAccountCredentials,

@@ -296,7 +296,10 @@ export const missingInput: Flow.StepExample = {
   `conformance(kind, step, options)` from `@walkeros/collector/dev` run the
   examples on a real collector and compare the push result with `outcome`.
   Conformance profiles: destinations `http`, `sdk-env`, `web-sdk`,
-  `vendor-global`, `socket`; `transformer` and `source` for the other kinds.
+  `vendor-global`, `socket`; `transformer` and `source` for the other kinds. The
+  browser profiles (`web-sdk`, `vendor-global`) need `page` from
+  `@walkeros/web-core/dev` in the options, and a web source may pass it;
+  `runExamples` takes the same option.
 
 ## Writing Examples
 

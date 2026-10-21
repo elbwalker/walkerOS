@@ -11,7 +11,7 @@ import type {
   Mapping,
 } from '.';
 import type { Ingest } from './ingest';
-import type { Observe } from '../observeConnect';
+import type { ObserveServer, ObserveSlot, ObserveWeb } from '../observeConnect';
 import type { ObserverFn } from './observer';
 import type { CauseLog } from '../causeLog';
 
@@ -145,11 +145,12 @@ export interface InitConfig extends Partial<Config> {
   /**
    * Observation session connect config, wired by `startFlow` before the run
    * command. The server form attaches a telemetry poster directly from its
-   * config trio; the web form attaches only when an `elbObserve` credential
-   * is present (URL param or storage slot) and its binding matches. Purely
-   * advisory: nothing on this path can affect event processing.
+   * config trio; the web form reads its credential through `slot`
+   * (`pageObserveSlot()` from `@walkeros/web-core`) and attaches only when
+   * one is present and its binding matches. Purely advisory: nothing on this
+   * path can affect event processing.
    */
-  observe?: Observe;
+  observe?: (ObserveWeb & { slot: ObserveSlot }) | ObserveServer;
   /**
    * Caller-supplied observers, added verbatim to `collector.observers` by
    * `startFlow`. Escape hatch for custom emit targets; same advisory

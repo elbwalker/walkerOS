@@ -1,7 +1,17 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "//": "concurrency: 4 with per-task memory bounds (jest workerIdleMemoryLimit) instead of a global throttle; keep the heavy website/docusaurus build out of inner-loop filters. Do not exceed 4 without re-running the memory probe (docs/plans/2026-05-22-test-perf-optimization.md). dependsOn: ['^build'] is on typecheck ONLY (kept): it preserves strict per-package typecheck (each package checks against upstream compiled .d.ts under its own lib/target), which a single-program source-based typecheck would lose. lint does NOT depend on ^build: eslint here is purely syntactic (@typescript-eslint/parser, no parserOptions.project, no type-aware rules), so it needs no built types. Cold-run speed comes from the remote cache + concurrency, not from weakening typecheck. See /workspaces/developer/AGENT.md rule 11.",
-  "globalDependencies": ["**/.env.*local", "website/.env"],
+  "globalDependencies": [
+    "**/.env.*local",
+    "website/.env",
+    "packages/config/tsconfig/*.json",
+    "packages/config/eslint/**",
+    "packages/web/eslint.config.mjs",
+    "packages/server/eslint.config.mjs",
+    "packages/transformers/eslint.config.mjs",
+    "packages/destinations/eslint.config.mjs",
+    "packages/mcps/eslint.config.mjs"
+  ],
   "concurrency": "4",
   "remoteCache": {
     "enabled": true,

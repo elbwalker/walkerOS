@@ -699,9 +699,9 @@ export async function bundleCore(
         // `window` explicitly, so they still run. The browser entry has zero
         // exports, so no `globalName` is needed (one would add a window var).
         stage2Options.format = 'iife';
-        // The entry's Tag Mode loader comes from the CLI's own core, never
-        // from the flow's core in TEMP_DIR, which may predate it.
-        stage2Options.plugins = [cliCorePlugin()];
+        // The entry's Tag Mode loader comes from the CLI's own web-core,
+        // never from a copy in TEMP_DIR, which may predate it.
+        stage2Options.plugins = [cliPackagesPlugin()];
         // Every build flag is defined from the flow's needs, so a feature the
         // flow does not use folds out (see build-flags.ts).
         stage2Options.define = {
@@ -991,30 +991,34 @@ export function getNodeExternals(): string[] {
 }
 
 // Marks the plugin's own lookup, so it is not intercepted again.
-const CLI_CORE = 'walkeros-cli-core';
+const CLI_PACKAGES = 'walkeros-cli-packages';
 
 /**
- * Resolves every `@walkeros/core` import of a generated entry (the Tag Mode
- * loader, the preview activator) from this module's own location: the core
- * this CLI was installed with. Resolving from the entry's temp dir would walk
- * up through every `node_modules` above it, where another core (a flow's
- * pinned one, or a stray install in a shared temp root) can shadow it.
+ * Resolves every `@walkeros/core` and `@walkeros/web-core` import of a
+ * generated entry (the Tag Mode loader, the preview activator) from this
+ * module's own location: the CLI's own walkerOS packages, the ones it was
+ * installed with. Resolving from the entry's temp dir would walk up through
+ * every `node_modules` above it, where another copy (a flow's pinned one, or a
+ * stray install in a shared temp root) can shadow it, or predate the loader.
  */
-export function cliCorePlugin(): esbuild.Plugin {
+export function cliPackagesPlugin(): esbuild.Plugin {
   const resolveDir = path.dirname(fileURLToPath(import.meta.url));
   return {
-    name: CLI_CORE,
+    name: CLI_PACKAGES,
     setup(build) {
-      build.onResolve({ filter: /^@walkeros\/core$/ }, async (args) => {
-        if (args.pluginData === CLI_CORE) return undefined;
-        const resolved = await build.resolve(args.path, {
-          kind: args.kind,
-          resolveDir,
-          pluginData: CLI_CORE,
-        });
-        if (resolved.errors.length > 0) return { errors: resolved.errors };
-        return { path: resolved.path, sideEffects: resolved.sideEffects };
-      });
+      build.onResolve(
+        { filter: /^@walkeros\/(core|web-core)$/ },
+        async (args) => {
+          if (args.pluginData === CLI_PACKAGES) return undefined;
+          const resolved = await build.resolve(args.path, {
+            kind: args.kind,
+            resolveDir,
+            pluginData: CLI_PACKAGES,
+          });
+          if (resolved.errors.length > 0) return { errors: resolved.errors };
+          return { path: resolved.path, sideEffects: resolved.sideEffects };
+        },
+      );
     },
   };
 }
@@ -1999,13 +2003,19 @@ export function readObserveConnect(
   return undefined;
 }
 
+/** Imports the page's Observe credential slot into a browser entry. */
+const OBSERVE_SLOT_IMPORT =
+  "import { pageObserveSlot } from '@walkeros/web-core';\n";
+
 /**
  * Emit the STATIC observe connect assignment for a generated entry: bake
  * ONLY the public connect values (`url` + `binding`, plus the optional
- * `flowId`/`level`/`sample` scoping) onto the startFlow config. The runtime
- * connect module inside startFlow does the credential/slot work at boot
- * (the per-session secret arrives out-of-band via the `elbObserve`
- * companion); no emitted byte here is ever secret.
+ * `flowId`/`level`/`sample` scoping) onto the startFlow config, beside the
+ * page slot the web arm reads its credential through. The runtime connect
+ * module inside startFlow does the credential work at boot (the per-session
+ * secret arrives out-of-band via the `elbObserve` companion); no emitted
+ * byte here is ever secret. The entry imports the slot with
+ * `OBSERVE_SLOT_IMPORT`.
  */
 function emitObserveAssignment(observe: ObserveWeb): string {
   const literal: ObserveWeb = {
@@ -2016,11 +2026,11 @@ function emitObserveAssignment(observe: ObserveWeb): string {
     ...(observe.sample !== undefined ? { sample: observe.sample } : {}),
   };
   return `
-  config.observe = ${JSON.stringify(literal)};`;
+  config.observe = { ...${JSON.stringify(literal)}, slot: pageObserveSlot() };`;
 }
 
 /** Imports the Tag Mode loader into a browser entry. */
-const MOIN_IMPORT = "import { moin } from '@walkeros/core';\n";
+const MOIN_IMPORT = "import { moin } from '@walkeros/web-core';\n";
 
 /**
  * The Tag Mode loader call, the first statement of a browser entry: the
@@ -2118,6 +2128,7 @@ export function generateWebEntry(
 
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
+  const observeImport = options.observe ? OBSERVE_SLOT_IMPORT : '';
   const observeBlock = options.observe
     ? emitObserveAssignment(options.observe)
     : '';
@@ -2125,7 +2136,7 @@ export function generateWebEntry(
   const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
   const loaderCall = platform === 'browser' ? emitMoinCall() : '';
 
-  return `${loaderImport}import { startFlow, wireConfig } from '${stage1Specifier}';
+  return `${loaderImport}${observeImport}import { startFlow, wireConfig } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
@@ -2146,9 +2157,9 @@ const __configData = ${dataPayload};
  */
 /**
  * Preview activation wiring. When present and enabled, the generated entry
- * imports the activator from core and lets it decide whether a preview bundle
- * boots in place of this flow. The bundle carries only PUBLIC values: a keyring,
- * an issuer, and opaque bindings. Never a project id, never a secret.
+ * imports the activator from web-core and lets it decide whether a preview
+ * bundle boots in place of this flow. The bundle carries only PUBLIC values: a
+ * keyring, an issuer, and opaque bindings. Never a project id, never a secret.
  */
 export interface WrapEntryPreview {
   enabled: boolean;
@@ -2238,7 +2249,7 @@ export function generateWrapEntry(
   // The activator is imported (not inlined) so its logic is tested as a module
   // and DCE keeps it out of every bundle that does not enable preview.
   const previewImport = previewEnabled
-    ? `import { browserSwapActivator } from '@walkeros/core';\n`
+    ? `import { browserSwapActivator } from '@walkeros/web-core';\n`
     : '';
 
   // Preview-artifact variant: read the SESSION-FORWARDING grant (the
@@ -2317,6 +2328,7 @@ ${grantTargets
   // STATIC observe connect wiring (see emitObserveAssignment): baked inside
   // the IIFE AFTER the activator's early return, so an activated page (the
   // artifact swapped in) never also installs the host's connect module.
+  const observeImport = options.observe ? OBSERVE_SLOT_IMPORT : '';
   const observeBlock = options.observe
     ? emitObserveAssignment(options.observe)
     : '';
@@ -2326,7 +2338,7 @@ ${grantTargets
   const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
   const loaderCall = platform === 'browser' ? emitMoinCall(options.moin) : '';
 
-  return `${loaderImport}${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
+  return `${loaderImport}${previewImport}${observeImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
 
 (async () => {${loaderCall}${previewBlock}
   const config = wireConfig(__configData);${envBlock}${previewGrantBlock}${observeBlock}

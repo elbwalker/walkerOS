@@ -23,9 +23,11 @@ describe('generateWrapEntry preview codegen', () => {
     expect(code).not.toContain('browserSwapActivator');
   });
 
-  it('imports the activator from core and short-circuits the production boot', () => {
+  it('imports the activator from web-core and short-circuits the production boot', () => {
     const code = generateWrapEntry('/tmp/stage1.js', { preview });
-    expect(code).toContain("from '@walkeros/core'");
+    expect(code).toContain(
+      "import { browserSwapActivator } from '@walkeros/web-core';",
+    );
     expect(code).toContain('browserSwapActivator');
     expect(code).toMatch(
       /if \(await browserSwapActivator\([\s\S]*?\)\) return;/,
@@ -163,15 +165,19 @@ describe('generateWrapEntry preview-artifact observe connect', () => {
       observe,
     });
     expect(code).not.toContain('browserSwapActivator');
-    // The connect module is pure config; the artifact entry's only core
-    // import is the Tag Mode loader.
-    expect(code.match(/from '@walkeros\/core'/g)).toHaveLength(1);
-    expect(code).toContain("import { moin } from '@walkeros/core';");
+    // The connect module is pure config; the artifact entry's only walkerOS
+    // imports are the Tag Mode loader and the page's Observe slot.
+    expect(code.match(/from '@walkeros\//g)).toHaveLength(2);
+    expect(code).toContain("import { moin } from '@walkeros/web-core';");
+    expect(code).toContain(
+      "import { pageObserveSlot } from '@walkeros/web-core';",
+    );
   });
 
   it('bakes the connect module for a web-only artifact (no grant targets)', () => {
     const code = generateWrapEntry('/tmp/stage1.js', { observe });
     expect(code).toContain('config.observe');
+    expect(code).toContain('slot: pageObserveSlot() };');
     expect(code).not.toContain('X-Walkeros-Preview');
     expect(code).not.toMatch(/obsw_/);
     expect(code).not.toMatch(/Bearer\s+[A-Za-z0-9]/);

@@ -21,7 +21,7 @@ import {
 } from '@walkeros/core';
 import { startFlow } from '../flow';
 import { wrapEnv } from '../wrapEnv';
-import type { Answer, Boundary, EnvAnswer, EnvBoundary } from './boundary';
+import type { Boundary, EnvAnswer, EnvBoundary } from './boundary';
 import { answerEnv, installBoundary } from './boundary';
 
 /**
@@ -29,6 +29,7 @@ import { answerEnv, installBoundary } from './boundary';
  * (`startFlow`), mocked only at the boundary (the package's examples env, or
  * the kit's fetch boundary), and its `out` and `outcome` are compared with
  * what the step did. One implementation with a thin binding per step kind.
+ * A web step runs on its page (`Flow.StepPage`, from `@walkeros/web-core/dev`).
  */
 
 /** The id every run registers its step under. */
@@ -105,7 +106,7 @@ export function mappingOf(
 }
 
 /** How the boundary answers an example's `respond`. */
-export function answerOf(respond?: Flow.StepRespond): Answer {
+export function answerOf(respond?: Flow.StepRespond): Flow.StepAnswer {
   if (!respond) return {};
   return { status: respond.status, body: respond.body, error: respond.error };
 }
@@ -143,7 +144,11 @@ export interface Setup {
   config?: Record<string, unknown>;
   /** Examples env; without it the step runs on its own env, at the boundary. */
   env?: ExamplesEnv;
-  answers?: (index: number) => Answer;
+  /** The page a web step runs on: its transports, its scripts. */
+  page?: Flow.StepPage;
+  /** Merge the page's globals over the env's `push` (its scripts land there). */
+  pageGlobals?: boolean;
+  answers?: (index: number) => Flow.StepAnswer;
   envAnswers?: (index: number) => EnvAnswer;
   /** Records every settings key the step reads (kit item 6). */
   reads?: Set<string>;
@@ -168,7 +173,7 @@ export interface Session {
   envBoundary?: EnvBoundary;
   /** Requests and SDK calls made while the step initialized. */
   initCalls(): number;
-  /** Scripts added to the document (web), with and without the marker. */
+  /** Scripts added to the page (web), with and without the marker. */
   scripts(): { marked: number; unmarked: number };
   run(input: Input): Promise<Step>;
   close(): Promise<void>;
@@ -204,18 +209,6 @@ function settingsOf(setup: Setup): unknown {
   });
 }
 
-/**
- * The marker web-core's `loadVendor` sets on every script it injects (its
- * `VENDOR_SCRIPT_MARKER`; the collector does not depend on web-core). A
- * drift fails the vendor-global item 1 of every adopting destination.
- */
-export const VENDOR_SCRIPT_MARKER = 'data-walkeros-vendor';
-
-function documentScripts(): Element[] {
-  if (typeof document === 'undefined') return [];
-  return Array.from(document.querySelectorAll('script'));
-}
-
 /** Runs `fn` as the init phase; its errors go to `initError`. */
 async function inInit<R>(
   setPhase: (phase: Phase) => void,
@@ -243,15 +236,15 @@ async function open(
   effectsOf?: () => Flow.StepEffect[],
 ): Promise<Session> {
   const logs: LogLine[] = [];
-  const boundary = installBoundary(setup.answers);
-  const before = new Set(documentScripts());
+  const boundary = installBoundary(setup.answers, setup.page);
 
   let envBoundary: EnvBoundary | undefined;
   let env: Record<string, unknown> | undefined;
   let recorded: Array<{ fn: string; args: unknown[] }> = [];
   if (setup.env) {
+    const globals = setup.pageGlobals ? boundary.page?.globals : undefined;
     envBoundary = answerEnv(
-      setup.env.push,
+      globals ? { ...setup.env.push, ...globals } : setup.env.push,
       setup.env.simulation,
       setup.envAnswers,
     );
@@ -318,13 +311,7 @@ async function open(
     initCalls: () =>
       boundary.requests.filter((request) => request.phase === 'init').length +
       (envBoundary?.calls.filter((call) => call.phase === 'init').length ?? 0),
-    scripts: () => {
-      const added = documentScripts().filter((script) => !before.has(script));
-      const marked = added.filter((script) =>
-        script.hasAttribute(VENDOR_SCRIPT_MARKER),
-      ).length;
-      return { marked, unmarked: added.length - marked };
-    },
+    scripts: () => boundary.page?.scripts() ?? { marked: 0, unmarked: 0 },
     run: async (input) => {
       const effectsBefore = effects().length;
       const logsBefore = logs.length;
@@ -347,12 +334,9 @@ async function open(
       try {
         await collector.command('shutdown');
       } finally {
+        // The page goes with the boundary: the scripts this run added are
+        // removed, so the next run starts on the page it found.
         boundary.restore();
-        // The page is loadVendor's once-per-src registry: the scripts this
-        // run added go, so the next run starts on the page it found.
-        documentScripts()
-          .filter((script) => !before.has(script))
-          .forEach((script) => script.remove());
       }
     },
   };
@@ -618,6 +602,8 @@ export interface DestinationRunOptions extends RunOptions {
   config?: Partial<Destination.Config>;
   /** R3: the standard events the destination maps. */
   claims?: StandardEventName[];
+  /** A web destination's page: `page` from `@walkeros/web-core/dev`. */
+  page?: Flow.StepPage;
 }
 
 export interface TransformerRunOptions extends RunOptions {
@@ -632,12 +618,14 @@ export interface SourceRunOptions extends RunOptions {
   config?: Partial<Source.Config>;
   /** The package's `createTrigger`, which feeds an example's `in`. */
   createTrigger?: Trigger.CreateFn;
+  /** A web source's page: `page` from `@walkeros/web-core/dev`. */
+  page?: Flow.StepPage;
 }
 
 /** The setup of an example's run. */
 function setupOf(
   example: Flow.StepExample,
-  options: RunOptions & { config?: object },
+  options: RunOptions & { config?: object; page?: Flow.StepPage },
   mapping?: Mapping.Rules,
 ): Setup {
   const respond = example.respond;
@@ -649,6 +637,7 @@ function setupOf(
     settings: options.settings,
     config,
     env: readEnv(options.env),
+    page: options.page,
     answers: () => answerOf(respond),
     envAnswers: () => envAnswerOf(respond),
   };
@@ -790,27 +779,47 @@ export function sourceConfig(
   };
 }
 
+/**
+ * Run `fn` on a web step's page, its requests answered at the boundary and
+ * its scripts removed after it; without a page it runs as is.
+ */
+export async function onPage<R>(
+  page: Flow.StepPage | undefined,
+  fn: () => Promise<R>,
+): Promise<R> {
+  if (!page) return fn();
+  const boundary = installBoundary(undefined, page);
+  try {
+    return await fn();
+  } finally {
+    boundary.restore();
+  }
+}
+
 async function checkSourceExample(
   step: Source.Init<Source.TypesGeneric>,
   example: Flow.StepExample,
   options: SourceRunOptions,
 ): Promise<string[]> {
-  if (!options.createTrigger)
+  const { createTrigger } = options;
+  if (!createTrigger)
     return ['sources run through the package createTrigger: pass it'];
-  const captured: Flow.StepEffect[] = [];
-  const instance = await options.createTrigger(
-    sourceConfig(step, options, captured, []),
-  );
-  try {
-    await instance.trigger(
-      example.trigger?.type,
-      example.trigger?.options,
-    )(example.in);
-    const out = compareOut(captured, example);
-    return out ? [out] : [];
-  } finally {
-    await instance.flow?.collector.command('shutdown');
-  }
+  return onPage(options.page, async () => {
+    const captured: Flow.StepEffect[] = [];
+    const instance = await createTrigger(
+      sourceConfig(step, options, captured, []),
+    );
+    try {
+      await instance.trigger(
+        example.trigger?.type,
+        example.trigger?.options,
+      )(example.in);
+      const out = compareOut(captured, example);
+      return out ? [out] : [];
+    } finally {
+      await instance.flow?.collector.command('shutdown');
+    }
+  });
 }
 
 /**

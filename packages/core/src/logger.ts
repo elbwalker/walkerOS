@@ -38,7 +38,7 @@ function normalizeError(err: Error): ErrorContext {
     name: err.name,
     stack: err.stack,
   };
-  const cause = normalizeCause(err.cause);
+  const cause = 'cause' in err ? normalizeCause(err.cause) : undefined;
   if (cause) context.cause = cause;
   return context;
 }

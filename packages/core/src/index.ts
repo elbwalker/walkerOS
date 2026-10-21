@@ -63,7 +63,7 @@ export * from './useHooks';
 export * from './telemetry';
 export * from './telemetryResolver';
 export * from './preview';
-export { MOIN_PARAM, MOIN_PRODUCTION, moin } from './moin';
+export { MOIN_PARAM, MOIN_PRODUCTION } from './moin';
 export type { MoinTarget } from './moin';
 export * from './journey';
 export { getTraceUntil, setTraceUntil } from './traceState';
@@ -115,12 +115,7 @@ export type {
 } from './chain';
 export * from './cache';
 export * from './cache-envelope';
-export {
-  serializeStoreValue,
-  deserializeStoreValue,
-  StoreCodecError,
-  isStoreValue,
-} from './store/codec';
+export { isStoreValue } from './store/codec';
 export * from './state';
 export * from './step-entry';
 export * from './transformer-mapping';

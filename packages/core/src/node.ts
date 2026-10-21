@@ -1,13 +1,13 @@
 /**
  * Node entry point (`@walkeros/core/node`).
  *
- * Helpers shared by `@walkeros/cli` and `@walkeros/runner` that do not belong
- * in the browser `.` entry: the temp-path helpers import node builtins, the
- * terminal logger config writes to the console, and the secret redactor and
- * the simulate output formatter (`toPrintable`, it reads `Buffer`) have
- * no browser consumer (in `.` it was not tree-shaken out of walker.js). Core gains no dependency
- * for them: the colouriser is injected by the caller, so chalk stays in the
- * packages that already depend on it.
+ * Helpers shared by `@walkeros/cli`, `@walkeros/runner` and the server stores
+ * that do not belong in the browser `.` entry: the temp-path helpers import
+ * node builtins, the terminal logger config writes to the console, and the
+ * secret redactor, the simulate output formatter (`toPrintable`) and the store
+ * byte codec (both read `Buffer`) have no browser consumer. Core gains no
+ * dependency for them: the colouriser is injected by the caller, so chalk
+ * stays in the packages that already depend on it.
  */
 
 /* eslint-disable no-console */
@@ -15,12 +15,17 @@ import os from 'os';
 import path from 'path';
 import { createLogger } from './logger';
 import { maskKnownValues, scrubSecrets } from './redactLine';
-import { maskKnownNumbers } from './scrubJson';
+import { maskKnownNumbers } from './node/scrubJson';
 
 export { scrubSecrets, redactLine } from './redactLine';
 export type { ScrubOptions } from './redactLine';
-export { scrubJson } from './scrubJson';
-export { toPrintable } from './toPrintable';
+export { scrubJson } from './node/scrubJson';
+export { toPrintable } from './node/toPrintable';
+export {
+  serializeStoreValue,
+  deserializeStoreValue,
+  StoreCodecError,
+} from './node/storeCodec';
 import type { Config, Format, Instance, LogContext } from './types/logger';
 import { Level } from './types/logger';
 

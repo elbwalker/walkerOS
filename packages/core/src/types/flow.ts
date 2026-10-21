@@ -786,6 +786,44 @@ export namespace Flow {
   /** The effects a step produces, in execution order. Empty = no observable effect (filtered, passthrough). */
   export type StepOut = readonly StepEffect[];
 
+  /** How a kit boundary answers one request. */
+  export interface StepAnswer {
+    status?: number;
+    body?: unknown;
+    /** The status text, which failure answers use to echo a canary. */
+    statusText?: string;
+    /** A network error, or no answer at all. */
+    error?: 'network' | 'timeout';
+    /** Answer one macrotask late (the floating-send check). */
+    late?: boolean;
+  }
+
+  /** Records one request at the kit boundary; returns its answer and marks it settled. */
+  export type StepRecord = (effect: StepEffect) => {
+    answer: StepAnswer;
+    settle: () => void;
+  };
+
+  /**
+   * The browser page a web step runs on in the conformance kit and the
+   * examples runner. `@walkeros/web-core/dev` implements it as `page`.
+   */
+  export interface StepPage {
+    open(record: StepRecord): StepPageSession;
+  }
+
+  /** One run on the page, from `open` to `close`. */
+  export interface StepPageSession {
+    /** Page globals merged over an examples env's `push` (the document). */
+    globals: Record<string, unknown>;
+    /** Scripts added since `open`, with and without the loadVendor marker. */
+    scripts(): { marked: number; unmarked: number };
+    /** Fire `error` on every marked script (kit item 2, vendor-global). */
+    failScripts(): void;
+    /** Restore the stubs and remove the scripts added since `open`. */
+    close(): void;
+  }
+
   /**
    * Named example pair for a step.
    * `in` is the input to the step, `out` is the expected output.

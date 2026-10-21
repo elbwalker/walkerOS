@@ -164,7 +164,9 @@ send is reported, that a failure never leaks event data into a log line, that a
 Call it from a Jest test with the profile that matches the destination:
 `http` for a destination that calls `fetch`, `sdk-env` for a server SDK,
 `web-sdk` for a web SDK started in `init`, `vendor-global` for a vendor script
-that defines a global, or `socket`. A setting that only works in pairs, such as
+that defines a global, or `socket`. A browser profile (`web-sdk`,
+`vendor-global`) also needs the `page` option, imported from
+`@walkeros/web-core/dev`; without it the test fails and names that import. A setting that only works in pairs, such as
 "one of these two", is stated as `anyOf` in the settings schema.
 
 ## The `pushBatch` function (optional)

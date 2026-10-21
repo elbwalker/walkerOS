@@ -874,9 +874,13 @@ broken item at once.
 The `profile` option says what the destination talks to: `http` (calls `fetch`),
 `sdk-env` (a server SDK injected through `env`), `web-sdk` (a web SDK started in
 `init`: `sdk-env` without the init check), `vendor-global` (a vendor script that
-defines a global), `socket` (a long-lived connection). Never prove delivery or
-loss with a mocked collector: `startFlow` and mock only the network or the
-vendor global.
+defines a global), `socket` (a long-lived connection). The browser profiles
+(`web-sdk`, `vendor-global`) also take `page` from `@walkeros/web-core/dev`
+(import it after the `@walkeros/collector/dev` import, pass it right after
+`profile`); without it the test throws
+`profile <name> runs on a page: pass page from @walkeros/web-core/dev`. Server
+destinations pass no `page`. Never prove delivery or loss with a mocked
+collector: `startFlow` and mock only the network or the vendor global.
 
 ### Key Test Patterns
 

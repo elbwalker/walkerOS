@@ -9,11 +9,16 @@ jest.mock('../../../commands/bundle/bundler.js', () => {
   };
 });
 
+import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs-extra';
+import * as esbuild from 'esbuild';
 import {
   applyCollectorDefaults,
   applyCollectorProvenance,
   buildDataPayload,
   buildSplitConfigObject,
+  cliPackagesPlugin,
   createEntryPoint,
   detectStepPackages,
   detectNamedImports,
@@ -1137,7 +1142,7 @@ describe('generateWrapEntry platform gating', () => {
 
 describe('the Tag Mode loader call', () => {
   const DATA_PAYLOAD = '{"sources":{},"destinations":{}}';
-  const LOADER_IMPORT = "import { moin } from '@walkeros/core';\n";
+  const LOADER_IMPORT = "import { moin } from '@walkeros/web-core';\n";
   const STAGE = {
     app: 'https://stage.app.walkeros.io',
     base: 'https://stage.cdn.walkeros.io/tag-mode/',
@@ -1174,6 +1179,14 @@ describe('the Tag Mode loader call', () => {
     expect(output.indexOf('moin();')).toBeLessThan(
       output.indexOf('if (await browserSwapActivator('),
     );
+  });
+
+  it('generateWrapEntry imports the preview activator from web-core', () => {
+    const output = generateWrapEntry('./skeleton.mjs', { preview });
+    expect(output).toContain(
+      "import { browserSwapActivator } from '@walkeros/web-core';\n",
+    );
+    expect(output).not.toContain("from '@walkeros/core'");
   });
 
   it('generateWrapEntry calls the loader in a preview artifact', () => {
@@ -1220,6 +1233,56 @@ describe('the Tag Mode loader call', () => {
     ['a base with credentials', { ...STAGE, base: 'https://u:p@cdn.test/t/' }],
   ])('generateWrapEntry refuses a target with %s', (_label, moin) => {
     expect(() => generateWrapEntry('./skeleton.mjs', { moin })).toThrow(/moin/);
+  });
+});
+
+describe('cliPackagesPlugin', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.realpathSync(
+      await fs.mkdtemp(path.join(os.tmpdir(), 'cli-packages-plugin-')),
+    );
+    // A web-core beside the entry, where esbuild would look first.
+    const shadow = path.join(tmpDir, 'node_modules', '@walkeros', 'web-core');
+    await fs.outputJson(path.join(shadow, 'package.json'), {
+      name: '@walkeros/web-core',
+      version: '0.0.1',
+      type: 'module',
+      exports: { '.': './index.mjs' },
+    });
+    await fs.writeFile(
+      path.join(shadow, 'index.mjs'),
+      'export function moin() {}\n',
+    );
+  });
+
+  afterEach(async () => {
+    await fs.remove(tmpDir).catch(() => {});
+  });
+
+  it("resolves @walkeros/web-core from the CLI's own dir, not the entry's", async () => {
+    const result = await esbuild.build({
+      stdin: {
+        contents: "import { moin } from '@walkeros/web-core';\nmoin();\n",
+        resolveDir: tmpDir,
+      },
+      absWorkingDir: tmpDir,
+      bundle: true,
+      write: false,
+      metafile: true,
+      format: 'esm',
+      platform: 'browser',
+      logLevel: 'silent',
+      plugins: [cliPackagesPlugin()],
+    });
+    const inputs = Object.keys(result.metafile.inputs).map((input) =>
+      path.resolve(tmpDir, input),
+    );
+    const cliWebCore = localPackageDir('@walkeros/web-core') + path.sep;
+    const besideEntry = path.join(tmpDir, 'node_modules') + path.sep;
+    expect(inputs.some((input) => input.startsWith(cliWebCore))).toBe(true);
+    expect(inputs.filter((input) => input.startsWith(besideEntry))).toEqual([]);
   });
 });
 

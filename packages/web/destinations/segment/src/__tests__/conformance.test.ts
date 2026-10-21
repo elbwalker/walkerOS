@@ -1,5 +1,6 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
 import { destinationSegment } from '..';
 import { examples, schemas } from '../dev';
 
@@ -21,6 +22,7 @@ describe('segment conformance', () => {
   it('conforms', async () => {
     await conformance('destination', destinationSegment, {
       profile: 'web-sdk',
+      page,
       examples: examples.step,
       schema: schemas.settings,
       settings: {

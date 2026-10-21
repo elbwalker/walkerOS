@@ -1,5 +1,6 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
 import { destinationPostHog } from '..';
 import { examples, schemas } from '../dev';
 
@@ -39,6 +40,7 @@ describe('posthog conformance', () => {
   it('conforms', async () => {
     await conformance('destination', destinationPostHog, {
       profile: 'web-sdk',
+      page,
       examples: examples.step,
       schema: schemas.settings,
       settings: {

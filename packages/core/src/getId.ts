@@ -23,7 +23,9 @@ export function getId(length = 6, charset: string = defaultCharset): string {
     const limit = 256 - (256 % n);
     while (str.length < length) {
       const need = length - str.length;
-      const buffer = new Uint8Array(Math.ceil(need * 1.3) + 4);
+      const buffer: Uint8Array<ArrayBuffer> = new Uint8Array(
+        Math.ceil(need * 1.3) + 4,
+      );
       if (!secureBytes(buffer)) break; // No secure source, drop to fallback below
       for (let i = 0; i < buffer.length && str.length < length; i++) {
         if (buffer[i] < limit) str += charset[buffer[i] % n];
@@ -37,11 +39,13 @@ export function getId(length = 6, charset: string = defaultCharset): string {
   return str;
 }
 
-function secureBytes(buffer: Uint8Array): boolean {
+function secureBytes(buffer: Uint8Array<ArrayBuffer>): boolean {
   try {
-    const cryptoObj: Crypto | undefined = globalThis.crypto;
-    if (cryptoObj && typeof cryptoObj.getRandomValues === 'function') {
-      cryptoObj.getRandomValues(buffer);
+    if (
+      typeof crypto !== 'undefined' &&
+      typeof crypto.getRandomValues === 'function'
+    ) {
+      crypto.getRandomValues(buffer);
       return true;
     }
   } catch {

@@ -3,7 +3,7 @@ import { applyState, compileState } from '../state';
 import type { GetStore } from '../state';
 import { getByPath } from '../byPath';
 import { FatalError } from '../fatalError';
-import { serializeStoreValue, deserializeStoreValue } from '../store/codec';
+import { serializeStoreValue, deserializeStoreValue } from '../node/storeCodec';
 import {
   createAsyncMockStore,
   createMockCollector,

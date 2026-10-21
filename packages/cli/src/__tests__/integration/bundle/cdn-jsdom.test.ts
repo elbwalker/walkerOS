@@ -395,6 +395,45 @@ describe('CDN bundle without a browser source — window.elb', () => {
 });
 
 /**
+ * A browser flow whose only step is neutral brings no web package into its
+ * build, yet its entry imports the Tag Mode loader from `@walkeros/web-core`:
+ * the CLI resolves it from its own tree.
+ */
+describe('CDN bundle whose only step is neutral', () => {
+  const NEUTRAL_FLOW = withLocalPackages({
+    version: 4,
+    flows: {
+      default: {
+        config: { platform: 'web' },
+        sources: {},
+        destinations: { demo: { package: '@walkeros/destination-demo' } },
+      },
+    },
+  });
+
+  let tmpDir: string;
+
+  beforeAll(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'walkeros-neutral-'));
+  });
+
+  afterAll(async () => {
+    await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  });
+
+  it('takes the Tag Mode loader from the CLI web-core', async () => {
+    const out = join(tmpDir, 'walker.js');
+    await bundle(NEUTRAL_FLOW, {
+      target: 'cdn',
+      silent: true,
+      cache: false,
+      buildOverrides: { output: out },
+    });
+    expect(await readFile(out, 'utf8')).toContain('walkeros.moin');
+  }, 120000);
+});
+
+/**
  * The flow's `config.settings.windowCollector` names the one collector global,
  * whether the flow is built with `walkeros bundle` or from a build manifest.
  */

@@ -38,6 +38,16 @@ export interface ObserveServer {
 
 export type Observe = ObserveWeb | ObserveServer;
 
+/** Where a web arm finds its credential: the page, from `@walkeros/web-core`. */
+export interface ObserveSlot {
+  /** The URL credential if present, else the stored one; null when absent. */
+  read(): { raw: string; fromUrl: boolean } | null;
+  /** Persist `raw`; when it came from the URL, strip it from the address bar. */
+  keep(raw: string, fromUrl: boolean): void;
+  /** Clear the stored credential only while it still equals `raw`. */
+  clear(raw: string): void;
+}
+
 /** Claims carried by a parsed `obsw_` web credential. */
 export interface ObserveCredential {
   /** Project binding. Must match the value baked into the host bundle. */

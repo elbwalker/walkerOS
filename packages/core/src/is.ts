@@ -51,18 +51,6 @@ export function isDefined<T>(val: T | undefined): val is T {
 }
 
 /**
- * Checks if a value is an element or the document.
- *
- * @param elem The value to check.
- * @returns True if the value is an element or the document, false otherwise.
- */
-export function isElementOrDocument(elem: unknown): elem is Element {
-  if (!elem || typeof elem !== 'object') return false;
-  // Property check: Document has 'body', Element has 'tagName'
-  return 'body' in elem || 'tagName' in elem;
-}
-
-/**
  * Checks if a value is a function.
  *
  * @param value The value to check.

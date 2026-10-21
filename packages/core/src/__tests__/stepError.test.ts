@@ -1,9 +1,61 @@
+import type * as FatalErrorModule from '../fatalError';
+import type * as StepErrorModule from '../stepError';
 import {
   networkErrorMessage,
   StepError,
   stepCall,
   toFailureReason,
 } from '../stepError';
+
+/**
+ * Loads a module under an `Error` that drops the ES2022 options argument, as
+ * a browser without `ErrorOptions` does.
+ */
+function underLegacyError<T extends object>(path: string): T {
+  const Native = globalThis.Error;
+  class LegacyError extends Native {
+    constructor(message?: string) {
+      super(message);
+    }
+  }
+  const setError = (value: ErrorConstructor | typeof LegacyError) =>
+    Object.defineProperty(globalThis, 'Error', {
+      value,
+      configurable: true,
+      writable: true,
+    });
+  setError(LegacyError);
+  try {
+    let loaded: T | undefined;
+    jest.isolateModules(() => {
+      loaded = jest.requireActual<T>(path);
+    });
+    if (loaded === undefined) throw new Error(`${path} did not load`);
+    return loaded;
+  } finally {
+    setError(Native);
+  }
+}
+
+describe('cause without ES2022 ErrorOptions', () => {
+  const original = new Error('original');
+
+  it('StepError keeps its cause as an own property', () => {
+    const { StepError: Legacy } =
+      underLegacyError<typeof StepErrorModule>('../stepError');
+    const error = new Legacy('m', { code: 'transport', cause: original });
+    expect(error.cause).toBe(original);
+    expect(Object.prototype.hasOwnProperty.call(error, 'cause')).toBe(true);
+  });
+
+  it('FatalError keeps its cause as an own property', () => {
+    const { FatalError: Legacy } =
+      underLegacyError<typeof FatalErrorModule>('../fatalError');
+    const error = new Legacy('m', { cause: original });
+    expect(error.cause).toBe(original);
+    expect(Object.prototype.hasOwnProperty.call(error, 'cause')).toBe(true);
+  });
+});
 
 describe('StepError', () => {
   it('carries code, status, retryable and the response body', () => {
@@ -97,7 +149,7 @@ describe('StepError', () => {
 
 describe('networkErrorMessage', () => {
   const withCause = (cause: unknown) =>
-    new TypeError('fetch failed', { cause });
+    Object.assign(new TypeError('fetch failed'), { cause });
 
   it.each<[string, unknown, string]>([
     [
@@ -164,7 +216,7 @@ describe('stepCall', () => {
         message: 'Vendor call failed',
         retryable: true,
       });
-      expect(error instanceof Error && error.cause).toBeInstanceOf(Error);
+      expect(error instanceof StepError && error.cause).toBeInstanceOf(Error);
     },
   );
 

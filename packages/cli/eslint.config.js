@@ -1,4 +1,5 @@
 import baseConfig from '@walkeros/config/eslint';
+import { nodePlatform } from '@walkeros/config/eslint/node';
 
 // The base config's own no-restricted-syntax selectors. A flat config replaces
 // a rule set twice for one file rather than merging it, so every block below
@@ -29,6 +30,7 @@ const devZones = ['src/dev.ts', 'src/examples/**', 'src/schemas/**'];
 
 export default [
   ...baseConfig,
+  ...nodePlatform,
   {
     files: ['src/**/*.ts'],
     ignores: [...tests, ...devZones, 'src/core/app-paths.ts'],

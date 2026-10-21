@@ -156,10 +156,9 @@ export function createBatchedPoster(
       ? Math.floor(rawMaxBodyBytes)
       : 60000;
   // Lazy lookup of the global `fetch` so the helper imports cleanly even in
-  // environments without one (it only fails when actually used). The cast
-  // is to the narrowed PosterFetch surface, not to a broader type.
+  // environments without one (it only fails when actually used).
   const fetchImpl: PosterFetch =
-    opts.fetch ?? ((url, init) => (globalThis.fetch as PosterFetch)(url, init));
+    opts.fetch ?? ((url, init) => fetch(url, init));
   const onError =
     opts.onError ??
     (() => {

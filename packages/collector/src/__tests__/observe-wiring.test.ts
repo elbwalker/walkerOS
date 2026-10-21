@@ -1,15 +1,22 @@
 /**
  * startFlow observe wiring: server-arm direct attach, web-arm credential
- * handshake (URL param -> localStorage slot -> zero-work), the observers
- * escape hatch, and the advisory no-crash invariant.
+ * handshake through the `ObserveSlot` port (keep, self-heal, zero-work), the
+ * observers escape hatch, and the advisory no-crash invariant. The page slot
+ * itself is pinned in @walkeros/web-core's observeSlot tests.
  *
  * Env-injection only: the poster's global fetch is swapped via
  * Object.defineProperty (and restored), warns are captured via an injected
- * logger handler, and the web credential arrives through the real jsdom URL
- * (history.replaceState) or the localStorage slot. No jest.mock anywhere.
+ * logger handler, and the web credential arrives through a fake slot that
+ * records every keep and clear. No jest.mock anywhere.
  */
 import { Level } from '@walkeros/core';
-import type { Logger, ObserverFn, PosterFetch } from '@walkeros/core';
+import type {
+  Collector,
+  Logger,
+  ObserveSlot,
+  ObserverFn,
+  PosterFetch,
+} from '@walkeros/core';
 import { startFlow } from '../flow';
 
 const OBSERVER_URL = 'https://obs.example';
@@ -50,16 +57,29 @@ function warnCapture(): { warns: string[]; logger: Logger.Config } {
   return { warns, logger: { level: 'WARN', handler } };
 }
 
-function setUrl(search: string): void {
-  window.history.replaceState({}, '', `https://example.com/${search}`);
+interface FakeSlot extends ObserveSlot {
+  kept: Array<[string, boolean]>;
+  cleared: string[];
+}
+
+/** An in-memory slot holding `found`, recording every keep and clear. */
+function fakeSlot(found: { raw: string; fromUrl: boolean } | null): FakeSlot {
+  const kept: Array<[string, boolean]> = [];
+  const cleared: string[] = [];
+  return {
+    kept,
+    cleared,
+    read: () => found,
+    keep: (raw, fromUrl) => {
+      kept.push([raw, fromUrl]);
+    },
+    clear: (raw) => {
+      cleared.push(raw);
+    },
+  };
 }
 
 describe('startFlow observe wiring', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    setUrl('');
-  });
-
   describe('server form', () => {
     it('installs an observer that posts the v1 envelope to url/ingest/sessionId', async () => {
       jest.useRealTimers();
@@ -135,29 +155,28 @@ describe('startFlow observe wiring', () => {
   });
 
   describe('web form', () => {
-    it('installs nothing with no URL param and no stored slot (zero-work)', async () => {
-      const setItem = jest.spyOn(Storage.prototype, 'setItem');
+    it('installs nothing and never touches the slot when it holds no credential (zero-work)', async () => {
+      const slot = fakeSlot(null);
       const { collector } = await startFlow({
-        observe: { url: OBSERVER_URL, binding: 'pb_x' },
+        observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
       });
       expect(collector.observers.size).toBe(0);
-      expect(setItem).not.toHaveBeenCalled();
-      setItem.mockRestore();
+      expect(slot.kept).toEqual([]);
+      expect(slot.cleared).toEqual([]);
     });
 
-    it('reads the URL param, persists the slot, and posts with binding header + credential secret', async () => {
+    it('keeps a URL credential as URL-borne and posts with binding header + credential secret', async () => {
       jest.useRealTimers();
-      setUrl('?elbObserve=obsw_pb_x.ses_9.sec_1');
+      const slot = fakeSlot({ raw: 'obsw_pb_x.ses_9.sec_1', fromUrl: true });
       const posts: CapturedPost[] = [];
       const restore = stubFetch(posts);
       try {
         const { collector, elb } = await startFlow({
-          observe: { url: OBSERVER_URL, binding: 'pb_x' },
+          observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
         });
         expect(collector.observers.size).toBe(1);
-        expect(localStorage.getItem('elbObserve')).toBe(
-          'obsw_pb_x.ses_9.sec_1',
-        );
+        // keep(raw, true): the slot persists it and strips the address bar.
+        expect(slot.kept).toEqual([['obsw_pb_x.ses_9.sec_1', true]]);
 
         await elb('page view');
         await new Promise((resolve) => setTimeout(resolve, 120));
@@ -172,36 +191,23 @@ describe('startFlow observe wiring', () => {
       }
     });
 
-    it('attaches from the stored slot when no URL param is present', async () => {
-      setUrl('?keep=1');
-      localStorage.setItem('elbObserve', 'obsw_pb_x.ses_9.sec_1');
+    it('keeps a stored credential as stored, so the address bar is never touched', async () => {
+      const slot = fakeSlot({ raw: 'obsw_pb_x.ses_9.sec_1', fromUrl: false });
       const { collector } = await startFlow({
-        observe: { url: OBSERVER_URL, binding: 'pb_x' },
+        observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
       });
       expect(collector.observers.size).toBe(1);
-      // Slot-sourced attach never touches the address bar.
-      expect(window.location.search).toBe('?keep=1');
-    });
-
-    it('strips elbObserve from the address bar after a URL-param attach, keeping innocent params', async () => {
-      setUrl('?foo=1&elbObserve=obsw_pb_x.ses_9.sec_1&bar=2');
-      const { collector } = await startFlow({
-        observe: { url: OBSERVER_URL, binding: 'pb_x' },
-      });
-      expect(collector.observers.size).toBe(1);
-      expect(window.location.search).not.toContain('elbObserve');
-      expect(window.location.search).toContain('foo=1');
-      expect(window.location.search).toContain('bar=2');
+      expect(slot.kept).toEqual([['obsw_pb_x.ses_9.sec_1', false]]);
     });
 
     it('clears the slot and stops posting when the observer answers 401', async () => {
       jest.useRealTimers();
-      localStorage.setItem('elbObserve', 'obsw_pb_x.ses_9.sec_1');
+      const slot = fakeSlot({ raw: 'obsw_pb_x.ses_9.sec_1', fromUrl: false });
       const posts: CapturedPost[] = [];
       const restore = stubFetch(posts, { ok: false, status: 401 });
       try {
         const { collector, elb } = await startFlow({
-          observe: { url: OBSERVER_URL, binding: 'pb_x' },
+          observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
         });
         expect(collector.observers.size).toBe(1);
 
@@ -209,7 +215,7 @@ describe('startFlow observe wiring', () => {
         await new Promise((resolve) => setTimeout(resolve, 120));
 
         expect(posts.length).toBeGreaterThan(0);
-        expect(localStorage.getItem('elbObserve')).toBeNull();
+        expect(slot.cleared).toEqual(['obsw_pb_x.ses_9.sec_1']);
         expect(collector.observers.size).toBe(0);
 
         // Detached: further events never reach the poster.
@@ -224,53 +230,73 @@ describe('startFlow observe wiring', () => {
 
     it('keeps the slot and keeps observing on a non-401 status', async () => {
       jest.useRealTimers();
-      localStorage.setItem('elbObserve', 'obsw_pb_x.ses_9.sec_1');
+      const slot = fakeSlot({ raw: 'obsw_pb_x.ses_9.sec_1', fromUrl: false });
       const posts: CapturedPost[] = [];
       const restore = stubFetch(posts, { ok: false, status: 500 });
       try {
         const { collector, elb } = await startFlow({
-          observe: { url: OBSERVER_URL, binding: 'pb_x' },
+          observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
         });
 
         await elb('page view');
         await new Promise((resolve) => setTimeout(resolve, 120));
 
         expect(posts.length).toBeGreaterThan(0);
-        expect(localStorage.getItem('elbObserve')).toBe(
-          'obsw_pb_x.ses_9.sec_1',
-        );
+        expect(slot.cleared).toEqual([]);
         expect(collector.observers.size).toBe(1);
       } finally {
         restore();
       }
     });
 
-    it('warns and installs nothing when the credential pb mismatches the binding', async () => {
-      setUrl('?elbObserve=obsw_pb_other.ses_9.sec_1');
+    it('warns, installs nothing and never touches the slot when the credential pb mismatches the binding', async () => {
+      const slot = fakeSlot({
+        raw: 'obsw_pb_other.ses_9.sec_1',
+        fromUrl: true,
+      });
       const { warns, logger } = warnCapture();
       const { collector } = await startFlow({
         logger,
-        observe: { url: OBSERVER_URL, binding: 'pb_x' },
+        observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
       });
       expect(collector.observers.size).toBe(0);
       expect(warns.some((m) => m.includes('binding'))).toBe(true);
-      expect(localStorage.getItem('elbObserve')).toBeNull();
+      expect(slot.kept).toEqual([]);
+      expect(slot.cleared).toEqual([]);
     });
 
-    it('warns and installs nothing on a malformed credential', async () => {
-      setUrl('?elbObserve=garbage');
+    it('warns and never touches the slot on a malformed URL credential', async () => {
+      // URL-sourced garbage never touches stored state (anti-griefing).
+      const slot = fakeSlot({ raw: 'garbage', fromUrl: true });
       const { warns, logger } = warnCapture();
       const { collector } = await startFlow({
         logger,
-        observe: { url: OBSERVER_URL, binding: 'pb_x' },
+        observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
       });
       expect(collector.observers.size).toBe(0);
-      expect(warns.length).toBeGreaterThan(0);
+      expect(warns).toEqual(['observe: malformed credential ignored']);
+      expect(slot.kept).toEqual([]);
+      expect(slot.cleared).toEqual([]);
+    });
+
+    it('warns and self-heals a malformed STORED credential', async () => {
+      const slot = fakeSlot({ raw: 'garbage', fromUrl: false });
+      const { warns, logger } = warnCapture();
+      const { collector } = await startFlow({
+        logger,
+        observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
+      });
+      expect(collector.observers.size).toBe(0);
+      expect(warns).toEqual(['observe: malformed stored credential cleared']);
+      // Stored state clears on its own failure, exactly that value: the next
+      // pageview is back on the silent zero-work path.
+      expect(slot.cleared).toEqual(['garbage']);
+      expect(slot.kept).toEqual([]);
     });
 
     it('honors a baked flowId and trace level from the connect config', async () => {
       jest.useRealTimers();
-      localStorage.setItem('elbObserve', 'obsw_pb_x.ses_9.sec_1');
+      const slot = fakeSlot({ raw: 'obsw_pb_x.ses_9.sec_1', fromUrl: false });
       const posts: CapturedPost[] = [];
       const restore = stubFetch(posts);
       try {
@@ -281,6 +307,7 @@ describe('startFlow observe wiring', () => {
             binding: 'pb_x',
             flowId: 'flow_db_1',
             level: 'trace',
+            slot,
           },
         });
         // The baked level reaches the collector-wide supplier so destination
@@ -310,29 +337,80 @@ describe('startFlow observe wiring', () => {
     });
 
     it('defaults to the flow name, standard level, and no observeLevel supplier', async () => {
-      localStorage.setItem('elbObserve', 'obsw_pb_x.ses_9.sec_1');
+      const slot = fakeSlot({ raw: 'obsw_pb_x.ses_9.sec_1', fromUrl: false });
       const { collector } = await startFlow({
         name: 'myflow',
-        observe: { url: OBSERVER_URL, binding: 'pb_x' },
+        observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
       });
       expect(collector.observers.size).toBe(1);
       // No baked level: the collector-wide capture supplier stays unset.
       expect(collector.observeLevel).toBeUndefined();
     });
 
-    it('warns and self-heals a malformed STORED slot value', async () => {
-      localStorage.setItem('elbObserve', 'garbage');
-      const { warns, logger } = warnCapture();
-      const { collector } = await startFlow({
-        logger,
-        observe: { url: OBSERVER_URL, binding: 'pb_x' },
+    it('a web observe without slot logs one ERROR line, and startFlow resolves', async () => {
+      // A JSON caller cannot carry the slot: the config arrives as parsed
+      // JSON, the shape a JS or JSON caller hands over.
+      const config: Collector.InitConfig = JSON.parse(
+        JSON.stringify({ observe: { url: OBSERVER_URL, binding: 'pb_x' } }),
+      );
+      const logs: Array<{ level: Level; message: string }> = [];
+      // No level: the line must be visible at the default level.
+      const handler: Logger.Handler = (level, message) => {
+        logs.push({ level, message });
+      };
+      const { collector, elb } = await startFlow({
+        ...config,
+        logger: { handler },
       });
+      expect(logs).toEqual([
+        {
+          level: Level.ERROR,
+          message:
+            'observe: a web observe config needs slot: pageObserveSlot() from @walkeros/web-core',
+        },
+      ]);
+      // Observe stays off; the flow runs.
       expect(collector.observers.size).toBe(0);
-      expect(warns.length).toBeGreaterThan(0);
-      // Stored state clears on its own failure -- the next pageview is
-      // back on the silent zero-work path.
-      expect(localStorage.getItem('elbObserve')).toBeNull();
+      await expect(elb('page view')).resolves.toBeDefined();
     });
+  });
+
+  describe('a throwing slot', () => {
+    const failing = (): never => {
+      throw new Error('boom');
+    };
+    it.each<[string, ObserveSlot]>([
+      ['read', { read: failing, keep: () => {}, clear: () => {} }],
+      [
+        'keep',
+        {
+          read: () => ({ raw: 'obsw_pb_x.ses_9.sec_1', fromUrl: false }),
+          keep: failing,
+          clear: () => {},
+        },
+      ],
+    ])(
+      'a throwing %s logs one ERROR line, and startFlow resolves',
+      async (_, slot) => {
+        const logs: Array<{ level: Level; message: string }> = [];
+        const handler: Logger.Handler = (level, message) => {
+          logs.push({ level, message });
+        };
+        const { collector, elb } = await startFlow({
+          logger: { handler },
+          observe: { url: OBSERVER_URL, binding: 'pb_x', slot },
+        });
+        expect(logs).toEqual([
+          {
+            level: Level.ERROR,
+            message: 'observe: the slot failed, Observe is off: boom',
+          },
+        ]);
+        // Observe stays off; the flow runs.
+        expect(collector.observers.size).toBe(0);
+        await expect(elb('page view')).resolves.toBeDefined();
+      },
+    );
   });
 
   describe('observers escape hatch', () => {

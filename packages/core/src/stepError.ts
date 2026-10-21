@@ -1,3 +1,5 @@
+import { setCause } from './errorCause';
+
 /**
  * Options of a {@link StepError}: the failure code, and what decides whether
  * a retry can help (`status`, an explicit `retryable`).
@@ -64,12 +66,11 @@ export class StepError extends Error {
   status?: number;
   retryable: boolean;
   body?: unknown;
+  declare cause?: unknown;
 
   constructor(message: string, options: StepErrorOptions) {
-    super(
-      message,
-      options.cause !== undefined ? { cause: options.cause } : undefined,
-    );
+    super(message);
+    if (options.cause !== undefined) setCause(this, options.cause);
     this.name = 'StepError';
     this.code = options.code;
     if (options.status !== undefined) this.status = options.status;
@@ -137,7 +138,8 @@ export function toFailureReason(err: unknown): FailureReason {
  */
 export function networkErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : 'Network error';
-  const cause = error instanceof Error ? error.cause : undefined;
+  const cause =
+    error instanceof Error && 'cause' in error ? error.cause : undefined;
   const code =
     typeof cause === 'object' &&
     cause !== null &&

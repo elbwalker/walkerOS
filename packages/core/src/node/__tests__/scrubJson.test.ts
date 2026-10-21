@@ -1,5 +1,5 @@
 import { maskKnownNumbers, scrubJson } from '../scrubJson';
-import { scrubSecrets } from '../redactLine';
+import { scrubSecrets } from '../../redactLine';
 
 describe('maskKnownNumbers', () => {
   it('masks numbers that print a digits-only known secret', () => {
