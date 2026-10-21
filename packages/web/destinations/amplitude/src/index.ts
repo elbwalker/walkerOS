@@ -11,9 +11,6 @@ import {
   stepCall,
 } from '@walkeros/core';
 import * as amplitudeSDK from '@amplitude/unified';
-import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
-import { experimentPlugin } from '@amplitude/plugin-experiment-browser';
-import { plugin as engagementPlugin } from '@amplitude/engagement-browser';
 import type {
   AmplitudePlugin,
   AmplitudeSDK,
@@ -302,35 +299,52 @@ async function start<I extends IdentifyInstance, R extends RevenueInstance>(
 
   // Session Replay, Experiment and Guides & Surveys are opt-in, each on its
   // own: only the ones the settings enable start, on the analytics server
-  // zone and instance.
+  // zone and instance. Each package loads only then, with a dynamic import:
+  // a static one of @amplitude/engagement-browser (an ESM entry without
+  // "type": "module") can come in as CommonJS without its named exports
+  // under Node loaders such as tsx, and failed every import of this module.
   const { serverZone, instanceName } = analyticsOptions;
   const shared = {
     ...(serverZone ? { serverZone } : {}),
     ...(instanceName ? { instanceName } : {}),
   };
-  const plugins: Array<[string, AmplitudePlugin]> = [];
+  const plugins: Array<[string, () => Promise<AmplitudePlugin>]> = [];
   if (sessionReplay)
     plugins.push([
       'Session Replay',
-      sessionReplayPlugin({ ...sessionReplay, ...shared }),
+      async () => {
+        const { sessionReplayPlugin } =
+          await import('@amplitude/plugin-session-replay-browser');
+        return sessionReplayPlugin({ ...sessionReplay, ...shared });
+      },
     ]);
   if (experiment?.deploymentKey)
     plugins.push([
       'Experiment',
-      experimentPlugin({ ...experiment, ...shared }),
+      async () => {
+        const { experimentPlugin } =
+          await import('@amplitude/plugin-experiment-browser');
+        return experimentPlugin({ ...experiment, ...shared });
+      },
     ]);
   if (engagement)
     plugins.push([
       'Guides & Surveys',
-      engagementPlugin({
-        ...(engagement === true ? {} : engagement),
-        ...shared,
-      }),
+      async () => {
+        const { plugin } = await import('@amplitude/engagement-browser');
+        return plugin({
+          ...(engagement === true ? {} : engagement),
+          ...shared,
+        });
+      },
     ]);
 
-  for (const [name, plugin] of plugins)
+  for (const [name, create] of plugins)
     await stepCall(
-      () => settled(() => amp.add(plugin)),
+      async () => {
+        const plugin = await create();
+        await settled(() => amp.add(plugin));
+      },
       'vendor-not-ready',
       `Amplitude ${name} failed to start`,
     );
