@@ -135,7 +135,7 @@ describe('mapping failures (ruling 2)', () => {
     expect(collector.status.failed).toBe(0);
     expect(lines.map((line) => line.context)).toEqual([
       expect.objectContaining({
-        step: 'mapping',
+        step: 'mapping.order complete',
         code: 'mapping',
         event: 'order complete',
         mappingKey: 'order complete',
@@ -143,5 +143,37 @@ describe('mapping failures (ruling 2)', () => {
     ]);
     expect(lines[0].message).toContain('mapping value has no operator (total)');
     expect(JSON.stringify(lines)).not.toContain('person@example.com');
+  });
+
+  it('value problems in two rules give two lines, one per rule', async () => {
+    const { lines, logger } = errors();
+    const operatorLess: Record<string, string> = { from: 'data.value' };
+    const destination: Destination.Instance = {
+      type: 'probe',
+      config: {},
+      push: jest.fn(),
+    };
+    const { elb } = await startFlow({
+      logger,
+      destinations: {
+        d: {
+          code: destination,
+          config: {
+            mapping: {
+              order: { complete: { data: { map: { total: operatorLess } } } },
+              page: { view: { data: { map: { title: operatorLess } } } },
+            },
+          },
+        },
+      },
+    });
+
+    await elb('order complete', { value: 42 });
+    await elb('page view', { title: 'Home' });
+
+    expect(lines.map((line) => line.context.step)).toEqual([
+      'mapping.order complete',
+      'mapping.page view',
+    ]);
   });
 });

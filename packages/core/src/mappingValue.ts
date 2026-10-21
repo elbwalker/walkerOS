@@ -54,10 +54,12 @@ function reportValue(
   err?: unknown,
 ): void {
   const name = context.event.name;
+  // Keyed on the rule, so a second rule's problem gets its own line.
+  const step = trace?.mappingKey ? `mapping.${trace.mappingKey}` : 'mapping';
   reportCause(
     context.collector,
     context.logger,
-    { step: 'mapping', code: 'mapping' },
+    { step, code: 'mapping' },
     message,
     {
       ...(typeof name === 'string' ? { event: name } : {}),

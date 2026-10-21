@@ -749,11 +749,11 @@ async function deliverToDestinations(
         // A queued entry goes out with the collector's current consent (full
         // replace: stale consent must not persist); the entry keeps its
         // identity, the event inside is copied. An entry a push is waiting
-        // for was admitted at that push with its own event consent and keeps
-        // it: on a server the collector's consent is usually empty, and
+        // for, and a held entry, was admitted with its own event consent and
+        // keeps it: on a server the collector's consent is usually empty, and
         // replacing it would deny an event whose consent was granted.
         const refresh = (entry: Destination.Queued) => {
-          if (!waiting.has(entry))
+          if (!waiting.has(entry) && entry.reason !== 'held')
             entry.event = { ...entry.event, consent: collector.consent };
           return entry;
         };

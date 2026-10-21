@@ -75,6 +75,12 @@ export const ConfigSchema = z
       .boolean()
       .describe('Completely skip this transformer in chains')
       .optional(),
+    timeout: z
+      .number()
+      .optional()
+      .describe(
+        'Timeout in ms (default 10000) for init and for each push; one that does not settle in this window fails the push with code timeout, and the next push retries the init.',
+      ),
     mock: z
       .unknown()
       .meta({

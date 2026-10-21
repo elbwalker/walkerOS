@@ -148,6 +148,12 @@ export interface Config<T extends TypesGeneric = Types> {
   state?: import('./state').State | import('./state').State[];
   init?: boolean; // Track init state (like Destination)
   disabled?: boolean; // Completely skip this transformer in chains
+  /**
+   * Timeout in ms (default 10000) for `init` and for each `push`: one that
+   * does not settle within this window fails the push with code `timeout`;
+   * the next push retries the init.
+   */
+  timeout?: number;
   /** Return this value instead of calling push(). Global mock for all chains. */
   mock?: unknown;
   /** Path-specific mock values keyed by chain path (e.g., "destination.ga4.before"). Takes precedence over global mock. */

@@ -182,3 +182,60 @@ describe('delivery order across a destination init', () => {
     },
   );
 });
+
+describe('held events keep their own consent', () => {
+  it.each<['skip' | 'queue']>([['skip'], ['queue']])(
+    'consentDenied %s: an event held with its consent granted is delivered from the drain after the collector revoked consent',
+    async (mode) => {
+      jest.useFakeTimers({ now: 1_000_000 });
+      const delivered: WalkerOS.Event[] = [];
+      let userSyncDown = true;
+      const destination: Destination.Instance = {
+        type: 'held',
+        config: { consent: { marketing: true }, timeout: 1000 },
+        on: (type) => {
+          if (type === 'user' && userSyncDown)
+            throw new Error('user sync down');
+        },
+        push: (event: WalkerOS.Event) => {
+          delivered.push(event);
+        },
+      };
+      const { collector, elb } = await startFlow({
+        consentDenied: mode,
+        consent: { marketing: true },
+        logger: { handler: () => undefined },
+        destinations: { d: { code: destination } },
+      });
+      await elb('page view'); // initialized and delivered
+      await elb('walker user', { id: 'u1' }); // on(user) throws: held
+
+      const held = await elb('a one');
+      expect(held.queued?.d.reason?.code).toBe('held');
+
+      await elb('walker consent', { marketing: false });
+
+      // The retry window passed and the user sync is back: the next push
+      // releases the hold and drains the held event.
+      userSyncDown = false;
+      jest.setSystemTime(1_000_000 + 1001);
+      await elb('b two');
+
+      expect(delivered.map((event) => event.name)).toEqual([
+        'page view',
+        'a one',
+      ]);
+      expect(delivered[1].consent).toEqual({ marketing: true });
+      // The new event has no consent of its own: the revocation applies.
+      const waiting = (collector.destinations.d.queuePush ?? []).map(
+        (entry) => [entry.event.name, entry.reason],
+      );
+      if (mode === 'skip') {
+        expect(waiting).toEqual([]);
+        expect(collector.status.destinations.d.skipped).toBe(1);
+      } else {
+        expect(waiting).toEqual([['b two', 'consent']]);
+      }
+    },
+  );
+});

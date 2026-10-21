@@ -2035,6 +2035,10 @@ export const flowCompleteCoverage = {
     state: 'state-set',
     init: RUNTIME('init'),
     disabled: RUNTIME('disabled'),
+    timeout: {
+      excluded:
+        'the transformers here initialize at once; the default 10 s applies',
+    },
     mock: RUNTIME('mock'),
     chainMocks: RUNTIME('chainMocks'),
     mapping: 'ga4-consent-map',

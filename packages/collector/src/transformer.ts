@@ -279,6 +279,25 @@ export async function initTransformers(
 }
 
 /**
+ * A transformer's `init` or `push`, bounded by its `config.timeout` (default
+ * 10000 ms), as a destination's. Work that does not settle in time rejects
+ * with `DestinationTimeoutError` (code `timeout`); its late result is ignored.
+ */
+function withTransformerTimeout<T>(
+  transformer: Transformer.Instance,
+  transformerId: string,
+  step: 'init' | 'push',
+  work: WalkerOS.PromiseOrValue<T>,
+): Promise<T> {
+  const timeoutMs = resolveDestinationTimeout(transformer.config.timeout);
+  return withTimeout(
+    Promise.resolve(work),
+    timeoutMs,
+    `Transformer "${transformerId}" ${step} timed out after ${timeoutMs}ms`,
+  );
+}
+
+/**
  * Initializes a transformer if it hasn't been initialized yet.
  * Called lazily before first push.
  *
@@ -316,22 +335,18 @@ export async function transformerInit(
 
     transformerLogger.debug('init');
 
-    // A transformer has no timeout setting: its init is bounded by the
-    // default destination timeout. One that does not settle in time throws
-    // `DestinationTimeoutError` (code `timeout`); the config below is only
-    // installed from an attempt that settled in time.
-    const timeoutMs = resolveDestinationTimeout();
-    const configResult = await withTimeout(
-      Promise.resolve(
-        useHooks(
-          transformer.init,
-          'TransformerInit',
-          collector.hooks,
-          collector.logger,
-        )(context),
-      ),
-      timeoutMs,
-      `Transformer "${transformerId}" init timed out after ${timeoutMs}ms`,
+    // The config below is only installed from an attempt that settled in
+    // time.
+    const configResult = await withTransformerTimeout(
+      transformer,
+      transformerId,
+      'init',
+      useHooks(
+        transformer.init,
+        'TransformerInit',
+        collector.hooks,
+        collector.logger,
+      )(context),
     );
 
     // Check for initialization failure
@@ -411,12 +426,17 @@ export async function transformerPush(
   emitStep(collector, inState);
 
   try {
-    const result = await useHooks(
-      transformer.push,
-      'TransformerPush',
-      collector.hooks,
-      collector.logger,
-    )(event, context);
+    const result = await withTransformerTimeout(
+      transformer,
+      transformerId,
+      'push',
+      useHooks(
+        transformer.push,
+        'TransformerPush',
+        collector.hooks,
+        collector.logger,
+      )(event, context),
+    );
 
     const finished = Date.now();
     const outState = stepState(

@@ -12,7 +12,8 @@ import { startFlow } from '..';
  * An init that never settles is bounded by the step's timeout, like a push:
  * the pushes waiting for it answer `failed` with code `timeout` instead of
  * waiting forever, the next push starts a new attempt, and an attempt that
- * settles after its timeout installs nothing.
+ * settles after its timeout installs nothing. A transformer's push is
+ * bounded the same way.
  */
 
 type Line = { level: Level; message: string; context: Logger.LogContext };
@@ -176,8 +177,7 @@ describe('destination init timeout', () => {
 });
 
 describe('transformer init timeout', () => {
-  // A transformer has no timeout setting: its init is bounded by the
-  // default destination timeout.
+  // Without a `config.timeout`, an init is bounded by the default.
   const timeout = resolveDestinationTimeout();
 
   it('fails the push with code timeout after the default timeout, retries on the next push, and ignores the stale attempt', async () => {
@@ -233,5 +233,100 @@ describe('transformer init timeout', () => {
       attempt: 'fresh',
     });
     expect(delivered).toEqual(['page read']);
+  });
+
+  it.each<[number, number, 'ok' | 'timeout']>([
+    [300, 200, 'ok'],
+    [15_000, 12_000, 'ok'],
+    [100, 200, 'timeout'],
+  ])(
+    'honours config.timeout %i ms for an init taking %i ms: %s',
+    async (configTimeout, initMs, expected) => {
+      const delivered: string[] = [];
+      const enrich: Transformer.Init = (context) => ({
+        type: 'enrich',
+        config: context.config,
+        init: () => new Promise<void>((resolve) => setTimeout(resolve, initMs)),
+        push: (event) => ({ event }),
+      });
+      const sink: Destination.Instance = {
+        type: 'sink',
+        config: {},
+        push: (event: WalkerOS.Event) => {
+          delivered.push(event.name);
+        },
+      };
+      const { collector, elb } = await startFlow({
+        logger: { handler: () => undefined },
+        next: 'enrich',
+        transformers: {
+          enrich: { code: enrich, config: { timeout: configTimeout } },
+        },
+        destinations: { sink: { code: sink } },
+      });
+
+      const answer = track(elb('page view'));
+      await jest.advanceTimersByTimeAsync(Math.min(configTimeout, initMs));
+
+      if (expected === 'ok') {
+        expect(answer()?.ok).toBe(true);
+        expect(collector.transformers.enrich.config.init).toBe(true);
+        expect(delivered).toEqual(['page view']);
+      } else {
+        expect(answer()?.reason).toEqual(
+          expect.objectContaining({ code: 'timeout', retryable: true }),
+        );
+        expect(collector.transformers.enrich.config.init).toBeFalsy();
+        expect(delivered).toEqual([]);
+      }
+    },
+  );
+});
+
+describe('transformer push timeout', () => {
+  it('a push that never settles fails the push with code timeout; other events still run', async () => {
+    const { logger, errors } = capture();
+    const delivered: string[] = [];
+    const enrich: Transformer.Init = (context) => ({
+      type: 'enrich',
+      config: context.config,
+      push: (event) => (event.name === 'page view' ? never() : { event }),
+    });
+    const sink: Destination.Instance = {
+      type: 'sink',
+      config: {},
+      push: (event: WalkerOS.Event) => {
+        delivered.push(event.name);
+      },
+    };
+    const { elb } = await startFlow({
+      logger,
+      next: 'enrich',
+      transformers: { enrich: { code: enrich, config: { timeout: 300 } } },
+      destinations: { sink: { code: sink } },
+    });
+
+    const hung = track(elb('page view'));
+    const next = track(elb('page read'));
+    await turns();
+    // The next event runs while the first one hangs.
+    expect(next()?.ok).toBe(true);
+    expect(delivered).toEqual(['page read']);
+    expect(hung()).toBeUndefined();
+
+    await jest.advanceTimersByTimeAsync(300);
+    expect(hung()?.ok).toBe(false);
+    expect(hung()?.reason).toEqual(
+      expect.objectContaining({ code: 'timeout', retryable: true }),
+    );
+    const lines = errors('Push failed').filter(
+      (line) => line.context.step === 'transformer.enrich',
+    );
+    expect(lines).toHaveLength(1);
+    expect(lines[0].context.code).toBe('timeout');
+
+    // And after it.
+    expect((await elb('page scroll')).ok).toBe(true);
+    expect(delivered).toEqual(['page read', 'page scroll']);
   });
 });
