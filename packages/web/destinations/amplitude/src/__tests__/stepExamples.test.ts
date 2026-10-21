@@ -123,9 +123,10 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
       calls.push(['amplitude.init', ...args]);
       return { promise: Promise.resolve() };
     },
-    initAll: (async (...args: unknown[]) => {
-      calls.push(['amplitude.initAll', ...args]);
-    }) as NonNullable<Env['amplitude']>['initAll'],
+    add: (...args: unknown[]) => {
+      calls.push(['amplitude.add', ...args]);
+      return { promise: Promise.resolve() };
+    },
     track: ((eventType: string, props?: Record<string, unknown>) => {
       calls.push(['amplitude.track', eventType, props ?? {}]);
     }) as NonNullable<Env['amplitude']>['track'],
@@ -216,9 +217,7 @@ describe('amplitude destination — step examples', () => {
 
       // Drop init — every example triggers init once; it's not part of `out`.
       const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-      const actual = collected().filter(
-        ([path]) => path !== 'amplitude.initAll' && path !== 'amplitude.init',
-      );
+      const actual = collected().filter(([path]) => path !== 'amplitude.init');
 
       expect(actual).toEqual(expected);
     },

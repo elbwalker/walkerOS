@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Logger, WalkerOS } from '@walkeros/core';
 import {
   getMappingValue,
   isArray,
@@ -132,15 +132,32 @@ function buildEventOptions(
 }
 
 /**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`Segment skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
+/**
  * Resolve and apply identity mapping. Calls analytics.identify() only
- * when the resolved value differs from the last-fired identity.
+ * when the resolved value differs from the last-fired identity. False when
+ * no userId, anonymousId or traits resolved.
  */
 async function applyIdentify(
   analytics: SegmentAnalytics,
   resolved: Record<string, unknown>,
   state: RuntimeState,
   options?: SegmentEventOptions,
-): Promise<void> {
+): Promise<boolean> {
   const last = state.lastIdentity || {};
   const userId = isString(resolved.userId) ? resolved.userId : undefined;
   const anonymousId = isString(resolved.anonymousId)
@@ -154,12 +171,14 @@ async function applyIdentify(
   if (anonymousId && anonymousId !== last.anonymousId)
     await send(() => analytics.setAnonymousId(anonymousId));
 
+  if (!userId && !anonymousId && !traits) return false;
+
   const traitsHash = hashTraits(traits);
   const userIdChanged = userId !== last.userId;
   const traitsChanged = traitsHash !== (last.traitsHash ?? '');
   const hasChange = userIdChanged || (traits !== undefined && traitsChanged);
 
-  if (!hasChange && !anonymousId) return;
+  if (!hasChange && !anonymousId) return true;
 
   await send(() =>
     options
@@ -172,17 +191,18 @@ async function applyIdentify(
     anonymousId: anonymousId ?? last.anonymousId,
     traitsHash,
   };
+  return true;
 }
 
-/** Resolve and apply the group mapping, once per change. */
+/** Resolve and apply the group mapping, once per change. False without a groupId. */
 async function applyGroup(
   analytics: SegmentAnalytics,
   resolved: Record<string, unknown>,
   state: RuntimeState,
   options?: SegmentEventOptions,
-): Promise<void> {
+): Promise<boolean> {
   const groupId = isString(resolved.groupId) ? resolved.groupId : undefined;
-  if (!groupId) return;
+  if (!groupId) return false;
 
   const traits =
     isObject(resolved.traits) && !isArray(resolved.traits)
@@ -193,7 +213,7 @@ async function applyGroup(
   const traitsHash = hashTraits(traits);
   const groupIdChanged = groupId !== last.groupId;
   const traitsChanged = traitsHash !== (last.traitsHash ?? '');
-  if (!groupIdChanged && !traitsChanged) return;
+  if (!groupIdChanged && !traitsChanged) return true;
 
   await send(() =>
     options
@@ -202,16 +222,17 @@ async function applyGroup(
   );
 
   state.lastGroup = { groupId, traitsHash };
+  return true;
 }
 
-/** Resolve and apply the page mapping. */
+/** Resolve and apply the page mapping. False when it resolved to nothing. */
 async function applyPage(
   analytics: SegmentAnalytics,
   pageMapping: unknown,
   event: WalkerOS.Event,
   collector: unknown,
   options?: SegmentEventOptions,
-): Promise<void> {
+): Promise<boolean> {
   // Boolean true → call page() with no args (SDK auto-collect).
   if (pageMapping === true) {
     await send(() =>
@@ -219,7 +240,7 @@ async function applyPage(
         ? analytics.page(undefined, undefined, undefined, options)
         : analytics.page(),
     );
-    return;
+    return true;
   }
 
   const resolved = await getMappingValue(
@@ -227,7 +248,7 @@ async function applyPage(
     pageMapping as Parameters<typeof getMappingValue>[1],
     { collector } as Parameters<typeof getMappingValue>[2],
   );
-  if (!isObject(resolved)) return;
+  if (!isObject(resolved)) return false;
 
   const category = isString(resolved.category) ? resolved.category : undefined;
   const name = isString(resolved.name) ? resolved.name : undefined;
@@ -250,6 +271,7 @@ async function applyPage(
       return analytics.page(category ?? null, name ?? null);
     return analytics.page();
   });
+  return true;
 }
 
 export const destinationSegment: Destination = {
@@ -300,7 +322,7 @@ export const destinationSegment: Destination = {
     return { ...config, settings: { ...settings, _state } };
   },
 
-  async push(event, { config, rule, data, collector }) {
+  async push(event, { config, rule, data, collector, logger }) {
     const settings: Partial<Settings> = config.settings || {};
     const state: RuntimeState = settings._state || {};
     const analytics = state.analytics;
@@ -335,8 +357,10 @@ export const destinationSegment: Destination = {
       const resolved = await getMappingValue(event, identifyMapping, {
         collector,
       });
-      if (isObject(resolved))
-        await applyIdentify(analytics, resolved, state, options);
+      const applied =
+        isObject(resolved) &&
+        (await applyIdentify(analytics, resolved, state, options));
+      if (!applied) skipped(logger, event, 'identify', 'identify');
     }
 
     // 3. Group - rule-level override wins over destination-level.
@@ -345,19 +369,24 @@ export const destinationSegment: Destination = {
       const resolved = await getMappingValue(event, groupMapping, {
         collector,
       });
-      if (isObject(resolved))
-        await applyGroup(analytics, resolved, state, options);
+      const applied =
+        isObject(resolved) &&
+        (await applyGroup(analytics, resolved, state, options));
+      if (!applied) skipped(logger, event, 'group', 'group');
     }
 
     // 4. Page (explicit first-class Segment pattern)
-    if (mappingSettings.page !== undefined)
-      await applyPage(
+    if (
+      mappingSettings.page !== undefined &&
+      !(await applyPage(
         analytics,
         mappingSettings.page,
         event,
         collector,
         options,
-      );
+      ))
+    )
+      skipped(logger, event, 'page', 'page');
 
     // 5. Default track call unless rule opts out via silent.
     if (rule?.silent !== true) {

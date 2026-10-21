@@ -1,6 +1,8 @@
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
+import { clone, createEvent, Level } from '@walkeros/core';
+import { destinationTikTok } from '..';
 import { examples } from '../dev';
 import type { TikTokStepExample } from '../examples/step';
 import type { Env, Settings, TTQ } from '../types';
@@ -96,4 +98,42 @@ describe('tiktok destination — step examples', () => {
       expect(actual).toEqual(expected);
     },
   );
+
+  it('writes one DEBUG line naming the event and the mapping key for a declared skip', async () => {
+    const lines: Array<[Level, string, unknown]> = [];
+    const handler: Logger.Handler = (level, message, context) => {
+      lines.push([level, message, context]);
+    };
+    const { elb } = await startFlow({
+      logger: { level: 'DEBUG', handler },
+      destinations: {
+        tiktok: {
+          code: {
+            ...destinationTikTok,
+            env: spyTtq(clone(examples.env.push)).env,
+          },
+          config: {
+            settings: { apiKey: 'test-pixel-id' },
+            mapping: {
+              company: {
+                update: {
+                  silent: true,
+                  settings: { identify: { map: { email: 'data.none' } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect((await elb(createEvent({ name: 'company update' }))).ok).toBe(true);
+    expect(lines.filter(([, message]) => message.includes('skipped'))).toEqual([
+      [
+        Level.DEBUG,
+        'TikTok skipped identify: identify resolved to nothing',
+        expect.objectContaining({ event: 'company update' }),
+      ],
+    ]);
+  });
 });

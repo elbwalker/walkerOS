@@ -1,3 +1,4 @@
+import type { Logger, WalkerOS } from '@walkeros/core';
 import {
   getGrantedConsent,
   getMappingValue,
@@ -179,6 +180,26 @@ async function applyGroupProfile(
   return applied;
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return isArray(value) && value.every(isString);
+}
+
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`Mixpanel skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
 export const destinationMixpanel: Destination = {
   type: 'mixpanel',
 
@@ -223,7 +244,7 @@ export const destinationMixpanel: Destination = {
     return { ...config, settings: { ...settings, _state } };
   },
 
-  async push(event, { config, rule, env, data, collector }) {
+  async push(event, { config, rule, env, data, collector, logger }) {
     const mp = getMixpanel(env as Env | undefined);
     const settings = (config.settings || {}) as Settings;
     const mappingSettings = rule?.settings || {};
@@ -246,13 +267,17 @@ export const destinationMixpanel: Destination = {
       const resolved = await getMappingValue(event, identifyMapping, {
         collector,
       });
-      if (isObject(resolved)) {
+      if (
+        isObject(resolved) &&
+        isString(resolved.distinctId) &&
+        resolved.distinctId !== ''
+      )
         state.lastIdentity = await applyIdentify(
           mp,
-          resolved as Record<string, unknown>,
+          resolved,
           state.lastIdentity,
         );
-      }
+      else skipped(logger, event, 'identify', 'identify');
     }
 
     // 3. People operations - fires zero or more mp.people.* calls.
@@ -260,8 +285,8 @@ export const destinationMixpanel: Destination = {
       const resolved = await getMappingValue(event, mappingSettings.people, {
         collector,
       });
-      if (isObject(resolved))
-        await applyPeople(mp, resolved as Record<string, unknown>);
+      if (!(isObject(resolved) && (await applyPeople(mp, resolved))))
+        skipped(logger, event, 'people', 'people');
     }
 
     // 4. Group assignment - resolves to { key, id } and calls set_group.
@@ -270,21 +295,19 @@ export const destinationMixpanel: Destination = {
       const resolved = await getMappingValue(event, groupMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        const { key, id } = resolved as { key?: unknown; id?: unknown };
-        if (
-          isString(key) &&
-          key !== '' &&
-          (isString(id) || isArray(id)) &&
-          id !== ''
-        ) {
-          await stepCall(
-            () => mp.set_group(key, id as string | string[]),
-            'transport',
-            'Mixpanel set_group failed',
-          );
-        }
-      }
+      const { key, id } = isObject(resolved) ? resolved : {};
+      if (
+        isString(key) &&
+        key !== '' &&
+        (isString(id) || isStringArray(id)) &&
+        id !== ''
+      )
+        await stepCall(
+          () => mp.set_group(key, id),
+          'transport',
+          'Mixpanel set_group failed',
+        );
+      else skipped(logger, event, 'set_group', 'group');
     }
 
     // 5. Group profile - resolves to { key, id, set?, set_once?, ... }
@@ -294,8 +317,8 @@ export const destinationMixpanel: Destination = {
         mappingSettings.groupProfile,
         { collector },
       );
-      if (isObject(resolved))
-        await applyGroupProfile(mp, resolved as Record<string, unknown>);
+      if (!(isObject(resolved) && (await applyGroupProfile(mp, resolved))))
+        skipped(logger, event, 'groupProfile', 'groupProfile');
     }
 
     // 6. Default track - unless the rule opts out via silent.

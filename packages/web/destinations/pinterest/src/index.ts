@@ -8,7 +8,7 @@ import {
   StepError,
   stepCall,
 } from '@walkeros/core';
-import type { Collector, Mapping, WalkerOS } from '@walkeros/core';
+import type { Collector, Logger, Mapping, WalkerOS } from '@walkeros/core';
 import type {
   Destination,
   EventData,
@@ -94,6 +94,22 @@ function identifyEqual(a?: IdentifyFields, b?: IdentifyFields): boolean {
   return a.em === b.em && a.external_id === b.external_id;
 }
 
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`Pinterest skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
 export const destinationPinterest: Destination = {
   type: 'pinterest',
 
@@ -137,7 +153,7 @@ export const destinationPinterest: Destination = {
     };
   },
 
-  async push(event, { config, rule, data, env, collector }) {
+  async push(event, { config, rule, data, env, collector, logger }) {
     vendor(config, env).check();
 
     const settings: Partial<Settings> = config.settings || {};
@@ -152,7 +168,10 @@ export const destinationPinterest: Destination = {
       // is already current) sends nothing: a declared skip, not a failure.
       const identifyMapping = rule?.settings?.identify ?? settings.identify;
       const identify = await resolveIdentify(event, identifyMapping, collector);
-      if (identify && !identifyEqual(identify, state.lastIdentify)) {
+      if (!identify) {
+        if (identifyMapping !== undefined)
+          skipped(logger, event, 'set', 'identify');
+      } else if (!identifyEqual(identify, state.lastIdentify)) {
         await stepCall(
           () => pintrk('set', identify),
           'transport',

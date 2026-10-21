@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
+import type { Collector, Logger, WalkerOS } from '@walkeros/core';
 import {
   getGrantedConsent,
   getMappingValue,
@@ -8,9 +8,14 @@ import {
   isObject,
   isString,
   StepError,
+  stepCall,
 } from '@walkeros/core';
 import * as amplitudeSDK from '@amplitude/unified';
+import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
+import { experimentPlugin } from '@amplitude/plugin-experiment-browser';
+import { plugin as engagementPlugin } from '@amplitude/engagement-browser';
 import type {
+  AmplitudePlugin,
   AmplitudeSDK,
   Destination,
   IdentifyInstance,
@@ -29,8 +34,8 @@ let real: RealSDK | undefined;
 
 /**
  * The real SDK: one @amplitude/unified client, as the module's own default
- * client is one per page. Created on first use; its `init` sets up analytics
- * alone, `initAll` adds the three plugins.
+ * client is one per page. Created on first use; its `init` sets up analytics,
+ * `add` one plugin at a time.
  */
 function realAmplitude(): RealSDK {
   if (real) return real;
@@ -39,7 +44,7 @@ function realAmplitude(): RealSDK {
     // The unified client forwards three arguments, and with three the
     // analytics SDK reads the second as a user id: the options go third.
     init: (apiKey, options) => client.init(apiKey, undefined, options),
-    initAll: (apiKey, options) => client.initAll(apiKey, options),
+    add: (plugin) => client.add(plugin),
     track: (eventType, eventProperties) =>
       client.track(eventType, eventProperties),
     identify: (identify) => client.identify(identify),
@@ -72,7 +77,7 @@ function isAmplitudeSDK(value: unknown): value is AmplitudeSDK {
     isObject(value) &&
     [
       'init',
-      'initAll',
+      'add',
       'track',
       'identify',
       'revenue',
@@ -89,27 +94,31 @@ function isAmplitudeSDK(value: unknown): value is AmplitudeSDK {
   );
 }
 
+const send = (fn: () => unknown) =>
+  stepCall(fn, 'transport', 'Amplitude call failed');
+
 /**
- * Waits for one SDK call: its promise, or the `promise` an AmplitudeReturn
- * carries. A throw or a rejection becomes a StepError.
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
  */
-async function call(
-  fn: () => unknown,
-  code: string,
-  message: string,
-  settle = false,
-): Promise<void> {
-  try {
-    const result = await fn();
-    if (settle && isObject(result) && result.promise instanceof Promise)
-      await result.promise;
-  } catch (error) {
-    throw new StepError(message, { code, cause: error });
-  }
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`Amplitude skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
 }
 
-const send = (fn: () => unknown) =>
-  call(fn, 'transport', 'Amplitude call failed');
+/** Waits for a call and the `promise` its AmplitudeReturn carries. */
+async function settled(fn: () => unknown): Promise<void> {
+  const result = await fn();
+  if (isObject(result) && result.promise instanceof Promise)
+    await result.promise;
+}
 
 /**
  * Deterministic string → positive integer hash (djb2).
@@ -134,7 +143,7 @@ async function applyIdentitySetters<
   R extends RevenueInstance,
 >(
   amp: AmplitudeSDK<I, R>,
-  sent: (fn: () => unknown) => Promise<void>,
+  send: (fn: () => unknown) => Promise<unknown>,
   resolved: Record<string, unknown>,
   lastIdentity: RuntimeState['lastIdentity'] = {},
 ): Promise<NonNullable<RuntimeState['lastIdentity']>> {
@@ -143,10 +152,10 @@ async function applyIdentitySetters<
   if ('user' in resolved) {
     const user = resolved.user;
     if (user === null || user === '') {
-      await sent(() => amp.setUserId(undefined));
+      await send(() => amp.setUserId(undefined));
       delete updated.user;
     } else if (isString(user) && user !== lastIdentity.user) {
-      await sent(() => amp.setUserId(user));
+      await send(() => amp.setUserId(user));
       updated.user = user;
     }
   }
@@ -154,7 +163,7 @@ async function applyIdentitySetters<
   if ('device' in resolved) {
     const device = resolved.device;
     if (isString(device) && device !== lastIdentity.device) {
-      await sent(() => amp.setDeviceId(device));
+      await send(() => amp.setDeviceId(device));
       updated.device = device;
     }
   }
@@ -174,7 +183,7 @@ async function applyIdentitySetters<
           ? hashStringToInt(session)
           : undefined;
     if (asNumber !== undefined && asNumber !== lastIdentity.session) {
-      await sent(() => amp.setSessionId(asNumber));
+      await send(() => amp.setSessionId(asNumber));
       updated.session = asNumber;
     }
   }
@@ -264,7 +273,7 @@ function buildRevenue<I extends IdentifyInstance, R extends RevenueInstance>(
   return rev;
 }
 
-/** Starts the SDK: analytics alone, or with the plugins the settings enable. */
+/** Starts analytics, then each plugin the settings enable, in that order. */
 async function start<I extends IdentifyInstance, R extends RevenueInstance>(
   amp: AmplitudeSDK<I, R>,
   settings: Settings,
@@ -285,35 +294,46 @@ async function start<I extends IdentifyInstance, R extends RevenueInstance>(
     ...browserOptions,
   };
 
-  // Session Replay, Experiment and Guides & Surveys are opt-in: without any
-  // of them only analytics starts. @amplitude/unified sets up all three
-  // together, so one enabled plugin brings the other two.
-  const plugins = Boolean(
-    sessionReplay || experiment?.deploymentKey || engagement,
-  );
-
-  if (!plugins)
-    return call(
-      () => amp.init(apiKey, analyticsOptions),
-      'vendor-not-ready',
-      'Amplitude init failed',
-      true,
-    );
-
-  return call(
-    () =>
-      amp.initAll(apiKey, {
-        serverZone: analyticsOptions.serverZone,
-        analytics: analyticsOptions,
-        ...(sessionReplay ? { sessionReplay } : {}),
-        ...(experiment?.deploymentKey ? { experiment } : {}),
-        ...(engagement
-          ? { engagement: engagement === true ? undefined : engagement }
-          : {}),
-      }),
+  await stepCall(
+    () => settled(() => amp.init(apiKey, analyticsOptions)),
     'vendor-not-ready',
     'Amplitude init failed',
   );
+
+  // Session Replay, Experiment and Guides & Surveys are opt-in, each on its
+  // own: only the ones the settings enable start, on the analytics server
+  // zone and instance.
+  const { serverZone, instanceName } = analyticsOptions;
+  const shared = {
+    ...(serverZone ? { serverZone } : {}),
+    ...(instanceName ? { instanceName } : {}),
+  };
+  const plugins: Array<[string, AmplitudePlugin]> = [];
+  if (sessionReplay)
+    plugins.push([
+      'Session Replay',
+      sessionReplayPlugin({ ...sessionReplay, ...shared }),
+    ]);
+  if (experiment?.deploymentKey)
+    plugins.push([
+      'Experiment',
+      experimentPlugin({ ...experiment, ...shared }),
+    ]);
+  if (engagement)
+    plugins.push([
+      'Guides & Surveys',
+      engagementPlugin({
+        ...(engagement === true ? {} : engagement),
+        ...shared,
+      }),
+    ]);
+
+  for (const [name, plugin] of plugins)
+    await stepCall(
+      () => settled(() => amp.add(plugin)),
+      'vendor-not-ready',
+      `Amplitude ${name} failed to start`,
+    );
 }
 
 async function pushTo<I extends IdentifyInstance, R extends RevenueInstance>(
@@ -324,13 +344,9 @@ async function pushTo<I extends IdentifyInstance, R extends RevenueInstance>(
   rule: { name?: unknown; silent?: boolean } | undefined,
   data: unknown,
   collector: Collector.Instance,
+  logger: Logger.Instance,
 ): Promise<void> {
   const state: RuntimeState = settings._state || {};
-  let calls = 0;
-  const sent = (fn: () => unknown) => {
-    calls++;
-    return send(fn);
-  };
 
   // 1. Reset - fires first so subsequent identity calls start clean.
   if (mappingSettings.reset !== undefined) {
@@ -341,7 +357,7 @@ async function pushTo<I extends IdentifyInstance, R extends RevenueInstance>(
             collector,
           });
     if (resolved) {
-      await sent(() => amp.reset());
+      await send(() => amp.reset());
       state.lastIdentity = {};
     }
   }
@@ -357,18 +373,18 @@ async function pushTo<I extends IdentifyInstance, R extends RevenueInstance>(
       identifyResolved = resolved;
       state.lastIdentity = await applyIdentitySetters(
         amp,
-        sent,
+        send,
         resolved,
         state.lastIdentity,
       );
-    }
+    } else skipped(logger, event, 'identify', 'identify');
   }
 
   // 3. Identify operations - fires amplitude.identify() if the resolved
   //    object has any op keys (set, setOnce, add, ...).
   if (identifyResolved) {
     const id = buildIdentify(amp, identifyResolved);
-    if (id) await sent(() => amp.identify(id));
+    if (id) await send(() => amp.identify(id));
   }
 
   // 4. Group assignment
@@ -376,11 +392,10 @@ async function pushTo<I extends IdentifyInstance, R extends RevenueInstance>(
     const resolved = await getMappingValue(event, mappingSettings.group, {
       collector,
     });
-    if (isObject(resolved)) {
-      const { type, name } = resolved;
-      if (isString(type) && (isString(name) || isStringArray(name)))
-        await sent(() => amp.setGroup(type, name));
-    }
+    const { type, name } = isObject(resolved) ? resolved : {};
+    if (isString(type) && (isString(name) || isStringArray(name)))
+      await send(() => amp.setGroup(type, name));
+    else skipped(logger, event, 'setGroup', 'group');
   }
 
   // 5. Group identify (properties on the group)
@@ -390,13 +405,14 @@ async function pushTo<I extends IdentifyInstance, R extends RevenueInstance>(
       mappingSettings.groupIdentify,
       { collector },
     );
-    if (isObject(resolved)) {
-      const { type, name } = resolved;
-      if (isString(type) && isString(name)) {
-        const id = buildIdentify(amp, resolved);
-        if (id) await sent(() => amp.groupIdentify(type, name, id));
-      }
-    }
+    const { type, name } = isObject(resolved) ? resolved : {};
+    const id =
+      isObject(resolved) && isString(type) && isString(name)
+        ? buildIdentify(amp, resolved)
+        : undefined;
+    if (id && isString(type) && isString(name))
+      await send(() => amp.groupIdentify(type, name, id));
+    else skipped(logger, event, 'groupIdentify', 'groupIdentify');
   }
 
   // 6. Revenue - single object or array from loop → N revenue() calls.
@@ -404,36 +420,27 @@ async function pushTo<I extends IdentifyInstance, R extends RevenueInstance>(
     const resolved = await getMappingValue(event, mappingSettings.revenue, {
       collector,
     });
-    const items = isArray(resolved) ? resolved : [resolved];
-    for (const item of items) {
+    let sent = 0;
+    for (const item of isArray(resolved) ? resolved : [resolved]) {
       if (!isObject(item)) continue;
       const revenue = buildRevenue(amp, item);
-      await sent(() => amp.revenue(revenue));
+      await send(() => amp.revenue(revenue));
+      sent++;
     }
+    if (!sent) skipped(logger, event, 'revenue', 'revenue');
   }
 
   // 7. Default track
   if (rule?.silent !== true) {
     const eventType = isString(rule?.name) ? rule.name : event.name;
     const eventProperties = isObject(data) ? data : {};
-    await sent(() => amp.track(eventType, eventProperties));
+    await send(() => amp.track(eventType, eventProperties));
   }
 
-  // Persist state mutations back onto config.settings.
+  // Persist state mutations back onto config.settings. A silent rule whose
+  // settings resolve nothing (or an identity that is already current) sends
+  // nothing: a declared skip, not a failure.
   settings._state = state;
-
-  // A silent rule whose own settings resolved nothing sent nothing.
-  const ruleSettings =
-    mappingSettings.reset !== undefined ||
-    mappingSettings.identify !== undefined ||
-    mappingSettings.group !== undefined ||
-    mappingSettings.groupIdentify !== undefined ||
-    mappingSettings.revenue !== undefined;
-  if (!calls && ruleSettings)
-    throw new StepError(
-      `Amplitude: the silent rule of "${event.name}" resolved no identity, group or revenue`,
-      { code: 'missing-input' },
-    );
 }
 
 function isStringArray(value: unknown): value is string[] {
@@ -468,12 +475,21 @@ export const destinationAmplitude: Destination = {
     return { ...config, settings: { ...settings, _state } };
   },
 
-  async push(event, { config, rule, env, data, collector }) {
+  async push(event, { config, rule, env, data, collector, logger }) {
     const settings: Settings = { apiKey: '', ...config.settings };
     const mappingSettings: Mapping = rule?.settings || {};
     const mock = mockOf(env);
     await (mock
-      ? pushTo(mock, event, settings, mappingSettings, rule, data, collector)
+      ? pushTo(
+          mock,
+          event,
+          settings,
+          mappingSettings,
+          rule,
+          data,
+          collector,
+          logger,
+        )
       : pushTo(
           realAmplitude(),
           event,
@@ -482,6 +498,7 @@ export const destinationAmplitude: Destination = {
           rule,
           data,
           collector,
+          logger,
         ));
   },
 
@@ -494,7 +511,7 @@ export const destinationAmplitude: Destination = {
 
     const granted = getGrantedConsent(required, collector.consent) !== false;
     const amp = mockOf(env) ?? realAmplitude();
-    await call(
+    await stepCall(
       () => amp.setOptOut(!granted),
       'consent-not-applied',
       'Amplitude did not take the consent update',

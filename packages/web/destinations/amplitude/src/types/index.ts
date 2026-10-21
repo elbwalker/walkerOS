@@ -3,10 +3,7 @@ import type {
   Destination as CoreDestination,
 } from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
-import type {
-  Types as AmplitudeTypes,
-  UnifiedOptions,
-} from '@amplitude/unified';
+import type { Types as AmplitudeTypes } from '@amplitude/unified';
 import type { SessionReplayOptions } from '@amplitude/plugin-session-replay-browser';
 import type { ExperimentPluginConfig } from '@amplitude/plugin-experiment-browser';
 import type { InitOptions as EngagementInitOptions } from '@amplitude/engagement-browser';
@@ -15,6 +12,7 @@ import type { InitOptions as EngagementInitOptions } from '@amplitude/engagement
 // walkerOS mapping-based `identify`. Omit it so Settings can re-declare it.
 type BrowserOptions = Omit<AmplitudeTypes.BrowserOptions, 'identify'>;
 export type AmplitudeBrowserOptions = AmplitudeTypes.BrowserOptions;
+export type AmplitudePlugin = AmplitudeTypes.Plugin;
 
 /**
  * Destination-level settings.
@@ -71,10 +69,10 @@ export interface AmplitudeSDK<
   I extends IdentifyInstance = IdentifyInstance,
   R extends RevenueInstance = RevenueInstance,
 > {
-  /** Analytics only, the plugins none. */
+  /** Analytics. */
   init: (apiKey: string, options?: AmplitudeBrowserOptions) => unknown;
-  /** Analytics plus Session Replay, Experiment and Guides & Surveys. */
-  initAll: (apiKey: string, options?: UnifiedOptions) => unknown;
+  /** One plugin: Session Replay, Experiment or Guides & Surveys. */
+  add: (plugin: AmplitudePlugin) => unknown;
   track: (
     eventType: string,
     eventProperties?: Record<string, unknown>,

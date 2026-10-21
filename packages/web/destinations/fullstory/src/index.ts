@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Logger, WalkerOS } from '@walkeros/core';
 import {
   getGrantedConsent,
   getMappingValue,
@@ -108,6 +108,22 @@ function consentCalls(
   return [() => (granted ? fs.start() : fs.shutdown())];
 }
 
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`FullStory skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
 export const destinationFullStory: Destination = {
   type: 'fullstory',
 
@@ -127,7 +143,7 @@ export const destinationFullStory: Destination = {
     );
   },
 
-  async push(event, { config, rule, env, data, collector }) {
+  async push(event, { config, rule, env, data, collector, logger }) {
     const fs = getFS(env);
     const settings: Partial<Settings> = config.settings || {};
     const mappingSettings: Mapping = rule?.settings || {};
@@ -138,17 +154,15 @@ export const destinationFullStory: Destination = {
       const resolved = await getMappingValue(event, identifyMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        const { uid, properties } = resolved;
-        if (isString(uid) && uid) {
-          const identityOpts: {
-            uid: string;
-            properties?: Record<string, unknown>;
-          } = { uid };
-          if (isObject(properties)) identityOpts.properties = properties;
-          await send(() => fs.setIdentity(identityOpts));
-        }
-      }
+      const { uid, properties } = isObject(resolved) ? resolved : {};
+      if (isString(uid) && uid) {
+        const identityOpts: {
+          uid: string;
+          properties?: Record<string, unknown>;
+        } = { uid };
+        if (isObject(properties)) identityOpts.properties = properties;
+        await send(() => fs.setIdentity(identityOpts));
+      } else skipped(logger, event, 'setIdentity', 'identify');
     }
 
     // 2. setProperties -- user or page scope
@@ -161,7 +175,7 @@ export const destinationFullStory: Destination = {
         await send(() =>
           fs.setProperties({ type: propertyType, properties: resolved }),
         );
-      }
+      } else skipped(logger, event, 'setProperties', 'set');
     }
 
     // 3. Default trackEvent -- unless rule.silent is set

@@ -447,22 +447,14 @@ export const silentRule: AmplitudeStepExample = {
 
 /**
  * The silent group rule of groupAssignmentWithProperties on an update
- * without data: no group name resolves and the rule suppresses the track,
- * so nothing is sent.
+ * without data: no group resolves, so nothing is sent. A declared skip: an
+ * unmet mapping, not a failure.
  */
 export const groupAssignmentWithoutData: AmplitudeStepExample = {
   public: false,
   description:
-    'A silent rule whose group mapping finds no company sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose group mapping finds no company sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'company update', entity: 'company', action: 'update' },
-  mapping: {
-    silent: true,
-    settings: {
-      group: {
-        map: { type: { value: 'company' }, name: 'data.company' },
-      },
-    },
-  },
+  mapping: groupAssignmentWithProperties.mapping,
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };

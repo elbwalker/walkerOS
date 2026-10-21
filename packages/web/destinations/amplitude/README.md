@@ -48,10 +48,9 @@ npm install @walkeros/web-destination-amplitude
 ## Plugins
 
 With only `apiKey` and the analytics options, only Amplitude analytics starts.
-Setting `sessionReplay`, `experiment` (with a `deploymentKey`) or `engagement`
-starts the plugins through `@amplitude/unified`, which sets up all three
-together: enabling one also sets up Session Replay, Experiment and Guides &
-Surveys.
+Each plugin starts only from its own setting: `sessionReplay` starts Session
+Replay, `experiment` with a `deploymentKey` starts Experiment, and `engagement`
+starts Guides & Surveys, which loads its SDK from cdn.amplitude.com.
 
 ## Documentation
 

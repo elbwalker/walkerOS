@@ -1,5 +1,6 @@
 import { startFlow } from '@walkeros/collector';
-import { getEvent } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
+import { createEvent, getEvent, Level } from '@walkeros/core';
 import { destinationFullStory } from '..';
 import type { FullStorySDK } from '../types';
 
@@ -43,6 +44,45 @@ describe('fullstory destination', () => {
       ['start'],
       ['trackEvent', { name: 'page view', properties: {} }],
       ['shutdown'],
+    ]);
+  });
+
+  it('writes one DEBUG line naming the event and the mapping key for a declared skip', async () => {
+    const lines: Array<[Level, string, unknown]> = [];
+    const handler: Logger.Handler = (level, message, context) => {
+      lines.push([level, message, context]);
+    };
+    const calls: unknown[][] = [];
+    const { elb } = await startFlow({
+      logger: { level: 'DEBUG', handler },
+      destinations: {
+        fullstory: {
+          code: {
+            ...destinationFullStory,
+            env: { fullstory: recordingFS(calls) },
+          },
+          config: {
+            settings: { orgId: 'o-1' },
+            mapping: {
+              company: {
+                update: {
+                  silent: true,
+                  settings: { identify: { map: { uid: 'data.none' } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect((await elb(createEvent({ name: 'company update' }))).ok).toBe(true);
+    expect(lines.filter(([, message]) => message.includes('skipped'))).toEqual([
+      [
+        Level.DEBUG,
+        'FullStory skipped setIdentity: identify resolved to nothing',
+        expect.objectContaining({ event: 'company update' }),
+      ],
     ]);
   });
 });

@@ -9,7 +9,9 @@ jest.mock('mixpanel-browser', () => ({
 
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
+import { clone, createEvent, Level } from '@walkeros/core';
+import { destinationMixpanel } from '..';
 import { examples } from '../dev';
 import type { MixpanelStepExample } from '../examples/step';
 import type { Env, MixpanelGroup, Settings } from '../types';
@@ -179,6 +181,45 @@ describe('mixpanel destination — step examples', () => {
       expect(actual).toEqual(expected);
     },
   );
+
+  it('writes one DEBUG line naming the event and the mapping key for a declared skip', async () => {
+    const lines: Array<[Level, string, unknown]> = [];
+    const handler: Logger.Handler = (level, message, context) => {
+      lines.push([level, message, context]);
+    };
+    const { elb } = await startFlow({
+      logger: { level: 'DEBUG', handler },
+      destinations: {
+        mixpanel: {
+          code: { ...destinationMixpanel, env: clone(examples.env.push) },
+          config: {
+            settings: { apiKey: 'k' },
+            mapping: {
+              company: {
+                update: {
+                  silent: true,
+                  settings: {
+                    groupProfile: {
+                      map: { key: { value: 'company' }, id: 'data.none' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect((await elb(createEvent({ name: 'company update' }))).ok).toBe(true);
+    expect(lines.filter(([, message]) => message.includes('skipped'))).toEqual([
+      [
+        Level.DEBUG,
+        'Mixpanel skipped groupProfile: groupProfile resolved to nothing',
+        expect.objectContaining({ event: 'company update' }),
+      ],
+    ]);
+  });
 });
 
 it('declares simulation paths that resolve', () =>

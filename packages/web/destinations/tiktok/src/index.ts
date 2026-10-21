@@ -1,3 +1,4 @@
+import type { Logger, WalkerOS } from '@walkeros/core';
 import {
   getGrantedConsent,
   getMappingValue,
@@ -79,7 +80,7 @@ async function applyIdentify(
   ttq: TTQ,
   resolved: Record<string, unknown>,
   lastIdentity: NonNullable<RuntimeState['lastIdentity']> = {},
-): Promise<NonNullable<RuntimeState['lastIdentity']>> {
+): Promise<NonNullable<RuntimeState['lastIdentity']> | undefined> {
   const next: NonNullable<RuntimeState['lastIdentity']> = { ...lastIdentity };
   const params: IdentifyParams = {};
   let changed = false;
@@ -94,9 +95,10 @@ async function applyIdentify(
     }
   }
 
-  // Skip ttq.identify() entirely if the resolved object has no non-empty
-  // values (anonymous visitor) or if nothing changed.
-  if (!changed || Object.keys(params).length === 0) return next;
+  // No non-empty value resolved: nothing to identify. An identity that is
+  // already current skips ttq.identify() as well.
+  if (Object.keys(params).length === 0) return undefined;
+  if (!changed) return next;
 
   await stepCall(
     () => ttq.identify(params),
@@ -104,6 +106,22 @@ async function applyIdentify(
     'TikTok identify failed',
   );
   return next;
+}
+
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`TikTok skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
 }
 
 export const destinationTikTok: Destination = {
@@ -149,7 +167,7 @@ export const destinationTikTok: Destination = {
     return { ...config, settings: { ...settings, _state } };
   },
 
-  async push(event, { config, rule, data, env, collector }) {
+  async push(event, { config, rule, data, env, collector, logger }) {
     vendor(config, env).check();
     const ttq = getTTQ(env);
     const settings: Partial<Settings> = config.settings || {};
@@ -166,13 +184,11 @@ export const destinationTikTok: Destination = {
       const resolved = await getMappingValue(event, identifyMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        state.lastIdentity = await applyIdentify(
-          ttq,
-          resolved,
-          state.lastIdentity,
-        );
-      }
+      const identity = isObject(resolved)
+        ? await applyIdentify(ttq, resolved, state.lastIdentity)
+        : undefined;
+      if (identity) state.lastIdentity = identity;
+      else skipped(logger, event, 'identify', 'identify');
     }
 
     // Default track. rule.silent suppresses the call entirely (e.g., for

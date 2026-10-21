@@ -6,7 +6,9 @@ jest.mock('@hotjar/browser', () => ({
 
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
+import { clone, createEvent, Level } from '@walkeros/core';
+import { destinationHotjar } from '..';
 import { examples } from '../dev';
 import type { Env, Settings } from '../types';
 import { expectSimulationResolves } from '@walkeros/core/dev';
@@ -94,6 +96,44 @@ describe('hotjar destination -- step examples', () => {
     const actual = collected().filter(([path]) => path !== 'hotjar.init');
 
     expect(actual).toEqual(expected);
+  });
+
+  it('writes one DEBUG line naming the event and the mapping key for a declared skip', async () => {
+    const lines: Array<[Level, string, unknown]> = [];
+    const handler: Logger.Handler = (level, message, context) => {
+      lines.push([level, message, context]);
+    };
+    const { elb } = await startFlow({
+      logger: { level: 'DEBUG', handler },
+      destinations: {
+        hotjar: {
+          code: {
+            ...destinationHotjar,
+            env: spyEnv(clone(examples.env.push)).env,
+          },
+          config: {
+            settings: { siteId: 1234567 },
+            mapping: {
+              company: {
+                update: {
+                  silent: true,
+                  settings: { stateChange: 'data.none' },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect((await elb(createEvent({ name: 'company update' }))).ok).toBe(true);
+    expect(lines.filter(([, message]) => message.includes('skipped'))).toEqual([
+      [
+        Level.DEBUG,
+        'Hotjar skipped stateChange: stateChange resolved to nothing',
+        expect.objectContaining({ event: 'company update' }),
+      ],
+    ]);
   });
 });
 

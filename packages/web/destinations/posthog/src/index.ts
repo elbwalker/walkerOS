@@ -1,3 +1,4 @@
+import type { Logger, WalkerOS } from '@walkeros/core';
 import {
   getGrantedConsent,
   getMappingValue,
@@ -117,6 +118,22 @@ async function applyGroup(
   return { lastGroup: updated, applied };
 }
 
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`PostHog skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
 export const destinationPostHog: Destination = {
   type: 'posthog',
 
@@ -172,7 +189,7 @@ export const destinationPostHog: Destination = {
     return { ...config, settings: { ...settings, _state } };
   },
 
-  async push(event, { config, rule, env, data, collector }) {
+  async push(event, { config, rule, env, data, collector, logger }) {
     const posthog = getPostHog(env as Env | undefined);
     const settings = (config.settings || {}) as Settings;
     const mappingSettings = rule?.settings || {};
@@ -203,14 +220,11 @@ export const destinationPostHog: Destination = {
       const resolved = await getMappingValue(event, identifyMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        const identity = await applyIdentity(
-          posthog,
-          resolved as Record<string, unknown>,
-          state.lastIdentity,
-        );
-        state.lastIdentity = identity.lastIdentity;
-      }
+      const identity = isObject(resolved)
+        ? await applyIdentity(posthog, resolved, state.lastIdentity)
+        : undefined;
+      if (identity?.applied) state.lastIdentity = identity.lastIdentity;
+      else skipped(logger, event, 'identify', 'identify');
     }
 
     // 3. Group - rule-level override wins over destination-level.
@@ -219,14 +233,11 @@ export const destinationPostHog: Destination = {
       const resolved = await getMappingValue(event, groupMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        const group = await applyGroup(
-          posthog,
-          resolved as Record<string, unknown>,
-          state.lastGroup,
-        );
-        state.lastGroup = group.lastGroup;
-      }
+      const group = isObject(resolved)
+        ? await applyGroup(posthog, resolved, state.lastGroup)
+        : undefined;
+      if (group?.applied) state.lastGroup = group.lastGroup;
+      else skipped(logger, event, 'group', 'group');
     }
 
     // 4. Default capture - unless rule opts out via silent.

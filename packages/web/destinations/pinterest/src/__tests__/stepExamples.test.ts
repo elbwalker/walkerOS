@@ -9,7 +9,9 @@
 
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone, isObject, isString } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
+import { clone, createEvent, isObject, isString, Level } from '@walkeros/core';
+import { destinationPinterest } from '..';
 import { examples } from '../dev';
 import type { Env, Pintrk } from '../types';
 
@@ -96,5 +98,43 @@ describe('pinterest destination — step examples', () => {
     });
 
     expect(actual).toEqual([...(example.out ?? [])]);
+  });
+
+  it('writes one DEBUG line naming the event and the mapping key for a declared skip', async () => {
+    const lines: Array<[Level, string, unknown]> = [];
+    const handler: Logger.Handler = (level, message, context) => {
+      lines.push([level, message, context]);
+    };
+    const { elb } = await startFlow({
+      logger: { level: 'DEBUG', handler },
+      destinations: {
+        pinterest: {
+          code: {
+            ...destinationPinterest,
+            env: spyEnv(clone(examples.env.push)).env,
+          },
+          config: {
+            settings: { apiKey: '2612345678901' },
+            mapping: {
+              company: {
+                update: {
+                  silent: true,
+                  settings: { identify: { map: { em: 'data.none' } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect((await elb(createEvent({ name: 'company update' }))).ok).toBe(true);
+    expect(lines.filter(([, message]) => message.includes('skipped'))).toEqual([
+      [
+        Level.DEBUG,
+        'Pinterest skipped set: identify resolved to nothing',
+        expect.objectContaining({ event: 'company update' }),
+      ],
+    ]);
   });
 });

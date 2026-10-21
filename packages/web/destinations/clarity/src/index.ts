@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Logger, WalkerOS } from '@walkeros/core';
 import {
   getGrantedConsent,
   getMappingValue,
@@ -194,6 +194,22 @@ function consentOf(
     : { analytics_Storage: 'denied', ad_Storage: 'denied' };
 }
 
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`Clarity skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
 export const destinationClarity: Destination = {
   type: 'clarity',
 
@@ -211,7 +227,7 @@ export const destinationClarity: Destination = {
     );
   },
 
-  async push(event, { config, rule, env, data, collector }) {
+  async push(event, { config, rule, env, data, collector, logger }) {
     const settings: Partial<Settings> = config.settings || {};
     const clarity = getClarity(env, settings.apiKey ?? '', config.timeout);
     const mappingSettings: Mapping = rule?.settings || {};
@@ -224,21 +240,19 @@ export const destinationClarity: Destination = {
       const resolved = await getMappingValue(event, identifyMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        const { customId, customSessionId, customPageId, friendlyName } =
-          resolved;
-        if (isString(customId) && customId) {
-          await send(() =>
-            callIdentify(
-              clarity,
-              customId,
-              isString(customSessionId) ? customSessionId : undefined,
-              isString(customPageId) ? customPageId : undefined,
-              isString(friendlyName) ? friendlyName : undefined,
-            ),
-          );
-        }
-      }
+      const { customId, customSessionId, customPageId, friendlyName } =
+        isObject(resolved) ? resolved : {};
+      if (isString(customId) && customId) {
+        await send(() =>
+          callIdentify(
+            clarity,
+            customId,
+            isString(customSessionId) ? customSessionId : undefined,
+            isString(customPageId) ? customPageId : undefined,
+            isString(friendlyName) ? friendlyName : undefined,
+          ),
+        );
+      } else skipped(logger, event, 'identify', 'identify');
     }
 
     // 2. Include tags - pre-flattened by core into context.data
@@ -250,8 +264,10 @@ export const destinationClarity: Destination = {
       const resolved = await getMappingValue(event, mappingSettings.set, {
         collector,
       });
-      for (const [key, value] of tagsOf(resolved))
+      const tags = tagsOf(resolved);
+      for (const [key, value] of tags)
         await send(() => clarity.setTag(key, value));
+      if (!tags.length) skipped(logger, event, 'setTag', 'set');
     }
 
     // 4. Session priority upgrade
@@ -260,6 +276,7 @@ export const destinationClarity: Destination = {
         collector,
       });
       if (isString(reason) && reason) await send(() => clarity.upgrade(reason));
+      else skipped(logger, event, 'upgrade', 'upgrade');
     }
 
     // 5. Default event forwarding - unless rule.silent is set
