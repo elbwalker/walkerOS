@@ -1,4 +1,5 @@
-import type { Config, Destination, Env } from './types';
+import type { Config, Destination, Env, Types } from './types';
+import type { Destination as CoreDestination, WalkerOS } from '@walkeros/core';
 import { getGrantedConsent, isObject, StepError } from '@walkeros/core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
 
@@ -56,6 +57,19 @@ async function call(
   }
 }
 
+/** The vendor call that sends one event. */
+async function send(
+  event: WalkerOS.Event,
+  { data, env }: CoreDestination.PushContext<Types>,
+): Promise<void> {
+  const params = isObject(data) ? data : {};
+  await call(
+    () => sdk(env)('track', event.name, params),
+    'transport',
+    'Vendor call failed',
+  );
+}
+
 export const destinationVendor: Destination = {
   type: 'vendor',
   config: {},
@@ -88,21 +102,17 @@ export const destinationVendor: Destination = {
 
   /**
    * Push event to destination. `data` is the mapped data, `rule` the matching
-   * mapping rule.
+   * mapping rule. A silent rule sends no event of its own: `push` hands the
+   * event to `send` unless the rule is silent, and never returns early (the
+   * `walkeros/no-silent-return` lint rule is an error). A destination with
+   * side-effect mappings (identify, group) runs them in `push` for a silent
+   * rule too, and writes one DEBUG line when they resolve to nothing.
    */
-  async push(event, { config, rule, data, env }) {
+  async push(event, context) {
     // A script that fired `error` fails every later push
-    vendor(config, env).check();
+    vendor(context.config, context.env).check();
 
-    // A silent rule sends no event of its own
-    if (rule?.silent) return;
-
-    const params = isObject(data) ? data : {};
-    await call(
-      () => sdk(env)('track', event.name, params),
-      'transport',
-      'Vendor call failed',
-    );
+    if (!context.rule?.silent) await send(event, context);
   },
 
   /** Tell the vendor about a consent change when it has a switch for it. */

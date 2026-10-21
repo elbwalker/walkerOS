@@ -93,7 +93,7 @@ The source must extract `ip` and `userAgent` into `ingest`:
 
 Behind a load balancer, `ip` is the balancer's address; extract the client from `headers.x-forwarded-for` instead. An IPv4 client on a dual-stack server (`::ffff:203.0.113.7`) is treated as its IPv4 address.
 
-Set an input to another [mapping value](/docs/mapping/value) to read it from elsewhere, or to `false` to leave it out. When one input resolves empty, the transformer hashes without it; when all of them do, the event fails with `missing-input`.
+Set an input to another [mapping value](/docs/mapping/value) to read it from elsewhere, or to `false` to leave it out. When one input resolves empty, the transformer hashes without it; when the IP, the user agent and every field resolve empty (the site does not count), the event fails with `missing-input`.
 
 ## Salt
 

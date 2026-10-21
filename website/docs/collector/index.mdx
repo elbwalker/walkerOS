@@ -263,7 +263,7 @@ event ends in one of three places:
 * `done`: the destination delivered the event,
 * `queued`: the event is waiting, with a `reason`: `consent` (the destination
   waits for a grant), `batch` (it sits in a batch until the flush) or `held`
-  (the destination had a failure and retries after a window),
+  (a state delivery to the destination, such as its consent handler, is running or failed; the destination retries once per window),
 * `failed`: the destination did not deliver it, with a `reason` that carries
   a `code`, a `message` and `retryable` (see the table in
   [Logger](./logger#failure-codes)).
@@ -350,6 +350,9 @@ warning.
 }`}
   language="json"
 />
+
+A held event keeps the consent it was admitted with: when its destination's
+hold ends it is delivered even if the collector's consent changed meanwhile.
 
 ### Flushing batches
 

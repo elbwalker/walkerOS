@@ -147,12 +147,16 @@ the destination in the first place. The Insight Tag itself has no vendor
 opt-out API. When consent is later revoked, walkerOS stops sending events,
 but the loaded tag stays in the page.
 
+Events that no rule sends still count as delivered. To report them as skipped
+instead, add a wildcard rule with `ignore: true` (`'*': { '*': { ignore: true } }`)
+and map the events you want.
+
 ### Deferred script load
 
 If you want the Insight Tag to load **only** after consent is granted, set
 `loadScript: true` and leave `config.consent.marketing` un-granted at init
-time. The destination will skip `addScript()` during init and inject the
-script the first time an `on('consent')` event grants `marketing`. The
+time. The destination will not load the script during init and injects it
+the first time an `on('consent')` event grants `marketing`. The
 handler is idempotent. If a `<script src="...snap.licdn.com...">` already
 exists in the DOM, no second injection happens.
 

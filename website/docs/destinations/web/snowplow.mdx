@@ -289,6 +289,14 @@ Track GDPR/CCPA consent events using Snowplow's [Enhanced Consent plugin](https:
 The destination automatically reacts to walkerOS consent events and calls the
 appropriate Snowplow consent methods.
 
+On a revocation of the destination's required consent, activity tracking and
+the link, form, button and YouTube plugins are switched off, and a grant
+switches them back on. Error tracking and FocalMeter have no off switch, so a
+revocation with them enabled fails visibly (`consent-not-applied`). With
+`settings.tracker`, plugins that need a URL fail at `init` with a `config`
+error. An event that no rule maps fails with `missing-input`; add an
+`ignore: true` rule for events you do not send.
+
 **Prerequisites:** load the Enhanced Consent plugin via the `plugins` setting
 or include it in your Snowplow script bundle.
 

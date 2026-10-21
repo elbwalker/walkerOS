@@ -111,13 +111,13 @@ call that fails fails the event, which shows as a failed push.
 ## Plugins
 
 With just `apiKey` set, only Amplitude analytics starts. Session Replay,
-Experiment, and Guides & Surveys are set up together as soon as one of them is
-enabled: setting `sessionReplay`, `experiment.deploymentKey` or `engagement`
-starts all three, and the others then run with their defaults. Session Replay
-then fetches its remote configuration from Amplitude and Guides & Surveys
-loads its SDK from `cdn.amplitude.com`. Session Replay and Experiment ship in
-the destination's bundle. To use one of them without the other two, a plugin
-subset is not possible today.
+Experiment, and Guides & Surveys start only when you enable them: setting
+`sessionReplay`, `experiment.deploymentKey` or `engagement` starts that plugin
+and no other. Session Replay fetches its remote configuration from Amplitude and
+Guides & Surveys loads its SDK from `cdn.amplitude.com`. Session Replay and
+Experiment ship in the destination's bundle. Events from a setup with plugins no
+longer carry the `amplitude-ts-unified` library prefix. The settings accept SDK
+options that the schema does not list and pass them through.
 
 Session Replay records a sampled share of sessions. The share is
 `sessionReplay.sampleRate` (default 0) unless the project's Session Replay

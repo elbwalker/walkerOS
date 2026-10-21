@@ -136,15 +136,7 @@ Send several events in one request with the shared envelope. See
 | 400 | Rejected client input: the pipeline declared the event invalid. The body echoes the validation message, for example `Event name is required` |
 | 500 | The pipeline failed to process a valid event for a reason a resend could fix (the body is `Event was not processed`), or an unexpected server fault (`Internal server error`) |
 
-A failed event is acknowledged or retried by one rule on every source, from the
-push result: a failure a resend could fix (`retryable`, such as a timeout or an
-unavailable vendor) answers 500, or 207 for the failed events of a batch, with
-the fixed text `Event was not processed`. A failure a resend cannot fix (a
-missing setting, a `4xx` from the vendor, a destination that is not ready) is
-acknowledged with 200: it is in the dead-letter queue and in the log, and
-sending the same event again would fail the same way. The body never carries a
-destination id or the text of a step's error; the collector's ERROR line does.
-An unexpected throw answers 500 `Internal server error`.
+A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
 
 Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
 inflating `status.failed`, and is logged at warn with the reason instead of as an

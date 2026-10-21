@@ -103,10 +103,12 @@ Two layers protect event delivery:
 
 1. **`config.consent`**: walkerOS gates delivery. Events are queued
    until required consent keys resolve to `true`.
-2. **`on('consent')`**: the destination closes the Optimizely client
-   (flushing queued events and stopping datafile polling) when any
-   required key flips to `false`. On re-grant, the next push re-initializes
-   the client.
+2. **`on('consent')`**: the destination decides on the whole consent state
+   against its own `config.consent` and acts only when a change touches a
+   required key. It keeps its client across a revoke and a grant.
+
+An event from a visitor without the configured `userId` fails with
+`missing-input`.
 
 <CodeSnippet
   code={`destinations: {

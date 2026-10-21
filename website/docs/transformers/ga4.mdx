@@ -437,7 +437,7 @@ The string is compiled to a `RegExp` at init time.
 
 ## Batch size limit
 
-Every decoded event continues through the pipeline as its own push, and a source's batch limit (such as the express `maxBatchSize`) only covers JSON batches, not a raw `text/plain` body. The transformer therefore caps the events in one request with `settings.maxEvents` (default `100`). It counts the non-empty lines of the POST body before decoding, and a request with more lines than the cap is dropped whole: no event from it is decoded, and one `warn` log line records the line count and the cap. The source still answers the client with success, so that log line is the only sign of the drop. Raise the cap only if your own server-to-server calls send larger batches:
+Every decoded event continues through the pipeline as its own push, and a source's batch limit (such as the express `maxBatchSize`) only covers JSON batches, not a raw `text/plain` body. The transformer therefore caps the events in one request with `settings.maxEvents` (default `100`). It counts the non-empty lines of the POST body before decoding, and a request with more lines than the cap is dropped whole: no event from it is decoded, and the collector writes one ERROR line with the line count and the cap. The source still answers the client with success, so that log line is the only sign of the drop. Raise the cap only if your own server-to-server calls send larger batches:
 
 ```json
 "settings": {

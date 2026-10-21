@@ -84,20 +84,20 @@ export const destinationWebhook: Destination.Instance<Types> = {
     if (!settings?.url)
       throw new StepError('Webhook needs settings.url', { code: 'config' });
 
-    // A rule with silent: true sends nothing
-    if (rule?.silent) return;
-
-    // 4. Send the event and await it; fetch resolves on an error status
-    const response = await fetch(settings.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(event),
-    });
-    if (!response.ok)
-      throw new StepError(\`HTTP \${response.status}\`, {
-        code: 'transport',
-        status: response.status,
+    // A rule with silent: true sends nothing; the push still returns normally
+    if (!rule?.silent) {
+      // 4. Send the event and await it; fetch resolves on an error status
+      const response = await fetch(settings.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event),
       });
+      if (!response.ok)
+        throw new StepError(\`HTTP \${response.status}\`, {
+          code: 'transport',
+          status: response.status,
+        });
+    }
   },
 };`}
   language="typescript"
@@ -142,8 +142,11 @@ with the `timeout` code.
 ### Rule options every destination honours
 
 A destination honours `rule.silent`: a rule with `silent: true` sends no event
-of its own and only runs the side effects the rule maps, such as an identify. A
-silent rule that has nothing to send returns normally.
+of its own and only runs the side effects the rule maps, such as an identify.
+Skip the send with a condition rather than an early `return`, as in the example
+above. A silent rule whose side effects resolve to nothing sends nothing, counts
+as delivered and writes one DEBUG line that names the call and the mapping key,
+never the value.
 
 ### Vendor scripts
 

@@ -203,10 +203,10 @@ see each line.
 | Code | Cause | Retryable | Fix |
 | ---- | ----- | --------- | --- |
 | `transport` | A destination's request failed or threw an unknown error | yes, except a `4xx` other than `429` | Check the endpoint and credentials; the status is on the line |
-| `timeout` | A push or an `init` did not settle within `config.timeout` (10 s) | yes | Raise `config.timeout` or check the vendor |
+| `timeout` | A destination or transformer push or `init` did not settle within its `config.timeout` (10 s by default) | yes | Raise `config.timeout` or check the vendor |
 | `not-ready` | The destination or transformer could not start | no | Fix the cause its message names |
-| `breaker-open` | Repeated retryable failures opened the circuit breaker; the destination is paused | yes | Wait, or fix the outage; the destination retries after a pause |
-| `blocked` | The destination was held for longer than one retry window | yes | Fix the failing call; later events retry |
+| `breaker-open` | `config.breaker` is set and `threshold` retryable failures in a row opened it; events fail at once | yes | Fix the outage. After `breaker.cooldown` (30 s) the next event probes the destination and a success closes the breaker; events failed while it was open stay in the dead-letter queue |
+| `blocked` | A state delivery to the destination (its `on` handler, for example consent) failed and did not recover within `config.timeout` | yes | Fix the destination's `on` handler (see its `consent-not-applied` line); later pushes retry the delivery, and events fail until one succeeds |
 | `queue-full` | A queue refused the event: the collector has not run yet, or a held destination's queue is full | yes | Start the collector sooner or raise `queueMax` |
 | `mapping` | A mapping rule `condition` threw, or a mapped value could not be built | no | Fix the condition or the value |
 | `transformer` | A transformer threw | no | Fix the transformer |
@@ -216,7 +216,10 @@ see each line.
 | `vendor-not-ready` | The vendor SDK is not ready yet | yes | Usually resolves on the next event |
 | `vendor-timeout` | The vendor script did not become ready in time | yes | Check the network and the script URL |
 | `beacon-rejected` | The browser refused a `sendBeacon` | only up to 64 KiB | Send smaller batches |
-| `consent-not-applied` | A destination's `on('consent')` handler failed | n/a | Fix the handler; the destination's events wait |
+| `consent-not-applied` | A destination's `on('consent')` handler failed | n/a | Fix the handler; the destination's events wait for one window of `config.timeout`, then fail with `blocked` |
+| `dlq-overflow` | A destination's dead-letter queue was full and evicted its oldest entry | n/a | Raise `dlqMax` or fix the failing destination; counted in `status.dropped` |
+| `on-overflow` | A destination's queue of waiting `on()` deliveries was full and dropped the oldest | n/a | Raise `queueMax`; counted in `status.dropped` |
+| `decode` | A store holds a value that cannot be decoded | no | Repair or delete the stored value; the read counts as a miss for that event |
 | `invalid` | An event was rejected as invalid input (a `WARN`) | no | Fix the producer |
 
 A step's own `StepError.code` wins over these. A code outside this table with
@@ -237,10 +240,9 @@ platforms such as Cloud Run read as structured logs.
   language="json"
 />
 
-A flow's own `logger` level and format apply under `runneros` as well. `--verbose`
-still forces `DEBUG`. A web flow has no output format, so `walkeros validate`
+Under `runneros`, a flow's own `logger` level (`DEBUG` included) and format apply to the collector's lines without `--verbose`; the runner's own `DEBUG` lines still need `--verbose`. A custom `handler` in the flow receives an `originalHandler` that does nothing under `runneros`, because the host prints every line once, masked and in the flow's format. A web flow has no output format, so `walkeros validate`
 rejects `logger.format` there (`WEB_LOGGER_FORMAT`). Secrets are masked in both
-formats, and a JSON line is capped at 32 KiB.
+formats, and a JSON line is capped at 32 KiB: a longer line truncates its context and, if still too long, its message (`messageTruncated: true`).
 
 ## Scoped loggers
 

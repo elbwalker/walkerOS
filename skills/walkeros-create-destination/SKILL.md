@@ -669,9 +669,14 @@ Use these templates as your starting point:
    `push`; for any other, `await ready()`. Pass attributes the tag needs
    (`data-domain`) through `options.attributes`.
 10. **Honour `rule.silent`.** A rule with `silent: true` sends no event of its
-    own and runs only the side effects it maps (identify, group). With nothing
-    to send it returns normally. Every destination ships a `silent` step example
-    (see Phase 3).
+    own and runs only the side effects it maps (identify, group). Do not
+    `return` early for it (`walkeros/no-silent-return` is an error): write
+    `push = async (event, context) => { if (!context.rule?.silent) await send(event, context); }`
+    and run the side effects around it. A silent rule whose side-effect mapping
+    resolves to nothing sends nothing, counts as delivered and writes one DEBUG
+    line (`<Vendor> skipped <call>: <mappingKey> resolved to nothing`, the event
+    name, never the value). Every destination ships a `silent` step example (see
+    Phase 3).
 11. **Consent reaches the vendor.** `config.consent` decides: in
     `on('consent')`, tell the vendor about a revocation and a grant when it has
     a switch (`getGrantedConsent(config.consent, collector.consent)`), and throw

@@ -83,17 +83,6 @@ Identity is resolved automatically from each event: `userId` defaults to `user.i
 
 ## Batching and delivery
 
-This destination batches by default: events are collected and sent together once
-`config.batch` reaches 15 events or 10 seconds, whichever comes
-first. Each event keeps its own outcome, so a failed delivery fails that event
-and lands in the dead-letter queue instead of counting as delivered. Set
-`config.batch: { size: 1 }` to send each event at once; there is no JSON switch
-that turns the default batch off.
-
-A batched event answers `queued` with the reason `batch`. A server source
-acknowledges the producer when the event is queued, and a failed flush is
-reported (one ERROR line with the status, the failed counter, the dead-letter
-queue) but not redelivered. Options are in
-[Batch scheduling](/docs/mapping/rule#batch-scheduling).
+This destination batches by default: `config.batch` sends after 15 events or 10 seconds, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
 
 An event without `userId` or `anonymousId` fails with `missing-input`.

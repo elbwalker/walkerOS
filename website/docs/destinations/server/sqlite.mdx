@@ -105,7 +105,7 @@ This runs `CREATE TABLE IF NOT EXISTS` with the canonical 15-column walkerOS Eve
 - `foreign_keys = ON`
 - `temp_store = MEMORY`
 
-Setup is idempotent. Re-running against a populated database is a safe no-op. Drift between the declared schema and the actual table is logged as `WARN setup.drift {field, declared, actual}`. Setup never auto-mutates an existing table, no `ALTER TABLE`, no destructive recreates.
+Setup is idempotent. Re-running against a populated database is a safe no-op. Drift between the declared schema and the actual table is logged as `WARN setup.drift {field, declared, actual}`. Setup never auto-mutates an existing table, no `ALTER TABLE`, no destructive recreates. A constraint error on insert is final and is not retried, and a missing table named by a rule's `table` setting is a `config` error. The legacy `schema: 'auto'` also creates the rule tables.
 
 The default 15-column schema mirrors the canonical walkerOS Event v4 layout. Only `name` is `NOT NULL`. See [Event Model](/docs/getting-started/event-model) for the full field reference.
 

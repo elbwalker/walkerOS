@@ -244,6 +244,7 @@ ingestion. This replaces the legacy `tabledata.insertAll` path.
 
 - **Cost**: $25/TB after the 2 TiB/month free tier (vs ~$50/TB for the legacy
   path). Most low-volume deployments fit entirely in the free tier.
+- **Rejected appends**: an append the server rejects (quota, permission, a dropped table) fails the push. Pub/Sub retries only the error codes its SDK retries.
 - **First use**: the writer opens at the first push, not at startup; a missing dataset or table fails that push with the setup hint. BigQuery and Pub/Sub failures are reported once by the collector, and the messages name codes, not row data.
 - **Batching**: `pushBatch` is implemented. Set `config.batch` on the
   destination (a bare number is the debounce `wait` in ms) to flush all events

@@ -122,7 +122,7 @@ Without it, Piwik PRO receives no client IP, user agent or language, and locates
 | `ip` | `["ingest.ip", "event.user.ip"]` | `cip`, the visitor's IP address. Kept on anonymous hits, for country-level location. |
 | `userAgent` | `["ingest.userAgent", "event.user.userAgent"]` | `ua` |
 | `language` | `["ingest.language", "event.user.language"]` | `lang` |
-| `pageUrl` | `"event.source.url"` | `url`. The Tracking API requires it, so an event without a page URL is skipped. |
+| `pageUrl` | `"event.source.url"` | `url`. The Tracking API requires it, so an event without a page URL fails with `missing-input`. |
 | `referrer` | `"event.source.referrer"` | `urlref` |
 | `visitorId` | `"event.user.device"` | `_id` on identified hits. A 16 character lowercase hex value passes through. Anything else is hashed to 16 hex characters, so walkerOS device ids are always hashed. |
 | `userId` | `"event.user.id"` | `uid` on identified hits. |
@@ -137,7 +137,7 @@ For cookieless tracking, pair `visitorId` with the [fingerprint transformer](/do
 
 `rule.name` selects a Piwik PRO JavaScript method, and `data` resolves to its arguments in order. Use `set` to pass several arguments; any other value is a single argument. A `page view` without `rule.name` becomes `trackPageView`, with `rule.data` as its arguments, or else `data.title` as the title.
 
-The server builds hits for 13 methods. A required argument is marked with `*`. When it is missing, the event is invalid and skipped. Every hit also carries the common parameters, the custom dimensions and the request context from the settings above.
+The server builds hits for 13 methods. A required argument is marked with `*`. When it is missing, the event is invalid and fails with `missing-input`. Every hit also carries the common parameters, the custom dimensions and the request context from the settings above.
 
 | Method (JavaScript signature) | What the server sends |
 |---|---|
@@ -228,7 +228,7 @@ A rule without `name` on an event that is not a page view sends only the goal wh
   language="json"
 />
 
-When the goal value resolves to something other than a number or a numeric string, the goal hit is invalid and the whole event is skipped. The method hit is not sent either. The same applies to any invalid hit: an event is sent completely or not at all. A goal value that resolves to nothing only leaves out `revenue`.
+When the goal value resolves to something other than a number or a numeric string, the goal hit is invalid and the whole event fails with `missing-input`. The method hit is not sent either. The same applies to any invalid hit: an event is sent completely or not at all. A goal value that resolves to nothing only leaves out `revenue`.
 
 ## Custom dimensions
 
@@ -293,7 +293,7 @@ The body of a bulk request holds one request string per hit. For a page view and
   language="json"
 />
 
-A goal adds its hit to the same list. Skipped events are left out of the request and count as delivered. If every event of a batch is skipped, no request is sent.
+A goal adds its hit to the same list. Invalid events fail individually and are left out of the request; a `silent` rule without a goal is left out and counts as delivered. If every event of a batch is left out, no request is sent.
 
 A failed request (a 4xx or 5xx status, a timeout or a network error) throws, so the whole batch goes to the destination's dead-letter queue. A 429 status is logged as rate limiting first. The destination does not retry.
 
@@ -315,14 +315,13 @@ The page view id links an event to the page view it happened on. By default it i
 
 ## Unmapped and invalid events
 
-These events are skipped:
+These events fail with `missing-input`:
 
 - An event that is not a page view and whose rule has neither `name` nor `goalId`.
 - An event whose rule names a method outside the table, such as `setUserId`.
-- A `silent` rule without a goal.
 - An invalid event: a missing required argument, no page URL, a value that must be a number but is not (such as `e_v` or `revenue`), or more than 100 products.
 
-Skips never throw. The destination logs a warning once per event name and reason, and repeats at debug level. To keep unmapped events out of the destination entirely, ignore everything with a wildcard and map what you need:
+A `silent` rule without a goal sends nothing and counts as delivered. To keep unmapped events out of the destination without a failure, ignore everything with a wildcard and map what you need:
 
 <CodeSnippet
   code={`"mapping": {

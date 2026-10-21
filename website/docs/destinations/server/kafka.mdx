@@ -86,7 +86,7 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
-The destination creates a single long-lived `kafkajs` producer and connects it at the first push, so a flow starts without a reachable broker. A failed send fails the push (dead-letter queue, one ERROR line) instead of being logged and counted delivered, and an unknown topic is a `config` error with the setup hint. On flow hot-swap or server shutdown, `destroy()` calls `producer.disconnect()` to flush in-flight messages and close TCP connections.
+The destination creates a single long-lived `kafkajs` producer and connects it at the first push, so a flow starts without a reachable broker. A failed send fails the push (dead-letter queue, one ERROR line) instead of being logged and counted delivered, and it is retried only when kafkajs marks the error as retriable, and an unknown topic is a `config` error with the setup hint. On flow hot-swap or server shutdown, `destroy()` calls `producer.disconnect()` to flush in-flight messages and close TCP connections.
 
 ## Message format
 

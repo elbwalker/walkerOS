@@ -186,8 +186,10 @@ flatten into a single array in execution order:
 import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
+// getEvent pins the timestamp (1700000000000) and derives the id from the event
+// name; pass `id` when the expected output must name a readable one.
 export const purchase: Flow.StepExample = {
-  in: getEvent('order complete', { timestamp: 1700000000 }),
+  in: getEvent('order complete', { id: '1700000000-gr0up-1' }),
   mapping: {
     name: 'Purchase',
     data: { map: { value: 'data.value', currency: { value: 'EUR' } } },
@@ -321,7 +323,7 @@ import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
 export const purchase: Flow.StepExample = {
-  in: getEvent('order complete', { timestamp: 1700000000 }),
+  in: getEvent('order complete', { id: '1700000000-gr0up-1' }),
   mapping: { name: 'Purchase', data: { map: { value: 'data.value' } } },
   out: ['track', 'Purchase', { value: 555 }, { eventID: '1700000000-gr0up-1' }],
 };
@@ -461,7 +463,7 @@ export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
     'A completed order mapped to the Meta Pixel Purchase standard event.',
-  in: getEvent('order complete', { timestamp: 1700000000 }),
+  in: getEvent('order complete', { id: '1700000000-gr0up-1' }),
   mapping: { name: 'Purchase', data: { map: { value: 'data.value' } } },
   out: [['fbq', 'track', 'Purchase', { value: 555, currency: 'EUR' }]],
 };

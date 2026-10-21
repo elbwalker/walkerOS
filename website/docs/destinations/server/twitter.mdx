@@ -96,7 +96,7 @@ The destination sends the client IP as the `ip_address` identifier and the user 
 
 ## User identification
 
-The destination builds an `identifiers` array. Each identifier is a separate single-key object in the payload. At least one **primary** identifier is required. Events without one are silently skipped.
+The destination builds an `identifiers` array. Each identifier is a separate single-key object in the payload. At least one **primary** identifier is required. An event without one fails with `missing-input`.
 
 **Primary identifiers:**
 

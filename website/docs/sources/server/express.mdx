@@ -202,15 +202,9 @@ push.
 | 500 | On synchronous POST: the pipeline failed to process a valid event for a reason a resend could fix; the body is `Event was not processed`. Otherwise: unexpected server fault (`Internal server error`) |
 | 207 | On synchronous batch POST: some events failed and a resend could fix it; the body lists the failed indices |
 
-A failed event is acknowledged or retried by one rule on every source, from the
-push result: a failure a resend could fix (`retryable`, such as a timeout or an
-unavailable vendor) answers 500, or 207 for the failed events of a batch, with
-the fixed text `Event was not processed`. A failure a resend cannot fix (a
-missing setting, a `4xx` from the vendor, a destination that is not ready) is
-acknowledged with 200: it is in the dead-letter queue and in the log, and
-sending the same event again would fail the same way. The body never carries a
-destination id or the text of a step's error; the collector's ERROR line does.
-An unexpected throw answers 500 `Internal server error`.
+A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
+
+In respond-first mode a request whose event later fails is already answered; the source writes a DEBUG line and the collector's ERROR line is the signal.
 
 GET pixel requests answer 200 with the GIF in every mode, unless a step
 responded first, because an image endpoint cannot carry a useful 400. Rejected pixel input is visible through the

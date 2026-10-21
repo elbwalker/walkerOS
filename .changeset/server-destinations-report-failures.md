@@ -21,4 +21,4 @@
 A failed request is reported as a failed push (dead-letter queue, one ERROR line
 with the status) instead of counting as delivered or being logged at debug.
 Events a destination cannot send, such as a missing user identifier, fail with
-`missing-input`. Rules with `silent: true` send nothing.
+`missing-input`. Rules with `silent: true` send no event of their own.
