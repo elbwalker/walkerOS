@@ -1528,8 +1528,11 @@ function hasConsentRequirement(destination: Destination.Instance): boolean {
 
 /**
  * Run a destination's own `init()` and return the config to install, marked
- * initialized. An `init()` that throws, or returns false, throws (the
- * latter as `StepError` code `not-ready`). The caller installs the config.
+ * initialized. An `init()` that throws, returns false (`StepError` code
+ * `not-ready`), or does not settle within the destination's timeout
+ * (`DestinationTimeoutError`, code `timeout`) throws. The caller installs the
+ * config, so an attempt that settles after its timeout installs nothing; the
+ * next push starts a new one.
  */
 async function runDestinationInit(
   collector: Collector.Instance,
@@ -1561,14 +1564,21 @@ async function runDestinationInit(
   const initStarted = Date.now();
   emitDestinationState(collector, destId, 'init', undefined, undefined);
 
+  const timeoutMs = resolveDestinationTimeout(destination.config.timeout);
   let configResult;
   try {
-    configResult = await useHooks(
-      init,
-      'DestinationInit',
-      collector.hooks,
-      collector.logger,
-    )(context);
+    configResult = await withTimeout(
+      Promise.resolve(
+        useHooks(
+          init,
+          'DestinationInit',
+          collector.hooks,
+          collector.logger,
+        )(context),
+      ),
+      timeoutMs,
+      `Destination "${destId}" init timed out after ${timeoutMs}ms`,
+    );
   } catch (err) {
     emitDestinationState(
       collector,

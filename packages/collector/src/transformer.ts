@@ -68,6 +68,7 @@ import { getCacheStore } from './cache';
 import { buildReportError, errorMeta } from './report-error';
 import { compileStepState, runStepState, warnStateOff } from './state';
 import { asStepError, initReturnedFalse } from './outcome';
+import { resolveDestinationTimeout, withTimeout } from './timeout';
 
 /**
  * Extracts chain property from definition and merges into config.
@@ -315,12 +316,23 @@ export async function transformerInit(
 
     transformerLogger.debug('init');
 
-    const configResult = await useHooks(
-      transformer.init,
-      'TransformerInit',
-      collector.hooks,
-      collector.logger,
-    )(context);
+    // A transformer has no timeout setting: its init is bounded by the
+    // default destination timeout. One that does not settle in time throws
+    // `DestinationTimeoutError` (code `timeout`); the config below is only
+    // installed from an attempt that settled in time.
+    const timeoutMs = resolveDestinationTimeout();
+    const configResult = await withTimeout(
+      Promise.resolve(
+        useHooks(
+          transformer.init,
+          'TransformerInit',
+          collector.hooks,
+          collector.logger,
+        )(context),
+      ),
+      timeoutMs,
+      `Transformer "${transformerId}" init timed out after ${timeoutMs}ms`,
+    );
 
     // Check for initialization failure
     if (configResult === false) return false;
