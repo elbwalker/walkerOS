@@ -35,6 +35,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
+    "@amplitude/analytics-core": "2.48.2",
     "@amplitude/analytics-node": "^1.5.53",
     "@walkeros/core": "4.8.1",
     "@walkeros/server-core": "4.8.1"
