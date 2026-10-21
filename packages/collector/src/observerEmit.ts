@@ -1,5 +1,5 @@
 import type { Collector, FlowState, Ingest, WalkerOS } from '@walkeros/core';
-import { emitStep, StepError, toFailureReason } from '@walkeros/core';
+import { emitStep, StepError, stepId, toFailureReason } from '@walkeros/core';
 
 /** Journey-correlation trio shared by every FlowState-stamping site. */
 export interface JourneyFields {
@@ -127,6 +127,32 @@ export function emit(
   args: BuildBaseStateArgs,
 ): void {
   emitStep(collector, buildBaseState(collector, args));
+}
+
+/**
+ * Emit one destination step state: the base fields, the event's id and
+ * journey trio (none for a state of the destination itself, such as its
+ * init), and whatever `fill` sets before observers see it.
+ */
+export function emitDestinationState(
+  collector: Collector.Instance,
+  destId: string,
+  phase: FlowState['phase'],
+  event: WalkerOS.Event | undefined,
+  ingest: Ingest | undefined,
+  fill?: (state: FlowState) => void,
+): void {
+  const state = stepState(
+    collector,
+    stepId('destination', destId),
+    'destination',
+    phase,
+    event && typeof event.id === 'string' ? event.id : '',
+    Date.now(),
+    event ? journeyFields(event, ingest, collector) : undefined,
+  );
+  fill?.(state);
+  emitStep(collector, state);
 }
 
 /**

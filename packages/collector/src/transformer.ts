@@ -61,14 +61,13 @@ import {
   getTransformerMappingWarnings,
   getRouteGraph,
   reportCause,
-  StepError,
   toFailureReason,
 } from '@walkeros/core';
 import { journeyFields, observerStepError, stepState } from './observerEmit';
 import { getCacheStore } from './cache';
 import { buildReportError, errorMeta } from './report-error';
 import { compileStepState, runStepState, warnStateOff } from './state';
-import { asStepError } from './outcome';
+import { asStepError, initReturnedFalse } from './outcome';
 
 /**
  * Extracts chain property from definition and merges into config.
@@ -853,12 +852,7 @@ async function runMember(
     )(collector, transformer, transformerName);
 
     if (!isInitialized) {
-      const err =
-        initError ??
-        new StepError(
-          'init returned false: throw a StepError that names the missing setting',
-          { code: 'not-ready' },
-        );
+      const err = initError ?? initReturnedFalse();
       return halt({
         copies: [],
         respond: currentRespond,

@@ -34,16 +34,6 @@ export const HELD_WAIT: QueuedReason = {
   message: 'a state delivery to the destination is running or failed',
 };
 
-/**
- * Waiting behind the destination's init, which another push started: the
- * event goes out right after it, in push order.
- */
-export const INIT_WAIT: QueuedReason = {
-  code: 'held',
-  message:
-    "the destination's init is running; the event goes out right after it",
-};
-
 const READY: DestinationState = { state: 'ready' };
 
 /**

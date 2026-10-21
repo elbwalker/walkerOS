@@ -5,6 +5,12 @@ import type {
   Lifecycle,
   Logger,
 } from '@walkeros/core';
+import {
+  reportCause,
+  StepError,
+  stepId,
+  toFailureReason,
+} from '@walkeros/core';
 import { createPushResult } from './destination';
 
 const STEP_TIMEOUT = 5000;
@@ -67,20 +73,36 @@ export async function flushDestinationBatches(
                 timer = setTimeout(
                   () =>
                     reject(
-                      new Error(`destination '${id}' batch flush timed out`),
+                      new StepError(
+                        `destination '${id}' batch flush timed out`,
+                        { code: 'timeout' },
+                      ),
                     ),
                   STEP_TIMEOUT,
                 );
               }),
             ]);
           } catch (err) {
-            // The flush did not settle in time (it may still land later):
-            // named in the result, one ERROR for this destination.
-            const message = err instanceof Error ? err.message : String(err);
-            ref.reason = { code: 'timeout', message, retryable: true };
-            collector.logger
-              .scope(dest.type || 'destination')
-              .error(`destination '${id}' batch flush failed: ${message}`);
+            // The flush did not settle in time (`timeout`; it may still land
+            // later) or rejected (its own reason): named in the result, one
+            // cause line per cause.
+            const reason = toFailureReason(err);
+            ref.reason = reason;
+            reportCause(
+              collector,
+              collector.logger,
+              {
+                step: stepId('destination', id),
+                code: reason.code,
+                status: reason.status,
+              },
+              'batch flush failed',
+              {
+                type: dest.type,
+                retryable: reason.retryable,
+                error: reason.message,
+              },
+            );
             return undefined;
           } finally {
             if (timer) clearTimeout(timer);

@@ -578,20 +578,23 @@ describe('Destination batch correctness (PROD-004)', () => {
 
     await collector.destinations['d'].batches!['* *'].flush();
 
-    const lines = errors.filter(
-      (e) => e.message === 'Push batch partial failure',
+    // One cause line: the counts and every cause (the error's code, else its
+    // name) in the message, the first row's reason in the structured fields.
+    const lines = errors.filter((e) =>
+      e.message.startsWith('Push batch partial failure'),
     );
     expect(lines).toHaveLength(1);
-    expect(lines[0].context).toMatchObject({
-      failed: 4,
-      delivered: 1,
-      entries: 5,
+    expect(lines[0].message).toContain(
+      'Push batch partial failure: 4 of 5 entries failed (A x2, B x1, TypeError x1)',
+    );
+    expect(lines[0].context).toEqual({
+      step: 'destination.d',
+      code: 'transport',
+      type: 'partial-causes',
+      count: 4,
+      retryable: true,
+      error: 'a first',
     });
-    expect(lines[0].context.causes).toEqual([
-      { code: 'A', count: 2, message: 'a first' },
-      { code: 'B', count: 1, message: 'b only' },
-      { code: 'TypeError', count: 1, message: 'plain' },
-    ]);
   });
 
   it('a BatchOutcome with empty failed counts the whole batch delivered', async () => {

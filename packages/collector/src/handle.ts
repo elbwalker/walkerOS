@@ -10,6 +10,7 @@ import type {
 import { Const } from './constants';
 import {
   addDestination,
+  clearQueuePush,
   markHeldForDrain,
   mergePushResults,
   pushToDestinations,
@@ -500,9 +501,7 @@ export async function runCollectorDeferred(
   }
 
   // Reset destination queues
-  Object.values(collector.destinations).forEach((destination) => {
-    destination.queuePush = [];
-  });
+  Object.values(collector.destinations).forEach(clearQueuePush);
 
   // Reset collector queue for this run
   collector.queue = [];

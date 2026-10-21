@@ -140,18 +140,17 @@ export async function initSource(
   } = sourceDefinition;
 
   // Registration checks, once at ERROR (the source still runs): mapping
-  // keys that do nothing at a source (behind the `__WALKEROS_VALIDATE__`
-  // build flag; CLI bundles check at build time), and the transformers its
-  // chains name.
+  // keys that do nothing at a source, and the transformers its chains name.
+  // Build flag: CLI bundles check both at build time and fold this out.
   if (typeof __WALKEROS_VALIDATE__ === 'undefined' || __WALKEROS_VALIDATE__) {
     const noOps = getMappingNoOpPaths('source', config, 'config');
     if (noOps.length)
       collector.logger
         .scope('source')
         .error(`Source ${sourceId}: ${getMappingNoOpMessage('source', noOps)}`);
+    checkChainTargets(collector, `source.${sourceId}.before`, before);
+    checkChainTargets(collector, `source.${sourceId}.next`, next);
   }
-  checkChainTargets(collector, `source.${sourceId}.before`, before);
-  checkChainTargets(collector, `source.${sourceId}.next`, next);
 
   // Compile declarative state entries once. For a source, all state entries
   // run before handing the event to `collector.push` (get enriches the event

@@ -29,8 +29,14 @@ function makeErrorCapture(): {
   handler: Logger.Handler;
 } {
   const messages: string[] = [];
-  const handler: Logger.Handler = (level, message) => {
-    if (level === Level.ERROR) messages.push(message);
+  // A cause line carries the failure's message in its context.
+  const handler: Logger.Handler = (level, message, context) => {
+    if (level === Level.ERROR)
+      messages.push(
+        typeof context.error === 'string'
+          ? `${message}: ${context.error}`
+          : message,
+      );
   };
   return { messages, handler };
 }

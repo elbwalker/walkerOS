@@ -5,16 +5,15 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import {
-  emitStep,
   reportCause,
   StepError,
   stepId,
   toFailureReason,
 } from '@walkeros/core';
-import { journeyFields, observerStepError, stepState } from './observerEmit';
+import { emitDestinationState, observerStepError } from './observerEmit';
 import { pushBounded, resetOverflowFlag } from './buffers';
 import { DEFAULT_DLQ_MAX, bumpDropped, ensureDestStatus } from './report-error';
-import { recordStepOutcome, resolveBreakerConfig } from './breaker';
+import { recordBreaker } from './breaker';
 
 /**
  * Codes the collector assigns at its own gates: the event never reached the
@@ -29,9 +28,22 @@ const GATE_CODES = [
   'mapping',
 ];
 
-/** Whether a failure reached the transport (and counts for the breaker). */
+/**
+ * Whether a failure counts for the breaker: a retryable failure at the
+ * transport. A deterministic one (`config`, `missing-input`, a 4xx) never
+ * opens it, or a misconfigured destination would turn into `breaker-open`
+ * (retryable) and be redelivered for as long as the flow runs.
+ */
 export function isTransportFailure(reason: FailureReason): boolean {
-  return !GATE_CODES.includes(reason.code);
+  return reason.retryable && !GATE_CODES.includes(reason.code);
+}
+
+/** The error of an `init` that returned `false` (bundled code is not typechecked). */
+export function initReturnedFalse(): StepError {
+  return new StepError(
+    'init returned false: throw a StepError that names the missing setting',
+    { code: 'not-ready' },
+  );
 }
 
 /**
@@ -108,31 +120,22 @@ export function recordFailure(
     destStatus.dlqSize = dlq.length;
   }
 
-  // The breaker counts transport failures only.
-  const breakerConfig = resolveBreakerConfig(destination.config.breaker);
-  if (breakerConfig && options.breaker !== false && isTransportFailure(reason))
-    recordStepOutcome(
-      collector.status.breakers,
-      stepId('destination', destination.config.id || id),
-      'transport-failure',
-      breakerConfig.threshold,
-      breakerConfig.cooldown,
-    );
+  // The breaker counts retryable transport failures only.
+  if (options.breaker !== false && isTransportFailure(reason))
+    recordBreaker(collector, destination, id, 'transport-failure');
 
   if (!options.observed) {
-    for (const event of events) {
-      const state = stepState(
+    for (const event of events)
+      emitDestinationState(
         collector,
-        step,
-        'destination',
+        id,
         'error',
-        typeof event.id === 'string' ? event.id : '',
-        now,
-        journeyFields(event, undefined, collector),
+        event,
+        undefined,
+        (state) => {
+          state.error = observerStepError(error);
+        },
       );
-      state.error = observerStepError(error);
-      emitStep(collector, state);
-    }
   }
 
   if (options.report === false) return reason;

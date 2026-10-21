@@ -98,7 +98,6 @@ export interface FlowState {
     | 'sampled_out'
     | 'disabled'
     | 'dropped'
-    | 'held'
     | 'ignored'
     | 'unknown';
   /** Free-form metadata: store key/value, cached: true, etc. */

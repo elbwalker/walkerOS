@@ -1,4 +1,4 @@
-import { assembleJourneys, Level } from '@walkeros/core';
+import { assembleJourneys, Level, StepError } from '@walkeros/core';
 import type {
   Collector,
   Destination,
@@ -143,11 +143,12 @@ describe('destination states, consent first', () => {
       message: 'a state delivery to the destination is running or failed',
     });
     expect(held.failed).toBeUndefined();
+    // Held is a waiting state: no Observe record until its out or error.
     expect(
       states.some(
-        (state) => state.phase === 'skip' && state.skipReason === 'held',
+        (state) => state.stepId === 'destination.d' && state.phase === 'skip',
       ),
-    ).toBe(true);
+    ).toBe(false);
 
     jest.setSystemTime(1_000_000 + 1001);
     const blocked = await elb('page view');
@@ -197,6 +198,40 @@ describe('destination states, consent first', () => {
     expect(collector.destinations.d.dlq).toHaveLength(5);
     const codes = at(Level.ERROR).map((line) => line.context.code);
     expect(codes).toEqual(['transport', 'breaker-open']);
+  });
+
+  it('(d) a deterministic failure never opens the breaker', async () => {
+    const { logger } = capture();
+    const push = jest.fn(async () => {
+      throw new StepError('Config settings apiKey missing', {
+        code: 'config',
+      });
+    });
+    const { elb, collector } = await startFlow({
+      logger,
+      destinations: {
+        d: {
+          code: {
+            type: 'probe',
+            config: { breaker: { threshold: 2, cooldown: 60_000 } },
+            push,
+          },
+        },
+      },
+    });
+
+    const results = [];
+    for (let i = 0; i < 4; i++) results.push(await elb('page view'));
+
+    expect(push).toHaveBeenCalledTimes(4);
+    for (const r of results)
+      expect(r.failed?.d.reason).toMatchObject({
+        code: 'config',
+        retryable: false,
+      });
+    expect(collector.status.breakers['destination.d']?.state ?? 'closed').toBe(
+      'closed',
+    );
   });
 
   it('(e) held overflow evicts consent waits first, then refuses the newest held event', async () => {
@@ -331,7 +366,7 @@ describe('destination states, consent first', () => {
     );
   });
 
-  it('(g) a batched event waits with reason batch and keeps its batched out; a held event emits skip held', async () => {
+  it('(g) a batched event waits with reason batch and keeps its batched out; a held event emits nothing yet', async () => {
     const { logger } = capture();
     const { states, observer } = observe();
     const pushBatch = jest.fn();
@@ -372,7 +407,7 @@ describe('destination states, consent first', () => {
     expect(pushBatch).not.toHaveBeenCalled();
 
     // Observe: the batch-stamped out stays the batch signal (no skip for a
-    // batch); the held destination emits skip with reason held.
+    // batch); a held event is waiting too: no record until its out or error.
     const eventId = r.event?.id;
     const ofEvent = states.filter((state) => state.eventId === eventId);
     expect(
@@ -380,14 +415,9 @@ describe('destination states, consent first', () => {
         (state) => state.stepId === 'destination.d' && state.phase === 'skip',
       ),
     ).toBe(false);
-    expect(
-      ofEvent.some(
-        (state) =>
-          state.stepId === 'destination.h' &&
-          state.phase === 'skip' &&
-          state.skipReason === 'held',
-      ),
-    ).toBe(true);
+    expect(ofEvent.some((state) => state.stepId === 'destination.h')).toBe(
+      false,
+    );
     const hopOf = () =>
       assembleJourneys(states)
         .journeys.find((journey) => journey.id === eventId)

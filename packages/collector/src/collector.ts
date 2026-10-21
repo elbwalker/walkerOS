@@ -140,31 +140,35 @@ export async function collector(
   );
 
   // Registration check of every chain known now: each transformer it names
-  // must exist (one ERROR per missing id, not one per event).
-  checkChainTargets(collector, 'collector.next', config.next);
-  for (const [id, destination] of Object.entries(collector.destinations)) {
-    checkChainTargets(
-      collector,
-      `destination.${id}.before`,
-      destination.config.before,
-    );
-    checkChainTargets(
-      collector,
-      `destination.${id}.next`,
-      destination.config.next,
-    );
-  }
-  for (const [id, transformer] of Object.entries(collector.transformers)) {
-    checkChainTargets(
-      collector,
-      `transformer.${id}.before`,
-      transformer.config.before,
-    );
-    checkChainTargets(
-      collector,
-      `transformer.${id}.next`,
-      transformer.config.next,
-    );
+  // must exist (one ERROR per missing id, not one per event). Build flag:
+  // CLI bundles check routes at build time and fold this out; the runtime
+  // still names a missing id once when an event meets it.
+  if (typeof __WALKEROS_VALIDATE__ === 'undefined' || __WALKEROS_VALIDATE__) {
+    checkChainTargets(collector, 'collector.next', config.next);
+    for (const [id, destination] of Object.entries(collector.destinations)) {
+      checkChainTargets(
+        collector,
+        `destination.${id}.before`,
+        destination.config.before,
+      );
+      checkChainTargets(
+        collector,
+        `destination.${id}.next`,
+        destination.config.next,
+      );
+    }
+    for (const [id, transformer] of Object.entries(collector.transformers)) {
+      checkChainTargets(
+        collector,
+        `transformer.${id}.before`,
+        transformer.config.before,
+      );
+      checkChainTargets(
+        collector,
+        `transformer.${id}.next`,
+        transformer.config.next,
+      );
+    }
   }
 
   return collector;
