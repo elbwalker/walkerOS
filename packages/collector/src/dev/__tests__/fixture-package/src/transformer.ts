@@ -61,3 +61,28 @@ export const envReading: Transformer.Init<EnvTypes> = ({ config, env }) => {
     },
   };
 };
+
+type IngestTypes = Transformer.Types<unknown>;
+
+/** Decodes the request in the ingest; an event without one is missing-input. */
+export const ingestDecoding: Transformer.Init<IngestTypes> = ({ config }) => ({
+  type: 'ingest-decoding',
+  config,
+  push: (event, { ingest }) => {
+    if (typeof ingest.url !== 'string')
+      throw new StepError('No request in the ingest', {
+        code: 'missing-input',
+      });
+    return { event: { ...event, name: 'page view' } };
+  },
+});
+
+/** Passes an event on unchanged when the ingest has no request (silent). */
+export const ingestPassing: Transformer.Init<IngestTypes> = ({ config }) => ({
+  type: 'ingest-passing',
+  config,
+  push: (event, { ingest }) =>
+    typeof ingest.url === 'string'
+      ? { event: { ...event, name: 'page view' } }
+      : { event },
+});

@@ -12,7 +12,12 @@ import {
   rawHttps,
   swallowing,
 } from './fixture-package/src';
-import { dropping, hashing } from './fixture-package/src/transformer';
+import {
+  dropping,
+  hashing,
+  ingestDecoding,
+  ingestPassing,
+} from './fixture-package/src/transformer';
 import type { Client } from './fixture-package/src/store';
 import { missing, remote } from './fixture-package/src/store';
 import { chatty, forwarding } from './fixture-package/src/source';
@@ -165,6 +170,55 @@ describe('conformance kit, other step kinds', () => {
       await expect(
         conformance('transformer', dropping, options),
       ).rejects.toMatchObject({ items: [2, 10] });
+    });
+  });
+
+  describe('transformer whose input is the ingest (item 10)', () => {
+    const noRequest: Flow.StepExample = {
+      public: false,
+      description: 'An event without a request in its ingest is reported.',
+      in: { name: 'page view' },
+      out: [],
+      outcome: { status: 'failed', code: 'missing-input' },
+    };
+    const ingestOptions = {
+      profile: 'transformer' as const,
+      root,
+      schema: { type: 'object', properties: {} },
+      settings: {},
+      examples: {
+        request: { in: { url: 'https://example.com/g/collect?en=page_view' } },
+        noRequest,
+      },
+    };
+
+    it('passes with a declared missing-input example the kit confirms', async () => {
+      await expect(
+        conformance('transformer', ingestDecoding, ingestOptions),
+      ).resolves.toBeUndefined();
+    });
+
+    it('fails item 10 without that example', async () => {
+      await expect(
+        conformance('transformer', ingestDecoding, {
+          ...ingestOptions,
+          examples: { request: ingestOptions.examples.request },
+        }),
+      ).rejects.toMatchObject({
+        items: [10],
+        message: expect.stringContaining('no missing-input example'),
+      });
+    });
+
+    it('fails a transformer that passes an event without the ingest on unchanged (items 2 and 10)', async () => {
+      await expect(
+        conformance('transformer', ingestPassing, ingestOptions),
+      ).rejects.toMatchObject({
+        items: [2, 10],
+        message: expect.stringContaining(
+          'item 10: example noRequest: out differs',
+        ),
+      });
     });
   });
 

@@ -998,6 +998,7 @@ async function transformerItem(
     }
 
     case 10:
+      if (!ctx.events.length) return ingestInputProblem(step, ctx);
       return strippedProblem(ctx, async (_, stripped) => {
         const run = await runTransformer(step, ctx, base, stripped);
         return {
@@ -1007,6 +1008,36 @@ async function transformerItem(
       });
   }
   return undefined;
+}
+
+/**
+ * Item 10 for a transformer whose input is the ingest (no success example
+ * carries an event `in`, e.g. a request to decode): an event without that
+ * ingest must be reported. Its declared `missing-input` example (an event
+ * `in`, `out: []`, a description) runs and must hold.
+ */
+async function ingestInputProblem(
+  step: TransformerStep,
+  ctx: Context,
+): Promise<Problem> {
+  const declared = Object.entries(ctx.options.examples).filter(
+    ([, example]) =>
+      isEvent(example.in) &&
+      example.outcome?.status === 'failed' &&
+      example.outcome.code === 'missing-input' &&
+      Array.isArray(example.out) &&
+      example.out.length === 0 &&
+      Boolean(example.description),
+  );
+  if (!declared.length)
+    return 'no example carries an event, and no missing-input example (an event without the ingest, out: [], a description) shows it is reported';
+  return runExamples('transformer', step, Object.fromEntries(declared), {
+    settings: ctx.options.settings,
+    env: ctx.options.env,
+  }).then(
+    () => undefined,
+    (error: unknown) => textOf(error),
+  );
 }
 
 /* ------------------------------------------------------------------------ */
