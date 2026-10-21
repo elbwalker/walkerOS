@@ -33,7 +33,9 @@ npm install @walkeros/web-destination-gtag
       "destinations": {
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
-          "config": {}
+          "config": {
+            "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
+          }
         }
       }
     }

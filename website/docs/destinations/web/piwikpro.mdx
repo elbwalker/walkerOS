@@ -93,6 +93,11 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+An event no rule maps fails with `missing-input`; use a rule with
+`ignore: true` to keep an event out without a failure. A consent revocation for
+a destination with `config.consent` turns off the link tracking walkerOS
+enabled, and a blocked `ppms.js` fails later events visibly.
+
 ## Loading the tracker
 
 With `loadScript: true`, the destination loads `ppms.js` from your account URL

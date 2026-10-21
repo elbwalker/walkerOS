@@ -103,6 +103,9 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
   language="javascript"
 />
 
+The source reads the page's `window` and needs no `env`, in integrated and
+bundled mode alike. In tests, `env.window` replaces it.
+
 Every event carries the page context in `source`, like browser source events:
 `{ type: 'dataLayer', platform: 'web', url, referrer }`, with `url` from
 `window.location.href` and `referrer` from `document.referrer`. Both are read

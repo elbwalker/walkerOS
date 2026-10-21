@@ -46,6 +46,23 @@ analytics platforms, marketing tools, data warehouses, and custom APIs.
 Each destination operates independently, so one failed destination won't affect
 others.
 
+## When delivery fails
+
+An event that a destination did not deliver is never counted as delivered. The
+push result lists the destination under `failed` with a `reason` (a `code`, a
+`message` and whether a retry could help), the destination's `failed` counter
+moves, the event goes to its dead-letter queue and the collector writes one
+ERROR line per cause and minute. This covers a failed request (including an
+error status or a rejected answer inside a `200`), a missing required setting,
+an event the destination cannot send, a vendor script that did not load, and a
+destination whose `init` failed. See [Logger](/docs/collector/logger#failure-codes)
+for the codes.
+
+Two things are not failures. Unmet consent only waits (or, on a server, skips)
+the event and is a `DEBUG` line. A rule with `ignore: true` or `silent: true`
+is a decision, not an error, and every destination honours both. Events a
+destination batches answer `queued` until the flush.
+
 ## Analytics tools
 
 | Destination | Web | Server |

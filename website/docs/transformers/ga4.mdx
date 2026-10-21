@@ -145,9 +145,9 @@ The transformer expects the source to populate `ctx.ingest` with these keys:
 | `path` | `string` | no       | Request path. Use it to gate the `before` chain when the source also receives other traffic. |
 | `body` | `string` | no       | Raw POST body. Multi-event batches are `\n`-separated lines. |
 
-`config.ingest` must use the `map` operator with **direct field paths on the request scope** (no `req.` prefix), as shown above. A bare object like `{ "url": "req.url" }` is silently inert: without an operator no field is extracted, `ctx.ingest` stays empty, and the transformer drops the hit.
+`config.ingest` must use the `map` operator with **direct field paths on the request scope** (no `req.` prefix), as shown above. A bare object like `{ "url": "req.url" }` has no operator: `walkeros validate` and the bundle reject it (`MAPPING_VALUE_NO_OPERATOR`). If it still runs, the value is dropped with an ERROR line from the collector, `ctx.ingest` stays empty, and the transformer fails every hit with `missing-input`.
 
-If `url` is missing or not a string the transformer drops the event silently.
+If `url` is missing or not a string the transformer fails the event with the `missing-input` code instead of dropping it. A request that cannot be decoded fails with the `transformer` code. Both show as one ERROR line per cause and minute, and the source answers 200 because resending the same request would fail again.
 
 ### GA4 hits and walkerOS events on one source
 

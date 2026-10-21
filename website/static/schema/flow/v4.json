@@ -251,6 +251,18 @@
         "init": {
           "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
           "type": "string"
+        },
+        "pushBatch": {
+          "description": "Optional batch push function (destinations with config.batch). Use $code: prefix for inline JavaScript.",
+          "type": "string"
+        },
+        "on": {
+          "description": "Optional event handler, called with the event type and context (consent, ready, run). Use $code: prefix for inline JavaScript.",
+          "type": "string"
+        },
+        "destroy": {
+          "description": "Optional destroy function, called at shutdown. Use $code: prefix for inline JavaScript.",
+          "type": "string"
         }
       },
       "required": ["push"],
@@ -747,6 +759,46 @@
           "description": "Invoke elb('walker <command>', in) instead of pushing in as an event",
           "type": "string",
           "enum": ["config", "consent", "user", "run"]
+        },
+        "outcome": {
+          "description": "Reported outcome of a failure or queue example (public: false)",
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["failed", "queued"],
+              "description": "Status in the result"
+            },
+            "code": {
+              "type": "string",
+              "description": "Reason code, e.g. transport or config"
+            },
+            "retryable": {
+              "description": "Whether a retry can help",
+              "type": "boolean"
+            }
+          },
+          "required": ["status", "code"],
+          "additionalProperties": false
+        },
+        "respond": {
+          "description": "What the boundary answers for this example",
+          "type": "object",
+          "properties": {
+            "status": {
+              "description": "HTTP status to answer",
+              "type": "number"
+            },
+            "body": {
+              "description": "Response body to answer"
+            },
+            "error": {
+              "description": "A network error or a timeout instead of a response",
+              "type": "string",
+              "enum": ["network", "timeout"]
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false,

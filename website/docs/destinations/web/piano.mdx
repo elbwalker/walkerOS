@@ -94,14 +94,15 @@ Add to your `flow.json` destinations:
 
 With `loadScript: true`, the destination adds the SDK script
 `https://tag.aticdn.net/piano-analytics.js` and configures `pa` with `site`,
-`collectDomain` and `options` once the script has loaded. If the script fails
-to load, it logs a warning. Until the SDK has loaded, the destination drops
-every event it receives and counts it as delivered. That includes the page
-view a browser source sends when the flow starts.
+`collectDomain` and `options` once the script has loaded. Events pushed while
+the script loads wait for it, including the page view a browser source sends
+when the flow starts. If the script is blocked or fails to load, later pushes
+fail and show up as failed events. A missing `site` or `collectDomain` fails
+the destination with a `config` error, and a rule with `silent: true` sends no
+event.
 
-To keep the first events, load the Piano SDK on your page before walkerOS
-starts and leave `loadScript` unset. The destination then configures `pa` at
-init.
+If Piano's SDK is already on your page before walkerOS starts, leave
+`loadScript` unset. The destination then configures `pa` at init.
 
 ## Event names
 

@@ -110,6 +110,30 @@ the code.
 **Fix:** Test what the code actually does. If external APIs must be mocked,
 verify the real API would receive correct data.
 
+### Rule 3b: Prove Delivery, Loss and Failures on a Real Collector
+
+A test or repro that claims an event was delivered, lost or reported as failed
+starts a real collector with `startFlow` and mocks only the network or the
+vendor global (through `env`), never `collector.push`. A suite that mocks the
+collector cannot see loss: a destination that returns early, swallows an error
+or forgets an `await` passes it. Assert on what a user sees at default settings:
+the push result (`ok: false`, the destination under `failed` with its `reason`),
+the status counters, or the ERROR line the collector wrote.
+
+Failure paths are examples too. A step package's failure modes (a missing
+required setting, a failing transport, a vendor script that is not loaded yet)
+are `public: false` step examples with an `outcome` (and `respond` for a vendor
+answer), not only the happy path. A `silent` rule and a consent revocation get
+examples as well.
+
+**Use the conformance kit.** `conformance(kind, step, options)` from
+`@walkeros/collector/dev` runs a destination, source, transformer or store on a
+real collector against its step examples and checks the failure contract in one
+call. The `profile` states what the step talks to: for destinations `http`,
+`sdk-env`, `web-sdk` (a web SDK started in `init`), `vendor-global` or `socket`;
+`transformer` and `source` for those kinds. `runExamples` runs the examples
+alone.
+
 ### Rule 4: Test First, Watch It Fail
 
 If you didn't see the test fail, you don't know it tests the right thing.
@@ -382,6 +406,9 @@ approach destinations use — see
 - Using `jest.mock()` for internal modules when `env` pattern is available
 - Tests that don't import from `../dev`
 - Assertions only checking mock call counts
+- Proving delivery or loss with a mocked `collector.push` instead of `startFlow`
+- A destination without a conformance test, a `silent` example or a failure
+  example
 - Tests with extensive mock setup (>50% of test is setup)
 - Test-only methods added to production classes
 - Claiming tests pass without running them

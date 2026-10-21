@@ -101,14 +101,23 @@ device ID and session on every page load. To keep them across page loads, map
 `device` and `session` in `settings.identify` (see the Destination identify
 example above), or set `identityStorage` yourself.
 
+## Consent and failures
+
+The destination's `config.consent` decides when Amplitude is allowed to
+collect: a revocation calls `setOptOut(true)` and a grant `setOptOut(false)`.
+A missing `apiKey` fails the destination with a `config` error, and an Amplitude
+call that fails fails the event, which shows as a failed push.
+
 ## Plugins
 
-`@amplitude/unified` sets up Session Replay, Experiment, and Guides & Surveys
-on every init, whether or not the settings below are present; the settings
-only pass options to them. With just `apiKey` set, the SDK fetches the Session
-Replay remote configuration from Amplitude and loads the Guides & Surveys SDK
-from `cdn.amplitude.com`. Session Replay and Experiment ship in the
-destination's bundle.
+With just `apiKey` set, only Amplitude analytics starts. Session Replay,
+Experiment, and Guides & Surveys are set up together as soon as one of them is
+enabled: setting `sessionReplay`, `experiment.deploymentKey` or `engagement`
+starts all three, and the others then run with their defaults. Session Replay
+then fetches its remote configuration from Amplitude and Guides & Surveys
+loads its SDK from `cdn.amplitude.com`. Session Replay and Experiment ship in
+the destination's bundle. To use one of them without the other two, a plugin
+subset is not possible today.
 
 Session Replay records a sampled share of sessions. The share is
 `sessionReplay.sampleRate` (default 0) unless the project's Session Replay

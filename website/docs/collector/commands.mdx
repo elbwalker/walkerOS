@@ -310,9 +310,9 @@ This gives five practical guarantees:
   `require` only delays when its first `on` delivery lands. A dependent source
   reacts to state correctly whether or not it declares `require`.
 * **Before the first push.** A destination's `on` handler receives the current
-  state before any event is delivered to it. This needs an `init` method on the
-  destination: without one, its `on` handler is never called, while the state
-  command still reports the destination under `done`. The collector waits for
+  state before any event is delivered to it. A destination without an `init`
+  method is initialized without one, once its consent requirement is met, and
+  its waiting `on` deliveries reach it then. The collector waits for
   an async handler to finish, up to the destination's `config.timeout`, before it
   delivers events. If the handler does not finish in that time, or fails, the
   destination's events stay in its queue instead of going out without the
@@ -499,6 +499,21 @@ elb({ name: 'page view' });
 
 // Output:
 // walker exec time 1`}
+  language="javascript"
+/>
+
+## flush {#walker-flush}
+
+Send every pending destination batch now (see
+[Batch scheduling](/docs/mapping/rule#batch-scheduling)) and keep the collector
+running. It answers a `PushResult` that merges the outcome of each flushed
+batch, so a failed flush shows under `failed` with its reason. Shutdown uses
+the same flush, and the browser source sends `walker flush` when the page goes
+away (`pagehide`, or the page turning hidden), so batched web events are not
+lost when a visitor leaves.
+
+<CodeSnippet
+  code={`await collector.command('flush');`}
   language="javascript"
 />
 

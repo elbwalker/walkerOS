@@ -32,7 +32,12 @@ npm install @walkeros/server-destination-tiktok
       "destinations": {
         "tiktok": {
           "package": "@walkeros/server-destination-tiktok",
-          "config": {}
+          "config": {
+            "settings": {
+              "pixelCode": "YOUR_PIXEL_CODE",
+              "accessToken": "YOUR_ACCESS_TOKEN"
+            }
+          }
         }
       }
     }

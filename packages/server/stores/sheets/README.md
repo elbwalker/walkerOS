@@ -30,7 +30,10 @@ npm install @walkeros/server-store-sheets
     "default": {
       "config": { "platform": "server" },
       "stores": {
-        "assets": { "package": "@walkeros/server-store-sheets", "config": {} }
+        "assets": {
+          "package": "@walkeros/server-store-sheets",
+          "config": { "settings": { "id": "YOUR_SPREADSHEET_ID" } }
+        }
       }
     }
   }

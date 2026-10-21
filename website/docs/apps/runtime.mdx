@@ -237,6 +237,13 @@ credential-named fields, long high-entropy strings), but they are not masked
 by exact value. Prefer app-managed secrets for anything that must never reach
 a log.
 
+The runtime prints text lines by default. A flow that sets
+`collector.logger.format` to `json` prints one JSON object per line instead,
+errors and warnings on stderr, which log collectors such as Cloud Run read as
+structured logs (see [Logger](/docs/collector/logger#log-format)). The flow's
+`logger.level` applies to the collector's lines, and `--verbose` still forces
+`DEBUG`.
+
 Log lines print a path under the system temp directory as `$TMPDIR/...`. On
 Linux `TMPDIR` is often unset, so read such a path as the system temp
 directory (usually `/tmp`).

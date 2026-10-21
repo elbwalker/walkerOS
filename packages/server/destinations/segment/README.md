@@ -32,7 +32,7 @@ npm install @walkeros/server-destination-segment
       "destinations": {
         "segment": {
           "package": "@walkeros/server-destination-segment",
-          "config": {}
+          "config": { "settings": { "writeKey": "YOUR_WRITE_KEY" } }
         }
       }
     }

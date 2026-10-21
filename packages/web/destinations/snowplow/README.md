@@ -32,7 +32,9 @@ npm install @walkeros/web-destination-snowplow
       "destinations": {
         "snowplow": {
           "package": "@walkeros/web-destination-snowplow",
-          "config": {}
+          "config": {
+            "settings": { "collectorUrl": "https://collector.example.com" }
+          }
         }
       }
     }

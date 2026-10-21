@@ -28,7 +28,10 @@ npm install @walkeros/server-store-fs
     "default": {
       "config": { "platform": "server" },
       "stores": {
-        "assets": { "package": "@walkeros/server-store-fs", "config": {} }
+        "assets": {
+          "package": "@walkeros/server-store-fs",
+          "config": { "settings": { "basePath": "./assets" } }
+        }
       }
     }
   }

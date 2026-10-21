@@ -31,7 +31,11 @@ npm install @walkeros/server-destination-slack
       "destinations": {
         "slack": {
           "package": "@walkeros/server-destination-slack",
-          "config": {}
+          "config": {
+            "settings": {
+              "webhookUrl": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+            }
+          }
         }
       }
     }

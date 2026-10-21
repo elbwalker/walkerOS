@@ -32,7 +32,7 @@ npm install @walkeros/web-destination-optimizely
       "destinations": {
         "optimizely": {
           "package": "@walkeros/web-destination-optimizely",
-          "config": {}
+          "config": { "settings": { "sdkKey": "YOUR_SDK_KEY" } }
         }
       }
     }

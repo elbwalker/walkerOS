@@ -92,6 +92,12 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+A destination with `config.consent` tells Matomo about a revocation:
+`forgetConsentGiven` stops link tracking too, and a grant sends
+`setConsentGiven`. An event no rule maps fails with `missing-input`, and an
+invalid `goalId` sends the hit without the goal and logs one ERROR line per
+cause. A rule with `silent: true` sends only its goal.
+
 ## Unmapped events
 
 An event without `rule.name` that is not a page view and sets no tracking flag

@@ -28,7 +28,10 @@ npm install @walkeros/source-demo
     "default": {
       "config": { "platform": "web" },
       "sources": {
-        "demo": { "package": "@walkeros/source-demo", "config": {} }
+        "demo": {
+          "package": "@walkeros/source-demo",
+          "config": { "settings": { "events": [{ "name": "page view" }] } }
+        }
       }
     }
   }

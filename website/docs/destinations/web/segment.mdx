@@ -114,7 +114,11 @@ to Segment category names:
 that grants all required keys. Analytics.js has no `optOut()` method, so the
 destination enforces consent by not loading the SDK before it is granted. A
 later revocation stops further events at the walkerOS consent gate; the
-loaded SDK stays on the page.
+loaded SDK stays on the page. Analytics.js loads on the first event after the
+grant. `settings.cdnURL` reaches Analytics.js, so a proxy set there is used.
+
+A missing `apiKey` fails the destination with a `config` error. If Analytics.js
+fails to load, later events fail visibly instead of disappearing.
 
 <CodeSnippet
   code={`destinations: {

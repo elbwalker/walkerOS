@@ -118,7 +118,7 @@ not used there.
       "destinations": {
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
-          "config": { "measurementId": "G-XXXXXX" }
+          "config": { "settings": { "ga4": { "measurementId": "G-XXXXXX" } } }
         }
       }
     }

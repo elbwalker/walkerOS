@@ -1101,7 +1101,7 @@ If the package returns nothing, no JSON is emitted; you only see the framework n
 | Code | Meaning |
 |------|---------|
 | 0 | Success or skip (any of the three skip reasons above) |
-| non-zero | Failure (resolution error, missing default export, package threw) |
+| non-zero | Failure (resolution error, missing default export, package threw, or the step's `init` threw or returned `false`; the message carries the reason) |
 
 ### IAM note
 
@@ -1291,10 +1291,10 @@ At runtime an unknown id is logged and skipped, and the chain continues. A `stop
 
 ### Reference checks
 
-`$flow.`, `$store.`, `$secret.` and `$contract.` resolve only as the whole string value; `$var.` and `$env.` also resolve inline. Flow validation warns when a whole-value reference would not resolve:
+`$flow.`, `$store.`, `$secret.` and `$contract.` resolve only as the whole string value; `$var.` and `$env.` also resolve inline. Flow validation fails with `MALFORMED_REFERENCE` when a whole-value reference would not resolve, and so does the bundle:
 
-| Value | Warning |
-|-------|---------|
+| Value | Error message |
+|-------|---------------|
 | `"$flow.server.url/collect"` | `does not match the $flow.NAME grammar (...); it would not resolve. To build a longer string, compose with $var or $env.` |
 | `"$secret.api_key"` | `does not match the $secret.NAME grammar (uppercase letters, digits and _); it would not resolve. ...` |
 | `"https://x/$store.cache"` | `uses $store. inline. $store. references resolve only as the whole value; it would ship as literal text. ...` |
@@ -1311,13 +1311,26 @@ When the file has a root `contract`, the default run validates it exactly as `wa
 
 Every step with a `package` has its resolved `config.settings` checked against the package's settings schema, at the version the bundle would install: the `config.bundle.packages` pin, else the inline `@version`, else latest. A local `path` package is read from disk.
 
-- Findings are warnings (`ENTRY_SCHEMA`, with `keyword`) for one minor release; they become errors after that. `--strict` fails on them now.
+- An unknown settings key is an error (`ENTRY_SCHEMA`, keyword `additionalProperties`) where the package closes its schema. Other findings are warnings (`ENTRY_SCHEMA`, with `keyword`) for one minor release; they become errors after that. `--strict` fails on them now.
 - Placeholders: `$var` is resolved first and the value checked. `$env.NAME:default` is checked using the default, and an error names the default, never the placeholder. `$flow` resolves statically; an unresolvable `$flow` is an error. Values known only at runtime (`$env.NAME` without default, `$secret`, `$store`, `$code`) are not checked and are listed in `details.deferred`.
 - A schema that cannot be fetched is a skip (`SCHEMA_UNAVAILABLE`); a package without a settings schema is a skip (`NO_SETTINGS_SCHEMA`).
 - **Steps that import a named export** are checked against that export's schema. The export is picked as the bundler picks it: the step's `import`, else the first `imports` entry of its `config.bundle.packages` pin, else the default export. A package with several exports publishes a settings schema per export (`exportSchemas` in its `walkerOS.json`); a package with one export uses its `settings` schema for a named import too. An export missing from `exportSchemas`, a multi-export package version published before per-export schemas, or a package version that does not list its exports, is a skip (`NO_SETTINGS_SCHEMA`), so `--strict` fails on it.
 - `--offline` skips this check without fetching anything; the `Scope:` line says `offline: package settings not checked`.
 
-Unknown top-level keys on a destination or store are warnings (`UNKNOWN_KEY`), and a removed package such as `@walkeros/store-memory` is a warning (`DEPRECATED_PACKAGE`).
+Unknown keys are errors (`UNKNOWN_KEY`) on a source, transformer, destination or store entry, inside any step `config`, in the `collector` block and in inline `code`, because the runtime ignores them. Contract rules accept only `extend`, `tagging`, `description`, `events` and `schema`; the sections `globals`, `context`, `custom`, `user` and `consent` are rejected, use `schema`. A removed package such as `@walkeros/store-memory` is a warning (`DEPRECATED_PACKAGE`).
+
+### Mapping and logger checks
+
+Validate and the bundle (so also `push`, `simulate`, `setup` and the MCP `flow_bundle`) stop on these structural errors before building anything:
+
+| Code | Meaning |
+|------|---------|
+| `MAPPING_NO_OP` | A mapping key that has no effect at its position: a source rule with `data`, `include`, `remove`, `batch`, `settings`, `extend` or `silent`, a destination rule with `extend`, a transformer field that does nothing there. One error per step, naming the paths, what applies there and the fix |
+| `MAPPING_VALUE_NO_OPERATOR` | A mapping value object with none of `key`, `value`, `fn`, `map`, `loop`, `set` |
+| `MAPPING_VALUE_PRODUCERS` | A mapping value with two producers |
+| `BATCH_WITHOUT_PUSH_BATCH` | `batch` on inline `code` that has no `pushBatch` |
+| `MALFORMED_REFERENCE` | A whole-value `$flow.`, `$store.`, `$secret.` or `$contract.` reference that would ship as literal text |
+| `WEB_LOGGER_FORMAT` | `logger.format` on a web flow; the browser console has no output format |
 
 ### Example checks
 
@@ -1369,17 +1382,16 @@ walkeros validate flow.json --strict --json || exit 1`}
 JSON output format (`details.context`, the IntelliSense context, omitted):
 ```json
 {
-  "valid": true,
+  "valid": false,
   "type": "flow",
-  "errors": [],
-  "warnings": [
+  "errors": [
     {
       "path": "flows.server.destinations.pubsub.setings",
-      "message": "Unknown key \"setings\" on Destination is ignored by the runtime",
-      "suggestion": "Remove the key, or move it to where it belongs.",
+      "message": "Unknown key \"setings\" on destination is ignored by the runtime. Remove the key, or move it to where it belongs.",
       "code": "UNKNOWN_KEY"
     }
   ],
+  "warnings": [],
   "details": {
     "flowNames": ["server"],
     "flowCount": 1,
@@ -1413,7 +1425,7 @@ Codes group as follows (the full list is exported as `VALIDATE_CODES` from `@wal
 | Group | Codes |
 |-------|-------|
 | Scope and options | `FLOW_NOT_FOUND`, `ENTRY_NOT_FOUND`, `AMBIGUOUS_ENTRY`, `OPTION_NOT_APPLICABLE` |
-| Structure and resolution | `SCHEMA_VALIDATION`, `INVALID_COMPONENT_NAME`, `INVALID_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `STATE_STORE_UNKNOWN`, `STATE_STORE_FILE`, `UNRESOLVED_REFERENCE`, `FLOW_CYCLE`, `VAR_CYCLE`, `UNKNOWN_KEY`, `DEPRECATED_PACKAGE`, `TRANSFORMER_MAPPING_NO_OP` (a warning: a transformer mapping field that does nothing there) |
+| Structure and resolution | `SCHEMA_VALIDATION`, `INVALID_COMPONENT_NAME`, `INVALID_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `STATE_STORE_UNKNOWN`, `STATE_STORE_FILE`, `UNRESOLVED_REFERENCE`, `FLOW_CYCLE`, `VAR_CYCLE`, `UNKNOWN_KEY`, `DEPRECATED_PACKAGE`, `MAPPING_NO_OP`, `MAPPING_VALUE_NO_OPERATOR`, `MAPPING_VALUE_PRODUCERS`, `BATCH_WITHOUT_PUSH_BATCH`, `MALFORMED_REFERENCE`, `WEB_LOGGER_FORMAT` |
 | Settings | `ENTRY_SCHEMA` |
 | Contracts | `NO_CONTRACT_SECTION`, `INVALID_EXTENDS`, `CIRCULAR_EXTENDS`, `UNRESOLVED_CONTRACT` |
 | Skips | `GATED_BY_ERRORS`, `CONTRACT_NOT_STATIC`, `NO_PACKAGE`, `NO_SETTINGS_SCHEMA`, `SCHEMA_UNAVAILABLE` |

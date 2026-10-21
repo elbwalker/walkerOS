@@ -33,7 +33,12 @@ npm install @walkeros/server-destination-pinterest
       "destinations": {
         "pinterest": {
           "package": "@walkeros/server-destination-pinterest",
-          "config": {}
+          "config": {
+            "settings": {
+              "accessToken": "YOUR_ACCESS_TOKEN",
+              "adAccountId": "YOUR_AD_ACCOUNT_ID"
+            }
+          }
         }
       }
     }

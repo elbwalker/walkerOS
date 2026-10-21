@@ -32,7 +32,12 @@ npm install @walkeros/server-destination-linkedin
       "destinations": {
         "linkedin": {
           "package": "@walkeros/server-destination-linkedin",
-          "config": {}
+          "config": {
+            "settings": {
+              "accessToken": "YOUR_ACCESS_TOKEN",
+              "conversionRuleId": "YOUR_CONVERSION_RULE_ID"
+            }
+          }
         }
       }
     }

@@ -86,7 +86,7 @@ The pull source is event-driven: `init()` opens the streaming subscription and f
 | `flowControl`        | `{ maxMessages?, maxBytes? }`     | `{ maxMessages: 100, maxBytes: 10 MB }` | Subscriber pull rate (in-flight cap).                            |
 | `ackDeadline`        | `number`                          | `60`                            | Per-message ack window in seconds.                                       |
 | `shutdownTimeoutMs`  | `number`                          | `30000`                         | Graceful drain budget on `destroy()`.                                    |
-| `onPushError`        | `'nack' \| 'ack'`                 | `'nack'`                        | Behavior when forwarding to the collector throws.                        |
+| `onPushError`        | `'nack' \| 'ack'`                 | `'nack'`                        | Behavior when forwarding to the collector throws or fails for a retryable reason. |
 
 ## Push webhook
 
@@ -123,13 +123,13 @@ app.listen(8080);`}
 
 Pub/Sub posts each message envelope to the configured endpoint as a JSON body matching the [Pub/Sub push spec](https://cloud.google.com/pubsub/docs/push). The handler decodes the envelope, base64-decodes the `data` field, runs the configured decoder, and forwards to the collector. Status codes:
 
-- `200`: forwarded successfully.
+- `200`: forwarded successfully, or failed for a reason a redelivery cannot fix (it is in the destination's dead-letter queue and in the collector's ERROR line).
 - `400`: the message is permanently invalid, either a malformed envelope
   (missing `message.data`, invalid base64) or an event the pipeline rejected.
   A retry cannot fix either, so the answer is a nack.
 - `401`: OIDC verification failed (when enabled).
-- `500`: collector push failed on an otherwise valid message; Pub/Sub will retry
-  per the subscription's retry policy.
+- `500`: collector push failed on an otherwise valid message for a retryable
+  reason, or threw; Pub/Sub will retry per the subscription's retry policy.
 
 Because a permanently invalid message is nacked rather than acknowledged, Pub/Sub
 keeps redelivering it. Set a
@@ -189,7 +189,7 @@ Topic provisioning is owned by the [Pub/Sub destination](/docs/destinations/serv
 | `text`           | `data.toString('utf8')` (forwarded as-is) |
 | `raw`            | The raw `Buffer` is forwarded unchanged   |
 
-A decoder that throws on malformed payloads triggers `onPushError` (pull mode): `nack` redelivers, `ack` drops with a debug log.
+A decoder that throws on malformed payloads triggers `onPushError` (pull mode): `nack` redelivers, `ack` drops with a debug log. In pull mode a failure a redelivery cannot fix (a missing setting, a `4xx` from the vendor, a destination that is not ready) and invalid input are acknowledged: the failure is in the destination's dead-letter queue and in one ERROR line from the collector, and invalid input is counted as `rejected`. Only a retryable failure (a timeout, an unavailable vendor) and a thrown push follow `onPushError`.
 
 ## Emulator
 

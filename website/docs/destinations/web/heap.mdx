@@ -90,12 +90,12 @@ Add to your `flow.json` destinations:
 
 :::caution
 `loadScript: true` loads the classic Heap SDK
-(`https://cdn.heapanalytics.com/js/heap-<appId>.js`). That SDK does not replay
-the calls the destination queues before it finishes loading, so events pushed
-earlier (such as the first page view) do not reach Heap. It also ignores
-`disablePageviewAutocapture`, `disableSessionReplay`, and `ingestServer`, and
-has no `startTracking()` or `stopTracking()`, so any consent command after it
-has loaded stops all further Heap events (see Consent).
+(`https://cdn.heapanalytics.com/js/heap-<appId>.js`). Events pushed while the
+script loads wait for it and reach Heap once it is ready; if the script is
+blocked or fails to load, later pushes fail and show up as failed events. Pass
+SDK options in `settings.heapConfig`. The classic SDK has no switch to stop
+tracking, so a consent revocation stops the events walkerOS sends but not
+Heap's own autocapture (see Consent).
 :::
 
 <Configuration type="destination" data={data} />
@@ -108,15 +108,12 @@ required consent keys are granted (see
 `heap.startTracking()` when all required keys are granted and
 `heap.stopTracking()` otherwise.
 
-The classic SDK that `loadScript: true` loads has neither method. The grant
-that loads Heap works, but once the script has loaded, every later
-`walker consent` command, even one that repeats the current state, makes the
-destination's `on('consent')` handler fail. The collector logs
-`on callback failed` and holds the destination's events in its queue, so Heap
-receives nothing for the rest of the page view, while `elb` still returns
-`ok`. A revocation also does not stop Heap's own capture. This setup keeps
-sending events only when your consent source sends no further consent command
-after the grant that loads Heap.
+The classic SDK that `loadScript: true` loads has neither method. Consent
+commands after it has loaded do not stall the destination, but a revocation
+only stops the events walkerOS sends: Heap's own autocapture keeps running
+because the classic SDK cannot be switched off. To keep Heap from capturing
+before consent, load Heap's script only after consent is granted, which is what
+`config.consent` does with `loadScript: true`.
 
 <CodeSnippet
   code={`destinations: {

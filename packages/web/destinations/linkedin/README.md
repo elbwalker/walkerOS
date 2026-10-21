@@ -32,7 +32,7 @@ npm install @walkeros/web-destination-linkedin
       "destinations": {
         "linkedin": {
           "package": "@walkeros/web-destination-linkedin",
-          "config": {}
+          "config": { "settings": { "apiKey": "YOUR_PARTNER_ID" } }
         }
       }
     }

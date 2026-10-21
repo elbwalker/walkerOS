@@ -153,11 +153,10 @@ per element, not once for the whole array. Batched requests carry no
 `traceparent` header: a batch can aggregate events from distinct traces, so
 there is no single identity to stamp.
 
-Set `size` explicitly and keep it small: the `fetch` and `beacon` transports
-send with `keepalive`, and browsers reject a `keepalive` request once the bodies
-in flight exceed 64 KiB, while the default `size` is 1000 events. Such a flush
-fails without being reported (see [Transport methods](#transport-methods)). A
-full event is around 0.5 to 1 KiB.
+Keep `size` small: the `beacon` transport is rejected by the browser once the
+bodies in flight exceed 64 KiB, and the default `size` is 1000 events. The
+`fetch` transport sends a request larger than that without `keepalive`, so it
+may be lost if the page unloads first. A full event is around 0.5 to 1 KiB.
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -187,6 +186,11 @@ const { collector, elb } = await startFlow({
 - **beacon**: `navigator.sendBeacon()`, always a `POST` without the configured
   `headers`
 
-The destination ignores the response: a failed request (an error
-status or a network error) is not reported, the event counts as delivered and
-does not reach the dead-letter queue.
+A failed request is reported as a failed push: an error status, a network
+error, a timeout (10 seconds for `fetch`) or a beacon the browser refuses. The
+event counts as failed, reaches the dead-letter queue and the collector logs one
+ERROR line per cause and minute. A `4xx` answer (other than `429`) is not
+retried. A beacon over 64 KiB is rejected and not retried either.
+
+A rule with `silent: true` sends nothing. Without `settings.url` the destination
+does not start and every push fails with the `config` code.

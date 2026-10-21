@@ -187,6 +187,10 @@ const value = await collector.stores.assets.get('key');`}
   language="typescript"
 />
 
+## Failed reads
+
+A read, write or delete that fails (a 403, a 5xx, a network error) throws instead of looking like a missing key, and a stored value that cannot be decoded throws too. A key that is not stored is a normal miss and returns `undefined`. The collector treats a failed read as a miss for that event and writes one ERROR line per cause, so a failing store is visible without stopping the flow.
+
 ## Setup lifecycle
 
 Stores may implement an optional `setup()` lifecycle for one-time, operator-time provisioning, for example creating an S3 bucket. Setup runs only when an operator explicitly invokes `walkeros setup store.<name>`; the runtime never auto-invokes it. Opt in via `config.setup` in the flow config (`true` or an object).

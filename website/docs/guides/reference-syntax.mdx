@@ -337,8 +337,8 @@ replaces every reference before the bundler or collector sees the config.
 
 `$flow.`, `$store.`, `$secret.` and `$contract.` resolve only when the reference
 is the entire string value. `$var.` and `$env.` also resolve inside a longer
-string. `walkeros validate` warns about a whole-value reference that would not
-resolve:
+string. `walkeros validate` and the bundle fail with `MALFORMED_REFERENCE` on a
+whole-value reference that would not resolve:
 
 - **Malformed:** `"$flow.server.url/collect"` or `"$secret.api_key"` does not
   match the reference grammar (`$secret.` names are uppercase letters, digits

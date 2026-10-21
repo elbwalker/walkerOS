@@ -32,7 +32,7 @@ npm install @walkeros/server-destination-mixpanel
       "destinations": {
         "mixpanel": {
           "package": "@walkeros/server-destination-mixpanel",
-          "config": {}
+          "config": { "settings": { "apiKey": "YOUR_PROJECT_TOKEN" } }
         }
       }
     }

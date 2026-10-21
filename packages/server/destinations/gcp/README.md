@@ -29,7 +29,10 @@ npm install @walkeros/server-destination-gcp
     "default": {
       "config": { "platform": "server" },
       "destinations": {
-        "gcp": { "package": "@walkeros/server-destination-gcp", "config": {} }
+        "gcp": {
+          "package": "@walkeros/server-destination-gcp",
+          "config": { "settings": { "projectId": "YOUR_PROJECT_ID" } }
+        }
       }
     }
   }

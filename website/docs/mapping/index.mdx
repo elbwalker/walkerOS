@@ -47,7 +47,7 @@ Everything in walkerOS mapping is built from two building blocks:
 - **[Mapping.Rule](./rule.mdx)**: the object on a source's or destination's
   `mapping[entity][action]`. It composes values into a complete rule
   (`name`, `data`, `condition`, `policy`, `batch`, `ignore`, `silent`,
-  `settings`).
+  `settings`). Every destination honours `silent`.
 
 When a destination doc shows `data: any`, the value you put there is a
 `Mapping.Value`. The whole rule around it is a `Mapping.Rule`.

@@ -31,7 +31,7 @@ npm install @walkeros/server-destination-sqlite
       "destinations": {
         "sqlite": {
           "package": "@walkeros/server-destination-sqlite",
-          "config": {}
+          "config": { "settings": { "sqlite": { "url": "./events.db" } } }
         }
       }
     }

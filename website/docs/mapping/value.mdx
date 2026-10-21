@@ -59,6 +59,19 @@ exactly one runs, in this order, and the rest never run: `loop`, `map`, `set`,
 including a `loop` over something that is not a list. `condition`, `consent`
 and `validate` filter the result and combine freely.
 
+An object needs at least one of `key`, `value`, `fn`, `map`, `loop` or `set`.
+An object with none of them, such as `{ total: 'data.value' }` where
+`{ map: { total: 'data.value' } }` was meant, has no operator: `walkeros
+validate` and the bundle reject it (`MAPPING_VALUE_NO_OPERATOR`), and if it
+still runs, the value is dropped, the event goes out without it, and the
+collector logs one ERROR line per cause saying how to fix it. An object with
+two producers is rejected the same way (`MAPPING_VALUE_PRODUCERS`).
+
+A callback that throws inside a value (`fn`, `validate`, a value-level
+`condition`) drops only that value and the collector reports it once per cause;
+the event is still delivered. A rule-level `condition` that throws is different:
+it fails the event (see [Rule](./rule.mdx)).
+
 To read a field and then transform it, use `fn` alone. It receives the whole
 source object, so `fn: (source) => source.user.email.split('@')[1]` does both
 steps in one place. For an event field you can also rewrite it with a `policy`

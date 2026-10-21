@@ -32,7 +32,7 @@ npm install @walkeros/web-destination-meta
       "destinations": {
         "meta": {
           "package": "@walkeros/web-destination-meta",
-          "config": {}
+          "config": { "settings": { "pixelId": "YOUR_PIXEL_ID" } }
         }
       }
     }

@@ -229,6 +229,8 @@ const { elb } = await startFlow({
 
 <Configuration type="destination" data={data} />
 
+`settings.collectorUrl` is required and the settings schema is closed, so `walkeros validate` rejects a key Snowplow does not read. The Snowplow script is injected once per script URL; if it fails to load, later events fail visibly.
+
 ## User identity and privacy
 
 ### Cross-session user stitching

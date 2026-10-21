@@ -29,7 +29,10 @@ npm install @walkeros/server-destination-file
     "default": {
       "config": { "platform": "server" },
       "destinations": {
-        "file": { "package": "@walkeros/server-destination-file", "config": {} }
+        "file": {
+          "package": "@walkeros/server-destination-file",
+          "config": { "settings": { "filename": "events.jsonl" } }
+        }
       }
     }
   }

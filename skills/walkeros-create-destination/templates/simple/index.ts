@@ -1,80 +1,123 @@
-import type { Destination, Env, Settings } from './types';
-import { isObject } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
+import type { Config, Destination, Env } from './types';
+import { getGrantedConsent, isObject, StepError } from '@walkeros/core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
 
 export * as DestinationVendor from './types';
 
+const SCRIPT_SRC = 'https://vendor.com/sdk.js';
+
 /**
- * Simple destination template.
+ * Vendor destination template (web, vendor script that defines a global).
  *
  * Key patterns:
- * 1. Init receives context - destructure config, env, logger, id
- * 2. Push receives context - includes data, rule (renamed from mapping), ingest
- * 3. Use getEnv<Env>(env) - never access window/document directly, and never
- *    cast them: the generic returns your narrowed Env merged with the DOM
- *    globals, so window.vendorSdk / document.createElement are already typed
- * 4. Return config from init - allows updating config during initialization
+ * 1. A failure is a throw. Never `return` early when nothing was sent, and
+ *    never log a failure yourself: the collector turns a thrown StepError
+ *    into a failed push, a DLQ entry and one ERROR line.
+ * 2. Await every call the vendor makes; a call that is not awaited fails after
+ *    the push was already counted as delivered.
+ * 3. Load scripts with `loadVendor`: a blocked or slow script becomes
+ *    `vendor-not-loaded` / `vendor-timeout` instead of lost events.
+ * 4. Honour `rule.silent`: send no event of its own, keep the side effects.
+ * 5. Pass consent to the vendor in `on('consent')` when the vendor has a
+ *    switch for it; `config.consent` decides.
+ * 6. Use getEnv<Env>(env) - never access window/document directly, and never
+ *    cast them.
  */
+
+/** The script `loadVendor` injects with `loadScript`; `check()` reports a failed one. */
+function vendor(config: Config, env?: Env) {
+  return loadVendor(
+    config.loadScript ? SCRIPT_SRC : undefined,
+    () => getEnv<Env>(env).window.vendorSdk,
+    { timeout: config.timeout },
+  );
+}
+
+/** The SDK global, or a StepError when it is not there. */
+function sdk(env?: Env) {
+  const { vendorSdk } = getEnv<Env>(env).window;
+  if (!vendorSdk)
+    throw new StepError('Vendor SDK not ready: window.vendorSdk is missing', {
+      code: 'vendor-not-ready',
+    });
+  return vendorSdk;
+}
+
+/** Runs one vendor call; a throw or a rejection becomes a StepError of `code`. */
+async function call(
+  fn: () => unknown,
+  code: string,
+  message: string,
+): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    throw new StepError(message, { code, cause: error });
+  }
+}
+
 export const destinationVendor: Destination = {
   type: 'vendor',
   config: {},
 
   /**
-   * Initialize destination - receives context object.
-   *
-   * @param context - Init context containing:
-   *   - config: Destination configuration (settings, mapping, etc.)
-   *   - env: Environment with window, document, etc.
-   *   - logger: Logger instance
-   *   - id: Unique destination identifier
-   *   - collector: Collector instance reference
-   *   - data: Pre-computed data from mapping
+   * Initialize destination. Throw a StepError when it cannot start; never
+   * return `false`. A destination with a consent requirement is initialized
+   * once consent is granted.
    */
-  init(context) {
-    const { config, env } = context;
+  async init({ config, env }) {
+    const { apiKey } = config.settings || {};
+    if (!apiKey)
+      throw new StepError('Vendor needs settings.apiKey', { code: 'config' });
+
+    // The SDK stub first, so calls queue until the vendor script replays them
     const { window } = getEnv<Env>(env);
-    const settings = config.settings || {};
-
-    if (config.loadScript) addScript(settings, env);
-
-    // Initialize vendor SDK queue
     window.vendorSdk =
       window.vendorSdk ||
       function () {
         (window.vendorSdk!.q = window.vendorSdk!.q || []).push(arguments);
       };
+    vendor(config, env);
 
-    return config;
+    await call(
+      () => sdk(env)('init', apiKey),
+      'vendor-not-ready',
+      'Vendor init call failed',
+    );
   },
 
   /**
-   * Push event to destination - receives event and push context.
-   *
-   * @param event - The walkerOS event to send
-   * @param context - Push context containing:
-   *   - config: Destination configuration
-   *   - env: Environment
-   *   - logger: Logger instance
-   *   - id: Destination identifier
-   *   - data: Pre-computed data from mapping
-   *   - rule: The matching mapping rule (renamed from 'mapping')
-   *   - ingest: Optional request metadata from source
+   * Push event to destination. `data` is the mapped data, `rule` the matching
+   * mapping rule.
    */
-  push(event, context) {
-    const { data, env } = context;
-    const params = isObject(data) ? data : {};
-    const { window } = getEnv<Env>(env);
+  async push(event, { config, rule, data, env }) {
+    // A script that fired `error` fails every later push
+    vendor(config, env).check();
 
-    // Call vendor API - must match outputs.ts examples
-    window.vendorSdk!('track', event.name, params);
+    // A silent rule sends no event of its own
+    if (rule?.silent) return;
+
+    const params = isObject(data) ? data : {};
+    await call(
+      () => sdk(env)('track', event.name, params),
+      'transport',
+      'Vendor call failed',
+    );
+  },
+
+  /** Tell the vendor about a consent change when it has a switch for it. */
+  async on(type, { config, data, env, collector }) {
+    const required = config.consent;
+    if (type !== 'consent' || !required || !isObject(data)) return;
+    if (!Object.keys(required).some((key) => key in data)) return;
+
+    const granted = getGrantedConsent(required, collector.consent) !== false;
+    await call(
+      () => sdk(env)('consent', granted ? 'grant' : 'revoke'),
+      'consent-not-applied',
+      'Vendor did not take the consent update',
+    );
   },
 };
-
-function addScript(settings: Settings, env?: Env) {
-  const { document } = getEnv<Env>(env);
-  const script = document.createElement('script');
-  script.src = `https://vendor.com/sdk.js?key=${settings.apiKey}`;
-  document.head.appendChild(script);
-}
 
 export default destinationVendor;

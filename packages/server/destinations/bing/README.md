@@ -29,7 +29,15 @@ npm install @walkeros/server-destination-bing
     "default": {
       "config": { "platform": "server" },
       "destinations": {
-        "bing": { "package": "@walkeros/server-destination-bing", "config": {} }
+        "bing": {
+          "package": "@walkeros/server-destination-bing",
+          "config": {
+            "settings": {
+              "accessToken": "YOUR_ACCESS_TOKEN",
+              "tagId": "YOUR_UET_TAG_ID"
+            }
+          }
+        }
       }
     }
   }
