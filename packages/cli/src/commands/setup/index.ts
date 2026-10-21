@@ -321,7 +321,7 @@ export async function setupCommand(opts: SetupCommandOptions): Promise<void> {
     // The init result is classified the same way the collector does:
     //   - object → use as resolved config for setup + destroy
     //   - void   → init mutated the input config in place; reuse it
-    //   - false  → init explicitly aborted; do NOT run setup
+    //   - false  → the step is not ready: setup fails (not-ready)
     let resolvedConfig: unknown = resolvedInputConfig;
     if (isLifecycleFn(initFn)) {
       const target = `${component.kind}.${component.id}`;

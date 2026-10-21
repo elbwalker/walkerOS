@@ -18,7 +18,12 @@ export function wireConfig(data) {
   if (data.withHandler)
     config.logger = {
       ...config.logger,
-      handler: (level, message) => calls.push(['flow', message]),
+      handler: (level, message, context, scope, originalHandler) => {
+        calls.push(['flow', message]);
+        // The documented custom-handler pattern: forward, then print.
+        if (data.withHandler === 'original')
+          originalHandler(level, message, context, scope);
+      },
     };
   return config;
 }
@@ -33,29 +38,34 @@ export async function startFlow(config) {
 }
 `;
 
+interface HostState {
+  format: Logger.Format;
+  debug: boolean;
+}
+
 describe('generateServerEntry merges the flow logger with the host logger', () => {
   const dirs: string[] = [];
   let errorSpy: jest.SpyInstance;
   let logSpy: jest.SpyInstance;
+  let warnSpy: jest.SpyInstance;
 
   beforeEach(() => {
     errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
     errorSpy.mockRestore();
     logSpy.mockRestore();
+    warnSpy.mockRestore();
     for (const dir of dirs) fs.rmSync(dir, { recursive: true, force: true });
     dirs.length = 0;
   });
 
   async function run(
     data: Record<string, unknown>,
-    context: (
-      format: { current: Logger.Format },
-      calls: unknown[],
-    ) => Record<string, unknown>,
+    context: (host: HostState, calls: unknown[]) => Record<string, unknown>,
   ): Promise<{ ring: Array<[Level, string, LogEntry]>; calls: unknown[] }> {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'server-entry-logger-'));
     dirs.push(dir);
@@ -80,13 +90,15 @@ describe('generateServerEntry merges the flow logger with the host logger', () =
     const calls: unknown[] = stage.calls;
 
     const ring: Array<[Level, string, LogEntry]> = [];
-    const format: { current: Logger.Format } = { current: 'text' };
-    const extra = context(format, calls);
+    // The runner's side of the contract: the flow's format and its DEBUG
+    // level, learned through onLogger, drive the host handler.
+    const host: HostState = { format: 'text', debug: false };
+    const extra = context(host, calls);
     await module.default({
       ...extra,
       logger: createCLILoggerConfig({
-        verbose: extra.verbose === true,
-        format: () => format.current,
+        verbose: () => extra.verbose === true || host.debug,
+        format: () => host.format,
         onLine: (level, message, line) => {
           ring.push([level, message, line]);
           calls.push(['host', message]);
@@ -102,10 +114,10 @@ describe('generateServerEntry merges the flow logger with the host logger', () =
     const settings: unknown[] = [];
     const { ring } = await run(
       { collector: { logger: { level: 'WARN', format: 'json' } } },
-      (format) => ({
+      (host) => ({
         onLogger: (value: { format?: Logger.Format }) => {
           settings.push(value);
-          if (value.format) format.current = value.format;
+          if (value.format) host.format = value.format;
         },
       }),
     );
@@ -132,7 +144,7 @@ describe('generateServerEntry merges the flow logger with the host logger', () =
   it('tells the host the flow settings before the collector starts', async () => {
     const { calls } = await run(
       { collector: { logger: { format: 'json' } } },
-      (_format, calls) => ({
+      (_host, calls) => ({
         onLogger: (value: unknown) => calls.push(['onLogger', value]),
       }),
     );
@@ -152,6 +164,47 @@ describe('generateServerEntry merges the flow logger with the host logger', () =
       Level.INFO,
       Level.WARN,
       Level.ERROR,
+    ]);
+  });
+
+  it("prints the flow's DEBUG lines without --verbose", async () => {
+    const { ring } = await run(
+      { collector: { logger: { level: 'DEBUG' } } },
+      (host) => ({
+        onLogger: (value: { level?: unknown }) => {
+          host.debug = value.level === 'DEBUG';
+        },
+      }),
+    );
+    expect(ring.map(([level]) => level)).toEqual([
+      Level.DEBUG,
+      Level.INFO,
+      Level.WARN,
+      Level.ERROR,
+    ]);
+    expect(logSpy.mock.calls.map((call) => call[0])).toEqual([
+      '  [dest] debug line',
+      '[dest] info line',
+      '[dest] warn line',
+    ]);
+  });
+
+  it('a flow handler calling originalHandler still prints exactly one masked line per log call', async () => {
+    const { calls } = await run(
+      {
+        collector: { logger: { level: 'WARN' } },
+        withHandler: 'original',
+      },
+      () => ({}),
+    );
+    // Two calls pass WARN (warn, error): one line each, both from the host.
+    expect(
+      calls.filter((call) => Array.isArray(call) && call[0] === 'flow'),
+    ).toHaveLength(2);
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(logSpy.mock.calls).toEqual([['[dest] warn line']]);
+    expect(errorSpy.mock.calls).toEqual([
+      ['[dest] Push failed {"code":"transport","status":503,"retryable":true}'],
     ]);
   });
 

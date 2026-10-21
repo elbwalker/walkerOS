@@ -1864,24 +1864,28 @@ export { startFlow };`;
  * ring tap), optionally `context.logLevel` (a level it forces, `--verbose`)
  * and `context.onLogger` (receives the flow's own `{ level, format }` before
  * the collector starts). The flow's level and format win over the host's;
- * a flow handler runs first, then the host's.
+ * a flow handler runs first, then the host's, which runs once per line,
+ * always. The flow handler's `originalHandler` does nothing: the host prints
+ * every line, masked and in the flow's format.
  */
 const HOST_LOGGER_MERGE = `  // The host's logger (masking, its error ring) joins the flow's own: the
   // flow's level and format win, unless the host forces a level (--verbose);
-  // the flow's handler runs first, then the host's, so neither replaces the
-  // other. The host learns the flow's settings before the collector starts,
-  // so every line, the first included, has the flow's format.
+  // the flow's handler runs first, then the host's, once per line, always.
+  // The flow handler's originalHandler does nothing, so no line prints a
+  // second time unmasked. The host learns the flow's settings before the
+  // collector starts, so every line, the first included, has its format.
   if (context.logger) {
     const own = config.logger || {};
     const host = context.logger;
     if (context.onLogger) context.onLogger({ level: own.level, format: own.format });
     const level = context.logLevel ?? own.level ?? host.level;
+    const printedByHost = () => {};
     const handler = own.handler && host.handler
-      ? (lvl, message, ctx, scope, original) => {
+      ? (lvl, message, ctx, scope) => {
           try {
-            own.handler(lvl, message, ctx, scope, original);
+            own.handler(lvl, message, ctx, scope, printedByHost);
           } finally {
-            host.handler(lvl, message, ctx, scope, original);
+            host.handler(lvl, message, ctx, scope, printedByHost);
           }
         }
       : host.handler || own.handler;

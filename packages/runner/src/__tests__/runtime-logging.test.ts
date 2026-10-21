@@ -49,6 +49,23 @@ describe('createRuntimeLogging', () => {
     expect(logSpy).toHaveBeenCalledWith('plain');
   });
 
+  it("opens DEBUG for the collector's lines at the flow's DEBUG level, not for the runner's own", () => {
+    const logging = createRuntimeLogging({});
+    logging.flowLogger.onLogger({ level: 'DEBUG' });
+    logging.collectorConfig.handler?.(
+      Level.DEBUG,
+      'collector debug',
+      {},
+      ['collector'],
+      () => {},
+    );
+    logging.logger.debug('runner debug');
+
+    expect(logSpy.mock.calls.map((call) => String(call[0]))).toEqual([
+      '  [collector] collector debug',
+    ]);
+  });
+
   it('forces DEBUG over the flow level only with --verbose', () => {
     expect(createRuntimeLogging({ verbose: true }).flowLogger.logLevel).toBe(
       Level.DEBUG,

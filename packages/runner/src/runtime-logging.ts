@@ -5,8 +5,9 @@
  * handler setup (masking, the ring tap) and one output format. The format is
  * the flow's own `logger.format`: the bundle entry reports the flow's logger
  * settings through `onLogger` before its collector starts, and every line
- * from then on, the runner's own included, uses it. No environment variable
- * sets it.
+ * from then on, the runner's own included, uses it. The flow's level opens
+ * the DEBUG gate for the collector's lines; the runner's own DEBUG lines
+ * still need `--verbose`. No environment variable sets either.
  */
 
 import { Level, type Logger } from '@walkeros/core';
@@ -49,18 +50,24 @@ export interface RuntimeLogging {
  * (`verbose`, `silent`, `json`), `onLine` and `knownSecrets`.
  */
 export function createRuntimeLogging(
-  options: Omit<CLILoggerOptions, 'format'>,
+  options: Omit<CLILoggerOptions, 'format' | 'verbose'> & { verbose?: boolean },
   colors: CLILoggerColors = {},
 ): RuntimeLogging {
   let format: Logger.Format = 'text';
+  let flowDebug = false;
   const shared: CLILoggerOptions = { ...options, format: () => format };
   return {
     logger: createCLILogger(shared, colors),
-    collectorConfig: createCLILoggerConfig(shared, colors),
+    collectorConfig: createCLILoggerConfig(
+      { ...shared, verbose: () => options.verbose === true || flowDebug },
+      colors,
+    ),
     flowLogger: {
       ...(options.verbose ? { logLevel: Level.DEBUG } : {}),
       onLogger: (settings) => {
         if (settings.format) format = settings.format;
+        flowDebug =
+          settings.level === Level.DEBUG || settings.level === 'DEBUG';
       },
     },
     format: () => format,

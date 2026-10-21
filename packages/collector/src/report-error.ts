@@ -93,7 +93,7 @@ export function errorMeta(err: unknown): {
  * uncaughtException it exists to contain.
  *
  * - orphan (`reportError(err)`): bump `status.connectionErrors[stepId]` and
- *   `logger.error`. Does NOT bump `failed` (no event lost at this instant;
+ *   `logger.warn`. Does NOT bump `failed` (no event lost at this instant;
  *   counting it against `failed` would double-count the next push that hits
  *   the broken writer and gets DLQ'd).
  * - event-bearing (`reportError(err, event)`): the event goes through the

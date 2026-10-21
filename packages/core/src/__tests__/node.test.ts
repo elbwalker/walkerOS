@@ -241,6 +241,33 @@ describe('createCLILogger format json', () => {
     expect(String(line.context).startsWith('{"rows":"x\\"')).toBe(true);
   });
 
+  it('caps a message above half the cap with messageTruncated, and the line still parses', () => {
+    const long = 'é'.repeat(MAX_JSON_LINE_BYTES);
+    createCLILogger({ format: 'json' }).error(long, { code: 'transport' });
+
+    const raw = String(errorSpy.mock.calls[0][0]);
+    expect(Buffer.byteLength(raw)).toBeLessThanOrEqual(MAX_JSON_LINE_BYTES);
+    const line = parse(errorSpy.mock.calls[0]);
+    expect(line.messageTruncated).toBe(true);
+    expect(String(line.message).startsWith('éé')).toBe(true);
+    expect(Buffer.byteLength(String(line.message))).toBeLessThanOrEqual(
+      MAX_JSON_LINE_BYTES / 2,
+    );
+    expect(line.context).toEqual({ code: 'transport' });
+  });
+
+  it('opens the DEBUG gate through a function-form verbose', () => {
+    let open = false;
+    const logger = createCLILogger({ format: 'json', verbose: () => open });
+    logger.debug('hidden');
+    open = true;
+    logger.debug('shown');
+
+    expect(logSpy.mock.calls.map((call) => parse(call).message)).toEqual([
+      'shown',
+    ]);
+  });
+
   it('sends ERROR and WARN to stderr, INFO and DEBUG to stdout', () => {
     const logger = createCLILogger({ format: 'json', verbose: true });
     logger.error('e');

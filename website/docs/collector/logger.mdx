@@ -225,9 +225,9 @@ not in this table because it is never a failure.
 
 ## Log format
 
-By default lines print as text. On a server flow, set `format` to `json` to
-print one JSON object per line, with `severity`, `message`, `time`, `scope` and
-`context`. Errors and warnings go to stderr, info and debug to stdout, which
+By default lines print as text. On a server flow run by `runneros`, set
+`format` to `json` to print one JSON object per line, with `severity`,
+`message`, `time`, `scope` and `context`. Errors and warnings go to stderr, info and debug to stdout, which
 platforms such as Cloud Run read as structured logs.
 
 <CodeSnippet

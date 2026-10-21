@@ -80,12 +80,14 @@ export function getDefaultTmpRoot(): string {
  * One log line as a structured entry: the shape a JSON line prints and the
  * `onLine` tap receives, masked like the text line. `message` is
  * `[scope] message` without the context; `scope` and `context` are omitted
- * when empty; `context` is a string prefix of its JSON, with
- * `contextTruncated`, when the line would pass {@link MAX_JSON_LINE_BYTES}.
+ * when empty. When the line would pass {@link MAX_JSON_LINE_BYTES}, a
+ * message above half the cap keeps a prefix (`messageTruncated`), then
+ * `context` becomes a string prefix of its JSON (`contextTruncated`).
  */
 export interface LogEntry {
   severity: 'ERROR' | 'WARNING' | 'INFO' | 'DEBUG';
   message: string;
+  messageTruncated?: true;
   scope?: string;
   context?: Record<string, unknown> | string;
   contextTruncated?: true;
@@ -99,7 +101,11 @@ export interface LogEntry {
 export const MAX_JSON_LINE_BYTES = 32 * 1024;
 
 export interface CLILoggerOptions {
-  verbose?: boolean;
+  /**
+   * Opens the DEBUG gate. A function is read per line, so a host can open
+   * it for the level a flow sets once it knows it.
+   */
+  verbose?: boolean | (() => boolean);
   silent?: boolean;
   json?: boolean;
   stderr?: boolean;
@@ -182,7 +188,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * and to the serialized context. A context that cannot serialize, or whose
  * masked form no longer parses, becomes `"[unserializable context]"`. A
  * line above {@link MAX_JSON_LINE_BYTES} keeps a prefix of its masked
- * context JSON, so the cut never splits a secret.
+ * message (when that is above half the cap) and of its masked context JSON,
+ * so a cut never splits a secret.
  */
 function buildLogEntry(
   level: Level,
@@ -215,6 +222,20 @@ function buildLogEntry(
   }
 
   let line = JSON.stringify(entry);
+  if (Buffer.byteLength(line) <= MAX_JSON_LINE_BYTES) return { entry, line };
+
+  // The message keeps at most half the cap, the context the rest.
+  const half = MAX_JSON_LINE_BYTES / 2;
+  if (Buffer.byteLength(entry.message) > half) {
+    const message = entry.message;
+    let size = half;
+    do {
+      entry.message = message.slice(0, size);
+      size = Math.floor(size / 2);
+    } while (Buffer.byteLength(entry.message) > half && size > 0);
+    entry.messageTruncated = true;
+    line = JSON.stringify(entry);
+  }
   if (contextJson && Buffer.byteLength(line) > MAX_JSON_LINE_BYTES) {
     entry.contextTruncated = true;
     let size = MAX_JSON_LINE_BYTES - Buffer.byteLength(entry.message) - 256;
@@ -274,6 +295,8 @@ export function createCLILoggerConfig(
 
   const readFormat = (): Format =>
     (typeof format === 'function' ? format() : format) ?? 'text';
+  const readVerbose = (): boolean =>
+    typeof verbose === 'function' ? verbose() : verbose;
   // The text line's masking order, shared by the JSON entry: known values
   // first, so the label can never split one; then the temp root label; then
   // the pattern rules.
@@ -286,6 +309,17 @@ export function createCLILoggerConfig(
     // --verbose.
     level: Level.DEBUG,
     handler: (level, message, context, scope) => {
+      // Machine output (`json`) prints only its result; silent keeps errors;
+      // DEBUG needs verbose. A line nobody prints and no tap reads costs
+      // nothing more.
+      const shown =
+        !json &&
+        (level === Level.ERROR || !silent) &&
+        (level !== Level.DEBUG || readVerbose());
+      const tap = options.onLine;
+      if (!shown && !tap) return;
+      const asJson = shown && readFormat() === 'json';
+
       // Build formatted message
       const scopePath = scope.length > 0 ? `[${scope.join(':')}] ` : '';
       // Serialize the structured context into the line so error details (gRPC
@@ -294,56 +328,55 @@ export function createCLILoggerConfig(
       // values too; the heartbeat path's 256-char cap stays as the wire
       // backstop. A context that cannot stringify (circular) must never break
       // logging.
-      let meta = '';
-      if (Object.keys(context).length > 0) {
+      const textLine = (): string => {
+        let meta = '';
+        if (Object.keys(context).length > 0) {
+          try {
+            meta = ` ${JSON.stringify(context)}`;
+          } catch {
+            meta = ' [unserializable context]';
+          }
+        }
+        // Redact secrets ONCE here, before BOTH the onLine ring tap and the
+        // console.* output. stderr is shipped directly by the log collector,
+        // so the heartbeat-egress redactor alone would miss it; doing it in
+        // the handler scrubs every line routed through this logger (collector
+        // and steps) on both paths. Length is preserved here (no truncation);
+        // the heartbeat path applies the 256-char wire cap separately as a
+        // backstop on already-redacted text.
+        // Order: known values first, so the label can never split one (a
+        // `sqlite:/tmp/...` URL, or a value that only touches the root at its
+        // edge); then the temp root label, since a long per-user root (macOS
+        // `/var/folders/...`) would otherwise read as a token; then the
+        // pattern rules.
+        return mask(`${scopePath}${message}${meta}`);
+      };
+      // The structured entry only where it is used: a JSON line, or the tap.
+      const built =
+        asJson || tap
+          ? buildLogEntry(level, message, context, scope, mask, readKnown())
+          : undefined;
+      const fullMessage = tap || !asJson ? textLine() : '';
+
+      // Tap every line before the gate so no level is dropped from capture.
+      if (tap && built) {
         try {
-          meta = ` ${JSON.stringify(context)}`;
+          tap(level, fullMessage, built.entry);
         } catch {
-          meta = ' [unserializable context]';
+          // Swallow: a throwing consumer must never break logging (and we
+          // must not call logger methods here to avoid infinite recursion).
         }
       }
-      // Redact secrets ONCE here, before BOTH the onLine ring tap and the
-      // console.* output. stderr is shipped directly by the log collector, so
-      // the heartbeat-egress redactor alone would miss it; doing it in the
-      // handler scrubs every line routed through this logger (collector and
-      // steps) on both paths. Length is preserved here (no truncation); the
-      // heartbeat path applies the 256-char wire cap separately as a backstop
-      // on already-redacted text.
-      // Order: known values first, so the label can never split one (a
-      // `sqlite:/tmp/...` URL, or a value that only touches the root at its
-      // edge); then the temp root label, since a long per-user root (macOS
-      // `/var/folders/...`) would otherwise read as a token; then the
-      // pattern rules.
-      const fullMessage = mask(`${scopePath}${message}${meta}`);
-      const { entry, line } = buildLogEntry(
-        level,
-        message,
-        context,
-        scope,
-        mask,
-        readKnown(),
-      );
 
-      // Tap every line before any early return so no level is dropped from capture.
-      try {
-        options.onLine?.(level, fullMessage, entry);
-      } catch {
-        // Swallow: a throwing consumer must never break logging (and we must
-        // not call logger methods here to avoid infinite recursion).
-      }
-
-      // Machine output (`json`) prints only its result; silent keeps errors;
-      // DEBUG needs verbose.
-      if (json) return;
-      if (level !== Level.ERROR && silent) return;
-      if (level === Level.DEBUG && !verbose) return;
+      if (!shown) return;
 
       // JSON lines: one object per line, no colour; ERROR and WARN on stderr
       // (where platforms that ship only stderr still see them), INFO and
       // DEBUG on stdout.
-      if (readFormat() === 'json') {
-        if (level === Level.ERROR || level === Level.WARN) console.error(line);
-        else out(line);
+      if (asJson && built) {
+        if (level === Level.ERROR || level === Level.WARN)
+          console.error(built.line);
+        else out(built.line);
         return;
       }
 
