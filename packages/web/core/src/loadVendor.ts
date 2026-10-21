@@ -6,6 +6,11 @@ export const VENDOR_SCRIPT_MARKER = 'data-walkeros-vendor';
 export interface LoadVendorOptions {
   /** The destination's timeout; the load deadline is its resolved value. */
   timeout?: number;
+  /**
+   * Attributes the vendor's tag needs (e.g. `data-domain`), set before the
+   * script is inserted. `src` and the marker cannot be overwritten.
+   */
+  attributes?: Record<string, string>;
 }
 
 export interface Vendor<T> {
@@ -34,20 +39,40 @@ interface Injected {
   waiting: Array<(outcome: Outcome) => void>;
 }
 
-/** One script per src on the page: a failure is never re-injected. */
-const injected = new Map<string, Injected>();
+/** The state of each vendor script, kept with its element. */
+const injected = new WeakMap<Element, Injected>();
 
-function inject(src: string, timeout: number): Injected {
-  const known = injected.get(src);
+/**
+ * The page's script for `src`. The page itself is the registry: its one
+ * marked script with that src means the src was injected (once per page, a
+ * failure is never re-injected), and another document has its own.
+ */
+function scriptOf(src: string): HTMLScriptElement | undefined {
+  const marked = document.querySelectorAll<HTMLScriptElement>(
+    `script[${VENDOR_SCRIPT_MARKER}]`,
+  );
+  return Array.from(marked).find(
+    (script) => script.getAttribute('src') === src,
+  );
+}
+
+function inject(
+  src: string,
+  timeout: number,
+  attributes: Record<string, string> = {},
+): Injected {
+  const existing = scriptOf(src);
+  const known = existing && injected.get(existing);
   if (known) return known;
 
+  // A marked script without state (another bundle's) is watched, not doubled.
+  const script = existing ?? document.createElement('script');
   const entry: Injected = {
     state: 'loading',
     expired: false,
     timeout,
     waiting: [],
   };
-  injected.set(src, entry);
 
   const settle = (outcome: Outcome) => {
     const waiting = entry.waiting;
@@ -60,10 +85,7 @@ function inject(src: string, timeout: number): Injected {
     settle('expired');
   }, timeout);
 
-  const script = document.createElement('script');
-  script.src = src;
-  script.async = true;
-  script.setAttribute(VENDOR_SCRIPT_MARKER, '');
+  injected.set(script, entry);
   script.addEventListener('load', () => {
     clearTimeout(timer);
     entry.state = 'loaded';
@@ -74,7 +96,16 @@ function inject(src: string, timeout: number): Injected {
     entry.state = 'failed';
     settle('failed');
   });
-  document.head.appendChild(script);
+
+  if (!existing) {
+    for (const [name, value] of Object.entries(attributes))
+      script.setAttribute(name, value);
+    // After the attributes, so they never replace the src or the marker.
+    script.src = src;
+    script.async = true;
+    script.setAttribute(VENDOR_SCRIPT_MARKER, '');
+    document.head.appendChild(script);
+  }
 
   return entry;
 }
@@ -93,8 +124,9 @@ const timedOut = (timeout: number) =>
   });
 
 /**
- * Injects a vendor script once per `src` (marked `data-walkeros-vendor`) and
- * reports its readiness. The deadline runs from the injection and equals the
+ * Injects a vendor script once per `src` on the page (marked
+ * `data-walkeros-vendor`, with the `attributes` its tag needs) and reports
+ * its readiness. The deadline runs from the injection and equals the
  * destination's resolved timeout, so an awaited `ready()` settles before the
  * push's own timeout. Without `src` (the page loads the vendor) nothing is
  * injected and there is no deadline.
@@ -105,7 +137,11 @@ export function loadVendor<T>(
   options: LoadVendorOptions = {},
 ): Vendor<T> {
   const script = src
-    ? inject(src, resolveDestinationTimeout(options.timeout))
+    ? inject(
+        src,
+        resolveDestinationTimeout(options.timeout),
+        options.attributes,
+      )
     : undefined;
 
   const present = (): Promise<T> => {

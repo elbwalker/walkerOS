@@ -37,6 +37,43 @@ describe('loadVendor', () => {
     expect(scripts[0].async).toBe(true);
   });
 
+  it('sets the tag attributes before the script is inserted; src and the marker stay', () => {
+    const src = nextSrc();
+    // Watching the head: an attribute set after the insertion would show.
+    const observer = new MutationObserver(() => undefined);
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+    loadVendor(src, get, {
+      attributes: {
+        'data-domain': 'example.com',
+        src: 'https://other.example/x.js',
+        [VENDOR_SCRIPT_MARKER]: 'taken',
+      },
+    });
+    const records = observer.takeRecords();
+    observer.disconnect();
+
+    expect(records.map(({ type }) => type)).toEqual(['childList']);
+    const [script] = scriptsOf(src);
+    expect(script.getAttribute('data-domain')).toBe('example.com');
+    expect(script.getAttribute('src')).toBe(src);
+    expect(script.getAttribute(VENDOR_SCRIPT_MARKER)).toBe('');
+  });
+
+  it('keeps the page as the registry: a script removed from the page is injected again', () => {
+    const src = nextSrc();
+    loadVendor(src, get);
+    loadVendor(src, get);
+    expect(scriptsOf(src)).toHaveLength(1);
+
+    scriptsOf(src).forEach((script) => script.remove());
+    loadVendor(src, get);
+    expect(scriptsOf(src)).toHaveLength(1);
+  });
+
   it('resolves with get() after load', async () => {
     const src = nextSrc();
     const ready = loadVendor(src, get).ready();

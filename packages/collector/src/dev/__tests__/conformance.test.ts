@@ -27,6 +27,8 @@ import {
   consentAware,
   consentIgnoring,
   initCalling,
+  pageScriptIgnoring,
+  pageScriptVendor,
   scriptVendor,
   swallowingSdk,
   vendorGlobal,
@@ -515,6 +517,27 @@ describe('conformance kit, vendor-global profile', () => {
         },
       }),
     ).resolves.toBeUndefined();
+  });
+
+  describe('a script injected once per page, loadScript on by default (item 2)', () => {
+    // No declared failure example: item 2 must reach the script error itself.
+    const { unreachable, ...scriptExamples } = examples;
+    const scriptOptions = { ...options, examples: scriptExamples };
+
+    it('reaches the script error although item 1 injected the src first', async () => {
+      await expect(
+        conformance('destination', pageScriptVendor, scriptOptions),
+      ).resolves.toBeUndefined();
+    });
+
+    it('fails item 2 when the push ignores the script error', async () => {
+      await expect(
+        conformance('destination', pageScriptIgnoring, scriptOptions),
+      ).rejects.toMatchObject({
+        items: [2],
+        message: expect.stringContaining('is not reported vendor-not-loaded'),
+      });
+    });
   });
 
   describe('item 8 runs a revoke gated on its keys, granted first (I1)', () => {

@@ -348,6 +348,11 @@ async function open(
         await collector.command('shutdown');
       } finally {
         boundary.restore();
+        // The page is loadVendor's once-per-src registry: the scripts this
+        // run added go, so the next run starts on the page it found.
+        documentScripts()
+          .filter((script) => !before.has(script))
+          .forEach((script) => script.remove());
       }
     },
   };
