@@ -14,6 +14,7 @@ import { startFlow } from '../../flow';
 import { runExamples } from '../runExamples';
 import { fixtures } from './fixtures';
 import { good } from './fixture-package/src';
+import { envReading } from './fixture-package/src/transformer';
 
 const URL = 'https://127.0.0.1:9/e';
 const fetchOut = (name: string): Flow.StepOut => [
@@ -286,6 +287,19 @@ describe('runExamples', () => {
             },
           },
           { settings: {} },
+        ),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('transformer env', () => {
+    it("gives the examples env to the factory, init and push, where a flow's entry carries it", async () => {
+      await expect(
+        runExamples(
+          'transformer',
+          envReading,
+          { tagged: { in: { name: 'page view' } } },
+          { env: { push: { prefix: 'kit' } } },
         ),
       ).resolves.toBeUndefined();
     });

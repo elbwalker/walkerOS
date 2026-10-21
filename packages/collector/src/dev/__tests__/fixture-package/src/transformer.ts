@@ -36,3 +36,28 @@ export const dropping: Transformer.Init<Types> = async (context) => {
       event.user?.id ? instance.push(event, pushContext) : false,
   };
 };
+
+type EnvTypes = Transformer.Types<unknown, { prefix?: string }>;
+
+/** Needs `env.prefix` in its factory, its init and its push. */
+export const envReading: Transformer.Init<EnvTypes> = ({ config, env }) => {
+  if (!env.prefix)
+    throw new StepError('Env prefix missing in the factory', {
+      code: 'config',
+    });
+  return {
+    type: 'env-reading',
+    config,
+    init: ({ env: initEnv }) => {
+      if (!initEnv.prefix)
+        throw new StepError('Env prefix missing in init', { code: 'config' });
+    },
+    push: (event, { env: pushEnv }) => {
+      if (!pushEnv.prefix)
+        throw new StepError('Env prefix missing in push', {
+          code: 'missing-input',
+        });
+      return { event };
+    },
+  };
+};

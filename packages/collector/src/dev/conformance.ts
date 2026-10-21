@@ -419,6 +419,8 @@ const failureEnvAnswers: Array<{ label: string; answer: EnvAnswer }> = [
 type DestinationStep = Destination.Instance<Destination.TypesGeneric>;
 
 interface DestinationRun extends Step {
+  /** Every log line of the session, from startFlow through the run. */
+  sessionLogs: LogLine[];
   initCalls: number;
   scripts: { marked: number; unmarked: number };
   dlq: WalkerOS.Event[];
@@ -448,6 +450,7 @@ async function runDestination(
     const run = await session.run({ event, ingest });
     return {
       ...run,
+      sessionLogs: [...session.logs],
       initCalls: session.initCalls(),
       scripts: session.scripts(),
       dlq: (session.collector.destinations[STEP_ID]?.dlq ?? []).map(
@@ -469,7 +472,9 @@ function reportProblem(label: string, run: DestinationRun): Problem {
     return `${label} is reported without its status`;
   if (!reason.retryable) return `${label} is reported as not retryable`;
   if (!run.dlq.length) return `${label} leaves the DLQ empty`;
-  const errors = errorsIn(run.logs);
+  // The whole session: a destination initialized inside startFlow writes
+  // its one line there, and the run's retry of the same cause is suppressed.
+  const errors = errorsIn(run.sessionLogs);
   if (errors !== 1)
     return `${label} writes ${errors} ERROR lines instead of the collector's one`;
   return undefined;
@@ -734,7 +739,7 @@ async function vendorFailureProblem(
       return `a push after the vendor script failed is not reported vendor-not-loaded (${show(reason)})`;
     const dlq = session.collector.destinations[STEP_ID]?.dlq ?? [];
     if (!dlq.length) return 'the vendor-not-loaded event is not in the DLQ';
-    const errors = errorsIn(run.logs);
+    const errors = errorsIn(session.logs);
     return errors === 1
       ? undefined
       : `vendor-not-loaded writes ${errors} ERROR lines instead of the collector's one`;
@@ -1029,6 +1034,34 @@ async function withStore<R>(
   }
 }
 
+/**
+ * Which operation examples reach the SDK boundary in a normal run (at least
+ * one call on the examples env), from the session's own call record. Items 2
+ * and 3 judge those only; an operation that no example reaches fails them,
+ * so a store cannot pass by never calling its client.
+ */
+async function reachingOperations(
+  step: StoreStep,
+  base: Setup,
+  operations: StoreOperation[],
+): Promise<{ reaching: StoreOperation[]; problems: string[] }> {
+  const reached = await withStore(step, base, async (session) => {
+    const flags: boolean[] = [];
+    for (const operation of operations) {
+      const before = session.envBoundary?.calls.length ?? 0;
+      await runStoreOperation(session, operation).catch(() => undefined);
+      flags.push((session.envBoundary?.calls.length ?? 0) > before);
+    }
+    return flags;
+  });
+  const reaching = operations.filter((_, index) => reached[index]);
+  const kinds = [...new Set(operations.map(({ operation }) => operation))];
+  const problems = kinds
+    .filter((kind) => !reaching.some(({ operation }) => operation === kind))
+    .map((kind) => `no example of ${kind} reaches the SDK`);
+  return { reaching, problems };
+}
+
 async function storeItem(
   item: number,
   step: StoreStep,
@@ -1055,7 +1088,11 @@ async function storeItem(
     case 2: {
       if (!ctx.env) return storeDeclaredFailures(step, ctx);
       if (!operations.length) return 'no store operation example to fail';
-      const problems: string[] = [];
+      const { reaching, problems } = await reachingOperations(
+        step,
+        base,
+        operations,
+      );
       for (const { label, answer } of failureEnvAnswers) {
         // A store call has no collector timeout around it here: a call that
         // never settles is item 3's late answer, not a failure to wait for.
@@ -1064,7 +1101,7 @@ async function storeItem(
           step,
           { ...base, envAnswers: () => answer },
           async (session) => {
-            for (const operation of operations) {
+            for (const operation of reaching) {
               const logsBefore = session.logs.length;
               const error = await runStoreOperation(session, operation).then(
                 () => undefined,
@@ -1087,12 +1124,16 @@ async function storeItem(
 
     case 3: {
       if (!ctx.env) return 'no SDK boundary to answer late (pass env)';
-      const problems: string[] = [];
+      const { reaching, problems } = await reachingOperations(
+        step,
+        base,
+        operations,
+      );
       await withStore(
         step,
         { ...base, envAnswers: () => ({ kind: 'late' }) },
         async (session) => {
-          for (const operation of operations) {
+          for (const operation of reaching) {
             await runStoreOperation(session, operation).catch(() => undefined);
             if (session.envBoundary?.pending())
               problems.push(

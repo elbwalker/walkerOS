@@ -423,8 +423,10 @@ export function openTransformer(
               ...(setup.settings !== undefined
                 ? { settings: settingsOf(setup) }
                 : {}),
-              ...(env ? { env } : {}),
             },
+            // Where a flow's transformer entry carries it: the factory gets
+            // it as context.env, init and push through the config it returns.
+            ...(env ? { env } : {}),
           },
         },
         // Under the step's id too, so its failure reads like a destination's.
@@ -449,8 +451,9 @@ export function openStore(
           ...(setup.settings !== undefined
             ? { settings: settingsOf(setup) }
             : {}),
-          ...(env ? { env } : {}),
         },
+        // Where a flow's store entry carries it: the store's context.env.
+        ...(env ? { env } : {}),
       },
     },
   }));

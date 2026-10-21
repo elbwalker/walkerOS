@@ -15,8 +15,11 @@ function clientOf(env: { client?: Client }): Client {
   return env.client;
 }
 
-/** Reports a failed read as a StepError, never as a miss. */
-export const remote: Store.Init<Types> = ({ config, env }) => {
+/**
+ * Reports a failed read as a StepError, never as a miss. Like the fs store,
+ * it refuses a key that leaves the store before any client call: a miss.
+ */
+export const remote: Store.Init<Types> = ({ config, env, logger }) => {
   if (!config.settings?.bucket)
     throw new StepError('Config settings bucket missing', { code: 'config' });
   const fail = (error: unknown): never => {
@@ -28,7 +31,13 @@ export const remote: Store.Init<Types> = ({ config, env }) => {
   return {
     type: 'remote',
     config,
-    get: (key) => clientOf(env).read(key).catch(fail),
+    get: (key) => {
+      if (key.includes('..')) {
+        logger.warn('Store refused a key outside the store');
+        return undefined;
+      }
+      return clientOf(env).read(key).catch(fail);
+    },
     set: (key, value) => clientOf(env).write(key, value).catch(fail),
     delete: (key) => clientOf(env).remove(key).catch(fail),
   };

@@ -47,19 +47,42 @@ export const vendorGlobal: Destination.Instance<Types> = {
 };
 
 /**
- * Calls its vendor in `init`, as `fbq('init', ...)` does: the call is queued
- * by the vendor, not awaited. It requires marketing consent, so the collector
- * initializes it inside the first input that grants it, not at the start.
+ * Starts its vendor SDK in `init` and awaits it, as fullstory's `fs.init`;
+ * a failed start throws `vendor-not-ready`. It requires marketing consent,
+ * so the collector initializes it inside the first input that grants it.
  */
 export const initCalling: Destination.Instance<Types> = {
   ...vendorGlobal,
   type: 'init-calling',
   config: { consent: { marketing: true } },
-  init: ({ config, env }) => {
+  init: async ({ config, env }) => {
     if (!env.vendor) return;
-    Promise.resolve(env.vendor.init(config.settings?.site ?? '')).catch(
+    try {
+      await env.vendor.init(config.settings?.site ?? '');
+    } catch (error) {
+      throw new StepError('Vendor did not start', {
+        code: 'vendor-not-ready',
+        cause: error,
+      });
+    }
+  },
+};
+
+/** Swallows a failed start and a failed call: nothing is reported (item 2). */
+export const swallowingSdk: Destination.Instance<Types> = {
+  ...vendorGlobal,
+  type: 'swallowing-sdk',
+  config: {},
+  init: async ({ config, env }) => {
+    await Promise.resolve(env.vendor?.init(config.settings?.site ?? '')).catch(
       () => undefined,
     );
+  },
+  push: async (event, { config, env, rule }) => {
+    if (rule?.silent) return;
+    await Promise.resolve(
+      env.vendor?.track(event.name, config.settings?.site),
+    ).catch(() => undefined);
   },
 };
 

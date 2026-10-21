@@ -21,6 +21,7 @@ import {
   consentAware,
   consentIgnoring,
   initCalling,
+  swallowingSdk,
   vendorGlobal,
 } from './fixture-package/src/vendor';
 import { eitherId, ga4Only } from './fixture-package/src/alternatives';
@@ -169,11 +170,14 @@ describe('conformance kit, other step kinds', () => {
 
   describe('store (socket profile)', () => {
     const values = new Map<string, Store.StoreValue>();
+    // Counted, so a test cannot pass without the store reaching its client.
+    const read = jest.fn(async (key: string) => values.get(key));
+    const write = jest.fn(async (key: string, value: Store.StoreValue) => {
+      values.set(key, value);
+    });
     const client: Client = {
-      read: async (key) => values.get(key),
-      write: async (key, value) => {
-        values.set(key, value);
-      },
+      read,
+      write,
       remove: async (key) => {
         values.delete(key);
       },
@@ -193,16 +197,56 @@ describe('conformance kit, other step kinds', () => {
       },
     };
 
-    it('passes a store that reports a failed read', async () => {
+    it('passes a store that reports a failed read, through its env client', async () => {
+      read.mockClear();
+      write.mockClear();
       await expect(
         conformance('store', remote, options),
       ).resolves.toBeUndefined();
+      expect(read).toHaveBeenCalled();
+      expect(write).toHaveBeenCalled();
     });
 
-    it('fails a store that turns a failed read into a miss (item 2)', async () => {
+    it('judges items 2 and 3 by the examples that reach the SDK (a refused key reaches none)', async () => {
+      read.mockClear();
+      await expect(
+        conformance('store', remote, {
+          ...options,
+          examples: {
+            ...options.examples,
+            refused: { in: { operation: 'get', key: '../../etc/passwd' } },
+          },
+        }),
+      ).resolves.toBeUndefined();
+      expect(read).toHaveBeenCalled();
+    });
+
+    it('fails items 2 and 3 when no example of an operation reaches the SDK', async () => {
+      await expect(
+        conformance('store', remote, {
+          ...options,
+          examples: {
+            write: options.examples.write,
+            refused: { in: { operation: 'get', key: '../../etc/passwd' } },
+          },
+        }),
+      ).rejects.toMatchObject({
+        items: [2, 3],
+        message: expect.stringContaining('no example of get reaches the SDK'),
+      });
+    });
+
+    it('fails a store that turns its client rejection into a miss (item 2)', async () => {
+      read.mockClear();
       await expect(
         conformance('store', missing, options),
-      ).rejects.toMatchObject({ items: [2] });
+      ).rejects.toMatchObject({
+        items: [2],
+        message: expect.stringContaining(
+          'a rejected SDK call on get is not reported',
+        ),
+      });
+      expect(read).toHaveBeenCalled();
     });
   });
 
@@ -310,7 +354,14 @@ describe('conformance kit, vendor-global profile', () => {
     const initExamples: Flow.StepExamples = {
       pageView: { ...examples.pageView, in: consented },
       silent: { ...examples.silent, in: consented },
-      unreachable: { ...examples.unreachable, in: consented },
+      // The vendor does not start: init fails before any push call.
+      unreachable: {
+        ...examples.unreachable,
+        in: consented,
+        description: 'The vendor does not start: init reports it.',
+        out: [],
+        outcome: { status: 'failed', code: 'vendor-not-ready' },
+      },
       // Grants marketing (the init runs inside it), revokes functional.
       revoke: {
         command: 'consent',
@@ -344,6 +395,30 @@ describe('conformance kit, vendor-global profile', () => {
       ).rejects.toMatchObject({
         items: [5],
         message: expect.stringMatching(/item 5: init makes 1 /),
+      });
+    });
+
+    it('counts item 2 over the session: an init that fails inside startFlow writes the one ERROR line', async () => {
+      const atLoad = { ...initCalling, config: {} };
+      await expect(
+        conformance('destination', atLoad, {
+          ...options,
+          env: tracked,
+          profile: 'web-sdk',
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('fails item 2 for a destination that swallows a failed start and a failed call', async () => {
+      await expect(
+        conformance('destination', swallowingSdk, {
+          ...options,
+          env: tracked,
+          profile: 'web-sdk',
+        }),
+      ).rejects.toMatchObject({
+        items: [2],
+        message: expect.stringContaining('a rejected SDK call is not reported'),
       });
     });
 
