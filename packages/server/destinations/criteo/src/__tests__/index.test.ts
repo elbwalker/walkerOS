@@ -7,6 +7,7 @@ import {
   createMockContext,
   createMockLogger,
   getEvent,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -28,7 +29,6 @@ describe('Server Destination Criteo', () => {
     jest.clearAllMocks();
 
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: 'OK',
     });
 
@@ -184,7 +184,7 @@ describe('Server Destination Criteo', () => {
     expect(body.events[0].event).toBe('trackTransaction');
 
     jest.clearAllMocks();
-    mockSendServer.mockResolvedValue({ ok: true, data: 'OK' });
+    mockSendServer.mockResolvedValue({ data: 'OK' });
 
     await destination.push(
       event,
@@ -319,7 +319,9 @@ describe('Server Destination Criteo', () => {
   });
 
   test('error response throws', async () => {
-    mockSendServer.mockResolvedValue({ ok: false, error: '401' });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 401', { code: 'transport', status: 401 }),
+    );
 
     const event = getEvent();
     const config: Config = { settings: { partnerId, callerId } };
@@ -334,7 +336,7 @@ describe('Server Destination Criteo', () => {
 
   test('environment customization via env.sendServer', async () => {
     const customSendServer = jest.fn();
-    customSendServer.mockResolvedValue({ ok: true, data: 'OK' });
+    customSendServer.mockResolvedValue({ data: 'OK' });
 
     const customEnv = { sendServer: customSendServer };
     const event = getEvent();

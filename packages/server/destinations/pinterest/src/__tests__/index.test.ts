@@ -6,6 +6,7 @@ import {
   getEvent,
   createMockContext,
   createMockLogger,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -27,7 +28,6 @@ describe('Server Destination Pinterest', () => {
     jest.clearAllMocks();
 
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: {
         num_events_received: 1,
         num_events_processed: 1,
@@ -146,7 +146,7 @@ describe('Server Destination Pinterest', () => {
 
   test('environment customization', async () => {
     const customSendServer = jest.fn();
-    customSendServer.mockResolvedValue({ ok: true, data: {} });
+    customSendServer.mockResolvedValue({ data: {} });
 
     const customEnv = { sendServer: customSendServer };
     const event = getEvent();
@@ -168,14 +168,9 @@ describe('Server Destination Pinterest', () => {
   });
 
   test('error', async () => {
-    mockSendServer.mockResolvedValue({
-      ok: false,
-      data: {
-        code: 4196,
-        message: 'Invalid request',
-      },
-      error: '400 Bad Request',
-    });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 400', { code: 'transport', status: 400 }),
+    );
     const event = getEvent();
     const config: Config = {
       settings: { accessToken, adAccountId },

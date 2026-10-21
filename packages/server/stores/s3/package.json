@@ -36,7 +36,9 @@
     "@walkeros/core": "4.8.1",
     "s3mini": "^0.9.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@walkeros/collector": "4.8.1"
+  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/server/stores/s3"

@@ -1962,6 +1962,8 @@ export const flowCompleteCoverage = {
     mapping: 'example-mapping',
     out: 'example-out',
     command: 'example-command',
+    outcome: RUNTIME('outcome (a failure example, public: false)'),
+    respond: RUNTIME('respond (a failure example, public: false)'),
   } satisfies Coverage<keyof Flow.StepExample>,
   sourceConfig: {
     settings: 'step-settings',

@@ -6,6 +6,7 @@ import {
   createMockContext,
   createMockLogger,
   getEvent,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -26,7 +27,6 @@ describe('Server Destination LinkedIn', () => {
     jest.clearAllMocks();
 
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: {},
     });
 
@@ -97,7 +97,7 @@ describe('Server Destination LinkedIn', () => {
 
   test('environment customization', async () => {
     const customSendServer = jest.fn();
-    customSendServer.mockResolvedValue({ ok: true, data: {} });
+    customSendServer.mockResolvedValue({ data: {} });
 
     const customEnv = { sendServer: customSendServer };
     const event = createEvent({
@@ -122,11 +122,9 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('error handling - non-ok response triggers throw', async () => {
-    mockSendServer.mockResolvedValue({
-      ok: false,
-      data: { message: 'Invalid token' },
-      error: '401 Unauthorized',
-    });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 401', { code: 'transport', status: 401 }),
+    );
 
     const event = createEvent({
       name: 'form submit',

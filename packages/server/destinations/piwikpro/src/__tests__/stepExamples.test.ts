@@ -35,7 +35,7 @@ describe('Step Examples', () => {
 
   beforeEach(() => {
     sendServer.mockReset();
-    sendServer.mockResolvedValue({ ok: true, data: '' });
+    sendServer.mockResolvedValue({ data: '' });
   });
 
   async function run(

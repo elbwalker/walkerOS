@@ -112,20 +112,12 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = (env as Env)?.sendServer || sendServer;
-  const result = await sendServerFn(url, JSON.stringify(body), {
+  await sendServerFn(url, JSON.stringify(body), {
     headers: {
       'Access-Token': accessToken,
       'Content-Type': 'application/json',
     },
   });
-
-  logger.debug('TikTok API response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`TikTok API error: ${JSON.stringify(result)}`);
-  }
 };
 
 const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];

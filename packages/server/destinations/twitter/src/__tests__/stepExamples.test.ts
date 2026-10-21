@@ -19,7 +19,6 @@ describe('Step Examples', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: { request_id: 'mock-request-id' },
     });
   });

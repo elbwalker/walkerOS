@@ -816,6 +816,31 @@ export namespace Flow {
      * When absent (default), `in` is pushed as a regular event.
      */
     command?: StepCommand;
+    /**
+     * The reported outcome of a failure or queue example (`public: false`):
+     * the step's status in the push result and its reason code. Absent means
+     * the step must not fail.
+     */
+    outcome?: StepOutcome;
+    /** What the boundary answers for this example (a failure fixture). */
+    respond?: StepRespond;
+  }
+
+  /** How a failure or queue example is reported in the push result. */
+  export interface StepOutcome {
+    status: 'failed' | 'queued';
+    code: string;
+    retryable?: boolean;
+  }
+
+  /**
+   * The boundary's answer to the request an example makes: an HTTP status and
+   * body, or a network error or a timeout instead of a response.
+   */
+  export interface StepRespond {
+    status?: number;
+    body?: unknown;
+    error?: 'network' | 'timeout';
   }
 
   /** Named step examples keyed by scenario name. */

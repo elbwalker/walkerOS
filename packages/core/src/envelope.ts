@@ -1,4 +1,4 @@
-import type { WalkerOS } from './types';
+import type { Elb, WalkerOS } from './types';
 import { isArray, isObject } from './is';
 
 /**
@@ -128,4 +128,34 @@ export function pushResultToOutcome(result: {
     };
   }
   return { id: result?.event?.id };
+}
+
+/** What a producer does with the message that carried a push. */
+export type Acknowledgement = 'ack' | 'retry' | 'reject';
+
+/**
+ * Decides from a push result whether a producer acks, retries or rejects the
+ * message that carried it: invalid input is `reject`, a delivered or queued
+ * event `ack`. A failure is `retry` when any of its reasons is retryable and
+ * `ack` when every reason is deterministic (a redelivery cannot fix a missing
+ * setting or a 4xx; the event is in the DLQ and its cause line is logged). A
+ * failure without any reason is `retry`, so an unclassified failure never
+ * deletes a message. Only `retryable` is read, never an error text.
+ *
+ * @param result The push result.
+ * @returns `ack`, `retry` or `reject`.
+ */
+export function acknowledge(result: Elb.PushResult): Acknowledgement {
+  if (result.invalid === true) return 'reject';
+  if (result.ok) return 'ack';
+
+  const retryable: boolean[] = [];
+  for (const ref of Object.values(result.failed ?? {})) {
+    const reason = ref.reason;
+    retryable.push(reason && 'retryable' in reason ? reason.retryable : true);
+  }
+  if (result.reason) retryable.push(result.reason.retryable);
+
+  if (retryable.length === 0) return 'retry';
+  return retryable.some(Boolean) ? 'retry' : 'ack';
 }

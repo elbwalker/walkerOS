@@ -109,3 +109,21 @@ export function toFailureReason(err: unknown): FailureReason {
     retryable: true,
   };
 }
+
+/**
+ * A network error's message with its cause code (`ECONNREFUSED`, `ENOTFOUND`),
+ * which runtimes keep on `cause` (Node's fetch says only `fetch failed`): the
+ * code only, never the cause's message, which carries addresses and URLs.
+ */
+export function networkErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : 'Network error';
+  const cause = error instanceof Error ? error.cause : undefined;
+  const code =
+    typeof cause === 'object' &&
+    cause !== null &&
+    'code' in cause &&
+    typeof cause.code === 'string'
+      ? cause.code
+      : undefined;
+  return code ? `${message} (${code})` : message;
+}

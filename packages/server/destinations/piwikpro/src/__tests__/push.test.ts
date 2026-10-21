@@ -6,7 +6,13 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import type { PartialConfig } from '../types';
-import { createEvent, createIngest, getEvent, Level } from '@walkeros/core';
+import {
+  createEvent,
+  createIngest,
+  getEvent,
+  Level,
+  StepError,
+} from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { destinationPiwikPro } from '..';
 
@@ -20,7 +26,7 @@ describe('push', () => {
 
   beforeEach(() => {
     sendServer.mockReset();
-    sendServer.mockResolvedValue({ ok: true, data: '' });
+    sendServer.mockResolvedValue({ data: '' });
     logs = [];
   });
 
@@ -153,10 +159,9 @@ describe('push', () => {
 
   it('fails a push on a transport error', async () => {
     await setup();
-    sendServer.mockResolvedValue({
-      ok: false,
-      error: '500 Internal Server Error',
-    });
+    sendServer.mockRejectedValue(
+      new StepError('HTTP 500', { code: 'transport', status: 500 }),
+    );
     const failed = collector.status.failed;
     await collector.push(event('page view'));
     expect(collector.status.failed).toBe(failed + 1);
@@ -164,10 +169,9 @@ describe('push', () => {
 
   it('fails the whole batch on a transport error', async () => {
     await setup({ batch: { size: 2, wait: 60000 } });
-    sendServer.mockResolvedValue({
-      ok: false,
-      error: '500 Internal Server Error',
-    });
+    sendServer.mockRejectedValue(
+      new StepError('HTTP 500', { code: 'transport', status: 500 }),
+    );
     const failed = collector.status.failed;
     await collector.push(event('page view'));
     await collector.push(event('page view'));
@@ -175,14 +179,17 @@ describe('push', () => {
     expect(collector.status.failed).toBe(failed + 2);
   });
 
-  it('warns on a 429 before failing', async () => {
+  it('reports a 429 as a retryable failure with its status', async () => {
     await setup();
-    sendServer.mockResolvedValue({ ok: false, error: '429 Too Many Requests' });
-    await collector.push(event('page view'));
-    expect(logs).toContainEqual([
-      Level.WARN,
-      'Piwik PRO rate limited the request (429)',
-    ]);
+    sendServer.mockRejectedValue(
+      new StepError('HTTP 429', { code: 'transport', status: 429 }),
+    );
+    const result = await collector.push(event('page view'));
+    expect(result.failed?.piwik?.reason).toMatchObject({
+      code: 'transport',
+      status: 429,
+      retryable: true,
+    });
   });
 
   it('warns once per skip reason, then logs at debug', async () => {

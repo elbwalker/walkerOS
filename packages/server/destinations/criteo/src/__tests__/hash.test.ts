@@ -20,7 +20,7 @@ describe('Criteo email hashing', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSendServer.mockResolvedValue({ ok: true, data: 'OK' });
+    mockSendServer.mockResolvedValue({ data: 'OK' });
   });
 
   async function pushEmail(email: string): Promise<CriteoEmailHashes> {

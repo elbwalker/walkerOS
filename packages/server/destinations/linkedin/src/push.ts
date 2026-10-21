@@ -149,7 +149,7 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = (env as Env)?.sendServer || sendServer;
-  const result = await sendServerFn(endpoint, JSON.stringify(body), {
+  await sendServerFn(endpoint, JSON.stringify(body), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
@@ -158,12 +158,4 @@ export const push: PushFn = async function (
       'Linkedin-Version': apiVersion,
     },
   });
-
-  logger.debug('LinkedIn API response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`LinkedIn API error: ${JSON.stringify(result)}`);
-  }
 };

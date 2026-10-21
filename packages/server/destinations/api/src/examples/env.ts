@@ -7,8 +7,7 @@ import type { Env } from '../types';
  * and development without requiring external dependencies.
  */
 
-const sendServer: NonNullable<Env['sendServer']> = () =>
-  Promise.resolve({ ok: true });
+const sendServer: NonNullable<Env['sendServer']> = () => Promise.resolve({});
 
 export const init: Env | undefined = {
   sendServer: undefined,

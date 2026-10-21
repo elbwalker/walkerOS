@@ -27,6 +27,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "devDependencies": {
+    "@walkeros/collector": "4.8.1",
     "@walkeros/core": "4.8.1",
     "@walkeros/server-core": "4.8.1"
   },

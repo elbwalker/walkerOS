@@ -207,11 +207,6 @@ describe('Destination API', () => {
         eventName: event.name,
       }),
     );
-
-    expect(testLogger.debug).toHaveBeenCalledWith(
-      'API destination response',
-      expect.objectContaining({ ok: undefined }),
-    );
   });
 
   describe('pushBatch', () => {
@@ -369,11 +364,6 @@ describe('Destination API', () => {
       expect(testLogger.debug).toHaveBeenCalledWith(
         'API destination sending batch',
         expect.objectContaining({ url, method: 'PUT', events: 2 }),
-      );
-
-      expect(testLogger.debug).toHaveBeenCalledWith(
-        'API destination response',
-        expect.objectContaining({ ok: undefined }),
       );
     });
   });

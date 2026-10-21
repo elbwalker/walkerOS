@@ -240,6 +240,27 @@ export const StepExampleSchema = z
       .describe(
         "Invoke elb('walker <command>', in) instead of pushing in as an event",
       ),
+    outcome: z
+      .object({
+        status: z.enum(['failed', 'queued']).describe('Status in the result'),
+        code: z.string().describe('Reason code, e.g. transport or config'),
+        retryable: z.boolean().optional().describe('Whether a retry can help'),
+      })
+      .optional()
+      .describe(
+        'Reported outcome of a failure or queue example (public: false)',
+      ),
+    respond: z
+      .object({
+        status: z.number().optional().describe('HTTP status to answer'),
+        body: z.unknown().optional().describe('Response body to answer'),
+        error: z
+          .enum(['network', 'timeout'])
+          .optional()
+          .describe('A network error or a timeout instead of a response'),
+      })
+      .optional()
+      .describe('What the boundary answers for this example'),
   })
   .meta({
     id: 'FlowStepExample',

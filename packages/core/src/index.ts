@@ -36,7 +36,7 @@ export * from './trim';
 export * from './tryCatch';
 export * from './fatalError';
 export * from './invalidEventError';
-export { StepError, toFailureReason } from './stepError';
+export { networkErrorMessage, StepError, toFailureReason } from './stepError';
 export type {
   FailureReason,
   QueueReason,
@@ -44,6 +44,10 @@ export type {
   StepErrorOptions,
 } from './stepError';
 export { createCauseLog, reportCause } from './causeLog';
+export {
+  DEFAULT_DESTINATION_TIMEOUT_MS,
+  resolveDestinationTimeout,
+} from './timeout';
 export type {
   CauseKey,
   CauseLog,

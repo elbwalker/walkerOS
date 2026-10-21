@@ -7,6 +7,7 @@ import {
   createIngest,
   createMockContext,
   createMockLogger,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -29,7 +30,6 @@ describe('Server Destination Meta', () => {
 
     // Reset mockSendServer to default successful response
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: {
         events_received: 1,
         messages: [],
@@ -289,7 +289,7 @@ describe('Server Destination Meta', () => {
 
   test('environment customization', async () => {
     const customSendServer = jest.fn();
-    customSendServer.mockResolvedValue({ ok: true, data: {} });
+    customSendServer.mockResolvedValue({ data: {} });
 
     const customEnv = { sendServer: customSendServer };
     const event = getEvent();
@@ -311,18 +311,9 @@ describe('Server Destination Meta', () => {
   });
 
   test('error', async () => {
-    mockSendServer.mockResolvedValue({
-      ok: false,
-      data: {
-        error: {
-          message: 'Invalid',
-          type: 'OAuthException',
-          code: 190,
-          fbtrace_id: 'abc',
-        },
-      },
-      error: '400 Bad Request',
-    });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 400', { code: 'transport', status: 400 }),
+    );
     const mockCollector = {} as Collector.Instance;
     const event = getEvent();
     const config: Config = {

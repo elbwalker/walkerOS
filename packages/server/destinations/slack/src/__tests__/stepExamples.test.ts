@@ -49,7 +49,7 @@ function spyEnv(): { env: Env; collected: () => Captured[] } {
 
   const sendServer = ((...args: unknown[]) => {
     calls.push(['sendServer', ...args] as Captured);
-    return Promise.resolve({ ok: true });
+    return Promise.resolve({});
   }) as Env['sendServer'];
 
   return {

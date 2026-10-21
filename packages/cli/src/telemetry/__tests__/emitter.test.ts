@@ -16,7 +16,7 @@ const mockSendServer = jest.fn(
     _url: string,
     _data?: SendDataValue,
     _options?: SendServerOptions,
-  ): Promise<SendResponse> => Promise.resolve({ ok: true }),
+  ): Promise<SendResponse> => Promise.resolve({}),
 );
 
 jest.mock('@walkeros/server-core', () => {
@@ -51,7 +51,7 @@ describe('emitter', () => {
     const p = getConfigPath();
     if (existsSync(p)) rmSync(p, { force: true });
     mockSendServer.mockClear();
-    mockSendServer.mockResolvedValue({ ok: true });
+    mockSendServer.mockResolvedValue({});
   });
 
   afterEach(() => {

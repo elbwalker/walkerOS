@@ -7,6 +7,7 @@ import {
   createMockContext,
   createMockLogger,
   getEvent,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -28,7 +29,6 @@ describe('Server Destination Snapchat', () => {
     jest.clearAllMocks();
 
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: JSON.stringify({ status: 'OK', request_id: 'req-1' }),
     });
 
@@ -330,7 +330,6 @@ describe('Server Destination Snapchat', () => {
   test('environment customization', async () => {
     const customSendServer = jest.fn();
     customSendServer.mockResolvedValue({
-      ok: true,
       data: JSON.stringify({ status: 'OK' }),
     });
 
@@ -354,10 +353,9 @@ describe('Server Destination Snapchat', () => {
   });
 
   test('error response throws', async () => {
-    mockSendServer.mockResolvedValue({
-      ok: false,
-      error: '401',
-    });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 401', { code: 'transport', status: 401 }),
+    );
 
     const event = getEvent();
     const config: Config = {

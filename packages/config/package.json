@@ -6,9 +6,10 @@
   "license": "MIT",
   "files": [
     "tsconfig/**/*.json",
-    "eslint/**/*.mjs",
+    "eslint/*.mjs",
+    "eslint/rules/*.mjs",
     "jest/**/*.mjs",
-    "tsup/**/*.mjs",
+    "tsup/*.mjs",
     "tsup/**/*.d.ts",
     "CHANGELOG.md"
   ],
@@ -25,6 +26,9 @@
     "./jest/web.setup": "./jest/web.setup.mjs",
     "./jest/node.setup": "./jest/node.setup.mjs",
     "./tsup": "./tsup/index.mjs"
+  },
+  "scripts": {
+    "test": "jest"
   },
   "dependencies": {
     "@swc/core": "^1.11.13",

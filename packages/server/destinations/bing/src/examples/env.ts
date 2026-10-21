@@ -16,7 +16,6 @@ type MockSendServer = (
 ) => Promise<SendResponse>;
 
 const mockSendServer: MockSendServer = async () => ({
-  ok: true,
   data: {
     status: 'OK',
     requestId: 'mock-123',

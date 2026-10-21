@@ -27,8 +27,7 @@ function createMockClient(): SlackClientMock {
 
 export const push: Env = {
   slackClient: createMockClient(),
-  sendServer: (() =>
-    Promise.resolve({ ok: true } as never)) as Env['sendServer'],
+  sendServer: () => Promise.resolve({}),
 };
 
 export const simulation = [

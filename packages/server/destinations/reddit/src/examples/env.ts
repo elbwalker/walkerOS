@@ -21,7 +21,6 @@ type MockSendServer = (
 const mockSendServer: MockSendServer = async () => {
   // Simulate successful Reddit API response
   return {
-    ok: true,
     data: {
       success: true,
     },

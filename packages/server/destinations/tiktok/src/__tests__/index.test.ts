@@ -7,6 +7,7 @@ import {
   createMockContext,
   createMockLogger,
   getEvent,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -29,7 +30,6 @@ describe('Server Destination TikTok', () => {
 
     // Reset mockSendServer to default successful response
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: JSON.stringify({ code: 0, message: 'OK' }),
     });
 
@@ -276,7 +276,6 @@ describe('Server Destination TikTok', () => {
   test('environment customization', async () => {
     const customSendServer = jest.fn();
     customSendServer.mockResolvedValue({
-      ok: true,
       data: JSON.stringify({ code: 0, message: 'OK' }),
     });
 
@@ -300,10 +299,9 @@ describe('Server Destination TikTok', () => {
   });
 
   test('error response throws', async () => {
-    mockSendServer.mockResolvedValue({
-      ok: false,
-      error: '401',
-    });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 401', { code: 'transport', status: 401 }),
+    );
 
     const event = getEvent();
     const config: Config = {

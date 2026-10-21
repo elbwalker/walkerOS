@@ -3,7 +3,9 @@ import {
   isBatchBody,
   batchResponse,
   pushResultToOutcome,
+  acknowledge,
 } from '../envelope';
+import type { Elb } from '../types';
 
 describe('toEventList', () => {
   it.each([
@@ -118,5 +120,80 @@ describe('pushResultToOutcome', () => {
     ],
   ])('%s', (_, result, expected) => {
     expect(pushResultToOutcome(result)).toEqual(expected);
+  });
+});
+
+describe('acknowledge', () => {
+  const ref = (code: string, retryable: boolean) => ({
+    type: 'api',
+    reason: { code, message: code, retryable },
+  });
+
+  it.each<[string, Elb.PushResult, 'ack' | 'retry' | 'reject']>([
+    ['invalid input', { ok: false, invalid: true }, 'reject'],
+    ['a delivered event', { ok: true, done: { api: { type: 'api' } } }, 'ack'],
+    [
+      'a queued event',
+      {
+        ok: true,
+        queued: {
+          api: { type: 'api', reason: { code: 'batch', message: 'batched' } },
+        },
+      },
+      'ack',
+    ],
+    [
+      'deterministic failures only (ruling 1)',
+      {
+        ok: false,
+        failed: { a: ref('config', false), b: ref('transport', false) },
+      },
+      'ack',
+    ],
+    [
+      'one retryable failure among deterministic ones',
+      {
+        ok: false,
+        failed: { a: ref('config', false), b: ref('timeout', true) },
+      },
+      'retry',
+    ],
+    [
+      'a retryable reason without a failed entry',
+      {
+        ok: false,
+        reason: { code: 'queue-full', message: 'full', retryable: true },
+      },
+      'retry',
+    ],
+    [
+      'a deterministic reason without a failed entry',
+      {
+        ok: false,
+        reason: {
+          code: 'mapping',
+          message: 'condition threw',
+          retryable: false,
+        },
+      },
+      'ack',
+    ],
+    [
+      'an error text that names queue-full while the reason is mapping (strings are never read)',
+      {
+        ok: false,
+        error: 'queue-full',
+        reason: { code: 'mapping', message: 'queue-full', retryable: false },
+      },
+      'ack',
+    ],
+    ['a failure without any reason', { ok: false }, 'retry'],
+    [
+      'a failed entry without a reason',
+      { ok: false, failed: { a: { type: 'api' } } },
+      'retry',
+    ],
+  ])('%s', (_, result, expected) => {
+    expect(acknowledge(result)).toBe(expected);
   });
 });

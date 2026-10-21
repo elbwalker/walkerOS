@@ -1,4 +1,4 @@
-import type { Logger, SendDataValue } from '@walkeros/core';
+import type { SendDataValue } from '@walkeros/core';
 import type { Settings, Destination, Env } from './types';
 import { isDefined } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
@@ -10,14 +10,11 @@ async function send(
   body: SendDataValue,
   settings: Settings,
   env: Env | undefined,
-  logger?: Logger.Instance,
 ): Promise<void> {
   const { url, headers, method, timeout } = settings;
   const sendServerFn = env?.sendServer || sendServer;
 
-  const response = await sendServerFn(url, body, { headers, method, timeout });
-
-  logger?.debug('API destination response', { ok: response?.ok });
+  await sendServerFn(url, body, { headers, method, timeout });
 }
 
 export const destinationAPI: Destination = {
@@ -44,7 +41,7 @@ export const destinationAPI: Destination = {
       eventName: event.name,
     });
 
-    await send(body, { ...settings, url }, env, logger);
+    await send(body, { ...settings, url }, env);
   },
 
   async pushBatch(batch, { config, rule, env, logger }) {
@@ -68,7 +65,7 @@ export const destinationAPI: Destination = {
       events: items.length,
     });
 
-    await send(JSON.stringify(payload), { ...settings, url }, env, logger);
+    await send(JSON.stringify(payload), { ...settings, url }, env);
   },
 };
 

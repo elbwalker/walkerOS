@@ -4,6 +4,7 @@ import {
   createMockContext,
   createMockLogger,
   getEvent,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -20,7 +21,7 @@ describe('push', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSendServer.mockResolvedValue({ ok: true, data: {} });
+    mockSendServer.mockResolvedValue({ data: {} });
     testEnv = clone(env.push);
     testEnv.sendServer = mockSendServer;
     destination = jest.requireActual('../').default;
@@ -180,12 +181,14 @@ describe('push', () => {
     );
   });
 
-  test('throws when sendServer returns ok: false', async () => {
-    mockSendServer.mockResolvedValue({ ok: false, error: 'Bad Request' });
+  test('throws when sendServer rejects', async () => {
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 400', { code: 'transport', status: 400 }),
+    );
     const event = getEvent('product view', { user: { id: 'u1' } });
     await expect(
       pushWith(event, { settings: { apiKey, apiSecret } }),
-    ).rejects.toThrow(/mParticle API error/);
+    ).rejects.toMatchObject({ code: 'transport', status: 400 });
   });
 
   test('rule.name overrides event name for custom_event', async () => {

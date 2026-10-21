@@ -35,7 +35,6 @@ describe('Step Examples', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: { events_received: 1, messages: [], fbtrace_id: 'abc' },
     });
   });

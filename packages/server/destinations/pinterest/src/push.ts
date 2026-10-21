@@ -102,17 +102,9 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = env?.sendServer || sendServer;
-  const result = await sendServerFn(endpoint, JSON.stringify(body), {
+  await sendServerFn(endpoint, JSON.stringify(body), {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-
-  logger.debug('Pinterest API response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`Pinterest API error: ${JSON.stringify(result)}`);
-  }
 };
 
 const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];

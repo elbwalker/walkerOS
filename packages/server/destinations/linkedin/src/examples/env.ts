@@ -18,7 +18,6 @@ async function mockSendServer(
   options?: SendServerOptions,
 ): Promise<SendResponse> {
   return {
-    ok: true,
     data: {},
   };
 }

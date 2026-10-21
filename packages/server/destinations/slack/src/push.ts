@@ -1,4 +1,3 @@
-import { isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import type { Mapping, PushFn, Settings, SlackClientMock } from './types';
 import { buildMessage } from './message';
@@ -39,14 +38,7 @@ async function pushWebhook(
   };
 
   const send = env?.sendServer || sendServer;
-  const result = await send(
-    settings.webhookUrl as string,
-    JSON.stringify(body),
-  );
-
-  if (isObject(result) && result.ok === false) {
-    logger.warn(`Slack webhook error: ${JSON.stringify(result)}`);
-  }
+  await send(settings.webhookUrl as string, JSON.stringify(body));
 }
 
 async function pushWebApi(

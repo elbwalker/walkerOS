@@ -1,4 +1,4 @@
-import { StepError, toFailureReason } from '../stepError';
+import { networkErrorMessage, StepError, toFailureReason } from '../stepError';
 
 describe('StepError', () => {
   it('carries code, status, retryable and the response body', () => {
@@ -87,5 +87,36 @@ describe('StepError', () => {
     expect(toFailureReason(new Error('a'.repeat(500))).message).toHaveLength(
       300,
     );
+  });
+});
+
+describe('networkErrorMessage', () => {
+  const withCause = (cause: unknown) =>
+    new TypeError('fetch failed', { cause });
+
+  it.each<[string, unknown, string]>([
+    [
+      'a cause code, never the cause message',
+      withCause(
+        Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:9?key=s'), {
+          code: 'ECONNREFUSED',
+        }),
+      ),
+      'fetch failed (ECONNREFUSED)',
+    ],
+    [
+      'a cause without a code',
+      withCause(new Error('socket hang up')),
+      'fetch failed',
+    ],
+    [
+      'a cause code that is not a string',
+      withCause({ code: 13 }),
+      'fetch failed',
+    ],
+    ['no cause', new TypeError('Failed to fetch'), 'Failed to fetch'],
+    ['a thrown value that is not an error', 'refused', 'Network error'],
+  ])('%s', (_, error, expected) => {
+    expect(networkErrorMessage(error)).toBe(expected);
   });
 });

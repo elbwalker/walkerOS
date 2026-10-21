@@ -19,7 +19,7 @@ describe('Step Examples', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSendServer.mockResolvedValue({ ok: true, data: {} });
+    mockSendServer.mockResolvedValue({ data: {} });
   });
 
   it.each(Object.entries(examples.step))('%s', async (_name, example) => {

@@ -19,7 +19,6 @@ async function mockSendServer(
 ): Promise<SendResponse> {
   // Simulate successful TikTok API response
   return {
-    ok: true,
     data: {
       code: 0,
       message: 'OK',
