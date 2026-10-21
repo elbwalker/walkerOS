@@ -5,6 +5,7 @@ import { conformance } from '../conformance';
 import { fixtures } from './fixtures';
 import {
   batching,
+  batchingByDefault,
   conditional,
   echoing,
   floating,
@@ -12,6 +13,7 @@ import {
   loud,
   rawHttps,
   swallowing,
+  swallowingByDefault,
 } from './fixture-package/src';
 import {
   dropping,
@@ -85,6 +87,24 @@ describe('conformance kit', () => {
   it('fails a batching destination that swallows a failed chunk (item 9)', async () => {
     await expect(
       conformance('destination', swallowing, { profile: 'http', ...fixtures }),
+    ).rejects.toMatchObject({ items: [9] });
+  });
+
+  it('runs the push path of a destination that batches by default, and item 9 on its batch', async () => {
+    await expect(
+      conformance('destination', batchingByDefault, {
+        profile: 'http',
+        ...fixtures,
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('still fails item 9 for a default batch that hides a failed entry', async () => {
+    await expect(
+      conformance('destination', swallowingByDefault, {
+        profile: 'http',
+        ...fixtures,
+      }),
     ).rejects.toMatchObject({ items: [9] });
   });
 

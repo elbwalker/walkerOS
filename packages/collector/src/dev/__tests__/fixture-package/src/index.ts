@@ -141,3 +141,17 @@ export const loud: Destination.Instance<Types> = {
     }
   },
 };
+
+/** Batches by default (shared rule 7) and reports the failed entries. */
+export const batchingByDefault: Destination.Instance<Types> = {
+  ...batching,
+  type: 'batching-by-default',
+  config: { batch: { size: 15, wait: 10_000 } },
+};
+
+/** Batches by default and hides a failed entry (item 9). */
+export const swallowingByDefault: Destination.Instance<Types> = {
+  ...swallowing,
+  type: 'swallowing-by-default',
+  config: { batch: { size: 15, wait: 10_000 } },
+};

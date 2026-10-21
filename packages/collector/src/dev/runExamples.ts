@@ -381,6 +381,9 @@ export function openDestination(
       [STEP_ID]: {
         code: instrumentDestination(step, setPhase, setup),
         config: {
+          // The push path: a destination's default `config.batch` is off
+          // unless the run sets its own batch (item 9 tests pushBatch).
+          batch: undefined,
           ...setup.config,
           ...(setup.settings !== undefined
             ? { settings: settingsOf(setup) }
