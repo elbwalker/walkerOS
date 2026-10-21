@@ -155,3 +155,18 @@ export const swallowingByDefault: Destination.Instance<Types> = {
   type: 'swallowing-by-default',
   config: { batch: { size: 15, wait: 10_000 } },
 };
+
+/**
+ * A silent group rule: no default call, a group call when the event names a
+ * group (in data or custom), nothing at all without one (a declared skip).
+ */
+export const grouping: Destination.Instance<Types> = {
+  ...good,
+  type: 'grouping',
+  push: async (event, context) => {
+    if (!context.rule?.silent) return good.push(event, context);
+    const group = event.data.group ?? event.custom.group;
+    if (typeof group === 'string')
+      await post(requireUrl(context.config), JSON.stringify({ group }));
+  },
+};

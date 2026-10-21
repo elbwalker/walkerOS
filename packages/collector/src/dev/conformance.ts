@@ -669,13 +669,22 @@ async function destinationItem(
       return batchProblem(step, ctx);
 
     case 10:
-      return strippedProblem(ctx, async (target, event) => {
-        const run = await runDestination(step, ctx, target, base, event);
-        return {
-          step: run,
-          delivered: Boolean(run.result.done?.[STEP_ID]) && !run.effects.length,
-        };
-      });
+      return strippedProblem(
+        ctx,
+        async (target, event) => {
+          const run = await runDestination(step, ctx, target, base, event);
+          return {
+            step: run,
+            delivered:
+              Boolean(run.result.done?.[STEP_ID]) && !run.effects.length,
+          };
+        },
+        (example) =>
+          checkDestinationExample(step, example, {
+            settings: options.settings,
+            env: ctx.runEnv ? options.env : undefined,
+          }),
+      );
 
     case 11: {
       const silent = Object.entries(options.examples).filter(
@@ -818,6 +827,7 @@ async function strippedProblem(
     target: EventExample,
     event: WalkerOS.DeepPartialEvent,
   ) => Promise<{ step: Step; delivered: boolean }>,
+  confirm: (example: Flow.StepExample) => Promise<string[]>,
 ): Promise<Problem> {
   // An example whose own out is [] sends nothing by design (silent, ignore).
   const sending = ctx.events.filter(({ example }) => sends(example));
@@ -827,38 +837,61 @@ async function strippedProblem(
     const { user, data, globals, context, ...stripped } = target.event;
     const { step, delivered } = await run(target, stripped);
     if (failedCode(step) === 'missing-input') {
-      if (!declaresMissingInput(ctx.options.examples, stripped))
+      if (!declaredFor(ctx, target, stripped, 'missing-input'))
         problems.push(
           `example ${target.name} fails missing-input without an out: [] example for that shape with a description`,
         );
-    } else if (delivered)
+      continue;
+    }
+    if (!delivered) continue;
+    // Recipe R-d's other answer: a declared skip for that shape, confirmed.
+    const skip = declaredFor(ctx, target, stripped, 'skip');
+    if (!skip) {
       problems.push(
-        `example ${target.name} without user, data, globals and context counts as delivered but nothing was sent`,
+        `example ${target.name} without user, data, globals and context counts as delivered but nothing was sent (declare missing-input, or a skip: public: false, the same rule, out: [], a description)`,
       );
+      continue;
+    }
+    for (const problem of await confirm(skip.example))
+      problems.push(`declared skip ${skip.name}: ${problem}`);
   }
   return problems.length ? problems.join(', ') : undefined;
 }
 
 const SHAPE_KEYS = ['user', 'data', 'globals', 'context'];
 
-function declaresMissingInput(
-  examples: Flow.StepExamples,
+/**
+ * The example a package declares for a stripped event's shape (an event `in`
+ * of that name without user, data, globals and context, `out: []`, a
+ * description): with `outcome.code: 'missing-input'` (a reported failure),
+ * or as a declared skip (`public: false`, no outcome, the target's rule).
+ */
+function declaredFor(
+  ctx: Context,
+  target: EventExample,
   stripped: WalkerOS.DeepPartialEvent,
-): boolean {
-  return Object.values(examples).some(
-    (example) =>
+  as: 'missing-input' | 'skip',
+): { name: string; example: Flow.StepExample } | undefined {
+  const found = Object.entries(ctx.options.examples).find(
+    ([, example]) =>
       isEvent(example.in) &&
       example.in.name === stripped.name &&
-      example.out?.length === 0 &&
+      Array.isArray(example.out) &&
+      example.out.length === 0 &&
       Boolean(example.description) &&
-      example.outcome?.code === 'missing-input' &&
       SHAPE_KEYS.every((key) => {
         const value = isObject(example.in) ? example.in[key] : undefined;
         return (
           value === undefined || (isObject(value) && !Object.keys(value).length)
         );
-      }),
+      }) &&
+      (as === 'missing-input'
+        ? example.outcome?.code === 'missing-input'
+        : example.public === false &&
+          !example.outcome &&
+          isEqual(example.mapping, target.example.mapping)),
   );
+  return found && { name: found[0], example: found[1] };
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1015,13 +1048,29 @@ async function transformerItem(
 
     case 10:
       if (!ctx.events.length) return ingestInputProblem(step, ctx);
-      return strippedProblem(ctx, async (_, stripped) => {
-        const run = await runTransformer(step, ctx, base, stripped);
-        return {
-          step: run,
-          delivered: run.result.ok && !run.effects.length,
-        };
-      });
+      return strippedProblem(
+        ctx,
+        async (_, stripped) => {
+          const run = await runTransformer(step, ctx, base, stripped);
+          return {
+            step: run,
+            delivered: run.result.ok && !run.effects.length,
+          };
+        },
+        (example) =>
+          runExamples(
+            'transformer',
+            step,
+            { skip: example },
+            {
+              settings: options.settings,
+              env: options.env,
+            },
+          ).then(
+            () => [],
+            (error: unknown) => [textOf(error)],
+          ),
+      );
   }
   return undefined;
 }

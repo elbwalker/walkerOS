@@ -10,6 +10,7 @@ import {
   echoing,
   floating,
   good,
+  grouping,
   loud,
   rawHttps,
   swallowing,
@@ -106,6 +107,75 @@ describe('conformance kit', () => {
         ...fixtures,
       }),
     ).rejects.toMatchObject({ items: [9] });
+  });
+
+  describe('item 10 accepts a declared skip for a silent group rule', () => {
+    const groupRule = { silent: true };
+    const groupWithoutData: Flow.StepExample = {
+      public: false,
+      description: 'A group rule without a group sends nothing.',
+      in: { name: 'company update' },
+      mapping: groupRule,
+      out: [],
+    };
+    const groupExamples: Flow.StepExamples = {
+      ...fixtures.examples,
+      groupWithData: {
+        in: { name: 'company update', data: { group: 'acme' } },
+        mapping: groupRule,
+        out: [
+          [
+            'fetch',
+            'https://127.0.0.1:9/e',
+            { method: 'POST', body: '{"group":"acme"}' },
+          ],
+        ],
+      },
+      groupWithoutData,
+    };
+
+    it('passes with the declared skip, confirmed by its own run', async () => {
+      await expect(
+        conformance('destination', grouping, {
+          profile: 'http',
+          ...fixtures,
+          examples: groupExamples,
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('fails item 10 without the declared skip', async () => {
+      const { groupWithoutData: _, ...undeclared } = groupExamples;
+      await expect(
+        conformance('destination', grouping, {
+          profile: 'http',
+          ...fixtures,
+          examples: undeclared,
+        }),
+      ).rejects.toMatchObject({ items: [10] });
+    });
+
+    // The declared skip carries the silent rule, so item 11 runs it too.
+    it('fails items 10 and 11 when the declared skip sends when it runs', async () => {
+      await expect(
+        conformance('destination', grouping, {
+          profile: 'http',
+          ...fixtures,
+          examples: {
+            ...groupExamples,
+            groupWithoutData: {
+              ...groupWithoutData,
+              in: { name: 'company update', custom: { group: 'acme' } },
+            },
+          },
+        }),
+      ).rejects.toMatchObject({
+        items: [10, 11],
+        message: expect.stringContaining(
+          'declared skip groupWithoutData: out differs',
+        ),
+      });
+    });
   });
 
   it('fails a destination without a silent example on item 11 only', async () => {
