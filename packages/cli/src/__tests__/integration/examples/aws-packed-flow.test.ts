@@ -97,7 +97,7 @@ function startFakeAws(requests: FakeRequest[]): Promise<http.Server> {
 const RUNNER = `
 const { default: factory } = await import(process.argv[2]);
 const { collector } = await factory({});
-await collector.push({ name: 'order complete', data: { id: 'o-1', total: 42 } });
+await collector.push({ name: 'order complete', data: { id: 'o-1', value: 42 } });
 await collector.command('shutdown');
 process.stdout.write(JSON.stringify(collector.status.destinations));
 `;
@@ -254,7 +254,7 @@ describe('packed AWS destinations in a bundled JSON flow', () => {
     const record: unknown = JSON.parse(data);
     expect(record).toMatchObject({
       name: 'order complete',
-      data: { id: 'o-1', total: 42 },
+      data: { id: 'o-1', value: 42 },
     });
 
     // SNS: the same event as the message, to the configured topic.

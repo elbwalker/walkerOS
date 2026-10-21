@@ -246,7 +246,7 @@ export const purchase: Flow.StepExample = {
     data: {
       map: {
         transaction_id: 'data.id',
-        value: 'data.total',
+        value: 'data.value',
         currency: { key: 'data.currency', value: 'EUR' },
       },
     },

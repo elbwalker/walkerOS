@@ -109,7 +109,7 @@ describe('push', () => {
   test('uses commerce_event when mapping.eventType is commerce_event', async () => {
     const event = getEvent('order complete', {
       timestamp: 1700000300000,
-      data: { id: 'ORD-1', total: 99.99, currency: 'USD' },
+      data: { id: 'ORD-1', value: 99.99, currency: 'USD' },
       user: { id: 'u1' },
     });
     const config: Config = {
@@ -130,7 +130,7 @@ describe('push', () => {
                     map: {
                       action: { value: 'purchase' },
                       transaction_id: 'data.id',
-                      total_amount: 'data.total',
+                      total_amount: 'data.value',
                     },
                   },
                 },

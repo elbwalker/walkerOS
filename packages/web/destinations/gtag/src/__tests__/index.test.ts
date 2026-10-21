@@ -4,6 +4,7 @@ import type { Settings, Rule, Env } from '../types';
 import { type Collector } from '@walkeros/core';
 import {
   clone,
+  createEvent,
   createMockContext,
   createMockLogger,
   getEvent,
@@ -611,7 +612,10 @@ describe('Unified Gtag Destination', () => {
         });
 
         // Call a regular event
-        const event = getEvent('button click', { data: { id: 'test-btn' } });
+        const event = createEvent({
+          name: 'button click',
+          data: { id: 'test-btn' },
+        });
         destination.push(
           event,
           createMockContext({

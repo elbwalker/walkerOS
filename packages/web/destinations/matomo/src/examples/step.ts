@@ -1,6 +1,6 @@
 import type { Flow } from '@walkeros/core';
 import type { Settings } from '../types';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * Matomo step example. The test runner registers the destination with the
@@ -135,7 +135,7 @@ export const ecommerceOrder: StepExample = {
         {
           map: {
             orderId: 'data.id',
-            grandTotal: 'data.total',
+            grandTotal: 'data.value',
             tax: 'data.taxes',
             shipping: 'data.shipping',
           },
@@ -288,7 +288,8 @@ export const siteSearch: StepExample = {
   title: 'Site search',
   description:
     'A search submit fires Matomo trackSiteSearch with the keyword, category, and number of results.',
-  in: getEvent('search submit', {
+  in: createEvent({
+    name: 'search submit',
     timestamp: 1700000405,
     data: { query: 'shoes', category: 'products', resultsCount: 42 },
   }),

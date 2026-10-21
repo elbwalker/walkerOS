@@ -509,7 +509,7 @@ const teaching = {
     note: 'examples are the contract of a step: this in gives this out, checked by simulation.',
     docs: [{ page: 'getting-started/flow/step-examples' }],
     cli: [
-      `walkeros push ${FILE} -f web -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"}}' --simulate destination.ga4`,
+      `walkeros push ${FILE} -f web -e '{"name":"order complete","data":{"id":"ORD-100","value":149.8,"currency":"EUR"}}' --simulate destination.ga4`,
     ],
   },
   'example-title': {
@@ -637,7 +637,7 @@ const teaching = {
     chapter: 'mapping',
     level: 'intermediate',
     useCases: [],
-    note: 'fn computes a value from the event, here the total rounded to cents. fn and key are alternatives: next to a key, fn never runs.',
+    note: 'fn computes a value from the event, here the order value rounded to cents. fn and key are alternatives: next to a key, fn never runs.',
     docs: [],
   },
   'value-loop': {
@@ -693,7 +693,7 @@ const teaching = {
     chapter: 'mapping',
     level: 'intermediate',
     useCases: [],
-    note: 'A rule condition skips the rule, here for orders without a total.',
+    note: 'A rule condition skips the rule, here for orders without a value.',
     docs: [],
   },
   'rule-settings': {
@@ -1530,7 +1530,6 @@ const teaching = {
     useCases: ['script-serving'],
     note: 'walker.js is served first party from the server flow.',
     docs: [{ page: 'transformers/file' }],
-    example: { step: 'file', name: 'walkerJs' },
     cli: [
       `walkeros bundle ${FILE} -f web -o packages/cli/examples/shared/walker.js`,
     ],
@@ -2212,7 +2211,7 @@ export const flowCompleteCli: CliEntry[] = [
     chapter: 'chains-routing',
   },
   {
-    command: `walkeros push ${FILE} -f web -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"}}' --simulate destination.ga4`,
+    command: `walkeros push ${FILE} -f web -e '{"name":"order complete","data":{"id":"ORD-100","value":149.8,"currency":"EUR"}}' --simulate destination.ga4`,
     chapter: 'mapping',
   },
   {

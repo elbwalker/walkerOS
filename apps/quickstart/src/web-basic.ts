@@ -95,7 +95,7 @@ export async function setupWebBasic(): Promise<{
                 data: {
                   map: {
                     transaction_id: 'data.id',
-                    value: 'data.total',
+                    value: 'data.value',
                     currency: { key: 'data.currency', value: 'EUR' },
                     tax: 'data.tax',
                     shipping: 'data.shipping',

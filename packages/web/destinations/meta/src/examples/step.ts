@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent, isObject } from '@walkeros/core';
 
 /**
  * Destination bootstrap.
@@ -32,7 +32,7 @@ export const purchase: Flow.StepExample = {
     name: 'Purchase',
     data: {
       map: {
-        value: 'data.total',
+        value: 'data.value',
         currency: { value: 'EUR' },
         contents: {
           loop: [
@@ -233,7 +233,8 @@ export const customEventWithTrackCustom: Flow.StepExample = {
   title: 'Custom event',
   description:
     'A video complete event is sent as a Meta Pixel trackCustom call with a custom event name and parameters.',
-  in: getEvent('video complete', {
+  in: createEvent({
+    name: 'video complete',
     timestamp: 1700000005,
     id: '1700000005-gr0up-1',
     data: { video_id: 'v1d30', duration: 120 },

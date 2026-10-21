@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -71,14 +71,14 @@ export const mappedData: CustomerIoStepExample = {
   in: getEvent('order complete', {
     timestamp: 1700000102,
     user: { id: 'us3r', session: 's3ss10n' },
-    data: { id: '0rd3r1d', total: 555, currency: 'EUR' },
+    data: { id: '0rd3r1d', value: 555, currency: 'EUR' },
   }),
   mapping: {
     name: 'purchase',
     data: {
       map: {
         order_id: 'data.id',
-        value: 'data.total',
+        value: 'data.value',
         currency: 'data.currency',
       },
     },
@@ -163,7 +163,8 @@ export const userLoginIdentify: CustomerIoStepExample = {
   title: 'User login identify',
   description:
     'A user login triggers only a Customer.io identify call with profile attributes, skipping the track.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000105,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -237,7 +238,8 @@ export const destroyPerson: CustomerIoStepExample = {
   title: 'Destroy person',
   description:
     'A user delete event permanently removes the person from Customer.io via trackClient.destroy.',
-  in: getEvent('user delete', {
+  in: createEvent({
+    name: 'user delete',
     timestamp: 1700000107,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
@@ -257,7 +259,8 @@ export const suppressPerson: CustomerIoStepExample = {
   title: 'Suppress person',
   description:
     'A user suppress event stops messaging for the person without deleting their profile data.',
-  in: getEvent('user suppress', {
+  in: createEvent({
+    name: 'user suppress',
     timestamp: 1700000108,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
@@ -277,7 +280,8 @@ export const unsuppressPerson: CustomerIoStepExample = {
   title: 'Unsuppress person',
   description:
     'A user unsuppress event resumes messaging for a previously suppressed Customer.io profile.',
-  in: getEvent('user unsuppress', {
+  in: createEvent({
+    name: 'user unsuppress',
     timestamp: 1700000109,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
@@ -296,7 +300,8 @@ export const unsuppressPerson: CustomerIoStepExample = {
  */
 export const wildcardIgnored: CustomerIoStepExample = {
   public: false,
-  in: getEvent('debug noise', {
+  in: createEvent({
+    name: 'debug noise',
     timestamp: 1700000110,
     user: { id: 'us3r', session: 's3ss10n' },
   }),

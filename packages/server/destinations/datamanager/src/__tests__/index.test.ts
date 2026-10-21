@@ -276,7 +276,7 @@ describe('Server Destination Data Manager', () => {
     test('sends event to Data Manager API', async () => {
       const event = getEvent('order complete');
       (event.data as Record<string, unknown>).id = 'ORDER-123';
-      (event.data as Record<string, unknown>).total = 99.99;
+      (event.data as Record<string, unknown>).value = 99.99;
       (event.data as Record<string, unknown>).currency = 'USD';
 
       const config: Config = {

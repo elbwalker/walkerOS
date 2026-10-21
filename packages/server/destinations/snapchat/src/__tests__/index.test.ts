@@ -2,10 +2,11 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import {
   clone,
+  createEvent,
   createIngest,
-  getEvent,
   createMockContext,
   createMockLogger,
+  getEvent,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -167,7 +168,7 @@ describe('Server Destination Snapchat', () => {
     const dest = jest.requireActual('../').default;
     const event = getEvent('order complete', {
       timestamp: 1700000900000,
-      data: { id: 'ORD-1', total: 100, currency: 'EUR' },
+      data: { id: 'ORD-1', value: 100, currency: 'EUR' },
       source: {
         type: 'browser',
         platform: 'web',
@@ -187,7 +188,7 @@ describe('Server Destination Snapchat', () => {
                 map: {
                   custom_data: {
                     map: {
-                      value: 'data.total',
+                      value: 'data.value',
                       currency: 'data.currency',
                       transaction_id: 'data.id',
                     },
@@ -257,7 +258,8 @@ describe('Server Destination Snapchat', () => {
   });
 
   test('user data is hashed', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@example.com' },
     });
     const config: Config = {
@@ -285,7 +287,8 @@ describe('Server Destination Snapchat', () => {
   });
 
   test('user_data mapping resolves from settings', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'u@example.com', id: 'user-123' },
     });
     const config: Config = {

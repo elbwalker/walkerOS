@@ -92,7 +92,7 @@ export const customTransform: Flow.StepExample = {
     data: {
       map: {
         order_id: 'data.id',
-        amount: 'data.total',
+        amount: 'data.value',
         tax: 'data.taxes',
         shipping_cost: 'data.shipping',
         currency: 'data.currency',

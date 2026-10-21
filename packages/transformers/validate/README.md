@@ -48,7 +48,7 @@ The same step in a bundled flow, referencing a named contract from the top-level
       "events": {
         "order": {
           "complete": {
-            "properties": { "data": { "required": ["total", "currency"] } }
+            "properties": { "data": { "required": ["value", "currency"] } }
           }
         }
       }

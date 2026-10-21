@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * Meta Conversions API step examples.
@@ -42,7 +42,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'c1d2e3f4a5b60001',
     timestamp: 1700000900000,
-    data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
+    data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       { entity: 'product', data: { id: 'SKU-A1', price: 129.99, quantity: 2 } },
     ],
@@ -59,7 +59,7 @@ export const purchase: Flow.StepExample = {
       map: {
         order_id: 'data.id',
         currency: { key: 'data.currency', value: 'EUR' },
-        value: 'data.total',
+        value: 'data.value',
         contents: {
           loop: [
             'nested',
@@ -116,7 +116,8 @@ export const lead: Flow.StepExample = {
   title: 'Form submit',
   description:
     'A form submission is forwarded to Meta CAPI as a custom event with the event source URL.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     id: 'c1d2e3f4a5b60002',
     timestamp: 1700000901000,
     data: { type: 'newsletter' },
@@ -156,7 +157,7 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'c1d2e3f4a5b60003',
     timestamp: 1700000902000,
-    data: { id: 'ORD-700', total: 89.99, currency: 'USD' },
+    data: { id: 'ORD-700', value: 89.99, currency: 'USD' },
     user: { id: 'cust-42' },
     context: { fbclid: ['abc123xyz', 0] },
     source: {
@@ -170,7 +171,7 @@ export const purchaseWithClickAttribution: Flow.StepExample = {
     data: {
       map: {
         currency: { key: 'data.currency', value: 'EUR' },
-        value: 'data.total',
+        value: 'data.value',
         order_id: 'data.id',
         user_data: {
           map: {

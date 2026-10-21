@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -33,7 +33,7 @@ export const defaultEventForwarding: AmplitudeStepExample = {
  */
 export const wildcardIgnored: AmplitudeStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -112,7 +112,8 @@ export const userLoginIdentify: AmplitudeStepExample = {
   title: 'User login identify',
   description:
     'A user login maps to amplitude.identify with set, setOnce, and add operations while the default track call is skipped.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000105,
     data: {
       user_id: 'new-user-123',
@@ -183,7 +184,8 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
   title: 'Subscription revenue',
   description:
     'A subscription renewal fires a single amplitude.revenue call with productId, price, and a currency fallback.',
-  in: getEvent('subscription renew', {
+  in: createEvent({
+    name: 'subscription renew',
     timestamp: 1700000107,
     data: {
       plan_id: 'plan-pro',
@@ -285,7 +287,7 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
         data_currency: 'EUR',
         data_shipping: 5.22,
         data_taxes: 73.76,
-        data_total: 555,
+        data_value: 555,
         globals_pagegroup: 'shop',
       },
     ],
@@ -300,7 +302,8 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
   title: 'Group assignment',
   description:
     'A company update assigns the user to a group and sets group properties via setGroup plus groupIdentify.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000109,
     data: {
       company: 'Acme',

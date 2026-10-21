@@ -33,7 +33,7 @@ export const orderEvent: Flow.StepExample = {
     method: 'POST',
     body: {
       name: 'order complete',
-      data: { id: 'ORD-700', total: 99.99, currency: 'EUR' },
+      data: { id: 'ORD-700', value: 99.99, currency: 'EUR' },
     },
     headers: { 'content-type': 'application/json' },
   },
@@ -42,7 +42,7 @@ export const orderEvent: Flow.StepExample = {
       'elb',
       {
         name: 'order complete',
-        data: { id: 'ORD-700', total: 99.99, currency: 'EUR' },
+        data: { id: 'ORD-700', value: 99.99, currency: 'EUR' },
       },
     ],
   ],

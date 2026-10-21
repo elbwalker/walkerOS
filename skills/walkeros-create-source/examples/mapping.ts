@@ -29,7 +29,7 @@ export const defaultMapping: Mapping.Rules = {
       data: {
         map: {
           id: 'properties.transaction_id',
-          total: 'properties.value',
+          value: 'properties.value',
           currency: 'properties.currency',
         },
       },

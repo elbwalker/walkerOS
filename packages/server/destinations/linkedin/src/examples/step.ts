@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * LinkedIn Conversions API step examples.
@@ -40,7 +40,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'ev-1700000900000',
     timestamp: 1700000900000,
-    data: { total: 249.99, currency: 'EUR' },
+    data: { value: 249.99, currency: 'EUR' },
     user: { email: 'jane@example.com' },
     source: { type: 'express', platform: 'server' },
   }),
@@ -48,7 +48,7 @@ export const purchase: Flow.StepExample = {
     settings: {
       conversion: {
         map: {
-          value: 'data.total',
+          value: 'data.value',
           currency: { key: 'data.currency', value: 'EUR' },
         },
       },
@@ -90,7 +90,8 @@ export const lead: Flow.StepExample = {
   title: 'Lead',
   description:
     'A form submission is posted to LinkedIn as a conversion with the SHA-256 hashed email as the user identifier.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     id: 'ev-1700000901000',
     timestamp: 1700000901000,
     user: { email: 'user@example.com' },
@@ -132,7 +133,7 @@ export const purchaseWithLiFatId: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'ev-1700000902000',
     timestamp: 1700000902000,
-    data: { total: 89.99, currency: 'USD' },
+    data: { value: 89.99, currency: 'USD' },
     user: { email: 'buyer@co.com' },
     context: { li_fat_id: ['abc123-fat-id', 0] },
     source: { type: 'express', platform: 'server' },
@@ -141,7 +142,7 @@ export const purchaseWithLiFatId: Flow.StepExample = {
     settings: {
       conversion: {
         map: {
-          value: 'data.total',
+          value: 'data.value',
           currency: { key: 'data.currency', value: 'USD' },
         },
       },

@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -60,7 +60,8 @@ export const customTable: SqliteStepExample = {
   title: 'Custom table',
   description:
     'A destination-level table setting inserts events into a custom SQLite table with the same column layout.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     timestamp: 1700000101,
     id: 'evt-2',
     user: { session: 'sess-99', id: '' },
@@ -112,7 +113,7 @@ export const orderComplete: SqliteStepExample = {
     timestamp: 1700000102,
     id: 'evt-3',
     user: { session: '', id: '' },
-    data: { id: 'ORD-1', total: 99 },
+    data: { id: 'ORD-1', value: 99 },
     source: { type: 'collector', schema: '4' },
     globals: {},
     consent: {},
@@ -131,7 +132,7 @@ export const orderComplete: SqliteStepExample = {
         '',
         '',
         '',
-        JSON.stringify({ id: 'ORD-1', total: 99 }),
+        JSON.stringify({ id: 'ORD-1', value: 99 }),
         JSON.stringify({}),
         JSON.stringify({}),
       ],
@@ -150,7 +151,7 @@ export const tableOverride: SqliteStepExample = {
     timestamp: 1700000103,
     id: 'evt-4',
     user: { session: '', id: '' },
-    data: { id: 'ORD-2', total: 42 },
+    data: { id: 'ORD-2', value: 42 },
     source: { type: 'collector', schema: '4' },
     globals: {},
     consent: {},
@@ -174,7 +175,7 @@ export const tableOverride: SqliteStepExample = {
         '',
         '',
         '',
-        JSON.stringify({ id: 'ORD-2', total: 42 }),
+        JSON.stringify({ id: 'ORD-2', value: 42 }),
         JSON.stringify({}),
         JSON.stringify({}),
       ],
@@ -187,7 +188,8 @@ export const tableOverride: SqliteStepExample = {
  */
 export const ignoredEvent: SqliteStepExample = {
   public: false,
-  in: getEvent('debug noise', {
+  in: createEvent({
+    name: 'debug noise',
     timestamp: 1700000104,
     id: 'evt-5',
     source: { type: 'collector', schema: '4' },

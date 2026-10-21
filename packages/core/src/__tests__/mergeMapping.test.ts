@@ -8,7 +8,7 @@ describe('mergeMappingRule', () => {
       map: {
         id: 'params.ep.transaction_id',
         currency: 'params.ep.currency',
-        total: 'params.epn.value',
+        value: 'params.epn.value',
       },
     },
     consent: { marketing: true },
@@ -26,7 +26,7 @@ describe('mergeMappingRule', () => {
       map: {
         id: 'params.ep.transaction_id',
         currency: 'params.ep.currency',
-        total: 'params.epn.value',
+        value: 'params.epn.value',
         coupon: 'params.ep.coupon',
       },
     });
@@ -40,7 +40,7 @@ describe('mergeMappingRule', () => {
       map: {
         id: 'params.ep.order_id',
         currency: 'params.ep.currency',
-        total: 'params.epn.value',
+        value: 'params.epn.value',
       },
     });
   });
@@ -58,7 +58,7 @@ describe('mergeMappingRule', () => {
       extend: { data: { map: { currency: null } } },
     });
     expect(result.data).toEqual({
-      map: { id: 'params.ep.transaction_id', total: 'params.epn.value' },
+      map: { id: 'params.ep.transaction_id', value: 'params.epn.value' },
     });
   });
   it('carries remove onto the merged rule', () => {
@@ -75,7 +75,7 @@ describe('mergeMappingRule', () => {
       map: {
         id: 'params.ep.transaction_id',
         currency: 'params.ep.currency',
-        total: 'params.epn.value',
+        value: 'params.epn.value',
         coupon: 'params.ep.coupon',
       },
     });
@@ -87,7 +87,7 @@ describe('mergeMappingRule', () => {
       map: {
         id: 'params.ep.transaction_id',
         currency: 'params.ep.currency',
-        total: 'params.epn.value',
+        value: 'params.epn.value',
       },
     });
   });

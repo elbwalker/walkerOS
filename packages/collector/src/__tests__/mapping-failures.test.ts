@@ -90,7 +90,7 @@ describe('mapping failures (ruling 2)', () => {
   it('(b, c, d) a throwing fn and an operator-less value drop the value only: delivered, reported, no payload', async () => {
     const { lines, logger } = errors();
     const received: unknown[] = [];
-    const order: Record<string, string> = { total: 'data.total' };
+    const order: Record<string, string> = { total: 'data.value' };
     const destination: Destination.Instance = {
       type: 'probe',
       config: {},
@@ -125,7 +125,7 @@ describe('mapping failures (ruling 2)', () => {
     });
 
     const r = await elb('order complete', {
-      total: 42,
+      value: 42,
       currency: 'EUR',
       email: 'person@example.com',
     });

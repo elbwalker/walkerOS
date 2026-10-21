@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent, isObject } from '@walkeros/core';
 
 /**
  * Snapchat Conversions API step examples.
@@ -33,7 +33,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'e1f2a3b4c5d60001',
     timestamp: 1700000900000,
-    data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
+    data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       {
         entity: 'product',
@@ -53,7 +53,7 @@ export const purchase: Flow.StepExample = {
       map: {
         custom_data: {
           map: {
-            value: 'data.total',
+            value: 'data.value',
             currency: { key: 'data.currency', value: 'EUR' },
             transaction_id: 'data.id',
             contents: {
@@ -230,7 +230,8 @@ export const lead: Flow.StepExample = {
   title: 'Sign up',
   description:
     'A newsletter form submission is sent to Snapchat as a SIGN_UP conversion with a hashed email.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     id: 'e1f2a3b4c5d60004',
     timestamp: 1700000903000,
     data: { type: 'newsletter' },

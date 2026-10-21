@@ -192,7 +192,7 @@ Target a specific step and provide input as `SourceInput`
 walkeros push flow.json --simulate source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
 
 # Simulate a destination step with an event
-walkeros push flow.json --simulate destination.gtag -e '{"entity":"order","action":"complete","data":{"total":149.97}}'
+walkeros push flow.json --simulate destination.gtag -e '{"entity":"order","action":"complete","data":{"value":149.97}}'
 ```
 
 Example output (a destination step prints its matched mapping key and every

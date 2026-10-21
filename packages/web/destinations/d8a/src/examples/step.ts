@@ -94,7 +94,7 @@ export const purchase: Flow.StepExample = {
     data: {
       map: {
         transaction_id: 'data.id',
-        value: 'data.total',
+        value: 'data.value',
         tax: 'data.taxes',
         shipping: 'data.shipping',
         currency: { key: 'data.currency', value: 'EUR' },
@@ -136,7 +136,7 @@ export const purchase: Flow.StepExample = {
         data_currency: 'EUR',
         data_shipping: 5.22,
         data_taxes: 73.76,
-        data_total: 555,
+        data_value: 555,
         context_shopping: 'complete',
         send_to: PROPERTY_ID,
       },

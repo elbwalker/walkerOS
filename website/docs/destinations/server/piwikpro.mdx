@@ -197,7 +197,7 @@ A page view, a custom event with a goal and an ecommerce order:
           {
             "map": {
               "orderId": "data.id",
-              "grandTotal": "data.total",
+              "grandTotal": "data.value",
               "tax": "data.taxes",
               "shipping": "data.shipping"
             }
@@ -212,7 +212,7 @@ A page view, a custom event with a goal and an ecommerce order:
 
 ### Goals
 
-A rule's `settings.goalId` adds a second hit, `trackGoal`, to the same request. `settings.goalValue` is a mapping value for its revenue, such as `"data.total"`. A page view rule with goal settings still sends its page view. With `silent: true`, the rule sends only the goal hit.
+A rule's `settings.goalId` adds a second hit, `trackGoal`, to the same request. `settings.goalValue` is a mapping value for its revenue, such as `"data.value"`. A page view rule with goal settings still sends its page view. With `silent: true`, the rule sends only the goal hit.
 
 A rule without `name` on an event that is not a page view sends only the goal when it has a `goalId`:
 
@@ -221,7 +221,7 @@ A rule without `name` on an event that is not a page view sends only the goal wh
   "complete": {
     "settings": {
       "goalId": "6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c",
-      "goalValue": "data.total"
+      "goalValue": "data.value"
     }
   }
 }`}

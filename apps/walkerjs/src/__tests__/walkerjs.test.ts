@@ -123,7 +123,7 @@ describe('the entry', () => {
   it('delivers calls queued before load, before the page view', async () => {
     Reflect.set(window, 'elbLayer', [
       ['walker user', { id: 'u1' }],
-      ['order complete', { total: 1 }],
+      ['order complete', { value: 1 }],
     ]);
     load();
     await settle();
@@ -137,12 +137,12 @@ describe('the entry', () => {
     setReadyState('loading');
     load();
     const elb: unknown = Reflect.get(window, 'elb');
-    if (typeof elb === 'function') elb('order complete', { total: 2 });
+    if (typeof elb === 'function') elb('order complete', { value: 2 });
     setReadyState('complete');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await settle();
     expect(named('order complete')).toEqual([
-      expect.objectContaining({ data: { total: 2 } }),
+      expect.objectContaining({ data: { value: 2 } }),
     ]);
   });
 

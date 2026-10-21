@@ -285,10 +285,13 @@ describe('docs transform: node shapes', () => {
   });
 
   test('FlowExample whose example has no out: key omitted', () => {
-    const e = entry('file-transformer');
-    const expected = findStepExample(FLOW, e.pointer, e.example);
-    assert.equal(expected.out, undefined, 'fixture assumption: no out');
-    const tree = transform('<FlowExample feature="file-transformer" />\n');
+    const e = entry('ga4-purchase');
+    const flow = structuredClone(FLOW);
+    delete findStepExample(flow, e.pointer, e.example).out;
+    const flowFile = flowFileOf('no-out', flow);
+    const tree = transform('<FlowExample feature="ga4-purchase" />\n', {
+      flowFile,
+    });
     const [step] = findAll(tree, isJsx('StepExample'));
     const parsed = JSON.parse(attr(step.node, 'example').value.value);
     assert.equal('out' in parsed, false);

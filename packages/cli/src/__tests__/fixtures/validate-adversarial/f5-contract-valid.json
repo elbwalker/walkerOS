@@ -9,9 +9,9 @@
             "properties": {
               "data": {
                 "type": "object",
-                "required": ["total"],
+                "required": ["value"],
                 "properties": {
-                  "total": {
+                  "value": {
                     "type": "number"
                   }
                 }

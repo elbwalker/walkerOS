@@ -59,7 +59,7 @@ export const completeEvent: WalkerOS.DeepPartialEvent = {
   name: 'order complete',
   data: {
     id: 'ORDER-123',
-    total: 999.99,
+    value: 999.99,
     currency: 'USD',
   },
   context: {

@@ -164,7 +164,7 @@ describe('validateEventAgainstContract', () => {
       name: 'order complete',
       entity: 'order',
       action: 'complete',
-      data: { id: 'O-1', total: 42.5 },
+      data: { id: 'O-1', value: 42.5 },
       context: { stage: ['checkout', 0] },
       timestamp: Date.now(),
     };

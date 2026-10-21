@@ -1,7 +1,7 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
+import type { Collector, StandardEventName, WalkerOS } from '@walkeros/core';
 import type { Hit, Rule, Settings } from '../types';
 import type { BuildResult } from '../hits';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { getHashServer } from '@walkeros/server-core';
 import { buildHits } from '../hits';
@@ -23,13 +23,26 @@ describe('buildHits', () => {
   });
 
   function event(
-    name: string,
+    name: StandardEventName,
     props: WalkerOS.DeepPartialEvent = {},
   ): WalkerOS.Event {
     return getEvent(name, {
       timestamp: 1700000300000,
       source: SOURCE,
       ...props,
+    });
+  }
+
+  /** An event outside the standard set, with the same timestamp and source. */
+  function otherEvent(
+    name: string,
+    props: WalkerOS.DeepPartialEvent = {},
+  ): WalkerOS.Event {
+    return createEvent({
+      timestamp: 1700000300000,
+      source: SOURCE,
+      ...props,
+      name,
     });
   }
 
@@ -91,13 +104,13 @@ describe('buildHits', () => {
     ],
     [
       'a method outside the table',
-      event('setUserId'),
+      otherEvent('setUserId'),
       { name: 'setUserId' },
       'unknown method setUserId',
     ],
     [
       'silent without a goal',
-      event('trackEvent'),
+      otherEvent('trackEvent'),
       { name: 'trackEvent', silent: true },
       'silent',
     ],
@@ -116,7 +129,11 @@ describe('buildHits', () => {
   it('skips an invalid method call with its reason', async () => {
     expect(
       await buildHits(
-        { event: event('trackEvent'), rule: { name: 'trackEvent' }, data: [] },
+        {
+          event: otherEvent('trackEvent'),
+          rule: { name: 'trackEvent' },
+          data: [],
+        },
         settings,
         collector,
       ),
@@ -132,7 +149,7 @@ describe('buildHits', () => {
     const [main, goal] = params(
       await buildHits(
         {
-          event: event('trackEvent', { data: { position: 3 } }),
+          event: otherEvent('trackEvent', { data: { position: 3 } }),
           rule: goalRule,
           data: ['promotion', 'visible'],
         },
@@ -153,7 +170,7 @@ describe('buildHits', () => {
       await buildHits(
         {
           event: event('order complete'),
-          rule: { settings: { goalId: 'g1', goalValue: 'data.total' } },
+          rule: { settings: { goalId: 'g1', goalValue: 'data.value' } },
         },
         settings,
         collector,
@@ -169,7 +186,7 @@ describe('buildHits', () => {
     const hits = params(
       await buildHits(
         {
-          event: event('trackEvent', { data: { position: 3 } }),
+          event: otherEvent('trackEvent', { data: { position: 3 } }),
           rule: { ...goalRule, silent: true },
         },
         settings,
@@ -183,7 +200,7 @@ describe('buildHits', () => {
   it('sets url to the trackLink address', async () => {
     const result = await buildHits(
       {
-        event: event('trackLink'),
+        event: otherEvent('trackLink'),
         rule: { name: 'trackLink' },
         data: ['https://example.com/a.pdf', 'download'],
       },

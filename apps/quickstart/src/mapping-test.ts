@@ -85,14 +85,14 @@ export async function testMapping(): Promise<MappingTestResult> {
                 data: {
                   map: {
                     transaction_id: 'data.id',
-                    value: 'data.total',
+                    value: 'data.value',
                     currency: { value: 'EUR' },
                     // Custom function
                     tax: {
                       fn: (value) => {
                         const event = value as WalkerOS.Event;
-                        const total = (event.data?.total as number) || 0;
-                        return total * 0.1;
+                        const orderValue = (event.data?.value as number) || 0;
+                        return orderValue * 0.1;
                       },
                     },
                   },
@@ -118,7 +118,7 @@ export async function testMapping(): Promise<MappingTestResult> {
   await elb({ name: 'product add', data: { id: 'P123', quantity: 2 } });
 
   // Order complete with calculated tax
-  await elb({ name: 'order complete', data: { id: 'ORDER-789', total: 1000 } });
+  await elb({ name: 'order complete', data: { id: 'ORDER-789', value: 1000 } });
 
   const { collector } = await startFlow({
     sources: {

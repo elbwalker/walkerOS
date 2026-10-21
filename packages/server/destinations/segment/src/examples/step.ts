@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -127,7 +127,8 @@ export const userLoginIdentify: SegmentStepExample = {
   title: 'User login identify',
   description:
     'A user login fires only Segment analytics.identify with the userId and traits, skipping the track.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000103,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -174,7 +175,8 @@ export const companyGroup: SegmentStepExample = {
   title: 'Group company',
   description:
     'A company update fires Segment analytics.group with groupId and group traits for account-level tracking.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000104,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -270,7 +272,8 @@ export const screenView: SegmentStepExample = {
   title: 'Screen view',
   description:
     'A screen view fires Segment analytics.screen with name, category, and properties for mobile app tracking.',
-  in: getEvent('screen view', {
+  in: createEvent({
+    name: 'screen view',
     timestamp: 1700000106,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -384,7 +387,8 @@ export const consentForwarding: SegmentStepExample = {
  */
 export const wildcardIgnored: SegmentStepExample = {
   public: false,
-  in: getEvent('debug noise', {
+  in: createEvent({
+    name: 'debug noise',
     timestamp: 1700000109,
     user: { id: 'us3r', session: 's3ss10n' },
   }),

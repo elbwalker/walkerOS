@@ -22,7 +22,7 @@ export const hints: Hint.Hints = {
     code: [
       {
         lang: 'sql',
-        code: "SELECT JSON_EXTRACT_SCALAR(data, '$.total') AS total FROM `project.walkeros.events` WHERE entity = 'order'",
+        code: "SELECT JSON_EXTRACT_SCALAR(data, '$.value') AS value FROM `project.walkeros.events` WHERE entity = 'order'",
       },
     ],
   },

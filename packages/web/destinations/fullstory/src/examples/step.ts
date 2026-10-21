@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -29,7 +29,7 @@ export const defaultEventForwarding: FullStoryStepExample = {
  */
 export const wildcardIgnored: FullStoryStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -57,7 +57,8 @@ export const userLoginIdentify: FullStoryStepExample = {
   title: 'User login identify',
   description:
     'A user login fires FullStory setIdentity with uid and profile properties before tracking the event.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000103,
     data: { id: 'u-123', name: 'Jane Doe', email: 'jane@example.com' },
   }),
@@ -124,7 +125,7 @@ export const setUserProperties: FullStoryStepExample = {
     settings: {
       set: {
         map: {
-          revenue: 'data.total',
+          revenue: 'data.value',
           currency: 'data.currency',
         },
       },
@@ -203,7 +204,8 @@ export const combinedFeatures: FullStoryStepExample = {
  */
 export const silentWithIdentify: FullStoryStepExample = {
   public: false,
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000108,
     data: { id: 'u-123', name: 'Jane Doe' },
   }),

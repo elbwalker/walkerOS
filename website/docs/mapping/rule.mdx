@@ -406,7 +406,7 @@ full. Presence of either keyword activates merge mode for that rule.
 
 ### Example: patch a GA4 decoder rule
 
-The transformer-ga4 `purchase` default ships `id`, `currency`, `total`, `tax`,
+The transformer-ga4 `purchase` default ships `id`, `currency`, `value`, `tax`,
 `shipping`, and `coupon`. The config below adds `affiliation` from a GA4 event
 parameter and drops `currency` from the output, keeping all other default
 fields:

@@ -362,11 +362,11 @@ export const orderComplete: Flow.StepExample = {
   in: {
     method: 'POST',
     path: '/collect',
-    body: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+    body: { name: 'order complete', data: { id: 'ORD-123', value: 149.97 } },
   },
   out: {
     name: 'order complete',
-    data: { id: 'ORD-123', total: 149.97 },
+    data: { id: 'ORD-123', value: 149.97 },
     entity: 'order',
     action: 'complete',
   },

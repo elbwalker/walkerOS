@@ -262,8 +262,8 @@ Because decoded events now carry `source.url`, the [fingerprint transformer](/do
 | `begin_checkout`      | `order start`      | `currency`, `value`, `coupon`     |
 | `add_shipping_info`   | `order shipping`   | `currency`, `value`, `tier`       |
 | `add_payment_info`    | `order payment`    | `currency`, `value`, `type`       |
-| `purchase`            | `order complete`   | `id`, `currency`, `total`, `tax`, `shipping`, `coupon` |
-| `refund`              | `order refund`     | `id`, `currency`, `total`         |
+| `purchase`            | `order complete`   | `id`, `currency`, `value`, `tax`, `shipping`, `coupon` |
+| `refund`              | `order refund`     | `id`, `currency`, `value`         |
 | `add_to_wishlist`     | `wishlist add`     | `currency`, `value`               |
 
 ### List / promotion
@@ -344,7 +344,7 @@ User config applies per event name; other events keep their defaults. A rule wit
 }
 ```
 
-`id`, `total`, `tax`, `shipping`, and `coupon` stay as the default defines them. A `null` value in `extend` clears an inherited field, for example `"extend": { "data": { "map": { "tax": null } } }`.
+`id`, `value`, `tax`, `shipping`, and `coupon` stay as the default defines them. A `null` value in `extend` clears an inherited field, for example `"extend": { "data": { "map": { "tax": null } } }`.
 
 ### Replace a default rule
 
@@ -363,7 +363,7 @@ Without `extend` or `remove`, the whole rule is taken from your config:
               "data": {
                 "map": {
                   "id": "params.ep.transaction_id",
-                  "total": "params.epn.value",
+                  "value": "params.epn.value",
                   "currency": "params.ep.currency",
                   "coupon": "params.ep.promo_code"
                 }

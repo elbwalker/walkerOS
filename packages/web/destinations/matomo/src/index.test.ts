@@ -1,7 +1,7 @@
 import type { Logger, WalkerOS } from '@walkeros/core';
 import type { DestinationMatomo } from '.';
 import { startFlow } from '@walkeros/collector';
-import { createMockLogger, getEvent, Level } from '@walkeros/core';
+import { createEvent, createMockLogger, getEvent, Level } from '@walkeros/core';
 import { destinationMatomo } from '.';
 import { MappingSchema, SettingsSchema } from './schemas';
 
@@ -177,7 +177,7 @@ describe('Destination Matomo', () => {
             complete: {
               settings: {
                 goalId: '1',
-                goalValue: 'data.total',
+                goalValue: 'data.value',
                 customDimensions: { '2': 'data.id' },
               },
             },
@@ -246,7 +246,7 @@ describe('Destination Matomo', () => {
         mapping: { user: { login: { name: 'setUserId', data: 'user.id' } } },
       });
 
-      await elb(getEvent('user login'));
+      await elb(createEvent({ name: 'user login' }));
 
       expect(paq).toEqual([['setUserId', 'us3r']]);
     });
@@ -374,7 +374,8 @@ describe('Destination Matomo', () => {
       });
 
       await elb(
-        getEvent('search submit', {
+        createEvent({
+          name: 'search submit',
           data: { query: 'shoes', category: 'products' },
         }),
       );
@@ -395,7 +396,7 @@ describe('Destination Matomo', () => {
               data: { set: [{ value: 'order' }, { value: 'complete' }] },
               settings: {
                 goalId: '1',
-                goalValue: 'data.total',
+                goalValue: 'data.value',
                 customDimensions: { '2': 'data.id' },
               },
             },
@@ -505,7 +506,7 @@ describe('Destination Matomo', () => {
       ).toBe(true);
       expect(
         MappingSchema.safeParse({
-          goalValue: { key: 'data.total' },
+          goalValue: { key: 'data.value' },
           customDimensions: { '2': { map: { size: 'data.size' } } },
         }).success,
       ).toBe(true);

@@ -10,7 +10,7 @@ export const Purchase: DestinationDataManager.Rule = {
     map: {
       // Required fields
       transactionId: 'data.id',
-      conversionValue: 'data.total',
+      conversionValue: 'data.value',
       currency: { key: 'data.currency', value: 'USD' },
       eventName: { value: 'purchase' },
 

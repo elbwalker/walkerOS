@@ -57,7 +57,7 @@ const pageEvent = getEvent('page view', {
 const orderEvt = getEvent('order complete', {
   id: 'ev-1700001001',
   timestamp: 1700001001,
-  data: { id: 'ORD-400', total: 99.99, currency: 'EUR' },
+  data: { id: 'ORD-400', value: 99.99, currency: 'EUR' },
   user: { id: 'usr-789' },
   source: { type: 'express', platform: 'server' },
 });
@@ -140,7 +140,7 @@ export const mappedMessage: Flow.StepExample = {
   in: orderEvt,
   mapping: {
     data: {
-      map: { id: 'id', name: 'name', order_id: 'data.id', total: 'data.total' },
+      map: { id: 'id', name: 'name', order_id: 'data.id', total: 'data.value' },
     },
   },
   out: [

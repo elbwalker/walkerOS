@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -196,7 +196,8 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
   title: 'Complete registration',
   description:
     'A user register fires ttq.identify for advanced matching and then tracks CompleteRegistration.',
-  in: getEvent('user register', {
+  in: createEvent({
+    name: 'user register',
     id: '55555555eeeeeeee',
     data: {
       email: 'new@acme.com',
@@ -265,7 +266,7 @@ export const orderCompleteCompletePayment: TikTokStepExample = {
     data: {
       map: {
         content_type: { value: 'product' },
-        value: 'data.total',
+        value: 'data.value',
         currency: { key: 'data.currency', value: 'EUR' },
         order_id: 'data.id',
         contents: {
@@ -329,7 +330,8 @@ export const searchSubmitSearch: TikTokStepExample = {
   title: 'Search',
   description:
     'A search submit fires TikTok Search with the query field mapped from event data.',
-  in: getEvent('search submit', {
+  in: createEvent({
+    name: 'search submit',
     id: '777777770000aaaa',
     data: {
       term: 'hiking backpack',

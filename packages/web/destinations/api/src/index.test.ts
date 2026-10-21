@@ -2,11 +2,11 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationAPI } from '.';
 import { startFlow } from '@walkeros/collector';
 import {
-  createEvent,
-  getEvent,
   clone,
+  createEvent,
   createMockContext,
   createMockLogger,
+  getEvent,
   isObject,
 } from '@walkeros/core';
 import { examples } from './dev';
@@ -277,7 +277,10 @@ describe('Destination API', () => {
 
   describe('pushBatch', () => {
     test('sends array of events', () => {
-      const events = [getEvent('product view'), getEvent('product click')];
+      const events = [
+        getEvent('product view'),
+        createEvent({ name: 'product click' }),
+      ];
       const batch = {
         key: 'product view',
         events,
@@ -303,7 +306,7 @@ describe('Destination API', () => {
 
     test('sends entry data when present, raw event otherwise', () => {
       const e0 = getEvent('product view');
-      const e1 = getEvent('product click');
+      const e1 = createEvent({ name: 'product click' });
       const mapped = { custom: 'data1' };
       const batch = {
         key: 'product view',
@@ -329,7 +332,7 @@ describe('Destination API', () => {
 
     test('delivers every entry when some have mapped data and some do not', () => {
       const e0 = getEvent('product view');
-      const e1 = getEvent('product click');
+      const e1 = createEvent({ name: 'product click' });
       const mapped = { mapped: 1 };
       const batch = {
         key: 'product view',
@@ -356,7 +359,10 @@ describe('Destination API', () => {
     });
 
     test('applies transform to each batch item', () => {
-      const events = [getEvent('product view'), getEvent('product click')];
+      const events = [
+        getEvent('product view'),
+        createEvent({ name: 'product click' }),
+      ];
       const batch = {
         key: 'product view',
         events,
@@ -390,7 +396,10 @@ describe('Destination API', () => {
     });
 
     test('sends a JSON array of the transformed bodies, not of strings', () => {
-      const events = [getEvent('product view'), getEvent('product click')];
+      const events = [
+        getEvent('product view'),
+        createEvent({ name: 'product click' }),
+      ];
       const batch = {
         key: 'product view',
         events,

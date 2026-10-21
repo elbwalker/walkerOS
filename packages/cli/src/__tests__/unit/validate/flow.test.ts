@@ -861,8 +861,8 @@ describe('validateFlow', () => {
               properties: {
                 data: {
                   type: 'object',
-                  required: ['total'],
-                  properties: { total: { type: 'number' } },
+                  required: ['value'],
+                  properties: { value: { type: 'number' } },
                 },
               },
             },
@@ -885,7 +885,7 @@ describe('validateFlow', () => {
       name: 'order complete',
       entity: 'order',
       action: 'complete',
-      data: { total: 9.99 },
+      data: { value: 9.99 },
       user: { hash: 'h1' },
       source: { type: 'express' },
     };
@@ -893,7 +893,7 @@ describe('validateFlow', () => {
       name: 'order complete',
       entity: 'order',
       action: 'complete',
-      data: { total: 9.99 },
+      data: { value: 9.99 },
       user: {},
       source: { type: 'express' },
     };

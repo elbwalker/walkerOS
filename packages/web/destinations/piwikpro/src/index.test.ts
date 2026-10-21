@@ -1,7 +1,13 @@
 import type { Logger, WalkerOS } from '@walkeros/core';
 import type { DestinationPiwikPro } from '.';
 import { startFlow } from '@walkeros/collector';
-import { createMockLogger, getEvent, isObject, Level } from '@walkeros/core';
+import {
+  createEvent,
+  createMockLogger,
+  getEvent,
+  isObject,
+  Level,
+} from '@walkeros/core';
 import { destinationPiwikPro } from '.';
 import { hints } from './hints';
 import { MappingSchema, SettingsSchema, settings } from './schemas';
@@ -175,7 +181,7 @@ describe('Destination PiwikPro', () => {
             complete: {
               settings: {
                 goalId: 'g1',
-                goalValue: 'data.total',
+                goalValue: 'data.value',
                 customDimensions: { '1': 'data.id' },
               },
             },
@@ -212,7 +218,7 @@ describe('Destination PiwikPro', () => {
         mapping: { user: { login: { name: 'setUserId', data: 'user.id' } } },
       });
 
-      await elb(getEvent('user login'));
+      await elb(createEvent({ name: 'user login' }));
 
       expect(paq).toEqual([['setUserId', 'us3r']]);
     });
@@ -224,7 +230,7 @@ describe('Destination PiwikPro', () => {
             complete: {
               name: 'trackEvent',
               data: { set: [{ value: 'order' }, { value: 'complete' }] },
-              settings: { goalId: 'g1', goalValue: 'data.total' },
+              settings: { goalId: 'g1', goalValue: 'data.value' },
             },
           },
         },
@@ -444,7 +450,7 @@ describe('Destination PiwikPro', () => {
         },
       });
 
-      await elb(getEvent('user login'));
+      await elb(createEvent({ name: 'user login' }));
 
       expect(paq).toEqual([['setUserId', 'us3r']]);
     });
@@ -591,7 +597,7 @@ describe('Destination PiwikPro', () => {
         mapping: { user: { login: { name: 'setUserId', data: 'user.id' } } },
       });
 
-      await elb(getEvent('user login'));
+      await elb(createEvent({ name: 'user login' }));
       await elb(pageView);
 
       expect(paq).toEqual([
@@ -633,7 +639,7 @@ describe('Destination PiwikPro', () => {
       expect(MappingSchema.safeParse({ goalValue: 10 }).success).toBe(true);
       expect(
         MappingSchema.safeParse({
-          goalValue: { map: { total: 'data.total' } },
+          goalValue: { map: { total: 'data.value' } },
           customDimensions: { '1': { map: { size: 'data.size' } } },
         }).success,
       ).toBe(true);
@@ -655,7 +661,7 @@ describe('Destination PiwikPro', () => {
     test('mapping accepts a rule without goalId (W8)', () => {
       expect(MappingSchema.safeParse({}).success).toBe(true);
       expect(
-        MappingSchema.safeParse({ goalId: 7, goalValue: 'data.total' }).success,
+        MappingSchema.safeParse({ goalId: 7, goalValue: 'data.value' }).success,
       ).toBe(true);
     });
   });

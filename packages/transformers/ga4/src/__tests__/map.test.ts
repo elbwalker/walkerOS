@@ -358,7 +358,7 @@ describe('mapHitToEvents — purchase (canary)', () => {
       data: {
         id: 'T-9001',
         currency: 'EUR',
-        total: 129.9,
+        value: 129.9,
         tax: 20.78,
         shipping: 4.99,
         coupon: 'SUMMER10',
@@ -548,7 +548,7 @@ describe('mapHitToEvents — ecommerce family', () => {
       name: 'order refund',
       entity: 'order',
       action: 'refund',
-      data: { id: 'T-9001', currency: 'EUR', total: 129.9 },
+      data: { id: 'T-9001', currency: 'EUR', value: 129.9 },
     });
   });
 

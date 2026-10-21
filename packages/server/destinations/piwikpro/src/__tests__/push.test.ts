@@ -1,6 +1,12 @@
-import type { Collector, Logger, SendResponse, WalkerOS } from '@walkeros/core';
+import type {
+  Collector,
+  Logger,
+  SendResponse,
+  StandardEventName,
+  WalkerOS,
+} from '@walkeros/core';
 import type { PartialConfig } from '../types';
-import { createIngest, getEvent, Level } from '@walkeros/core';
+import { createEvent, createIngest, getEvent, Level } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { destinationPiwikPro } from '..';
 
@@ -37,7 +43,10 @@ describe('push', () => {
     return collector;
   }
 
-  function event(name: string, props: WalkerOS.DeepPartialEvent = {}) {
+  function event(
+    name: StandardEventName,
+    props: WalkerOS.DeepPartialEvent = {},
+  ) {
     return getEvent(name, {
       timestamp: 1700000300000,
       source: SOURCE,
@@ -179,8 +188,20 @@ describe('push', () => {
   it('warns once per skip reason, then logs at debug', async () => {
     await setup();
     // An event name no other test pushes, so the warned key is this test's own
-    await collector.push(event('skip probe'));
-    await collector.push(event('skip probe'));
+    await collector.push(
+      createEvent({
+        name: 'skip probe',
+        timestamp: 1700000300000,
+        source: SOURCE,
+      }),
+    );
+    await collector.push(
+      createEvent({
+        name: 'skip probe',
+        timestamp: 1700000300000,
+        source: SOURCE,
+      }),
+    );
     const skips = logs.filter(([, message]) => message.includes('skipped'));
     expect(skips).toEqual([
       [Level.WARN, 'Piwik PRO skipped an event: unmapped'],

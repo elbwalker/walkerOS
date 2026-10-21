@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent, isObject } from '@walkeros/core';
 
 /**
  * TikTok Events API step examples.
@@ -34,7 +34,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'd1e2f3a4b5c60001',
     timestamp: 1700000900000,
-    data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
+    data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       {
         entity: 'product',
@@ -52,7 +52,7 @@ export const purchase: Flow.StepExample = {
     name: 'CompletePayment',
     data: {
       map: {
-        value: 'data.total',
+        value: 'data.value',
         currency: { key: 'data.currency', value: 'EUR' },
         order_id: 'data.id',
         content_type: { value: 'product' },
@@ -259,7 +259,8 @@ export const lead: Flow.StepExample = {
   title: 'Submit form',
   description:
     'A newsletter form submission is sent to TikTok as a SubmitForm event with the hashed email in user context.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     id: 'd1e2f3a4b5c60004',
     timestamp: 1700000903000,
     data: { type: 'newsletter' },

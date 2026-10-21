@@ -2,7 +2,7 @@ import type { WalkerOS, Mapping } from '@walkeros/core';
 import type { DestinationSnowplow } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
-import { getEvent, mockEnv } from '@walkeros/core';
+import { createEvent, getEvent, mockEnv } from '@walkeros/core';
 import {
   clearUserData,
   enableAnonymousTracking,
@@ -247,7 +247,7 @@ describe('destination snowplow', () => {
 
   test('event without mapping is skipped', async () => {
     // Test that events without mapping configuration are silently skipped
-    const event = getEvent('custom unmapped');
+    const event = createEvent({ name: 'custom unmapped' });
 
     const destinationWithEnv = {
       ...destination,
@@ -1238,7 +1238,7 @@ describe('destination snowplow', () => {
         ...getEvent('order complete'),
         data: {
           id: 'ORD-123',
-          total: 1048,
+          value: 1048,
           currency: 'USD',
         },
         nested: [
@@ -1269,7 +1269,7 @@ describe('destination snowplow', () => {
                         'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
                       data: {
                         transaction_id: 'data.id',
-                        revenue: 'data.total',
+                        revenue: 'data.value',
                         currency: 'data.currency',
                       },
                     },

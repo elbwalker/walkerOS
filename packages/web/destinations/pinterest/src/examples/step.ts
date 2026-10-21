@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * Output convention:
@@ -28,7 +28,7 @@ export const defaultForward: Flow.StepExample = {
  */
 export const wildcardIgnored: Flow.StepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -55,7 +55,8 @@ export const siteSearch: Flow.StepExample = {
   title: 'Search',
   description:
     'A site search fires Pinterest search with the search_query field resolved from event data.',
-  in: getEvent('site search', {
+  in: createEvent({
+    name: 'site search',
     timestamp: 1700000103,
     id: 'ev-1700000103',
     data: { query: 'leather jacket' },
@@ -190,7 +191,7 @@ export const orderCompleteCheckout: Flow.StepExample = {
     name: 'checkout',
     data: {
       map: {
-        value: 'data.total',
+        value: 'data.value',
         order_id: 'data.id',
         currency: { key: 'data.currency', value: 'EUR' },
         line_items: {
@@ -248,7 +249,8 @@ export const userLoginLead: Flow.StepExample = {
   title: 'Lead with matching',
   description:
     'A user login fires pintrk set for enhanced matching and then a lead conversion track call.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000107,
     id: 'ev-1700000107',
     data: {
@@ -294,7 +296,8 @@ export const identifyOnlySilent: Flow.StepExample = {
   title: 'Identify only',
   description:
     'A user update fires pintrk set for enhanced matching without a track call via mapping silent.',
-  in: getEvent('user update', {
+  in: createEvent({
+    name: 'user update',
     timestamp: 1700000108,
     id: 'ev-1700000108',
     data: {

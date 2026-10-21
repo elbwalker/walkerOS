@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -35,7 +35,7 @@ export const defaultEventForwarding: ClarityStepExample = {
  */
 export const wildcardIgnored: ClarityStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -50,7 +50,8 @@ export const userLoginIdentify: ClarityStepExample = {
   title: 'User login identify',
   description:
     'A user login fires Clarity.identify with custom id, session id, page id, and friendly name then tracks the event.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000102,
     data: { id: 'u-123', name: 'Jane Doe' },
     globals: { pagegroup: 'shop', pagetype: 'home' },
@@ -199,7 +200,7 @@ export const orderCompleteInclude: ClarityStepExample = {
     ['clarity.setTag', 'data_currency', 'EUR'],
     ['clarity.setTag', 'data_shipping', '5.22'],
     ['clarity.setTag', 'data_taxes', '73.76'],
-    ['clarity.setTag', 'data_total', '555'],
+    ['clarity.setTag', 'data_value', '555'],
     ['clarity.event', 'order complete'],
   ],
 };

@@ -513,7 +513,7 @@ walkeros bundle config.json --all -o dist/all
                 "data": {
                   "map": {
                     "transaction_id": "data.orderId",
-                    "value": "data.total"
+                    "value": "data.value"
                   }
                 }
               }

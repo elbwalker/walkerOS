@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -127,7 +127,8 @@ export const userLoginIdentify: RudderStackStepExample = {
   title: 'User login identify',
   description:
     'A user login fires only an analytics.identify call with the resolved userId and traits, skipping the track.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000103,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -174,7 +175,8 @@ export const companyGroup: RudderStackStepExample = {
   title: 'Group company',
   description:
     'A company update fires analytics.group with the groupId and group traits for B2B account tracking.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000104,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -268,7 +270,8 @@ export const screenView: RudderStackStepExample = {
   title: 'Screen view',
   description:
     'A screen view from a mobile app backend fires analytics.screen with a screen name and properties.',
-  in: getEvent('screen view', {
+  in: createEvent({
+    name: 'screen view',
     timestamp: 1700000106,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -314,7 +317,8 @@ export const aliasUser: RudderStackStepExample = {
   title: 'Alias user',
   description:
     'An identity merge fires analytics.alias to link a previous anonymous id to the newly registered user id.',
-  in: getEvent('identity merge', {
+  in: createEvent({
+    name: 'identity merge',
     timestamp: 1700000107,
     user: { id: 'registered-456', session: 's3ss10n' },
     data: {
@@ -376,7 +380,8 @@ export const anonymousOnly: RudderStackStepExample = {
  */
 export const wildcardIgnored: RudderStackStepExample = {
   public: false,
-  in: getEvent('debug noise', {
+  in: createEvent({
+    name: 'debug noise',
     timestamp: 1700000109,
     user: { id: 'us3r', session: 's3ss10n' },
   }),

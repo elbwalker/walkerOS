@@ -1040,16 +1040,16 @@ describe('processEventMapping', () => {
   test('config-level policy applied before event-level policy', async () => {
     const event = {
       name: 'order complete',
-      data: { total: 100 },
+      data: { value: 100 },
     };
 
     const config = {
       policy: {
         'data.configLevel': { value: 'config' },
-        'data.total': {
+        'data.value': {
           fn: (e: unknown) =>
-            isObject(e) && isObject(e.data) && typeof e.data.total === 'number'
-              ? e.data.total * 2
+            isObject(e) && isObject(e.data) && typeof e.data.value === 'number'
+              ? e.data.value * 2
               : undefined,
         },
       },
@@ -1058,12 +1058,12 @@ describe('processEventMapping', () => {
           complete: {
             policy: {
               'data.eventLevel': { value: 'event' },
-              'data.total': {
+              'data.value': {
                 fn: (e: unknown) =>
                   isObject(e) &&
                   isObject(e.data) &&
-                  typeof e.data.total === 'number'
-                    ? e.data.total + 50
+                  typeof e.data.value === 'number'
+                    ? e.data.value + 50
                     : undefined,
               },
             },
@@ -1076,7 +1076,7 @@ describe('processEventMapping', () => {
 
     // Config policy runs first: 100 * 2 = 200
     // Event policy runs second: 200 + 50 = 250
-    expect(result.event.data.total).toBe(250);
+    expect(result.event.data.value).toBe(250);
     expect(result.event.data.configLevel).toBe('config');
     expect(result.event.data.eventLevel).toBe('event');
   });
@@ -1333,7 +1333,7 @@ describe('processEventMapping', () => {
   test('remove strips paths from produced data after evaluation', async () => {
     const event = {
       name: 'order complete',
-      data: { total: 42, currency: 'EUR' },
+      data: { value: 42, currency: 'EUR' },
     };
     const config = {
       mapping: {
@@ -1341,7 +1341,7 @@ describe('processEventMapping', () => {
           complete: {
             data: {
               map: {
-                value: 'data.total',
+                value: 'data.value',
                 currency: 'data.currency',
               },
             },

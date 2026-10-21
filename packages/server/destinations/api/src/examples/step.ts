@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * API server destination step examples.
@@ -42,7 +42,8 @@ export const customHeaders: Flow.StepExample = {
   title: 'Custom headers',
   description:
     'A form submission is sent to the API with custom request headers such as an API key for authentication.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     timestamp: 1700000801,
     data: { type: 'contact', email: 'user@example.com' },
     source: { type: 'express', platform: 'server' },
@@ -73,7 +74,7 @@ export const customTransform: Flow.StepExample = {
     'An order event is reshaped via a data mapping into a custom JSON payload with renamed fields for the API.',
   in: getEvent('order complete', {
     timestamp: 1700000802,
-    data: { id: 'ORD-500', total: 199.99, currency: 'USD' },
+    data: { id: 'ORD-500', value: 199.99, currency: 'USD' },
     user: { id: 'buyer-42' },
     source: { type: 'express', platform: 'server' },
   }),
@@ -81,7 +82,7 @@ export const customTransform: Flow.StepExample = {
     data: {
       map: {
         order_id: 'data.id',
-        amount: 'data.total',
+        amount: 'data.value',
         currency: 'data.currency',
         customer_id: 'user.id',
         event_type: 'name',

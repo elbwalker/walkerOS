@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * Destination bootstrap.
@@ -76,7 +76,7 @@ export const ecommerceOrder: Flow.StepExample = {
         {
           map: {
             orderId: 'data.id',
-            grandTotal: 'data.total',
+            grandTotal: 'data.value',
             tax: 'data.taxes',
             shipping: 'data.shipping',
           },
@@ -322,7 +322,7 @@ export const eventWithGoalValue: Flow.StepExample = {
     },
     settings: {
       goalId: 'goal_1',
-      goalValue: 'data.total',
+      goalValue: 'data.value',
     },
   },
   out: [
@@ -335,7 +335,8 @@ export const ecommerceRemoveFromCart: Flow.StepExample = {
   title: 'Remove from cart',
   description:
     'A product remove fires Piwik PRO ecommerceRemoveFromCart with the removed item.',
-  in: getEvent('product remove', {
+  in: createEvent({
+    name: 'product remove',
     timestamp: 1700000308,
     data: {
       id: 'ers',
@@ -385,7 +386,8 @@ export const siteSearch: Flow.StepExample = {
   title: 'Site search',
   description:
     'A search submit fires Piwik PRO trackSiteSearch with the keyword, category, and result count.',
-  in: getEvent('search submit', {
+  in: createEvent({
+    name: 'search submit',
     timestamp: 1700000309,
     data: { query: 'rucksack', category: 'bags', results: 12 },
   }),
@@ -402,7 +404,8 @@ export const linkDownload: Flow.StepExample = {
   title: 'Download link',
   description:
     'A file download fires Piwik PRO trackLink with the file URL and the download link type.',
-  in: getEvent('file download', {
+  in: createEvent({
+    name: 'file download',
     timestamp: 1700000310,
     data: { url: 'https://www.example.com/whitepaper.pdf' },
   }),
@@ -419,7 +422,11 @@ export const ping: Flow.StepExample = {
   title: 'Ping',
   description:
     'A pulse-triggered event fires Piwik PRO ping to extend the time spent on the page.',
-  in: getEvent('page ping', { timestamp: 1700000311, trigger: 'pulse' }),
+  in: createEvent({
+    name: 'page ping',
+    timestamp: 1700000311,
+    trigger: 'pulse',
+  }),
   mapping: {
     name: 'ping',
   },

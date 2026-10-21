@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -39,7 +39,7 @@ export const destinationLevelInclude: HeapStepExample = {
     data: {
       map: {
         order_id: 'data.id',
-        total: 'data.total',
+        total: 'data.value',
         currency: { key: 'data.currency', value: 'EUR' },
       },
     },
@@ -79,7 +79,8 @@ export const userLoginIdentify: HeapStepExample = {
   title: 'User login identify',
   description:
     'A user login identifies the Heap user by email and adds user properties while skipping the track.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000103,
     data: {
       email: 'user@example.com',
@@ -112,7 +113,7 @@ export const userLogoutReset: HeapStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls heap.resetIdentity to clear the identified user from the Heap client.',
-  in: getEvent('user logout', { timestamp: 1700000104 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000104 }),
   mapping: {
     silent: true,
     settings: {
@@ -134,7 +135,7 @@ export const eventWithUserProperties: HeapStepExample = {
     timestamp: 1700000105,
     data: {
       id: '0rd3r1d',
-      total: 555,
+      value: 555,
       currency: 'EUR',
     },
   }),
@@ -142,7 +143,7 @@ export const eventWithUserProperties: HeapStepExample = {
     settings: {
       userProperties: {
         map: {
-          last_order_value: 'data.total',
+          last_order_value: 'data.value',
           last_order_currency: 'data.currency',
         },
       },

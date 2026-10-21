@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -37,7 +37,7 @@ export const simpleConversionId: LinkedInStepExample = {
   title: 'Simple conversion',
   description:
     'A form submit fires a LinkedIn lintrk track with only a conversion_id from Campaign Manager.',
-  in: getEvent('form submit', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'form submit', timestamp: 1700000101 }),
   mapping: {
     settings: {
       conversion: {
@@ -78,7 +78,7 @@ export const orderCompleteFullConversion: LinkedInStepExample = {
       conversion: {
         map: {
           id: { value: 67890 },
-          value: 'data.total',
+          value: 'data.value',
           currency: { key: 'data.currency', value: 'EUR' },
           eventId: 'id',
         },
@@ -151,7 +151,8 @@ export const demoRequestLead: LinkedInStepExample = {
   title: 'Lead conversion',
   description:
     'A demo request fires a LinkedIn lintrk track for a lead conversion with id and event_id only.',
-  in: getEvent('demo request', {
+  in: createEvent({
+    name: 'demo request',
     timestamp: 1700000104,
     id: '1700000104abcdef',
   }),
@@ -187,7 +188,7 @@ export const demoRequestLead: LinkedInStepExample = {
  */
 export const conversionSilenced: LinkedInStepExample = {
   public: false,
-  in: getEvent('form submit', { timestamp: 1700000105 }),
+  in: createEvent({ name: 'form submit', timestamp: 1700000105 }),
   mapping: {
     silent: true,
     settings: {
@@ -213,7 +214,7 @@ export const conversionSilenced: LinkedInStepExample = {
  */
 export const missingConversionIdIgnored: LinkedInStepExample = {
   public: false,
-  in: getEvent('form submit', { timestamp: 1700000106 }),
+  in: createEvent({ name: 'form submit', timestamp: 1700000106 }),
   mapping: {
     settings: {
       conversion: {

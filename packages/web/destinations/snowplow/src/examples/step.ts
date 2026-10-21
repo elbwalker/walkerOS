@@ -202,7 +202,7 @@ export const transaction: Flow.StepExample = {
           schema: SCHEMAS.TRANSACTION,
           data: {
             transaction_id: 'data.id',
-            revenue: 'data.total',
+            revenue: 'data.value',
             currency: { key: 'data.currency', value: 'USD' },
             payment_method: { value: 'credit_card' },
             tax: 'data.taxes',
@@ -387,7 +387,7 @@ export const contextLoop: Flow.StepExample = {
           schema: SCHEMAS.TRANSACTION,
           data: {
             transaction_id: 'data.id',
-            revenue: 'data.total',
+            revenue: 'data.value',
             currency: 'data.currency',
           },
         },

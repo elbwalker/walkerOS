@@ -140,13 +140,13 @@
             "properties": {
               "data": {
                 "type": "object",
-                "required": ["id", "total", "currency"],
+                "required": ["id", "value", "currency"],
                 "properties": {
                   "id": {
                     "type": "string",
                     "minLength": 1
                   },
-                  "total": {
+                  "value": {
                     "type": "number",
                     "minimum": 0
                   },
@@ -736,7 +736,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -790,7 +790,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -966,12 +966,12 @@
               "order": {
                 "complete": {
                   "name": "purchase",
-                  "condition": "$code:(event) => event.data && event.data.total > 0",
+                  "condition": "$code:(event) => event.data && event.data.value > 0",
                   "data": {
                     "map": {
                       "transaction_id": "data.id",
                       "value": {
-                        "fn": "$code:(event) => Math.round(Number(event.data.total) * 100) / 100"
+                        "fn": "$code:(event) => Math.round(Number(event.data.value) * 100) / 100"
                       },
                       "currency": [
                         "data.currency",
@@ -1013,12 +1013,12 @@
               "public": true,
               "mapping": {
                 "name": "purchase",
-                "condition": "$code:(event) => event.data && event.data.total > 0",
+                "condition": "$code:(event) => event.data && event.data.value > 0",
                 "data": {
                   "map": {
                     "transaction_id": "data.id",
                     "value": {
-                      "fn": "$code:(event) => Math.round(Number(event.data.total) * 100) / 100"
+                      "fn": "$code:(event) => Math.round(Number(event.data.value) * 100) / 100"
                     },
                     "currency": [
                       "data.currency",
@@ -1056,7 +1056,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -1150,12 +1150,12 @@
               "description": "The coupon condition leaves the parameter out when the order has none.",
               "mapping": {
                 "name": "purchase",
-                "condition": "$code:(event) => event.data && event.data.total > 0",
+                "condition": "$code:(event) => event.data && event.data.value > 0",
                 "data": {
                   "map": {
                     "transaction_id": "data.id",
                     "value": {
-                      "fn": "$code:(event) => Math.round(Number(event.data.total) * 100) / 100"
+                      "fn": "$code:(event) => Math.round(Number(event.data.value) * 100) / 100"
                     },
                     "currency": [
                       "data.currency",
@@ -1193,7 +1193,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-101",
-                  "total": 129.9,
+                  "value": 129.9,
                   "currency": "EUR"
                 },
                 "id": "ev-order-complete",
@@ -1626,7 +1626,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -1677,7 +1677,7 @@
                 [
                   "sendWeb",
                   "http://localhost:8080/collect",
-                  "[{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"context\":{},\"globals\":{\"site\":\"shop\",\"language\":\"en\",\"pageGroup\":\"checkout\"},\"custom\":{},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"jane@example.com\"},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}],\"consent\":{\"functional\":true,\"marketing\":true},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"entity\":\"order\",\"action\":\"complete\",\"timestamp\":1700000000000,\"source\":{\"type\":\"browser\",\"platform\":\"web\",\"url\":\"https://www.example.com/checkout/thanks\",\"count\":1,\"release\":{\"web\":\"4.6.1\"}}}]",
+                  "[{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-100\",\"value\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"context\":{},\"globals\":{\"site\":\"shop\",\"language\":\"en\",\"pageGroup\":\"checkout\"},\"custom\":{},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"jane@example.com\"},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}],\"consent\":{\"functional\":true,\"marketing\":true},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"entity\":\"order\",\"action\":\"complete\",\"timestamp\":1700000000000,\"source\":{\"type\":\"browser\",\"platform\":\"web\",\"url\":\"https://www.example.com/checkout/thanks\",\"count\":1,\"release\":{\"web\":\"4.6.1\"}}}]",
                   {
                     "transport": "beacon"
                   }
@@ -1693,7 +1693,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -1743,7 +1743,7 @@
                 [
                   "sendWeb",
                   "http://localhost:8080/collect",
-                  "[{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"context\":{},\"globals\":{\"site\":\"shop\",\"language\":\"en\",\"pageGroup\":\"checkout\"},\"custom\":{},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\"},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}],\"consent\":{\"functional\":true},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"entity\":\"order\",\"action\":\"complete\",\"timestamp\":1700000000000,\"source\":{\"type\":\"browser\",\"platform\":\"web\",\"url\":\"https://www.example.com/checkout/thanks\",\"count\":1,\"release\":{\"web\":\"4.6.1\"}}}]",
+                  "[{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-100\",\"value\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"context\":{},\"globals\":{\"site\":\"shop\",\"language\":\"en\",\"pageGroup\":\"checkout\"},\"custom\":{},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\"},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}],\"consent\":{\"functional\":true},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"entity\":\"order\",\"action\":\"complete\",\"timestamp\":1700000000000,\"source\":{\"type\":\"browser\",\"platform\":\"web\",\"url\":\"https://www.example.com/checkout/thanks\",\"count\":1,\"release\":{\"web\":\"4.6.1\"}}}]",
                   {
                     "transport": "beacon"
                   }
@@ -1966,7 +1966,7 @@
                   "action": "complete",
                   "data": {
                     "id": "ORD-100",
-                    "total": 149.8,
+                    "value": 149.8,
                     "currency": "EUR",
                     "coupon": "WELCOME10"
                   },
@@ -2023,7 +2023,7 @@
                     "action": "complete",
                     "data": {
                       "id": "ORD-100",
-                      "total": 149.8,
+                      "value": 149.8,
                       "currency": "EUR",
                       "coupon": "WELCOME10"
                     },
@@ -2117,7 +2117,7 @@
                       "data": {
                         "id": "SUB-77",
                         "currency": "EUR",
-                        "total": 59.9
+                        "value": 59.9
                       },
                       "user": {
                         "device": "cid-9",
@@ -2407,42 +2407,6 @@
           },
           "next": {
             "stop": true
-          },
-          "examples": {
-            "walkerJs": {
-              "title": "Serve walker.js first party",
-              "description": "GET /walker.js is answered from the assets store with the configured headers; the step returns false and its next stops, so a script request never becomes an event. Proven over HTTP in the flow test.",
-              "public": true,
-              "in": {
-                "name": "page view",
-                "entity": "page",
-                "action": "view",
-                "data": {
-                  "domain": "www.example.com",
-                  "title": "Trail Runner",
-                  "id": "/product/trail-runner"
-                },
-                "id": "ev-page-view",
-                "trigger": "load",
-                "timestamp": 1700000000000,
-                "consent": {
-                  "functional": true,
-                  "marketing": true
-                },
-                "globals": {
-                  "language": "en",
-                  "pageGroup": "product"
-                },
-                "user": {
-                  "device": "d3v1c3",
-                  "session": "s3ss10n"
-                },
-                "source": {
-                  "type": "express",
-                  "platform": "server"
-                }
-              }
-            }
           }
         },
         "dedup": {
@@ -2467,7 +2431,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -2524,7 +2488,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -2597,7 +2561,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -2654,7 +2618,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -2721,7 +2685,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -2778,7 +2742,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -2840,7 +2804,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -2897,7 +2861,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -2991,7 +2955,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -3051,7 +3015,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -3134,7 +3098,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -3194,7 +3158,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -3365,7 +3329,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -3425,7 +3389,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -3500,7 +3464,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -3561,7 +3525,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -3626,7 +3590,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -3685,7 +3649,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -3775,7 +3739,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -3837,7 +3801,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -3942,7 +3906,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -4005,7 +3969,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -4086,7 +4050,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -4149,7 +4113,7 @@
                       "action": "complete",
                       "data": {
                         "id": "ORD-100",
-                        "total": 149.8,
+                        "value": 149.8,
                         "currency": "EUR",
                         "coupon": "WELCOME10"
                       },
@@ -4254,7 +4218,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -4311,7 +4275,7 @@
                 [
                   "PubSub.topic.publishMessage",
                   {
-                    "data": "{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"context\":{},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"custom\":{},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"4cdea64501d6109d0a25750a7ce1d5c87e5fc927c61b674f191b73e28b582c93\",\"hash\":\"cea3ca84340feb4a\",\"botScore\":null,\"botCategory\":\"unknown\",\"ltv\":420,\"segment\":\"loyal\"},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}],\"consent\":{\"functional\":true,\"marketing\":true},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"entity\":\"order\",\"action\":\"complete\",\"timestamp\":1700000000000,\"timing\":0,\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true,\"count\":1,\"release\":{\"server\":\"4.6.1\"}}}"
+                    "data": "{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-100\",\"value\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"context\":{},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"custom\":{},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"4cdea64501d6109d0a25750a7ce1d5c87e5fc927c61b674f191b73e28b582c93\",\"hash\":\"cea3ca84340feb4a\",\"botScore\":null,\"botCategory\":\"unknown\",\"ltv\":420,\"segment\":\"loyal\"},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}],\"consent\":{\"functional\":true,\"marketing\":true},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"entity\":\"order\",\"action\":\"complete\",\"timestamp\":1700000000000,\"timing\":0,\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true,\"count\":1,\"release\":{\"server\":\"4.6.1\"}}}"
                   }
                 ]
               ]
@@ -4361,7 +4325,7 @@
                   },
                   "data": {
                     "map": {
-                      "value": "data.total",
+                      "value": "data.value",
                       "currency": [
                         "data.currency",
                         {
@@ -4411,7 +4375,7 @@
                 },
                 "data": {
                   "map": {
-                    "value": "data.total",
+                    "value": "data.value",
                     "currency": [
                       "data.currency",
                       {
@@ -4428,7 +4392,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -4570,7 +4534,7 @@
                   "name": "ecommerceOrder",
                   "settings": {
                     "goalId": "$env.PIWIK_ORDER_GOAL:6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c",
-                    "goalValue": "data.total"
+                    "goalValue": "data.value"
                   },
                   "data": {
                     "set": [
@@ -4593,7 +4557,7 @@
                       {
                         "map": {
                           "orderId": "data.id",
-                          "grandTotal": "data.total"
+                          "grandTotal": "data.value"
                         }
                       }
                     ]
@@ -4616,7 +4580,7 @@
                 "name": "ecommerceOrder",
                 "settings": {
                   "goalId": "$env.PIWIK_ORDER_GOAL:6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c",
-                  "goalValue": "data.total"
+                  "goalValue": "data.value"
                 },
                 "data": {
                   "set": [
@@ -4639,7 +4603,7 @@
                     {
                       "map": {
                         "orderId": "data.id",
-                        "grandTotal": "data.total"
+                        "grandTotal": "data.value"
                       }
                     }
                   ]
@@ -4651,7 +4615,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -4743,7 +4707,7 @@
                   "data": {
                     "map": {
                       "transactionId": "data.id",
-                      "conversionValue": "data.total",
+                      "conversionValue": "data.value",
                       "currency": [
                         "data.currency",
                         {
@@ -4777,7 +4741,7 @@
                 "data": {
                   "map": {
                     "transactionId": "data.id",
-                    "conversionValue": "data.total",
+                    "conversionValue": "data.value",
                     "currency": [
                       "data.currency",
                       {
@@ -4794,7 +4758,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10",
                   "session": {
@@ -4913,7 +4877,7 @@
               "public": true,
               "in": {
                 "id": "msg-1",
-                "dataString": "{\"name\":\"order complete\",\"entity\":\"order\",\"action\":\"complete\",\"data\":{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"timestamp\":1700000000000,\"consent\":{\"functional\":true,\"marketing\":true},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"31b4ae339b671c9e81adbe27e74b38f09a4756300de6b81998c83a3964cbb849\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420,\"segment\":\"loyal\"},\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}]}",
+                "dataString": "{\"name\":\"order complete\",\"entity\":\"order\",\"action\":\"complete\",\"data\":{\"id\":\"ORD-100\",\"value\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"},\"id\":\"ev-order-complete\",\"trigger\":\"load\",\"timestamp\":1700000000000,\"consent\":{\"functional\":true,\"marketing\":true},\"globals\":{\"language\":\"en\",\"pageGroup\":\"checkout\"},\"user\":{\"device\":\"d3v1c3\",\"session\":\"s3ss10n\",\"id\":\"cust-42\",\"email\":\"31b4ae339b671c9e81adbe27e74b38f09a4756300de6b81998c83a3964cbb849\",\"hash\":\"5f1c0a9e7d3b2c41\",\"botScore\":0,\"botCategory\":\"human\",\"ltv\":420,\"segment\":\"loyal\"},\"source\":{\"type\":\"express\",\"platform\":\"server\",\"url\":\"https://www.example.com/checkout/thanks\",\"valid\":true},\"nested\":[{\"entity\":\"product\",\"data\":{\"id\":\"SKU-1\",\"name\":\"Trail Runner\",\"price\":129.9,\"quantity\":1}},{\"entity\":\"product\",\"data\":{\"id\":\"SKU-2\",\"name\":\"Running Socks\",\"price\":9.95,\"quantity\":2}}]}",
                 "attributes": {}
               },
               "out": [
@@ -4925,7 +4889,7 @@
                     "action": "complete",
                     "data": {
                       "id": "ORD-100",
-                      "total": 149.8,
+                      "value": 149.8,
                       "currency": "EUR",
                       "coupon": "WELCOME10"
                     },
@@ -5017,7 +4981,7 @@
                 "action": "complete",
                 "data": {
                   "id": "ORD-100",
-                  "total": 149.8,
+                  "value": 149.8,
                   "currency": "EUR",
                   "coupon": "WELCOME10"
                 },
@@ -5075,7 +5039,7 @@
                   [
                     {
                       "name": "order complete",
-                      "data": "{\"id\":\"ORD-100\",\"total\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"}",
+                      "data": "{\"id\":\"ORD-100\",\"value\":149.8,\"currency\":\"EUR\",\"coupon\":\"WELCOME10\"}",
                       "context": null,
                       "globals": "{\"language\":\"en\",\"pageGroup\":\"checkout\"}",
                       "custom": null,

@@ -37,7 +37,7 @@ export const checkout: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'a1b2c3d4e5f60001',
     timestamp: 1700000900,
-    data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
+    data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       {
         entity: 'product',
@@ -62,7 +62,7 @@ export const checkout: Flow.StepExample = {
       map: {
         custom_data: {
           map: {
-            value: 'data.total',
+            value: 'data.value',
             currency: { key: 'data.currency', value: 'EUR' },
             order_id: 'data.id',
             num_items: {

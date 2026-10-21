@@ -167,7 +167,7 @@ const purchaseEvent = getEvent('order complete', {
   data: {
     id: 'ORD-500',
     currency: 'EUR',
-    total: 199.99,
+    value: 199.99,
     items: [
       { sku: 'SKU-1', quantity: 2 },
       { sku: 'SKU-2', quantity: 1 },

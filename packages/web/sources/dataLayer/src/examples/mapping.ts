@@ -46,7 +46,7 @@ export const purchase: Mapping.Rule = {
   data: {
     map: {
       id: 'transaction_id',
-      total: 'value',
+      value: 'value',
       currency: 'currency',
       nested: {
         loop: [

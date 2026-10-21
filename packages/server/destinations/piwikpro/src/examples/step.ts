@@ -1,10 +1,11 @@
 import type {
   Flow,
   Mapping as WalkerOSMapping,
+  StandardEventName,
   WalkerOS,
 } from '@walkeros/core';
 import type { Hit, Rule, Settings } from '../types';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 // Build-time version define, sent as ts_v on every hit.
 declare const __VERSION__: string;
@@ -63,10 +64,18 @@ const IDENTIFIED: Hit = [
 ];
 
 function event(
-  name: string,
+  name: StandardEventName,
   props: WalkerOS.DeepPartialEvent = {},
 ): WalkerOS.Event {
   return getEvent(name, { timestamp: TIMESTAMP, source: SOURCE, ...props });
+}
+
+/** An event outside the standard set, with the same timestamp and source. */
+function otherEvent(
+  name: string,
+  props: WalkerOS.DeepPartialEvent = {},
+): WalkerOS.Event {
+  return createEvent({ timestamp: TIMESTAMP, source: SOURCE, ...props, name });
 }
 
 /** The one sendServer call for these hits, each already in parameter order. */
@@ -167,9 +176,9 @@ export const eventWithGoalValue: StepExample = {
   in: event('order complete'),
   mapping: {
     name: 'trackEvent',
-    settings: { goalId: GOAL_ID, goalValue: 'data.total' },
+    settings: { goalId: GOAL_ID, goalValue: 'data.value' },
     data: {
-      set: [{ value: 'order' }, { value: 'complete' }, 'data.id', 'data.total'],
+      set: [{ value: 'order' }, { value: 'complete' }, 'data.id', 'data.value'],
     },
   },
   out: send(
@@ -214,7 +223,7 @@ export const siteSearch: StepExample = {
   title: 'Site search',
   description:
     'A search event maps to trackSiteSearch with keyword, category and result count.',
-  in: event('search submit', {
+  in: otherEvent('search submit', {
     data: { query: 'rucksack', category: 'bags', results: 12 },
   }),
   mapping: {
@@ -236,7 +245,7 @@ export const trackLink: StepExample = {
   title: 'Download link',
   description:
     'A tagged download maps to trackLink, which sends the file address as download and as the hit url.',
-  in: event('file download', {
+  in: otherEvent('file download', {
     data: { url: 'https://www.example.com/whitepaper.pdf' },
   }),
   mapping: {
@@ -257,7 +266,7 @@ export const ping: StepExample = {
   title: 'Ping',
   description:
     'A heartbeat event maps to ping, which extends the session without counting as a page view.',
-  in: event('page ping'),
+  in: otherEvent('page ping'),
   mapping: {
     name: 'ping',
   },
@@ -296,7 +305,7 @@ export const ecommerceRemoveFromCart: StepExample = {
   title: 'Remove from cart',
   description:
     'A product remove maps to ecommerceRemoveFromCart with the removed product.',
-  in: event('product remove', {
+  in: otherEvent('product remove', {
     data: {
       id: 'ers',
       name: 'Everyday Ruck Snack',
@@ -347,7 +356,7 @@ export const ecommerceOrder: StepExample = {
         {
           map: {
             orderId: 'data.id',
-            grandTotal: 'data.total',
+            grandTotal: 'data.value',
             tax: 'data.taxes',
             shipping: 'data.shipping',
           },

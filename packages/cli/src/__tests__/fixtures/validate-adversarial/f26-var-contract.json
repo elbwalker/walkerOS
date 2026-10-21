@@ -9,9 +9,9 @@
             "properties": {
               "data": {
                 "type": "object",
-                "required": ["total"],
+                "required": ["value"],
                 "properties": {
-                  "total": {
+                  "value": {
                     "type": "number"
                   }
                 }
@@ -55,7 +55,7 @@
                 "entity": "order",
                 "action": "complete",
                 "data": {
-                  "total": 9.99
+                  "value": 9.99
                 },
                 "user": {},
                 "source": {
@@ -71,7 +71,7 @@
                       "entity": "order",
                       "action": "complete",
                       "data": {
-                        "total": 9.99
+                        "value": 9.99
                       },
                       "user": {},
                       "source": {

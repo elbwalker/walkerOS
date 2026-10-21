@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { WalkerOS } from '@walkeros/core';
 import type { Config, CriteoEmailHashes, Settings } from '../types';
-import { clone, createMockContext, getEvent } from '@walkeros/core';
+import { clone, createEvent, createMockContext } from '@walkeros/core';
 import { examples } from '../dev';
 
 const { env } = examples;
@@ -25,7 +25,7 @@ describe('Criteo email hashing', () => {
 
   async function pushEmail(email: string): Promise<CriteoEmailHashes> {
     const destination = jest.requireActual('../').default;
-    const event = getEvent('form submit', { user: { email } });
+    const event = createEvent({ name: 'form submit', user: { email } });
     const config: Config = {
       settings: {
         partnerId,

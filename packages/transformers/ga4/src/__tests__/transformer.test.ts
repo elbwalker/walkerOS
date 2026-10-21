@@ -319,7 +319,7 @@ describe('transformerGa4', () => {
           name: 'order complete',
           data: expect.objectContaining({
             id: 'T-99',
-            total: 42,
+            value: 42,
             currency: 'EUR',
           }),
         }),
@@ -349,7 +349,7 @@ describe('transformerGa4', () => {
           data: expect.objectContaining({
             id: 'T-1',
             currency: 'EUR',
-            total: 10,
+            value: 10,
             affiliation: 'partner-1',
           }),
         }),
@@ -367,7 +367,7 @@ describe('transformerGa4', () => {
       const result = await instance.push(emptyEvent, ctx);
       expect(result).toEqual({
         event: expect.objectContaining({
-          data: expect.objectContaining({ id: 'T-1', total: 10 }),
+          data: expect.objectContaining({ id: 'T-1', value: 10 }),
         }),
       });
       const event = (result as { event: WalkerOS.DeepPartialEvent }).event;

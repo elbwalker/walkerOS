@@ -6,7 +6,7 @@ import type { GA4Mapping } from './types';
  * The `'*'` key is the fallback for unknown event names.
  *
  * Field naming for `data.map`:
- * - Monetary: `currency` from `ep.currency`, `value`/`total` from `epn.value`,
+ * - Monetary: `currency` from `ep.currency`, `value` from `epn.value`,
  *   `tax` from `epn.tax`, `shipping` from `epn.shipping`, `coupon` from
  *   `ep.coupon`.
  * - Promotions read from `firstItem` (synthetic `items[0]` reference exposed by
@@ -32,7 +32,7 @@ export const defaultMapping: GA4Mapping = {
       map: {
         id: 'params.ep.transaction_id',
         currency: 'params.ep.currency',
-        total: 'params.epn.value',
+        value: 'params.epn.value',
         tax: 'params.epn.tax',
         shipping: 'params.epn.shipping',
         coupon: 'params.ep.coupon',
@@ -111,7 +111,7 @@ export const defaultMapping: GA4Mapping = {
       map: {
         id: 'params.ep.transaction_id',
         currency: 'params.ep.currency',
-        total: 'params.epn.value',
+        value: 'params.epn.value',
       },
     },
   },

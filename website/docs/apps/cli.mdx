@@ -620,7 +620,7 @@ Create `event.json`:
   "name": "order complete",
   "data": {
     "id": "ORD-12345",
-    "total": 299.99,
+    "value": 299.99,
     "currency": "USD"
   },
   "user": {
@@ -729,7 +729,7 @@ The `--event` parameter accepts three formats:
 A simulated destination runs with the mock env its package ships (`examples.env.push`), so the vendor SDK or HTTP call is recorded instead of sent. The output lists, per simulated step, the mapping rule that matched and every recorded vendor call:
 
 <CodeSnippet
-  code={`walkeros push flow.json -e '{"name":"order complete","data":{"id":"ORD-1","total":42}}' \\
+  code={`walkeros push flow.json -e '{"name":"order complete","data":{"id":"ORD-1","value":42}}' \\
   --simulate destination.pubsub`}
   language="bash"
 />
@@ -738,7 +738,7 @@ A simulated destination runs with the mock env its package ships (`examples.env.
 success: true
   destination.pubsub
     mapping: none
-    call PubSub.topic.publishMessage({"data":"{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-1\",\"total\":42},...)
+    call PubSub.topic.publishMessage({"data":"{\"name\":\"order complete\",\"data\":{\"id\":\"ORD-1\",\"value\":42},...)
   Duration: 44779ms
 ```
 

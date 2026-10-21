@@ -21,7 +21,7 @@
                   "data": {
                     "map": {
                       "transaction_id": "data.id",
-                      "value": "data.total",
+                      "value": "data.value",
                       "currency": "data.currency",
                       "tax": "data.tax",
                       "shipping": "data.shipping",

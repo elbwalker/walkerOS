@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -61,7 +61,7 @@ export const captureWithInclude: PostHogStepExample = {
           data_currency: 'EUR',
           data_shipping: 5.22,
           data_taxes: 73.76,
-          data_total: 555,
+          data_value: 555,
           globals_pagegroup: 'shop',
         },
       },
@@ -77,7 +77,8 @@ export const identifyWithSetAndSetOnce: PostHogStepExample = {
   title: 'Identify with $set',
   description:
     'A user login fires PostHog identify with $set and $set_once person properties and skips the capture.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000102,
     data: {
       user_id: 'new-user-123',
@@ -133,7 +134,8 @@ export const groupIdentifyWithProperties: PostHogStepExample = {
   title: 'Group identify',
   description:
     'A company update fires PostHog groupIdentify with group type, key, and associated group properties.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000103,
     data: {
       company_id: 'company_123',

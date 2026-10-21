@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -51,7 +51,7 @@ export const orderCompleteRevenue: OptimizelyStepExample = {
     timestamp: 1700000102,
     data: {
       revenue_cents: 55500,
-      total: 555,
+      value: 555,
       currency: 'EUR',
       item_count: 3,
     },
@@ -60,7 +60,7 @@ export const orderCompleteRevenue: OptimizelyStepExample = {
     name: 'purchase',
     settings: {
       revenue: 'data.revenue_cents',
-      value: 'data.total',
+      value: 'data.value',
       eventTags: {
         map: {
           currency: 'data.currency',
@@ -86,7 +86,8 @@ export const signupWithAttributes: OptimizelyStepExample = {
   title: 'Signup with attributes',
   description:
     'A user signup sets per-event Optimizely attributes via setAttribute before firing the trackEvent.',
-  in: getEvent('user signup', {
+  in: createEvent({
+    name: 'user signup',
     timestamp: 1700000103,
     data: {
       method: 'google',
@@ -117,7 +118,7 @@ export const signupWithAttributes: OptimizelyStepExample = {
  */
 export const wildcardIgnored: OptimizelyStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000104 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000104 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -130,7 +131,8 @@ export const attributesOnlySilent: OptimizelyStepExample = {
   title: 'Attributes only',
   description:
     'A profile update sets Optimizely user attributes without firing a trackEvent for user enrichment.',
-  in: getEvent('profile update', {
+  in: createEvent({
+    name: 'profile update',
     timestamp: 1700000105,
     data: {
       plan: 'premium',

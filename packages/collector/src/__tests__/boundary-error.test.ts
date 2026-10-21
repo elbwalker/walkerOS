@@ -123,7 +123,7 @@ describe('push boundary', () => {
     // without carrying the buyer's address into stderr and the jsonl sink.
     const event: WalkerOS.DeepPartialEvent = {
       name: 'order complete',
-      data: { total: 42 },
+      data: { value: 42 },
       user: { id: 'buyer@example.com' },
     };
 

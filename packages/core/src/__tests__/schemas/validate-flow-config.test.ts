@@ -258,11 +258,11 @@ describe('validateFlowConfig', () => {
                   properties: {
                     data: {
                       type: 'object',
-                      required: ['total'],
+                      required: ['value'],
                       properties: {
-                        total: {
+                        value: {
                           type: 'number',
-                          description: 'Order total in EUR',
+                          description: 'Order value in EUR',
                         },
                       },
                     },
@@ -280,9 +280,9 @@ describe('validateFlowConfig', () => {
     const result = validateFlowConfig(json);
     const order = result.context?.contract?.find((c) => c.entity === 'order');
     expect(order?.actions).toEqual(['complete']);
-    expect(order?.properties?.complete?.total).toEqual({
+    expect(order?.properties?.complete?.value).toEqual({
       type: 'number',
-      description: 'Order total in EUR',
+      description: 'Order value in EUR',
       required: true,
     });
   });
@@ -1513,7 +1513,7 @@ describe('validateFlowConfig', () => {
       ],
       [
         'bare event paths in destination data',
-        destination({ data: { map: { v: 'data.total' } } }),
+        destination({ data: { map: { v: 'data.value' } } }),
       ],
       [
         'a reference string',

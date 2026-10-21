@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -54,7 +54,7 @@ export const defaultEventForwarding: SegmentStepExample = {
  */
 export const wildcardIgnored: SegmentStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -143,7 +143,8 @@ export const userLoginIdentify: SegmentStepExample = {
   title: 'User login identify',
   description:
     'A user login fires Segment analytics.identify with userId and reserved traits such as email, name, and plan.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000105,
     data: {
       user_id: 'new-user-123',
@@ -199,7 +200,8 @@ export const profileUpdateTraitsOnly: SegmentStepExample = {
   title: 'Profile update',
   description:
     'A profile update calls Segment analytics.identify with traits and no userId to merge traits into the current profile.',
-  in: getEvent('profile update', {
+  in: createEvent({
+    name: 'profile update',
     timestamp: 1700000106,
     data: {
       name: 'Jane Q. Doe',
@@ -245,7 +247,7 @@ export const userLogoutReset: SegmentStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls analytics.reset to clear userId, anonymousId, and traits then generate a new anonymous id.',
-  in: getEvent('user logout', { timestamp: 1700000107 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000107 }),
   mapping: {
     silent: true,
     settings: {
@@ -263,7 +265,8 @@ export const companyUpdateGroup: SegmentStepExample = {
   title: 'Group company',
   description:
     'A company update fires Segment analytics.group with a groupId and traits for account-level tracking.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000108,
     data: {
       company_id: 'comp-456',
@@ -387,7 +390,7 @@ export const orderCompletedEcommerce: SegmentStepExample = {
         currency: { key: 'data.currency', value: 'EUR' },
         shipping: 'data.shipping',
         tax: 'data.taxes',
-        total: 'data.total',
+        total: 'data.value',
         products: {
           loop: [
             'nested',

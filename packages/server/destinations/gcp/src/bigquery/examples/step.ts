@@ -39,7 +39,7 @@ const purchaseEvent = getEvent('order complete', {
   timestamp: 1700001101,
   data: {
     id: 'ORD-500',
-    total: 199.99,
+    value: 199.99,
     items: [{ sku: 'SKU-1', qty: 2 }],
   },
   source: { type: 'express', platform: 'server' },

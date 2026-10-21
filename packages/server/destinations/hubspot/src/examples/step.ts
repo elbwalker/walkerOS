@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -61,7 +61,7 @@ export const mappedEventName: HubSpotStepExample = {
   in: getEvent('order complete', {
     timestamp: 1700000101,
     user: { email: 'user@example.com' },
-    data: { total: 99.5, currency: 'EUR', id: 'ord-123' },
+    data: { value: 99.5, currency: 'EUR', id: 'ord-123' },
   }),
   mapping: {
     name: 'order complete',
@@ -69,7 +69,7 @@ export const mappedEventName: HubSpotStepExample = {
       eventName: 'purchase_completed',
       properties: {
         map: {
-          revenue: 'data.total',
+          revenue: 'data.value',
           currency: 'data.currency',
           order_id: 'data.id',
         },
@@ -179,7 +179,8 @@ export const userLoginIdentify: HubSpotStepExample = {
   title: 'User login identify',
   description:
     'A user login only upserts the HubSpot contact with profile and lifecycle properties, skipping the event send.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000104,
     user: { email: 'user@example.com' },
     data: {
@@ -270,7 +271,8 @@ export const noIdentity: HubSpotStepExample = {
  */
 export const wildcardIgnored: HubSpotStepExample = {
   public: false,
-  in: getEvent('debug noise', {
+  in: createEvent({
+    name: 'debug noise',
     timestamp: 1700000107,
     user: { email: 'user@example.com' },
   }),

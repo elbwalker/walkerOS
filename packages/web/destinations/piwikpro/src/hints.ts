@@ -24,7 +24,7 @@ export const hints: Hint.Hints = {
     code: [
       {
         lang: 'json',
-        code: '{ "order": { "complete": { "name": "trackEvent", "data": { "set": ["entity", "action", "data.id"] }, "settings": { "goalId": "goal-uuid", "goalValue": "data.total" } } } }',
+        code: '{ "order": { "complete": { "name": "trackEvent", "data": { "set": ["entity", "action", "data.id"] }, "settings": { "goalId": "goal-uuid", "goalValue": "data.value" } } } }',
       },
     ],
   },

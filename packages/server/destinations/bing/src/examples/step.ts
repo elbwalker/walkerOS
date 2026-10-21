@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent, isObject } from '@walkeros/core';
 
 /**
  * Bing UET CAPI step examples.
@@ -40,7 +40,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'b1c2d3e4f5a60001',
     timestamp: 1700000900000,
-    data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
+    data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       {
         entity: 'product',
@@ -60,7 +60,7 @@ export const purchase: Flow.StepExample = {
       map: {
         customData: {
           map: {
-            value: 'data.total',
+            value: 'data.value',
             currency: { key: 'data.currency', value: 'EUR' },
             transactionId: 'data.id',
             pageType: { value: 'purchase' },
@@ -170,7 +170,8 @@ export const lead: Flow.StepExample = {
   title: 'Lead',
   description:
     'A newsletter form submission is sent to Bing UET as a lead event with the SHA-256 hashed email.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     id: 'b1c2d3e4f5a60003',
     timestamp: 1700000902000,
     data: { type: 'newsletter' },

@@ -2,10 +2,11 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Rules, Settings } from '../types';
 import {
   clone,
+  createEvent,
   createIngest,
-  getEvent,
   createMockContext,
   createMockLogger,
+  getEvent,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -226,7 +227,8 @@ describe('Server Destination TikTok', () => {
   });
 
   test('user data is hashed', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@example.com' },
     });
     const config: Config = {

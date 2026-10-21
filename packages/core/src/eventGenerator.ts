@@ -1,6 +1,29 @@
 import type { WalkerOS } from './types';
 import { assign } from './assign';
+import { fnv1a64 } from './deriveSpanId';
 import { getSpanId } from './getSpanId';
+
+/**
+ * Fixed timestamp of every generated event (2023-11-14T22:13:20Z, in
+ * milliseconds), so generated events are the same on every run and day.
+ */
+const TIMESTAMP = 1700000000000;
+
+/**
+ * Names `getEvent` knows: the standard events plus the generic default
+ * `entity action`. Any other name does not compile.
+ */
+export type StandardEventName =
+  | 'entity action'
+  | 'cart view'
+  | 'checkout view'
+  | 'order complete'
+  | 'page view'
+  | 'product add'
+  | 'product view'
+  | 'product visible'
+  | 'promotion visible'
+  | 'session start';
 
 /**
  * Creates a complete event with default values.
@@ -16,7 +39,7 @@ import { getSpanId } from './getSpanId';
 export function createEvent(
   props: WalkerOS.DeepPartialEvent = {},
 ): WalkerOS.Event {
-  const timestamp = props.timestamp || new Date().setHours(0, 13, 37, 0);
+  const timestamp = props.timestamp || TIMESTAMP;
   const id = props.id || getSpanId();
 
   const defaultEvent: WalkerOS.Event = {
@@ -83,18 +106,23 @@ export function createEvent(
 }
 
 /**
- * Creates a complete event with default values based on the event name.
+ * Creates a complete standard event with default values based on its name.
  * Used for testing and debugging.
  *
- * @param name - The name of the event to create.
+ * The output is stable: the timestamp is fixed and the id is derived from the
+ * name (16 lowercase hex characters), so the same name gives the same event on
+ * every call, run and day. Events with other names use `createEvent`.
+ *
+ * @param name - The standard event to create.
  * @param props - Properties to override the default values.
  * @returns A complete event.
  */
 export function getEvent(
-  name: string = 'entity action',
+  name: StandardEventName = 'entity action',
   props: WalkerOS.DeepPartialEvent = {},
 ): WalkerOS.Event {
-  const timestamp = props.timestamp || new Date().setHours(0, 13, 37, 0);
+  const timestamp = props.timestamp || TIMESTAMP;
+  const id = props.id || fnv1a64(name);
 
   const quantity = 2;
   const product1 = {
@@ -115,7 +143,8 @@ export function getEvent(
     },
   };
 
-  const defaultEvents: Record<string, WalkerOS.PartialEvent> = {
+  const defaultEvents: Record<StandardEventName, WalkerOS.PartialEvent> = {
+    'entity action': {},
     'cart view': {
       data: {
         currency: 'EUR',
@@ -163,7 +192,7 @@ export function getEvent(
         currency: 'EUR',
         shipping: 5.22,
         taxes: 73.76,
-        total: 555,
+        value: 555,
       },
       context: { shopping: ['complete', 0] },
       globals: { pagegroup: 'shop' },
@@ -273,5 +302,5 @@ export function getEvent(
     },
   };
 
-  return createEvent({ ...defaultEvents[name], ...props, name: name });
+  return createEvent({ ...defaultEvents[name], ...props, name, id });
 }

@@ -2,10 +2,11 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import {
   clone,
+  createEvent,
   createIngest,
-  getEvent,
   createMockContext,
   createMockLogger,
+  getEvent,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -241,7 +242,8 @@ describe('Server Destination Criteo', () => {
   });
 
   test('raw email is hashed into md5, sha256, sha256_md5', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'user@example.com' },
     });
     const config: Config = {
@@ -351,7 +353,7 @@ describe('Server Destination Criteo', () => {
     const dest = jest.requireActual('../').default;
     const event = getEvent('order complete', {
       timestamp: 1700000900000,
-      data: { id: 'ORD-1', total: 100, currency: 'EUR' },
+      data: { id: 'ORD-1', value: 100, currency: 'EUR' },
       nested: [
         {
           entity: 'product',

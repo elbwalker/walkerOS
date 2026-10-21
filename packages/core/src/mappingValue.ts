@@ -130,8 +130,8 @@ async function processMappingValue(
 
       if (!Object.keys(mapping).length) return;
 
-      // An object without any operator (`{ total: 'data.total' }` where
-      // `{ map: { total: 'data.total' } }` was meant) would resolve to the
+      // An object without any operator (`{ total: 'data.value' }` where
+      // `{ map: { total: 'data.value' } }` was meant) would resolve to the
       // whole input. Drop it and say how to fix it.
       if (!VALUE_KEYS.some((name) => name in mapping)) {
         reportValue(

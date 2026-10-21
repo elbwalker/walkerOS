@@ -33,7 +33,7 @@ export const events: Record<string, WalkerOS.Event> = {
   // Maps to purchaseCall in outputs.ts
   purchase: {
     name: 'order complete',
-    data: { id: 'T-123', total: 99.99 },
+    data: { id: 'T-123', value: 99.99 },
     context: {},
     globals: {},
     custom: {},

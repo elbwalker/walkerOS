@@ -95,10 +95,10 @@ export const checkoutPost: Flow.StepExample = {
   in: {
     method: 'POST',
     path: '/collect',
-    body: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+    body: { name: 'order complete', data: { id: 'ORD-123', value: 149.97 } },
   },
   out: [
-    ['elb', { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } }],
+    ['elb', { name: 'order complete', data: { id: 'ORD-123', value: 149.97 } }],
   ],
 };
 ```
@@ -190,7 +190,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000000 }),
   mapping: {
     name: 'Purchase',
-    data: { map: { value: 'data.total', currency: { value: 'EUR' } } },
+    data: { map: { value: 'data.value', currency: { value: 'EUR' } } },
   },
   out: [
     [
@@ -284,7 +284,7 @@ import { getEvent } from '@walkeros/core';
 
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { timestamp: 1700000000 }),
-  mapping: { name: 'Purchase', data: { map: { value: 'data.total' } } },
+  mapping: { name: 'Purchase', data: { map: { value: 'data.value' } } },
   out: ['track', 'Purchase', { value: 555 }, { eventID: '1700000000-gr0up-1' }],
 };
 
@@ -424,7 +424,7 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order mapped to the Meta Pixel Purchase standard event.',
   in: getEvent('order complete', { timestamp: 1700000000 }),
-  mapping: { name: 'Purchase', data: { map: { value: 'data.total' } } },
+  mapping: { name: 'Purchase', data: { map: { value: 'data.value' } } },
   out: [['fbq', 'track', 'Purchase', { value: 555, currency: 'EUR' }]],
 };
 

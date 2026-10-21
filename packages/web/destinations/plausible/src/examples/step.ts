@@ -39,7 +39,7 @@ export const purchase: Flow.StepExample = {
         revenue: {
           map: {
             currency: { value: 'EUR' },
-            amount: 'data.total',
+            amount: 'data.value',
           },
         },
       },

@@ -98,10 +98,10 @@ const sampleConfig = {
           package: '@walkeros/web-destination-gtag',
           examples: {
             purchase: {
-              in: { name: 'order complete', data: { total: 42 } },
+              in: { name: 'order complete', data: { value: 42 } },
               mapping: {
                 name: 'purchase',
-                data: { map: { value: 'data.total' } },
+                data: { map: { value: 'data.value' } },
               },
               out: [
                 { type: 'call', path: 'gtag', args: ['event', 'purchase'] },
@@ -203,7 +203,7 @@ describe('flow_examples tool', () => {
     const purchase = exampleNamed(result, 'purchase');
     expect(purchase.mapping).toEqual({
       name: 'purchase',
-      data: { map: { value: 'data.total' } },
+      data: { map: { value: 'data.value' } },
     });
   });
 

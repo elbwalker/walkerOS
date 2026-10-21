@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -39,7 +39,7 @@ export const purchaseAlert: SlackStepExample = {
     timestamp: 1700000100,
     data: {
       id: 'ORD-500',
-      total: 299.99,
+      value: 299.99,
       currency: 'EUR',
       product: 'Pro Plan',
     },
@@ -48,7 +48,7 @@ export const purchaseAlert: SlackStepExample = {
   mapping: {
     settings: {
       channel: '#sales',
-      text: ':moneybag: New order: ${data.id} - ${data.total} ${data.currency}',
+      text: ':moneybag: New order: ${data.id} - ${data.value} ${data.currency}',
     },
   },
   out: [
@@ -72,7 +72,8 @@ export const errorAlert: SlackStepExample = {
   title: 'Error alert',
   description:
     'An error event posts a critical alert to an engineering channel using a mapping-level channel override.',
-  in: getEvent('error occur', {
+  in: createEvent({
+    name: 'error occur',
     timestamp: 1700000200,
     data: {
       message: 'Payment gateway timeout',
@@ -107,7 +108,8 @@ export const welcomeDM: SlackStepExample = {
   title: 'Welcome DM',
   description:
     'A user signup opens a Slack DM channel and posts a welcome message with the selected plan.',
-  in: getEvent('user signup', {
+  in: createEvent({
+    name: 'user signup',
     timestamp: 1700000300,
     data: { plan: 'enterprise' },
     user: { id: 'U-NEW-USER' },
@@ -141,7 +143,8 @@ export const threadedCheckoutStep: SlackStepExample = {
   title: 'Threaded reply',
   description:
     'A checkout step posts as a threaded reply in Slack via thread_ts with broadcast to the channel.',
-  in: getEvent('checkout step', {
+  in: createEvent({
+    name: 'checkout step',
     timestamp: 1700000400,
     data: { step: 'payment', sessionTs: '1700000000.000050' },
   }),
@@ -176,7 +179,8 @@ export const ephemeralMessage: SlackStepExample = {
   title: 'Ephemeral message',
   description:
     'A quota warning posts an ephemeral Slack message visible only to a target admin user.',
-  in: getEvent('quota warning', {
+  in: createEvent({
+    name: 'quota warning',
     timestamp: 1700000500,
     data: { remaining: 5 },
   }),
@@ -211,7 +215,8 @@ export const defaultBlocks: SlackStepExample = {
   title: 'Default blocks',
   description:
     'With no custom text the destination auto-generates a Block Kit message from event data and source.',
-  in: getEvent('lead submit', {
+  in: createEvent({
+    name: 'lead submit',
     timestamp: 1700000600,
     data: { name: 'Acme', email: 'sales@acme.test' },
     source: { type: 'crm', platform: 'server' },
@@ -261,7 +266,8 @@ export const deployNotification: SlackStepExample = {
   title: 'Webhook deploy',
   description:
     'Without a token the destination posts to an incoming Slack webhook URL with the rendered message body.',
-  in: getEvent('deploy complete', {
+  in: createEvent({
+    name: 'deploy complete',
     timestamp: 1700000700,
     data: { version: '1.4.2', environment: 'prod' },
   }),

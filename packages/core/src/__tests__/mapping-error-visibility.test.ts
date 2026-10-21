@@ -186,12 +186,12 @@ describe('a value object without an operator (E14)', () => {
     const collector = createTestCollector();
     const event: WalkerOS.DeepPartialEvent = {
       name: 'order complete',
-      data: { total: 42, currency: 'EUR' },
+      data: { value: 42, currency: 'EUR' },
       user: { email: 'person@example.com' },
     };
 
     // A plain object of paths, the shape a hand-written config arrives in.
-    const order: Record<string, string> = { total: 'data.total' };
+    const order: Record<string, string> = { total: 'data.value' };
     const mapping: Mapping.Value = {
       map: { order, currency: 'data.currency' },
     };

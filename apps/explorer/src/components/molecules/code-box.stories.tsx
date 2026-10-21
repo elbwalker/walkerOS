@@ -231,7 +231,7 @@ export const DynamicFlowContext: Story = {
                           data: {
                             map: {
                               value: {
-                                key: 'data.total',
+                                key: 'data.value',
                                 fn: '$code:(value) => Number(value)',
                               },
                             },

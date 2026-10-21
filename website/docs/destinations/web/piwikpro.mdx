@@ -150,7 +150,7 @@ a wildcard and map what you need:
 
 A rule's `settings.goalId` adds a `trackGoal` call after the method hit.
 `settings.goalValue` is a mapping value for its conversion value, such as
-`"data.total"`. A page view rule with goal settings still tracks its page
+`"data.value"`. A page view rule with goal settings still tracks its page
 view. With `silent: true`, the rule sends only the goal, with its dimensions.
 A `silent` rule without a goal sends nothing and logs a skip.
 
@@ -162,7 +162,7 @@ when it has a `goalId`:
   "complete": {
     "settings": {
       "goalId": "6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c",
-      "goalValue": "data.total"
+      "goalValue": "data.value"
     }
   }
 }`}
