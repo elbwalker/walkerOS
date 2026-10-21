@@ -67,7 +67,7 @@ import { journeyFields, observerStepError, stepState } from './observerEmit';
 import { getCacheStore } from './cache';
 import { buildReportError, errorMeta } from './report-error';
 import { compileStepState, runStepState, warnStateOff } from './state';
-import { asStepError, initReturnedFalse } from './outcome';
+import { asStepError, initReturnedFalse, returnedFalse } from './outcome';
 import { resolveDestinationTimeout, withTimeout } from './timeout';
 
 /**
@@ -335,7 +335,7 @@ export async function transformerInit(
     );
 
     // Check for initialization failure
-    if (configResult === false) return false;
+    if (returnedFalse(configResult)) return false;
 
     // Update config if returned, preserving env from definition
     transformer.config = {

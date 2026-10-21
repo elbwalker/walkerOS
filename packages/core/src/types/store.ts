@@ -129,7 +129,7 @@ export type Init<T extends TypesGeneric = Types> = (
 
 export type InitFn<T extends TypesGeneric = Types> = (
   context: Context<T>,
-) => WalkerOS.PromiseOrValue<void | false | Config<T>>;
+) => WalkerOS.PromiseOrValue<void | Config<T>>;
 
 export type InitStore<T extends TypesGeneric = Types> = {
   code: Init<T>;

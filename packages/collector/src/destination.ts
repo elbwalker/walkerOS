@@ -48,6 +48,7 @@ import {
   isTransportFailure,
   recordFailure,
   recordSkip,
+  returnedFalse,
 } from './outcome';
 import {
   BATCH_WAIT,
@@ -1597,7 +1598,7 @@ async function runDestinationInit(
   // Runtime guard: bundled code is not typechecked, so an init may still
   // return false. Without this, `{ ...(false || config), init: true }`
   // would install a destination with its settings missing.
-  if (configResult === false) throw initReturnedFalse();
+  if (returnedFalse(configResult)) throw initReturnedFalse();
 
   // The config to install, marked initialized; the caller installs it.
   return {

@@ -42,12 +42,12 @@ export default [
       'jest/no-disabled-tests': 'warn',
       'jest/no-focused-tests': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
-      'walkeros/await-send': 'warn',
+      'walkeros/await-send': 'error',
       'no-restricted-syntax': [
         'error',
         {
           selector:
-            "ExportAllDeclaration[source.value=/(^|\\/)(examples|schemas)$/]",
+            'ExportAllDeclaration[source.value=/(^|\\/)(examples|schemas)$/]',
           message:
             'Examples and schemas must be exported only from src/dev.ts (the ./dev subpath); a production-entry export leaks them into bundled output.',
         },
@@ -65,7 +65,7 @@ export default [
   {
     // A destination's push and pushBatch never end with a bare return.
     files: ['**/destinations/**/*.{js,ts,tsx}'],
-    rules: { 'walkeros/no-silent-return': 'warn' },
+    rules: { 'walkeros/no-silent-return': 'error' },
   },
   {
     // Relaxed rules for test files

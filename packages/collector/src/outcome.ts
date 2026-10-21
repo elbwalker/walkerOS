@@ -38,6 +38,14 @@ export function isTransportFailure(reason: FailureReason): boolean {
   return reason.retryable && !GATE_CODES.includes(reason.code);
 }
 
+/**
+ * Whether an `init` returned `false`. Its type forbids it, but bundled code is
+ * not typechecked, so the guard reads the value as it arrives.
+ */
+export function returnedFalse(result: unknown): boolean {
+  return result === false;
+}
+
 /** The error of an `init` that returned `false` (bundled code is not typechecked). */
 export function initReturnedFalse(): StepError {
   return new StepError(

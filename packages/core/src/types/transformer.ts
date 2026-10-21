@@ -271,12 +271,12 @@ export type Fn<
  *
  * @param context - Transformer context
  * @returns void - initialization successful
- * @returns false - initialization failed, skip this transformer
+ * @throws StepError - initialization failed; the push fails
  * @returns Config<T> - return updated config
  */
 export type InitFn<T extends TypesGeneric = Types> = (
   context: Context<T>,
-) => WalkerOS.PromiseOrValue<void | false | Config<T>>;
+) => WalkerOS.PromiseOrValue<void | Config<T>>;
 
 /**
  * Transformer instance returned by Init function.

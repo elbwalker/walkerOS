@@ -149,6 +149,7 @@ describe('transformer init contract (C7)', () => {
     const enrich: Transformer.Instance = {
       type: 'enrich',
       config: {},
+      // @ts-expect-error init may no longer return false: the type rejects it, the runtime guard reports it
       init: initFalse,
       push: (event) => ({ event }),
     };

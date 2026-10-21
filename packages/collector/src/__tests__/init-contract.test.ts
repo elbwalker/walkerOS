@@ -29,6 +29,7 @@ describe('init contract', () => {
     const legacy: Destination.Instance = {
       type: 'legacy',
       config: {},
+      // @ts-expect-error init may no longer return false: the type rejects it, the runtime guard reports it
       init: initFalse,
       push: jest.fn(),
     };
