@@ -664,10 +664,12 @@ Use these templates as your starting point:
      sends the event and reports once with `reportCause`. Only a wholly
      unsendable event throws `missing-input`.
 9. **Scripts through `loadVendor`** (`@walkeros/web-core`). It injects the
-   script once per page and reports `vendor-not-loaded`, `vendor-not-ready` and
-   `vendor-timeout`. For a vendor that replays its own stub, call `check()` in
-   `push`; for any other, `await ready()`. Pass attributes the tag needs
-   (`data-domain`) through `options.attributes`.
+   script once per page into the document `env` provides (the page's own by
+   default) and reports `vendor-not-loaded`, `vendor-not-ready` and
+   `vendor-timeout`. For tests and examples, `mockScriptDocument()` from
+   `@walkeros/web-core/dev` provides a document. For a vendor that replays its
+   own stub, call `check()` in `push`; for any other, `await ready()`. Pass
+   attributes the tag needs (`data-domain`) through `options.attributes`.
 10. **Honour `rule.silent`.** A rule with `silent: true` sends no event of its
     own and runs only the side effects it maps (identify, group). Do not
     `return` early for it (`walkeros/no-silent-return` is an error): write

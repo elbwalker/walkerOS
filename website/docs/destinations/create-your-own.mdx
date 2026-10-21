@@ -151,7 +151,7 @@ never the value.
 ### Vendor scripts
 
 A web destination that loads a vendor script uses `loadVendor` from
-`@walkeros/web-core`. It injects the script once per page and throws
+`@walkeros/web-core`. It injects the script once per page, into the document the destination's `env` provides (the page's own by default), so simulation and server-side rendering work without a browser page. It throws
 `vendor-not-loaded`, `vendor-not-ready` or `vendor-timeout`, so a blocked
 script shows as failed pushes instead of lost events.
 
