@@ -2,6 +2,7 @@ import { isObject, StepError } from '@walkeros/core';
 import type { Destination } from '@walkeros/core';
 
 export interface Vendor {
+  init(site: string): void | Promise<void>;
   track(name: string, site?: string): void | Promise<void>;
   consent(granted: boolean): void;
 }
@@ -43,4 +44,43 @@ export const vendorGlobal: Destination.Instance<Types> = {
     if (type !== 'consent' || !isVendor(vendor) || !isObject(data)) return;
     vendor.consent(data.marketing === true);
   },
+};
+
+/**
+ * Calls its vendor in `init`, as `fbq('init', ...)` does: the call is queued
+ * by the vendor, not awaited. It requires marketing consent, so the collector
+ * initializes it inside the first input that grants it, not at the start.
+ */
+export const initCalling: Destination.Instance<Types> = {
+  ...vendorGlobal,
+  type: 'init-calling',
+  config: { consent: { marketing: true } },
+  init: ({ config, env }) => {
+    if (!env.vendor) return;
+    Promise.resolve(env.vendor.init(config.settings?.site ?? '')).catch(
+      () => undefined,
+    );
+  },
+};
+
+/**
+ * Follows its own `config.consent` at the vendor: on a consent change it
+ * tells the vendor whether every key it requires is still granted.
+ */
+export const consentAware: Destination.Instance<Types> = {
+  ...vendorGlobal,
+  type: 'consent-aware',
+  on: (type, { config, env, data }) => {
+    const vendor = env.vendor;
+    if (type !== 'consent' || !isVendor(vendor) || !isObject(data)) return;
+    const required = Object.keys(config.consent ?? {});
+    vendor.consent(required.every((key) => data[key] === true));
+  },
+};
+
+/** Ignores a revocation: the vendor keeps collecting on its own (I1). */
+export const consentIgnoring: Destination.Instance<Types> = {
+  ...vendorGlobal,
+  type: 'consent-ignoring',
+  on: undefined,
 };

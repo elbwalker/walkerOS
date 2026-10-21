@@ -265,9 +265,19 @@ async function open(
     } else env = envBoundary.env;
   }
 
+  // Calls recorded while the step initializes belong to the init phase:
+  // item 5 reads them there, and no example's effects ever include them.
+  const initRecorded = new Set<number>();
+  let initFrom: number | undefined;
   const setPhase = (phase: Phase) => {
     boundary.phase = phase;
     if (envBoundary) envBoundary.phase = phase;
+    if (phase === 'init') initFrom = recorded.length;
+    else if (initFrom !== undefined) {
+      for (let index = initFrom; index < recorded.length; index++)
+        initRecorded.add(index);
+      initFrom = undefined;
+    }
   };
 
   const handler: Logger.Handler = (level, message, context, scope) => {
@@ -286,10 +296,18 @@ async function open(
     throw error;
   }
 
+  /** What the step did for its inputs: never what its init did. */
   const effects = (): Flow.StepEffect[] => {
     if (effectsOf) return effectsOf();
-    if (setup.env) return recorded.map(({ fn, args }) => [fn, ...args]);
-    return boundary.requests.map((request) => request.effect);
+    if (setup.env)
+      return recorded.flatMap(({ fn, args }, index) => {
+        if (initRecorded.has(index)) return [];
+        const effect: Flow.StepEffect = [fn, ...args];
+        return [effect];
+      });
+    return boundary.requests
+      .filter((request) => request.phase !== 'init')
+      .map((request) => request.effect);
   };
 
   return {
@@ -625,6 +643,17 @@ function setupOf(
   };
 }
 
+/**
+ * The keys a `walker consent` example revokes (sets to `false`). An example
+ * without any is not a revoke example.
+ */
+export function revokedKeys(example: Flow.StepExample): string[] {
+  if (example.command !== 'consent' || !isObject(example.in)) return [];
+  return Object.entries(example.in)
+    .filter(([, value]) => value === false)
+    .map(([key]) => key);
+}
+
 /** Run one destination example; its problems, empty when it holds. */
 export async function checkDestinationExample(
   step: Destination.Instance<Destination.TypesGeneric>,
@@ -633,11 +662,18 @@ export async function checkDestinationExample(
 ): Promise<string[]> {
   const input = inputOf(example);
   if (typeof input === 'string') return [input];
-  const session = await openDestination(
-    step,
-    setupOf(example, options, mappingOf(example, input)),
-  );
+  const setup = setupOf(example, options, mappingOf(example, input));
+
+  // A revoke runs as a revocation happens: the destination is gated on the
+  // revoked keys and granted them first; only the revoke's own effects
+  // count, the grant's stay out like the init's.
+  const revoked = revokedKeys(example);
+  const grant = Object.fromEntries(revoked.map((key) => [key, true]));
+  if (revoked.length) setup.config = { ...setup.config, consent: grant };
+
+  const session = await openDestination(step, setup);
   try {
+    if (revoked.length) await session.run({ command: 'consent', data: grant });
     const { result, effects } = await session.run(input);
     const problems: string[] = [];
     const out = compareOut(effects, example);

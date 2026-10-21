@@ -17,7 +17,13 @@ import type { Client } from './fixture-package/src/store';
 import { missing, remote } from './fixture-package/src/store';
 import { chatty, forwarding } from './fixture-package/src/source';
 import type { Vendor } from './fixture-package/src/vendor';
-import { vendorGlobal } from './fixture-package/src/vendor';
+import {
+  consentAware,
+  consentIgnoring,
+  initCalling,
+  vendorGlobal,
+} from './fixture-package/src/vendor';
+import { eitherId, ga4Only } from './fixture-package/src/alternatives';
 
 describe('conformance kit', () => {
   beforeEach(() => {
@@ -249,6 +255,7 @@ describe('conformance kit, vendor-global profile', () => {
   });
 
   const vendor: Vendor = {
+    init: () => undefined,
     track: () => undefined,
     consent: () => undefined,
   };
@@ -294,6 +301,100 @@ describe('conformance kit, vendor-global profile', () => {
     ).resolves.toBeUndefined();
   });
 
+  describe('a destination whose init calls its vendor', () => {
+    const tracked = {
+      ...options.env,
+      simulation: [...options.env.simulation, 'call:vendor.init'],
+    };
+    const consented = { ...event, consent: { marketing: true } };
+    const initExamples: Flow.StepExamples = {
+      pageView: { ...examples.pageView, in: consented },
+      silent: { ...examples.silent, in: consented },
+      unreachable: { ...examples.unreachable, in: consented },
+      // Grants marketing (the init runs inside it), revokes functional.
+      revoke: {
+        command: 'consent',
+        in: { marketing: true, functional: false },
+        out: [['vendor.consent', true]],
+      },
+    };
+    const initOptions = { ...options, env: tracked, examples: initExamples };
+
+    it('leaves the init calls of a destination initialized inside an input out of its effects (items 2, 8 and 11 pass)', async () => {
+      await expect(
+        conformance('destination', initCalling, initOptions),
+      ).resolves.toBeUndefined();
+    });
+
+    it('passes web-sdk and fails item 5 only under sdk-env when init starts the SDK at page load', async () => {
+      // Without a consent gate the collector initializes it inside startFlow.
+      const atLoad = { ...initCalling, config: {} };
+      const atLoadOptions = { ...options, env: tracked };
+      await expect(
+        conformance('destination', atLoad, {
+          ...atLoadOptions,
+          profile: 'web-sdk',
+        }),
+      ).resolves.toBeUndefined();
+      await expect(
+        conformance('destination', atLoad, {
+          ...atLoadOptions,
+          profile: 'sdk-env',
+        }),
+      ).rejects.toMatchObject({
+        items: [5],
+        message: expect.stringMatching(/item 5: init makes 1 /),
+      });
+    });
+
+    it('still counts the init calls for item 5', async () => {
+      await expect(
+        conformance('destination', initCalling, {
+          ...initOptions,
+          profile: 'sdk-env',
+        }),
+      ).rejects.toMatchObject({
+        items: [5],
+        message: expect.stringMatching(/item 5: init makes 1 /),
+      });
+    });
+  });
+
+  describe('item 8 runs a revoke gated on its keys, granted first (I1)', () => {
+    it('passes a destination that passes the revocation to its vendor', async () => {
+      await expect(
+        conformance('destination', consentAware, options),
+      ).resolves.toBeUndefined();
+    });
+
+    it('fails item 8 when the revoke example leaves the vendor call out', async () => {
+      await expect(
+        conformance('destination', consentAware, {
+          ...options,
+          examples: {
+            ...examples,
+            revoke: {
+              ...examples.revoke,
+              description: 'No consent call.',
+              out: [],
+            },
+          },
+        }),
+      ).rejects.toMatchObject({ items: [8] });
+    });
+
+    it('fails item 8 for a destination that ignores the revocation', async () => {
+      await expect(
+        conformance('destination', consentIgnoring, options),
+      ).rejects.toMatchObject({
+        items: [8],
+        message: expect.stringContaining(
+          'item 8: example revoke: out differs: expected [["vendor.consent",false]], got []',
+        ),
+      });
+    });
+  });
+
   it('fails a consent revoke example that declares no out on item 8 only', async () => {
     const { out, ...revoke } = examples.revoke;
     await expect(
@@ -302,5 +403,91 @@ describe('conformance kit, vendor-global profile', () => {
         examples: { ...examples, revoke },
       }),
     ).rejects.toMatchObject({ items: [8] });
+  });
+});
+
+describe('conformance kit, item 4 with alternatives (anyOf)', () => {
+  beforeEach(() => {
+    jest.useRealTimers();
+  });
+
+  const event = { name: 'page view', data: { title: 'Home' } };
+  const examples: Flow.StepExamples = {
+    pageView: {
+      in: event,
+      out: [
+        [
+          'fetch',
+          'https://127.0.0.1:9/collect',
+          { method: 'POST', body: '{"id":"G-1","name":"page view"}' },
+        ],
+      ],
+    },
+    silent: {
+      public: false,
+      description: 'A silent rule sends nothing.',
+      in: event,
+      mapping: { silent: true },
+      out: [],
+    },
+  };
+  const options = {
+    profile: 'http' as const,
+    root: fixtures.root,
+    settings: { ga4: { measurementId: 'G-1' } },
+    schema: {
+      type: 'object',
+      properties: {
+        ga4: {
+          type: 'object',
+          properties: { measurementId: { type: 'string' } },
+        },
+        ads: {
+          type: 'object',
+          properties: { conversionId: { type: 'string' } },
+        },
+      },
+      anyOf: [
+        {
+          required: ['ga4'],
+          properties: { ga4: { required: ['measurementId'] } },
+        },
+        {
+          required: ['ads'],
+          properties: { ads: { required: ['conversionId'] } },
+        },
+      ],
+    },
+    examples,
+  };
+
+  it('passes an init error that names a key of every alternative', async () => {
+    await expect(
+      conformance('destination', eitherId, options),
+    ).resolves.toBeUndefined();
+  });
+
+  it('fails item 4 only when the init error names no key of one alternative', async () => {
+    await expect(
+      conformance('destination', ga4Only, options),
+    ).rejects.toMatchObject({
+      items: [4],
+      message: expect.stringContaining(
+        'names no key of the alternative ads.conversionId',
+      ),
+    });
+  });
+
+  it('still counts a schema whose alternative requires nothing as requiring nothing', async () => {
+    const anyOf = [...options.schema.anyOf, { properties: {} }];
+    await expect(
+      conformance('destination', eitherId, {
+        ...options,
+        schema: { ...options.schema, anyOf },
+      }),
+    ).rejects.toMatchObject({
+      items: [4],
+      message: expect.stringContaining('although the schema requires nothing'),
+    });
   });
 });

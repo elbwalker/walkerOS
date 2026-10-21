@@ -31,6 +31,7 @@ import {
   openTransformer,
   outcomeOf,
   readEnv,
+  revokedKeys,
   RUN_TIMEOUT,
   runExamples,
   runStoreOperation,
@@ -52,6 +53,7 @@ import {
 export type Profile =
   | 'http'
   | 'sdk-env'
+  | 'web-sdk'
   | 'vendor-global'
   | 'socket'
   | 'transformer'
@@ -60,7 +62,10 @@ export type Profile =
 export interface ConformanceOptions {
   profile: Profile;
   examples: Flow.StepExamples;
-  /** The settings schema (JSON Schema): its properties and `required`. */
+  /**
+   * The settings schema (JSON Schema): its properties, `required`, and
+   * `anyOf`/`oneOf` alternatives for a "one of these" rule (item 4).
+   */
   schema: JSONSchema;
   /** Minimal valid settings, pure JSON. */
   settings: Record<string, unknown>;
@@ -92,6 +97,8 @@ export class ConformanceError extends Error {
 const PROFILE_ITEMS: Record<Profile, number[]> = {
   http: [1, 2, 3, 4, 5, 6, 7, 9, 10],
   'sdk-env': [1, 2, 3, 4, 5, 6, 7, 9, 10],
+  // A web SDK starts in init at page load on purpose (autocapture, recording).
+  'web-sdk': [1, 2, 3, 4, 6, 7, 9, 10],
   'vendor-global': [1, 2, 4, 6, 7, 8, 10],
   socket: [1, 2, 3, 4, 5, 6, 7, 9],
   transformer: [1, 2, 4, 5, 6, 7, 10],
@@ -120,7 +127,7 @@ interface Context {
   /** Env the run uses: the examples env except where the profile has none. */
   runEnv?: ExamplesEnv;
   schemaKeys: string[];
-  required: string[];
+  requires: Requirements;
   events: EventExample[];
   /** The first success event example that sends something. */
   primary?: EventExample;
@@ -138,7 +145,6 @@ const sends = (example: Flow.StepExample) =>
 function contextOf(options: ConformanceOptions): Context {
   const env = readEnv(options.env);
   const properties = options.schema.properties;
-  const required = options.schema.required;
   const events: EventExample[] = [];
   for (const [name, example] of Object.entries(options.examples)) {
     if (example.command || example.outcome || example.respond) continue;
@@ -151,9 +157,7 @@ function contextOf(options: ConformanceOptions): Context {
     env,
     runEnv: options.profile === 'http' ? undefined : env,
     schemaKeys: isObject(properties) ? Object.keys(properties) : [],
-    required: Array.isArray(required)
-      ? required.filter((key): key is string => typeof key === 'string')
-      : [],
+    requires: requirementsOf(options.schema),
     events,
     primary: primary ?? events[0],
   };
@@ -182,26 +186,111 @@ function stepError(error: unknown): StepError | undefined {
   return error instanceof StepError ? error : undefined;
 }
 
+/**
+ * What a settings schema requires: keys it always requires (top-level
+ * `required`), and groups of alternatives (`anyOf`/`oneOf`, also inside
+ * `allOf`) of which at least one branch must hold. A branch's keys are its
+ * `required` names, as dotted paths where the named property requires keys
+ * of its own (`ga4.measurementId`).
+ */
+interface Requirements {
+  keys: string[];
+  alternatives: string[][][];
+}
+
+function stringsOf(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function propertyOf(properties: unknown, key: string): unknown {
+  return isObject(properties) ? properties[key] : undefined;
+}
+
+/** The keys a schema node requires, nested `required` as dotted paths. */
+function requiredPaths(
+  node: unknown,
+  properties: unknown,
+  prefix = '',
+  depth = 0,
+): string[] {
+  if (!isObject(node) || depth > 5) return [];
+  return stringsOf(node.required).flatMap((name) => {
+    const path = prefix ? `${prefix}.${name}` : name;
+    const child =
+      propertyOf(node.properties, name) ?? propertyOf(properties, name);
+    const inner = requiredPaths(child, undefined, path, depth + 1);
+    return inner.length ? inner : [path];
+  });
+}
+
+function requirementsOf(schema: JSONSchema): Requirements {
+  const alternatives: string[][][] = [];
+  const collect = (node: unknown) => {
+    if (!isObject(node)) return;
+    for (const branches of [node.anyOf, node.oneOf]) {
+      if (!Array.isArray(branches) || !branches.length) continue;
+      const keys = branches.map((branch) =>
+        requiredPaths(branch, schema.properties),
+      );
+      // A branch that requires nothing lets {} pass: nothing is required.
+      if (keys.every((branch) => branch.length)) alternatives.push(keys);
+    }
+    if (Array.isArray(node.allOf)) node.allOf.forEach(collect);
+  };
+  collect(schema);
+  return { keys: stringsOf(schema.required), alternatives };
+}
+
+const requiresSomething = ({ keys, alternatives }: Requirements) =>
+  keys.length > 0 || alternatives.length > 0;
+
+/** The requirements as words for a message: `a, b and c or d`. */
+function describeRequired({ keys, alternatives }: Requirements): string {
+  return [
+    ...keys,
+    ...alternatives.map((branches) =>
+      branches.map((branch) => branch.join(' and ')).join(' or '),
+    ),
+  ].join(', ');
+}
+
 /** Problems of what init threw with `settings: {}` (item 4). */
 function notReadyProblem(ctx: Context, thrown: unknown[]): Problem {
-  if (!ctx.required.length) {
+  const { requires } = ctx;
+  if (!requiresSomething(requires)) {
     const failed = thrown.map(stepError).find((error) => error);
     return failed && NOT_STARTED.includes(failed.code)
       ? `fails ${failed.code} with settings {} although the schema requires nothing`
       : undefined;
   }
+  const naming = describeRequired(requires);
   if (!thrown.length)
-    return `init does not throw with settings {}: it must throw a StepError naming ${ctx.required.join(', ')}`;
+    return `init does not throw with settings {}: it must throw a StepError naming ${naming}`;
   const error = stepError(thrown[0]);
   if (!error)
-    return `init throws a plain error with settings {}: throw a StepError with code config naming ${ctx.required.join(', ')}`;
+    return `init throws a plain error with settings {}: throw a StepError with code config naming ${naming}`;
   if (error.code !== 'config')
     return `init throws code ${error.code} with settings {}: the code is config`;
-  const named = ctx.schemaKeys.filter((key) => wordIn(error.message, key));
-  const missing = ctx.required.filter((key) => !named.includes(key));
-  const extra = named.filter((key) => !ctx.required.includes(key));
+  const { message } = error;
+  const missing = requires.keys.filter((key) => !wordIn(message, key));
   if (missing.length)
     return `the init error does not name the required ${missing.join(', ')}`;
+  for (const branches of requires.alternatives) {
+    const unnamed = branches.find(
+      (branch) => !branch.some((key) => wordIn(message, key)),
+    );
+    if (unnamed)
+      return `the init error names no key of the alternative ${unnamed.join(' and ')}`;
+  }
+  const allowed = new Set([
+    ...requires.keys,
+    ...requires.alternatives.flat(2).map((path) => path.split('.')[0]),
+  ]);
+  const extra = ctx.schemaKeys.filter(
+    (key) => !allowed.has(key) && wordIn(message, key),
+  );
   if (extra.length)
     return `the init error names ${extra.join(', ')}, which the schema does not require`;
   return undefined;
@@ -469,8 +558,8 @@ async function destinationItem(
         example: {},
         event: getEvent('page view'),
       };
-      if (ctx.required.length && !step.init)
-        return `checks no settings in init: init must throw a StepError naming ${ctx.required.join(', ')}`;
+      if (requiresSomething(ctx.requires) && !step.init)
+        return `checks no settings in init: init must throw a StepError naming ${describeRequired(ctx.requires)}`;
       const thrown: unknown[] = [];
       await runDestination(step, ctx, target, {
         settings: {},
@@ -528,11 +617,9 @@ async function destinationItem(
     }
 
     case 8: {
+      // Each revoke runs gated on its revoked keys, granted first (I1).
       const revokes = Object.entries(options.examples).filter(
-        ([, example]) =>
-          example.command === 'consent' &&
-          isObject(example.in) &&
-          Object.values(example.in).some((value) => value === false),
+        ([, example]) => revokedKeys(example).length > 0,
       );
       if (!revokes.length)
         return 'no walker consent revoke example (its out is the vendor consent call, or [] with a description)';
@@ -834,7 +921,7 @@ async function transformerItem(
 
     case 2: {
       const problems: string[] = [];
-      if (ctx.required.length) {
+      if (requiresSomething(ctx.requires)) {
         const run = await runTransformer(step, ctx, { settings: {} }, event);
         // Refusing to start with a StepError is reported too, at the start.
         if (run.startError !== undefined) {
@@ -1233,7 +1320,7 @@ type KitArgs =
   | ['source', SourceStep];
 
 const KIND_PROFILES: Record<KitArgs[0], Profile[]> = {
-  destination: ['http', 'sdk-env', 'vendor-global', 'socket'],
+  destination: ['http', 'sdk-env', 'web-sdk', 'vendor-global', 'socket'],
   transformer: ['transformer'],
   store: ['socket'],
   source: ['source'],
