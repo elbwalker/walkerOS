@@ -451,6 +451,7 @@ describe('sourceExpress', () => {
         success: false,
         error: 'Internal server error',
       });
+      expect(JSON.stringify(res.responseBody)).not.toContain('Collector error');
     });
   });
 

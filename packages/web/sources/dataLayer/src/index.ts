@@ -16,7 +16,12 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
   // Events exit via `push` (the collector's source pipeline, so this source's
   // `next`/`before`/mapping/cache/state and status apply); `elb` stays the
   // outward-facing slot on the instance below. This source emits no commands.
-  const { elb, push, window: envWindow } = env;
+  const { elb, push } = env;
+  // The collector passes no `window`: an injected one (tests, simulation)
+  // wins, else the page's own.
+  const envWindow =
+    env.window ||
+    (typeof globalThis.window !== 'undefined' ? globalThis.window : undefined);
 
   const settings: Source.Settings<Types> = {
     name: 'dataLayer',

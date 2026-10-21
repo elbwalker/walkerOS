@@ -1,5 +1,9 @@
-import type { Collector, Logger } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
+import type { Collector, EventOutcome, Logger } from '@walkeros/core';
+import {
+  INTERNAL_SERVER_ERROR,
+  isObject,
+  pushResultToOutcome,
+} from '@walkeros/core';
 import type { EventRequest } from './types';
 
 export async function processEvent(
@@ -7,7 +11,7 @@ export async function processEvent(
   push: Collector.PushFn,
   logger?: Logger.Instance,
   requestId?: string,
-): Promise<{ id?: string; error?: string; status?: number }> {
+): Promise<EventOutcome> {
   try {
     // A batch element that is not an object carries no event fields. Treat it
     // as an empty event so the collector's gate classifies it as invalid
@@ -15,17 +19,7 @@ export async function processEvent(
     const { event, ...rest } = isObject(eventReq) ? eventReq : {};
     const result = await push({ ...rest, name: rest.name ?? event });
 
-    if (result?.ok === false) {
-      if (result.invalid === true) {
-        return { error: result.error ?? 'Invalid event', status: 400 };
-      }
-      return {
-        error: result.error ?? 'Event was not processed',
-        status: 500,
-      };
-    }
-
-    return { id: result?.event?.id };
+    return pushResultToOutcome(result);
   } catch (error) {
     // Log with structured context - per using-logger skill
     logger?.error('Event processing failed', {
@@ -34,10 +28,8 @@ export async function processEvent(
       requestId,
     });
     // A rejected push promise is a server fault: the collector resolves
-    // pipeline failures, so a rejection is exceptional by construction.
-    return {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      status: 500,
-    };
+    // pipeline failures, so a rejection is exceptional by construction. Its
+    // message is logged above, never answered.
+    return { error: INTERNAL_SERVER_ERROR, status: 500 };
   }
 }

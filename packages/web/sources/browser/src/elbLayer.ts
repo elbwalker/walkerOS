@@ -1,5 +1,11 @@
-import type { Elb, Logger } from '@walkeros/core';
-import { isString, isObject, tryCatch } from '@walkeros/core';
+import type { Collector, Elb, Logger } from '@walkeros/core';
+import {
+  isString,
+  isObject,
+  reportCause,
+  toFailureReason,
+  tryCatch,
+} from '@walkeros/core';
 import { createPushResult } from '@walkeros/collector';
 import type { Context } from './types';
 import { translateToCoreCollector } from './translation';
@@ -85,13 +91,32 @@ const readOrCreateDrainMarker = (arr: unknown[]): DrainMarker => {
   return fresh;
 };
 
+// The entry's event or command name, never its payload. An event object is
+// read inside a guard: its own `name` may be the getter that threw.
+const entryName = (item: unknown[]): string | undefined => {
+  const [first] = item;
+  if (isString(first)) return first;
+  return tryCatch(() =>
+    isObject(first) && isString(first.name) ? first.name : undefined,
+  )();
+};
+
 export function createElbLayer(
   context: Context,
-  config: { name?: string; window?: Window; logger?: Logger.Instance } = {},
+  config: {
+    name?: string;
+    window?: Window;
+    logger?: Logger.Instance;
+    /** Reports a failed entry through its cause log and status. */
+    collector?: Collector.Instance;
+    /** The source id, which names the step of a failed entry. */
+    id?: string;
+  } = {},
 ): ElbLayerController {
   const layerName = config.name || 'elbLayer';
   const windowObj = config.window;
   const logger = config.logger;
+  const collector = config.collector;
 
   const ok = (): Elb.PushResult => createPushResult({ ok: true });
 
@@ -166,13 +191,32 @@ export function createElbLayer(
   };
 
   // One bad entry must not break the chain: isolate each route so a throw
-  // resolves ok:false and the FIFO continues.
+  // resolves ok:false and the FIFO continues. The entry's event is lost, so
+  // it is an ERROR through the collector's cause log and counted as failed;
+  // the line names the entry, never carries it.
   const routeSafe = async (item: unknown[]): Promise<Elb.PushResult> => {
     try {
       return await route(item);
     } catch (error) {
-      logger?.warn('elbLayer entry failed', { error, item });
-      return createPushResult({ ok: false });
+      const reason = toFailureReason(error);
+      if (collector) collector.status.failed++;
+      if (logger)
+        reportCause(
+          collector,
+          logger,
+          {
+            step: config.id ? `source.${config.id}` : 'source',
+            code: reason.code,
+            status: reason.status,
+          },
+          'elbLayer entry failed',
+          {
+            event: entryName(item),
+            retryable: reason.retryable,
+            error: reason.message,
+          },
+        );
+      return createPushResult({ ok: false, reason, error: reason.message });
     }
   };
 

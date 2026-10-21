@@ -17,6 +17,7 @@ import { getPageViewData, getUser } from './walker';
 import { getConfig } from './config';
 import { mark, owner, release } from './ownership';
 import { watchHistory } from './history';
+import { watchPageHide } from './pageHide';
 
 export * as SourceBrowser from './types';
 
@@ -115,6 +116,8 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   // it started, in order: a run that takes one is a history run.
   let stopHistory: (() => void) | undefined;
   const historyHrefs: string[] = [];
+  // The unsubscribe of the page-hide watcher, set in init.
+  let stopPageHide: (() => void) | undefined;
   // The URL of the last page view, the referrer of the next one.
   let previousHref: string | undefined;
 
@@ -159,6 +162,16 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     if (initialized) return;
     initialized = true;
 
+    // Leaving the page flushes every destination batch through the flush
+    // shutdown uses, so events waiting in a batch window are sent. The
+    // collector keeps running, for a page restored from the back-forward
+    // cache. Not awaited: the page is going away.
+    stopPageHide = watchPageHide(actualWindow, actualDocument, () => {
+      elb('walker flush').catch((error: unknown) => {
+        logger.error('walker flush failed', { error });
+      });
+    });
+
     // Build the append-only layer controller. It routes through the real
     // translationContext, so `walker init` reaches initScope and events flow
     // through the same funnel as direct window.elb calls.
@@ -171,6 +184,8 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
             name: layerName,
             window: actualWindow,
             logger,
+            collector: context.collector,
+            id: context.id,
           })
         : undefined;
 
@@ -297,6 +312,9 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
       stopHistory?.();
       stopHistory = undefined;
       historyHrefs.length = 0;
+
+      stopPageHide?.();
+      stopPageHide = undefined;
 
       // Restore the layer's native push and forget controller state.
       controller?.destroy();

@@ -248,11 +248,13 @@ describe('sourceFetch', () => {
 
       // A rejected push is a server fault, not client input: the collector
       // resolves pipeline failures, so a rejection is exceptional.
+      // The thrown message goes to the log, never into the answer.
       expect(response.status).toBe(500);
       expect(responseBody).toMatchObject({
         success: false,
-        error: 'Collector error',
+        error: 'Internal server error',
       });
+      expect(JSON.stringify(responseBody)).not.toContain('Collector error');
     });
 
     it('answers 400 with the reason when the push settles an invalid-input rejection', async () => {
@@ -506,7 +508,7 @@ describe('sourceFetch', () => {
     it('should process examples.inputs.pageView', async () => {
       const mockPush = jest
         .fn()
-        .mockResolvedValue({ event: { id: 'test-id' } });
+        .mockResolvedValue({ ok: true, event: { id: 'test-id' } });
 
       const source = await sourceFetch(
         createSourceContext(

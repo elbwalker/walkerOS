@@ -48,14 +48,29 @@ export function isBatchBody(body: unknown): boolean {
 }
 
 /**
- * The outcome of delivering one event of a batch.
+ * The answer text when a resend could still deliver the event. The step and
+ * its error stay in the collector's cause line.
+ */
+export const EVENT_NOT_PROCESSED = 'Event was not processed';
+
+/**
+ * The answer text of a fault that threw, the push included. Its message can
+ * carry paths, dependency names or config details, so it goes to the log only.
+ */
+export const INTERNAL_SERVER_ERROR = 'Internal server error';
+
+/**
+ * The outcome of delivering one event, as a producer is answered.
  *
  * `id` is present when the event was accepted and minted one. `error` is
- * present when it was not accepted.
+ * present when it was not accepted, with the HTTP `status` a single event is
+ * answered with: 400 for invalid input, 500 when a resend could still
+ * deliver it. A batch answers through `batchResponse`.
  */
 export interface EventOutcome {
   id?: string;
   error?: string;
+  status?: 400 | 500;
 }
 
 /** A batch response: the status to answer with, and the body to send. */
@@ -109,25 +124,24 @@ export function batchResponse(outcomes: EventOutcome[]): BatchResponse {
 }
 
 /**
- * Maps a collector push result onto a batch event outcome.
+ * Maps a push result onto the outcome a producer is answered with, the one
+ * place an HTTP source decides it (`acknowledge`):
+ * - `ack`: accepted, with the event id. This includes a failure a resend
+ *   cannot fix: the event is in the DLQ and its cause line is logged.
+ * - `retry`: 500 with a fixed text. The step and its error stay in the
+ *   collector's cause line; a public client cannot act on them.
+ * - `reject`: 400 with the reason, which describes the producer's own input.
  *
- * @param result The push result, or undefined when the push returned none.
+ * @param result The push result.
  * @returns The outcome for this event.
  */
-export function pushResultToOutcome(result: {
-  ok?: boolean;
-  invalid?: boolean;
-  error?: string;
-  event?: { id?: string };
-}): EventOutcome {
-  if (result?.ok === false) {
-    return {
-      error:
-        result.error ??
-        (result.invalid === true ? 'Invalid event' : 'Event was not processed'),
-    };
-  }
-  return { id: result?.event?.id };
+export function pushResultToOutcome(result: Elb.PushResult): EventOutcome {
+  const acknowledgement = acknowledge(result);
+  if (acknowledgement === 'reject')
+    return { error: result.error ?? 'Invalid event', status: 400 };
+  if (acknowledgement === 'retry')
+    return { error: EVENT_NOT_PROCESSED, status: 500 };
+  return { id: result.event?.id };
 }
 
 /** What a producer does with the message that carried a push. */

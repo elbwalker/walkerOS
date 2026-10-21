@@ -8,6 +8,7 @@ import type {
 } from './types';
 import type { Source } from '@walkeros/core';
 import {
+  INTERNAL_SERVER_ERROR,
   batchResponse,
   isBatchBody,
   requestToData,
@@ -103,7 +104,7 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
 
         const results = [];
         for (const event of events) {
-          results.push(await processEvent(event, envPush));
+          results.push(await processEvent(event, envPush, context.logger));
         }
 
         if (batched) {
@@ -127,10 +128,9 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
         } as EventResponse);
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      });
+      // The reason is logged, not answered (see INTERNAL_SERVER_ERROR).
+      context.logger.error('Cloud Function handler error', { error });
+      res.status(500).json({ success: false, error: INTERNAL_SERVER_ERROR });
     }
   };
 

@@ -5,6 +5,8 @@ import {
   pushResultToOutcome,
   acknowledge,
 } from '../envelope';
+import type { EventOutcome } from '../envelope';
+import { createEvent } from '../eventGenerator';
 import type { Elb } from '../types';
 
 describe('toEventList', () => {
@@ -105,21 +107,68 @@ describe('batchResponse', () => {
 });
 
 describe('pushResultToOutcome', () => {
-  it.each([
-    ['an accepted push', { ok: true, event: { id: 'a' } }, { id: 'a' }],
-    ['a declined push', { ok: false, error: 'nope' }, { error: 'nope' }],
+  const event = createEvent({ id: 'a' });
+  const ref = (code: string, retryable: boolean) => ({
+    type: 'api',
+    reason: { code, message: `${code} at api`, retryable },
+  });
+
+  it.each<[string, Elb.PushResult, EventOutcome]>([
+    ['a delivered push', { ok: true, event }, { id: 'a' }],
     [
-      'an invalid push with no reason',
-      { ok: false, invalid: true },
-      { error: 'Invalid event' },
+      'a failure a resend cannot fix (ack: answered 200 with the id)',
+      { ok: false, event, failed: { api: ref('config', false) } },
+      { id: 'a' },
     ],
     [
-      'a failed push with no reason',
+      'a failure a resend could still deliver',
+      { ok: false, event, failed: { api: ref('transport', true) } },
+      { error: 'Event was not processed', status: 500 },
+    ],
+    [
+      'a retryable transformer failure (its id and text stay in the log)',
+      {
+        ok: false,
+        event,
+        error: 'Transformer "enrich" failed: enrichment API answered 503',
+        reason: { code: 'transport', message: 'answered 503', retryable: true },
+      },
+      { error: 'Event was not processed', status: 500 },
+    ],
+    [
+      'a failure without any reason',
       { ok: false },
-      { error: 'Event was not processed' },
+      { error: 'Event was not processed', status: 500 },
+    ],
+    [
+      'invalid input, with the reason the producer can act on',
+      { ok: false, invalid: true, error: 'Event name is invalid' },
+      { error: 'Event name is invalid', status: 400 },
+    ],
+    [
+      'invalid input with no reason',
+      { ok: false, invalid: true },
+      { error: 'Invalid event', status: 400 },
     ],
   ])('%s', (_, result, expected) => {
     expect(pushResultToOutcome(result)).toEqual(expected);
+  });
+
+  it('feeds the batch answer: a retryable failure makes it 207, no step named', () => {
+    const { status, body } = batchResponse([
+      pushResultToOutcome({ ok: true, event }),
+      pushResultToOutcome({
+        ok: false,
+        event,
+        error: 'Transformer "enrich" failed: enrichment API answered 503',
+        reason: { code: 'transport', message: 'answered 503', retryable: true },
+      }),
+    ]);
+    expect(status).toBe(207);
+    expect(body.errors).toEqual([
+      { index: 1, error: 'Event was not processed' },
+    ]);
+    expect(JSON.stringify(body)).not.toMatch(/enrich|503/);
   });
 });
 
