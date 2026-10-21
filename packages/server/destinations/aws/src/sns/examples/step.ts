@@ -158,3 +158,12 @@ export const mappedMessage: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule publishes no message to SNS. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true publishes no message to SNS.',
+  in: pageEvent,
+  mapping: { silent: true },
+  out: [],
+};

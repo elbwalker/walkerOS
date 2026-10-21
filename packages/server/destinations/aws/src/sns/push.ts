@@ -59,9 +59,14 @@ async function resolveStringMappingValue(
 
 /**
  * Publishes one event. Resolves once SNS accepted the message, else throws an
- * `AwsDeliveryError`; the collector logs it, so SNS logs no error of its own.
+ * `StepError`; the collector logs it, so SNS logs no error of its own.
  */
 export const push: PushFn = async function (event, context) {
+  // A silent rule has no message of its own: nothing to publish.
+  if (!context.rule?.silent) await publish(event, context);
+};
+
+const publish: PushFn = async function (event, context) {
   const { config, data, env, rule, collector, logger, id } = context;
   const settings = resolveSettings(config.settings);
   const { runtime } = settings;
@@ -113,7 +118,7 @@ export const push: PushFn = async function (event, context) {
     throw localError(
       target,
       'InvalidRecord',
-      `The message does not serialize to JSON: ${error instanceof Error ? error.message : String(error)}`,
+      'The message does not serialize to JSON.',
       error,
     );
   }

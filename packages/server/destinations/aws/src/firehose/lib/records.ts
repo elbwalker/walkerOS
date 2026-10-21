@@ -62,7 +62,7 @@ export function planChunks(
       refused.push({
         index,
         code: 'InvalidRecord',
-        detail: `Record ${index} does not serialize to JSON: ${error instanceof Error ? error.message : String(error)}`,
+        detail: `Record ${index} does not serialize to JSON.`,
         cause: error,
       });
       return;

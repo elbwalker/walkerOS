@@ -1,4 +1,4 @@
-import { AwsDeliveryError } from '../errors';
+import { StepError } from '@walkeros/core';
 import { parseCredentials } from '../credentials';
 
 const SECRET = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYSECRETVALUE';
@@ -8,7 +8,7 @@ function messageOf(fn: () => unknown): string {
   try {
     fn();
   } catch (error) {
-    expect(error).toBeInstanceOf(AwsDeliveryError);
+    expect(error).toBeInstanceOf(StepError);
     return error instanceof Error ? error.message : String(error);
   }
   throw new Error('expected a throw');

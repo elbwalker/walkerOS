@@ -2,9 +2,8 @@ import {
   ResourceNotFoundException,
   ServiceUnavailableException,
 } from '@aws-sdk/client-firehose';
-import { createMockContext, createMockLogger } from '@walkeros/core';
+import { StepError, createMockContext, createMockLogger } from '@walkeros/core';
 import destination from '../';
-import { AwsDeliveryError } from '../../lib/errors';
 import type { Answer } from './support';
 import {
   STREAM,
@@ -59,8 +58,8 @@ describe('Firehose pushBatch outcomes', () => {
     const outcome = await result;
     expect(outcome).toEqual({
       failed: [
-        { index: 502, error: expect.any(AwsDeliveryError) },
-        { index: 507, error: expect.any(AwsDeliveryError) },
+        { index: 502, error: expect.any(StepError) },
+        { index: 507, error: expect.any(StepError) },
       ],
     });
   });
@@ -88,7 +87,7 @@ describe('Firehose pushBatch outcomes', () => {
       () => undefined,
       (e: unknown) => e,
     );
-    expect(error).toBeInstanceOf(AwsDeliveryError);
+    expect(error).toBeInstanceOf(StepError);
     expect(error).toMatchObject({
       code: 'ServiceUnavailableException',
       retryable: false,

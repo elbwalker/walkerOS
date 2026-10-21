@@ -19,6 +19,7 @@ import {
   __setStsHarness,
 } from '@aws-sdk/client-sts';
 import {
+  StepError,
   createEvent,
   createMockContext,
   createMockLogger,
@@ -26,7 +27,6 @@ import {
 import type { MockLogger } from '@walkeros/core';
 import type { Config, Env, PartialConfig, SendClient } from '../types';
 import { expectSimulationResolves } from '@walkeros/core/dev';
-import { AwsDeliveryError } from '../../lib/errors';
 import destination from '../';
 import * as snsExamples from '../examples';
 
@@ -155,8 +155,8 @@ describe('SNS init', () => {
     ['neither ARN nor name', {}, 'settings.topicArn'],
   ])('%s throws', async (_case, settings, fragment) => {
     const error = await init({ settings }).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(AwsDeliveryError);
-    expect(error).toMatchObject({ code: 'InvalidConfig' });
+    expect(error).toBeInstanceOf(StepError);
+    expect(error).toMatchObject({ code: 'config' });
     expect(String(error)).toContain(fragment);
   });
 
@@ -295,14 +295,14 @@ describe('SNS push', () => {
     __setStsHarness({ error: new Error('network down') });
     const config = await init({ settings: { topicName: 'walkeros-events' } });
 
-    await expect(publish(config)).rejects.toBeInstanceOf(AwsDeliveryError);
+    await expect(publish(config)).rejects.toBeInstanceOf(StepError);
     await publish(config);
     expect(publishInput()).toMatchObject({
       TopicArn: 'arn:aws:sns:eu-central-1:000000000000:walkeros-events',
     });
   });
 
-  test('a publish failure throws an AwsDeliveryError and logs no error', async () => {
+  test('a publish failure throws an StepError and logs no error', async () => {
     const logger = createMockLogger();
     const config = await init({ settings: { topicArn: ARN } });
     __setHarness({
@@ -317,7 +317,7 @@ describe('SNS push', () => {
       (e: unknown) => e,
     );
 
-    expect(error).toBeInstanceOf(AwsDeliveryError);
+    expect(error).toBeInstanceOf(StepError);
     expect(error).toMatchObject({
       code: 'NotFoundException',
       status: 404,

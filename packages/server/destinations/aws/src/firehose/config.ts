@@ -1,6 +1,6 @@
 import type { Logger } from '@walkeros/core';
 import { FirehoseClient } from '@aws-sdk/client-firehose';
-import { isObject } from '@walkeros/core';
+import { StepError, isObject } from '@walkeros/core';
 import type {
   Config,
   CredentialSource,
@@ -80,7 +80,7 @@ export async function getConfig(
 
   if (!streamName)
     throw configError(
-      'Firehose: settings.streamName is missing. Set it to the name of your Firehose stream.',
+      'Firehose: settings.streamName is missing. Set it to the name of your Firehose stream (settings.firehose.streamName is the deprecated form).',
     );
   if (!STREAM_NAME_PATTERN.test(streamName))
     throw configError(
@@ -140,7 +140,9 @@ export async function getConfig(
 export function resolveSettings(settings: InitSettings | undefined): Settings {
   const { streamName, region, client, runtime } = settings ?? {};
   if (!streamName || !region || !client || !runtime)
-    throw configError('Firehose: the destination was not initialized.');
+    throw new StepError('Firehose: the destination was not initialized.', {
+      code: 'not-ready',
+    });
   return {
     streamName,
     region,

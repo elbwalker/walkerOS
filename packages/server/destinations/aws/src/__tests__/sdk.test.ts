@@ -10,10 +10,14 @@ import type { Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Destination } from '@walkeros/core';
-import { createEvent, createMockContext, isObject } from '@walkeros/core';
+import {
+  StepError,
+  createEvent,
+  createMockContext,
+  isObject,
+} from '@walkeros/core';
 import firehose, { destinationSNS } from '../index';
 import type { DestinationFirehose } from '../index';
-import { AwsDeliveryError } from '../lib/errors';
 
 interface FakeRequest {
   target: string;
@@ -234,7 +238,7 @@ describe('Firehose with the real SDK', () => {
     ).catch((e: unknown) => e);
 
     expect(requests).toHaveLength(3);
-    expect(error).toBeInstanceOf(AwsDeliveryError);
+    expect(error).toBeInstanceOf(StepError);
     expect(error).toMatchObject({
       code: 'ServiceUnavailableException',
       status: 500,
@@ -276,7 +280,7 @@ describe('Firehose with the real SDK', () => {
     ).catch((e: unknown) => e);
 
     expect(requests).toEqual([]);
-    expect(error).toBeInstanceOf(AwsDeliveryError);
+    expect(error).toBeInstanceOf(StepError);
     expect(String(error)).toContain('config.credentials');
   }, 15_000);
 });

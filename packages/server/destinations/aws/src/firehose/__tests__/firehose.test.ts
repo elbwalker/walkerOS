@@ -1,11 +1,11 @@
 import { FirehoseClient } from '@aws-sdk/client-firehose';
 import {
+  StepError,
   createEvent,
   createMockContext,
   createMockLogger,
 } from '@walkeros/core';
 import destination, { destinationFirehose } from '../';
-import { AwsDeliveryError } from '../../lib/errors';
 import type { PartialConfig, SendClient } from '../types';
 import { STREAM, id, initialized, isRecord, recordingEnv } from './support';
 
@@ -170,8 +170,8 @@ describe('settings', () => {
     const error = await initialized({ settings }, recordingEnv().env).catch(
       (e: unknown) => e,
     );
-    expect(error).toBeInstanceOf(AwsDeliveryError);
-    expect(error).toMatchObject({ code: 'InvalidConfig', retryable: false });
+    expect(error).toBeInstanceOf(StepError);
+    expect(error).toMatchObject({ code: 'config', retryable: false });
     expect(String(error)).toContain('settings.streamName');
   });
 

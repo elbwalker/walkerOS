@@ -127,3 +127,12 @@ export const mappedRecord: Flow.StepExample = {
     total: 99.99,
   }),
 };
+
+/** A silent rule sends no record to Firehose. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no record to Firehose.',
+  in: pageEvent,
+  mapping: { silent: true },
+  out: [],
+};

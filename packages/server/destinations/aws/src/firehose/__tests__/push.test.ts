@@ -25,7 +25,10 @@ describe('Firehose push', () => {
           setTimeout(() => reject(new Error('later failure')), 5),
         ),
     );
-    await expect(pushing).rejects.toThrow('later failure');
+    await expect(pushing).rejects.toHaveProperty(
+      'cause.message',
+      'later failure',
+    );
   });
 
   test('does not resolve before its send resolves', async () => {

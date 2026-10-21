@@ -1,13 +1,9 @@
 import type { Destination, Logger, WalkerOS } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import { PutRecordBatchCommand } from '@aws-sdk/client-firehose';
 import type { Env, Settings } from '../types';
 import type { DeliveryTarget } from '../../lib/errors';
-import {
-  AwsDeliveryError,
-  fromSdkError,
-  localError,
-  recordError,
-} from '../../lib/errors';
+import { fromSdkError, localError, recordError } from '../../lib/errors';
 import type { PlannedRecord } from './records';
 import { planChunks, toPayload } from './records';
 
@@ -20,7 +16,7 @@ export interface DeliveryItem {
 /** A record that did not land, by its index in the delivery. */
 export interface DeliveryFailure {
   index: number;
-  error: AwsDeliveryError;
+  error: StepError;
 }
 
 /** The per-record answer of a `PutRecordBatch` call, as far as it is read. */
@@ -99,12 +95,7 @@ function chunkFailures(
       if (!entry.errorCode) return;
       failures.push({
         index: chunk[local].index,
-        error: recordError(
-          target,
-          entry.errorCode,
-          entry.errorMessage ?? 'Record rejected.',
-          status,
-        ),
+        error: recordError(target, entry.errorCode, status, entry),
       });
     });
     // Entries that do not account for the reported count cannot place the
@@ -205,13 +196,11 @@ export async function deliver(
  * mixed causes give the most frequent code, retryable only if every record
  * was, with the counts per code in the message.
  */
-export function nothingLanded(
-  failures: readonly DeliveryFailure[],
-): AwsDeliveryError {
+export function nothingLanded(failures: readonly DeliveryFailure[]): StepError {
   const first = failures[0].error;
   if (failures.every(({ error }) => error === first)) return first;
 
-  const byCode = new Map<string, { count: number; sample: AwsDeliveryError }>();
+  const byCode = new Map<string, { count: number; sample: StepError }>();
   for (const { error } of failures) {
     const entry = byCode.get(error.code);
     if (entry) entry.count += 1;
@@ -226,7 +215,7 @@ export function nothingLanded(
     .map(([code, { count }]) => `${count} ${code}`)
     .join(', ');
 
-  return new AwsDeliveryError(
+  return new StepError(
     `${dominant.sample.message} (all ${failures.length} records failed: ${counts})`,
     {
       code: dominant.sample.code,

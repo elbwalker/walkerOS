@@ -3,6 +3,7 @@ import {
   isThrottlingError,
   isTransientError,
 } from '@smithy/core/retry';
+import { StepError } from '@walkeros/core';
 
 /** The AWS service a delivery goes to, as it appears in every message. */
 export type AwsService = 'Firehose' | 'SNS';
@@ -21,33 +22,14 @@ export interface DeliveryTarget {
   id?: string;
 }
 
-export interface AwsDeliveryErrorOptions {
-  code: string;
-  status?: number;
-  retryable: boolean;
-  cause?: unknown;
-}
-
-/**
- * Every failure this package reports or throws. `code` is the AWS error name
- * or one of the package's own codes (`RecordTooLarge`, `InvalidRecord`,
- * `InvalidResponse`, `InvalidConfig`), `status` the HTTP status when AWS
- * answered, and `retryable` whether sending the same record again can succeed.
- * The SDK error stays reachable as `cause`.
+/*
+ * Every failure this package throws is a `StepError`. `code` is the AWS error
+ * name or one of the package's own codes (`RecordTooLarge`, `InvalidRecord`,
+ * `InvalidResponse`, `config`), `status` the HTTP status when AWS answered,
+ * and `retryable` whether sending the same record again can succeed. The
+ * message is the package's own: AWS's text can quote the request, so it stays
+ * on the SDK error, kept as `cause`, or on a rejected record's `body`.
  */
-export class AwsDeliveryError extends Error {
-  readonly code: string;
-  readonly status: number | undefined;
-  readonly retryable: boolean;
-
-  constructor(message: string, options: AwsDeliveryErrorOptions) {
-    super(message, { cause: options.cause });
-    this.name = 'AwsDeliveryError';
-    this.code = options.code;
-    this.status = options.status;
-    this.retryable = options.retryable;
-  }
-}
 
 /** Codes whose fix is a configuration change, each with that change. */
 function hintFor(code: string, target: DeliveryTarget): string | undefined {
@@ -80,14 +62,16 @@ function describe(target: DeliveryTarget): string {
   return `${target.service} ${kind} "${target.resource}" (${target.region})`;
 }
 
-/** Builds the message: target, code, the AWS text and, if listed, the fix. */
+/** Builds the message: target, code, the package's detail and, if listed, the fix. */
 export function formatMessage(
   target: DeliveryTarget,
   code: string,
-  text: string,
+  detail?: string,
 ): string {
   const hint = hintFor(code, target);
-  const base = `${describe(target)}: ${code}: ${text}`;
+  const base = detail
+    ? `${describe(target)}: ${code}: ${detail}`
+    : `${describe(target)}: ${code}`;
   return hint ? `${base} ${hint}` : base;
 }
 
@@ -107,30 +91,47 @@ function readCode(error: SdkError): string {
 }
 
 /**
+ * Errors of the providers that resolve credentials before a request goes
+ * out: a setup problem, never fixed by sending again.
+ */
+const PROVIDER_ERRORS = [
+  'ProviderError',
+  'CredentialsProviderError',
+  'TokenProviderError',
+];
+
+/**
  * Wraps an error a whole call threw. `retryable` is the SDK's own public
  * classifier, the one its standard retry strategy uses, so this package keeps
- * no table of its own.
+ * no table of its own. An error it does not know that carries no AWS answer
+ * never reached AWS (a refused connection) and is retryable like any
+ * transport failure, unless no credentials could be found.
  */
 export function fromSdkError(
   error: unknown,
   target: DeliveryTarget,
-): AwsDeliveryError {
-  if (error instanceof AwsDeliveryError) return error;
+): StepError {
+  if (error instanceof StepError) return error;
 
   if (!isSdkError(error)) {
-    return new AwsDeliveryError(
-      formatMessage(target, 'UnknownError', String(error)),
-      { code: 'UnknownError', retryable: false, cause: error },
-    );
+    return new StepError(formatMessage(target, 'UnknownError'), {
+      code: 'UnknownError',
+      retryable: false,
+      cause: error,
+    });
   }
 
   const code = readCode(error);
+  const status = error.$metadata?.httpStatusCode;
   const retryable =
-    isThrottlingError(error) || isTransientError(error) || isServerError(error);
+    isThrottlingError(error) ||
+    isTransientError(error) ||
+    isServerError(error) ||
+    (status === undefined && !PROVIDER_ERRORS.includes(code));
 
-  return new AwsDeliveryError(formatMessage(target, code, error.message), {
+  return new StepError(formatMessage(target, code), {
     code,
-    status: error.$metadata?.httpStatusCode,
+    status,
     retryable,
     cause: error,
   });
@@ -139,18 +140,20 @@ export function fromSdkError(
 /**
  * A record AWS rejected inside an accepted call. Both per-record codes AWS
  * documents for PutRecordBatch (`ServiceUnavailableException`,
- * `InternalFailure`) are retryable, so every such rejection is.
+ * `InternalFailure`) are retryable, so every such rejection is. AWS's answer
+ * for the record stays on the error as `body`.
  */
 export function recordError(
   target: DeliveryTarget,
   code: string,
-  text: string,
   status?: number,
-): AwsDeliveryError {
-  return new AwsDeliveryError(formatMessage(target, code, text), {
+  body?: unknown,
+): StepError {
+  return new StepError(formatMessage(target, code), {
     code,
     status,
     retryable: true,
+    body,
   });
 }
 
@@ -161,10 +164,10 @@ export function recordError(
 export function localError(
   target: DeliveryTarget,
   code: 'RecordTooLarge' | 'InvalidRecord' | 'InvalidResponse',
-  text: string,
+  detail: string,
   cause?: unknown,
-): AwsDeliveryError {
-  return new AwsDeliveryError(formatMessage(target, code, text), {
+): StepError {
+  return new StepError(formatMessage(target, code, detail), {
     code,
     retryable: code === 'InvalidResponse',
     cause,
@@ -172,9 +175,6 @@ export function localError(
 }
 
 /** A configuration error found offline in `init` or `setup`. */
-export function configError(message: string): AwsDeliveryError {
-  return new AwsDeliveryError(message, {
-    code: 'InvalidConfig',
-    retryable: false,
-  });
+export function configError(message: string): StepError {
+  return new StepError(message, { code: 'config' });
 }

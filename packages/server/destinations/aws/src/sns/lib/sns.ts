@@ -8,7 +8,7 @@ import type { SendClient } from '../../lib/client';
 import type { DeliveryTarget } from '../../lib/errors';
 import type { Env } from '../types';
 import { isHandlerInstance, requestHandlerOptions } from '../../lib/client';
-import { fromSdkError } from '../../lib/errors';
+import { fromSdkError, localError } from '../../lib/errors';
 
 export interface ClientOptions {
   region: string;
@@ -94,9 +94,10 @@ export async function getCallerIdentity(
   }
 
   if (!isObject(response) || typeof response.Account !== 'string')
-    throw fromSdkError(
-      new Error('STS GetCallerIdentity returned no Account.'),
+    throw localError(
       target,
+      'InvalidResponse',
+      'STS GetCallerIdentity returned no Account.',
     );
 
   // The caller ARN carries the partition (aws, aws-cn, aws-us-gov).
