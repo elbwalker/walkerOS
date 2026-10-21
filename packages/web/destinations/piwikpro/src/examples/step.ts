@@ -480,3 +480,40 @@ export const customDimensionsPageView: Flow.StepExample = {
     ['deleteCustomDimension', 1],
   ],
 };
+
+/** A silent rule without a goal sends nothing. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description:
+    'A rule with silent: true and no goal sends no command, no identification change either.',
+  in: getEvent('page view', { timestamp: 1700000400 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * An event no rule maps: Piwik PRO has no method for it, so the push fails
+ * instead of counting as delivered.
+ */
+export const unmappedEvent: Flow.StepExample = {
+  public: false,
+  description:
+    'An event without a rule name or a goal, and not a page view, has no Piwik PRO method: the push fails with missing-input.',
+  in: getEvent('product view', { timestamp: 1700000401 }),
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
+};
+
+/**
+ * A revocation of the consent the destination requires turns off the link
+ * tracking it enabled: config.consent { marketing: true }, granted first,
+ * then revoked.
+ */
+export const consentRevoke: Flow.StepExample = {
+  public: false,
+  description:
+    'For a destination with config.consent { marketing: true }, revoking marketing pushes disableLinkTracking, so the tracker stops sending link clicks on its own.',
+  command: 'consent',
+  in: { marketing: false },
+  out: [['window._paq.push', ['disableLinkTracking']]],
+};

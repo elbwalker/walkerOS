@@ -112,6 +112,7 @@ class MockRevenue implements RevenueInstance {
  */
 export const init: Env | undefined = {
   amplitude: {
+    init: noopPromise,
     initAll: () => Promise.resolve(),
     track: noop,
     identify: noop,
@@ -123,8 +124,6 @@ export const init: Env | undefined = {
     setSessionId: noop,
     setGroup: noop,
     groupIdentify: noop,
-    flush: noopPromise,
-    add: noopPromise,
     Identify: MockIdentify,
     Revenue: MockRevenue,
   },
@@ -136,6 +135,7 @@ export const init: Env | undefined = {
  */
 export const push: Env = {
   amplitude: {
+    init: noopPromise,
     initAll: () => Promise.resolve(),
     track: noop,
     identify: noop,
@@ -147,8 +147,6 @@ export const push: Env = {
     setSessionId: noop,
     setGroup: noop,
     groupIdentify: noop,
-    flush: noopPromise,
-    add: noopPromise,
     Identify: MockIdentify,
     Revenue: MockRevenue,
   },
@@ -156,6 +154,7 @@ export const push: Env = {
 
 /** Simulation tracking paths for CLI --simulate. */
 export const simulation = [
+  'call:amplitude.init',
   'call:amplitude.initAll',
   'call:amplitude.track',
   'call:amplitude.identify',

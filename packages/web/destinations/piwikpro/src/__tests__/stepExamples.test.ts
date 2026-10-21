@@ -73,8 +73,10 @@ function makeMockPaq(): {
 }
 
 describe('piwikpro web destination -- step examples', () => {
+  // Consent and failure examples run in the conformance test.
   const stepEntries = Object.entries(examples.step).filter(
-    ([name]) => name !== 'init',
+    ([name, example]) =>
+      name !== 'init' && !example.command && !example.outcome,
   );
 
   it('pass no currency argument, the tracker has none (W6)', () => {

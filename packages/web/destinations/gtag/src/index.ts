@@ -3,14 +3,16 @@ import type { Settings, Destination, Env, Config } from './types';
 import { initGA4, pushGA4Event } from './ga4';
 import { initAds, pushAdsEvent, resolveUserData } from './ads';
 import { initGTM, pushGTMEvent } from './gtm';
+import { gtmVendor } from './gtm/config';
 import { getData } from './shared/mapping';
 import {
   buildDefaultConsent,
   hasConsentSignal,
   resolveConsentMapping,
 } from './shared/consent';
-import { initializeGtag } from './shared/gtag';
-import { isObject } from '@walkeros/core';
+import { checkGtag, initializeGtag, settle } from './shared/gtag';
+import { hasTool, TOOL_PATHS } from './shared/tools';
+import { isObject, reportCause, stepId, StepError } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 
 // Types
@@ -28,20 +30,34 @@ export function resetConsentState(): void {
 // per Google's required ordering. Gated on the destination's OWN config: a
 // consent signal (config.consent set, or como_advanced) and como !== false.
 // Idempotent via defaultConsentSet (consent state is window-global).
-function setupConsentDefault(config: Config, env: Env | undefined): void {
+function setupConsentDefault(config: Config, env: Env | undefined): unknown[] {
   const settings = config.settings || {};
-  if (defaultConsentSet) return;
-  if (!hasConsentSignal(config.consent, settings)) return;
+  if (defaultConsentSet) return [];
+  if (!hasConsentSignal(config.consent, settings)) return [];
 
   const defaultConsent = buildDefaultConsent(settings);
-  if (!defaultConsent) return; // como:false or no params
+  if (!defaultConsent) return []; // como:false or no params
 
   const { window } = getEnv<Env>(env);
   const gtag = initializeGtag(window); // ensure stub exists before any config
-  if (!gtag) return;
+  if (!gtag) return [];
 
-  gtag('consent', 'default', defaultConsent);
   defaultConsentSet = true;
+  return [gtag('consent', 'default', defaultConsent)];
+}
+
+/**
+ * Throws `vendor-not-loaded` once a script the destination loaded failed:
+ * gtag replays its stub, so events before that go out as usual.
+ */
+function checkScripts(config: Config): void {
+  const { settings = {}, loadScript, timeout } = config;
+  const { ga4, ads, gtm } = settings;
+  if (!loadScript) return;
+  if (ga4?.measurementId && ga4.init !== false)
+    checkGtag(ga4.measurementId, ga4.scriptSrc, timeout);
+  if (ads?.conversionId) checkGtag(ads.conversionId, undefined, timeout);
+  if (gtm?.containerId) gtmVendor(gtm, timeout).check();
 }
 
 export const destinationGtag: Destination = {
@@ -53,43 +69,46 @@ export const destinationGtag: Destination = {
 
   config: { settings: {} },
 
-  init({ config, env, logger }) {
-    const { settings = {}, loadScript } = config;
+  async init({ config, env, logger }) {
+    const { settings = {}, loadScript, timeout } = config;
     const { ga4, ads, gtm } = settings;
 
     // Fail if no tools are configured
-    if (!ga4?.measurementId && !ads?.conversionId && !gtm?.containerId) {
-      logger.throw(
-        'Config settings missing. Set ga4.measurementId, ads.conversionId, or gtm.containerId',
-      );
-    }
+    if (!hasTool(settings))
+      throw new StepError(`Config settings ${TOOL_PATHS} missing`, {
+        code: 'config',
+      });
 
     // Observe gtag's origin BEFORE anything (including the consent default)
     // installs a stub, so a later `js` is only sent if walkerOS bootstrapped.
     const gtagExternal = !!getEnv<Env>(env).window.gtag;
 
-    // Emit the denied consent default before any tool's config call.
-    setupConsentDefault(config, env);
-
-    // Initialize GA4 if configured
-    if (ga4?.measurementId) {
-      initGA4(ga4, loadScript, env, logger, gtagExternal);
-    }
-
-    // Initialize Google Ads if configured
-    if (ads?.conversionId) {
-      initAds(ads, loadScript, env, logger, gtagExternal);
-    }
-
-    // Initialize GTM if configured
-    if (gtm?.containerId) {
-      initGTM(gtm, loadScript, env, logger);
-    }
+    await settle(
+      () => [
+        // Emit the denied consent default before any tool's config call.
+        ...setupConsentDefault(config, env),
+        // Initialize GA4 if configured
+        ...(ga4?.measurementId
+          ? initGA4(ga4, loadScript, env, logger, gtagExternal, timeout)
+          : []),
+        // Initialize Google Ads if configured
+        ...(ads?.conversionId
+          ? initAds(ads, loadScript, env, logger, gtagExternal, timeout)
+          : []),
+        // Initialize GTM if configured
+        ...(gtm?.containerId
+          ? initGTM(gtm, loadScript, env, logger, timeout)
+          : []),
+      ],
+      'vendor-not-ready',
+      'Google tag did not take its setup calls',
+    );
 
     return config;
   },
 
-  async push(event, { config, rule = {}, data, env, collector, logger }) {
+  async push(event, { config, rule = {}, data, env, collector, logger, id }) {
+    checkScripts(config);
     const { settings = {} } = config;
     const { ga4, ads, gtm } = settings;
     const eventMapping = rule.settings || {};
@@ -121,39 +140,58 @@ export const destinationGtag: Destination = {
             collector,
           );
 
-    // Push to GA4 if configured
-    if (ga4?.measurementId) {
-      pushGA4Event(event, ga4, ga4Data, env, logger);
-    }
+    // A silent rule sends none of the default calls below.
+    const send = !rule.silent;
 
     // Resolve enhanced conversions user data if configured
     let adsUserData: Record<string, unknown> | undefined;
-    if (ads?.conversionId && ads?.enhancedConversions) {
+    if (send && ads?.conversionId && ads?.enhancedConversions) {
       adsUserData = await resolveUserData(event, ads, collector);
     }
 
-    // @TODO: Fix condition - should check for rule.settings?.ads?.label || rule.name
-    // Currently requires rule.name even when label is provided via settings.ads.label
-    if (ads?.conversionId && rule.name) {
-      pushAdsEvent(
-        event,
-        ads,
-        eventMapping.ads,
-        adsData,
-        rule.name,
-        env,
-        logger,
-        adsUserData,
-      );
-    }
-
-    // Push to GTM if configured
-    if (gtm?.containerId) {
-      pushGTMEvent(event, gtm, eventMapping.gtm, gtmData, env, logger);
-    }
+    await settle(
+      () => [
+        // Push to GA4 if configured
+        ...(send && ga4?.measurementId
+          ? [
+              pushGA4Event(event, ga4, ga4Data, env, logger, (message, key) =>
+                // One line per cause through the collector's cause log; the
+                // context names the mapping key, never its value.
+                reportCause(
+                  collector,
+                  logger,
+                  { step: stepId('destination', id), code: 'mapping' },
+                  message,
+                  { event: event.name, mappingKey: key },
+                ),
+              ),
+            ]
+          : []),
+        // @TODO: Fix condition - should check for rule.settings?.ads?.label || rule.name
+        // Currently requires rule.name even when label is provided via settings.ads.label
+        ...(send && ads?.conversionId && rule.name
+          ? pushAdsEvent(
+              event,
+              ads,
+              eventMapping.ads,
+              adsData,
+              rule.name,
+              env,
+              logger,
+              adsUserData,
+            )
+          : []),
+        // Push to GTM if configured
+        ...(send && gtm?.containerId
+          ? [pushGTMEvent(event, gtm, eventMapping.gtm, gtmData, env, logger)]
+          : []),
+      ],
+      'transport',
+      'Google tag call failed',
+    );
   },
 
-  on(type, context) {
+  async on(type, context) {
     // Only handle consent events
     if (type !== 'consent' || !isObject(context.data)) return;
 
@@ -175,11 +213,10 @@ export const destinationGtag: Destination = {
 
     // Safety net for setups that fire consent without init having seen a signal:
     // establish the denied default once before the first update.
-    if (!defaultConsentSet) {
-      const defaultConsent = buildDefaultConsent(settings);
-      if (defaultConsent) gtag('consent', 'default', defaultConsent);
-      defaultConsentSet = true;
-    }
+    const defaultConsent = defaultConsentSet
+      ? undefined
+      : buildDefaultConsent(settings);
+    defaultConsentSet = true;
 
     // Build gtag consent object for update
     const gtagConsent: Record<string, 'granted' | 'denied'> = {};
@@ -197,11 +234,17 @@ export const destinationGtag: Destination = {
       });
     });
 
-    // Only proceed if we have consent parameters to update
-    if (Object.keys(gtagConsent).length === 0) return;
-
-    // Always use update after the initial default
-    gtag('consent', 'update', gtagConsent);
+    await settle(
+      () => [
+        ...(defaultConsent ? [gtag('consent', 'default', defaultConsent)] : []),
+        // Always use update after the initial default, when a parameter changes
+        ...(Object.keys(gtagConsent).length
+          ? [gtag('consent', 'update', gtagConsent)]
+          : []),
+      ],
+      'consent-not-applied',
+      'Google tag did not take the consent update',
+    );
   },
 };
 

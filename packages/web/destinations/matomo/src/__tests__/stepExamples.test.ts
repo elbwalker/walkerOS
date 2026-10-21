@@ -66,8 +66,10 @@ function makeMockPaq(): {
 }
 
 describe('matomo web destination -- step examples', () => {
+  // Consent and failure examples run in the conformance test.
   const stepEntries = Object.entries(examples.step).filter(
-    ([name]) => name !== 'init',
+    ([name, example]) =>
+      name !== 'init' && !example.command && !example.outcome,
   );
 
   // Matomo records a cart or an order only after an addEcommerceItem call per

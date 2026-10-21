@@ -1,18 +1,21 @@
 import type { WalkerOS, Logger } from '@walkeros/core';
 import type { GA4Settings, Env } from '../types';
-import { addScript, initializeGtag } from '../shared/gtag';
+import { StepError } from '@walkeros/core';
+import { initializeGtag, loadGtag } from '../shared/gtag';
 import { getEnv } from '@walkeros/web-core';
 
 export function initGA4(
   settings: GA4Settings,
   loadScript: boolean | undefined,
   env: Env | undefined,
-  logger: Logger.Instance,
+  _logger: Logger.Instance,
   // True when gtag was already initialised by something else, e.g. a tag
   // manager. Observed once before walkerOS touches the window.
   gtagExternal = false,
-): void {
-  const { window, document } = getEnv<Env>(env);
+  // The destination's timeout, the deadline of the injected script.
+  timeout?: number,
+): unknown[] {
+  const { window } = getEnv<Env>(env);
   const {
     measurementId,
     transport_url,
@@ -22,7 +25,10 @@ export function initGA4(
     init,
   } = settings;
 
-  if (!measurementId) logger.throw('Config settings ga4.measurementId missing');
+  if (!measurementId)
+    throw new StepError('Config settings ga4.measurementId missing', {
+      code: 'config',
+    });
 
   // Ensure the gtag stub exists either way, so events can queue.
   initializeGtag(window);
@@ -31,12 +37,12 @@ export function initGA4(
   // configures this measurement ID itself. walkerOS then only sends events,
   // routed by `send_to`. Loading the script or issuing a second, later
   // `config` would override the identity the container already established.
-  if (init === false) return;
+  if (init === false) return [];
 
   // Load the gtag script. `server_container_url` routes measurement data and
   // says nothing about script delivery, so first-party serving needs its own
   // `scriptSrc` pointing at the container's configured tag serving path.
-  if (loadScript) addScript(measurementId, scriptSrc, document);
+  if (loadScript) loadGtag(measurementId, scriptSrc, timeout);
 
   const gtagSettings: WalkerOS.AnyObject = {};
 
@@ -54,8 +60,10 @@ export function initGA4(
 
   // `js` announces that gtag initialised here. If an external tag manager
   // already bootstrapped it, a second one carries a false, later timestamp.
-  if (!gtagExternal) gtag('js', new Date());
+  const calls: unknown[] = [];
+  if (!gtagExternal) calls.push(gtag('js', new Date()));
 
   // gtag init call
-  gtag('config', measurementId, gtagSettings);
+  calls.push(gtag('config', measurementId, gtagSettings));
+  return calls;
 }

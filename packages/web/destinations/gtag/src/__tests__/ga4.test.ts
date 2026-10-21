@@ -1,11 +1,11 @@
 import { initGA4, pushGA4Event } from '../ga4';
-import { resetLoadedScripts } from '../shared/gtag';
 import { examples } from '../dev';
 import { clone, createMockLogger, getEvent } from '@walkeros/core';
 import type { GA4Settings } from '../types';
 
 describe('GA4 Implementation', () => {
   const mockGtag = jest.fn();
+  const dropped = jest.fn();
   const mockEnv = clone(examples.env.push);
   mockEnv.window.gtag = mockGtag;
 
@@ -97,34 +97,38 @@ describe('GA4 Implementation', () => {
     });
 
     describe('gtag.js loading', () => {
-      // Build an env whose document.createElement captures the injected script
-      // so the resolved `script.src` can be asserted.
+      beforeEach(() => {
+        // The fallback follows the script's error event on real timers.
+        jest.useRealTimers();
+      });
+
+      // The scripts loadVendor added in this test (once per src and page).
       const setupCapture = () => {
-        resetLoadedScripts();
-        type FakeScript = {
-          src: string;
-          onerror?: () => void;
-          setAttribute: (name: string, value: string) => void;
-          removeAttribute: (name: string) => void;
-        };
-        const created: FakeScript[] = [];
+        const scripts = () =>
+          Array.from(
+            document.querySelectorAll('script[data-walkeros-vendor]'),
+            (script) => script.getAttribute('src') ?? '',
+          );
+        const before = new Set(scripts());
+        const added = () => scripts().filter((src) => !before.has(src));
         const env = clone(examples.env.push);
         env.window.gtag = mockGtag;
-        env.document.createElement = () => {
-          const script: FakeScript = {
-            src: '',
-            setAttribute: () => {},
-            removeAttribute: () => {},
-          };
-          created.push(script);
-          return script;
+        const getSrc = (): string | undefined => {
+          const list = added();
+          return list[list.length - 1];
         };
         return {
           env,
-          getSrc: () => created[created.length - 1]?.src,
-          countCreated: () => created.length,
-          // Simulate the browser failing the most recently injected script.
-          failScript: () => created[created.length - 1]?.onerror?.(),
+          getSrc,
+          countCreated: () => added().length,
+          // Simulate the browser failing the most recently injected script,
+          // then let the fallback follow.
+          failScript: async () => {
+            document
+              .querySelector(`script[src="${getSrc()}"]`)
+              ?.dispatchEvent(new Event('error'));
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          },
         };
       };
 
@@ -219,33 +223,33 @@ describe('GA4 Implementation', () => {
         expect(getSrc()).toBe('https://example.com/metrics/tag_serving_path/');
       });
 
-      it('falls back to googletagmanager.com when scriptSrc fails to load', () => {
+      it('falls back to googletagmanager.com when scriptSrc fails to load', async () => {
         const { env, getSrc, failScript } = setupCapture();
         const settings: GA4Settings = {
-          measurementId: 'G-FIRSTPARTY',
+          measurementId: 'G-FALLBACK',
           scriptSrc: 'https://example.com/metrics/wrong_path/',
         };
 
         initGA4(settings, true, env, createMockLogger());
         expect(getSrc()).toBe('https://example.com/metrics/wrong_path/');
 
-        failScript();
+        await failScript();
 
         expect(getSrc()).toBe(
-          'https://www.googletagmanager.com/gtag/js?id=G-FIRSTPARTY',
+          'https://www.googletagmanager.com/gtag/js?id=G-FALLBACK',
         );
       });
 
-      it('does not fall back twice when the fallback itself fails', () => {
+      it('does not fall back twice when the fallback itself fails', async () => {
         const { env, failScript, countCreated } = setupCapture();
         const settings: GA4Settings = {
-          measurementId: 'G-FIRSTPARTY',
-          scriptSrc: 'https://example.com/metrics/wrong_path/',
+          measurementId: 'G-TWICE',
+          scriptSrc: 'https://example.com/metrics/other_wrong_path/',
         };
 
         initGA4(settings, true, env, createMockLogger());
-        failScript(); // first-party fails -> fallback injected
-        failScript(); // fallback fails -> must not loop
+        await failScript(); // first-party fails -> fallback injected
+        await failScript(); // fallback fails -> must not loop
 
         expect(countCreated()).toBe(2);
       });
@@ -263,7 +267,7 @@ describe('GA4 Implementation', () => {
       const logger = createThrowingLogger();
 
       expect(() =>
-        pushGA4Event(mockEvent, settings, {}, mockEnv, logger),
+        pushGA4Event(mockEvent, settings, {}, mockEnv, logger, dropped),
       ).toThrow('Config settings ga4.measurementId missing');
     });
 
@@ -276,6 +280,7 @@ describe('GA4 Implementation', () => {
         { value: 123.45 },
         mockEnv,
         createMockLogger(),
+        dropped,
       );
 
       expect(mockGtag).toHaveBeenCalledWith(
@@ -297,6 +302,7 @@ describe('GA4 Implementation', () => {
         { price: 99.99, currency: 'USD' },
         mockEnv,
         createMockLogger(),
+        dropped,
       );
 
       expect(mockGtag).toHaveBeenCalledWith(
@@ -316,7 +322,14 @@ describe('GA4 Implementation', () => {
         debug: true,
       };
 
-      pushGA4Event(mockEvent, settings, {}, mockEnv, createMockLogger());
+      pushGA4Event(
+        mockEvent,
+        settings,
+        {},
+        mockEnv,
+        createMockLogger(),
+        dropped,
+      );
 
       expect(mockGtag).toHaveBeenCalledWith(
         'event',
@@ -334,7 +347,14 @@ describe('GA4 Implementation', () => {
         snakeCase: false,
       };
 
-      pushGA4Event(mockEvent, settings, {}, mockEnv, createMockLogger());
+      pushGA4Event(
+        mockEvent,
+        settings,
+        {},
+        mockEnv,
+        createMockLogger(),
+        dropped,
+      );
 
       expect(mockGtag).toHaveBeenCalledWith(
         'event',
@@ -358,6 +378,7 @@ describe('GA4 Implementation', () => {
         { 'data_creative-type': 'Sale' },
         mockEnv,
         createMockLogger(),
+        dropped,
       );
 
       expect(paramsOf()).toMatchObject({ data_creative_type: 'Sale' });
@@ -374,6 +395,7 @@ describe('GA4 Implementation', () => {
         { source_platform: 'web', data_id: 'x' },
         mockEnv,
         createMockLogger(),
+        dropped,
       );
 
       expect(paramsOf()).not.toHaveProperty('source_platform');
@@ -389,6 +411,7 @@ describe('GA4 Implementation', () => {
         { user_id: 'us3r' },
         mockEnv,
         createMockLogger(),
+        dropped,
       );
 
       expect(paramsOf()).not.toHaveProperty('user_id');
@@ -401,6 +424,7 @@ describe('GA4 Implementation', () => {
         { 'source-platform': 'web' },
         mockEnv,
         createMockLogger(),
+        dropped,
       );
 
       expect(paramsOf()).not.toHaveProperty('source_platform');
@@ -416,6 +440,7 @@ describe('GA4 Implementation', () => {
         { currency: 'EUR', value: 12.5, transaction_id: 'T1' },
         mockEnv,
         createMockLogger(),
+        dropped,
       );
 
       expect(paramsOf()).toMatchObject({
@@ -425,16 +450,24 @@ describe('GA4 Implementation', () => {
       });
     });
 
-    it('should drop an empty param name, and warn', () => {
+    it('should drop an empty param name, report it and send the event', () => {
       const logger = createMockLogger();
 
-      pushGA4Event(mockEvent, settings, { '': 'x' }, mockEnv, logger);
+      pushGA4Event(
+        mockEvent,
+        settings,
+        { '': 'x', a: 1 },
+        mockEnv,
+        logger,
+        dropped,
+      );
 
       expect(paramsOf()).not.toHaveProperty('');
-      expect(logger.warn).toHaveBeenCalled();
+      expect(paramsOf()).toHaveProperty('a', 1);
+      expect(dropped).toHaveBeenCalledWith(expect.any(String), '');
     });
 
-    it('should warn when two param names normalize to one', () => {
+    it('should keep the first of two names that normalize to one and report the second', () => {
       const logger = createMockLogger();
 
       pushGA4Event(
@@ -443,17 +476,28 @@ describe('GA4 Implementation', () => {
         { 'a-b': 1, 'a.b': 2 },
         mockEnv,
         logger,
+        dropped,
       );
 
-      expect(logger.warn).toHaveBeenCalled();
+      expect(paramsOf()).toHaveProperty('a_b', 1);
+      expect(dropped).toHaveBeenCalledTimes(1);
+      expect(dropped).toHaveBeenCalledWith(expect.any(String), 'a.b');
     });
 
     it('should not warn when every param name is already valid', () => {
       const logger = createMockLogger();
 
-      pushGA4Event(mockEvent, settings, { currency: 'EUR' }, mockEnv, logger);
+      pushGA4Event(
+        mockEvent,
+        settings,
+        { currency: 'EUR' },
+        mockEnv,
+        logger,
+        dropped,
+      );
 
       expect(logger.warn).not.toHaveBeenCalled();
+      expect(dropped).not.toHaveBeenCalled();
     });
   });
 });

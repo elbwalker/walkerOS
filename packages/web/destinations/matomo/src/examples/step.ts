@@ -360,3 +360,39 @@ export const customDimensions: StepExample = {
     ['_paq.push', ['setCustomDimension', 1, 'docs']],
   ],
 };
+
+/** A silent rule without a goal sends nothing. */
+export const silentRule: StepExample = {
+  public: false,
+  description:
+    'A rule with silent: true and no goal sends no command, its dimensions included.',
+  in: getEvent('page view', { timestamp: 1700000300 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * An event no rule maps: Matomo has no command for it, so the push fails
+ * instead of counting as delivered.
+ */
+export const unmappedEvent: StepExample = {
+  public: false,
+  description:
+    'An event without a rule name, a tracking flag or a goal, and not a page view, has no Matomo command: the push fails with missing-input.',
+  in: getEvent('product view', { timestamp: 1700000301 }),
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
+};
+
+/**
+ * A revocation of the consent the destination requires stops Matomo:
+ * config.consent { marketing: true }, granted first, then revoked.
+ */
+export const consentRevoke: StepExample = {
+  public: false,
+  description:
+    'For a destination with config.consent { marketing: true }, revoking marketing pushes forgetConsentGiven, which stops every tracking request of the page, link tracking included.',
+  command: 'consent',
+  in: { marketing: false },
+  out: [['window._paq.push', ['forgetConsentGiven']]],
+};

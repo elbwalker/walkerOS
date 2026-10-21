@@ -43,17 +43,6 @@ export interface Env extends DestinationWeb.Env {
     // Optional: the SDK queue may be absent until `init` installs it.
     _paq?: Array<unknown>;
   };
-  document: {
-    createElement: (tagName: string) => {
-      type: string;
-      src: string;
-      async?: boolean;
-      defer?: boolean;
-    };
-    head: {
-      appendChild: (node: unknown) => void;
-    };
-  };
 }
 
 export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;

@@ -496,29 +496,6 @@ export const consentContextOmitted: SegmentStepExample = {
 };
 
 /**
- * Consent granted → deferred load fires for the first time. The
- * destination was initialized with consent requirement; on the walker
- * consent command it calls analytics.load(writeKey, initOptions).
- *
- * Uses the canonical StepExample.command='consent' pattern. The full
- * call shape includes both the settings arg and the initOptions arg.
- */
-export const consentGrantDeferredLoad: SegmentStepExample = {
-  title: 'Consent deferred load',
-  description:
-    'With consent: { analytics: true } in the destination config, a walker consent grant triggers the deferred Segment analytics.load with the configured writeKey.',
-  command: 'consent',
-  in: { analytics: true } as WalkerOS.Consent,
-  out: [
-    [
-      'analytics.load',
-      { writeKey: 'test-project' },
-      { initialPageview: false },
-    ],
-  ],
-};
-
-/**
  * Consent revoked → no SDK call. The walkerOS consent gate handles
  * blocking subsequent events. The destination's on('consent') handler
  * is a no-op on revocation (Segment has no opt-out method).
@@ -528,4 +505,30 @@ export const consentRevokeNoOp: SegmentStepExample = {
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   out: [],
+};
+
+/** A silent rule without settings of its own calls nothing. */
+export const silentRule: SegmentStepExample = {
+  public: false,
+  description: 'A rule with silent: true and no settings calls nothing.',
+  in: getEvent('page view', { timestamp: 1700000140 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group rule of companyUpdateGroup on an update without data: no
+ * groupId resolves and the rule suppresses the track, so nothing is sent.
+ */
+export const companyUpdateWithoutData: SegmentStepExample = {
+  public: false,
+  description:
+    'A silent rule whose group mapping finds no groupId sends nothing, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'company update', entity: 'company', action: 'update' },
+  mapping: {
+    silent: true,
+    settings: { group: { map: { groupId: 'data.company_id' } } },
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
 };

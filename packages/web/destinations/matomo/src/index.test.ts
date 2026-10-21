@@ -1,4 +1,4 @@
-import type { Logger, WalkerOS } from '@walkeros/core';
+import type { Elb, Logger, WalkerOS } from '@walkeros/core';
 import type { DestinationMatomo } from '.';
 import { startFlow } from '@walkeros/collector';
 import { createEvent, createMockLogger, getEvent, Level } from '@walkeros/core';
@@ -16,23 +16,12 @@ interface Harness {
   logs: LogEntry[];
 }
 
-interface ScriptElement {
-  type: string;
-  src: string;
-  async?: boolean;
-  defer?: boolean;
-}
-
 const siteId = '1';
 const url = 'https://analytics.example.com/';
 
 function createEnv(paq?: unknown[]): DestinationMatomo.Env {
   return {
     window: paq ? { _paq: paq } : {},
-    document: {
-      createElement: () => ({ type: '', src: '', async: false, defer: false }),
-      head: { appendChild: () => {} },
-    },
   };
 }
 
@@ -65,24 +54,27 @@ async function setup(
   return { elb, paq, logs };
 }
 
+/** The src of every script `loadVendor` added. */
+function vendorScripts(): string[] {
+  return Array.from(
+    document.querySelectorAll('script[data-walkeros-vendor]'),
+    (script) => script.getAttribute('src') ?? '',
+  );
+}
+
+/** The reason the one destination of a push failed with. */
+function failure(result: Elb.PushResult) {
+  return Object.values(result.failed ?? {})[0]?.reason;
+}
+
 /** Runs init directly on a fresh collector and returns what it pushed and loaded. */
 async function runInit(config: DestinationMatomo.Config) {
   const { init } = destinationMatomo;
   if (!init) throw new Error('init missing');
 
   const paq: unknown[] = [];
-  const scripts: ScriptElement[] = [];
-  const env: DestinationMatomo.Env = {
-    window: { _paq: paq },
-    document: {
-      createElement: () => {
-        const script: ScriptElement = { type: '', src: '' };
-        scripts.push(script);
-        return script;
-      },
-      head: { appendChild: () => {} },
-    },
-  };
+  const env: DestinationMatomo.Env = { window: { _paq: paq } };
+  const before = vendorScripts();
   const { collector } = await startFlow();
 
   await init({
@@ -93,7 +85,11 @@ async function runInit(config: DestinationMatomo.Config) {
     collector,
   });
 
-  return { paq, scripts };
+  // loadVendor adds a script once per src and page.
+  return {
+    paq,
+    scripts: vendorScripts().filter((src) => !before.includes(src)),
+  };
 }
 
 function warnings(logs: LogEntry[], text: string): LogEntry[] {
@@ -138,24 +134,21 @@ describe('Destination Matomo', () => {
       expect(paq).toEqual([['trackPageView', '/docs/']]);
     });
 
-    test('unmapped event pushes nothing and warns once', async () => {
+    test('unmapped event pushes nothing and fails with missing-input', async () => {
       const { elb, paq, logs } = await setup();
 
-      await elb('foo bar');
-      await elb('foo bar');
+      const result = await elb('foo bar');
 
-      const skipped = 'Event "foo bar" skipped';
       expect(paq).toEqual([]);
-      expect(warnings(logs, skipped)).toHaveLength(1);
-      expect(
-        logs.filter(
-          (log) => log.level === Level.DEBUG && log.message.includes(skipped),
-        ),
-      ).toHaveLength(1);
+      expect(failure(result)).toMatchObject({
+        code: 'missing-input',
+        retryable: false,
+      });
+      expect(warnings(logs, 'foo bar')).toEqual([]);
     });
 
-    test('implicit rule without a goal is skipped', async () => {
-      const { elb, paq, logs } = await setup({
+    test('implicit rule without a goal fails with missing-input', async () => {
+      const { elb, paq } = await setup({
         mapping: {
           product: {
             add: { settings: { customDimensions: { '2': 'data.id' } } },
@@ -163,10 +156,22 @@ describe('Destination Matomo', () => {
         },
       });
 
-      await elb(getEvent('product add'));
+      const result = await elb(getEvent('product add'));
 
       expect(paq).toEqual([]);
-      expect(warnings(logs, 'Event "product add" skipped')).toHaveLength(1);
+      expect(failure(result)).toMatchObject({ code: 'missing-input' });
+    });
+
+    test('a silent rule sends only its goal', async () => {
+      const { elb, paq } = await setup({
+        mapping: {
+          page: { view: { silent: true, settings: { goalId: '1' } } },
+        },
+      });
+
+      await elb(pageView);
+
+      expect(paq).toEqual([['trackGoal', '1', undefined]]);
     });
 
     test('implicit rule with a goal sends only the goal', async () => {
@@ -207,38 +212,57 @@ describe('Destination Matomo', () => {
       expect(paq).toEqual([['trackGoal', goalId, undefined]]);
     });
 
-    test('an invalid goalId sends the main hit, no goal and warns once', async () => {
-      const { elb, paq, logs } = await setup({
-        mapping: {
-          promotion: {
-            visible: {
-              name: 'trackEvent',
-              data: { set: [{ value: 'promotion' }, { value: 'visible' }] },
-              settings: { goalId: 'goal_1' },
+    test('an invalid goalId sends the hit without the goal and one ERROR line per cause', async () => {
+      const paq: unknown[] = [];
+      const logs: LogEntry[] = [];
+      // The default level: only ERROR lines reach the handler.
+      const { elb } = await startFlow({
+        logger: { handler: (level, message) => logs.push({ level, message }) },
+        destinations: {
+          matomo: {
+            code: { ...destinationMatomo, env: createEnv(paq) },
+            config: {
+              settings: { siteId, url, enableLinkTracking: false },
+              mapping: {
+                promotion: {
+                  visible: {
+                    name: 'trackEvent',
+                    data: {
+                      set: [{ value: 'promotion' }, { value: 'visible' }],
+                    },
+                    settings: { goalId: 'goal_1' },
+                  },
+                },
+              },
             },
           },
         },
       });
 
-      await elb(getEvent('promotion visible'));
-      await elb(getEvent('promotion visible'));
+      const first = await elb(getEvent('promotion visible'));
+      const second = await elb(getEvent('promotion visible'));
 
+      expect(first.ok).toBe(true);
+      expect(second.ok).toBe(true);
       expect(paq).toEqual([
         ['trackEvent', 'promotion', 'visible'],
         ['trackEvent', 'promotion', 'visible'],
       ]);
-      expect(warnings(logs, 'goalId')).toHaveLength(1);
+      // The second occurrence within the window is counted, not logged.
+      const errors = logs.filter((log) => log.level === Level.ERROR);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('goalId');
     });
 
-    test('an implicit rule with only an invalid goal is skipped as unmapped', async () => {
-      const { elb, paq, logs } = await setup({
+    test('an implicit rule with only an invalid goal is unmapped', async () => {
+      const { elb, paq } = await setup({
         mapping: { product: { add: { settings: { goalId: 'goal_1' } } } },
       });
 
-      await elb(getEvent('product add'));
+      const result = await elb(getEvent('product add'));
 
       expect(paq).toEqual([]);
-      expect(warnings(logs, 'Event "product add" skipped')).toHaveLength(1);
+      expect(failure(result)).toMatchObject({ code: 'missing-input' });
     });
 
     test('explicit rule name passes through', async () => {
@@ -283,13 +307,41 @@ describe('Destination Matomo', () => {
       expect(paq).toEqual([...group('/a/'), ...group('/b/')]);
     });
 
-    test('missing _paq warns and pushes nothing', async () => {
-      const { elb, paq, logs } = await setup({ init: true }, { queue: false });
+    test('missing _paq fails with vendor-not-ready and pushes nothing', async () => {
+      const { elb, paq } = await setup({ init: true }, { queue: false });
 
-      await elb(pageView);
+      const result = await elb(pageView);
 
       expect(paq).toEqual([]);
-      expect(warnings(logs, '_paq')).toHaveLength(1);
+      expect(failure(result)).toMatchObject({
+        code: 'vendor-not-ready',
+        retryable: true,
+      });
+    });
+
+    test('a consent revocation stops Matomo for a consent-gated destination, a grant resumes it', async () => {
+      const { elb, paq } = await setup({ consent: { marketing: true } });
+
+      await elb('walker consent', { marketing: true });
+      await elb(pageView);
+      await elb('walker consent', { marketing: false });
+
+      expect(paq).toEqual([
+        ['setConsentGiven'],
+        ['trackPageView', title],
+        ['forgetConsentGiven'],
+      ]);
+    });
+
+    test('with disableCookies a consent grant keeps cookies off', async () => {
+      const { elb, paq } = await setup({
+        consent: { marketing: true },
+        settings: { disableCookies: true },
+      });
+
+      await elb('walker consent', { marketing: true });
+
+      expect(paq).toEqual([['disableCookies'], ['setConsentGiven', false]]);
     });
   });
 
@@ -422,9 +474,7 @@ describe('Destination Matomo', () => {
         settings: { siteId, url },
       });
 
-      expect(scripts.map((script) => script.src)).toEqual([
-        'https://analytics.example.com/matomo.js',
-      ]);
+      expect(scripts).toEqual(['https://analytics.example.com/matomo.js']);
       expect(paq).toEqual([
         ['setTrackerUrl', 'https://analytics.example.com/matomo.php'],
         ['setSiteId', siteId],
@@ -435,9 +485,9 @@ describe('Destination Matomo', () => {
     test.each([
       ['siteId', { url }],
       ['url', { siteId }],
-    ])('throws for missing %s with loadScript', async (_name, settings) => {
+    ])('throws for missing %s with loadScript', async (name, settings) => {
       await expect(runInit({ loadScript: true, settings })).rejects.toThrow(
-        'missing',
+        `needs settings ${name}`,
       );
     });
 
@@ -455,14 +505,11 @@ describe('Destination Matomo', () => {
       'https://analytics.example.com',
       'https://analytics.example.com//',
     ])('normalizes %s to one trailing slash', async (baseUrl) => {
-      const { paq, scripts } = await runInit({
+      const { paq } = await runInit({
         loadScript: true,
         settings: { siteId, url: baseUrl, enableLinkTracking: false },
       });
 
-      expect(scripts.map((script) => script.src)).toEqual([
-        'https://analytics.example.com/matomo.js',
-      ]);
       expect(paq).toEqual([
         ['setTrackerUrl', 'https://analytics.example.com/matomo.php'],
         ['setSiteId', siteId],

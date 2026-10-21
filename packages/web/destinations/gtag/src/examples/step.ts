@@ -500,3 +500,38 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends none of the default gtag or dataLayer calls. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description:
+    'A rule with silent: true sends no GA4 event, no Ads conversion and no GTM push.',
+  in: getEvent('page view', { timestamp: 1700000500 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * A revocation updates Consent Mode: with config.consent { marketing: true },
+ * granted first, revoking marketing denies the ad parameters the default
+ * mapping assigns to it.
+ */
+export const consentRevoke: Flow.StepExample = {
+  public: false,
+  description:
+    'Revoking marketing updates gtag Consent Mode v2 with the ad parameters denied.',
+  command: 'consent',
+  in: { marketing: false },
+  out: [
+    [
+      'window.gtag',
+      'consent',
+      'update',
+      {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+      },
+    ],
+  ],
+};

@@ -28,15 +28,6 @@ export interface Env extends DestinationWeb.Env {
     fbq?: facebook.Pixel.Event;
     _fbq?: facebook.Pixel.Event;
   };
-  document: {
-    createElement: (tagName: string) => {
-      src: string;
-      async: boolean;
-      setAttribute: (name: string, value: string) => void;
-      removeAttribute: (name: string) => void;
-    };
-    head: { appendChild: (node: unknown) => void };
-  };
 }
 
 export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;

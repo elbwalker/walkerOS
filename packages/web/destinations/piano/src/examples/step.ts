@@ -100,3 +100,25 @@ export const customEvent: Flow.StepExample = {
     ],
   ],
 };
+
+/** A silent rule sends no Piano event. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no Piano event.',
+  in: getEvent('page view', { timestamp: 1700000203 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * Piano sends only on sendEvent, which the collector stops for a revoked
+ * consent; the destination has no consent call to make.
+ */
+export const consentRevoke: Flow.StepExample = {
+  public: false,
+  description:
+    'Piano Analytics sends only when the destination calls sendEvent, which walkerOS stops for a consent-gated destination after a revocation, so no consent call is needed.',
+  command: 'consent',
+  in: { analytics: false },
+  out: [],
+};

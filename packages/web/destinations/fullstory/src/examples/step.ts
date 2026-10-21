@@ -204,6 +204,7 @@ export const combinedFeatures: FullStoryStepExample = {
  */
 export const silentWithIdentify: FullStoryStepExample = {
   public: false,
+  description: 'A silent rule still runs its identify.',
   in: createEvent({
     name: 'user login',
     timestamp: 1700000108,
@@ -314,4 +315,63 @@ export const consentRevokeFlag: FullStoryStepExample = {
     ['fullstory.setIdentity', { consent: true }],
     ['fullstory.setIdentity', { consent: false }],
   ],
+};
+
+/** A silent rule without settings of its own calls nothing. */
+export const silentRule: FullStoryStepExample = {
+  public: false,
+  description: 'A rule with silent: true and no settings calls nothing.',
+  in: getEvent('page view', { timestamp: 1700000120 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/** The FullStory SDK is unreachable: its init fails, so the push reports it. */
+export const fullstoryUnreachable: FullStoryStepExample = {
+  public: false,
+  description:
+    'The FullStory SDK fails, so the destination does not start: the push fails with vendor-not-ready, retryable, and the event is in the DLQ.',
+  in: getEvent('product view', { timestamp: 1700000121 }),
+  respond: { error: 'network' },
+  out: [],
+  outcome: { status: 'failed', code: 'vendor-not-ready', retryable: true },
+};
+
+/**
+ * The silent page rule of setPageProperties on a page view without data: no
+ * property resolves and the rule suppresses the event, so nothing is sent.
+ */
+export const setPagePropertiesWithoutData: FullStoryStepExample = {
+  public: false,
+  description:
+    'A silent rule whose property mapping finds no data sends nothing, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'page view', entity: 'page', action: 'view' },
+  mapping: {
+    silent: true,
+    settings: {
+      set: { map: { pageName: 'data.title' } },
+      setType: 'page',
+    },
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+
+/**
+ * The silent identify rule of silentWithIdentify on a login without data: no
+ * uid resolves and the rule suppresses the event, so nothing is sent.
+ */
+export const silentIdentifyWithoutData: FullStoryStepExample = {
+  public: false,
+  description:
+    'A silent rule whose identify mapping finds no uid sends nothing, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'user login', entity: 'user', action: 'login' },
+  mapping: {
+    silent: true,
+    settings: {
+      identify: { map: { uid: 'data.id' } },
+    },
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
 };

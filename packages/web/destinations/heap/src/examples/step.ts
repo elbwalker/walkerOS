@@ -22,7 +22,7 @@ export const defaultEventForwarding: HeapStepExample = {
   description:
     'A walker event becomes a Heap track call with the event name and empty properties.',
   in: getEvent('product view', { timestamp: 1700000100 }),
-  out: [['heap.track', 'product view', {}]],
+  out: [['window.heap.track', 'product view', {}]],
 };
 
 /**
@@ -46,7 +46,7 @@ export const destinationLevelInclude: HeapStepExample = {
   },
   out: [
     [
-      'heap.track',
+      'window.heap.track',
       'purchase',
       { order_id: '0rd3r1d', total: 555, currency: 'EUR' },
     ],
@@ -66,8 +66,8 @@ export const destinationLevelIdentify: HeapStepExample = {
     identify: 'user.id',
   },
   out: [
-    ['heap.identify', 'us3r'],
-    ['heap.track', 'page view', {}],
+    ['window.heap.identify', 'us3r'],
+    ['window.heap.track', 'page view', {}],
   ],
 };
 
@@ -101,8 +101,8 @@ export const userLoginIdentify: HeapStepExample = {
     },
   },
   out: [
-    ['heap.identify', 'user@example.com'],
-    ['heap.addUserProperties', { plan: 'premium', company: 'Acme' }],
+    ['window.heap.identify', 'user@example.com'],
+    ['window.heap.addUserProperties', { plan: 'premium', company: 'Acme' }],
   ],
 };
 
@@ -120,7 +120,7 @@ export const userLogoutReset: HeapStepExample = {
       reset: true,
     },
   },
-  out: [['heap.resetIdentity']],
+  out: [['window.heap.resetIdentity']],
 };
 
 /**
@@ -151,10 +151,10 @@ export const eventWithUserProperties: HeapStepExample = {
   },
   out: [
     [
-      'heap.addUserProperties',
+      'window.heap.addUserProperties',
       { last_order_value: 555, last_order_currency: 'EUR' },
     ],
-    ['heap.track', 'order complete', {}],
+    ['window.heap.track', 'order complete', {}],
   ],
 };
 
@@ -180,23 +180,23 @@ export const globalEventProperties: HeapStepExample = {
       },
     },
   },
-  out: [['heap.addEventProperties', { page_category: 'docs' }]],
+  out: [['window.heap.addEventProperties', { page_category: 'docs' }]],
 };
 
 /**
- * Consent granted then revoked: the destination loads under the grant
- * (heap.startTracking), and the later revoke calls heap.stopTracking via the
- * on('consent') handler. A gated destination never loads under denial, so the
+ * Consent granted then revoked: the destination loads under the grant, and
+ * the revoke calls heap.stopTracking via the on('consent') handler; `out` is
+ * the revoke's call. A gated destination never loads under denial, so the
  * stop is a real revocation of an already-granted destination.
  */
 export const consentRevokeStopTracking: HeapStepExample = {
   title: 'Consent revoked',
   description:
-    'With consent: { analytics: true } in the destination config, the destination calls heap.startTracking once analytics is granted and heap.stopTracking when it is revoked. The classic Heap SDK that loadScript loads has neither method.',
+    'With consent: { analytics: true } in the destination config, a revocation of analytics calls heap.stopTracking once Heap has loaded. The classic Heap SDK that loadScript loads has no such method, so there only the pushes stop.',
   command: 'consent',
   before: { analytics: true },
   in: { analytics: false },
-  out: [['heap.startTracking'], ['heap.stopTracking']],
+  out: [['window.heap.stopTracking']],
 };
 
 /**
@@ -209,5 +209,14 @@ export const consentGrantStartTracking: HeapStepExample = {
     'With consent: { analytics: true } in the destination config, a walker consent grant for analytics calls heap.startTracking.',
   command: 'consent',
   in: { analytics: true },
-  out: [['heap.startTracking']],
+  out: [['window.heap.startTracking']],
+};
+
+/** A silent rule without settings of its own calls nothing. */
+export const silentRule: HeapStepExample = {
+  public: false,
+  description: 'A rule with silent: true and no settings calls nothing.',
+  in: getEvent('page view', { timestamp: 1700000107 }),
+  mapping: { silent: true },
+  out: [],
 };

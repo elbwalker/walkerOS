@@ -435,3 +435,34 @@ export const consentGrantOptIn: AmplitudeStepExample = {
   settings: {} as Partial<Settings>,
   out: [['amplitude.setOptOut', false]],
 };
+
+/** A silent rule without settings of its own calls nothing. */
+export const silentRule: AmplitudeStepExample = {
+  public: false,
+  description: 'A rule with silent: true and no settings calls nothing.',
+  in: getEvent('page view', { timestamp: 1700000120 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group rule of groupAssignmentWithProperties on an update
+ * without data: no group name resolves and the rule suppresses the track,
+ * so nothing is sent.
+ */
+export const groupAssignmentWithoutData: AmplitudeStepExample = {
+  public: false,
+  description:
+    'A silent rule whose group mapping finds no company sends nothing, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'company update', entity: 'company', action: 'update' },
+  mapping: {
+    silent: true,
+    settings: {
+      group: {
+        map: { type: { value: 'company' }, name: 'data.company' },
+      },
+    },
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};

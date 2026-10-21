@@ -4,6 +4,15 @@ import type {
 } from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
 
+/** The `window.clarity` queue: the stub until the tag script replaces it. */
+export type ClarityQueue = ((...args: unknown[]) => void) & { q?: unknown[] };
+
+declare global {
+  interface Window {
+    clarity?: ClarityQueue;
+  }
+}
+
 /**
  * Settings (destination-level).
  *
@@ -48,12 +57,14 @@ export interface ClaritySDK {
   ) => void;
   setTag: (key: string, value: string | string[]) => void;
   event: (name: string) => void;
-  consentV2: (consentOptions?: {
-    ad_Storage: 'granted' | 'denied';
-    analytics_Storage: 'granted' | 'denied';
-  }) => void;
+  consentV2: (consentOptions: ConsentV2) => void;
   upgrade: (reason: string) => void;
 }
+
+/** A ConsentV2 update: the categories a consent change names. */
+export type ConsentV2 = Partial<
+  Record<'analytics_Storage' | 'ad_Storage', 'granted' | 'denied'>
+>;
 
 /**
  * Env: optional override for the vendor SDK. Production leaves this

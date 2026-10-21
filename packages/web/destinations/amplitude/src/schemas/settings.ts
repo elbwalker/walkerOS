@@ -52,19 +52,19 @@ export const SettingsSchema = z.object({
   sessionReplay: z
     .unknown()
     .describe(
-      'Session Replay options, passed to the Session Replay plugin. @amplitude/unified sets up the plugin on every init, whether or not this is set; it records a sampled share of sessions, set by the project sampling settings in Amplitude when present, else by sampleRate (default 0).',
+      'Session Replay options, passed to the Session Replay plugin. Without this, experiment.deploymentKey or engagement only analytics starts. With any of the three set, @amplitude/unified sets up all three plugins together. It records a sampled share of sessions, set by the project sampling settings in Amplitude when present, else by sampleRate (default 0).',
     )
     .optional(),
   experiment: z
     .unknown()
     .describe(
-      'Feature Experiment options. Passed to the Experiment plugin only when they include `deploymentKey`. @amplitude/unified sets up the plugin on every init; without a deploymentKey it uses the API key.',
+      'Feature Experiment options, passed to the Experiment plugin only when they include `deploymentKey`. Without it, sessionReplay or engagement only analytics starts. With any of the three set, @amplitude/unified sets up all three plugins together.',
     )
     .optional(),
   engagement: z
     .unknown()
     .describe(
-      'Guides & Surveys options object. @amplitude/unified loads the Guides & Surveys SDK from cdn.amplitude.com on every init, whether or not this is set; `true` passes no options.',
+      'Guides & Surveys options object; `true` passes no options. Without it, sessionReplay or experiment.deploymentKey only analytics starts. With any of the three set, @amplitude/unified sets up all three plugins together, and Guides & Surveys loads its SDK from cdn.amplitude.com.',
     )
     .optional(),
 });

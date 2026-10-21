@@ -10,12 +10,9 @@ export type HeapPropertyValue = string | number | boolean;
 /** Options accepted by heap.load() as the second argument. */
 export interface HeapConfig {
   disableTextCapture?: boolean;
-  disablePageviewAutocapture?: boolean;
-  disableSessionReplay?: boolean;
   secureCookie?: boolean;
   compressCookies?: boolean;
   clearEventPropertiesOnNewUser?: boolean;
-  ingestServer?: string;
   trackingServer?: string;
   eventPropertiesStorageMedium?: string;
   metadataStorageMedium?: string;
@@ -27,7 +24,7 @@ export interface HeapConfig {
  * Mirrors the snippet-provided command queue so tests can mock each method.
  */
 export interface HeapSDK {
-  load: (appId: string, config?: HeapConfig) => void;
+  load?: (appId: string, config?: HeapConfig) => void;
   track: (
     event: string,
     properties?: Record<string, HeapPropertyValue>,
@@ -37,11 +34,21 @@ export interface HeapSDK {
   addUserProperties: (properties: Record<string, HeapPropertyValue>) => void;
   addEventProperties: (properties: Record<string, HeapPropertyValue>) => void;
   clearEventProperties: () => void;
-  startTracking: () => void;
-  stopTracking: () => void;
+  /** Not in the classic SDK that loadScript loads. */
+  startTracking?: () => void;
+  /** Not in the classic SDK that loadScript loads. */
+  stopTracking?: () => void;
   appid?: string;
   config?: HeapConfig;
-  q?: unknown[][];
+}
+
+/**
+ * What `window.heap` holds before the classic SDK loads: the app id and
+ * config it reads, no methods (it replays no object stub).
+ */
+export interface HeapLoader {
+  appid: string;
+  config: HeapConfig;
 }
 
 /**
@@ -55,14 +62,8 @@ export interface Settings {
   appId: string;
   /** Disable Heap auto text capture. Default: true. */
   disableTextCapture?: boolean;
-  /** Disable Heap automatic pageview tracking. Default: true (walkerOS handles pageviews). */
-  disablePageviewAutocapture?: boolean;
-  /** Disable Heap session replay. */
-  disableSessionReplay?: boolean;
   /** SSL-only cookies. */
   secureCookie?: boolean;
-  /** Custom server endpoint (first-party proxy). */
-  ingestServer?: string;
   /** Destination-level identity mapping. Resolves to a string for heap.identify(). */
   identify?: WalkerOSMapping.Value;
   /** Destination-level user properties mapping. Resolves to object for heap.addUserProperties(). */
@@ -103,7 +104,7 @@ export interface Env extends DestinationWeb.Env {
 
 declare global {
   interface Window {
-    heap?: HeapSDK;
+    heap?: HeapSDK | HeapLoader;
   }
 }
 

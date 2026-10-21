@@ -11,7 +11,7 @@ export function pushGTMEvent(
   data: unknown,
   env?: Env,
   _logger?: Logger.Instance,
-): void {
+): unknown {
   const { window } = getEnv<Env>(env);
   const obj = { event: event.name }; // Use the name mapping by default
 
@@ -20,7 +20,7 @@ export function pushGTMEvent(
   const dataLayerArray: unknown[] = isArray(existing) ? existing : [];
   window[dataLayerName] = dataLayerArray;
 
-  dataLayerArray.push({
+  return dataLayerArray.push({
     ...obj,
     ...(isObject(data) ? data : event),
   });

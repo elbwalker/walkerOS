@@ -1,86 +1,130 @@
 import type { Mapping, Destination, Env } from './types';
-import { getMappingValue, isArray } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
+import {
+  getGrantedConsent,
+  getMappingValue,
+  isArray,
+  isObject,
+  reportCause,
+  stepId,
+  StepError,
+} from '@walkeros/core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
 import { resolveDimensionMap, sequence } from './dimensions';
-import { logSkip } from './skip';
 
 // Types
 export * as DestinationMatomo from './types';
+
+/**
+ * Pushes commands onto the queue in one synchronous block, so another
+ * event's commands never interleave, then waits for what each push returns.
+ */
+async function pushAll(
+  queue: unknown[],
+  commands: unknown[][],
+  code: string,
+  message: string,
+): Promise<void> {
+  try {
+    await Promise.all(commands.map((command) => queue.push(command)));
+  } catch (error) {
+    throw new StepError(message, { code, cause: error });
+  }
+}
+
+/**
+ * matomo.js, injected by `loadVendor` with `loadScript`. `_paq` replays its
+ * own queue, so commands are pushed synchronously and only a failed script
+ * is reported.
+ */
+function vendor(url: string | undefined, env?: Env, timeout?: number) {
+  return loadVendor(
+    url ? `${normalizeUrl(url)}matomo.js` : undefined,
+    () => getEnv<Env>(env).window._paq,
+    { timeout },
+  );
+}
 
 export const destinationMatomo: Destination = {
   type: 'matomo',
 
   config: {},
 
-  init({ config, env, logger }) {
+  async init({ config, env }) {
     const { window } = getEnv<Env>(env);
     const { settings = {}, loadScript } = config;
     const { siteId, url } = settings;
-
-    // Set up the Matomo command queue
-    window._paq = window._paq || [];
-    const queue = window._paq;
-    const paq = (command: unknown[]) => {
-      queue.push(command);
-    };
+    const commands: unknown[][] = [];
 
     if (loadScript) {
       // Required only to load and address the tracker
-      if (!siteId) return logger.throw('Config settings siteId missing');
-      if (!url) return logger.throw('Config settings url missing');
+      if (!siteId || !url)
+        throw new StepError(
+          `Matomo with loadScript needs settings ${[
+            ...(siteId ? [] : ['siteId']),
+            ...(url ? [] : ['url']),
+          ].join(' and ')}`,
+          { code: 'config' },
+        );
 
       const baseUrl = normalizeUrl(url);
-
-      // Load the Matomo tracking script
-      addScript(baseUrl, env);
-
-      // Configure tracker URL and site ID
-      paq(['setTrackerUrl', baseUrl + 'matomo.php']);
-      paq(['setSiteId', siteId]);
+      commands.push(['setTrackerUrl', baseUrl + 'matomo.php']);
+      commands.push(['setSiteId', siteId]);
     }
 
     // Cookie-free tracking
-    if (settings.disableCookies) paq(['disableCookies']);
+    if (settings.disableCookies) commands.push(['disableCookies']);
 
     // Enable link tracking by default
-    if (settings.enableLinkTracking !== false) paq(['enableLinkTracking']);
+    if (settings.enableLinkTracking !== false)
+      commands.push(['enableLinkTracking']);
 
     // Heart beat timer for accurate time-on-page
     if (settings.enableHeartBeatTimer)
-      paq(['enableHeartBeatTimer', settings.enableHeartBeatTimer]);
+      commands.push(['enableHeartBeatTimer', settings.enableHeartBeatTimer]);
+
+    // The Matomo command queue
+    window._paq = window._paq || [];
+    if (loadScript) vendor(url, env, config.timeout);
+    await pushAll(
+      window._paq,
+      commands,
+      'vendor-not-ready',
+      'Matomo did not take its setup commands',
+    );
   },
 
   async push(event, { config, rule = {}, data, env, collector, logger, id }) {
-    const { window } = getEnv<Env>(env);
-    const queue = window._paq;
-    if (!queue) {
-      logger.warn('Matomo _paq queue missing, init() not run');
-      return;
-    }
-    const paq = (command: unknown[]) => {
-      queue.push(command);
-    };
-
     const settings = config.settings || {};
+    if (config.loadScript) vendor(settings.url, env, config.timeout).check();
+    const queue = getEnv<Env>(env).window._paq;
+    if (!queue)
+      throw new StepError('Matomo _paq queue missing: init did not run', {
+        code: 'vendor-not-ready',
+      });
+
     const eventMapping: Mapping = rule.settings || {};
     const { goalId } = eventMapping;
     const parameters = isArray(data) ? data : [data];
 
-    // Matomo drops a conversion whose goal id is not a positive integer
-    const goal = isGoalId(goalId) ? goalId : undefined;
+    // Matomo drops a conversion whose goal id is not a positive integer: the
+    // hit goes without it, and the cause log reports it once per cause.
+    const goal = goalId === undefined || isGoalId(goalId) ? goalId : undefined;
     if (goalId !== undefined && goal === undefined)
-      logSkip(
+      reportCause(
+        collector,
         logger,
-        `${id}|${event.name}|invalid goalId`,
-        `Goal of event "${event.name}" skipped: goalId ${JSON.stringify(goalId)} is not a positive integer`,
-        { event: event.name, reason: 'invalid goalId' },
+        { step: stepId('destination', id), code: 'config' },
+        'Matomo goal skipped: goalId is not a positive integer',
+        { event: event.name, mappingKey: 'goalId' },
       );
 
     // A tracking flag picks the method, an explicit rule name (already
     // applied to event.name) passes through, and a page view defaults to
-    // trackPageView. Anything else sends only its goal, or is unmapped.
+    // trackPageView. A silent rule sends none of them, only its goal.
     let command: unknown[] | undefined;
-    if (eventMapping.siteSearch) {
+    if (rule.silent) {
+      command = undefined;
+    } else if (eventMapping.siteSearch) {
       command = ['trackSiteSearch', ...parameters];
     } else if (eventMapping.contentImpression) {
       command = ['trackContentImpression', ...parameters];
@@ -98,13 +142,10 @@ export const destinationMatomo: Destination = {
             ]
           : ['trackPageView', ...parameters];
     } else if (goal === undefined) {
-      logSkip(
-        logger,
-        `${id}|${event.name}|unmapped`,
-        `Event "${event.name}" skipped: no rule name, tracking flag or goal, and not a page view`,
-        { event: event.name, reason: 'unmapped' },
+      throw new StepError(
+        `Matomo has no command for "${event.name}": map it with a rule name, a tracking flag or a goal, or ignore it`,
+        { code: 'missing-input' },
       );
-      return;
     }
 
     // Resolve everything first, so this event's commands are pushed in one
@@ -123,13 +164,48 @@ export const destinationMatomo: Destination = {
       ),
     );
 
-    before.forEach(paq);
-    if (command) paq(command);
+    // A silent rule without a goal sends nothing, dimensions included.
+    if (command || goal !== undefined)
+      await pushAll(
+        queue,
+        [
+          ...before,
+          ...(command ? [command] : []),
+          // Goal tracking alongside event
+          ...(goal !== undefined ? [['trackGoal', goal, goalValue]] : []),
+          ...after,
+        ],
+        'transport',
+        'Matomo did not take the event commands',
+      );
+  },
 
-    // Goal tracking alongside event
-    if (goal !== undefined) paq(['trackGoal', goal, goalValue]);
+  // The destination's required consent decides, as it gates the pushes: a
+  // revocation stops every tracking request (link tracking included) for the
+  // page, a grant resumes them. With disableCookies the grant keeps cookies
+  // off.
+  async on(type, { config, data, env, collector }) {
+    const required = config.consent;
+    if (type !== 'consent' || !required || !isObject(data)) return;
+    if (!Object.keys(required).some((key) => key in data)) return;
+    const queue = getEnv(env).window._paq;
+    if (!queue) return;
 
-    after.forEach(paq);
+    const granted = getGrantedConsent(required, collector.consent) !== false;
+    const disableCookies =
+      isObject(config.settings) && config.settings.disableCookies === true;
+    const command = !granted
+      ? ['forgetConsentGiven']
+      : disableCookies
+        ? ['setConsentGiven', false]
+        : ['setConsentGiven'];
+
+    await pushAll(
+      queue,
+      [command],
+      'consent-not-applied',
+      'Matomo did not take the consent update',
+    );
   },
 };
 
@@ -145,16 +221,6 @@ function isGoalId(value: unknown): value is string | number {
 /** Base URL with exactly one trailing slash. */
 function normalizeUrl(url: string): string {
   return `${url.replace(/\/+$/, '')}/`;
-}
-
-function addScript(url: string, env?: Env) {
-  const { document } = getEnv<Env>(env);
-  const script = document.createElement('script');
-  script.type = 'text/javascript';
-  script.src = url + 'matomo.js';
-  script.async = true;
-  script.defer = true;
-  document.head.appendChild(script);
 }
 
 export default destinationMatomo;

@@ -295,7 +295,7 @@ export const consentGrantBoth: ClarityStepExample = {
 export const consentRevoke: ClarityStepExample = {
   title: 'Consent revoked',
   description:
-    'With settings.consent mapping analytics to analytics_Storage and marketing to ad_Storage, a grant of both and then a walker consent command denying both call Clarity.consentV2 twice, the second time with denied flags.',
+    'With settings.consent mapping analytics to analytics_Storage and marketing to ad_Storage, a walker consent command denying both calls Clarity.consentV2 with denied flags.',
   command: 'consent',
   before: { analytics: true, marketing: true },
   in: { analytics: false, marketing: false } as WalkerOS.Consent,
@@ -308,11 +308,50 @@ export const consentRevoke: ClarityStepExample = {
   out: [
     [
       'clarity.consentV2',
-      { analytics_Storage: 'granted', ad_Storage: 'granted' },
-    ],
-    [
-      'clarity.consentV2',
       { analytics_Storage: 'denied', ad_Storage: 'denied' },
     ],
   ],
+};
+
+/** A silent rule without settings of its own calls nothing. */
+export const silentRule: ClarityStepExample = {
+  public: false,
+  description: 'A rule with silent: true and no settings calls nothing.',
+  in: getEvent('page view', { timestamp: 1700000110 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/** The Clarity SDK is unreachable: its init fails, so the push reports it. */
+export const clarityUnreachable: ClarityStepExample = {
+  public: false,
+  description:
+    'The Clarity SDK fails, so the destination does not start: the push fails with vendor-not-ready, retryable, and the event is in the DLQ.',
+  in: getEvent('product view', { timestamp: 1700000111 }),
+  respond: { error: 'network' },
+  out: [],
+  outcome: { status: 'failed', code: 'vendor-not-ready', retryable: true },
+};
+
+/**
+ * The silent tag rule of pageViewSilent on a page view without data: no tag
+ * resolves and the rule suppresses the event, so nothing is sent.
+ */
+export const pageViewSilentWithoutData: ClarityStepExample = {
+  public: false,
+  description:
+    'A silent rule whose tag mapping finds no data sends nothing, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'page view', entity: 'page', action: 'view' },
+  mapping: {
+    silent: true,
+    settings: {
+      set: {
+        map: {
+          page_id: 'data.id',
+        },
+      },
+    },
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
 };

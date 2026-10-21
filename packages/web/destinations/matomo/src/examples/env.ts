@@ -2,8 +2,8 @@ import type { Env } from '../types';
 
 /**
  * Example environment configurations for Matomo destination.
- * Mocks the _paq command queue and DOM elements for testing
- * without requiring real browser or network.
+ * Mocks the _paq command queue for testing without requiring real browser
+ * or network.
  */
 
 export const init: Env | undefined = {
@@ -11,30 +11,12 @@ export const init: Env | undefined = {
     // _paq absent: init() is expected to install the queue.
     location: { href: 'https://www.example.com/page' },
   },
-  document: {
-    createElement: () => ({
-      type: '',
-      src: '',
-      async: false,
-      defer: false,
-    }),
-    head: { appendChild: () => {} },
-  },
 };
 
 export const push: Env = {
   window: {
     _paq: [],
     location: { href: 'https://www.example.com/page' },
-  },
-  document: {
-    createElement: () => ({
-      type: '',
-      src: '',
-      async: false,
-      defer: false,
-    }),
-    head: { appendChild: () => {} },
   },
 };
 

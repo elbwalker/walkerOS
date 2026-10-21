@@ -74,6 +74,7 @@ const _sourceDriftGuard: [UnstrippedSourceCollision] extends [never]
   : false = true;
 
 describe('GA4 reserved parameter guard', () => {
+  const dropped = jest.fn();
   const mockGtag = jest.fn();
   const mockEnv = clone(examples.env.push);
   mockEnv.window.gtag = mockGtag;
@@ -117,7 +118,14 @@ describe('GA4 reserved parameter guard', () => {
     const event = fullEvent();
     const included = flattenIncludeSections(event, ['all']);
 
-    pushGA4Event(event, settings, included, mockEnv, createMockLogger());
+    pushGA4Event(
+      event,
+      settings,
+      included,
+      mockEnv,
+      createMockLogger(),
+      dropped,
+    );
 
     const emitted = Object.keys(mockGtag.mock.calls[0][2]);
     const collisions = emitted.filter((name) =>
@@ -133,7 +141,14 @@ describe('GA4 reserved parameter guard', () => {
     const event = fullEvent();
     const included = flattenIncludeSections(event, ['all']);
 
-    pushGA4Event(event, settings, included, mockEnv, createMockLogger());
+    pushGA4Event(
+      event,
+      settings,
+      included,
+      mockEnv,
+      createMockLogger(),
+      dropped,
+    );
 
     expect(mockGtag.mock.calls[0][2]).toMatchObject({
       source_type: 'browser',

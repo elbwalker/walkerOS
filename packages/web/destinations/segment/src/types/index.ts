@@ -24,6 +24,8 @@ import type {
 export interface Settings extends Omit<InitOptions, 'group'> {
   /** Segment write key. Maps to `writeKey` in the load() settings arg. */
   apiKey: string;
+  /** Custom CDN host for Analytics.js settings. Maps to `cdnURL` in the load() settings arg. */
+  cdnURL?: string;
   /** walkerOS mapping value resolving to an identity object (userId, traits, anonymousId). */
   identify?: WalkerOSMapping.Value;
   /** walkerOS mapping value resolving to a group object (groupId, traits). */
@@ -52,8 +54,8 @@ export interface RuntimeState {
   };
   /** Holds the AnalyticsBrowser instance created in init(). */
   analytics?: SegmentAnalytics;
-  /** True once load() has been called (may be deferred pending consent). */
-  loaded?: boolean;
+  /** Set once the instance's load failed: later pushes fail. */
+  failed?: boolean;
 }
 
 export type InitSettings = Partial<Settings>;

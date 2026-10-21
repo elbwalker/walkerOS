@@ -49,8 +49,9 @@ const initOut: Effect[] = [...(initExample.out ?? [])].map((effect) => [
 ]);
 
 describe('piano destination — step examples', () => {
+  // Non-public examples (silent, consent) run in the conformance test.
   const stepEntries = Object.entries(examples.step).filter(
-    ([name]) => name !== 'init',
+    ([name, example]) => name !== 'init' && example.public !== false,
   );
 
   it.each(stepEntries)('%s', async (name, example) => {
