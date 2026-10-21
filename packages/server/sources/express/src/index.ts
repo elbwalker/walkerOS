@@ -30,8 +30,9 @@ const toError = (value: unknown): Error =>
 /**
  * Settle handler for respond-first pushes: the HTTP ack already went out,
  * so a pipeline decline (ok:false) or a rejection can only surface here.
- * Warn on decline; the collector has already error-logged a thrown pipeline
- * failure, this line ties the outcome to the request that was acked.
+ * A decline is a DEBUG trace per event: the collector's cause line already
+ * reports its failure once per cause; this line ties the outcome to the
+ * request that was acked.
  * Invalid-input rejections stay silent here: the collector already warned
  * and counted them at the pipeline gate.
  */
@@ -43,7 +44,7 @@ const settleAfterAck = (
     .then(
       (settled) => {
         if (settled?.ok === false && settled.invalid !== true) {
-          logger.warn('Event not processed after ack', {
+          logger.debug('Event not processed after ack', {
             failed: settled.failed ? Object.keys(settled.failed) : [],
           });
         }

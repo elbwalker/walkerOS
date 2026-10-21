@@ -201,9 +201,9 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
           // Forward event directly — validation is not the source's responsibility.
           const result = await processEvent(events[0] ?? {}, envPush, logger);
           if (result.error) {
-            // A thrown push is already error-logged inside processEvent;
-            // this covers settled declines only.
-            logger.warn('Event processing failed', { error: result.error });
+            // A per-request trace, so DEBUG: a decline is reported by the
+            // collector's cause line, a thrown push at ERROR in processEvent.
+            logger.debug('Event processing failed', { error: result.error });
             return createJsonResponse(
               { success: false, error: result.error },
               result.status ?? 500,
@@ -270,11 +270,16 @@ async function processBatch(
     try {
       const result = await push(event as WalkerOS.DeepPartialEvent);
       const outcome = pushResultToOutcome(result);
-      if (outcome.error) logger.warn(`Batch event ${i} not processed`);
+      // Per event, so DEBUG: the collector's cause line reports it.
+      if (outcome.error) logger.debug(`Batch event ${i} not processed`);
       outcomes.push(outcome);
     } catch (error) {
+      // A rejected push never reached the collector's cause log, so this
+      // ERROR is its only signal; the message is logged, never answered.
       outcomes.push({ error: INTERNAL_SERVER_ERROR });
-      logger.warn(`Batch event ${i} processing failed`, error);
+      logger.error(`Batch event ${i} processing failed`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 

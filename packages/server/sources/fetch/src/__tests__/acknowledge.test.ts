@@ -1,4 +1,4 @@
-import { StepError } from '@walkeros/core';
+import { Level, StepError } from '@walkeros/core';
 import type { Destination } from '@walkeros/core';
 import { examples } from '../dev';
 import type { Result } from '../examples/trigger';
@@ -84,6 +84,35 @@ describe('Fetch acknowledgement', () => {
     });
     expect(result.status).toBe(200);
     expect(result.body).toMatchObject({ success: true, processed: 2 });
+  });
+
+  it('traces a not processed event at DEBUG only, single and batch', async () => {
+    const lines: Array<[Level, string]> = [];
+    const instance = await examples.createTrigger({
+      logger: {
+        level: 'DEBUG',
+        handler: (level, message) => void lines.push([level, message]),
+      },
+      sources: { fetch: { code: sourceFetch } },
+      destinations: { vendorX: { code: failing(retryable()) } },
+    });
+    try {
+      const trigger = instance.trigger();
+      const url = 'https://collect.example/collect';
+      await trigger({ method: 'POST', url, body: { name: 'page view' } });
+      await trigger({
+        method: 'POST',
+        url,
+        body: { batch: [{ name: 'page view' }] },
+      });
+    } finally {
+      await instance.flow?.collector.command('shutdown');
+    }
+    // Per event lines stay at DEBUG; the collector's cause line is the ERROR.
+    expect(lines).toContainEqual([Level.DEBUG, 'Event processing failed']);
+    expect(lines).toContainEqual([Level.DEBUG, 'Batch event 0 not processed']);
+    expect(lines.filter(([level]) => level === Level.WARN)).toEqual([]);
+    expect(lines.some(([level]) => level === Level.ERROR)).toBe(true);
   });
 
   it('answers a batch with a retryable failure with 207', async () => {
