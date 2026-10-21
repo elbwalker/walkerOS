@@ -1,5 +1,5 @@
-import type { Flow, WalkerOS } from '@walkeros/core';
-import { createEvent, getEvent } from '@walkeros/core';
+import type { Flow } from '@walkeros/core';
+import { createEvent, getEvent, isObject } from '@walkeros/core';
 
 /**
  * Output convention:
@@ -198,10 +198,10 @@ export const orderCompleteCheckout: Flow.StepExample = {
           loop: [
             'nested',
             {
-              condition: (value: unknown) => {
-                const v = value as { data?: { price?: unknown } };
-                return typeof v?.data?.price === 'number';
-              },
+              condition: (value: unknown) =>
+                isObject(value) &&
+                isObject(value.data) &&
+                typeof value.data.price === 'number',
               map: {
                 product_id: 'data.id',
                 product_name: 'data.color',
@@ -329,7 +329,7 @@ export const consentRevoke: Flow.StepExample = {
   description:
     'For a destination with config.consent { marketing: true }, revoking marketing makes no vendor call: the destination stops sending track calls itself.',
   command: 'consent',
-  in: { marketing: false } as WalkerOS.Consent,
+  in: { marketing: false },
   out: [],
 };
 
@@ -338,8 +338,10 @@ export const consentRevoke: Flow.StepExample = {
  */
 export const consentGrant: Flow.StepExample = {
   public: false,
+  description:
+    'A grant of the required consent lets the destination send track calls again; Pinterest has no consent call to make.',
   command: 'consent',
-  in: { marketing: true } as WalkerOS.Consent,
+  in: { marketing: true },
   out: [],
 };
 
@@ -355,24 +357,13 @@ export const silentRule: Flow.StepExample = {
 /**
  * The silent identify rule of identifyOnlySilent on an update without data:
  * no identity resolves and the rule suppresses the track, so nothing is
- * sent.
+ * sent. A declared skip: an unmet mapping, not a failure.
  */
 export const identifyOnlySilentWithoutData: Flow.StepExample = {
   public: false,
   description:
-    'A silent rule whose identify mapping finds no email or id sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose identify mapping finds no email or id sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'user update', entity: 'user', action: 'update' },
-  mapping: {
-    silent: true,
-    settings: {
-      identify: {
-        map: {
-          em: 'data.email',
-          external_id: 'data.id',
-        },
-      },
-    },
-  },
+  mapping: identifyOnlySilent.mapping,
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };

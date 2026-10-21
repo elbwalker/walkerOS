@@ -1,6 +1,11 @@
 import type { Config, Destination, Env } from './types';
 import { SCRIPT_SRC, setup } from './setup';
-import { getGrantedConsent, isObject, StepError } from '@walkeros/core';
+import {
+  getGrantedConsent,
+  isObject,
+  StepError,
+  stepCall,
+} from '@walkeros/core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
 
 // Types
@@ -28,19 +33,6 @@ function pixel(env?: Env): facebook.Pixel.Event {
   return fbq;
 }
 
-/** Runs one fbq call; a throw or a rejection becomes a StepError of `code`. */
-async function call(
-  fn: () => unknown,
-  code: string,
-  message: string,
-): Promise<void> {
-  try {
-    await fn();
-  } catch (error) {
-    throw new StepError(message, { code, cause: error });
-  }
-}
-
 export const destinationMeta: Destination = {
   type: 'meta-pixel',
 
@@ -58,7 +50,7 @@ export const destinationMeta: Destination = {
     vendor(config, env);
 
     const fbq = pixel(env);
-    await call(
+    await stepCall(
       () => fbq('init', pixelId),
       'vendor-not-ready',
       'Meta Pixel init call failed',
@@ -79,7 +71,7 @@ export const destinationMeta: Destination = {
     const eventName = track || trackCustom || event.name;
 
     if (!rule.silent)
-      await call(
+      await stepCall(
         () =>
           fbq(
             trackCustom ? 'trackCustom' : 'track',
@@ -103,7 +95,7 @@ export const destinationMeta: Destination = {
     const { fbq } = getEnv(env).window;
     if (typeof fbq !== 'function') return;
 
-    await call(
+    await stepCall(
       () => fbq('consent', granted ? 'grant' : 'revoke'),
       'consent-not-applied',
       'Meta Pixel did not take the consent update',

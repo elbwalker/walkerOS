@@ -158,19 +158,13 @@ export const pageViewSilent: HotjarStepExample = {
 /**
  * The silent stateChange rule of pageViewStateChange on a page view without
  * data: no path resolves and the rule suppresses the event, so nothing is
- * sent.
+ * sent. A declared skip: an unmet mapping, not a failure.
  */
 export const pageViewStateChangeWithoutData: HotjarStepExample = {
   public: false,
   description:
-    'A silent rule whose stateChange mapping finds no path sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose stateChange mapping finds no path sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'page view', entity: 'page', action: 'view' },
-  mapping: {
-    silent: true,
-    settings: {
-      stateChange: 'data.id',
-    },
-  },
+  mapping: pageViewStateChange.mapping,
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };

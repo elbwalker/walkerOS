@@ -11,7 +11,7 @@ export const SettingsSchema = z
     consent: z
       .record(z.string(), z.enum(['analytics_Storage', 'ad_Storage']))
       .describe(
-        'Translation table from walkerOS consent keys to Clarity ConsentV2 categories. Example: { "analytics": "analytics_Storage", "marketing": "ad_Storage" }. Required to get meaningful consent behavior, since Clarity expects its own category names.',
+        'Translation table from walkerOS consent keys to Clarity ConsentV2 categories. Example: { "analytics": "analytics_Storage", "marketing": "ad_Storage" }. Without it, the consent the destination requires (config.consent) decides: a grant grants analytics_Storage only, a revocation denies both categories; ad_Storage is granted only through this table.',
       )
       .optional(),
     identify: z

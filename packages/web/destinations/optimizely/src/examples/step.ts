@@ -157,30 +157,29 @@ export const attributesOnlySilent: OptimizelyStepExample = {
 };
 
 /**
- * Consent revoked -- the destination closes the Optimizely client,
- * flushing queued events and stopping datafile polling.
+ * Consent revoked: no vendor call. Optimizely sends only what walkerOS tracks,
+ * which the consent gate stops, so the client keeps running.
  */
 export const consentRevoked: OptimizelyStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent command with analytics denied closes the Optimizely client and flushes queued events.',
+    'A walker consent command with analytics denied makes no Optimizely call: walkerOS stops tracking for the consent-gated destination, and the client stays ready for the next grant.',
   command: 'consent',
   before: { analytics: true },
-  in: { analytics: false } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
-  out: [['optimizely.close']],
+  in: { analytics: false },
+  out: [],
 };
 
 /**
- * Consent granted -- no immediate SDK action needed. The destination
- * re-initializes on the next push (walkerOS queues events until consent
- * is granted, then re-inits). No calls expected.
+ * Consent granted: no SDK call. The client kept running, so the next push
+ * after a grant tracks again.
  */
 export const consentGranted: OptimizelyStepExample = {
   public: false,
+  description:
+    'A walker consent grant makes no Optimizely call: the client kept running, so the next push tracks again.',
   command: 'consent',
-  in: { analytics: true } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
+  in: { analytics: true },
   out: [],
 };
 

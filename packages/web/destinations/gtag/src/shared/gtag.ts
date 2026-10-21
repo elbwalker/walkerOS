@@ -41,23 +41,6 @@ export function checkGtag(id: string, src?: string, timeout?: number): void {
   }
 }
 
-/**
- * Waits for what the gtag or dataLayer calls of one step returned (the stub
- * returns nothing); a throw or a rejection becomes a StepError of `code`.
- */
-export async function settle(
-  calls: () => unknown[],
-  code: string,
-  message: string,
-): Promise<void> {
-  try {
-    await Promise.all(calls());
-  } catch (error) {
-    if (error instanceof StepError) throw error;
-    throw new StepError(message, { code, cause: error });
-  }
-}
-
 export function initializeGtag(
   window: WindowWithDataLayer,
 ): Gtag.Gtag | undefined {

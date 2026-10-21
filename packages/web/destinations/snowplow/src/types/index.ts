@@ -93,6 +93,8 @@ export interface TrackerFunctions {
     config: ActivityTrackingConfiguration,
     trackers?: string[],
   ) => void;
+  /** Disable activity tracking (page pings), on a consent revocation */
+  disableActivityTracking?: (trackers?: string[]) => void;
   /** Add plugin */
   addPlugin?: (config: { plugin: BrowserPlugin }, trackers?: string[]) => void;
   /** Add global contexts */
@@ -144,6 +146,7 @@ export interface SnowplowAdapter {
   trackStructEvent(event: Record<string, unknown>): void;
   setUserId(userId?: string | null): void;
   enableActivityTracking(config: ActivityTrackingConfiguration): void;
+  disableActivityTracking(): void;
   addPlugin(
     config: { plugin: BrowserPlugin } | [string, [string, string]],
   ): void;
@@ -385,6 +388,8 @@ export interface RuntimeState {
   userIdSet?: boolean;
   /** The initialized adapter instance */
   adapter?: SnowplowAdapter;
+  /** The tracker's own senders are off after a consent revocation */
+  paused?: boolean;
 }
 
 /**

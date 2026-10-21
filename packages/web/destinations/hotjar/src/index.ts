@@ -1,4 +1,10 @@
-import { getMappingValue, isObject, isString, StepError } from '@walkeros/core';
+import {
+  getMappingValue,
+  isObject,
+  isString,
+  StepError,
+  stepCall,
+} from '@walkeros/core';
 import Hotjar from '@hotjar/browser';
 import type { HotjarSDK, Destination, Env, Mapping, Settings } from './types';
 
@@ -15,21 +21,16 @@ function getHotjar(env: Env | undefined): HotjarSDK {
 
 /**
  * Runs one Hotjar call. The SDK reports failure by returning `false` (and
- * logging to the console), so a `false` or a throw becomes a StepError.
+ * logging to the console), so a `false` fails like a throw.
  */
-async function call(
-  fn: () => unknown,
-  code: string,
-  message: string,
-): Promise<void> {
-  let result: unknown;
-  try {
-    result = await fn();
-  } catch (error) {
-    throw new StepError(message, { code, cause: error });
-  }
-  if (result === false) throw new StepError(message, { code });
-}
+const call = (fn: () => unknown, code: string, message: string) =>
+  stepCall(
+    async () => {
+      if ((await fn()) === false) throw new StepError(message, { code });
+    },
+    code,
+    message,
+  );
 
 export const destinationHotjar: Destination = {
   type: 'hotjar',
@@ -66,9 +67,6 @@ export const destinationHotjar: Destination = {
     const settings = (config.settings || {}) as Partial<Settings>;
     const mappingSettings = (rule?.settings || {}) as Mapping;
 
-    // Whether any Hotjar call went out for this event
-    let sent = false;
-
     // 1. Identify -- rule-level override wins over destination-level.
     //    Fires first per Hotjar's guidance so subsequent event calls
     //    are associated with the right user.
@@ -96,7 +94,6 @@ export const destinationHotjar: Destination = {
             'transport',
             'Hotjar identify failed',
           );
-          sent = true;
         }
       }
     }
@@ -114,7 +111,6 @@ export const destinationHotjar: Destination = {
           'transport',
           'Hotjar stateChange failed',
         );
-        sent = true;
       }
     }
 
@@ -126,20 +122,10 @@ export const destinationHotjar: Destination = {
         'transport',
         'Hotjar event failed',
       );
-      sent = true;
     }
 
-    // A silent rule that asked for identify or stateChange, which the event
-    // could not resolve, sent nothing at all
-    if (
-      !sent &&
-      (identifyMapping !== undefined ||
-        mappingSettings.stateChange !== undefined)
-    )
-      throw new StepError(
-        'Hotjar identify or stateChange resolved to nothing for this event',
-        { code: 'missing-input' },
-      );
+    // A silent rule whose identify or stateChange resolves nothing sends
+    // nothing: a declared skip, not a failure.
   },
 };
 

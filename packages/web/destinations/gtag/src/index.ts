@@ -10,9 +10,15 @@ import {
   hasConsentSignal,
   resolveConsentMapping,
 } from './shared/consent';
-import { checkGtag, initializeGtag, settle } from './shared/gtag';
+import { checkGtag, initializeGtag } from './shared/gtag';
 import { hasTool, TOOL_PATHS } from './shared/tools';
-import { isObject, reportCause, stepId, StepError } from '@walkeros/core';
+import {
+  isObject,
+  reportCause,
+  stepCall,
+  stepId,
+  StepError,
+} from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 
 // Types
@@ -42,7 +48,7 @@ function setupConsentDefault(config: Config, env: Env | undefined): unknown[] {
   const gtag = initializeGtag(window); // ensure stub exists before any config
   if (!gtag) return [];
 
-  defaultConsentSet = true;
+  // defaultConsentSet is set by the caller once this call settled.
   return [gtag('consent', 'default', defaultConsent)];
 }
 
@@ -83,26 +89,33 @@ export const destinationGtag: Destination = {
     // installs a stub, so a later `js` is only sent if walkerOS bootstrapped.
     const gtagExternal = !!getEnv<Env>(env).window.gtag;
 
-    await settle(
-      () => [
+    let defaultSent = false;
+    await stepCall(
+      () => {
         // Emit the denied consent default before any tool's config call.
-        ...setupConsentDefault(config, env),
-        // Initialize GA4 if configured
-        ...(ga4?.measurementId
-          ? initGA4(ga4, loadScript, env, logger, gtagExternal, timeout)
-          : []),
-        // Initialize Google Ads if configured
-        ...(ads?.conversionId
-          ? initAds(ads, loadScript, env, logger, gtagExternal, timeout)
-          : []),
-        // Initialize GTM if configured
-        ...(gtm?.containerId
-          ? initGTM(gtm, loadScript, env, logger, timeout)
-          : []),
-      ],
+        const defaultCall = setupConsentDefault(config, env);
+        defaultSent = defaultCall.length > 0;
+        return Promise.all([
+          ...defaultCall,
+          // Initialize GA4 if configured
+          ...(ga4?.measurementId
+            ? initGA4(ga4, loadScript, env, logger, gtagExternal, timeout)
+            : []),
+          // Initialize Google Ads if configured
+          ...(ads?.conversionId
+            ? initAds(ads, loadScript, env, logger, gtagExternal, timeout)
+            : []),
+          // Initialize GTM if configured
+          ...(gtm?.containerId
+            ? initGTM(gtm, loadScript, env, logger, timeout)
+            : []),
+        ]);
+      },
       'vendor-not-ready',
       'Google tag did not take its setup calls',
     );
+    // Only a default gtag took counts: a failed init sends it again.
+    if (defaultSent) defaultConsentSet = true;
 
     return config;
   },
@@ -149,43 +162,44 @@ export const destinationGtag: Destination = {
       adsUserData = await resolveUserData(event, ads, collector);
     }
 
-    await settle(
-      () => [
-        // Push to GA4 if configured
-        ...(send && ga4?.measurementId
-          ? [
-              pushGA4Event(event, ga4, ga4Data, env, logger, (message, key) =>
-                // One line per cause through the collector's cause log; the
-                // context names the mapping key, never its value.
-                reportCause(
-                  collector,
-                  logger,
-                  { step: stepId('destination', id), code: 'mapping' },
-                  message,
-                  { event: event.name, mappingKey: key },
+    await stepCall(
+      () =>
+        Promise.all([
+          // Push to GA4 if configured
+          ...(send && ga4?.measurementId
+            ? [
+                pushGA4Event(event, ga4, ga4Data, env, logger, (message, key) =>
+                  // One line per cause through the collector's cause log; the
+                  // context names the mapping key, never its value.
+                  reportCause(
+                    collector,
+                    logger,
+                    { step: stepId('destination', id), code: 'mapping' },
+                    message,
+                    { event: event.name, mappingKey: key },
+                  ),
                 ),
-              ),
-            ]
-          : []),
-        // @TODO: Fix condition - should check for rule.settings?.ads?.label || rule.name
-        // Currently requires rule.name even when label is provided via settings.ads.label
-        ...(send && ads?.conversionId && rule.name
-          ? pushAdsEvent(
-              event,
-              ads,
-              eventMapping.ads,
-              adsData,
-              rule.name,
-              env,
-              logger,
-              adsUserData,
-            )
-          : []),
-        // Push to GTM if configured
-        ...(send && gtm?.containerId
-          ? [pushGTMEvent(event, gtm, eventMapping.gtm, gtmData, env, logger)]
-          : []),
-      ],
+              ]
+            : []),
+          // @TODO: Fix condition - should check for rule.settings?.ads?.label || rule.name
+          // Currently requires rule.name even when label is provided via settings.ads.label
+          ...(send && ads?.conversionId && rule.name
+            ? pushAdsEvent(
+                event,
+                ads,
+                eventMapping.ads,
+                adsData,
+                rule.name,
+                env,
+                logger,
+                adsUserData,
+              )
+            : []),
+          // Push to GTM if configured
+          ...(send && gtm?.containerId
+            ? [pushGTMEvent(event, gtm, eventMapping.gtm, gtmData, env, logger)]
+            : []),
+        ]),
       'transport',
       'Google tag call failed',
     );
@@ -216,7 +230,6 @@ export const destinationGtag: Destination = {
     const defaultConsent = defaultConsentSet
       ? undefined
       : buildDefaultConsent(settings);
-    defaultConsentSet = true;
 
     // Build gtag consent object for update
     const gtagConsent: Record<string, 'granted' | 'denied'> = {};
@@ -234,17 +247,21 @@ export const destinationGtag: Destination = {
       });
     });
 
-    await settle(
-      () => [
-        ...(defaultConsent ? [gtag('consent', 'default', defaultConsent)] : []),
-        // Always use update after the initial default, when a parameter changes
-        ...(Object.keys(gtagConsent).length
-          ? [gtag('consent', 'update', gtagConsent)]
-          : []),
-      ],
+    await stepCall(
+      () =>
+        Promise.all([
+          ...(defaultConsent
+            ? [gtag('consent', 'default', defaultConsent)]
+            : []),
+          // Always use update after the initial default, when a parameter changes
+          ...(Object.keys(gtagConsent).length
+            ? [gtag('consent', 'update', gtagConsent)]
+            : []),
+        ]),
       'consent-not-applied',
       'Google tag did not take the consent update',
     );
+    defaultConsentSet = true;
   },
 };
 

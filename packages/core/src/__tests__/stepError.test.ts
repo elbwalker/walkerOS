@@ -1,4 +1,9 @@
-import { networkErrorMessage, StepError, toFailureReason } from '../stepError';
+import {
+  networkErrorMessage,
+  StepError,
+  stepCall,
+  toFailureReason,
+} from '../stepError';
 
 describe('StepError', () => {
   it('carries code, status, retryable and the response body', () => {
@@ -118,5 +123,63 @@ describe('networkErrorMessage', () => {
     ['a thrown value that is not an error', 'refused', 'Network error'],
   ])('%s', (_, error, expected) => {
     expect(networkErrorMessage(error)).toBe(expected);
+  });
+});
+
+describe('stepCall', () => {
+  it('answers what the call returns, sync or async', async () => {
+    await expect(stepCall(() => 1, 'transport', 'Call failed')).resolves.toBe(
+      1,
+    );
+    await expect(
+      stepCall(() => Promise.resolve('done'), 'transport', 'Call failed'),
+    ).resolves.toBe('done');
+  });
+
+  it.each<[string, () => unknown]>([
+    [
+      'a throw',
+      () => {
+        throw new Error('Request failed: jane@example.com');
+      },
+    ],
+    [
+      'a rejection',
+      () => Promise.reject(new Error('Request failed: jane@example.com')),
+    ],
+  ])(
+    'wraps %s in its code and message, the original as cause only',
+    async (_, call) => {
+      const error = await stepCall(
+        call,
+        'transport',
+        'Vendor call failed',
+      ).then(
+        () => undefined,
+        (thrown: unknown) => thrown,
+      );
+      expect(error).toBeInstanceOf(StepError);
+      expect(error).toMatchObject({
+        code: 'transport',
+        message: 'Vendor call failed',
+        retryable: true,
+      });
+      expect(error instanceof Error && error.cause).toBeInstanceOf(Error);
+    },
+  );
+
+  it('passes a StepError through unchanged, its own code winning', async () => {
+    const own = new StepError('Vendor script failed to load', {
+      code: 'vendor-not-loaded',
+    });
+    await expect(
+      stepCall(
+        () => {
+          throw own;
+        },
+        'transport',
+        'Vendor call failed',
+      ),
+    ).rejects.toBe(own);
   });
 });

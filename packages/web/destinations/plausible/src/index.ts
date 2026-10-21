@@ -1,5 +1,5 @@
 import type { Config, Destination, Env } from './types';
-import { isObject, StepError } from '@walkeros/core';
+import { isObject, StepError, stepCall } from '@walkeros/core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
 
 // Types
@@ -40,14 +40,11 @@ export const destinationPlausible: Destination = {
     // A silent rule sends no Plausible event
     if (!rule?.silent) {
       const params = isObject(data) ? data : {};
-      try {
-        await plausible(`${event.name}`, params);
-      } catch (error) {
-        throw new StepError('Plausible call failed', {
-          code: 'transport',
-          cause: error,
-        });
-      }
+      await stepCall(
+        () => plausible(`${event.name}`, params),
+        'transport',
+        'Plausible call failed',
+      );
     }
   },
 };

@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkeros/core';
-import { isObject, StepError } from '@walkeros/core';
+import { isObject, StepError, stepCall } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 import type { D8aConfigParams, D8aFn } from '@d8a-tech/wt';
 import { installD8a } from '@d8a-tech/wt';
@@ -27,19 +27,6 @@ function getD8a(
   name: string,
 ): D8aFn {
   return windowRef[name] as D8aFn;
-}
-
-/** Runs one d8a call; a throw or a rejection becomes a StepError of `code`. */
-async function call(
-  fn: () => unknown,
-  code: string,
-  message: string,
-): Promise<void> {
-  try {
-    await fn();
-  } catch (error) {
-    throw new StepError(message, { code, cause: error });
-  }
 }
 
 /** The installed d8a function, or a StepError when it is not there. */
@@ -79,11 +66,11 @@ export const destinationD8a: Destination = {
     const { property_id, server_container_url } = settings;
 
     const missing = [
-      !property_id && 'property_id',
-      !server_container_url && 'server_container_url',
-    ].filter(Boolean);
+      ...(property_id ? [] : ['settings.property_id']),
+      ...(server_container_url ? [] : ['settings.server_container_url']),
+    ];
     if (missing.length)
-      throw new StepError(`d8a needs settings.${missing.join(', ')}`, {
+      throw new StepError(`d8a needs ${missing.join(' and ')}`, {
         code: 'config',
       });
 
@@ -102,12 +89,12 @@ export const destinationD8a: Destination = {
       window as Window & Record<string, unknown>,
       globalName,
     );
-    await call(
+    await stepCall(
       () => d8a('js', new Date()),
       'vendor-not-ready',
       'd8a init call failed',
     );
-    await call(
+    await stepCall(
       () => d8a('config', property_id, buildConfigParams(settings)),
       'vendor-not-ready',
       'd8a config call failed',
@@ -144,7 +131,7 @@ export const destinationD8a: Destination = {
         globalName,
       );
 
-      await call(
+      await stepCall(
         () => d8a('event', eventName, eventParams),
         'transport',
         'd8a event call failed',
@@ -179,7 +166,7 @@ export const destinationD8a: Destination = {
         allParams.forEach((param) => {
           defaultConsent[param] = 'denied';
         });
-        await call(
+        await stepCall(
           () => d8a('consent', 'default', defaultConsent),
           'consent-not-applied',
           'd8a did not take the consent default',
@@ -203,7 +190,7 @@ export const destinationD8a: Destination = {
 
     if (Object.keys(d8aConsent).length === 0) return;
 
-    await call(
+    await stepCall(
       () => d8a('consent', 'update', d8aConsent),
       'consent-not-applied',
       'd8a did not take the consent update',

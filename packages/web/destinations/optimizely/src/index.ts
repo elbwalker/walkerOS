@@ -1,10 +1,10 @@
-import type { WalkerOS } from '@walkeros/core';
 import {
   getMappingValue,
   isNumber,
   isObject,
   isString,
   StepError,
+  stepCall,
 } from '@walkeros/core';
 import * as optimizelySDK from '@optimizely/optimizely-sdk';
 import type {
@@ -27,19 +27,6 @@ function getOptimizely(env: Env | undefined): OptimizelySDKType {
   return optimizelySDK as unknown as OptimizelySDKType;
 }
 
-/** Runs one Optimizely call; a throw or a rejection becomes a StepError of `code`. */
-async function call<T>(
-  fn: () => T | Promise<T>,
-  code: string,
-  message: string,
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    throw new StepError(message, { code, cause: error });
-  }
-}
-
 export const destinationOptimizely: Destination = {
   type: 'optimizely',
 
@@ -55,7 +42,7 @@ export const destinationOptimizely: Destination = {
     const sdk = getOptimizely(env as Env | undefined);
 
     const { sdkKey } = settings;
-    const configManager = await call(
+    const configManager = await stepCall(
       () =>
         sdk.createPollingProjectConfigManager({
           sdkKey,
@@ -66,7 +53,7 @@ export const destinationOptimizely: Destination = {
       'Optimizely config manager failed to start',
     );
 
-    const eventProcessor = await call(
+    const eventProcessor = await stepCall(
       () =>
         sdk.createBatchEventProcessor({
           batchSize: settings.batchSize ?? 10,
@@ -81,12 +68,12 @@ export const destinationOptimizely: Destination = {
       eventProcessor: eventProcessor,
     };
 
-    const client = await call(
+    const client = await stepCall(
       () => sdk.createInstance(instanceConfig),
       'vendor-not-ready',
       'Optimizely client failed to start',
     );
-    const ready = await call(
+    const ready = await stepCall(
       () => client.onReady(),
       'vendor-not-ready',
       'Optimizely client did not become ready',
@@ -144,7 +131,7 @@ export const destinationOptimizely: Destination = {
 
     // 3. Create or reuse user context
     if (userId !== state.lastUserId || !state.userContext) {
-      const userContext = await call(
+      const userContext = await stepCall(
         () => client.createUserContext(userId, baseAttributes),
         'transport',
         'Optimizely createUserContext failed',
@@ -174,7 +161,7 @@ export const destinationOptimizely: Destination = {
         for (const [key, value] of Object.entries(
           resolved as Record<string, unknown>,
         )) {
-          await call(
+          await stepCall(
             () => userContext.setAttribute(key, value),
             'transport',
             'Optimizely setAttribute failed',
@@ -222,7 +209,7 @@ export const destinationOptimizely: Destination = {
         }
       }
 
-      await call(
+      await stepCall(
         () => userContext.trackEvent(eventKey, eventTags),
         'transport',
         'Optimizely trackEvent failed',
@@ -233,29 +220,9 @@ export const destinationOptimizely: Destination = {
     settings._state = state;
   },
 
-  async on(type, context) {
-    if (type !== 'consent' || !context.data) return;
-
-    const required = context.config?.consent;
-    if (!required || Object.keys(required).length === 0) return;
-
-    const consent = context.data as WalkerOS.Consent;
-    const allGranted = Object.keys(required).every(
-      (key) => consent[key] === true,
-    );
-
-    const state = (context.config?.settings as Settings)?._state;
-    if (!allGranted && state?.client) {
-      const { client } = state;
-      state.client = undefined;
-      state.userContext = undefined;
-      await call(
-        () => client.close(),
-        'consent-not-applied',
-        'Optimizely did not stop on the consent revocation',
-      );
-    }
-  },
+  // No on('consent'): Optimizely sends only the decisions and events walkerOS
+  // tracks, which the consent gate stops, so a revocation needs no vendor
+  // call and the client keeps running for the next grant.
 
   destroy({ config }) {
     const settings = (config?.settings || {}) as Settings;

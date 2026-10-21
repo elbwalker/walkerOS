@@ -43,10 +43,37 @@ describe('clarity destination', () => {
 
     expect(calls).toEqual([
       ['init', 'gated'],
-      ['consentV2', { analytics_Storage: 'granted', ad_Storage: 'granted' }],
+      ['consentV2', { analytics_Storage: 'granted' }],
       ['event', 'page view'],
       ['consentV2', { analytics_Storage: 'denied', ad_Storage: 'denied' }],
     ]);
+  });
+
+  it('never grants ad storage from an analytics-only grant without settings.consent', async () => {
+    const calls: unknown[][] = [];
+    const { elb } = await startFlow({
+      destinations: {
+        clarity: {
+          code: {
+            ...destinationClarity,
+            env: { clarity: recordingClarity(calls) },
+          },
+          config: {
+            consent: { analytics: true, marketing: true },
+            settings: { apiKey: 'analytics-only' },
+          },
+        },
+      },
+    });
+
+    await elb('walker consent', { analytics: true, marketing: false });
+    await elb(getEvent('page view'));
+    await elb('walker consent', { analytics: true });
+
+    const consentCalls = calls.filter(([name]) => name === 'consentV2');
+    expect(consentCalls.length).toBeGreaterThan(0);
+    for (const [, v2] of consentCalls)
+      expect(v2).not.toMatchObject({ ad_Storage: 'granted' });
   });
 
   it('fails pushes with vendor-not-loaded once the Clarity script failed to load', async () => {

@@ -6,6 +6,7 @@ import {
   isString,
   isThenable,
   StepError,
+  stepCall,
 } from '@walkeros/core';
 import { AnalyticsBrowser } from '@segment/analytics-next';
 import type {
@@ -76,17 +77,8 @@ function isSegmentAnalytics(value: unknown): value is SegmentAnalytics {
   );
 }
 
-/** Waits for one Analytics.js call; a throw or a rejection becomes a StepError. */
-async function send(fn: () => unknown): Promise<void> {
-  try {
-    await fn();
-  } catch (error) {
-    throw new StepError('Segment call failed', {
-      code: 'transport',
-      cause: error,
-    });
-  }
-}
+const send = (fn: () => unknown) =>
+  stepCall(fn, 'transport', 'Segment call failed');
 
 /**
  * Stable hash of a traits object for state-diffing. Uses a deterministic
@@ -141,15 +133,14 @@ function buildEventOptions(
 
 /**
  * Resolve and apply identity mapping. Calls analytics.identify() only
- * when the resolved value differs from the last-fired identity. Returns
- * whether it called the SDK.
+ * when the resolved value differs from the last-fired identity.
  */
 async function applyIdentify(
   analytics: SegmentAnalytics,
   resolved: Record<string, unknown>,
   state: RuntimeState,
   options?: SegmentEventOptions,
-): Promise<boolean> {
+): Promise<void> {
   const last = state.lastIdentity || {};
   const userId = isString(resolved.userId) ? resolved.userId : undefined;
   const anonymousId = isString(resolved.anonymousId)
@@ -160,18 +151,15 @@ async function applyIdentify(
       ? resolved.traits
       : undefined;
 
-  let called = false;
-  if (anonymousId && anonymousId !== last.anonymousId) {
+  if (anonymousId && anonymousId !== last.anonymousId)
     await send(() => analytics.setAnonymousId(anonymousId));
-    called = true;
-  }
 
   const traitsHash = hashTraits(traits);
   const userIdChanged = userId !== last.userId;
   const traitsChanged = traitsHash !== (last.traitsHash ?? '');
   const hasChange = userIdChanged || (traits !== undefined && traitsChanged);
 
-  if (!hasChange && !anonymousId) return called;
+  if (!hasChange && !anonymousId) return;
 
   await send(() =>
     options
@@ -184,18 +172,17 @@ async function applyIdentify(
     anonymousId: anonymousId ?? last.anonymousId,
     traitsHash,
   };
-  return true;
 }
 
-/** Resolve and apply the group mapping; returns whether it called the SDK. */
+/** Resolve and apply the group mapping, once per change. */
 async function applyGroup(
   analytics: SegmentAnalytics,
   resolved: Record<string, unknown>,
   state: RuntimeState,
   options?: SegmentEventOptions,
-): Promise<boolean> {
+): Promise<void> {
   const groupId = isString(resolved.groupId) ? resolved.groupId : undefined;
-  if (!groupId) return false;
+  if (!groupId) return;
 
   const traits =
     isObject(resolved.traits) && !isArray(resolved.traits)
@@ -206,7 +193,7 @@ async function applyGroup(
   const traitsHash = hashTraits(traits);
   const groupIdChanged = groupId !== last.groupId;
   const traitsChanged = traitsHash !== (last.traitsHash ?? '');
-  if (!groupIdChanged && !traitsChanged) return false;
+  if (!groupIdChanged && !traitsChanged) return;
 
   await send(() =>
     options
@@ -215,17 +202,16 @@ async function applyGroup(
   );
 
   state.lastGroup = { groupId, traitsHash };
-  return true;
 }
 
-/** Resolve and apply the page mapping; returns whether it called the SDK. */
+/** Resolve and apply the page mapping. */
 async function applyPage(
   analytics: SegmentAnalytics,
   pageMapping: unknown,
   event: WalkerOS.Event,
   collector: unknown,
   options?: SegmentEventOptions,
-): Promise<boolean> {
+): Promise<void> {
   // Boolean true → call page() with no args (SDK auto-collect).
   if (pageMapping === true) {
     await send(() =>
@@ -233,7 +219,7 @@ async function applyPage(
         ? analytics.page(undefined, undefined, undefined, options)
         : analytics.page(),
     );
-    return true;
+    return;
   }
 
   const resolved = await getMappingValue(
@@ -241,7 +227,7 @@ async function applyPage(
     pageMapping as Parameters<typeof getMappingValue>[1],
     { collector } as Parameters<typeof getMappingValue>[2],
   );
-  if (!isObject(resolved)) return false;
+  if (!isObject(resolved)) return;
 
   const category = isString(resolved.category) ? resolved.category : undefined;
   const name = isString(resolved.name) ? resolved.name : undefined;
@@ -264,7 +250,6 @@ async function applyPage(
       return analytics.page(category ?? null, name ?? null);
     return analytics.page();
   });
-  return true;
 }
 
 export const destinationSegment: Destination = {
@@ -281,19 +266,21 @@ export const destinationSegment: Destination = {
     const settings: Settings = { ...config.settings, apiKey };
 
     const _state: RuntimeState = { lastIdentity: {}, lastGroup: {} };
-    let loaded: unknown;
-    try {
-      loaded = loadAnalytics(getSegment(env), settings);
-      // load() answers the instance at once; a wrapped SDK may answer it
-      // through a promise.
-      if (!isSegmentAnalytics(loaded) && isThenable(loaded))
-        loaded = await loaded;
-    } catch (error) {
-      throw new StepError('Segment load() failed', {
-        code: 'vendor-not-ready',
-        cause: error,
-      });
-    }
+    // load() answers the instance at once, itself a thenable that settles
+    // once Analytics.js is ready, so it is not awaited; a wrapped SDK may
+    // answer the instance through a promise. The tuple keeps it unawaited.
+    const [loaded] = await stepCall(
+      async (): Promise<[unknown]> => {
+        const result: unknown = loadAnalytics(getSegment(env), settings);
+        return [
+          isSegmentAnalytics(result) || !isThenable(result)
+            ? result
+            : await result,
+        ];
+      },
+      'vendor-not-ready',
+      'Segment load() failed',
+    );
     if (!isSegmentAnalytics(loaded))
       throw new StepError('Segment load() returned no Analytics instance', {
         code: 'vendor-not-ready',
@@ -328,7 +315,6 @@ export const destinationSegment: Destination = {
 
     const mappingSettings = rule?.settings || {};
     const options = buildEventOptions(event, settings);
-    let calls = 0;
 
     // 1. Reset fires first so subsequent identity calls start clean.
     if (mappingSettings.reset !== undefined) {
@@ -338,7 +324,6 @@ export const destinationSegment: Destination = {
           : await getMappingValue(event, mappingSettings.reset, { collector });
       if (resolved) {
         await send(() => analytics.reset());
-        calls++;
         state.lastIdentity = {};
         state.lastGroup = {};
       }
@@ -350,11 +335,8 @@ export const destinationSegment: Destination = {
       const resolved = await getMappingValue(event, identifyMapping, {
         collector,
       });
-      if (
-        isObject(resolved) &&
-        (await applyIdentify(analytics, resolved, state, options))
-      )
-        calls++;
+      if (isObject(resolved))
+        await applyIdentify(analytics, resolved, state, options);
     }
 
     // 3. Group - rule-level override wins over destination-level.
@@ -363,25 +345,19 @@ export const destinationSegment: Destination = {
       const resolved = await getMappingValue(event, groupMapping, {
         collector,
       });
-      if (
-        isObject(resolved) &&
-        (await applyGroup(analytics, resolved, state, options))
-      )
-        calls++;
+      if (isObject(resolved))
+        await applyGroup(analytics, resolved, state, options);
     }
 
     // 4. Page (explicit first-class Segment pattern)
-    if (
-      mappingSettings.page !== undefined &&
-      (await applyPage(
+    if (mappingSettings.page !== undefined)
+      await applyPage(
         analytics,
         mappingSettings.page,
         event,
         collector,
         options,
-      ))
-    )
-      calls++;
+      );
 
     // 5. Default track call unless rule opts out via silent.
     if (rule?.silent !== true) {
@@ -393,22 +369,11 @@ export const destinationSegment: Destination = {
           ? analytics.track(eventName, properties, options)
           : analytics.track(eventName, properties),
       );
-      calls++;
     }
 
+    // A silent rule whose settings resolve nothing (or an identity or group
+    // that is already current) sends nothing: a declared skip.
     settings._state = state;
-
-    // A silent rule whose own settings resolved nothing sent nothing.
-    const ruleSettings =
-      mappingSettings.reset !== undefined ||
-      mappingSettings.identify !== undefined ||
-      mappingSettings.group !== undefined ||
-      mappingSettings.page !== undefined;
-    if (!calls && ruleSettings)
-      throw new StepError(
-        `Segment: the silent rule of "${event.name}" resolved no identity, group or page`,
-        { code: 'missing-input' },
-      );
   },
 };
 

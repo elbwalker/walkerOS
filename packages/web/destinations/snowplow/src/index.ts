@@ -16,7 +16,12 @@ import {
 import { DEFAULT_SCRIPT_URL, setup } from './setup';
 import { pushSnowplowEvent } from './push';
 import { createQueueAdapter, createBrowserTrackerAdapter } from './adapter';
-import { isObject, StepError } from '@walkeros/core';
+import {
+  getGrantedConsent,
+  isObject,
+  StepError,
+  stepCall,
+} from '@walkeros/core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
 
 // Types
@@ -51,20 +56,52 @@ function vendor(
 }
 
 /**
- * Runs one Snowplow call or block; a throw or a rejection that is not
- * already a StepError becomes a StepError of `code`.
+ * Turns the tracker's own senders off on a revocation of the destination's
+ * required consent and on again on the next grant: activity pings, and link
+ * click tracking where a URL plugin enabled it. The required consent decides
+ * on the whole consent state, as it gates the pushes, and only a change that
+ * names a required key counts.
  */
-async function guard<T>(
-  fn: () => T | Promise<T>,
-  code: string,
-  message: string,
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (error instanceof StepError) throw error;
-    throw new StepError(message, { code, cause: error });
-  }
+async function followConsent(
+  settings: Partial<Settings>,
+  required: WalkerOS.Consent | undefined,
+  change: WalkerOS.AnyObject,
+  consent: WalkerOS.Consent,
+): Promise<void> {
+  const state = settings._state;
+  const adapter = state?.adapter;
+  if (!state || !adapter || !required) return;
+  if (!Object.keys(required).some((key) => key in change)) return;
+
+  const granted = getGrantedConsent(required, consent) !== false;
+  if (granted !== Boolean(state.paused)) return;
+
+  const linkClicks = (settings.plugins ?? [])
+    .filter(isUrlBasedPlugin)
+    .filter(
+      (plugin) =>
+        (plugin.enableMethod ?? deriveEnableMethod(plugin.name[1])) ===
+        'enableLinkClickTracking',
+    );
+  const { activityTracking } = settings;
+
+  await stepCall(
+    () => {
+      if (activityTracking) {
+        if (granted) adapter.enableActivityTracking(activityTracking);
+        else adapter.disableActivityTracking();
+      }
+      for (const plugin of linkClicks) {
+        if (!granted) adapter.call('disableLinkClickTracking');
+        else if (plugin.options)
+          adapter.call('enableLinkClickTracking', plugin.options);
+        else adapter.call('enableLinkClickTracking');
+      }
+    },
+    'consent-not-applied',
+    'Snowplow did not take the consent update',
+  );
+  state.paused = !granted;
 }
 
 /**
@@ -244,7 +281,7 @@ export const destinationSnowplow: Destination = {
         );
 
       // Initialize tracker
-      await guard(
+      await stepCall(
         () =>
           trackerFunctions.newTracker(
             settings.trackerName || 'sp',
@@ -277,7 +314,7 @@ export const destinationSnowplow: Destination = {
       vendor({ ...config, settings }, env);
 
       // Initialize tracker via queue
-      await guard(
+      await stepCall(
         () =>
           snowplow('newTracker', settings.trackerName || 'sp', collectorUrl, {
             appId: settings.appId || 'walkerOS',
@@ -304,14 +341,14 @@ export const destinationSnowplow: Destination = {
     // Enable activity tracking if configured
     if (settings.activityTracking) {
       const activityTracking = settings.activityTracking;
-      await guard(
+      await stepCall(
         () => tracker.enableActivityTracking(activityTracking),
         'vendor-not-ready',
         'Snowplow enableActivityTracking failed',
       );
     }
 
-    await guard(
+    await stepCall(
       () => {
         // Load plugins
         if (settings.plugins) {
@@ -378,7 +415,7 @@ export const destinationSnowplow: Destination = {
     vendor(config, env as Env | undefined).check();
 
     const eventMapping = rule.settings || {};
-    await guard(
+    await stepCall(
       () =>
         pushSnowplowEvent(
           event,
@@ -415,6 +452,15 @@ export const destinationSnowplow: Destination = {
     // own Settings/Env needs a core-types change to make `on` generic over
     // Types; tracked as a follow-up. These two `as` casts are that boundary.
     const settings = (context.config?.settings || {}) as Partial<Settings>;
+
+    // The tracker's own senders follow the destination's required consent
+    await followConsent(
+      settings,
+      context.config.consent,
+      consent,
+      context.collector.consent,
+    );
+
     const consentConfig = settings.consent;
 
     // Skip if consent tracking is not configured
@@ -448,7 +494,7 @@ export const destinationSnowplow: Destination = {
       baseParams.gdprApplies = consentConfig.gdprApplies;
 
     // Call the appropriate Enhanced Consent plugin method
-    await guard(
+    await stepCall(
       () => {
         if (allDenied) {
           // For deny, use required scopes (the ones being denied)

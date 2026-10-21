@@ -16,6 +16,7 @@ describe('snowplow conformance', () => {
       settings: {
         collectorUrl: 'https://collector.example.com',
         pageViewEvent: 'page view',
+        activityTracking: { minimumVisitLength: 30, heartbeatDelay: 10 },
       },
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),

@@ -29,6 +29,8 @@ export const SettingsSchema = z
       )
       .optional(),
   })
-  .strict();
+  // Pass-through settings are loose: every other TikTok option is forwarded
+  // to ttq.load() as given.
+  .loose();
 
 export type Settings = z.infer<typeof SettingsSchema>;

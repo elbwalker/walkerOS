@@ -5,6 +5,7 @@ import {
   isObject,
   isString,
   StepError,
+  stepCall,
 } from '@walkeros/core';
 import { init as fsInit, FullStory } from '@fullstory/browser';
 import type { Destination, FullStorySDK, Mapping, Settings } from './types';
@@ -74,22 +75,8 @@ function initOptions(settings: unknown): InitOptions | undefined {
   return options;
 }
 
-/** Runs one FullStory call; a throw or a rejection becomes a StepError. */
-async function call(
-  fn: () => unknown,
-  code: string,
-  message: string,
-): Promise<void> {
-  try {
-    await fn();
-  } catch (error) {
-    if (error instanceof StepError) throw error;
-    throw new StepError(message, { code, cause: error });
-  }
-}
-
 const send = (fn: () => unknown) =>
-  call(fn, 'transport', 'FullStory call failed');
+  stepCall(fn, 'transport', 'FullStory call failed');
 
 /** The calls a consent change makes, or none. */
 function consentCalls(
@@ -133,7 +120,7 @@ export const destinationFullStory: Destination = {
       throw new StepError('FullStory needs settings.orgId', {
         code: 'config',
       });
-    await call(
+    await stepCall(
       () => getFS(env).init(options),
       'vendor-not-ready',
       'FullStory init failed',
@@ -144,11 +131,6 @@ export const destinationFullStory: Destination = {
     const fs = getFS(env);
     const settings: Partial<Settings> = config.settings || {};
     const mappingSettings: Mapping = rule?.settings || {};
-    let calls = 0;
-    const sent = (fn: () => unknown) => {
-      calls++;
-      return send(fn);
-    };
 
     // 1. Identify -- rule-level override wins over destination-level.
     const identifyMapping = mappingSettings.identify ?? settings.identify;
@@ -164,7 +146,7 @@ export const destinationFullStory: Destination = {
             properties?: Record<string, unknown>;
           } = { uid };
           if (isObject(properties)) identityOpts.properties = properties;
-          await sent(() => fs.setIdentity(identityOpts));
+          await send(() => fs.setIdentity(identityOpts));
         }
       }
     }
@@ -176,7 +158,7 @@ export const destinationFullStory: Destination = {
       });
       if (isObject(resolved) && Object.keys(resolved).length) {
         const propertyType = mappingSettings.setType || 'user';
-        await sent(() =>
+        await send(() =>
           fs.setProperties({ type: propertyType, properties: resolved }),
         );
       }
@@ -186,18 +168,11 @@ export const destinationFullStory: Destination = {
     if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
       const properties = isObject(data) ? data : {};
-      await sent(() => fs.trackEvent({ name: eventName, properties }));
+      await send(() => fs.trackEvent({ name: eventName, properties }));
     }
 
-    // A silent rule whose own settings resolved nothing sent nothing.
-    const ruleSettings =
-      mappingSettings.identify !== undefined ||
-      mappingSettings.set !== undefined;
-    if (!calls && ruleSettings)
-      throw new StepError(
-        `FullStory: the silent rule of "${event.name}" resolved no identity or properties`,
-        { code: 'missing-input' },
-      );
+    // A silent rule whose settings resolve nothing sends nothing: a
+    // declared skip, not a failure.
   },
 
   async on(type, { config, data, env, collector }) {
@@ -211,7 +186,7 @@ export const destinationFullStory: Destination = {
     );
 
     for (const fn of calls)
-      await call(
+      await stepCall(
         fn,
         'consent-not-applied',
         'FullStory did not take the consent update',

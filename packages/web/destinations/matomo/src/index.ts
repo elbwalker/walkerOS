@@ -7,6 +7,7 @@ import {
   reportCause,
   stepId,
   StepError,
+  stepCall,
 } from '@walkeros/core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
 import { resolveDimensionMap, sequence } from './dimensions';
@@ -18,17 +19,17 @@ export * as DestinationMatomo from './types';
  * Pushes commands onto the queue in one synchronous block, so another
  * event's commands never interleave, then waits for what each push returns.
  */
-async function pushAll(
+function pushAll(
   queue: unknown[],
   commands: unknown[][],
   code: string,
   message: string,
-): Promise<void> {
-  try {
-    await Promise.all(commands.map((command) => queue.push(command)));
-  } catch (error) {
-    throw new StepError(message, { code, cause: error });
-  }
+): Promise<number[]> {
+  return stepCall(
+    () => Promise.all(commands.map((command) => queue.push(command))),
+    code,
+    message,
+  );
 }
 
 /**

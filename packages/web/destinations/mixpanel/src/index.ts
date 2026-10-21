@@ -1,11 +1,12 @@
-import type { WalkerOS } from '@walkeros/core';
 import {
+  getGrantedConsent,
   getMappingValue,
   isArray,
   isBoolean,
   isObject,
   isString,
   StepError,
+  stepCall,
 } from '@walkeros/core';
 import mixpanel from 'mixpanel-browser';
 import type {
@@ -29,19 +30,6 @@ function getMixpanel(env: Env | undefined): MixpanelSDK {
   return env?.mixpanel ?? (mixpanel as unknown as MixpanelSDK);
 }
 
-/** Runs one Mixpanel call; a throw or a rejection becomes a StepError of `code`. */
-async function call(
-  fn: () => unknown,
-  code: string,
-  message: string,
-): Promise<void> {
-  try {
-    await fn();
-  } catch (error) {
-    throw new StepError(message, { code, cause: error });
-  }
-}
-
 /**
  * Resolve the distinctId from an identify mapping value and call
  * mixpanel.identify() only if the value changed since the last call.
@@ -56,7 +44,7 @@ async function applyIdentify(
   const distinctId = resolved.distinctId;
   if (!isString(distinctId) || distinctId === '') return updated;
   if (distinctId === lastIdentity.distinctId) return updated;
-  await call(
+  await stepCall(
     () => mp.identify(distinctId),
     'transport',
     'Mixpanel identify failed',
@@ -96,7 +84,7 @@ async function applyPeople(
     if (!isObject(bag)) continue;
     if (Object.keys(bag).length === 0) continue;
     // Typed dispatch - each op's first arg is a Record<string, unknown>.
-    await call(
+    await stepCall(
       () =>
         (mp.people[op] as (props: Record<string, unknown>) => void)(
           bag as Record<string, unknown>,
@@ -112,7 +100,7 @@ async function applyPeople(
       isString(v),
     );
     if (names.length > 0)
-      await call(
+      await stepCall(
         () => mp.people.unset(names),
         'transport',
         'Mixpanel people.unset failed',
@@ -121,7 +109,7 @@ async function applyPeople(
   }
 
   if (resolved.delete_user === true) {
-    await call(
+    await stepCall(
       () => mp.people.delete_user(),
       'transport',
       'Mixpanel people.delete_user failed',
@@ -155,7 +143,7 @@ async function applyGroupProfile(
     const bag = resolved[op];
     if (!isObject(bag)) continue;
     if (Object.keys(bag).length === 0) continue;
-    await call(
+    await stepCall(
       () =>
         (group[op] as (props: Record<string, unknown>) => void)(
           bag as Record<string, unknown>,
@@ -171,7 +159,7 @@ async function applyGroupProfile(
       isString(v),
     );
     if (names.length > 0)
-      await call(
+      await stepCall(
         () => group.unset(names),
         'transport',
         'Mixpanel group.unset failed',
@@ -180,7 +168,7 @@ async function applyGroupProfile(
   }
 
   if (resolved.delete === true) {
-    await call(
+    await stepCall(
       () => group.delete(),
       'transport',
       'Mixpanel group.delete failed',
@@ -223,7 +211,7 @@ export const destinationMixpanel: Destination = {
     };
 
     // Mixpanel's init() is synchronous (returns void).
-    await call(
+    await stepCall(
       () => mp.init(apiKey, initConfig),
       'vendor-not-ready',
       'Mixpanel init failed',
@@ -240,8 +228,6 @@ export const destinationMixpanel: Destination = {
     const settings = (config.settings || {}) as Settings;
     const mappingSettings = rule?.settings || {};
     const state: RuntimeState = settings._state || {};
-    // Whether any Mixpanel call or state change came out of this event
-    let sent = false;
 
     // 1. Reset - fires first so subsequent identity calls start clean.
     if (mappingSettings.reset !== undefined) {
@@ -249,9 +235,8 @@ export const destinationMixpanel: Destination = {
         ? mappingSettings.reset
         : await getMappingValue(event, mappingSettings.reset, { collector });
       if (resolved) {
-        await call(() => mp.reset(), 'transport', 'Mixpanel reset failed');
+        await stepCall(() => mp.reset(), 'transport', 'Mixpanel reset failed');
         state.lastIdentity = {};
-        sent = true;
       }
     }
 
@@ -267,7 +252,6 @@ export const destinationMixpanel: Destination = {
           resolved as Record<string, unknown>,
           state.lastIdentity,
         );
-        sent = sent || isString(resolved.distinctId);
       }
     }
 
@@ -276,10 +260,8 @@ export const destinationMixpanel: Destination = {
       const resolved = await getMappingValue(event, mappingSettings.people, {
         collector,
       });
-      if (isObject(resolved)) {
-        sent =
-          (await applyPeople(mp, resolved as Record<string, unknown>)) || sent;
-      }
+      if (isObject(resolved))
+        await applyPeople(mp, resolved as Record<string, unknown>);
     }
 
     // 4. Group assignment - resolves to { key, id } and calls set_group.
@@ -296,12 +278,11 @@ export const destinationMixpanel: Destination = {
           (isString(id) || isArray(id)) &&
           id !== ''
         ) {
-          await call(
+          await stepCall(
             () => mp.set_group(key, id as string | string[]),
             'transport',
             'Mixpanel set_group failed',
           );
-          sent = true;
         }
       }
     }
@@ -313,11 +294,8 @@ export const destinationMixpanel: Destination = {
         mappingSettings.groupProfile,
         { collector },
       );
-      if (isObject(resolved)) {
-        sent =
-          (await applyGroupProfile(mp, resolved as Record<string, unknown>)) ||
-          sent;
-      }
+      if (isObject(resolved))
+        await applyGroupProfile(mp, resolved as Record<string, unknown>);
     }
 
     // 6. Default track - unless the rule opts out via silent.
@@ -326,43 +304,30 @@ export const destinationMixpanel: Destination = {
       const properties = isObject(data)
         ? (data as Record<string, unknown>)
         : {};
-      await call(
+      await stepCall(
         () => mp.track(eventName, properties),
         'transport',
         'Mixpanel track failed',
       );
-      sent = true;
     }
 
-    // A silent rule none of whose mappings resolved sent nothing at all
-    if (!sent && rule?.silent === true && Object.keys(mappingSettings).length)
-      throw new StepError(
-        'Mixpanel mappings resolved to nothing for this event',
-        {
-          code: 'missing-input',
-        },
-      );
-
-    // Persist state mutations back onto config.settings.
+    // A silent rule whose mappings resolve nothing sends nothing: a declared
+    // skip, not a failure. Persist state mutations back onto config.settings.
     settings._state = state;
   },
 
-  async on(type, context) {
-    if (type !== 'consent' || !context.data) return;
-    const mp = getMixpanel(context.env as Env | undefined);
+  // The destination's required consent decides on the whole consent state,
+  // as it gates the pushes, and only a change that names a required key
+  // reaches Mixpanel: a revocation opts out, a grant opts back in.
+  async on(type, { config, data, env, collector }) {
+    const required = config.consent;
+    if (type !== 'consent' || !required || !isObject(data)) return;
+    if (!Object.keys(required).some((key) => key in data)) return;
 
-    const consent = context.data as WalkerOS.Consent;
-    // Derive the consent keys from config.consent - iterate every key the
-    // destination declared as required. If ALL required keys are granted,
-    // opt IN; otherwise opt OUT.
-    const required = context.config?.consent;
-    if (!required || Object.keys(required).length === 0) return;
-
-    const allGranted = Object.keys(required).every(
-      (key) => consent[key] === true,
-    );
-    await call(
-      () => (allGranted ? mp.opt_in_tracking() : mp.opt_out_tracking()),
+    const mp = getMixpanel(env as Env | undefined);
+    const granted = getGrantedConsent(required, collector.consent) !== false;
+    await stepCall(
+      () => (granted ? mp.opt_in_tracking() : mp.opt_out_tracking()),
       'consent-not-applied',
       'Mixpanel did not take the consent update',
     );

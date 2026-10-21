@@ -4,6 +4,7 @@ import {
   isObject,
   isString,
   StepError,
+  stepCall,
 } from '@walkeros/core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
 import type {
@@ -86,21 +87,8 @@ function toHeapProperties(value: unknown): Record<string, HeapPropertyValue> {
   return out;
 }
 
-/** Runs one Heap call; a throw or a rejection becomes a StepError. */
-async function call(
-  fn: () => unknown,
-  code: string,
-  message: string,
-): Promise<void> {
-  try {
-    await fn();
-  } catch (error) {
-    if (error instanceof StepError) throw error;
-    throw new StepError(message, { code, cause: error });
-  }
-}
-
-const send = (fn: () => unknown) => call(fn, 'transport', 'Heap call failed');
+const send = (fn: () => unknown) =>
+  stepCall(fn, 'transport', 'Heap call failed');
 
 export const destinationHeap: Destination = {
   type: 'heap',
@@ -219,7 +207,7 @@ export const destinationHeap: Destination = {
 
     const toggle = granted ? heap.startTracking : heap.stopTracking;
     if (!toggle) return;
-    await call(
+    await stepCall(
       () => toggle.call(heap),
       'consent-not-applied',
       'Heap did not take the consent update',

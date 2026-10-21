@@ -1,19 +1,14 @@
-import type { WalkerOS } from '@walkeros/core';
 import {
   getMappingValue,
   isNumber,
   isObject,
   isString,
   StepError,
+  stepCall,
 } from '@walkeros/core';
+import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
-import type {
-  Destination,
-  Env,
-  Lintrk,
-  LintrkTrackData,
-  Mapping,
-} from './types';
+import type { Destination, Lintrk, LintrkTrackData, Mapping } from './types';
 
 // Types export
 export * as DestinationLinkedIn from './types';
@@ -39,25 +34,26 @@ const LINKEDIN_SCRIPT_SRC =
  * Idempotent - if `lintrk` is already installed (e.g. another tag installed
  * it), leave the existing function alone.
  */
-function installLintrkQueue(env: Env | undefined): void {
+function installLintrkQueue(env?: DestinationWeb.Env): void {
   const { window } = getEnv(env);
-  const w = window as Env['window'];
-  if (w.lintrk) return;
-  const lintrk = function (this: unknown, ...args: unknown[]) {
-    (lintrk.q = lintrk.q || []).push(args);
-  } as unknown as Lintrk;
-  lintrk.q = [];
-  w.lintrk = lintrk;
+  if (window.lintrk) return;
+  const lintrk: Lintrk = Object.assign(
+    (...args: unknown[]) => {
+      (lintrk.q ||= []).push(args);
+    },
+    { q: [] },
+  );
+  window.lintrk = lintrk;
 }
 
-function setPartnerGlobals(env: Env | undefined, partnerId: string): void {
+function setPartnerGlobals(
+  env: DestinationWeb.Env | undefined,
+  partnerId: string,
+): void {
   const { window } = getEnv(env);
-  const w = window as Env['window'];
-  w._linkedin_partner_id = partnerId;
-  w._linkedin_data_partner_ids = w._linkedin_data_partner_ids || [];
-  if (!w._linkedin_data_partner_ids.includes(partnerId)) {
-    w._linkedin_data_partner_ids.push(partnerId);
-  }
+  window._linkedin_partner_id = partnerId;
+  const ids = (window._linkedin_data_partner_ids ||= []);
+  if (!ids.includes(partnerId)) ids.push(partnerId);
 }
 
 /**
@@ -65,25 +61,15 @@ function setPartnerGlobals(env: Env | undefined, partnerId: string): void {
  * replays its own queue, so it is called synchronously and only a failed
  * script is reported.
  */
-function vendor(config: { loadScript?: boolean; timeout?: number }, env?: Env) {
+function vendor(
+  config: { loadScript?: boolean; timeout?: number },
+  env?: DestinationWeb.Env,
+) {
   return loadVendor(
     config.loadScript ? LINKEDIN_SCRIPT_SRC : undefined,
-    () => (getEnv(env).window as Env['window']).lintrk,
+    () => getEnv(env).window.lintrk,
     { timeout: config.timeout },
   );
-}
-
-/** Runs one lintrk call; a throw or a rejection becomes a StepError of `code`. */
-async function call(
-  fn: () => unknown,
-  code: string,
-  message: string,
-): Promise<void> {
-  try {
-    await fn();
-  } catch (error) {
-    throw new StepError(message, { code, cause: error });
-  }
 }
 
 /**
@@ -102,12 +88,7 @@ async function call(
 function buildLintrkData(resolved: unknown): LintrkTrackData | undefined {
   if (!isObject(resolved)) return undefined;
 
-  const { id, value, currency, eventId } = resolved as {
-    id?: unknown;
-    value?: unknown;
-    currency?: unknown;
-    eventId?: unknown;
-  };
+  const { id, value, currency, eventId } = resolved;
 
   // id must be a truthy number (Campaign Manager conversion_id).
   // Accept numeric strings by coercion - users may supply { value: "12345" }.
@@ -151,36 +132,34 @@ export const destinationLinkedIn: Destination = {
     if (!settings?.apiKey)
       throw new StepError('LinkedIn needs settings.apiKey', { code: 'config' });
 
-    setPartnerGlobals(env as Env | undefined, settings.apiKey);
-    installLintrkQueue(env as Env | undefined);
+    setPartnerGlobals(env, settings.apiKey);
+    installLintrkQueue(env);
 
     // Script injection is opt-in via config.loadScript (same default as
     // plausible / meta). Users who already embed the Insight Tag snippet in
     // their HTML should leave loadScript false - the destination only
     // installs the queue shim and mutates _linkedin_partner_id.
-    vendor(config, env as Env | undefined);
+    vendor(config, env);
 
     return config;
   },
 
   async push(event, { config, rule, env, collector }) {
-    vendor(config, env as Env | undefined).check();
+    vendor(config, env).check();
 
-    const { window } = getEnv(env);
-    const w = window as Env['window'];
-    const lintrk = w.lintrk;
+    const { lintrk } = getEnv(env).window;
     if (!lintrk)
       throw new StepError('LinkedIn Insight Tag not ready: lintrk is missing', {
         code: 'vendor-not-ready',
       });
 
-    const mappingSettings = (rule?.settings || {}) as Mapping;
+    const mappingSettings: Mapping = rule?.settings || {};
 
     // Opt-in: a rule without a conversion makes no call. Honor rule-level
     // silent (core flag at packages/core/src/types/mapping.ts) the same way.
     if (rule?.silent !== true && mappingSettings.conversion !== undefined) {
       const resolved = await getMappingValue(
-        event as WalkerOS.Event,
+        event,
         mappingSettings.conversion,
         { collector },
       );
@@ -192,7 +171,7 @@ export const destinationLinkedIn: Destination = {
           { code: 'missing-input' },
         );
 
-      await call(
+      await stepCall(
         () => lintrk('track', data),
         'transport',
         'LinkedIn lintrk call failed',
@@ -200,20 +179,18 @@ export const destinationLinkedIn: Destination = {
     }
   },
 
-  on(type, context) {
-    if (type !== 'consent' || !context.data) return;
+  on(type, { config, data, env }) {
+    if (type !== 'consent' || !isObject(data)) return;
 
     // LinkedIn has no vendor consent mode. The collector's config.consent gate
     // is the sole mechanism for blocking events. This handler exists for a
     // narrow case: config.loadScript was true BUT marketing consent was
     // initially denied, so init() did not run. When consent later grants
     // marketing, the script is injected; loadVendor injects it once per page.
-    const consent = context.data as WalkerOS.Consent;
-    const config = context.config;
-    if (!config?.loadScript) return;
-    if (consent.marketing !== true) return;
+    if (!config.loadScript) return;
+    if (data.marketing !== true) return;
 
-    vendor(config, context.env as Env | undefined);
+    vendor(config, env);
   },
 };
 

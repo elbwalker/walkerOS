@@ -37,7 +37,7 @@ describe('tiktok destination — step examples', () => {
     '%s',
     async (name, example) => {
       // Fresh clone per test so mutations don't bleed across cases.
-      const env = clone(examples.env.push) as Env;
+      const env = clone(examples.env.push);
       const { env: spiedEnv, collected, reset } = spyTtq(env);
 
       const dest = jest.requireActual('../').default;

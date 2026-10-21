@@ -335,23 +335,14 @@ export const clarityUnreachable: ClarityStepExample = {
 
 /**
  * The silent tag rule of pageViewSilent on a page view without data: no tag
- * resolves and the rule suppresses the event, so nothing is sent.
+ * resolves and the rule suppresses the event, so nothing is sent. A declared
+ * skip: an unmet mapping, not a failure.
  */
 export const pageViewSilentWithoutData: ClarityStepExample = {
   public: false,
   description:
-    'A silent rule whose tag mapping finds no data sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose tag mapping finds no data sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'page view', entity: 'page', action: 'view' },
-  mapping: {
-    silent: true,
-    settings: {
-      set: {
-        map: {
-          page_id: 'data.id',
-        },
-      },
-    },
-  },
+  mapping: pageViewSilent.mapping,
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };

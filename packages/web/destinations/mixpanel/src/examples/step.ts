@@ -454,24 +454,14 @@ export const pageViewSilent: MixpanelStepExample = {
 /**
  * The silent group profile rule of companyUpdateGroupProfile on an update
  * without data: no group key and id resolve and the rule suppresses the
- * track, so nothing is sent.
+ * track, so nothing is sent. A declared skip: an unmet mapping, not a
+ * failure.
  */
 export const companyUpdateWithoutData: MixpanelStepExample = {
   public: false,
   description:
-    'A silent rule whose group profile mapping finds no group sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose group profile mapping finds no group sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'company update', entity: 'company', action: 'update' },
-  mapping: {
-    silent: true,
-    settings: {
-      groupProfile: {
-        map: {
-          key: { value: 'company_id' },
-          id: 'data.company_id',
-        },
-      },
-    },
-  },
+  mapping: companyUpdateGroupProfile.mapping,
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };

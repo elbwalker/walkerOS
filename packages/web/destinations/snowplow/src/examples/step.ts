@@ -471,15 +471,15 @@ export const silentRule: Flow.StepExample = {
 };
 
 /**
- * A revocation of the consent the destination requires. Without
- * settings.consent there is no Enhanced Consent call, so no vendor call is
- * made and the collector's consent gate stops the sending.
+ * A revocation of the consent the destination requires turns off the
+ * tracker's own senders: with activityTracking set, the page pings stop.
+ * Without settings.consent there is no Enhanced Consent event.
  */
 export const consentRevoke: Flow.StepExample = {
   public: false,
   description:
-    'For a destination with config.consent { marketing: true } and no settings.consent, revoking marketing makes no vendor call: the collector stops sending.',
+    'For a destination with config.consent { marketing: true } and activityTracking, revoking marketing calls disableActivityTracking, so sp.js stops its page pings; a grant enables them again.',
   command: 'consent',
   in: { marketing: false },
-  out: [],
+  out: [['window.snowplow', 'disableActivityTracking']],
 };

@@ -502,6 +502,8 @@ export const consentContextOmitted: SegmentStepExample = {
  */
 export const consentRevokeNoOp: SegmentStepExample = {
   public: false,
+  description:
+    'Segment has no opt-out and Analytics.js sends nothing on its own (initialPageview false), so a revocation makes no call: walkerOS stops the pushes of a consent-gated destination.',
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
   out: [],
@@ -518,17 +520,14 @@ export const silentRule: SegmentStepExample = {
 
 /**
  * The silent group rule of companyUpdateGroup on an update without data: no
- * groupId resolves and the rule suppresses the track, so nothing is sent.
+ * groupId resolves, so nothing is sent. A declared skip: an unmet mapping,
+ * not a failure.
  */
 export const companyUpdateWithoutData: SegmentStepExample = {
   public: false,
   description:
-    'A silent rule whose group mapping finds no groupId sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose group mapping finds no groupId sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'company update', entity: 'company', action: 'update' },
-  mapping: {
-    silent: true,
-    settings: { group: { map: { groupId: 'data.company_id' } } },
-  },
+  mapping: companyUpdateGroup.mapping,
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };

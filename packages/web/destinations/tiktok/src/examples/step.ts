@@ -404,12 +404,12 @@ export const silentRule: TikTokStepExample = {
 /**
  * A silent rule that only sets an identity, on an event with no email, phone
  * or id: nothing resolves and the rule suppresses the track, so nothing is
- * sent.
+ * sent. A declared skip: an unmet mapping, not a failure.
  */
 export const silentIdentifyWithoutData: TikTokStepExample = {
   public: false,
   description:
-    'A silent rule whose identify mapping finds no email, phone or id sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose identify mapping finds no email, phone or id sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'user update', entity: 'user', action: 'update' },
   mapping: {
     silent: true,
@@ -424,5 +424,4 @@ export const silentIdentifyWithoutData: TikTokStepExample = {
     },
   },
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };

@@ -115,6 +115,8 @@ export const SettingsSchema = z
       )
       .optional(),
   })
-  .strict();
+  // Pass-through settings are loose: every other posthog-js config key
+  // (respect_dnt, ...) is forwarded to init() as given.
+  .loose();
 
 export type Settings = z.infer<typeof SettingsSchema>;

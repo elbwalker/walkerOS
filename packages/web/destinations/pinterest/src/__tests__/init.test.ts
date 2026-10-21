@@ -13,18 +13,19 @@ import type { Env, Pintrk } from '../types';
 
 function spy(env: Env): unknown[][] {
   const calls: unknown[][] = [];
-  const fn = ((...args: unknown[]) => {
-    calls.push(args);
-  }) as unknown as Pintrk;
-  fn.queue = [];
-  fn.version = '3.0';
+  const fn: Pintrk = Object.assign(
+    (...args: unknown[]) => {
+      calls.push(args);
+    },
+    { queue: [], version: '3.0' },
+  );
   env.window.pintrk = fn;
   return calls;
 }
 
 describe('pinterest destination — init', () => {
   it('fires pintrk("load", tagId) then pintrk("page") when pageview is true (default)', async () => {
-    const env = clone(examples.env.push) as Env;
+    const env = clone(examples.env.push);
     const calls = spy(env);
 
     const dest = jest.requireActual('../').default;
@@ -43,7 +44,7 @@ describe('pinterest destination — init', () => {
   });
 
   it('skips pintrk("page") when pageview is false', async () => {
-    const env = clone(examples.env.push) as Env;
+    const env = clone(examples.env.push);
     const calls = spy(env);
 
     const dest = jest.requireActual('../').default;
@@ -65,7 +66,7 @@ describe('pinterest destination — init', () => {
 
   it('throws a config error when apiKey is missing', async () => {
     const dest = jest.requireActual('../').default;
-    const env = clone(examples.env.push) as Env;
+    const env = clone(examples.env.push);
     await expect(
       dest.init({
         config: { settings: {} },

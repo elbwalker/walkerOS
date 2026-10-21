@@ -377,24 +377,14 @@ export const pageViewSilent: PostHogStepExample = {
 /**
  * The silent group rule of groupAssignmentWithProperties on an update
  * without data: no group type and key resolve and the rule suppresses the
- * capture, so nothing is sent.
+ * capture, so nothing is sent. A declared skip: an unmet mapping, not a
+ * failure.
  */
 export const companyUpdateWithoutData: PostHogStepExample = {
   public: false,
   description:
-    'A silent rule whose group mapping finds no group sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose group mapping finds no group sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'company update', entity: 'company', action: 'update' },
-  mapping: {
-    silent: true,
-    settings: {
-      group: {
-        map: {
-          type: { value: 'company' },
-          key: 'data.company_id',
-        },
-      },
-    },
-  },
+  mapping: groupAssignmentWithProperties.mapping,
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };

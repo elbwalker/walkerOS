@@ -1,4 +1,4 @@
-import type { Env, Lintrk } from '../types';
+import type { Env } from '../types';
 
 /**
  * Example environment configurations for LinkedIn Insight Tag destination.
@@ -32,7 +32,7 @@ export const push: Env = {
   window: {
     _linkedin_partner_id: '123456',
     _linkedin_data_partner_ids: ['123456'],
-    lintrk: Object.assign(noop, { q: [] as unknown[] }) as unknown as Lintrk,
+    lintrk: Object.assign(noop, { q: [] }),
   },
 };
 

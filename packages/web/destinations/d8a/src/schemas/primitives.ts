@@ -85,6 +85,8 @@ export const SettingsSchema = z
     file_downloads_enabled: z.boolean().optional(),
     file_download_extensions: csvOrArray.optional(),
   })
-  .strict();
+  // Pass-through settings are loose: every other d8a config key is
+  // forwarded to d8a('config', ...) as given.
+  .loose();
 
 export type Settings = z.infer<typeof SettingsSchema>;

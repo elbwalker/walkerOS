@@ -81,6 +81,26 @@ export class StepError extends Error {
   }
 }
 
+/**
+ * Runs one vendor or SDK call, sync or async, and waits for it. A
+ * `StepError` it throws passes through unchanged (the step's own code wins);
+ * anything else becomes a `StepError` with `code` and `message`, the
+ * original kept as `cause` and never in the message, which a vendor can fill
+ * with the values it was sent.
+ */
+export async function stepCall<T>(
+  call: () => T | PromiseLike<T>,
+  code: string,
+  message: string,
+): Promise<Awaited<T>> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof StepError) throw error;
+    throw new StepError(message, { code, cause: error });
+  }
+}
+
 /** A message capped to what a reason or a log line may carry. */
 export function capMessage(message: string): string {
   return message.length > MAX_MESSAGE_LENGTH

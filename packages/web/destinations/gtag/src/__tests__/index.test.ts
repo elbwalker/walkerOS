@@ -701,7 +701,7 @@ describe('Unified Gtag Destination', () => {
         expect(pushGA4Event).toHaveBeenCalled();
       });
 
-      it('should call gtag consent update on subsequent consent changes', () => {
+      it('should call gtag consent update on subsequent consent changes', async () => {
         // Set up destination with default consent mode
         const destination = { ...destinationGtag };
         destination.config = {
@@ -710,7 +710,7 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // First consent call (should use 'default' then 'update')
-        destination.on?.('consent', {
+        await destination.on?.('consent', {
           id: contextId,
           collector: mockCollector,
           config: destination.config,
@@ -737,7 +737,7 @@ describe('Unified Gtag Destination', () => {
         mockGtag.mockClear();
 
         // Second consent call (should only use 'update')
-        destination.on?.('consent', {
+        await destination.on?.('consent', {
           id: contextId,
           collector: mockCollector,
           config: destination.config,
@@ -998,6 +998,39 @@ describe('Unified Gtag Destination', () => {
         ad_personalization: 'denied',
         analytics_storage: 'denied',
       });
+    });
+
+    it('sends the denied default again after an init whose default call failed', async () => {
+      let fail = true;
+      gtag.mockImplementation((...args: unknown[]) => {
+        if (fail && args[0] === 'consent' && args[1] === 'default') {
+          fail = false;
+          throw new Error('gtag wrapper failed');
+        }
+      });
+      const config = {
+        consent: { marketing: true },
+        settings: { ga4: { measurementId: 'G-X' } },
+      };
+      const context = {
+        id: contextId,
+        config,
+        env: orderEnv,
+        collector: mockCollector,
+        logger: createThrowingLogger(),
+      };
+
+      await expect(destinationGtag.init!(context)).rejects.toMatchObject({
+        code: 'vendor-not-ready',
+      });
+      gtag.mockClear();
+      await destinationGtag.init!(context);
+
+      expect(gtag.mock.calls[0]).toEqual([
+        'consent',
+        'default',
+        expect.objectContaining({ ad_storage: 'denied' }),
+      ]);
     });
 
     it('does NOT emit a default when there is no consent signal', async () => {

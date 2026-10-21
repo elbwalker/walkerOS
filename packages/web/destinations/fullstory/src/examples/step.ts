@@ -339,39 +339,28 @@ export const fullstoryUnreachable: FullStoryStepExample = {
 
 /**
  * The silent page rule of setPageProperties on a page view without data: no
- * property resolves and the rule suppresses the event, so nothing is sent.
+ * property resolves and the rule suppresses the event, so nothing is sent. A
+ * declared skip: an unmet mapping, not a failure.
  */
 export const setPagePropertiesWithoutData: FullStoryStepExample = {
   public: false,
   description:
-    'A silent rule whose property mapping finds no data sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose property mapping finds no data sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'page view', entity: 'page', action: 'view' },
-  mapping: {
-    silent: true,
-    settings: {
-      set: { map: { pageName: 'data.title' } },
-      setType: 'page',
-    },
-  },
+  mapping: setPageProperties.mapping,
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };
 
 /**
  * The silent identify rule of silentWithIdentify on a login without data: no
- * uid resolves and the rule suppresses the event, so nothing is sent.
+ * uid resolves and the rule suppresses the event, so nothing is sent. A
+ * declared skip.
  */
 export const silentIdentifyWithoutData: FullStoryStepExample = {
   public: false,
   description:
-    'A silent rule whose identify mapping finds no uid sends nothing, so the push fails with missing-input instead of counting as delivered.',
+    'A silent rule whose identify mapping finds no uid sends nothing: an unmet mapping, not a failure, so the push returns normally.',
   in: { name: 'user login', entity: 'user', action: 'login' },
-  mapping: {
-    silent: true,
-    settings: {
-      identify: { map: { uid: 'data.id' } },
-    },
-  },
+  mapping: silentWithIdentify.mapping,
   out: [],
-  outcome: { status: 'failed', code: 'missing-input' },
 };

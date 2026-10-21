@@ -5,6 +5,7 @@ import {
   isObject,
   isString,
   StepError,
+  stepCall,
 } from '@walkeros/core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
 import Clarity from '@microsoft/clarity';
@@ -110,22 +111,8 @@ function getClarity(
   throw new StepError('env.clarity is not a Clarity SDK', { code: 'config' });
 }
 
-/** Runs one Clarity call; a throw or a rejection becomes a StepError. */
-async function call(
-  fn: () => unknown,
-  code: string,
-  message: string,
-): Promise<void> {
-  try {
-    await fn();
-  } catch (error) {
-    if (error instanceof StepError) throw error;
-    throw new StepError(message, { code, cause: error });
-  }
-}
-
 const send = (fn: () => unknown) =>
-  call(fn, 'transport', 'Clarity call failed');
+  stepCall(fn, 'transport', 'Clarity call failed');
 
 function coerceTagValue(value: unknown): string | string[] | undefined {
   if (value == null || value === '') return undefined;
@@ -180,8 +167,9 @@ function isCategory(value: unknown): value is Category {
 /**
  * Clarity's ConsentV2 update for one consent change, or none to send. With
  * `settings.consent` each mapped key present in the change sets its
- * category; without it the destination's required consent decides, as it
- * gates the pushes, and both categories follow it.
+ * category. Without it the destination's required consent decides, as it
+ * gates the pushes: a grant grants analytics storage only, a revocation
+ * denies both. Ad storage is granted only through `settings.consent`.
  */
 function consentOf(
   settings: unknown,
@@ -201,9 +189,9 @@ function consentOf(
 
   if (!required || !Object.keys(required).some((key) => key in change))
     return undefined;
-  const granted =
-    getGrantedConsent(required, state) !== false ? 'granted' : 'denied';
-  return { analytics_Storage: granted, ad_Storage: granted };
+  return getGrantedConsent(required, state) !== false
+    ? { analytics_Storage: 'granted' }
+    : { analytics_Storage: 'denied', ad_Storage: 'denied' };
 }
 
 export const destinationClarity: Destination = {
@@ -216,7 +204,7 @@ export const destinationClarity: Destination = {
     if (!apiKey)
       throw new StepError('Clarity needs settings.apiKey', { code: 'config' });
 
-    await call(
+    await stepCall(
       () => getClarity(env, apiKey, config.timeout).init(apiKey),
       'vendor-not-ready',
       'Clarity init failed',
@@ -227,11 +215,6 @@ export const destinationClarity: Destination = {
     const settings: Partial<Settings> = config.settings || {};
     const clarity = getClarity(env, settings.apiKey ?? '', config.timeout);
     const mappingSettings: Mapping = rule?.settings || {};
-    let calls = 0;
-    const sent = (fn: () => unknown) => {
-      calls++;
-      return send(fn);
-    };
 
     // 1. Identify - rule-level override wins over destination-level.
     //    Fires first per Clarity's own guidance so subsequent tag/event
@@ -245,7 +228,7 @@ export const destinationClarity: Destination = {
         const { customId, customSessionId, customPageId, friendlyName } =
           resolved;
         if (isString(customId) && customId) {
-          await sent(() =>
+          await send(() =>
             callIdentify(
               clarity,
               customId,
@@ -260,7 +243,7 @@ export const destinationClarity: Destination = {
 
     // 2. Include tags - pre-flattened by core into context.data
     for (const [key, value] of tagsOf(data))
-      await sent(() => clarity.setTag(key, value));
+      await send(() => clarity.setTag(key, value));
 
     // 3. Explicit tags via mapping.settings.set
     if (mappingSettings.set !== undefined) {
@@ -268,7 +251,7 @@ export const destinationClarity: Destination = {
         collector,
       });
       for (const [key, value] of tagsOf(resolved))
-        await sent(() => clarity.setTag(key, value));
+        await send(() => clarity.setTag(key, value));
     }
 
     // 4. Session priority upgrade
@@ -276,25 +259,17 @@ export const destinationClarity: Destination = {
       const reason = await getMappingValue(event, mappingSettings.upgrade, {
         collector,
       });
-      if (isString(reason) && reason) await sent(() => clarity.upgrade(reason));
+      if (isString(reason) && reason) await send(() => clarity.upgrade(reason));
     }
 
     // 5. Default event forwarding - unless rule.silent is set
     if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
-      await sent(() => clarity.event(eventName));
+      await send(() => clarity.event(eventName));
     }
 
-    // A silent rule whose own settings resolved nothing sent nothing.
-    const ruleSettings =
-      mappingSettings.identify !== undefined ||
-      mappingSettings.set !== undefined ||
-      mappingSettings.upgrade !== undefined;
-    if (!calls && ruleSettings)
-      throw new StepError(
-        `Clarity: the silent rule of "${event.name}" resolved no identify, tag or upgrade`,
-        { code: 'missing-input' },
-      );
+    // A silent rule whose settings resolve nothing sends nothing: a
+    // declared skip, not a failure.
   },
 
   async on(type, { config, data, env, collector }) {
@@ -308,7 +283,7 @@ export const destinationClarity: Destination = {
     if (!v2) return;
 
     const apiKey = isObject(config.settings) ? config.settings.apiKey : '';
-    await call(
+    await stepCall(
       () =>
         getClarity(
           env,

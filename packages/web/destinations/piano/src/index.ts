@@ -1,5 +1,5 @@
 import type { Config, Env, Destination, PianoAnalytics } from './types';
-import { isObject, StepError } from '@walkeros/core';
+import { isObject, StepError, stepCall } from '@walkeros/core';
 import { loadVendor } from '@walkeros/web-core';
 
 // Types
@@ -46,24 +46,23 @@ export const destinationPiano: Destination = {
     const pa = await vendor(config, env).ready();
     const settings = config.settings;
 
-    try {
-      if (settings && !configured.has(pa)) {
-        await pa.setConfigurations({
-          site: settings.site,
-          collectDomain: settings.collectDomain,
-          ...(isObject(settings.options) ? settings.options : {}),
-        });
-        configured.add(pa);
-      }
+    await stepCall(
+      async () => {
+        if (settings && !configured.has(pa)) {
+          await pa.setConfigurations({
+            site: settings.site,
+            collectDomain: settings.collectDomain,
+            ...(isObject(settings.options) ? settings.options : {}),
+          });
+          configured.add(pa);
+        }
 
-      if (!rule?.silent)
-        await pa.sendEvent(event.name, isObject(data) ? data : {});
-    } catch (error) {
-      throw new StepError('Piano Analytics call failed', {
-        code: 'transport',
-        cause: error,
-      });
-    }
+        if (!rule?.silent)
+          await pa.sendEvent(event.name, isObject(data) ? data : {});
+      },
+      'transport',
+      'Piano Analytics call failed',
+    );
   },
 };
 

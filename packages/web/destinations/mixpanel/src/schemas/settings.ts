@@ -101,6 +101,8 @@ export const SettingsSchema = z
       )
       .optional(),
   })
-  .strict();
+  // Pass-through settings are loose: every other Mixpanel Config key is
+  // forwarded to init() as given.
+  .loose();
 
 export type Settings = z.infer<typeof SettingsSchema>;
