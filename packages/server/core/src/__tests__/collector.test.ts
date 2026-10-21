@@ -87,8 +87,9 @@ describe('Server Collector', () => {
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
     expect(mockDestinationPush).toHaveBeenCalledWith(
       mockEvent,
+      // A destination without `init` is marked initialized at its first push.
       expect.objectContaining({
-        config: mockDestination.config,
+        config: { ...mockDestination.config, init: true },
       }),
     );
     expect(result.ok).toBe(true);
@@ -118,8 +119,9 @@ describe('Server Collector', () => {
         user: { id: 'us3r1d' },
         consent: { test: true },
       }),
+      // A destination without `init` is marked initialized at its first push.
       expect.objectContaining({
-        config: mockDestination.config,
+        config: { ...mockDestination.config, init: true },
       }),
     );
   });

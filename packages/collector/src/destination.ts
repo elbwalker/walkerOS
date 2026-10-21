@@ -42,6 +42,7 @@ import {
   BATCH_WAIT,
   CONSENT_WAIT,
   HELD_WAIT,
+  INIT_WAIT,
   breakerState,
   heldState,
 } from './destination-outcome-state';
@@ -606,6 +607,19 @@ async function deliverToDestinations(
         const requeueHeld = (entries: Destination.Queued[]) =>
           enqueue(entries, 'held');
 
+        // The entries concurrent pushes queued behind a running init (held,
+        // not among `keep`), taken out of the queue in push order.
+        const takeQueuedBehindInit = (keep: Set<Destination.Queued>) => {
+          const queuePush = destination.queuePush || [];
+          const behind = queuePush.filter(
+            (queued) => queued.reason === 'held' && !keep.has(queued),
+          );
+          destination.queuePush = queuePush.filter(
+            (queued) => !behind.includes(queued),
+          );
+          return behind;
+        };
+
         // Fail refused held entries through the one outcome sink.
         const refuseHeld = (refused: Destination.Queued[]) =>
           recordFailure(
@@ -808,9 +822,16 @@ async function deliverToDestinations(
               true,
             );
           } catch (err) {
-            recordFailure(collector, destination, id, [], err, {
-              message: 'destination init failed',
-            });
+            // Events queued behind this init by concurrent pushes fail with
+            // it, rather than waiting for a next push that may never come.
+            recordFailure(
+              collector,
+              destination,
+              id,
+              takeQueuedBehindInit(new Set()).map((entry) => entry.event),
+              err,
+              { message: 'destination init failed' },
+            );
           }
           // The flush held the destination: there are no events of this call
           // to requeue, and any parked by a concurrent push stay queued.
@@ -866,6 +887,21 @@ async function deliverToDestinations(
         // a concurrent push while the init flush was running.
         const parked = new Set(destination.queuePush);
 
+        // An init of this destination (with its queue flush) is running in
+        // another pass: the admitted events queue behind it, and that pass
+        // delivers them right after its own, so the destination receives its
+        // events in push order. A destination without an `init` runs a no-op
+        // one through the same path, so it is covered too.
+        if (initsRunning.has(destination)) {
+          releaseProbeSlot();
+          const refused = requeueHeld(allowedEvents);
+          if (refused.length) {
+            const failed = refuseHeld(refused);
+            return { id, destination, failed };
+          }
+          return { id, destination, queued: INIT_WAIT };
+        }
+
         // Initialize the destination if needed. An init that throws, or
         // returns false (runtime guard: `not-ready`), fails the admitted
         // events through the outcome sink; init is re-attempted on the next
@@ -878,11 +914,15 @@ async function deliverToDestinations(
               code: 'not-ready',
             });
         } catch (err) {
+          // The events queued behind this init by concurrent pushes fail with
+          // it, in push order after this pass's own.
           const failed = recordFailure(
             collector,
             destination,
             id,
-            allowedEvents.map((entry) => entry.event),
+            [...allowedEvents, ...takeQueuedBehindInit(parked)].map(
+              (entry) => entry.event,
+            ),
             err,
             { message: 'destination init failed' },
           );
@@ -1552,6 +1592,13 @@ export async function destinationInit<Destination extends Destination.Instance>(
     // flushed instead of starting another init().
     const running = initsRunning.get(destination);
     if (running) return running;
+    // Nothing to run and nothing queued: initialized at once, without a
+    // turn, so this destination's events keep their place among its
+    // siblings' (a destination without `init` delivered at once before).
+    if (!destination.init && !destination.queueOn?.length) {
+      destination.config = { ...destination.config, init: true };
+      return true;
+    }
     const started = initAndFlush(
       collector,
       destination,
