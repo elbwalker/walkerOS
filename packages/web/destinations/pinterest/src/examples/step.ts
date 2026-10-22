@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { createEvent, getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * Output convention:
@@ -88,7 +88,7 @@ export const siteSearch: Flow.StepExample = {
 export const productViewContent: Flow.StepExample = {
   title: 'View content',
   description:
-    'A product view fires Pinterest viewcontent with value, currency, product_id, and product_name.',
+    'A product view fires Pinterest viewcontent with value, currency, and a single-item line_items array.',
   in: getEvent('product view', {
     timestamp: 1700000104,
     id: 'ev-1700000104',
@@ -99,8 +99,17 @@ export const productViewContent: Flow.StepExample = {
       map: {
         value: 'data.price',
         currency: { key: 'data.currency', value: 'EUR' },
-        product_id: 'data.id',
-        product_name: 'data.color',
+        line_items: {
+          set: [
+            {
+              map: {
+                product_id: 'data.id',
+                product_name: 'data.name',
+                product_price: 'data.price',
+              },
+            },
+          ],
+        },
       },
     },
   },
@@ -112,8 +121,13 @@ export const productViewContent: Flow.StepExample = {
       {
         value: 420,
         currency: 'EUR',
-        product_id: 'ers',
-        product_name: 'black',
+        line_items: [
+          {
+            product_id: 'ers',
+            product_name: 'Everyday Ruck Snack',
+            product_price: 420,
+          },
+        ],
         event_id: 'ev-1700000104',
       },
     ],
@@ -143,7 +157,7 @@ export const productAddToCart: Flow.StepExample = {
             {
               map: {
                 product_id: 'data.id',
-                product_name: 'data.color',
+                product_name: 'data.name',
                 product_price: 'data.price',
                 product_quantity: { value: 1 },
               },
@@ -165,7 +179,7 @@ export const productAddToCart: Flow.StepExample = {
         line_items: [
           {
             product_id: 'ers',
-            product_name: 'black',
+            product_name: 'Everyday Ruck Snack',
             product_price: 420,
             product_quantity: 1,
           },
@@ -199,12 +213,16 @@ export const orderCompleteCheckout: Flow.StepExample = {
             'nested',
             {
               condition: (value: unknown) =>
-                isObject(value) &&
-                isObject(value.data) &&
+                typeof value === 'object' &&
+                value !== null &&
+                'data' in value &&
+                typeof value.data === 'object' &&
+                value.data !== null &&
+                'price' in value.data &&
                 typeof value.data.price === 'number',
               map: {
                 product_id: 'data.id',
-                product_name: 'data.color',
+                product_name: 'data.name',
                 product_price: 'data.price',
                 product_quantity: { value: 1 },
               },
@@ -226,12 +244,13 @@ export const orderCompleteCheckout: Flow.StepExample = {
         line_items: [
           {
             product_id: 'ers',
-            product_name: 'black',
+            product_name: 'Everyday Ruck Snack',
             product_price: 420,
             product_quantity: 1,
           },
           {
             product_id: 'cc',
+            product_name: 'Cool Cap',
             product_price: 42,
             product_quantity: 1,
           },

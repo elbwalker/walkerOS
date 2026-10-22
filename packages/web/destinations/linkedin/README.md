@@ -32,13 +32,18 @@ npm install @walkeros/web-destination-linkedin
       "destinations": {
         "linkedin": {
           "package": "@walkeros/web-destination-linkedin",
-          "config": { "settings": { "apiKey": "YOUR_PARTNER_ID" } }
+          "config": {
+            "loadScript": true,
+            "settings": { "apiKey": "123456" }
+          }
         }
       }
     }
   }
 }
 ```
+
+LinkedIn tracks only the events whose rule sets a `conversion`, see the docs.
 
 ## Documentation
 

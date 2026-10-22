@@ -33,7 +33,7 @@ npm install @walkeros/web-destination-pinterest
       "destinations": {
         "pinterest": {
           "package": "@walkeros/web-destination-pinterest",
-          "config": { "settings": { "apiKey": "YOUR_TAG_ID" } }
+          "config": { "settings": { "apiKey": "2612345678901" } }
         }
       }
     }

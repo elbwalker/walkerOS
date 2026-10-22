@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
 
 const INIT_DATE_MS = 1700000000000;
 const INIT_DATE = new Date(INIT_DATE_MS);
@@ -102,10 +102,11 @@ export const purchase: Flow.StepExample = {
           loop: [
             'nested',
             {
-              condition: (entity: unknown) => {
-                const candidate = entity as { entity?: unknown };
-                return isObject(entity) && candidate.entity === 'product';
-              },
+              condition: (entity: unknown) =>
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 item_id: 'data.id',
                 item_name: 'data.name',

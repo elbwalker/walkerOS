@@ -12,13 +12,13 @@ export const SettingsSchema = z
     pageview: z
       .boolean()
       .describe(
-        'Fire pintrk("page") once in init after core.js loads. Default true (matches Pinterest\'s base code convention). Set false when walkerOS sources already emit page view events and you would otherwise get a duplicate initial fire.',
+        'Call pintrk("page") once in init, as Pinterest\'s base code does. Default true. Set false to leave the call out.',
       )
       .optional(),
     identify: z
       .unknown()
       .describe(
-        'walkerOS mapping value resolving to enhanced matching fields: { em?: string, external_id?: string }. em is auto-hashed by the Pinterest JS tag — do not hash before passing. Passed to pintrk("load", tagId, data) on init and pintrk("set", data) when the resolved value changes.',
+        'walkerOS mapping value resolving to enhanced matching fields: { em?: string, external_id?: string }. The Pinterest tag takes em plain (it hashes it with SHA-256 in the browser) or already hashed. Resolved on each event and sent with pintrk("set", data) when it changes; init calls pintrk("load", tagId) without it.',
       )
       .optional(),
   })

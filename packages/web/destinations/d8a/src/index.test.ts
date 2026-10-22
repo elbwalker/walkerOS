@@ -1,6 +1,6 @@
 // The real @d8a-tech/wt package is ESM and can't be parsed by Jest's
 // default CommonJS transformer. Tests always wire their own mock via
-// `env.installD8a`, so the real module is never invoked — we stub the
+// `env.installD8a`, so the real module is never invoked; we stub the
 // import with a no-op installer to let Jest load the destination file.
 jest.mock(
   '@d8a-tech/wt',
@@ -27,9 +27,10 @@ jest.mock(
   { virtual: true },
 );
 
-import type { Destination, WalkerOS } from '@walkeros/core';
+import type { Destination, Mapping, WalkerOS } from '@walkeros/core';
 import type { D8aFn, InstallD8aOptions, InstallD8aResult } from '@d8a-tech/wt';
-import { createMockLogger } from '@walkeros/core';
+import { runInNewContext } from 'vm';
+import { createMockLogger, isObject } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from './dev';
 import { resetConsentState } from './index';
@@ -84,6 +85,21 @@ function createInstallD8a(calls: CallRecord[]): Env['installD8a'] {
       },
     };
   };
+}
+
+// Functions in examples are published as `{ $code: fn.toString() }` in
+// walkerOS.json and evaluated without the module scope they were written in.
+function asPublished(rule: unknown): Mapping.Rule | undefined {
+  if (!isObject(rule)) return undefined;
+  return JSON.parse(
+    JSON.stringify(rule, (_, value) =>
+      typeof value === 'function' ? { $code: value.toString() } : value,
+    ),
+    (_, value) =>
+      isObject(value) && typeof value.$code === 'string'
+        ? runInNewContext(`(${value.$code})`)
+        : value,
+  );
 }
 
 function makeTestEnv(): { env: Env; calls: CallRecord[] } {
@@ -152,4 +168,27 @@ describe('d8a web destination -- step examples', () => {
     const actual = calls.slice(initOut.length);
     expect(actual).toEqual(example.out);
   });
+
+  it.each(stepEntries.filter(([, example]) => !example.command))(
+    '%s as published',
+    async (_name, example) => {
+      const { env, calls } = makeTestEnv();
+      const dest = jest.requireActual('./').default;
+      const { elb } = await startFlow();
+
+      const event = example.in as WalkerOS.Event;
+      const rule = asPublished(example.mapping);
+      const mapping = rule
+        ? { [event.entity]: { [event.action]: rule } }
+        : undefined;
+
+      elb('walker destination', {
+        code: { ...dest, env },
+        config: { ...initIn, mapping },
+      });
+      await elb(event);
+
+      expect(calls.slice(initOut.length)).toEqual(example.out);
+    },
+  );
 });
