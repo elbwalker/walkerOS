@@ -1,5 +1,32 @@
 # @walkeros/server-destination-hubspot
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: `settings.batch` and `settings.batchSize` are removed: batch with the
+  destination's `config.batch`, which sends through HubSpot's batch API in
+  chunks of 500 and reports each event's own outcome. An event without email or
+  objectId fails with `missing-input`, and a failed HubSpot call fails the push
+  with its status.
+- acf757d: A silent rule whose identify, group or similar mapping resolves to
+  nothing sends nothing, counts as delivered and writes one DEBUG line naming
+  the call and mapping key, never the value. HubSpot's warning and Mixpanel's
+  error for this case are now DEBUG, because nothing was lost.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/server-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

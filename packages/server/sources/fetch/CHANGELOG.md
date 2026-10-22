@@ -1,5 +1,40 @@
 # @walkeros/server-source-fetch
 
+## 4.8.2
+
+### Patch Changes
+
+- 7e5fc27: A per-event "not processed" answer in a batch logs at DEBUG, because
+  the collector's ERROR line is the signal. A push that throws inside a batch
+  logs an ERROR and answers `Internal server error`, never the error text.
+- 2374f54: A push that failed for a reason a resend cannot fix (a missing
+  setting, a 4xx, a destination that is not ready) is acknowledged: SQS deletes
+  the message, Pub/Sub acks it, HTTP sources answer 200. Only retryable failures
+  nack or answer 500, or 207 for a batch, with the fixed text
+  `Event was not processed`.
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+  - @walkeros/collector@4.8.2
+  - @walkeros/core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

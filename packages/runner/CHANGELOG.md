@@ -1,5 +1,27 @@
 # @walkeros/runner
 
+## 4.8.2
+
+### Patch Changes
+
+- 964590a: Auth header records skip undefined values.
+- 2374f54: A flow's `logger.level` and `logger.format` apply to the collector's
+  lines, and the format to the runner's own lines; `--verbose` still forces
+  DEBUG. A flow's `logger.level`, DEBUG included, applies to the collector's
+  lines without `--verbose`. `flow handler error` logs at ERROR, a rejected
+  heartbeat at WARN, and Node process warnings go through the logger at WARN.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+  - @walkeros/core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

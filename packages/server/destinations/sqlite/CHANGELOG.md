@@ -1,5 +1,30 @@
 # @walkeros/server-destination-sqlite
 
+## 4.8.2
+
+### Patch Changes
+
+- 7e5fc27: A constraint error on insert is final and not retried, and a missing
+  table named by a rule's `table` setting is a `config` error. The legacy
+  `schema: 'auto'` also creates the rule tables.
+- 2374f54: The table check and the prepared insert run at the first push, so a
+  flow starts without querying the database. A missing table fails the push with
+  the setup hint, and a failed INSERT fails the push instead of being logged and
+  counted delivered.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/server-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

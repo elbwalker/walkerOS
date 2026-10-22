@@ -1,5 +1,30 @@
 # @walkeros/server-destination-kafka
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: The producer connects at the first push, so a flow starts without a
+  reachable broker. A failed send fails the push instead of being logged and
+  counted delivered; an unknown topic is a `config` error with the setup hint.
+  Rules with `silent: true` send nothing.
+- 7e5fc27: A send is retried only when kafkajs marks the error as retriable.
+  Deterministic failures, such as an unknown topic or a rejected message, are
+  final and fail the push once instead of being retried.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/server-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

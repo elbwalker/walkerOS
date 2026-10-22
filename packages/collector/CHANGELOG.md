@@ -1,5 +1,64 @@
 # @walkeros/collector
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: `@walkeros/collector/dev` adds `runExamples`, which runs step
+  examples on a real collector, and `conformance`, a test kit with profiles
+  (`http`, `sdk-env`, `web-sdk`, `vendor-global`, `socket`, `transformer`,
+  `source`) that checks the failure contract of a destination, source,
+  transformer or store and reports every broken item at once.
+- 2374f54: Failures are explicit. A failing `init`, an open circuit breaker, a
+  destination held past one retry window, a full pre-run queue and a throwing
+  transformer answer `failed` or `ok: false` with a `reason`; consent waits stay
+  `queued`. The collector writes one ERROR line per cause and minute, with a
+  `suppressed` count, and never the event payload.
+- 7e5fc27: A held event keeps the consent it was admitted with: when its
+  destination's hold ends it is delivered even if the collector's consent
+  changed in the meantime. A mapping value problem now logs once per mapping
+  rule instead of once for all rules, so a second rule's problem is no longer
+  hidden behind the first.
+- 2374f54: An event that a rule with `ignore: true` drops is reported as
+  skipped, not delivered: it is no longer under `done`, does not move `count`,
+  and counts in `skipped`. A source answers `{ ok: true, dropped: true }`. New
+  `walker flush` sends every pending destination batch at once and leaves the
+  collector running.
+- 2374f54: A destination or transformer `init` that does not settle within the
+  step's timeout (destination `config.timeout`, default 10 seconds; transformers
+  use the default) now fails the waiting pushes with code `timeout` instead of
+  leaving them unanswered. The next push retries the `init`.
+- 2374f54: A destination whose config sets `batch` without a `pushBatch`, or a
+  mapping key with no effect at its position, logs one ERROR when it registers
+  and still runs. A connection error that lost no event logs at WARN instead of
+  ERROR.
+- 2374f54: New `consentDenied: 'skip'` makes a server collector skip an event
+  that a destination's consent does not allow, instead of queueing it for a
+  grant that never comes. It counts in `skipped` and logs at DEBUG, never as an
+  error. A destination without `init` is initialized without one, so its `on`
+  handlers run.
+- 7e5fc27: Transformers accept `config.timeout` in milliseconds (default 10000).
+  It bounds `init` and each `push`; a push that does not settle fails the event
+  with code `timeout` instead of leaving the push unanswered.
+- 2374f54: The web bundle `walker.js` carries the full failure contract, the
+  circuit breaker included. It grows from 35,181 bytes to 39,411 bytes, measured
+  as gzip -9.
+- 964590a: A web Observe config takes `slot: pageObserveSlot()` from
+  `@walkeros/web-core`; without it one error line says so and Observe stays off.
+  The conformance kit's browser profiles take `page` from
+  `@walkeros/web-core/dev`. Observed web bundles need this CLI version.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+  - @walkeros/core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

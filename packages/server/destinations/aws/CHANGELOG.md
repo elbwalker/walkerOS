@@ -1,5 +1,28 @@
 # @walkeros/server-destination-aws
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: Failures are reported with the AWS error name as code, the HTTP
+  status and a correct retryable flag, so a missing stream, denied access or
+  missing credentials is no longer retried. Messages name the stream or topic,
+  region and fix, not AWS's text. Settings schemas require a stream name
+  (Firehose) or topic ARN or name (SNS).
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/server-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

@@ -1,5 +1,45 @@
 # @walkeros/quickstart
 
+## 4.8.2
+
+### Patch Changes
+
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [b1d65e2]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [b1d65e2]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+  - @walkeros/collector@4.8.2
+  - @walkeros/core@4.8.2
+  - @walkeros/web-core@4.8.2
+  - @walkeros/web-destination-api@4.8.2
+  - @walkeros/web-destination-gtag@4.8.2
+  - @walkeros/web-source-browser@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

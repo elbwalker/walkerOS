@@ -1,5 +1,43 @@
 # @walkeros/web-destination-meta
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: A destination with `config.consent` now tells the vendor about
+  consent changes: Meta calls `fbq('consent', 'revoke' | 'grant')`, Matomo
+  `forgetConsentGiven` and `setConsentGiven`, Clarity sends ConsentV2, FullStory
+  stops and starts capture, and Piwik PRO turns off the link tracking it
+  enabled.
+- 2374f54: A failed vendor call, a missing required setting (`config`) and an
+  event that cannot be sent (`missing-input`) are reported as failed pushes,
+  with the dead-letter queue and one ERROR line, instead of counting as
+  delivered. Rules with `silent: true` send no event. Settings schemas reject
+  unknown keys.
+- b1d65e2: Web destinations that load a vendor script inject it through the
+  document of their `env`, so simulation and server-side rendering work without
+  a browser page. A page still gets the script in its own document by default,
+  and a missing document fails the push with `vendor-not-ready`.
+- 2374f54: Vendor scripts load through walkerOS: a blocked or slow script fails
+  later events visibly (`vendor-not-loaded`, `vendor-timeout`) instead of losing
+  them. Pushes made while the script loads wait for it, and each script is
+  injected once per page.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [b1d65e2]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/web-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

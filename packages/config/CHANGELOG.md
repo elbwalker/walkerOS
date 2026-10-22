@@ -1,5 +1,19 @@
 # @walkeros/config
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: The lint rules `walkeros/await-send` and `walkeros/no-silent-return`
+  are errors: a send that is not awaited, or a bare `return` in a destination's
+  `push` or `pushBatch`, fails lint. ESM builds of server-only packages define
+  `require`, so their CommonJS SDKs load, and tests are no longer published.
+- 964590a: The presets set `lib` and `types` and enforce the platform: web and
+  neutral code are held to ES2020 APIs, and the new
+  `@walkeros/config/eslint/neutral` and the platform bans in `eslint/web` and
+  `eslint/node` keep each package on its own platform. `npm run check:platform`
+  checks every package.
+
 ## 4.8.1
 
 ## 4.8.0

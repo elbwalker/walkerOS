@@ -1,5 +1,27 @@
 # @walkeros/server-destination-file
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: Each push waits until its line is written; a failed open or write
+  fails the push instead of a warning, and a stream error no longer crashes the
+  process. A dynamic filename that resolves to nothing fails with
+  `missing-input`. Rules with `silent: true` write nothing.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/server-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

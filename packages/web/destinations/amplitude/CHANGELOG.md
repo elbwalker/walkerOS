@@ -1,5 +1,45 @@
 # @walkeros/web-destination-amplitude
 
+## 4.8.2
+
+### Patch Changes
+
+- b1d65e2: Amplitude loads each plugin package only when that plugin is enabled.
+  The package now imports cleanly under Node and tsx, so simulation and tooling
+  no longer fail on a browser-only plugin that the flow never uses.
+- 2374f54: Without Session Replay, Experiment or Guides & Surveys settings only
+  Amplitude analytics starts; enabling one still starts all three. Options now
+  reach the SDK (`autocapture: false` was lost before). A missing `apiKey` is a
+  `config` error and a failed init is retried by the next push.
+- 7e5fc27: A silent rule whose identify, group or similar mapping resolves to
+  nothing sends nothing, counts as delivered and writes one DEBUG line naming
+  the call and mapping key, never the value. An identity or group that is
+  already current writes nothing.
+- 7e5fc27: Settings accept SDK options that the schema does not list and pass
+  them through to the SDK, so a newer SDK option no longer fails validation.
+  Amplitude events from a setup with plugins no longer carry the
+  `amplitude-ts-unified` library prefix.
+- 2374f54: A failed vendor call, a missing required setting (`config`) and an
+  event that cannot be sent (`missing-input`) are reported as failed pushes,
+  with the dead-letter queue and one ERROR line, instead of counting as
+  delivered. Rules with `silent: true` send no event. Settings schemas reject
+  unknown keys.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [b1d65e2]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/web-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

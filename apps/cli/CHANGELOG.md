@@ -1,5 +1,15 @@
 # walkeros
 
+## 4.8.2
+
+### Patch Changes
+
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [dbb558d]
+- Updated dependencies [964590a]
+  - @walkeros/cli@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

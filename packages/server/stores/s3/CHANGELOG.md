@@ -1,5 +1,26 @@
 # @walkeros/server-store-s3
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: A read, write or delete that fails (403, 5xx, network) now throws
+  instead of looking like a missing key, and a stored value that cannot be
+  decoded throws too. The collector reports a failed read as a miss with one
+  error line. S3 and Sheets check their bucket or spreadsheet at the first
+  operation instead of at startup.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+  - @walkeros/core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes
