@@ -14,7 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/hubspot" npm="@walkeros/server-destination-hubspot" status="beta" />
 
-Server-side event delivery to [HubSpot](https://www.hubspot.com/) via the official [`@hubspot/api-client`](https://www.npmjs.com/package/@hubspot/api-client) SDK. Sends custom behavioral events, upserts contacts via the CRM API, and supports optional batch mode with graceful shutdown.
+Server-side event delivery to [HubSpot](https://www.hubspot.com/) via the official [`@hubspot/api-client`](https://www.npmjs.com/package/@hubspot/api-client) SDK. Sends custom behavioral events, upserts contacts via the CRM API, and batches events through the collector's `config.batch`.
 
 <WhereThisFits
   pre={<>HubSpot is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -81,7 +81,28 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
-Every event must be associated with a contact via `email` or `objectId`. The `email` path defaults to `user.email`. Events where neither value can be resolved are skipped with a warning.
+Every event must be associated with a contact via `email` or `objectId`. The `email` path defaults to `user.email`. An event where neither value can be resolved fails with the `missing-input` code, and a failed HubSpot call fails the push with HubSpot's HTTP status. A `429` and a `5xx` answer are retryable.
+
+## Batching
+
+Set `config.batch` to send events through HubSpot's batch API instead of one
+request per event. The options are in
+[Batch scheduling](/docs/mapping/rule#batch-scheduling). A flush sends chunks of
+500 events, and each event keeps its own outcome. `settings.batch` and
+`settings.batchSize` no longer exist; a flow that sets them fails `walkeros
+validate`.
+
+<CodeSnippet
+  code={`"config": {
+  "batch": { "size": 100, "wait": 5000 },
+  "settings": { "accessToken": "YOUR_HUBSPOT_ACCESS_TOKEN" }
+}`}
+  language="json"
+/>
+
+A batched event answers `queued` with the reason `batch`. A failed flush is
+reported (one ERROR line, the failed counter, the dead-letter queue), but the
+producer's message is not redelivered.
 
 ## Contact upsert
 

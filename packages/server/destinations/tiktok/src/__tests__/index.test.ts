@@ -2,10 +2,12 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Rules, Settings } from '../types';
 import {
   clone,
+  createEvent,
   createIngest,
-  getEvent,
   createMockContext,
   createMockLogger,
+  getEvent,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -28,7 +30,6 @@ describe('Server Destination TikTok', () => {
 
     // Reset mockSendServer to default successful response
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: JSON.stringify({ code: 0, message: 'OK' }),
     });
 
@@ -58,7 +59,9 @@ describe('Server Destination TikTok', () => {
         logger: createMockLogger(),
         id: 'test-tiktok',
       }),
-    ).rejects.toThrow('Config settings pixelCode missing');
+    ).rejects.toThrow(
+      new StepError('Config settings pixelCode missing', { code: 'config' }),
+    );
   });
 
   test('init - missing accessToken throws', async () => {
@@ -71,7 +74,7 @@ describe('Server Destination TikTok', () => {
         logger: createMockLogger(),
         id: 'test-tiktok',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, pixelCode missing');
   });
 
   test('init - valid settings returns config with defaults', async () => {
@@ -226,7 +229,8 @@ describe('Server Destination TikTok', () => {
   });
 
   test('user data is hashed', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@example.com' },
     });
     const config: Config = {
@@ -274,7 +278,6 @@ describe('Server Destination TikTok', () => {
   test('environment customization', async () => {
     const customSendServer = jest.fn();
     customSendServer.mockResolvedValue({
-      ok: true,
       data: JSON.stringify({ code: 0, message: 'OK' }),
     });
 
@@ -298,10 +301,9 @@ describe('Server Destination TikTok', () => {
   });
 
   test('error response throws', async () => {
-    mockSendServer.mockResolvedValue({
-      ok: false,
-      error: '401',
-    });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 401', { code: 'transport', status: 401 }),
+    );
 
     const event = getEvent();
     const config: Config = {

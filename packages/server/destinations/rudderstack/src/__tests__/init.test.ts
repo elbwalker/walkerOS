@@ -48,7 +48,16 @@ describe('init', () => {
 describe('destroy', () => {
   it('calls flush on the analytics instance', async () => {
     const flush = jest.fn().mockResolvedValue(undefined);
-    const mockAnalytics = { flush } as unknown as RudderStackAnalyticsMock;
+    const sent = () => undefined;
+    const mockAnalytics: RudderStackAnalyticsMock = {
+      track: sent,
+      identify: sent,
+      group: sent,
+      page: sent,
+      screen: sent,
+      alias: sent,
+      flush,
+    };
 
     const config = {
       settings: {

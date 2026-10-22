@@ -1,7 +1,7 @@
 import type { PushBatchFn } from './types';
-import { isObject } from '@walkeros/core';
+import { isObject, StepError } from '@walkeros/core';
 import { eventToRow } from './eventToRow';
-import { ensureWriter } from './writer';
+import { appendError, ensureWriter } from './writer';
 
 /**
  * Batched push using a single appendRows call.
@@ -10,88 +10,86 @@ import { ensureWriter } from './writer';
  * as a BatchOutcome identifying the failed entries by index. The collector then
  * DLQs only those rows and counts the rest as delivered, so a later DLQ retry
  * does not re-write the already-succeeded rows (no duplicates). A whole-append
- * failure (the appendRows call itself rejects, or the writer is missing) still
- * throws, routing the entire batch to the DLQ.
+ * failure (the appendRows call itself rejects, or the writer cannot be opened)
+ * still throws, routing the entire batch to the DLQ. The collector writes the
+ * failure lines; this package writes none of its own.
  */
 export const pushBatch: PushBatchFn = async (batch, { config, logger }) => {
   const settings = config.settings;
-  if (!settings) return logger.throw('settings missing, init() not run');
+  if (!settings)
+    throw new StepError('BigQuery settings missing, init() not run', {
+      code: 'not-ready',
+    });
 
-  if (!settings.writer)
-    return logger.throw('writer is missing, init() not run');
+  // A silent rule has no row of its own. Entry indexes stay those of the
+  // flushed batch, which the collector maps failures back to.
+  const sent = batch.entries.flatMap((entry, index) =>
+    entry.rule?.silent ? [] : [{ entry, index }],
+  );
+  if (sent.length === 0) return;
 
-  // Self-heal a broken writer (one re-open attempt) before failing. On a failed
-  // re-open this throws, routing the WHOLE batch to the DLQ in-band and feeding
-  // the collector's per-destination breaker. Breaker-gated by the collector, so
-  // the re-open runs at most once per admitted batch.
-  if (settings.writerBroken) await ensureWriter(settings, logger);
+  // Open the writer at the first push, or self-heal a broken one (one
+  // re-open attempt) before failing. On a failed open this throws, routing the
+  // WHOLE batch to the DLQ in-band and feeding the collector's
+  // per-destination breaker. Breaker-gated by the collector, so the open runs
+  // at most once per admitted batch.
+  await ensureWriter(settings, logger);
 
   const { writer, datasetId, tableId } = settings;
+  if (!writer)
+    throw new StepError('BigQuery writer is missing', { code: 'not-ready' });
 
-  if (!writer) return logger.throw('writer is missing, init() not run');
-  if (!datasetId) return logger.throw('datasetId is missing');
-  if (!tableId) return logger.throw('tableId is missing');
-
-  const rows = batch.entries.map((e) =>
-    isObject(e.data) ? e.data : eventToRow(e.event),
+  const rows = sent.map(({ entry }) =>
+    isObject(entry.data) ? entry.data : eventToRow(entry.event),
   );
 
-  if (rows.length === 0) return;
+  logger.debug('Calling BigQuery Storage Write API (batch)', {
+    dataset: datasetId,
+    table: tableId,
+    rowCount: rows.length,
+  });
 
+  let result;
   try {
-    logger.debug('Calling BigQuery Storage Write API (batch)', {
-      dataset: datasetId,
-      table: tableId,
-      rowCount: rows.length,
-    });
-    const pending = writer.appendRows(rows);
-    const result = await pending.getResult();
-
-    if (result.rowErrors && result.rowErrors.length > 0) {
-      const failed = result.rowErrors.length;
-      // Operator-visible summary at INFO, each row error at ERROR.
-      logger.info('BigQuery batch had partial failures', {
-        ok: rows.length - failed,
-        failed,
-        rowCount: rows.length,
-      });
-      for (const re of result.rowErrors) {
-        logger.error('BigQuery row append failed', {
-          index: re.index,
-          code: re.code,
-          message: re.message,
-        });
-      }
-      // Report per-row failures so the collector DLQs only the failed rows and
-      // counts the succeeded rows as delivered. `re.index` is the row's
-      // position in `rows`, which is built 1:1 from `batch.entries`, so it maps
-      // directly to the collector's entry index. The per-row error preserves
-      // the original BigQuery `code` and `message` for debugging from the DLQ.
-      // The Storage Write SDK types `index` as a protobuf int64 (number, string,
-      // or Long) and `message` as a nullable string, so both are normalized to
-      // the strict BatchFailure shape here.
-      const failures = result.rowErrors.map((re) => ({
-        index: Number(re.index),
-        error: Object.assign(new Error(re.message ?? 'BigQuery row error'), {
-          code: re.code,
-        }),
-      }));
-
-      return { failed: failures };
-    }
-
-    // Full success: keep at DEBUG to avoid noise on every batch.
-    logger.debug('BigQuery batch append ok', {
-      ok: rows.length,
-      failed: 0,
-      offset: result.appendResult?.offset?.value,
-    });
+    // `appendRows` answers synchronously; an injected writer (tests,
+    // simulation) may answer with a promise, so its answer is awaited.
+    const pending = await writer.appendRows(rows);
+    result = await pending.getResult();
   } catch (err) {
-    // Log the failure and rethrow the raw error so the whole batch routes to the
-    // DLQ. Secret redaction is standardized at the CLI logger handler.
-    logger.error('BigQuery batch append threw', {
-      error: err instanceof Error ? err.message : String(err),
+    // The whole batch routes to the DLQ; the collector reports it once.
+    throw new StepError('BigQuery batch append threw', {
+      code: 'transport',
+      cause: err,
     });
-    throw err;
   }
+
+  // The server answered the append with an error status: no row landed, the
+  // whole batch fails.
+  const failed = appendError(result);
+  if (failed) throw failed;
+
+  if (result.rowErrors && result.rowErrors.length > 0) {
+    // Report per-row failures so the collector DLQs only the failed rows and
+    // counts the succeeded rows as delivered. `re.index` is the row's position
+    // in `rows`, mapped back to the entry's index in the flushed batch. The
+    // Storage Write SDK types `index` as a protobuf int64 (number, string, or
+    // Long), normalized here. A row error's message can quote the row, so the
+    // error names only its code.
+    const failures = result.rowErrors.map((re) => ({
+      index: sent[Number(re.index)]?.index ?? Number(re.index),
+      error: new StepError(`BigQuery row append failed (code ${re.code})`, {
+        code: 'transport',
+        retryable: false,
+      }),
+    }));
+
+    return { failed: failures };
+  }
+
+  // Full success: keep at DEBUG to avoid noise on every batch.
+  logger.debug('BigQuery batch append ok', {
+    ok: rows.length,
+    failed: 0,
+    offset: result.appendResult?.offset?.value,
+  });
 };

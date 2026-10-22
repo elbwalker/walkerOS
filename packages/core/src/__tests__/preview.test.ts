@@ -79,6 +79,10 @@ describe('parseGrant', () => {
   ])('returns null for %s', (_label, raw) => {
     expect(parseGrant(raw)).toBeNull();
   });
+
+  it('rejects a grant whose art escapes the /preview/ path prefix (path traversal)', () => {
+    expect(parseGrant(makeRaw({ ...payload, art: '../../evil' }))).toBeNull();
+  });
 });
 
 describe('verifyActivation', () => {

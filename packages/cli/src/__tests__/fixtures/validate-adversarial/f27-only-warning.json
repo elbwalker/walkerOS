@@ -1,0 +1,25 @@
+{
+  "version": 4,
+  "flows": {
+    "a": {
+      "config": {
+        "platform": "server"
+      },
+      "destinations": {
+        "d": {
+          "code": {
+            "type": "d",
+            "push": "$code:(event) => {}"
+          },
+          "config": {
+            "mapping": {
+              "page.view": {
+                "name": "pv"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

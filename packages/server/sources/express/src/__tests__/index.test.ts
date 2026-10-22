@@ -451,6 +451,7 @@ describe('sourceExpress', () => {
         success: false,
         error: 'Internal server error',
       });
+      expect(JSON.stringify(res.responseBody)).not.toContain('Collector error');
     });
   });
 
@@ -1095,7 +1096,7 @@ describe('sourceExpress', () => {
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
-    it('POST async warns when the push settles ok:false after the ack', async () => {
+    it('POST async traces at DEBUG when the push settles ok:false after the ack', async () => {
       const mockLogger = createMockLogger();
       const okFalsePush = jest.fn().mockResolvedValue({ ok: false });
       const source = await sourceExpress(
@@ -1118,14 +1119,16 @@ describe('sourceExpress', () => {
       await new Promise((resolve) => setImmediate(resolve));
 
       expect(res.statusCode).toBe(200);
-      expect(mockLogger.warn).toHaveBeenCalledWith(
+      // Per event, so DEBUG: the collector's cause line is the visible one.
+      expect(mockLogger.debug).toHaveBeenCalledWith(
         'Event not processed after ack',
         { failed: [] },
       );
+      expect(mockLogger.warn).not.toHaveBeenCalled();
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
-    it('GET async {GET:true} warns when the push settles ok:false after the GIF', async () => {
+    it('GET async {GET:true} traces at DEBUG when the push settles ok:false after the GIF', async () => {
       const mockLogger = createMockLogger();
       const okFalsePush = jest.fn().mockResolvedValue({ ok: false });
       const source = await sourceExpress(
@@ -1146,10 +1149,11 @@ describe('sourceExpress', () => {
       );
       await new Promise((resolve) => setImmediate(resolve));
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect(mockLogger.debug).toHaveBeenCalledWith(
         'Event not processed after ack',
         { failed: [] },
       );
+      expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
     it('POST async stays silent when the push settles ok:true', async () => {

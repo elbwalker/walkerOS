@@ -59,7 +59,12 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('klaviyo server destination -- step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
+  // Non-public examples (silent, failures) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each(published)('%s', async (_name, rawExample) => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;

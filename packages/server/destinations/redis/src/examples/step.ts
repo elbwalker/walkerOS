@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -31,7 +31,7 @@ export const orderComplete: RedisStepExample = {
     'An order complete event is appended to the Redis stream alongside other event types for downstream consumers.',
   in: getEvent('order complete', {
     timestamp: 1700000101,
-    data: { id: 'ORD-400', total: 99.99, currency: 'EUR' },
+    data: { id: 'ORD-400', value: 99.99, currency: 'EUR' },
   }),
   out: [['client.xadd', ['walkeros:events', '*', 'event', 'json:event']]],
 };
@@ -95,7 +95,7 @@ export const streamKeyOverride: RedisStepExample = {
     'A mapping rule routes the event to a dedicated Redis stream instead of the destination default.',
   in: getEvent('order complete', {
     timestamp: 1700000104,
-    data: { id: 'ORD-500', total: 42 },
+    data: { id: 'ORD-500', value: 42 },
   }),
   mapping: {
     settings: {
@@ -110,9 +110,18 @@ export const streamKeyOverride: RedisStepExample = {
  */
 export const ignoredEvent: RedisStepExample = {
   public: false,
-  in: getEvent('debug noise', {
-    timestamp: 1700000105,
-  }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000105 }),
   mapping: { ignore: true },
+  out: [],
+};
+
+/**
+ * Silent rule -- mapping.silent: true appends nothing.
+ */
+export const silentRule: RedisStepExample = {
+  public: false,
+  description: 'A rule with silent: true appends nothing to the stream.',
+  in: getEvent('page view', { timestamp: 1700000106 }),
+  mapping: { silent: true },
   out: [],
 };

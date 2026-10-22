@@ -47,3 +47,22 @@ inbound requests and all provide:
 serving requests. They have no HTTP surface, so none of the request-shaped
 features above apply, and `config.ingest` does not either: there is no request
 to adapt. Retries and dead-lettering stay with the queue.
+
+## Producer acknowledgement
+
+Every server source tells its producer what happened to an event from the push
+result, with one rule:
+
+| Push result | HTTP sources | SQS and Pub/Sub pull | Pub/Sub push |
+|---|---|---|---|
+| Delivered, queued, skipped | 200 | ack | 200 |
+| Failed, a resend could fix it (`retryable`) | 500, or 207 for the failed events of a batch | nack | 500 |
+| Failed, a resend cannot fix it | 200, acknowledged | ack | 200 |
+| Invalid input | 400 | ack, counted as `rejected` | 400 |
+
+A deterministic failure is acknowledged on purpose: resending the message would
+fail the same way and loop. It is visible in the destination's `failed`
+counter, its dead-letter queue and one ERROR line per cause and minute. A
+batched event answers `queued`, so the producer is acknowledged when the event
+is queued; a failed flush is reported but the message is not redelivered. The
+HTTP body never names a destination or quotes a step's error.

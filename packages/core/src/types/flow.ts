@@ -367,6 +367,12 @@ export namespace Flow {
     type?: string;
     /** Optional "$code:..." init function. */
     init?: string;
+    /** Optional "$code:..." batch push function (destinations). */
+    pushBatch?: string;
+    /** Optional "$code:..." event handler (`on('consent')` and others). */
+    on?: string;
+    /** Optional "$code:..." destroy function. */
+    destroy?: string;
   }
 
   /**
@@ -392,7 +398,7 @@ export namespace Flow {
     /**
      * Inline code definition (object form only).
      *
-     * Object: `{push, type?, init?}` for inline code definition.
+     * Object: `{push, type?, init?, pushBatch?, on?, destroy?}` for inline code definition.
      * For named-export selection from a package, use the `import` field with `package`.
      */
     code?: Code;
@@ -487,7 +493,7 @@ export namespace Flow {
     /**
      * Inline code definition (object form only).
      *
-     * Object: `{push, type?, init?}` for inline code definition.
+     * Object: `{push, type?, init?, pushBatch?, on?, destroy?}` for inline code definition.
      * For named-export selection from a package, use the `import` field with `package`.
      */
     code?: Code;
@@ -562,7 +568,7 @@ export namespace Flow {
     /**
      * Inline code definition (object form only).
      *
-     * Object: `{push, type?, init?}` for inline code definition.
+     * Object: `{push, type?, init?, pushBatch?, on?, destroy?}` for inline code definition.
      * For named-export selection from a package, use the `import` field with `package`.
      */
     code?: Code;
@@ -643,7 +649,7 @@ export namespace Flow {
     /**
      * Inline code definition (object form only).
      *
-     * Object: `{push, type?, init?}` for inline code definition.
+     * Object: `{push, type?, init?, pushBatch?, on?, destroy?}` for inline code definition.
      * For named-export selection from a package, use the `import` field with `package`.
      */
     code?: Code;
@@ -780,6 +786,44 @@ export namespace Flow {
   /** The effects a step produces, in execution order. Empty = no observable effect (filtered, passthrough). */
   export type StepOut = readonly StepEffect[];
 
+  /** How a kit boundary answers one request. */
+  export interface StepAnswer {
+    status?: number;
+    body?: unknown;
+    /** The status text, which failure answers use to echo a canary. */
+    statusText?: string;
+    /** A network error, or no answer at all. */
+    error?: 'network' | 'timeout';
+    /** Answer one macrotask late (the floating-send check). */
+    late?: boolean;
+  }
+
+  /** Records one request at the kit boundary; returns its answer and marks it settled. */
+  export type StepRecord = (effect: StepEffect) => {
+    answer: StepAnswer;
+    settle: () => void;
+  };
+
+  /**
+   * The browser page a web step runs on in the conformance kit and the
+   * examples runner. `@walkeros/web-core/dev` implements it as `page`.
+   */
+  export interface StepPage {
+    open(record: StepRecord): StepPageSession;
+  }
+
+  /** One run on the page, from `open` to `close`. */
+  export interface StepPageSession {
+    /** Page globals merged over an examples env's `push` (the document). */
+    globals: Record<string, unknown>;
+    /** Scripts added since `open`, with and without the loadVendor marker. */
+    scripts(): { marked: number; unmarked: number };
+    /** Fire `error` on every marked script (kit item 2, vendor-global). */
+    failScripts(): void;
+    /** Restore the stubs and remove the scripts added since `open`. */
+    close(): void;
+  }
+
   /**
    * Named example pair for a step.
    * `in` is the input to the step, `out` is the expected output.
@@ -816,6 +860,31 @@ export namespace Flow {
      * When absent (default), `in` is pushed as a regular event.
      */
     command?: StepCommand;
+    /**
+     * The reported outcome of a failure or queue example (`public: false`):
+     * the step's status in the push result and its reason code. Absent means
+     * the step must not fail.
+     */
+    outcome?: StepOutcome;
+    /** What the boundary answers for this example (a failure fixture). */
+    respond?: StepRespond;
+  }
+
+  /** How a failure or queue example is reported in the push result. */
+  export interface StepOutcome {
+    status: 'failed' | 'queued';
+    code: string;
+    retryable?: boolean;
+  }
+
+  /**
+   * The boundary's answer to the request an example makes: an HTTP status and
+   * body, or a network error or a timeout instead of a response.
+   */
+  export interface StepRespond {
+    status?: number;
+    body?: unknown;
+    error?: 'network' | 'timeout';
   }
 
   /** Named step examples keyed by scenario name. */

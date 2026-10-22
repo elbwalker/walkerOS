@@ -1,4 +1,5 @@
 import {
+  INTERNAL_SERVER_ERROR,
   normalizeBody,
   requestToData,
   isObject,
@@ -200,9 +201,9 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
           // Forward event directly — validation is not the source's responsibility.
           const result = await processEvent(events[0] ?? {}, envPush, logger);
           if (result.error) {
-            // A thrown push is already error-logged inside processEvent;
-            // this covers settled declines only.
-            logger.warn('Event processing failed', { error: result.error });
+            // A per-request trace, so DEBUG: a decline is reported by the
+            // collector's cause line, a thrown push at ERROR in processEvent.
+            logger.debug('Event processing failed', { error: result.error });
             return createJsonResponse(
               { success: false, error: result.error },
               result.status ?? 500,
@@ -227,11 +228,7 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
       logger.error('Internal server error', error);
       const corsHeaders = createCorsHeaders(settings.cors);
       return createJsonResponse(
-        {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Internal server error',
-        },
+        { success: false, error: INTERNAL_SERVER_ERROR },
         500,
         corsHeaders,
       );
@@ -245,19 +242,9 @@ async function processEvent(
   event: WalkerOS.DeepPartialEvent,
   push: Collector.PushFn,
   logger: Logger.Instance,
-): Promise<{ id?: string; error?: string; status?: number }> {
+): Promise<EventOutcome> {
   try {
-    const result = await push(event);
-    if (result?.ok === false) {
-      if (result.invalid === true) {
-        return { error: result.error ?? 'Invalid event', status: 400 };
-      }
-      return {
-        error: result.error ?? 'Event was not processed',
-        status: 500,
-      };
-    }
-    return { id: result?.event?.id };
+    return pushResultToOutcome(await push(event));
   } catch (error) {
     // A rejected push promise is a server fault: the collector resolves
     // pipeline failures, so a rejection is exceptional by construction.
@@ -266,7 +253,7 @@ async function processEvent(
     // in the error channel.
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Event processing failed', { error: message });
-    return { error: message, status: 500 };
+    return { error: INTERNAL_SERVER_ERROR, status: 500 };
   }
 }
 
@@ -282,14 +269,17 @@ async function processBatch(
 
     try {
       const result = await push(event as WalkerOS.DeepPartialEvent);
-      const outcome = pushResultToOutcome(result ?? {});
-      if (outcome.error) logger.warn(`Batch event ${i} not processed`);
+      const outcome = pushResultToOutcome(result);
+      // Per event, so DEBUG: the collector's cause line reports it.
+      if (outcome.error) logger.debug(`Batch event ${i} not processed`);
       outcomes.push(outcome);
     } catch (error) {
-      outcomes.push({
+      // A rejected push never reached the collector's cause log, so this
+      // ERROR is its only signal; the message is logged, never answered.
+      outcomes.push({ error: INTERNAL_SERVER_ERROR });
+      logger.error(`Batch event ${i} processing failed`, {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      logger.warn(`Batch event ${i} processing failed`, error);
     }
   }
 

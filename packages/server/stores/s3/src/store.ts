@@ -1,5 +1,9 @@
 import { S3mini } from 's3mini';
-import { serializeStoreValue, deserializeStoreValue } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
+import {
+  serializeStoreValue,
+  deserializeStoreValue,
+} from '@walkeros/core/node';
 import type { Store } from '@walkeros/core';
 import type { S3StoreSettings, Types } from './types';
 
@@ -53,36 +57,30 @@ function buildEndpoint(endpoint: string, bucket: string): string {
 function assertSettings(
   settings: Partial<S3StoreSettings> | undefined,
 ): asserts settings is S3StoreSettings {
-  if (
-    !settings ||
-    typeof settings.bucket !== 'string' ||
-    settings.bucket.length === 0
-  ) {
-    throw new Error(
-      'storeS3Init: settings.bucket is required (non-empty string)',
-    );
-  }
-  if (typeof settings.endpoint !== 'string' || settings.endpoint.length === 0) {
-    throw new Error(
-      'storeS3Init: settings.endpoint is required (non-empty string)',
-    );
-  }
-  if (
-    typeof settings.accessKeyId !== 'string' ||
-    settings.accessKeyId.length === 0
-  ) {
-    throw new Error(
-      'storeS3Init: settings.accessKeyId is required (non-empty string)',
-    );
-  }
-  if (
-    typeof settings.secretAccessKey !== 'string' ||
-    settings.secretAccessKey.length === 0
-  ) {
-    throw new Error(
-      'storeS3Init: settings.secretAccessKey is required (non-empty string)',
-    );
-  }
+  // The settings S3 cannot work without, each a non-empty string.
+  const required: Record<string, unknown> = {
+    bucket: settings?.bucket,
+    endpoint: settings?.endpoint,
+    accessKeyId: settings?.accessKeyId,
+    secretAccessKey: settings?.secretAccessKey,
+  };
+  const missing = Object.keys(required).filter((key) => {
+    const value = required[key];
+    return typeof value !== 'string' || value.length === 0;
+  });
+  if (missing.length)
+    throw new StepError(`Config settings ${missing.join(', ')} missing`, {
+      code: 'config',
+    });
+}
+
+/** A failed S3 call as a StepError; the client's own message stays the cause. */
+function storeError(operation: string, err: unknown): StepError {
+  if (err instanceof StepError) return err;
+  return new StepError(`S3 ${operation} failed`, {
+    code: 'transport',
+    cause: err,
+  });
 }
 
 export const storeS3Init: Store.Init<Types> = async (context) => {
@@ -113,19 +111,32 @@ export const storeS3Init: Store.Init<Types> = async (context) => {
     return prefix + key;
   }
 
-  // Hard-fail with an actionable message if the bucket is missing.
-  // Mirrors the BigQuery init-time hard-fail pattern.
-  const exists = await client.bucketExists();
-  if (!exists) {
-    const setupId = context.id ?? 's3';
-    const errorMsg =
-      `S3 bucket not found: ${settings.bucket} at ${settings.endpoint}. ` +
-      `Run "walkeros setup store.${setupId}" to create it.`;
-    context.logger.error(errorMsg, {
-      bucket: settings.bucket,
-      endpoint: settings.endpoint,
-    });
-    throw new Error(errorMsg);
+  // The bucket is checked once, at the first operation, so init stays
+  // offline. A missing bucket fails with an actionable message (S3 answers a
+  // missing object and a missing bucket alike); a failed check is retried.
+  let checked: Promise<void> | undefined;
+  function ensureBucket(): Promise<void> {
+    if (!checked) {
+      const checking = client.bucketExists().then(
+        (exists) => {
+          if (exists) return;
+          const setupId = context.id ?? 's3';
+          throw new StepError(
+            `S3 bucket not found: ${settings.bucket} at ${settings.endpoint}. ` +
+              `Run "walkeros setup store.${setupId}" to create it.`,
+            { code: 'config' },
+          );
+        },
+        (err: unknown) => {
+          throw storeError('bucket check', err);
+        },
+      );
+      checking.catch(() => {
+        if (checked === checking) checked = undefined;
+      });
+      checked = checking;
+    }
+    return checked;
   }
 
   return {
@@ -143,27 +154,29 @@ export const storeS3Init: Store.Init<Types> = async (context) => {
       const s3Key = resolveKey(key);
       if (!s3Key) return undefined;
 
-      let bytes: Buffer;
+      await ensureBucket();
+      let arrayBuffer: ArrayBuffer | null;
       try {
-        const arrayBuffer = await client.getObjectArrayBuffer(s3Key);
-        if (!arrayBuffer) return undefined;
-        bytes = Buffer.from(arrayBuffer);
-      } catch {
-        return undefined;
+        arrayBuffer = await client.getObjectArrayBuffer(s3Key);
+      } catch (err) {
+        throw storeError('read', err);
       }
+      // A missing object is a miss; any other failed read threw above.
+      if (!arrayBuffer) return undefined;
+      const bytes = Buffer.from(arrayBuffer);
       // File mode hands the raw bytes back untouched (Buffer is a Uint8Array,
-      // a valid StoreValue leaf). Structured mode decodes the utf8-JSON payload.
-      // A corrupt or empty payload (e.g. a 0-byte object) degrades to a miss
-      // rather than throwing a raw SyntaxError.
+      // a valid StoreValue leaf). Structured mode decodes the utf8-JSON
+      // payload; a stored value that does not decode (corrupt or empty) is a
+      // failed read, never a miss. The message names no value.
       if (fileMode) return bytes;
       try {
         return deserializeStoreValue(bytes);
       } catch (err) {
-        context.logger.debug('structured decode failed, degrading to miss', {
-          key,
-          error: err instanceof Error ? err.message : String(err),
+        throw new StepError('S3 value could not be decoded', {
+          code: 'decode',
+          retryable: false,
+          cause: err,
         });
-        return undefined;
       }
     },
 
@@ -171,34 +184,43 @@ export const storeS3Init: Store.Init<Types> = async (context) => {
       const s3Key = resolveKey(key);
       if (!s3Key) return;
 
-      if (fileMode) {
-        // Byte-exact passthrough: accept Uint8Array (Buffer included) or string.
-        if (!(value instanceof Uint8Array) && typeof value !== 'string') {
-          throw new Error(
-            'storeS3Init.set: in file mode value must be Uint8Array or string; got ' +
-              typeof value,
-          );
-        }
-        await client.putObject(s3Key, value, mimeFromKey(key));
-        return;
+      // File mode: byte-exact passthrough of Uint8Array (Buffer included)
+      // or string, with a real mime. Structured mode: utf8-JSON bytes.
+      let body: Uint8Array | string;
+      let contentType: string;
+      if (!fileMode) {
+        body = serializeStoreValue(value);
+        contentType = JSON_CONTENT_TYPE;
+      } else if (value instanceof Uint8Array || typeof value === 'string') {
+        body = value;
+        contentType = mimeFromKey(key);
+      } else {
+        throw new StepError(
+          'storeS3Init.set: in file mode value must be Uint8Array or string; got ' +
+            typeof value,
+          { code: 'config' },
+        );
       }
 
-      // Structured mode: serialize to utf8-JSON bytes, stored as JSON.
-      await client.putObject(
-        s3Key,
-        serializeStoreValue(value),
-        JSON_CONTENT_TYPE,
-      );
+      await ensureBucket();
+      try {
+        await client.putObject(s3Key, body, contentType);
+      } catch (err) {
+        throw storeError('write', err);
+      }
     },
 
     async delete(key: string): Promise<void> {
       const s3Key = resolveKey(key);
       if (!s3Key) return;
 
+      // S3 answers a delete of a missing object with success; any other
+      // failure is reported.
+      await ensureBucket();
       try {
         await client.deleteObject(s3Key);
-      } catch {
-        /* S3 delete is idempotent */
+      } catch (err) {
+        throw storeError('delete', err);
       }
     },
   };

@@ -19,7 +19,7 @@ declare const __VERSION__: string;
 // preserves these (stamp-if-absent), keeping the example deterministic.
 const orderEvent = getEvent('order complete', {
   timestamp: 1700001100,
-  data: { id: 'ORD-500', total: 199.99, currency: 'EUR' },
+  data: { id: 'ORD-500', value: 199.99, currency: 'EUR' },
   user: { id: 'usr-789' },
   source: {
     type: 'express',
@@ -162,7 +162,7 @@ export const mappedData: Flow.StepExample = {
     data: {
       map: {
         order_id: 'data.id',
-        revenue: 'data.total',
+        revenue: 'data.value',
         currency: 'data.currency',
       },
     },
@@ -200,4 +200,13 @@ export const pageView: Flow.StepExample = {
     ['topic', 'events', { messageOrdering: false }],
     ['publishMessage', 'events', { data: expectedPayload(pageEvent) }],
   ],
+};
+
+/** A silent rule publishes no message. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true publishes no message.',
+  in: getEvent('page view', { timestamp: 1700000000500 }),
+  mapping: { silent: true },
+  out: [],
 };

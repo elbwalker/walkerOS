@@ -1,5 +1,5 @@
 import type { Simulation } from '.';
-import type { FlowStatePhase, FlowStepType } from './telemetry';
+import type { FlowState, FlowStatePhase, FlowStepType } from './telemetry';
 
 /**
  * Journey types describe the assembled, cross-runtime life of ONE EVENT as
@@ -128,15 +128,9 @@ export interface JourneyBranch {
   /** Wall-clock duration of the branch, when measured. */
   durationMs?: number;
   /** Skip discriminator when the branch was skipped. */
-  skipReason?:
-    | 'consent'
-    | 'cache_hit'
-    | 'sampled_out'
-    | 'disabled'
-    | 'dropped'
-    | 'unknown';
+  skipReason?: FlowState['skipReason'];
   /** Error info when the branch failed. */
-  error?: { name?: string; message: string };
+  error?: FlowState['error'];
   /** Outbound payload of the branch, when captured. */
   out?: unknown;
   /** Vendor calls recorded on the branch's out record, when captured. */
@@ -174,15 +168,9 @@ export interface JourneyHop {
   /** Outbound event/payload for the hop, when captured (trace level). */
   out?: unknown;
   /** Error info when the hop's terminal phase is error. */
-  error?: { name?: string; message: string };
+  error?: FlowState['error'];
   /** Skip discriminator when the hop's terminal phase is skip. */
-  skipReason?:
-    | 'consent'
-    | 'cache_hit'
-    | 'sampled_out'
-    | 'disabled'
-    | 'dropped'
-    | 'unknown';
+  skipReason?: FlowState['skipReason'];
   /** Matched mapping rule, when one matched. */
   mappingKey?: string;
   /** Matched contract rule, when one matched. */

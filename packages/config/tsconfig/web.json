@@ -3,7 +3,7 @@
   "display": "Web",
   "extends": "./base.json",
   "compilerOptions": {
-    "lib": ["dom", "es2018"],
+    "lib": ["dom", "es2020"],
     "target": "es2018"
   }
 }

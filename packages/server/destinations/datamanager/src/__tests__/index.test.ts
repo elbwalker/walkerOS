@@ -276,7 +276,7 @@ describe('Server Destination Data Manager', () => {
     test('sends event to Data Manager API', async () => {
       const event = getEvent('order complete');
       (event.data as Record<string, unknown>).id = 'ORDER-123';
-      (event.data as Record<string, unknown>).total = 99.99;
+      event.data.value = 99.99;
       (event.data as Record<string, unknown>).currency = 'USD';
 
       const config: Config = {
@@ -477,10 +477,13 @@ describe('Server Destination Data Manager', () => {
       expect(requestBody.testEventCode).toBe('TEST12345');
     });
 
-    test('throws error on API failure', async () => {
+    test.each([
+      [400, false],
+      [503, true],
+    ])('API failure %i has retryable %s', async (status, retryable) => {
       mockFetch.mockResolvedValue({
         ok: false,
-        status: 400,
+        status,
         text: async () => 'Invalid request',
       });
 
@@ -496,7 +499,11 @@ describe('Server Destination Data Manager', () => {
             id: 'test-dm',
           }),
         ),
-      ).rejects.toThrow('Data Manager API error (400)');
+      ).rejects.toMatchObject({
+        message: `Data Manager API error (${status})`,
+        status,
+        retryable,
+      });
     });
 
     test('throws error on validation errors', async () => {
@@ -526,8 +533,47 @@ describe('Server Destination Data Manager', () => {
             id: 'test-dm',
           }),
         ),
-      ).rejects.toThrow('Validation errors');
+      ).rejects.toThrow('Data Manager rejected the event');
     });
+
+    test('delivers a 2xx answer without a request id', async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+
+      await expect(
+        destination.push(
+          getEvent('page view'),
+          createMockContext({
+            config: defaultConfig,
+            env: { authClient: mockAuthClient, fetch: mockFetch },
+            logger: mockLogger,
+            id: 'test-dm',
+          }),
+        ),
+      ).resolves.toBeUndefined();
+    });
+
+    test.each([null, 'accepted'])(
+      'throws on an unreadable answer (%p)',
+      async (answer) => {
+        mockFetch.mockResolvedValue({ ok: true, json: async () => answer });
+
+        await expect(
+          destination.push(
+            getEvent('page view'),
+            createMockContext({
+              config: defaultConfig,
+              env: { authClient: mockAuthClient, fetch: mockFetch },
+              logger: mockLogger,
+              id: 'test-dm',
+            }),
+          ),
+        ).rejects.toMatchObject({
+          message: 'Data Manager answered with an unreadable body',
+          code: 'transport',
+          retryable: false,
+        });
+      },
+    );
 
     test('uses custom URL when provided', async () => {
       const event = getEvent('page view');

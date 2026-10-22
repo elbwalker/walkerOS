@@ -8,6 +8,7 @@ import type {
   ActivityTrackingConfiguration,
   BrowserPlugin,
 } from '@snowplow/browser-tracker-core';
+import { StepError } from '@walkeros/core';
 
 /**
  * Create adapter from sp.js command queue (window.snowplow)
@@ -36,6 +37,9 @@ export function createQueueAdapter(
     },
     enableActivityTracking(config: ActivityTrackingConfiguration) {
       snowplow('enableActivityTracking', config);
+    },
+    disableActivityTracking() {
+      snowplow('disableActivityTracking');
     },
     addPlugin(config: { plugin: BrowserPlugin } | [string, [string, string]]) {
       if (Array.isArray(config)) {
@@ -120,6 +124,15 @@ export function createBrowserTrackerAdapter(
       if (functions.enableActivityTracking) {
         functions.enableActivityTracking(config);
       }
+    },
+    disableActivityTracking() {
+      // Page pings keep going without it: the revocation cannot be applied.
+      if (!functions.disableActivityTracking)
+        throw new StepError(
+          'Snowplow tracker.disableActivityTracking is missing, so activity pings continue after a revocation',
+          { code: 'consent-not-applied' },
+        );
+      functions.disableActivityTracking();
     },
     addPlugin(config: { plugin: BrowserPlugin } | [string, [string, string]]) {
       if (functions.addPlugin && !Array.isArray(config)) {

@@ -1,7 +1,52 @@
+import { builtinModules } from 'node:module';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import jest from 'eslint-plugin-jest';
 import globals from 'globals';
 import tsParser from '@typescript-eslint/parser';
+import awaitSend from './rules/await-send.mjs';
+import noSilentReturn from './rules/no-silent-return.mjs';
+
+// The platform boundary, checked by `npm run check:platform`. A web package
+// uses no Node name, a server package no browser name, a neutral package
+// neither. TypeScript cannot hold the line alone: @types/node declares
+// localStorage and navigator, and @types/jsdom brings the DOM into any program
+// that loads it.
+export const browserGlobals = [
+  'window',
+  'self',
+  'document',
+  'location',
+  'history',
+  'localStorage',
+  'sessionStorage',
+  'navigator',
+  'XMLHttpRequest',
+];
+export const nodeGlobals = [
+  'Buffer',
+  'process',
+  'require',
+  'module',
+  '__dirname',
+  '__filename',
+  'global',
+  'setImmediate',
+  'clearImmediate',
+];
+export const nodeBuiltins = [...builtinModules];
+
+// Tests run in Node under jest, so the platform bans on globals and imports
+// skip them.
+export const testFiles = ['**/__tests__/**', '**/*.test.{js,ts,tsx}'];
+
+// walkerOS rules for the delivery contract. At `warn` while the step packages
+// migrate onto it; `error` once every package is migrated.
+const walkeros = {
+  rules: {
+    'await-send': awaitSend,
+    'no-silent-return': noSilentReturn,
+  },
+};
 
 export default [
   {
@@ -18,6 +63,7 @@ export default [
     plugins: {
       '@typescript-eslint': typescriptEslint,
       jest,
+      walkeros,
     },
     languageOptions: {
       parser: tsParser,
@@ -30,11 +76,12 @@ export default [
       'jest/no-disabled-tests': 'warn',
       'jest/no-focused-tests': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
+      'walkeros/await-send': 'error',
       'no-restricted-syntax': [
         'error',
         {
           selector:
-            "ExportAllDeclaration[source.value=/(^|\\/)(examples|schemas)$/]",
+            'ExportAllDeclaration[source.value=/(^|\\/)(examples|schemas)$/]',
           message:
             'Examples and schemas must be exported only from src/dev.ts (the ./dev subpath); a production-entry export leaks them into bundled output.',
         },
@@ -50,11 +97,18 @@ export default [
     rules: { 'no-restricted-syntax': 'off' },
   },
   {
+    // A destination's push and pushBatch never end with a bare return.
+    files: ['**/destinations/**/*.{js,ts,tsx}'],
+    rules: { 'walkeros/no-silent-return': 'error' },
+  },
+  {
     // Relaxed rules for test files
     files: ['**/*.test.{js,ts,tsx}', '**/__tests__/**/*.{js,ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       'no-console': 'off',
+      'walkeros/await-send': 'off',
+      'walkeros/no-silent-return': 'off',
     },
   },
 ];

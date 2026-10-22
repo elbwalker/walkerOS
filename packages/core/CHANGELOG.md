@@ -1,5 +1,53 @@
 # @walkeros/core
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: `logger.throw` only throws and no longer writes a log line; the
+  collector writes the one failure line. A rule `condition` that throws fails
+  the event instead of falling through. A mapping value without an operator is
+  dropped and reported. The wildcard lookup tries exact, `entity *`, `* action`,
+  then `* *`, and falls through a tier whose conditions all fail.
+- 7e5fc27: A JSON log line above 32 KiB now truncates its message as well as its
+  context and sets `messageTruncated: true`, so one oversized line can no longer
+  break a log pipeline. Mapping problems report under the step `mapping.<rule>`,
+  one line per rule.
+- 2374f54: `logger.format: 'json'` prints one JSON object per line on server
+  flows, with `severity`, `message`, `time`, `scope` and `context`; errors and
+  warnings go to stderr. Web flows reject it. A log handler receives the cause
+  code, status, retryable flag and suppressed count as structured fields, so
+  lines can be forwarded without parsing.
+- 964590a: Tag Mode's `moin` and the preview activator `browserSwapActivator`
+  (with `SwapActivatorConfig` and `SESSION_STORAGE_KEY`) moved to
+  `@walkeros/web-core`, and `isElementOrDocument` is removed.
+  `serializeStoreValue`, `deserializeStoreValue` and `StoreCodecError` moved to
+  `@walkeros/core/node`. `getFlowSettings` reads `$env` only from the `env` you
+  pass it, never from `process.env`. Errors keep `cause` in every browser.
+- 4100ede: `getEvent` returns the same event on every run: a fixed timestamp and
+  an id derived from the event name. It accepts only standard event names, so a
+  typo no longer compiles; `createEvent` builds any other event and uses the
+  same fixed default timestamp. `order complete` carries the order amount as
+  `data.value` instead of `data.total`, and the package examples read
+  `data.value`.
+- 2374f54: New `StepError` carries a code, an HTTP status and `retryable`;
+  `acknowledge(result)` tells a producer to ack, retry or reject a message, and
+  `reportCause` writes one failure line per cause. `SendResponse` is `{ data }`.
+  An `init` of a destination, transformer or store can no longer return `false`:
+  throw a `StepError`, and untyped `false` fails with `not-ready`.
+- 2374f54: Flow validation now rejects unknown keys in step `config`,
+  destination and store entries, the `collector` block, inline `code` and
+  contract rules, mapping keys with no effect at their position, values without
+  an operator or with two producers, and malformed whole-value references.
+  Inline code may define `pushBatch`, `on` and `destroy`. Strict `$flow` treats
+  an empty value as unresolved.
+- 15eb7b2: The error for an empty `$flow` reference names only the setting to
+  fill in; it no longer suggests a `walkeros deploy` command.
+- 33a2779: `$flow` references now accept flow names with a hyphen, such as
+  `$flow.tracking-server.url`.
+- 33a2779: Tag Mode's loader now hears the app's call on sites that block
+  messages from origins they do not know.
+
 ## 4.8.1
 
 ### Patch Changes

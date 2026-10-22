@@ -10,15 +10,37 @@ import type {
 import { Level } from './types/logger';
 
 /**
- * Normalize an Error object into ErrorContext
+ * An error's `cause` reduced to its name and code: a cause can carry a
+ * request, a response body or settings, none of which belong in a log line.
+ */
+function normalizeCause(
+  cause: unknown,
+): { name?: string; code?: string | number } | undefined {
+  if (typeof cause !== 'object' || cause === null) return undefined;
+  const reduced: { name?: string; code?: string | number } = {};
+  if ('name' in cause && typeof cause.name === 'string')
+    reduced.name = cause.name;
+  if (
+    'code' in cause &&
+    (typeof cause.code === 'string' || typeof cause.code === 'number')
+  )
+    reduced.code = cause.code;
+  return reduced;
+}
+
+/**
+ * Normalize an Error object into ErrorContext. Never copies a response body
+ * (`StepError.body`) and keeps only the cause's name and code.
  */
 function normalizeError(err: Error): ErrorContext {
-  return {
+  const context: ErrorContext = {
     message: err.message,
     name: err.name,
     stack: err.stack,
-    cause: (err as Error & { cause?: unknown }).cause,
   };
+  const cause = 'cause' in err ? normalizeCause(err.cause) : undefined;
+  if (cause) context.cause = cause;
+  return context;
 }
 
 /**
@@ -173,31 +195,11 @@ function createLoggerInternal(config: InternalConfig): Instance {
   };
 
   /**
-   * Log and throw - combines logging and throwing
+   * Throw only: the collector's catch writes the one line for the failure,
+   * so logging here as well would print every failure twice.
    */
-  const logAndThrow = (message: string | Error, context?: unknown): never => {
-    // Always log errors regardless of level
-    const normalized = normalizeParams(message, context);
-
-    if (handler) {
-      handler(
-        Level.ERROR,
-        normalized.message,
-        normalized.context,
-        scope,
-        defaultHandler,
-      );
-    } else {
-      defaultHandler(
-        Level.ERROR,
-        normalized.message,
-        normalized.context,
-        scope,
-      );
-    }
-
-    // Throw with the message
-    throw new Error(normalized.message);
+  const throwOnly = (message: string | Error, context?: unknown): never => {
+    throw new Error(normalizeParams(message, context).message);
   };
 
   return {
@@ -205,7 +207,7 @@ function createLoggerInternal(config: InternalConfig): Instance {
     warn: (message, context) => log(Level.WARN, message, context),
     info: (message, context) => log(Level.INFO, message, context),
     debug: (message, context) => log(Level.DEBUG, message, context),
-    throw: logAndThrow,
+    throw: throwOnly,
     json: (data: unknown) => {
       if (jsonHandler) {
         jsonHandler(data);

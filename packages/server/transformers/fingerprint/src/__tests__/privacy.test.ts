@@ -181,17 +181,28 @@ describe('Privacy defaults', () => {
   });
 
   it.each([
-    ['missing', undefined],
-    ['empty', ''],
-  ])('warns once when the salt is %s and still hashes', async (_, value) => {
-    const transformer = await init({ salt: value });
+    ['missing', {}],
+    ['empty', { salt: '' }],
+  ])('does not start when the salt is %s', (_, settings) => {
+    expect(() =>
+      transformerFingerprint(
+        createMockContext<FpTypes>({ config: { settings }, logger, id: 'fp' }),
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        code: 'config',
+        message: 'Config settings salt missing',
+      }),
+    );
+  });
 
-    await hash(transformer);
-    const result = await hash(transformer);
+  it('fails with missing-input when neither ip nor user agent resolves', async () => {
+    const transformer = await init({ salt });
 
-    expect(result).toMatch(/^[a-f0-9]{64}$/);
-    expect(logger.warn).toHaveBeenCalledTimes(1);
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('salt'));
+    await expect(push(transformer, {})).rejects.toMatchObject({
+      code: 'missing-input',
+    });
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -126,7 +126,8 @@ describe('fetch envelope contract', () => {
       success: false,
       processed: 1,
       failed: 1,
-      errors: [{ index: 1, error: 'nope' }],
+      // A retryable failure answers a fixed text; its own lives in the log.
+      errors: [{ index: 1, error: 'Event was not processed' }],
     });
   });
 

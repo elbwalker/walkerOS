@@ -150,8 +150,10 @@ export const BundleSchema = z
  * @remarks
  * Object-only inline code block. Enables custom sources, transformers,
  * destinations, and stores without npm packages. The `push` function is
- * required; `type` and `init` are optional. To select a named export from
- * a package, use the step's `import` field instead.
+ * required; `type` and the other step functions (`STEP_FUNCTION_KEYS`:
+ * `init`, `pushBatch`, `on`, `destroy`) are optional. Closed: any other key
+ * is an error, because the bundler emits only these. To select a named
+ * export from a package, use the step's `import` field instead.
  *
  * @example
  * ```json
@@ -181,7 +183,26 @@ export const CodeSchema = z
       .describe(
         'Optional initialization function. Use $code: prefix for inline JavaScript.',
       ),
+    pushBatch: z
+      .string()
+      .optional()
+      .describe(
+        'Optional batch push function (destinations with config.batch). Use $code: prefix for inline JavaScript.',
+      ),
+    on: z
+      .string()
+      .optional()
+      .describe(
+        'Optional event handler, called with the event type and context (consent, ready, run). Use $code: prefix for inline JavaScript.',
+      ),
+    destroy: z
+      .string()
+      .optional()
+      .describe(
+        'Optional destroy function, called at shutdown. Use $code: prefix for inline JavaScript.',
+      ),
   })
+  .strict()
   .meta({
     id: 'FlowCode',
     title: 'Flow.Code',
@@ -240,6 +261,27 @@ export const StepExampleSchema = z
       .describe(
         "Invoke elb('walker <command>', in) instead of pushing in as an event",
       ),
+    outcome: z
+      .object({
+        status: z.enum(['failed', 'queued']).describe('Status in the result'),
+        code: z.string().describe('Reason code, e.g. transport or config'),
+        retryable: z.boolean().optional().describe('Whether a retry can help'),
+      })
+      .optional()
+      .describe(
+        'Reported outcome of a failure or queue example (public: false)',
+      ),
+    respond: z
+      .object({
+        status: z.number().optional().describe('HTTP status to answer'),
+        body: z.unknown().optional().describe('Response body to answer'),
+        error: z
+          .enum(['network', 'timeout'])
+          .optional()
+          .describe('A network error or a timeout instead of a response'),
+      })
+      .optional()
+      .describe('What the boundary answers for this example'),
   })
   .meta({
     id: 'FlowStepExample',
@@ -704,6 +746,10 @@ export const ContractRuleSchema = z
     events: ValidateEventsSchema.optional(),
     schema: JsonSchemaSchema.optional(),
   })
+  // Closed (`CONTRACT_RULE_KEYS`): a section such as `globals` or `consent`
+  // would be accepted and never enforced, so it is an error; a rule on the
+  // whole event goes into `schema`.
+  .strict()
   .meta({
     id: 'ContractRule',
     title: 'Flow.ContractRule',

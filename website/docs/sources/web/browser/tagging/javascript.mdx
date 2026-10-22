@@ -27,7 +27,7 @@ Pass `elb` a [partial event](/docs/getting-started/event-model#push-an-event):
 // With context, the trigger and a nested entity
 elb({
   name: 'order complete',
-  data: { id: 'O123', total: 99.99 },
+  data: { id: 'O123', value: 99.99 },
   context: { test: ['checkout_v2', 0] },
   trigger: 'submit',
   nested: [{ entity: 'product', data: { id: 'P123', quantity: 1 } }],

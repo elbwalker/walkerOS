@@ -4,6 +4,8 @@ import type {
   WalkerOS,
   Elb,
   Destination,
+  FailureReason,
+  QueuedReason,
   Transformer,
   Ingest,
   RespondFn,
@@ -21,16 +23,40 @@ import {
   emitStep,
   getId,
   getGrantedConsent,
+  getMappingKeyPaths,
+  getMappingNoOpMessage,
+  getMappingNoOpPaths,
   isDefined,
   isFunction,
   isObject,
   OBSERVE_ENV_KEY,
   processEventMapping,
+  reportCause,
+  StepError,
   stepId,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
-import { journeyFields, stepError, stepState } from './observerEmit';
+import {
+  emitDestinationState,
+  journeyFields,
+  observerStepError,
+  stepState,
+} from './observerEmit';
+import {
+  initReturnedFalse,
+  isTransportFailure,
+  recordFailure,
+  recordSkip,
+  returnedFalse,
+} from './outcome';
+import {
+  BATCH_WAIT,
+  CONSENT_WAIT,
+  HELD_WAIT,
+  breakerState,
+  heldState,
+} from './destination-outcome-state';
 import { compileStepState, runStepState, warnStateOff } from './state';
 import { wrapEnv } from './wrapEnv';
 import { attachCalls } from './sanitizeArgs';
@@ -48,31 +74,28 @@ import {
 } from './on';
 import type { DestinationDelivery } from './on';
 import { resolveDestinationTimeout, withTimeout } from './timeout';
-import { runTransformerChain, extractChainProperty } from './transformer';
+import {
+  checkChainTargets,
+  runTransformerChain,
+  extractChainProperty,
+} from './transformer';
 import { getCacheStore } from './cache';
 import {
+  DEFAULT_QUEUE_MAX,
+  logOverflowOnce,
   pushBounded,
   resetOverflowFlag,
   seededQueueMax,
-  warnOverflowOnce,
 } from './buffers';
 import {
-  DEFAULT_DLQ_MAX,
   bumpDropped,
   ensureDestStatus,
   buildReportError,
-  errorMeta,
 } from './report-error';
 import { reconcilePending } from './pending';
 import { runCollectorNext } from './collector-next';
-import {
-  isBreakerOpen,
-  recordStepOutcome,
-  releaseProbe,
-  resolveBreakerConfig,
-} from './breaker';
+import { recordBreaker, releaseBreakerProbe } from './breaker';
 
-const DEFAULT_QUEUE_MAX = 1_000;
 /** Default upper-bound on entries per batch. Caps unbounded growth under sustained load. */
 const DEFAULT_BATCH_SIZE = 1_000;
 /** Default upper-bound on batch age in ms. Forces flush even if debounce keeps resetting. */
@@ -90,6 +113,17 @@ const BATCHED_RESULT: { batched: true } = Object.freeze({ batched: true });
 
 function isBatchedResult(value: unknown): boolean {
   return value === BATCHED_RESULT;
+}
+
+/**
+ * Sentinel returned by {@link destinationPush} when a mapping rule with
+ * `ignore: true` matched: the event was deliberately not sent (a skip, never
+ * `done`).
+ */
+const IGNORED_RESULT: { ignored: true } = Object.freeze({ ignored: true });
+
+function isIgnoredResult(value: unknown): boolean {
+  return value === IGNORED_RESULT;
 }
 
 /**
@@ -205,13 +239,14 @@ export async function addDestination(
     config,
     env: mergeEnvironments(code.env, env),
   };
+  checkDestinationRegistration(collector, id, destination, true);
 
   // Add the destination
   collector.destinations[id] = destination;
 
   // Process previous events if not disabled
   if (destination.config.queue !== false)
-    destination.queuePush = [...collector.queue];
+    destination.queuePush = collector.queue.map((event) => ({ event }));
 
   // A runtime destination catches up on state recorded before it existed, the
   // same way a pending destination does on activation, so its on() runs
@@ -264,41 +299,69 @@ export async function settleDestinationDeliveries(
 }
 
 /**
- * Fold the results of per-destination drains into a flush result, so a
- * command reports every destination its events reached. A destination queued
- * in the flush and done or failed after its drain is reported by its latest
- * outcome.
+ * Fold push results into one, worst first: `ok` only if every result is ok,
+ * a destination failed in any of them is failed, otherwise a destination's
+ * latest outcome wins (a destination queued in a flush and done after its
+ * drain is done). A `reason` and an `error` from any result survive. The one
+ * merge for a command's drains and for every fan-out (source `before`,
+ * source `next`, `collector.next`).
  */
 export function mergePushResults(
   base: Elb.PushResult,
-  drains: Elb.PushResult[],
+  others: Elb.PushResult[],
 ): Elb.PushResult {
-  if (!drains.length) return base;
+  if (!others.length) return base;
   const done = { ...(base.done ?? {}) };
   const queued = { ...(base.queued ?? {}) };
   const failed = { ...(base.failed ?? {}) };
-  for (const drain of drains) {
-    for (const [id, ref] of Object.entries(drain.done ?? {})) {
+  let reason = base.reason;
+  let error = base.error;
+  for (const other of others) {
+    for (const [id, ref] of Object.entries(other.done ?? {})) {
+      if (failed[id]) continue;
       done[id] = ref;
       delete queued[id];
     }
-    for (const [id, ref] of Object.entries(drain.failed ?? {})) {
+    for (const [id, ref] of Object.entries(other.failed ?? {})) {
       failed[id] = ref;
+      delete done[id];
       delete queued[id];
     }
-    Object.assign(queued, drain.queued ?? {});
+    for (const [id, ref] of Object.entries(other.queued ?? {})) {
+      if (!failed[id]) queued[id] = ref;
+    }
+    reason = reason ?? other.reason;
+    error = error ?? other.error;
   }
   const merged: Elb.PushResult = {
     ...base,
-    ok: base.ok && drains.every((drain) => drain.ok),
+    ok: base.ok && others.every((other) => other.ok),
   };
   delete merged.done;
   delete merged.queued;
   delete merged.failed;
+  delete merged.reason;
+  delete merged.error;
   if (Object.keys(done).length) merged.done = done;
   if (Object.keys(queued).length) merged.queued = queued;
   if (Object.keys(failed).length) merged.failed = failed;
+  if (reason) merged.reason = reason;
+  if (error !== undefined) merged.error = error;
   return merged;
+}
+
+/**
+ * The push result of a chain whose transformer failed: `ok: false`, the
+ * reason, and an error naming the transformer.
+ */
+export function chainFailureResult(
+  failure: Transformer.ChainFailure,
+): Elb.PushResult {
+  return createPushResult({
+    ok: false,
+    reason: failure.reason,
+    error: `Transformer "${failure.by}" failed: ${failure.reason.message}`,
+  });
 }
 
 /**
@@ -332,14 +395,18 @@ export async function pushToDestinations(
     return deliverToDestinations(collector, undefined, meta, destinations);
 
   const next = await runCollectorNext(collector, event, meta);
+  const failure = next.failure ? chainFailureResult(next.failure) : undefined;
   if (next.copies.length === 0)
-    return createPushResult({
-      ok: true,
-      ...(next.dropped ? { dropped: true } : {}),
-    });
+    return (
+      failure ??
+      createPushResult({
+        ok: true,
+        ...(next.dropped ? { dropped: true } : {}),
+      })
+    );
 
-  // Each copy is delivered in order, as its own event with its own ingest.
-  // The first delivery's result is reported, as for a source-level fan-out.
+  // Each copy is delivered in order, as its own event with its own ingest,
+  // and every copy's outcome is reported (merged worst first).
   const results: Elb.PushResult[] = [];
   for (const copy of next.copies) {
     results.push(
@@ -351,13 +418,146 @@ export async function pushToDestinations(
       ),
     );
   }
-  return results[0];
+  const [first, ...rest] = results;
+  return mergePushResults(first, failure ? [...rest, failure] : rest);
+}
+
+/** What became of one event of a delivery pass at one destination. */
+type EntryOutcome =
+  | { kind: 'delivered'; response?: unknown }
+  | { kind: 'batched' }
+  | { kind: 'failed'; reason: FailureReason; error: unknown }
+  | { kind: 'queued'; reason: QueuedReason }
+  | { kind: 'skipped' };
+
+/**
+ * Pushes that queued behind a running init wait here for their own events'
+ * outcome; the pass that runs the init (or the next pass to take the
+ * events) settles them, so each push answers what became of its own events.
+ */
+const waiting = new WeakMap<
+  Destination.Queued,
+  (outcome: EntryOutcome) => void
+>();
+
+/** Settle the pushes waiting for these entries, if any. */
+function settle(entries: Destination.Queued[], outcome: EntryOutcome): void {
+  for (const entry of entries) {
+    const resolve = waiting.get(entry);
+    if (!resolve) continue;
+    waiting.delete(entry);
+    resolve(outcome);
+  }
+}
+
+/**
+ * After a pass: the entries still waiting in a destination's queue (held
+ * after its init, or waiting for consent) answer as waiting. Not while an
+ * init of the destination runs: its pass settles them.
+ */
+function settleWaiting(destination: Destination.Instance): void {
+  if (initsRunning.has(destination) || initCallers.has(destination)) return;
+  settleQueued(destination.queuePush || []);
+}
+
+/**
+ * Passes awaiting `destinationInit`, per destination. `destinationInit`
+ * drops its running mark one turn before its caller resumes and takes the
+ * entries queued behind the init; this mark lasts until the caller resumes
+ * (released in the caller's own `finally`, which runs in that resumption,
+ * before the synchronous take), so no other pass answers those entries
+ * early in between.
+ */
+const initCallers = new WeakMap<Destination.Instance, number>();
+
+function beginInitCall(destination: Destination.Instance): void {
+  initCallers.set(destination, (initCallers.get(destination) ?? 0) + 1);
+}
+
+function endInitCall(destination: Destination.Instance): void {
+  const count = (initCallers.get(destination) ?? 1) - 1;
+  if (count > 0) initCallers.set(destination, count);
+  else initCallers.delete(destination);
+}
+
+/** The pushes waiting for these queue entries answer that they wait. */
+function settleQueued(entries: Destination.Queued[]): void {
+  for (const entry of entries)
+    settle([entry], {
+      kind: 'queued',
+      reason: entry.reason === 'consent' ? CONSENT_WAIT : HELD_WAIT,
+    });
+}
+
+/**
+ * Empty a destination's queue (a new run): the pushes still waiting for
+ * one of its entries answer that it was waiting.
+ */
+export function clearQueuePush(destination: Destination.Instance): void {
+  settleQueued(destination.queuePush || []);
+  destination.queuePush = [];
+}
+
+/** What one destination did with one delivery pass. */
+interface DestinationOutcome {
+  id: string;
+  destination: Destination.Instance;
+  /** Nothing to report for this destination (disabled, nothing to send). */
+  skipped?: true;
+  /** Why its events wait. */
+  queued?: QueuedReason;
+  /** Why it failed; the failure is recorded already. */
+  failed?: FailureReason;
+  error?: unknown;
+  response?: unknown;
+  totalDuration?: number;
+  /** Events delivered synchronously. */
+  delivered?: number;
+  /** Events that entered a batch window. */
+  batched?: number;
+}
+
+/** A pass's outcome from its events' outcomes (failed, then delivered, then waiting). */
+function passOutcome(
+  id: string,
+  destination: Destination.Instance,
+  outcomes: EntryOutcome[],
+  totalDuration = 0,
+): DestinationOutcome {
+  let failed: { reason: FailureReason; error: unknown } | undefined;
+  let queued: QueuedReason | undefined;
+  let delivered = 0;
+  let batched = 0;
+  let response: unknown;
+  for (const outcome of outcomes) {
+    if (outcome.kind === 'failed') failed = failed ?? outcome;
+    else if (outcome.kind === 'delivered') {
+      delivered++;
+      if (outcome.response !== undefined) response = outcome.response;
+    } else if (outcome.kind === 'batched') batched++;
+    else if (outcome.kind === 'queued') queued = queued ?? outcome.reason;
+  }
+  return {
+    id,
+    destination,
+    totalDuration,
+    delivered,
+    batched,
+    response,
+    ...(failed ? { failed: failed.reason, error: failed.error } : {}),
+    ...(queued ? { queued } : {}),
+  };
 }
 
 /**
  * Delivers one event (or, without one, the queued events only) to all or a
  * subset of destinations. Module-private: every caller goes through
  * `pushToDestinations`, so `collector.next` runs exactly once per event.
+ *
+ * Per destination and pass, one state (O3): ready (`done`), waiting
+ * (`queued` with reason `consent`, `batch` or `held`), blocked (`failed`
+ * with a reason, through the one outcome sink). Consent is decided first:
+ * a consent-denied event never reaches a failure path.
  */
 async function deliverToDestinations(
   collector: Collector.Instance,
@@ -371,7 +571,9 @@ async function deliverToDestinations(
 ): Promise<Elb.PushResult> {
   const { user } = collector;
 
-  // Add event to the collector queue (bounded; FIFO drop-oldest on overflow)
+  // Add event to the collector queue (bounded; FIFO drop-oldest on overflow).
+  // The replay buffer only feeds destinations added later, so an eviction
+  // loses nothing for a present destination: INFO.
   if (event) {
     const queueMax = seededQueueMax(collector.config.queueMax);
     const result = pushBounded(collector.queue, event, { max: queueMax });
@@ -382,9 +584,10 @@ async function deliverToDestinations(
         'queue',
         result.dropped,
       );
-      warnOverflowOnce(
+      logOverflowOnce(
         collector.queue,
         collector.logger,
+        'info',
         'collector.queue overflow; oldest events dropped',
         {
           buffer: 'queue',
@@ -405,680 +608,842 @@ async function deliverToDestinations(
   // unset; routes then resolve against an empty set.
   const transformers: Transformer.Transformers = collector.transformers || {};
 
-  const results = await Promise.all(
-    // Process all destinations in parallel
-    Object.entries(destinations || {}).map(async ([id, destination]) => {
-      // Disabled destinations are completely skipped — no queuing, no init, no processing
-      if (destination.config.disabled) {
-        return { id, destination, skipped: true };
-      }
-
-      // Canonical id: the breaker gate, the failure/success accounting, and any
-      // aggregation MUST all key on the SAME id. A destination whose runtime
-      // `config.id` differs from its map key would otherwise touch two
-      // different breaker entries (gate vs accounting), so failures never
-      // accumulate against the entry the gate inspects and the breaker never
-      // opens. Resolve once here and thread it through the result.
-      const canonicalId = destination.config.id || id;
-      const breakerKey = stepId('destination', canonicalId);
-      const breakerConfig = resolveBreakerConfig(destination.config.breaker);
-
-      // Circuit-breaker gate (same precedence as `config.disabled`): when the
-      // breaker is open, skip the event (counted as skipped, never pushed).
-      // Presence-gated: inert unless `config.breaker` is set.
-      if (
-        breakerConfig &&
-        isBreakerOpen(
-          collector.status.breakers,
-          breakerKey,
-          breakerConfig.cooldown,
-        )
-      ) {
-        return { id, destination, skipped: true };
-      }
-
-      // Probe-settle helpers. When the gate above admitted a half-open probe,
-      // EVERY post-gate path must settle it: either record an outcome (the
-      // event reached the transport) or release the probe (it never did).
-      // Otherwise `probing` stays true and the breaker deadlocks half-open.
-      // Both are presence-gated and internally no-op unless half-open+probing.
-      const recordProbe = (outcome: 'transport-failure' | 'success') => {
-        if (breakerConfig) {
-          recordStepOutcome(
-            collector.status.breakers,
-            breakerKey,
-            outcome,
-            breakerConfig.threshold,
-            breakerConfig.cooldown,
-          );
-        }
-      };
-      const releaseProbeSlot = () => {
-        if (breakerConfig) releaseProbe(collector.status.breakers, breakerKey);
-      };
-
-      // Return events to this destination's own queue. Bounded; FIFO
-      // drop-oldest on overflow.
-      const requeue = (events: WalkerOS.Events) => {
-        if (!events.length) return;
-        if (!destination.queuePush) destination.queuePush = [];
-        const queuePush = destination.queuePush;
-        const destId = destination.config.id || id;
-        const bound = {
-          max: destination.config.queueMax ?? DEFAULT_QUEUE_MAX,
-        };
-        let totalDropped = 0;
-        for (const queued of events) {
-          const r = pushBounded(queuePush, queued, bound);
-          totalDropped += r.dropped;
-        }
-        if (totalDropped > 0) {
-          // Ensure status entry exists for early-overflow paths.
-          ensureDestStatus(collector, destId);
-          const droppedCount = bumpDropped(
-            collector.status,
-            stepId('destination', destId),
-            'queue',
-            totalDropped,
-          );
-          warnOverflowOnce(
-            queuePush,
-            collector.logger.scope(destination.type || 'unknown'),
-            'destination.queuePush overflow; oldest events dropped',
-            {
-              buffer: 'queuePush',
-              destination: destId,
-              cap: bound.max,
-              droppedCount,
-            },
-          );
-        } else if (queuePush.length < bound.max) {
-          resetOverflowFlag(queuePush);
-        }
-      };
-
-      // A held destination retries its owed state before its push, so a
-      // handler that failed once and would settle now recovers without waiting
-      // for another state command. Rate-limited by the hold's own age to one
-      // attempt per timeout window, and never while a state delivery to it is
-      // running: a permanently hung handler costs one bounded wait per window,
-      // never one per event. The retry is inside this destination's own
-      // closure, so siblings are untouched.
-      // An initialized destination that is not held but owes state (a cell
-      // merged at `walker run` before the run's re-delivery reached it)
-      // receives that state before this push, the same way a held one
-      // retries, but without waiting for a window.
-      if (
-        destination.on &&
-        destination.config.init &&
-        !getStateHold(destination) &&
-        !isStateDeliveryInFlight(destination) &&
-        owesDestinationState(collector, destination)
-      )
-        await catchUpDestinationState(collector, destination, id);
-
-      const hold = getStateHold(destination);
-      if (
-        hold &&
-        !isStateDeliveryInFlight(destination) &&
-        Date.now() - hold.since >=
-          resolveDestinationTimeout(destination.config.timeout)
-      )
-        await catchUpDestinationState(collector, destination, id);
-
-      // State hold: a state delivery to this destination is running or did
-      // not settle. Its events stay in its own queue, nothing is delivered,
-      // and the queue is not drained. Held, not dropped.
-      if (getStateHold(destination)) {
-        releaseProbeSlot(); // probe admitted but the destination is held
-        if (!event) return { id, destination, skipped: true };
-        const held = [clone(event)];
-        requeue(held);
-        return { id, destination, queue: held };
-      }
-
-      // Queued events: refresh consent (full replace — stale consent must not persist).
-      // User merge happens for all events below in allowedEvents.map.
-      let currentQueue = (destination.queuePush || []).map((event) => ({
-        ...event,
-        consent: collector.consent,
-      }));
-      destination.queuePush = [];
-
-      // Current event: added as-is (consent is already fresh from createEvent).
-      if (event) currentQueue.push(clone(event));
-
-      // Clone ingest for this destination (prevents cross-destination races in Promise.all)
-      const destIngest: Ingest = meta.ingest
-        ? {
-            ...meta.ingest,
-            _meta: { ...meta.ingest._meta, path: [...meta.ingest._meta.path] },
-          }
-        : createIngest('unknown');
-
-      // If no events and no queued on events, skip this destination
-      if (!currentQueue.length && !destination.queueOn?.length) {
-        releaseProbeSlot(); // probe admitted but no event to push
-        return { id, destination, skipped: true };
-      }
-
-      // If only on events queued (no push events), still init to flush queueOn.
-      // Direct try/catch + logger.error here is intentional. Previously this
-      // used tryCatchAsync(destinationInit) without an onError callback, which
-      // silently returned undefined when init threw, hiding real failures on
-      // the queueOn-only path. Mirrors the same pattern used below at the main
-      // init call site so failures are never silent on either branch.
-      if (!currentQueue.length && destination.queueOn?.length) {
-        // Consent gate (sole-gate invariant): this branch would init the
-        // destination purely to flush queued on() events, but there is no push
-        // event whose individual consent could apply, so collector consent is
-        // the complete basis. Never init a consent-gated destination while its
-        // required consent is denied. Self-heals: handle.ts runs
-        // pushToDestinations after every state command, so the grant command
-        // re-enters here with consent satisfied and inits then.
-        if (!getGrantedConsent(destination.config.consent, collector.consent)) {
-          releaseProbeSlot(); // probe admitted but consent gate denies push
+  const passes = Object.entries(destinations || {});
+  let results: DestinationOutcome[];
+  try {
+    results = await Promise.all(
+      // Process all destinations in parallel
+      passes.map(async ([id, destination]): Promise<DestinationOutcome> => {
+        // Disabled destinations are completely skipped — no queuing, no init, no processing
+        if (destination.config.disabled) {
           return { id, destination, skipped: true };
         }
-        let isInitialized = false;
-        try {
-          isInitialized = await destinationInit(
+
+        // Canonical id: the breaker gate, the failure/success accounting, and
+        // any aggregation MUST all key on the SAME id. A destination whose
+        // runtime `config.id` differs from its map key would otherwise touch
+        // two different breaker entries (gate vs accounting), so failures
+        // never accumulate against the entry the gate inspects and the
+        // breaker never opens. Resolve once here and thread it through.
+        const canonicalId = destination.config.id || id;
+
+        // Probe settle. When the breaker gate below admitted a half-open
+        // probe, EVERY later path must settle it: record an outcome (the
+        // event reached the transport, `recordBreaker`) or release the probe
+        // (it never did). Otherwise `probing` stays true and the breaker
+        // deadlocks half-open. A no-op unless half-open and probing.
+        const releaseProbeSlot = () =>
+          releaseBreakerProbe(collector, destination, id);
+
+        const queueMax = destination.config.queueMax ?? DEFAULT_QUEUE_MAX;
+        const queueStep = stepId('destination', canonicalId);
+        const destLogger = collector.logger.scope(
+          destination.type || 'unknown',
+        );
+
+        // One bounded queue, two kinds of waiting entries. A consent wait is
+        // a documented bound: when the queue is full the oldest consent wait
+        // is evicted (`status.dropped`, DEBUG once: unmet consent is never
+        // above DEBUG), and a new consent wait meeting a queue of held events
+        // only is the one dropped. A held event is a delivery promise: it
+        // evicts the oldest consent wait, and with none left it is refused
+        // (returned, to fail with `queue-full`). Entries keep their identity;
+        // only their reason is set. The once-flag is keyed on the destination:
+        // its queue array is replaced on every pass.
+        const enqueue = (
+          entries: Destination.Queued[],
+          reason: 'consent' | 'held',
+        ): Destination.Queued[] => {
+          const refused: Destination.Queued[] = [];
+          if (!entries.length) return refused;
+          if (!destination.queuePush) destination.queuePush = [];
+          const queuePush = destination.queuePush;
+          let evicted = 0;
+          for (const entry of entries) {
+            entry.reason = reason;
+            if (queuePush.length >= queueMax) {
+              const oldest = queuePush.findIndex(
+                (queued) => queued.reason === 'consent',
+              );
+              // A push waiting for an evicted or dropped consent wait
+              // answers it waited for consent, as at its push.
+              if (oldest !== -1) {
+                settle(queuePush.splice(oldest, 1), {
+                  kind: 'queued',
+                  reason: CONSENT_WAIT,
+                });
+                evicted++;
+              } else if (reason === 'consent') {
+                settle([entry], { kind: 'queued', reason: CONSENT_WAIT });
+                evicted++;
+                continue;
+              } else {
+                refused.push(entry);
+                continue;
+              }
+            }
+            queuePush.push(entry);
+          }
+          if (evicted > 0) {
+            ensureDestStatus(collector, canonicalId);
+            const droppedCount = bumpDropped(
+              collector.status,
+              queueStep,
+              'queue',
+              evicted,
+            );
+            logOverflowOnce(
+              destination,
+              destLogger,
+              'debug',
+              'destination.queuePush overflow; oldest consent-waiting events dropped',
+              {
+                buffer: 'queuePush',
+                destination: canonicalId,
+                cap: queueMax,
+                droppedCount,
+              },
+            );
+          } else if (queuePush.length < queueMax) {
+            resetOverflowFlag(destination);
+          }
+          return refused;
+        };
+        const requeue = (entries: Destination.Queued[]) =>
+          void enqueue(entries, 'consent');
+        const requeueHeld = (entries: Destination.Queued[]) =>
+          enqueue(entries, 'held');
+
+        // The entries pushes queued behind a running init (they wait for
+        // their outcome), taken out of the queue in push order.
+        const takeWaiting = () => {
+          const queuePush = destination.queuePush || [];
+          destination.queuePush = queuePush.filter(
+            (queued) => !waiting.has(queued),
+          );
+          return queuePush.filter((queued) => waiting.has(queued));
+        };
+
+        // Hold entries in the destination's own queue; those the full queue
+        // refuses fail with `queue-full` through the one outcome sink.
+        const holdOrRefuse = (
+          entries: Destination.Queued[],
+        ): DestinationOutcome => {
+          const refused = requeueHeld(entries);
+          if (!refused.length) return { id, destination, queued: HELD_WAIT };
+          const error = new StepError(
+            `destination.queuePush full (queueMax ${queueMax}) while the destination is held: newest event refused`,
+            { code: 'queue-full' },
+          );
+          const failed = recordFailure(
             collector,
             destination,
             id,
-            true,
+            refused.map((entry) => entry.event),
+            error,
           );
-        } catch (err) {
-          collector.status.failed++;
-          const destType = destination.type || 'unknown';
-          collector.logger.scope(destType).error('destination init failed', {
-            error: err instanceof Error ? err.message : String(err),
-          });
-          // A probe whose init throws is a real transport failure: re-open.
-          recordProbe('transport-failure');
+          settle(refused, { kind: 'failed', reason: failed, error });
+          return { id, destination, failed, error };
+        };
+
+        // A queued entry goes out with the collector's current consent (full
+        // replace: stale consent must not persist); the entry keeps its
+        // identity, the event inside is copied. An entry a push is waiting
+        // for, and a held entry, was admitted with its own event consent and
+        // keeps it: on a server the collector's consent is usually empty, and
+        // replacing it would deny an event whose consent was granted.
+        const refresh = (entry: Destination.Queued) => {
+          if (!waiting.has(entry) && entry.reason !== 'held')
+            entry.event = { ...entry.event, consent: collector.consent };
+          return entry;
+        };
+
+        // Per-event consent gate: granted events keep only their granted
+        // states and are delivered; denied events emit a skip state so
+        // observers see the gate decision, and wait (or, under
+        // `consentDenied: 'skip'`, are skipped and counted). The collector
+        // state is read at call time: this closure awaits, and a consent
+        // command can run in between.
+        const consentDenied = collector.config.consentDenied ?? 'queue';
+        const destIngest: Ingest = meta.ingest
+          ? {
+              ...meta.ingest,
+              _meta: {
+                ...meta.ingest._meta,
+                path: [...meta.ingest._meta.path],
+              },
+            }
+          : createIngest('unknown');
+        const admit = (queue: Destination.Queued[]) => {
+          const consent = collector.consent;
+          const allowed: Destination.Queued[] = [];
+          const denied: Destination.Queued[] = [];
+          for (const entry of queue) {
+            const queuedEvent = entry.event;
+            const grantedConsent = getGrantedConsent(
+              destination.config.consent, // Required
+              consent, // Current collector state
+              queuedEvent.consent, // Individual event state
+            );
+
+            if (grantedConsent) {
+              queuedEvent.consent = grantedConsent; // Save granted consent states only
+              allowed.push(entry);
+              continue;
+            }
+
+            emitDestinationState(
+              collector,
+              id,
+              'skip',
+              queuedEvent,
+              destIngest,
+              (state) => {
+                state.skipReason = 'consent';
+                if (consent) state.consent = { ...consent };
+                if (destination.config.consent)
+                  state.meta = { required: { ...destination.config.consent } };
+              },
+            );
+
+            if (consentDenied === 'skip') {
+              recordSkip(collector, destination, id, queuedEvent, 'consent');
+              settle([entry], { kind: 'skipped' });
+            } else denied.push(entry);
+          }
+          return { allowed, denied };
+        };
+
+        // A held destination retries its owed state before its push, so a
+        // handler that failed once and would settle now recovers without
+        // waiting for another state command. Rate-limited by the hold's own
+        // age to one attempt per timeout window, and never while a state
+        // delivery to it is running: a permanently hung handler costs one
+        // bounded wait per window, never one per event. The retry is inside
+        // this destination's own closure, so siblings are untouched.
+        // An initialized destination that is not held but owes state (a cell
+        // merged at `walker run` before the run's re-delivery reached it)
+        // receives that state before this push, the same way a held one
+        // retries, but without waiting for a window.
+        if (
+          destination.on &&
+          destination.config.init &&
+          !getStateHold(destination) &&
+          !isStateDeliveryInFlight(destination) &&
+          owesDestinationState(collector, destination)
+        )
+          await catchUpDestinationState(collector, destination, id);
+
+        const timeout = resolveDestinationTimeout(destination.config.timeout);
+        const hold = getStateHold(destination);
+        if (
+          hold &&
+          !isStateDeliveryInFlight(destination) &&
+          Date.now() - hold.since >= timeout
+        )
+          await catchUpDestinationState(collector, destination, id);
+
+        // State hold: a state delivery to this destination is running or did
+        // not settle. Consent first: a denied event waits for consent as
+        // anywhere else. A granted one is held in the destination's own queue
+        // for one retry window (`queued`, reason `held`; a waiting state, no
+        // Observe record until its `out` or `error`); once the hold outlasts
+        // that window the destination is blocked: the event and the held ones
+        // before it fail (`blocked`) until a retry succeeds.
+        const held = heldState(destination, timeout);
+        if (held.state !== 'ready') {
+          if (!event) return { id, destination, skipped: true };
+          const { allowed, denied } = admit([{ event: clone(event) }]);
+          requeue(denied);
+          if (!allowed.length)
+            return denied.length
+              ? { id, destination, queued: CONSENT_WAIT }
+              : { id, destination, skipped: true };
+
+          if (held.state === 'blocked') {
+            const heldBefore = (destination.queuePush || []).filter(
+              (queued) => queued.reason === 'held',
+            );
+            destination.queuePush = (destination.queuePush || []).filter(
+              (queued) => queued.reason !== 'held',
+            );
+            const error = held.error;
+            const failed = recordFailure(
+              collector,
+              destination,
+              id,
+              [...heldBefore, ...allowed].map((entry) => entry.event),
+              error,
+            );
+            settle(heldBefore, { kind: 'failed', reason: failed, error });
+            return { id, destination, failed, error };
+          }
+
+          return holdOrRefuse(allowed);
         }
-        // The flush held the destination: there are no events of this call
-        // to requeue, and any parked by a concurrent push stay queued.
-        if (getStateHold(destination)) {
-          releaseProbeSlot();
+
+        // Queued events: refresh consent (full replace — stale consent must
+        // not persist). Each entry keeps its identity; the event inside is
+        // copied. User merge happens for all events below.
+        let currentQueue: Destination.Queued[] = (
+          destination.queuePush || []
+        ).map(refresh);
+        destination.queuePush = [];
+
+        // Current event: added as-is (consent is already fresh from createEvent).
+        if (event) currentQueue.push({ event: clone(event) });
+
+        // If no events and no queued on events, skip this destination
+        if (!currentQueue.length && !destination.queueOn?.length) {
           return { id, destination, skipped: true };
         }
-        // Events parked by a concurrent push while the flush was running go
-        // out with this call, through the consent gate below.
-        if (isInitialized && destination.queuePush?.length) {
-          currentQueue = destination.queuePush.map((queued) => ({
-            ...queued,
-            consent: collector.consent,
-          }));
-          destination.queuePush = [];
-        } else {
-          // queueOn-only flush exercises no push, so a successful/false-returning
-          // init releases the probe (the transport-failure path already re-opened
-          // it, where release is a no-op).
-          releaseProbeSlot();
-          return { id, destination, skipped: !isInitialized };
-        }
-      }
 
-      // Per-event consent gate: granted events keep only their granted
-      // states and are delivered, denied events emit a skip state so
-      // observers see the gate decision, and stay queued. The collector state
-      // is read at call time: this closure awaits, and a consent command can
-      // run in between.
-      const admit = (queue: WalkerOS.Events) => {
-        const consent = collector.consent;
-        const allowed: WalkerOS.Events = [];
-        const skipped = queue.filter((queuedEvent) => {
-          const grantedConsent = getGrantedConsent(
-            destination.config.consent, // Required
-            consent, // Current collector state
-            queuedEvent.consent, // Individual event state
-          );
-
-          if (grantedConsent) {
-            queuedEvent.consent = grantedConsent; // Save granted consent states only
-
-            allowed.push(queuedEvent); // Add to allowed queue
-            return false; // Remove from destination queue
+        // If only on events are queued (no push events), still init to flush
+        // queueOn. An init that throws here loses no event: it is reported
+        // through the outcome sink with none.
+        if (!currentQueue.length && destination.queueOn?.length) {
+          // Consent gate (sole-gate invariant): this branch would init the
+          // destination purely to flush queued on() events, but there is no
+          // push event whose individual consent could apply, so collector
+          // consent is the complete basis. Never init a consent-gated
+          // destination while its required consent is denied. Self-heals:
+          // handle.ts runs pushToDestinations after every state command, so
+          // the grant command re-enters here with consent satisfied and inits
+          // then.
+          if (
+            !getGrantedConsent(destination.config.consent, collector.consent)
+          ) {
+            return { id, destination, skipped: true };
           }
-
-          const skipState = stepState(
-            collector,
-            stepId('destination', id),
-            'destination',
-            'skip',
-            typeof queuedEvent.id === 'string' ? queuedEvent.id : '',
-            Date.now(),
-            journeyFields(queuedEvent, destIngest, collector),
-          );
-          skipState.skipReason = 'consent';
-          if (consent) skipState.consent = { ...consent };
-          if (destination.config.consent) {
-            skipState.meta = { required: { ...destination.config.consent } };
-          }
-          emitStep(collector, skipState);
-
-          return true; // Keep denied events in the queue
-        });
-        return { allowed, skipped };
-      };
-
-      const admittedWith = collector.consent;
-      const { allowed: allowedEvents, skipped: skippedEvents } =
-        admit(currentQueue);
-
-      // Add skipped (consent-denied) events back to the queue.
-      requeue(skippedEvents);
-
-      // Execution shall not pass if no events are allowed
-      if (!allowedEvents.length) {
-        releaseProbeSlot(); // probe admitted but every event was re-queued
-        return { id, destination, queue: currentQueue }; // Don't push if not allowed
-      }
-
-      // Events present in the queue before init: the consent-denied ones just
-      // requeued. Anything else found there after init was parked by a
-      // concurrent push while the init flush was running.
-      const parked = new Set(destination.queuePush);
-
-      // Initialize the destination if needed.
-      // Direct try/catch + logger.error here is intentional. Previously this
-      // used tryCatchAsync(destinationInit) without an onError callback, which
-      // silently returned undefined when init threw, hiding real failures. The
-      // destination itself may also log a more specific error before throwing;
-      // this is the boundary safety net so failures are never silent.
-      // Allowed: at least one event cleared the per-event consent gate above,
-      // so initialization is authorized (true) for the chokepoint guard.
-      let isInitialized = false;
-      try {
-        isInitialized = await destinationInit(collector, destination, id, true);
-      } catch (err) {
-        collector.status.failed++;
-        const destType = destination.type || 'unknown';
-        collector.logger.scope(destType).error('destination init failed', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // A probe whose init throws is a real transport failure (the down
-        // destination is exactly the one whose init throws): re-open with a
-        // fresh window so self-heal does not deadlock.
-        recordProbe('transport-failure');
-      }
-
-      if (!isInitialized) {
-        // Init returned false (no throw): the probe never pushed, so release it
-        // (no-op if the throw path above already re-opened).
-        releaseProbeSlot();
-        return { id, destination, queue: currentQueue };
-      }
-
-      // The init flush held the destination: a state delivery did not settle.
-      // The allowed events go back to its queue; the denied ones are there
-      // already.
-      if (getStateHold(destination)) {
-        releaseProbeSlot();
-        requeue(allowedEvents);
-        return { id, destination, queue: allowedEvents };
-      }
-
-      // A consent command ran while init was awaited: the events admitted
-      // before it pass the gate again with the consent that holds now.
-      const deniedAfter: WalkerOS.Events = [];
-      if (collector.consent !== admittedWith) {
-        const regated = admit(
-          allowedEvents.map((queued) => ({
-            ...queued,
-            consent: collector.consent,
-          })),
-        );
-        allowedEvents.splice(0, allowedEvents.length, ...regated.allowed);
-        deniedAfter.push(...regated.skipped);
-      }
-
-      // Events parked by a concurrent push while the init flush was running
-      // pass the same consent gate, with the consent that holds now, and go
-      // out with this call.
-      const queuedAfter = destination.queuePush || [];
-      const arrived = queuedAfter.filter((queued) => !parked.has(queued));
-      if (arrived.length) {
-        destination.queuePush = queuedAfter.filter((queued) =>
-          parked.has(queued),
-        );
-        const late = admit(
-          arrived.map((queued) => ({ ...queued, consent: collector.consent })),
-        );
-        allowedEvents.push(...late.allowed);
-        deniedAfter.push(...late.skipped);
-      }
-      requeue(deniedAfter);
-
-      if (!allowedEvents.length) {
-        releaseProbeSlot(); // every event was denied after init
-        return deniedAfter.length
-          ? { id, destination, queue: deniedAfter }
-          : { id, destination, skipped: true };
-      }
-
-      // Process the destinations event queue
-      let error: unknown;
-      let response: unknown;
-      if (!destination.dlq) destination.dlq = [];
-
-      // The before and next routes; each resolves per event, hop by hop,
-      // with `{ ingest, event }` (the runner resolves nothing ahead).
-      const before = destination.config.before;
-      const nextConfig = destination.config.next;
-
-      // Compile destination cache once per batch (not per-event).
-      // Destination caches operate on events (HIT/MISS keyed by event fields),
-      // so the rule shape is always EventCacheRule, not StoreCacheRule.
-      const destCacheConfig = destination.config?.cache as
-        | Cache.Cache<Cache.EventCacheRule>
-        | undefined;
-      const compiledDCache = destCacheConfig
-        ? compileCache(destCacheConfig)
-        : undefined;
-      const dCacheStore = compiledDCache
-        ? getCacheStore(compiledDCache, collector)
-        : undefined;
-
-      // Compile declarative state entries once per batch. `get` runs before
-      // the mapping-to-payload push (so it can shape the pushed event); `set`
-      // runs after a successful send.
-      const dStateEntries = compileStepState(destination.config?.state);
-      const dStateGet = dStateEntries?.filter((entry) => entry.mode === 'get');
-      const dStateSet = dStateEntries?.filter((entry) => entry.mode === 'set');
-
-      // Process allowed events and store failed ones in the dead letter queue (DLQ)
-      let totalDuration = 0;
-      // Count of events enqueued into a batch in this pass; the aggregation
-      // below uses this to skip the synchronous `count++` for batched events
-      // (counters move to the flush callback per PROD-004 plan Q9).
-      let batchedCount = 0;
-      // Events the destination actually received. A before-chain fan-out makes
-      // this exceed allowedEvents.length, which counts what entered.
-      let pushedCount = 0;
-      await Promise.all(
-        allowedEvents.map(async (event) => {
-          // Merge collector user into event (collector as base, event overrides)
-          event.user = assign(user, event.user);
-
-          // Full cache check: before the before chain (skips everything on HIT)
-          let cacheMiss: { key: string; ttl: number } | undefined;
-          let cacheValue: unknown;
-          if (compiledDCache?.stop && dCacheStore) {
-            const cacheContext = createMappingRoot(destIngest, event);
-            const cacheResult = await checkCache(
-              compiledDCache,
-              dCacheStore,
-              cacheContext,
-            );
-            if (cacheResult?.status === 'HIT') {
-              return event; // Skip before chain + push
-            }
-            if (cacheResult?.status === 'MISS') {
-              cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
-            }
-          }
-
-          // Run post-collector transformer chain if configured for this destination
-          let children: Array<{ event: WalkerOS.Event; ingest: Ingest }> = [
-            { event, ingest: destIngest },
-          ];
-          let destRespond = meta.respond;
-          if (before !== undefined) {
-            const chainPath = `destination.${id}.before`;
-            const chainResult = await runTransformerChain(
+          let isInitialized = false;
+          beginInitCall(destination);
+          try {
+            isInitialized = await destinationInit(
               collector,
-              transformers,
-              before,
-              event,
-              destIngest,
-              meta.respond,
-              chainPath,
+              destination,
+              id,
+              true,
             );
-
-            if (chainResult.copies.length === 0) {
-              // Dropped or stopped: THIS destination skips the event; other
-              // destinations are unaffected.
-              const skipState = stepState(
-                collector,
-                stepId('destination', id),
-                'destination',
-                'skip',
-                typeof event.id === 'string' ? event.id : '',
-                Date.now(),
-                journeyFields(event, destIngest, collector),
-              );
-              skipState.skipReason = 'dropped';
-              skipState.meta = {
-                by: chainResult.droppedBy ?? 'route',
-                at: chainPath,
-              };
-              emitStep(collector, skipState);
-              return event;
-            }
-
-            // Update respond if the chain produced a wrapped one
-            if (chainResult.respond) destRespond = chainResult.respond;
-
-            // A before chain may fan one event into several. Every child is
-            // delivered, each with the ingest it finished with.
-            children = chainResult.copies.map((copy) => ({
-              event: copy.event as WalkerOS.Event,
-              ingest: copy.ingest,
-            }));
+          } catch (err) {
+            // Events queued behind this init fail with it, rather than
+            // waiting for a next push that may never come.
+            const behind = takeWaiting();
+            const reason = recordFailure(
+              collector,
+              destination,
+              id,
+              behind.map((entry) => entry.event),
+              err,
+              { message: 'destination init failed' },
+            );
+            settle(behind, { kind: 'failed', reason, error: err });
+          } finally {
+            // From here to the take below runs without a turn.
+            endInitCall(destination);
           }
+          // The flush held the destination: there are no events of this call
+          // to requeue, and any parked by a concurrent push stay queued.
+          if (getStateHold(destination)) {
+            return { id, destination, skipped: true };
+          }
+          // Events parked by a concurrent push while the flush was running go
+          // out with this call, through the consent gate below.
+          if (isInitialized && destination.queuePush?.length) {
+            currentQueue = destination.queuePush.map(refresh);
+            destination.queuePush = [];
+          } else {
+            return { id, destination, skipped: true };
+          }
+        }
 
-          // Delivers one child of the before chain, from the step-level cache
-          // check through the destination.next chain. Runs once per child, so
-          // a fan-out reaches the destination in full. Returns whether the
-          // child was actually delivered.
-          const deliverOne = async (
-            processedEvent: WalkerOS.Event | null,
-            childIngest: Ingest,
-            sharedMiss: { key: string; ttl: number } | undefined,
-          ): Promise<boolean> => {
-            // The pre-chain key is derived from the one event that entered, so
-            // a fan-out shares it and one write covers every child. A
-            // step-level key is derived from THIS child, so it is the child's
-            // own and must be written here.
-            let cacheMiss = sharedMiss;
-            let ownKey = false;
+        const admittedWith = collector.consent;
+        const { allowed: allowedEvents, denied: deniedEvents } =
+          admit(currentQueue);
 
-            // Step-level cache check: after before chain, skip only push on HIT
-            if (compiledDCache && !compiledDCache.stop && dCacheStore) {
-              const cacheContext = createMappingRoot(
-                childIngest,
-                processedEvent ?? undefined,
-              );
+        // Denied events wait for consent in the destination's own queue.
+        requeue(deniedEvents);
+
+        // Execution shall not pass if no events are allowed
+        if (!allowedEvents.length) {
+          return deniedEvents.length
+            ? { id, destination, queued: CONSENT_WAIT }
+            : { id, destination, skipped: true };
+        }
+
+        // Circuit-breaker gate, after the consent decision: while the breaker
+        // is open, every admitted event fails with `breaker-open` (counted,
+        // DLQ, one cause line). Presence-gated: inert unless `config.breaker`
+        // is set. A half-open breaker admits this pass as its single probe.
+        const breaker = breakerState(collector, destination, canonicalId);
+        if (breaker.state === 'blocked') {
+          const error = breaker.error;
+          const failed = recordFailure(
+            collector,
+            destination,
+            id,
+            allowedEvents.map((entry) => entry.event),
+            error,
+          );
+          settle(allowedEvents, { kind: 'failed', reason: failed, error });
+          return { id, destination, failed, error };
+        }
+
+        // Events present in the queue before init: the consent-denied ones
+        // just requeued. Anything else found there after init was parked by
+        // a concurrent push while the init flush was running.
+        const parked = new Set(destination.queuePush);
+
+        // An init of this destination (with its queue flush) is running in
+        // another pass: the admitted events queue behind it and that pass
+        // delivers them right after its own, so the destination receives its
+        // events in push order. This push answers only once its events were
+        // tried (delivered, or failed with the reason, a failed init's too),
+        // never before: a producer must not acknowledge an untried event.
+        if (initsRunning.has(destination)) {
+          releaseProbeSlot();
+          // Entries another push queued already keep their own waiter.
+          const outcomes = allowedEvents
+            .filter((entry) => !waiting.has(entry))
+            .map(
+              (entry) =>
+                new Promise<EntryOutcome>((resolve) =>
+                  waiting.set(entry, resolve),
+                ),
+            );
+          holdOrRefuse(allowedEvents);
+          return passOutcome(id, destination, await Promise.all(outcomes));
+        }
+
+        // Initialize the destination if needed. An init that throws, or
+        // returns false (runtime guard: `not-ready`), fails the admitted
+        // events through the outcome sink; init is re-attempted on the next
+        // push. Allowed: at least one event cleared the per-event consent
+        // gate above, so initialization is authorized (true) for the
+        // chokepoint guard, and the init answers true or throws.
+        beginInitCall(destination);
+        try {
+          await destinationInit(collector, destination, id, true);
+        } catch (err) {
+          // The events queued behind this init fail with it, in push order
+          // after this pass's own.
+          const behind = takeWaiting();
+          const failed = recordFailure(
+            collector,
+            destination,
+            id,
+            [...allowedEvents, ...behind].map((entry) => entry.event),
+            err,
+            { message: 'destination init failed' },
+          );
+          // Entries this pass took from the queue may have a waiting push.
+          settle([...allowedEvents, ...behind], {
+            kind: 'failed',
+            reason: failed,
+            error: err,
+          });
+          // An init that did not reach the transport releases the probe.
+          if (!isTransportFailure(failed)) releaseProbeSlot();
+          return { id, destination, failed, error: err };
+        } finally {
+          // From here to the take of the arrived entries below runs without
+          // a turn.
+          endInitCall(destination);
+        }
+
+        // The init flush held the destination: a state delivery did not
+        // settle. The allowed events wait as held; the denied ones are queued
+        // already.
+        if (getStateHold(destination)) {
+          releaseProbeSlot();
+          return holdOrRefuse(allowedEvents);
+        }
+
+        // A consent command ran while init was awaited: the events admitted
+        // before it pass the gate again with the consent that holds now.
+        const deniedAfter: Destination.Queued[] = [];
+        if (collector.consent !== admittedWith) {
+          const regated = admit(allowedEvents.map(refresh));
+          allowedEvents.splice(0, allowedEvents.length, ...regated.allowed);
+          deniedAfter.push(...regated.denied);
+        }
+
+        // Events parked by a concurrent push while the init flush was running
+        // pass the same consent gate, with the consent that holds now, and go
+        // out with this call.
+        const queuedAfter = destination.queuePush || [];
+        const arrived = queuedAfter.filter((queued) => !parked.has(queued));
+        if (arrived.length) {
+          destination.queuePush = queuedAfter.filter((queued) =>
+            parked.has(queued),
+          );
+          const late = admit(arrived.map(refresh));
+          allowedEvents.push(...late.allowed);
+          deniedAfter.push(...late.denied);
+        }
+        requeue(deniedAfter);
+
+        if (!allowedEvents.length) {
+          releaseProbeSlot(); // every event was denied after init
+          return deniedAfter.length
+            ? { id, destination, queued: CONSENT_WAIT }
+            : { id, destination, skipped: true };
+        }
+
+        // Process the destinations event queue. A push failed at the
+        // transport: the outcome sink recorded it for the breaker.
+        let pushRecorded = false;
+
+        // The before and next routes; each resolves per event, hop by hop,
+        // with `{ ingest, event }` (the runner resolves nothing ahead).
+        const before = destination.config.before;
+        const nextConfig = destination.config.next;
+
+        // Compile destination cache once per batch (not per-event).
+        // Destination caches operate on events (HIT/MISS keyed by event
+        // fields), so the rule shape is always EventCacheRule, not
+        // StoreCacheRule.
+        const destCacheConfig = destination.config?.cache as
+          | Cache.Cache<Cache.EventCacheRule>
+          | undefined;
+        const compiledDCache = destCacheConfig
+          ? compileCache(destCacheConfig)
+          : undefined;
+        const dCacheStore = compiledDCache
+          ? getCacheStore(compiledDCache, collector)
+          : undefined;
+
+        // Compile declarative state entries once per batch. `get` runs before
+        // the mapping-to-payload push (so it can shape the pushed event);
+        // `set` runs after a successful send.
+        const dStateEntries = compileStepState(destination.config?.state);
+        const dStateGet = dStateEntries?.filter(
+          (entry) => entry.mode === 'get',
+        );
+        const dStateSet = dStateEntries?.filter(
+          (entry) => entry.mode === 'set',
+        );
+
+        let totalDuration = 0;
+        // Events enqueued into a batch in this pass: they wait in the batch
+        // window (`queued`, reason `batch`); their counters move to the flush
+        // callback (per PROD-004 plan Q9).
+        let batchedCount = 0;
+        // Events the destination actually received. A before-chain fan-out
+        // makes this exceed allowedEvents.length, which counts what entered.
+        let pushedCount = 0;
+        const outcomes = await Promise.all(
+          allowedEvents.map(async (entry): Promise<EntryOutcome> => {
+            const event = entry.event;
+            // What became of this event (its before chain may fan it out).
+            const tally: {
+              delivered: number;
+              batched: number;
+              response?: unknown;
+              failure?: { reason: FailureReason; error: unknown };
+            } = { delivered: 0, batched: 0 };
+            const settled = (): EntryOutcome =>
+              tally.failure
+                ? { kind: 'failed', ...tally.failure }
+                : tally.delivered
+                  ? { kind: 'delivered', response: tally.response }
+                  : tally.batched
+                    ? { kind: 'batched' }
+                    : { kind: 'skipped' };
+
+            // Merge collector user into event (collector as base, event overrides)
+            event.user = assign(user, event.user);
+
+            // Full cache check: before the before chain (skips everything on HIT)
+            let cacheMiss: { key: string; ttl: number } | undefined;
+            let cacheValue: unknown;
+            if (compiledDCache?.stop && dCacheStore) {
+              const cacheContext = createMappingRoot(destIngest, event);
               const cacheResult = await checkCache(
                 compiledDCache,
                 dCacheStore,
                 cacheContext,
+                undefined,
+                collector,
               );
               if (cacheResult?.status === 'HIT') {
-                return false; // Skip push, deduplicated
+                return settled(); // Skip before chain + push
               }
               if (cacheResult?.status === 'MISS') {
-                cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
-                ownKey = true;
+                cacheMiss = {
+                  key: cacheResult.key,
+                  ttl: cacheResult.rule.ttl,
+                };
               }
             }
 
-            // state[get]: enrich the event before the mapping-to-payload push.
-            if (dStateGet && dStateGet.length > 0 && processedEvent) {
-              processedEvent = await runStepState(
-                collector,
-                dStateGet,
-                processedEvent,
-                childIngest,
-              );
-            }
-
-            const pushStart = Date.now();
-            let pushFailed = false;
-            const result = await tryCatchAsync(destinationPush, (err) => {
-              // Log the error with destination scope
-              const destType = destination.type || 'unknown';
-              collector.logger.scope(destType).error('Push failed', {
-                ...errorMeta(err),
-                event: processedEvent!.name,
-              });
-              error = err; // oh no
-              pushFailed = true;
-
-              // Add failed event to destinations DLQ (bounded; FIFO drop-oldest)
-              const dlq = destination.dlq!;
-              const destId = destination.config.id || id;
-              const dlqBound = {
-                max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX,
-              };
-              const dlqResult = pushBounded(
-                dlq,
-                [processedEvent!, err],
-                dlqBound,
-              );
-              if (dlqResult.dropped > 0) {
-                ensureDestStatus(collector, destId);
-                const droppedCount = bumpDropped(
-                  collector.status,
-                  stepId('destination', destId),
-                  'dlq',
-                  dlqResult.dropped,
-                );
-                warnOverflowOnce(
-                  dlq,
-                  collector.logger.scope(destination.type || 'unknown'),
-                  'destination.dlq overflow; oldest entries dropped',
-                  {
-                    buffer: 'dlq',
-                    destination: destId,
-                    cap: dlqBound.max,
-                    droppedCount,
-                  },
-                );
-              } else if (dlq.length < dlqBound.max) {
-                resetOverflowFlag(dlq);
-              }
-
-              return undefined;
-            })(
-              collector,
-              destination,
-              id,
-              processedEvent!,
-              childIngest,
-              destRespond,
-            );
-            totalDuration += Date.now() - pushStart;
-
-            // Destination cache MISS. A per-child key is written now; the
-            // shared pre-chain key is recorded and written once after every
-            // child settles. The stored value is a dedup marker, since neither
-            // cache check reads it back.
-            if (
-              cacheMiss &&
-              dCacheStore &&
-              destination.config.mock === undefined
-            ) {
-              if (ownKey) {
-                storeCache(
-                  dCacheStore,
-                  cacheMiss.key,
-                  result ?? true,
-                  cacheMiss.ttl,
-                );
-              } else if (cacheValue === undefined) {
-                cacheValue = result ?? true;
-              }
-            }
-
-            // state[set]: stash from the event after a successful send. A
-            // batched-enqueue is not a real send (the sentinel is returned
-            // before delivery), so set is deferred until flush. The flush-path
-            // write is a documented follow-up, not handled here yet.
-            if (
-              !pushFailed &&
-              !isBatchedResult(result) &&
-              dStateSet &&
-              dStateSet.length > 0 &&
-              processedEvent
-            ) {
-              processedEvent = await runStepState(
-                collector,
-                dStateSet,
-                processedEvent,
-                childIngest,
-              );
-            }
-
-            // Capture the last response (for single event pushes).
-            // Batched-enqueue sentinel is NOT a real response; don't surface it.
-            if (result !== undefined && !isBatchedResult(result)) {
-              response = result;
-            }
-            if (isBatchedResult(result)) batchedCount++;
-
-            // Run destination.next chain after successful push
-            if (!pushFailed && nextConfig) {
-              // Write push response to ingest for destination.next transformers
-              if (result !== undefined) {
-                childIngest._response = result;
-              }
-
-              // Delivery already happened: a stop only ends this chain.
-              const nextResult = await runTransformerChain(
+            // Run post-collector transformer chain if configured for this
+            // destination
+            let children: Array<{ event: WalkerOS.Event; ingest: Ingest }> = [
+              { event, ingest: destIngest },
+            ];
+            let destRespond = meta.respond;
+            if (before !== undefined) {
+              const chainPath = `destination.${id}.before`;
+              const chainResult = await runTransformerChain(
                 collector,
                 transformers,
-                nextConfig,
+                before,
+                event,
+                destIngest,
+                meta.respond,
+                chainPath,
+              );
+
+              // A transformer of this destination's before chain failed: the
+              // destination did not get the event. The transformer's failure
+              // is counted and logged already; the destination reports it.
+              if (chainResult.failure) {
+                tally.failure = {
+                  reason: chainResult.failure.reason,
+                  error: `Transformer "${chainResult.failure.by}" failed: ${chainResult.failure.reason.message}`,
+                };
+                ensureDestStatus(collector, id).failed++;
+              }
+
+              if (chainResult.copies.length === 0) {
+                if (chainResult.failure) return settled();
+                // Dropped or stopped: THIS destination skips the event; other
+                // destinations are unaffected.
+                emitDestinationState(
+                  collector,
+                  id,
+                  'skip',
+                  event,
+                  destIngest,
+                  (state) => {
+                    state.skipReason = 'dropped';
+                    state.meta = {
+                      by: chainResult.droppedBy ?? 'route',
+                      at: chainPath,
+                    };
+                  },
+                );
+                return settled();
+              }
+
+              // Update respond if the chain produced a wrapped one
+              if (chainResult.respond) destRespond = chainResult.respond;
+
+              // A before chain may fan one event into several. Every child is
+              // delivered, each with the ingest it finished with.
+              children = chainResult.copies.map((copy) => ({
+                event: copy.event as WalkerOS.Event,
+                ingest: copy.ingest,
+              }));
+            }
+
+            // Delivers one child of the before chain, from the step-level
+            // cache check through the destination.next chain. Runs once per
+            // child, so a fan-out reaches the destination in full. Returns
+            // whether the child was actually delivered.
+            const deliverOne = async (
+              processedEvent: WalkerOS.Event | null,
+              childIngest: Ingest,
+              sharedMiss: { key: string; ttl: number } | undefined,
+            ): Promise<boolean> => {
+              // The pre-chain key is derived from the one event that entered,
+              // so a fan-out shares it and one write covers every child. A
+              // step-level key is derived from THIS child, so it is the
+              // child's own and must be written here.
+              let cacheMiss = sharedMiss;
+              let ownKey = false;
+
+              // Step-level cache check: after before chain, skip only push on HIT
+              if (compiledDCache && !compiledDCache.stop && dCacheStore) {
+                const cacheContext = createMappingRoot(
+                  childIngest,
+                  processedEvent ?? undefined,
+                );
+                const cacheResult = await checkCache(
+                  compiledDCache,
+                  dCacheStore,
+                  cacheContext,
+                  undefined,
+                  collector,
+                );
+                if (cacheResult?.status === 'HIT') {
+                  return false; // Skip push, deduplicated
+                }
+                if (cacheResult?.status === 'MISS') {
+                  cacheMiss = {
+                    key: cacheResult.key,
+                    ttl: cacheResult.rule.ttl,
+                  };
+                  ownKey = true;
+                }
+              }
+
+              // state[get]: enrich the event before the mapping-to-payload push.
+              if (dStateGet && dStateGet.length > 0 && processedEvent) {
+                processedEvent = await runStepState(
+                  collector,
+                  dStateGet,
+                  processedEvent,
+                  childIngest,
+                );
+              }
+
+              const pushStart = Date.now();
+              let pushFailed = false;
+              const result = await tryCatchAsync(destinationPush, (err) => {
+                // The one outcome sink: counters, DLQ, breaker, one cause
+                // line. destinationPush emitted the Observe error already.
+                const reason = recordFailure(
+                  collector,
+                  destination,
+                  id,
+                  [processedEvent!],
+                  err,
+                  { observed: true },
+                );
+                tally.failure = { reason, error: err };
+                if (isTransportFailure(reason)) pushRecorded = true;
+                pushFailed = true;
+                return undefined;
+              })(
+                collector,
+                destination,
+                id,
                 processedEvent!,
                 childIngest,
                 destRespond,
-                `destination.${id}.next`,
               );
-              if (nextResult.respond) destRespond = nextResult.respond;
+              totalDuration += Date.now() - pushStart;
+
+              // A rule that ignores the event: deliberately not sent, a skip.
+              if (isIgnoredResult(result)) return false;
+
+              // Destination cache MISS. A per-child key is written now; the
+              // shared pre-chain key is recorded and written once after every
+              // child settles. The stored value is a dedup marker, since
+              // neither cache check reads it back.
+              if (
+                cacheMiss &&
+                dCacheStore &&
+                destination.config.mock === undefined
+              ) {
+                if (ownKey) {
+                  storeCache(
+                    dCacheStore,
+                    cacheMiss.key,
+                    result ?? true,
+                    cacheMiss.ttl,
+                  );
+                } else if (cacheValue === undefined) {
+                  cacheValue = result ?? true;
+                }
+              }
+
+              // state[set]: stash from the event after a successful send. A
+              // batched-enqueue is not a real send (the sentinel is returned
+              // before delivery), so set is deferred until flush. The
+              // flush-path write is a documented follow-up, not handled here
+              // yet.
+              if (
+                !pushFailed &&
+                !isBatchedResult(result) &&
+                dStateSet &&
+                dStateSet.length > 0 &&
+                processedEvent
+              ) {
+                processedEvent = await runStepState(
+                  collector,
+                  dStateSet,
+                  processedEvent,
+                  childIngest,
+                );
+              }
+
+              // Capture the last response (for single event pushes).
+              // Batched-enqueue sentinel is NOT a real response; don't surface it.
+              if (result !== undefined && !isBatchedResult(result)) {
+                tally.response = result;
+              }
+              if (isBatchedResult(result)) {
+                tally.batched++;
+                batchedCount++;
+                return false;
+              }
+              if (pushFailed) return false;
+
+              // Run destination.next chain after successful push
+              if (nextConfig) {
+                // Write push response to ingest for destination.next transformers
+                if (result !== undefined) {
+                  childIngest._response = result;
+                }
+
+                // Delivery already happened: a stop only ends this chain.
+                const nextResult = await runTransformerChain(
+                  collector,
+                  transformers,
+                  nextConfig,
+                  processedEvent!,
+                  childIngest,
+                  destRespond,
+                  `destination.${id}.next`,
+                );
+                if (nextResult.respond) destRespond = nextResult.respond;
+              }
+
+              return true;
+            };
+
+            for (const child of children) {
+              // Each child gets its own step-level cache decision; the
+              // full-check miss recorded before the chain is shared, since it
+              // was computed from the one event that entered. Only a child
+              // that actually reached the destination counts as delivered.
+              if (await deliverOne(child.event, child.ingest, cacheMiss)) {
+                tally.delivered++;
+                pushedCount++;
+              }
             }
 
-            return true;
-          };
+            // One write per request, after every child settled.
+            if (
+              cacheMiss &&
+              dCacheStore &&
+              cacheValue !== undefined &&
+              destination.config.mock === undefined
+            ) {
+              storeCache(dCacheStore, cacheMiss.key, cacheValue, cacheMiss.ttl);
+            }
 
-          for (const child of children) {
-            // Each child gets its own step-level cache decision; the full-check
-            // miss recorded before the chain is shared, since it was computed
-            // from the one event that entered. Only a child that actually
-            // reached the destination counts as delivered.
-            if (await deliverOne(child.event, child.ingest, cacheMiss))
-              pushedCount++;
-          }
+            return settled();
+          }),
+        );
 
-          // One write per request, after every child settled.
-          if (
-            cacheMiss &&
-            dCacheStore &&
-            cacheValue !== undefined &&
-            destination.config.mock === undefined
-          ) {
-            storeCache(dCacheStore, cacheMiss.key, cacheValue, cacheMiss.ttl);
-          }
+        // Events queued behind this pass's init answer their own pushes;
+        // this pass reports its own events.
+        const own: EntryOutcome[] = [];
+        allowedEvents.forEach((entry, index) => {
+          if (waiting.has(entry)) settle([entry], outcomes[index]);
+          else own.push(outcomes[index]);
+        });
 
-          return event;
-        }),
-      );
+        // Settle a probe this pass may hold: a transport failure was
+        // recorded by the outcome sink; otherwise a synchronous delivery
+        // closes the breaker, and a pass that reached no transport (every
+        // event ignored, deduplicated, dropped, failed by a before chain or
+        // by its mapping) releases it. A batched pass settles in its flush,
+        // which records its own outcome.
+        if (!pushRecorded) {
+          if (pushedCount) recordBreaker(collector, destination, id, 'success');
+          else if (!batchedCount) releaseProbeSlot();
+        }
 
-      return {
-        id,
-        destination,
-        error,
-        response,
-        totalDuration,
-        batchedCount,
-        allowedCount: allowedEvents.length,
-        pushedCount,
-        canonicalId,
-        breakerConfig,
-      };
-    }),
-  );
+        return passOutcome(id, destination, own, totalDuration);
+      }),
+    );
+  } finally {
+    for (const [, destination] of passes) settleWaiting(destination);
+  }
 
   // Build result objects
   const done: Record<string, Destination.Ref> = {};
@@ -1103,63 +1468,36 @@ async function deliverToDestinations(
     destStatus.queuePushSize = destination.queuePush?.length ?? 0;
     destStatus.dlqSize = destination.dlq?.length ?? 0;
 
-    // Circuit-breaker accounting keys on the canonical stepId so it matches the
-    // gate exactly. Presence-gated: only when this destination has a breaker.
-    const breakerConfig = result.breakerConfig;
-    const breakerKey = result.canonicalId
-      ? stepId('destination', result.canonicalId)
-      : undefined;
-    const recordBreaker = (outcome: 'transport-failure' | 'success') => {
-      if (breakerConfig && breakerKey) {
-        recordStepOutcome(
-          collector.status.breakers,
-          breakerKey,
-          outcome,
-          breakerConfig.threshold,
-          breakerConfig.cooldown,
-        );
-      }
-    };
-
-    if (result.error) {
-      ref.error = result.error;
-      failed[result.id] = ref;
-      destStatus.failed++;
+    // Events delivered synchronously count once per pass (the historical
+    // semantics: one bump per pushToDestinations call, regardless of the
+    // number of events), whatever else happened in the pass.
+    const delivered = result.delivered ?? 0;
+    if (delivered > 0) {
+      destStatus.count++;
       destStatus.lastAt = now;
       destStatus.duration += result.totalDuration || 0;
-      collector.status.failed++;
-      // A single-event push that threw/timed out is a transport failure.
-      recordBreaker('transport-failure');
-    } else if (result.queue && result.queue.length) {
-      // Events already re-queued at destination.queuePush via skippedEvents push
-      queued[result.id] = ref;
-    } else {
-      // If every allowed event was enqueued into a batch, success counters
-      // belong to the flush callback (PROD-004 plan Q9): don't increment
-      // here and don't mark `done`. The flush bumps `count` and `out` when
-      // pushBatch resolves. If only some events were batched, count the
-      // synchronously-delivered ones.
-      const batchedCount = result.batchedCount ?? 0;
-      const allowedCount = result.allowedCount ?? 0;
-      // What the destination actually received. A before-chain fan-out makes
-      // this exceed allowedCount, which counts what entered.
-      const deliveredCount = result.pushedCount ?? allowedCount;
-      const syncDelivered = Math.max(0, deliveredCount - batchedCount);
-      if (syncDelivered > 0 || allowedCount === 0) {
-        done[result.id] = ref;
-        // For non-batched destinations preserve the historical semantics
-        // (one bump per pushToDestinations call, regardless of allowed
-        // events count, since the original code only bumped once).
-        destStatus.count++;
-        destStatus.lastAt = now;
-        destStatus.duration += result.totalDuration || 0;
-        collector.status.out++;
-        // A synchronously-delivered single-event push is a success: reset and
-        // close the breaker. (Fully-batched passes settle in the flush
-        // callback instead, which records its own outcome.)
-        recordBreaker('success');
-      }
+      collector.status.out++;
     }
+
+    if (result.failed) {
+      // Counted, DLQ'd and logged by the outcome sink already.
+      ref.error = result.error;
+      ref.reason = result.failed;
+      failed[result.id] = ref;
+      destStatus.lastAt = now;
+      if (!delivered) destStatus.duration += result.totalDuration || 0;
+    } else if (delivered > 0) {
+      done[result.id] = ref;
+    } else if ((result.batched ?? 0) > 0) {
+      // In a batch window: delivered (and counted) when the batch flushes.
+      ref.reason = BATCH_WAIT;
+      queued[result.id] = ref;
+    } else if (result.queued) {
+      ref.reason = result.queued;
+      queued[result.id] = ref;
+    }
+    // Otherwise every event was skipped on purpose (ignored, deduplicated by
+    // the cache, dropped by a before chain): nothing to report.
   }
 
   return createPushResult({
@@ -1191,14 +1529,18 @@ function hasConsentRequirement(destination: Destination.Instance): boolean {
 
 /**
  * Run a destination's own `init()` and return the config to install, marked
- * initialized, or false when `init()` returned false. The caller installs it.
+ * initialized. An `init()` that throws, returns false (`StepError` code
+ * `not-ready`), or does not settle within the destination's timeout
+ * (`DestinationTimeoutError`, code `timeout`) throws. The caller installs the
+ * config, so an attempt that settles after its timeout installs nothing; the
+ * next push starts a new one.
  */
 async function runDestinationInit(
   collector: Collector.Instance,
   destination: Destination.Instance,
   init: NonNullable<Destination.Instance['init']>,
   destId: string,
-): Promise<false | Destination.Config> {
+): Promise<Destination.Config> {
   // Create scoped logger for this destination: [type:id] or [unknown:id]
   const destType = destination.type || 'unknown';
   const destLogger = collector.logger.scope(destType);
@@ -1221,44 +1563,42 @@ async function runDestinationInit(
   destLogger.debug('init');
 
   const initStarted = Date.now();
-  emitStep(
-    collector,
-    stepState(
-      collector,
-      stepId('destination', destId),
-      'destination',
-      'init',
-      '',
-      initStarted,
-    ),
-  );
+  emitDestinationState(collector, destId, 'init', undefined, undefined);
 
+  const timeoutMs = resolveDestinationTimeout(destination.config.timeout);
   let configResult;
   try {
-    configResult = await useHooks(
-      init,
-      'DestinationInit',
-      collector.hooks,
-      collector.logger,
-    )(context);
-  } catch (err) {
-    const initErrFinished = Date.now();
-    const errState = stepState(
-      collector,
-      stepId('destination', destId),
-      'destination',
-      'error',
-      '',
-      initErrFinished,
+    configResult = await withTimeout(
+      Promise.resolve(
+        useHooks(
+          init,
+          'DestinationInit',
+          collector.hooks,
+          collector.logger,
+        )(context),
+      ),
+      timeoutMs,
+      `Destination "${destId}" init timed out after ${timeoutMs}ms`,
     );
-    errState.durationMs = initErrFinished - initStarted;
-    errState.error = stepError(err);
-    emitStep(collector, errState);
+  } catch (err) {
+    emitDestinationState(
+      collector,
+      destId,
+      'error',
+      undefined,
+      undefined,
+      (state) => {
+        state.durationMs = Date.now() - initStarted;
+        state.error = observerStepError(err);
+      },
+    );
     throw err;
   }
 
-  // Actively check for errors (when false)
-  if (configResult === false) return false; // don't push if init is false
+  // Runtime guard: bundled code is not typechecked, so an init may still
+  // return false. Without this, `{ ...(false || config), init: true }`
+  // would install a destination with its settings missing.
+  if (returnedFalse(configResult)) throw initReturnedFalse();
 
   // The config to install, marked initialized; the caller installs it.
   return {
@@ -1276,12 +1616,14 @@ async function runDestinationInit(
 async function initAndFlush(
   collector: Collector.Instance,
   destination: Destination.Instance,
-  init: NonNullable<Destination.Instance['init']>,
+  init: Destination.Instance['init'],
   destId: string,
 ): Promise<boolean> {
-  const config = await runDestinationInit(collector, destination, init, destId);
-  if (config === false) return false; // don't push if init is false
-  destination.config = config;
+  // A destination without an `init` has nothing to run: it is marked
+  // initialized, and its queued deliveries flush below.
+  destination.config = init
+    ? await runDestinationInit(collector, destination, init, destId)
+    : { ...destination.config, init: true };
 
   // Flush queued on() events now that destination is initialized. The
   // queue stays live while the flush runs: a delivery that arrives in the
@@ -1325,7 +1667,8 @@ async function initAndFlush(
     }
   }
 
-  collector.logger.scope(destination.type || 'unknown').debug('init done');
+  if (init)
+    collector.logger.scope(destination.type || 'unknown').debug('init done');
   return true;
 }
 
@@ -1346,8 +1689,10 @@ export async function destinationInit<Destination extends Destination.Instance>(
   // consent-gated destination is never initialized without a cleared gate.
   allowed = false,
 ): Promise<boolean> {
-  // Check if the destination was initialized properly or try to do so
-  if (destination.init && !destination.config.init) {
+  // Check if the destination was initialized properly or try to do so. A
+  // destination without an `init` runs a no-op one, through the same consent
+  // gate and queue flush, so its queued `on()` deliveries reach it.
+  if (!destination.config.init) {
     // Defense-in-depth: refuse to init a destination that declares a consent
     // requirement unless the gate was cleared. We do NOT re-derive consent from
     // collector state here, because the push path's decision may rest on an
@@ -1364,6 +1709,13 @@ export async function destinationInit<Destination extends Destination.Instance>(
     // flushed instead of starting another init().
     const running = initsRunning.get(destination);
     if (running) return running;
+    // Nothing to run and nothing queued: initialized at once, without a
+    // turn, so this destination's events keep their place among its
+    // siblings' (a destination without `init` delivered at once before).
+    if (!destination.init && !destination.queueOn?.length) {
+      destination.config = { ...destination.config, init: true };
+      return true;
+    }
     const started = initAndFlush(
       collector,
       destination,
@@ -1403,9 +1755,30 @@ export async function destinationPush<Destination extends Destination.Instance>(
 ): Promise<unknown> {
   const { config } = destination;
 
-  const processed = await processEventMapping(event, config, collector);
+  // A rule `condition` that throws fails the event (`mapping`): reported to
+  // observers here, like any failed push, then rethrown to the outcome sink.
+  let processed: Awaited<
+    ReturnType<typeof processEventMapping<WalkerOS.Event>>
+  >;
+  try {
+    processed = await processEventMapping(event, config, collector);
+  } catch (err) {
+    emitDestinationState(collector, destId, 'error', event, ingest, (state) => {
+      state.error = observerStepError(err);
+    });
+    throw err;
+  }
 
-  if (processed.ignore) return false;
+  // An ignored event is a deliberate skip: counted in `skipped`, never `done`.
+  if (processed.ignore) {
+    recordSkip(collector, destination, destId, event, 'ignored');
+    const { mappingKey } = processed;
+    emitDestinationState(collector, destId, 'skip', event, ingest, (state) => {
+      state.skipReason = 'ignored';
+      if (mappingKey) state.mappingKey = mappingKey;
+    });
+    return IGNORED_RESULT;
+  }
 
   // Create scoped logger for this destination: [type] or [unknown]
   const destType = destination.type || 'unknown';
@@ -1481,10 +1854,12 @@ export async function destinationPush<Destination extends Destination.Instance>(
       // so the closure does NOT leak the first event's context.
       const baseEnv = mergeEnvironments(destination.env, config.env);
 
-      const flushBatch = async (): Promise<void> => {
+      const flushBatch = async (): Promise<
+        Destination.BatchFlushOutcome | undefined
+      > => {
         const batchState = destination.batches![mappingKey];
         const currentBatched = batchState.batched;
-        if (currentBatched.entries.length === 0) return;
+        if (currentBatched.entries.length === 0) return undefined;
 
         const snapshot: Destination.Batch<unknown> = {
           key: currentBatched.key,
@@ -1523,28 +1898,6 @@ export async function destinationPush<Destination extends Destination.Instance>(
         const destIdResolved = destination.config.id || destId;
         const destStatus = ensureDestStatus(collector, destIdResolved);
 
-        // Circuit-breaker accounting for the batch path. Keys on the canonical
-        // stepId so it matches the gate. Presence-gated. A whole-batch throw is
-        // a transport failure; any delivered rows (full or partial success) are
-        // a success. Partial-failure rows themselves are breaker-neutral.
-        const flushBreakerConfig = resolveBreakerConfig(
-          destination.config.breaker,
-        );
-        const flushBreakerKey = stepId('destination', destIdResolved);
-        const recordFlushBreaker = (
-          outcome: 'transport-failure' | 'success',
-        ) => {
-          if (flushBreakerConfig) {
-            recordStepOutcome(
-              collector.status.breakers,
-              flushBreakerKey,
-              outcome,
-              flushBreakerConfig.threshold,
-              flushBreakerConfig.cooldown,
-            );
-          }
-        };
-
         const flushStarted = Date.now();
 
         // Rows the destination named as failed, index -> that row's error. A
@@ -1553,46 +1906,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
         const failedRows = new Map<number, unknown>();
         let batchThrew = false;
         let batchError: unknown;
-
-        // Routes a set of [event, error] pairs to this destination's DLQ,
-        // applying the bound and emitting the overflow warning once. Shared by
-        // the whole-batch failure path (pushBatch threw) and the partial-row
-        // failure path (pushBatch returned a BatchOutcome).
-        const routeToDlq = (failures: Array<[WalkerOS.Event, unknown]>) => {
-          const dlq = (destination.dlq = destination.dlq || []);
-          const dlqBound = {
-            max: destination.config.dlqMax ?? DEFAULT_DLQ_MAX,
-          };
-          let totalDropped = 0;
-          for (const pair of failures) {
-            const r = pushBounded(dlq, pair, dlqBound);
-            totalDropped += r.dropped;
-          }
-          if (totalDropped > 0) {
-            const droppedCount = bumpDropped(
-              collector.status,
-              stepId('destination', destIdResolved),
-              'dlq',
-              totalDropped,
-            );
-            warnOverflowOnce(
-              dlq,
-              destLogger,
-              'destination.dlq overflow; oldest entries dropped',
-              {
-                buffer: 'dlq',
-                destination: destIdResolved,
-                cap: dlqBound.max,
-                droppedCount,
-              },
-            );
-          } else if (dlq.length < dlqBound.max) {
-            resetOverflowFlag(dlq);
-          }
-          destStatus.failed += failures.length;
-          destStatus.dlqSize = dlq.length;
-          collector.status.failed += failures.length;
-        };
+        let failure: FailureReason | undefined;
 
         // Number of entries treated as delivered after the flush settles.
         // Whole-batch success (void) = all; whole-batch failure (throw) = 0;
@@ -1621,74 +1935,90 @@ export async function destinationPush<Destination extends Destination.Instance>(
             succeededCount = 0;
             batchThrew = true;
             batchError = err;
-            // Route the entire batch to DLQ on a thrown/whole-batch failure.
-            routeToDlq(snapshot.entries.map((entry) => [entry.event, err]));
-            // Whole-batch throw is a transport failure for the breaker.
-            recordFlushBreaker('transport-failure');
-            destLogger.error('Push batch failed', {
-              error: err instanceof Error ? err.message : String(err),
-              entries: snapshot.entries.length,
-            });
+            // The whole batch failed: every entry through the one outcome
+            // sink (counters, DLQ, breaker, one cause line). The per-entry
+            // Observe frames follow below.
+            failure = recordFailure(
+              collector,
+              destination,
+              destIdResolved,
+              snapshot.entries.map((entry) => entry.event),
+              err,
+              { observed: true, message: 'Push batch failed' },
+            );
             return undefined;
           },
         )(snapshot, batchContext);
 
         // Partial-failure path: pushBatch resolved a BatchOutcome listing the
-        // entries that did not succeed. DLQ and fail-count only those; the rest
-        // are delivered. Out-of-range indices are ignored defensively.
+        // entries that did not succeed. Only those fail, each with its own
+        // error, through the outcome sink; the rest are delivered. One line
+        // summarizes the rows by cause (the error's `code`, else its
+        // `name`), with a count and the first message as a sample.
+        // Partial-failure rows are breaker-neutral. Out-of-range indices are
+        // ignored defensively.
         if (isBatchOutcome(outcome) && outcome.failed.length > 0) {
-          const failedPairs: Array<[WalkerOS.Event, unknown]> = [];
-          for (const failure of outcome.failed) {
-            const entry = snapshot.entries[failure.index];
-            if (!entry || failedRows.has(failure.index)) continue;
+          for (const row of outcome.failed) {
+            const entry = snapshot.entries[row.index];
+            if (!entry || failedRows.has(row.index)) continue;
             const rowError =
-              failure.error ??
+              row.error ??
               new Error(
-                `Push batch entry ${failure.index} failed (no per-row error provided)`,
+                `Push batch entry ${row.index} failed (no per-row error provided)`,
               );
-            failedRows.set(failure.index, rowError);
-            failedPairs.push([entry.event, rowError]);
+            failedRows.set(row.index, rowError);
           }
-          if (failedPairs.length > 0) {
-            routeToDlq(failedPairs);
-            succeededCount = Math.max(
-              0,
-              snapshot.entries.length - failedPairs.length,
+          const causes = new Map<string, { code: string; count: number }>();
+          for (const [index, rowError] of failedRows) {
+            const reason = recordFailure(
+              collector,
+              destination,
+              destIdResolved,
+              [snapshot.entries[index].event],
+              rowError,
+              { observed: true, report: false, breaker: false },
             );
-            // One entry per failure cause: the error's `code`, else its
-            // `name`, with a count and the first message as a sample.
-            const causes = new Map<
-              string,
-              { code: string; count: number; message: string }
-            >();
-            for (const [, rowError] of failedPairs) {
-              const code =
-                rowError instanceof Error &&
-                'code' in rowError &&
-                typeof rowError.code === 'string'
-                  ? rowError.code
-                  : rowError instanceof Error
-                    ? rowError.name
-                    : 'Error';
-              const cause = causes.get(code);
-              if (cause) cause.count++;
-              else
-                causes.set(code, {
-                  code,
-                  count: 1,
-                  message:
-                    rowError instanceof Error
-                      ? rowError.message
-                      : String(rowError),
-                });
-            }
-            destLogger.error('Push batch partial failure', {
-              failed: failedPairs.length,
-              delivered: succeededCount,
-              entries: snapshot.entries.length,
-              causes: [...causes.values()],
-            });
+            failure = failure ?? reason;
+            const code =
+              rowError instanceof Error &&
+              'code' in rowError &&
+              typeof rowError.code === 'string'
+                ? rowError.code
+                : rowError instanceof Error
+                  ? rowError.name
+                  : 'Error';
+            const cause = causes.get(code);
+            if (cause) cause.count++;
+            else causes.set(code, { code, count: 1 });
           }
+          succeededCount = Math.max(
+            0,
+            snapshot.entries.length - failedRows.size,
+          );
+          // One cause line, keyed on the first row's reason; the message
+          // counts the rows and names each cause (the error's `code`, else
+          // its `name`) with its count.
+          if (failure)
+            reportCause(
+              collector,
+              collector.logger,
+              {
+                step: stepId('destination', destIdResolved),
+                code: failure.code,
+                status: failure.status,
+              },
+              `Push batch partial failure: ${failedRows.size} of ${snapshot.entries.length} entries failed (${[
+                ...causes.values(),
+              ]
+                .map((cause) => `${cause.code} x${cause.count}`)
+                .join(', ')})`,
+              {
+                type: destination.type,
+                count: failedRows.size,
+                retryable: failure.retryable,
+                error: failure.message,
+              },
+            );
         }
 
         // Batch outcomes fan out one frame per entry, emitted once the flush
@@ -1722,7 +2052,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
           state.durationMs = settledAt - flushStarted;
           if (failed) {
             const err = batchThrew ? batchError : failedRows.get(index);
-            state.error = stepError(err);
+            state.error = observerStepError(err);
           }
           emitStep(collector, state);
         });
@@ -1740,10 +2070,17 @@ export async function destinationPush<Destination extends Destination.Instance>(
           destStatus.lastAt = Date.now();
           collector.status.out += succeededCount;
           // Any delivered rows mean the transport worked: success closes the
-          // breaker. Partial-failure rows are breaker-neutral (handled by the
-          // absence of a transport-failure record for them above).
-          recordFlushBreaker('success');
+          // breaker (a whole-batch throw was recorded by the outcome sink).
+          // Partial-failure rows are breaker-neutral (recorded with
+          // `breaker: false` above).
+          recordBreaker(collector, destination, destId, 'success');
         }
+
+        return {
+          delivered: succeededCount,
+          failed: snapshot.entries.length - succeededCount,
+          ...(failure ? { reason: failure } : {}),
+        };
       };
 
       const scheduler = debounce(flushBatch, {
@@ -1758,9 +2095,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
         batchFn: () => {
           void scheduler();
         },
-        flush: async () => {
-          await scheduler.flush();
-        },
+        flush: async () => (await scheduler.flush()) ?? undefined,
       };
     }
 
@@ -1933,23 +2268,22 @@ export async function destinationPush<Destination extends Destination.Instance>(
 
       return response;
     } catch (err) {
-      const pushFinished = Date.now();
-      const errState = stepState(
+      const { mappingKey } = processed;
+      emitDestinationState(
         collector,
-        stepId('destination', destId),
-        'destination',
+        destId,
         'error',
-        eventIdValue,
-        pushFinished,
-        journey,
+        processed.event,
+        ingest,
+        (state) => {
+          state.durationMs = Date.now() - pushStarted;
+          state.error = observerStepError(err);
+          // Surface the vendor calls recorded before the failure, so a
+          // mid-push error doesn't discard them.
+          attachCalls(state, recordedCalls);
+          if (mappingKey) state.mappingKey = mappingKey;
+        },
       );
-      errState.durationMs = pushFinished - pushStarted;
-      errState.error = stepError(err);
-      // Surface the vendor calls recorded before the failure, so a mid-push
-      // error doesn't discard them.
-      attachCalls(errState, recordedCalls);
-      if (processed.mappingKey) errState.mappingKey = processed.mappingKey;
-      emitStep(collector, errState);
       throw err;
     }
   }
@@ -1995,6 +2329,47 @@ export function registerDestination(
 }
 
 /**
+ * Registration checks of a destination, logged once at ERROR (a config value
+ * without effect): a `batch` without `pushBatch` (events would go to `push`
+ * one by one), and, behind the `__WALKEROS_VALIDATE__` build flag (CLI
+ * bundles check at build time), mapping keys that do nothing at the
+ * destination position and, with `chains`, the transformers its `before` and
+ * `next` name (checked once transformers exist). The destination still runs.
+ */
+export function checkDestinationRegistration(
+  collector: Collector.Instance,
+  id: string,
+  destination: Destination.Instance,
+  chains = false,
+): void {
+  const { config } = destination;
+  const logger = collector.logger.scope(destination.type || 'unknown');
+
+  if (!destination.pushBatch) {
+    const batchPaths = getMappingKeyPaths(config, 'config', {
+      config: ['batch'],
+      rule: ['batch'],
+    });
+    if (batchPaths.length)
+      logger.error(
+        `Destination ${id}: ${batchPaths.map((path) => `\`${path}\``).join(', ')} has no effect: the destination has no pushBatch, so events go to push one by one`,
+      );
+  }
+
+  if (typeof __WALKEROS_VALIDATE__ === 'undefined' || __WALKEROS_VALIDATE__) {
+    const paths = getMappingNoOpPaths('destination', config, 'config');
+    if (paths.length)
+      logger.error(
+        `Destination ${id}: ${getMappingNoOpMessage('destination', paths)}`,
+      );
+    if (chains) {
+      checkChainTargets(collector, `destination.${id}.before`, config.before);
+      checkChainTargets(collector, `destination.${id}.next`, config.next);
+    }
+  }
+}
+
+/**
  * Initializes a map of destinations using ONLY the unified code/config/env pattern.
  * Does NOT call destination.init() - that happens later during push with proper consent checks.
  *
@@ -2019,6 +2394,7 @@ export async function initDestinations(
       continue;
     }
     result[id] = registerDestination(def);
+    checkDestinationRegistration(collector, id, result[id]);
   }
 
   return result;

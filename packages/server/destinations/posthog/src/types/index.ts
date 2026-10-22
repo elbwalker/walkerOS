@@ -14,8 +14,6 @@ export interface Settings {
   identify?: WalkerOSMapping.Value;
   /** Destination-level group mapping */
   group?: WalkerOSMapping.Value;
-  /** Event sections to flatten into capture properties */
-  include?: string[];
   // PostHog SDK passthrough options
   host?: string;
   flushAt?: number;
@@ -29,6 +27,8 @@ export interface Settings {
   fetchRetryDelay?: number;
   debug?: boolean;
   disabled?: boolean;
+  /** The running send; the next one waits for it. Runtime only. */
+  _sending?: Promise<void>;
 }
 
 export type InitSettings = Partial<Settings>;
@@ -47,6 +47,10 @@ export interface PostHogClient {
   capture(props: Parameters<PostHog['capture']>[0]): void;
   identify(props: Parameters<PostHog['identify']>[0]): void;
   groupIdentify(props: Parameters<PostHog['groupIdentify']>[0]): void;
+  /** Sends the queued calls; rejects when the request failed. */
+  flush(): Promise<void>;
+  /** The SDK reports a failed send as an `error` event; returns its remover. */
+  on?(event: 'error', listener: (error: unknown) => void): () => void;
   shutdown(): Promise<void> | void;
   enable(): Promise<void> | void;
   disable(): Promise<void> | void;
@@ -71,6 +75,7 @@ export type Config = {
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;
+export type PushBatchFn = CoreDestination.PushBatchFn<Types>;
 
 export type PartialConfig = DestinationServer.PartialConfig<Types>;
 

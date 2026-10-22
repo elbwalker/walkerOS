@@ -23,7 +23,7 @@ export const purchaseEvent: Partial<WalkerOS.Event> = {
   event: 'order complete',
   data: {
     id: 'T-123',
-    total: 99.99,
+    value: 99.99,
     currency: 'USD',
   },
 };

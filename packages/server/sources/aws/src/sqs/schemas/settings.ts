@@ -75,7 +75,7 @@ export const SettingsSchema = z.object({
   onPushError: z
     .enum(['nack', 'ack'])
     .describe(
-      'Behavior when forwarding to the collector throws. nack (default) skips DeleteMessage so the message redelivers; ack drops it.',
+      'Behavior when a message is not delivered and a redelivery could still deliver it (a retryable failure), or when decoding or forwarding throws. nack (default) skips DeleteMessage so the message redelivers; ack drops it.',
     )
     .optional(),
 });

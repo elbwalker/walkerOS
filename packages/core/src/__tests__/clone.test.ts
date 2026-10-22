@@ -48,19 +48,15 @@ describe('clone', () => {
     expect(cloned.regex.flags).toBe(org.regex.flags);
   });
 
-  test('skip unsupported types', () => {
-    const element = document.createElement('div');
+  test('keeps non-plain objects by reference', () => {
+    const custom = { [Symbol.toStringTag]: 'Custom' };
     const func = jest.mock;
-    const windowRef = window;
-    const documentRef = document;
 
-    const org = { element, func, windowRef, documentRef };
+    const org = { custom, func };
     const cloned = clone(org);
 
-    expect(cloned.element).toBe(org.element); // Reference remains the same
+    expect(cloned.custom).toBe(org.custom); // Reference remains the same
     expect(cloned.func).toBe(org.func); // Reference remains the same
-    expect(cloned.windowRef).toBe(org.windowRef); // Reference remains the same
-    expect(cloned.documentRef).toBe(org.documentRef); // Reference remains the same
   });
 
   test('handle circular references', () => {

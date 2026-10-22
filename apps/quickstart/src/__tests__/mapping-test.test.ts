@@ -24,7 +24,7 @@ describe('walkerOS Mapping Example', () => {
         data: { item_id: 'P123', quantity: 2 },
         rule: 'add_to_cart',
       },
-      // order complete -> purchase, tax computed as total * 0.1
+      // order complete -> purchase, tax computed as value * 0.1
       {
         name: 'purchase',
         data: {

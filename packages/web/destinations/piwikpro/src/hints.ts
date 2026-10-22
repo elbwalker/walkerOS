@@ -24,12 +24,12 @@ export const hints: Hint.Hints = {
     code: [
       {
         lang: 'json',
-        code: '{ "order": { "complete": { "name": "trackEvent", "data": { "set": ["entity", "action", "data.id"] }, "settings": { "goalId": "goal-uuid", "goalValue": "data.total" } } } }',
+        code: '{ "order": { "complete": { "name": "trackEvent", "data": { "set": ["entity", "action", "data.id"] }, "settings": { "goalId": "goal-uuid", "goalValue": "data.value" } } } }',
       },
     ],
   },
   'unmapped-events': {
-    text: 'An event without a rule name that is not a page view sends only its goal when the rule has settings.goalId, and is otherwise skipped with a warning (once per event name, then at debug level). A named rule with silent: true also sends only its goal. To keep other events out of the destination entirely, ignore everything with a wildcard and keep the page view explicitly.',
+    text: 'An event without a rule name that is not a page view sends only its goal when the rule has settings.goalId, and otherwise fails with missing-input; add an ignore: true rule for events you do not send. A named rule with silent: true also sends only its goal. To keep other events out of the destination entirely, ignore everything with a wildcard and keep the page view explicitly.',
     code: [
       {
         lang: 'json',

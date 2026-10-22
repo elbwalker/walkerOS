@@ -161,6 +161,42 @@ The same bound applies at shutdown, where the collector races each pending batch
 flush against a fixed 5000 ms step timeout before destroying the destination. A
 destination whose retries need longer than that loses them on shutdown.
 
+## Outcomes and failure reasons
+
+A push ends in one place per destination in the `PushResult`: `done`, `queued`
+(reason `consent`, `batch` or `held`) or `failed`. A failed entry carries a
+`reason` `{ code, message, retryable, status? }` that the collector derives from
+the thrown value: a `StepError` keeps its `code`, any other throw is
+`transport`. Codes the collector assigns itself: `timeout`, `not-ready` (a
+destination whose `init` could not start or returned `false`), `breaker-open`,
+`blocked` (held past one retry window), `queue-full`, `mapping` (a rule
+`condition` threw), `transformer`. Codes a destination throws: `config`,
+`missing-input`, `vendor-not-loaded`, `vendor-not-ready`, `vendor-timeout`,
+`transport`. `retryable` decides whether a server source asks the producer to
+resend (`acknowledge(result)` from `@walkeros/core`: `ack`, `retry` or
+`reject`); it never reads message text.
+
+**Unmet consent is never a failure.** A destination waiting for consent answers
+`queued` with the reason `consent`; a server collector skips a consent-denied
+event instead (`consentDenied: 'skip'`, counted in
+`status.destinations[id].skipped`, a `debug` line). A rule with `ignore: true`
+is a skip as well, not a delivery.
+
+**Failed means thrown.** A destination reports a failure only by throwing a
+`StepError`; it never returns early, never returns `false` from `init`, never
+logs the failure itself, and awaits every call it makes. The collector writes
+one ERROR line per (step, code, status) and minute. Every destination honours
+`rule.silent` (no event of its own, side effects still run) and ships a `silent`
+example.
+
+**The conformance kit.** `conformance('destination', destination, options)` from
+`@walkeros/collector/dev` runs a destination on a real collector against its
+step examples and fails with every broken item of the contract at once. Pick the
+`profile` by what the destination talks to: `http`, `sdk-env`, `web-sdk` (a web
+SDK started in `init`), `vendor-global`, `socket`. A web destination also passes
+`page` from `@walkeros/web-core/dev`. See
+[create-destination](../walkeros-create-destination/SKILL.md).
+
 ## Batch scheduling
 
 Set `config.batch` on a destination (with `pushBatch` implemented) to batch
@@ -168,12 +204,16 @@ Set `config.batch` on a destination (with `pushBatch` implemented) to batch
 is needed. The configuration shape is `batch?: number | { wait?, size?, age? }`
 at both the destination-config layer and the mapping-rule layer.
 
-**`pushBatch` is the gate, and a missing one fails silently.** The collector
-engages batching only when `destination.pushBatch` exists. Set `config.batch` on
-a destination that lacks it and every event is sent one at a time, with no
-warning and no error: the config is accepted and inert. When adding batching to
-a destination, implementing `pushBatch` is the change; `config.batch` alone buys
-nothing.
+**`pushBatch` is the gate.** The collector engages batching only when
+`destination.pushBatch` exists. Set `config.batch` on a destination that lacks
+it and every event is sent one at a time; the collector logs one ERROR at
+registration naming the setting, and `walkeros validate` and the bundle fail
+(`BATCH_WITHOUT_PUSH_BATCH`) for inline `code`. When adding batching to a
+destination, implementing `pushBatch` is the change; `config.batch` alone buys
+nothing. A batched event answers `queued` with the reason `batch`, so a server
+source acknowledges the producer at queue time; a failed flush is visible (ERROR
+line, failed counter, DLQ) but is not redelivered. `walker flush` flushes every
+pending batch.
 
 - `wait` (ms): debounce window. The timer resets on every push. Legacy form
   `batch: 1000` is shorthand for `{ wait: 1000 }`.
@@ -232,11 +272,12 @@ after a successful flush.
 **Three rules every destination follows.** First, no retry loops, backoff or DLQ
 code of its own: each request is sent once through the vendor SDK, whose
 built-in retry stays at its defaults, because a standard retry belongs in the
-collector, not in each package. Second, `init` is offline: it validates the
-config and builds clients, but makes no network call, loads no credentials and
-creates no remote resources; authentication and lookups happen on the first
-delivery, and provisioning belongs to `setup`. Third, every failure, thrown or
-reported in a `BatchOutcome`, is an `Error` that names the cause (and, for a
+collector, not in each package. Second, a server destination's `init` is
+offline: it validates the config and builds clients, but makes no network call,
+loads no credentials and creates no remote resources; connections (Kafka,
+BigQuery, S3, Sheets, SQLite) open at the first use, memoized and retried after
+a failure, and provisioning belongs to `setup`. Third, every failure, thrown or
+reported in a `BatchOutcome`, is a `StepError` that names the cause (and, for a
 configuration error, the fix) and carries `code` (the vendor error name or a
 package code), `status` (the HTTP status when the vendor answered) and
 `retryable`. Take `retryable` from the vendor SDK's own public classifier where

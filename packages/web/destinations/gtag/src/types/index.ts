@@ -25,17 +25,6 @@ export interface Env extends DestinationWeb.Env {
     gtag?: Gtag.Gtag;
     dataLayer: unknown[];
   };
-  document: {
-    createElement: (tagName: string) => {
-      src: string;
-      async?: boolean;
-      setAttribute: (name: string, value: string) => void;
-      removeAttribute: (name: string) => void;
-    };
-    head: {
-      appendChild: (node: unknown) => void;
-    };
-  };
 }
 
 // Consent mode configuration

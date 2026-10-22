@@ -40,8 +40,10 @@ await startFlow({
 ```
 
 The source must extract `ip` and `userAgent` into `ingest` (its
-`config.ingest`). The event then carries the hash at `user.hash`. Without a salt
-the hash can be reversed to the IP, so the transformer logs a warning.
+`config.ingest`). The event then carries the hash at `user.hash`. The salt is
+required: without it the hash could be reversed to the IP, so the transformer
+does not start. An event whose IP and user agent both resolve empty fails with
+`missing-input`, since every visitor would get the same hash.
 
 ## Documentation
 

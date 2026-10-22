@@ -104,7 +104,7 @@ describe('Google Ads Implementation', () => {
 
   describe('pushAdsEvent', () => {
     const mockEvent = getEvent('order complete', {
-      data: { id: 'order-123', total: 99.99 },
+      data: { id: 'order-123', value: 99.99 },
     });
 
     const settings: AdsSettings = {

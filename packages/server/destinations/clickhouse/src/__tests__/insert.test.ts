@@ -386,17 +386,15 @@ describe('retry', () => {
 
   // The advice is what an operator acts on, so it has to reach them even where
   // there was never a retry to skip.
-  it('gives the operator guidance with no retry left to skip', async () => {
+  it('gives up on a terminal code without a retry or a line of its own', async () => {
     __failInsert(1, { code: '252' });
 
     await settle(
-      insertRows(entriesFor('evt-a'), settingsFor({ maxRetries: 0 }), logger),
+      insertRows(entriesFor('evt-a'), settingsFor({ maxRetries: 2 }), logger),
     );
 
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('config.batch.size'),
-      { code: '252' },
-    );
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });
 

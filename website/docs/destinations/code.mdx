@@ -63,5 +63,9 @@ The rules for `code` in a flow file are in
 Set `consent`, `mapping` and the other destination options in `config` beside
 `code`, as for any destination. In integrated mode the object can implement the
 whole [destination interface](/docs/destinations/create-your-own). `batch`
-needs a `pushBatch` function, which only the integrated form can provide: a
-flow file's `code` takes only `type`, `init` and `push`.
+needs a `pushBatch` function: without one, `walkeros validate` and the bundle
+fail with `BATCH_WITHOUT_PUSH_BATCH`. A flow file's `code` takes `type`, `init`,
+`push`, `pushBatch`, `on` and `destroy`; any other key is an error.
+
+A `push` that cannot send throws, and a `push` that returns normally counts as
+delivered. See [Reporting failures](/docs/destinations/create-your-own#reporting-failures).

@@ -88,6 +88,45 @@ describe('getMappingEvent', () => {
     });
   });
 
+  test('tries entity action, entity *, * action, * * in that order (E22)', async () => {
+    const R: Mapping.Rule = { name: 'r' };
+    expect(
+      await getMappingEvent(
+        { name: 'product click' },
+        { product: { view: {} }, '*': { click: R } },
+      ),
+    ).toStrictEqual({ eventMapping: R, mappingKey: '* click' });
+
+    const failing = jest.fn(() => false);
+    const S: Mapping.Rule = { name: 's' };
+    const T: Mapping.Rule = { name: 't' };
+    expect(
+      await getMappingEvent(
+        { name: 'product click' },
+        {
+          product: { click: { condition: failing }, '*': S },
+          '*': { '*': T },
+        },
+      ),
+    ).toStrictEqual({ eventMapping: S, mappingKey: 'product *' });
+    expect(failing).toHaveBeenCalledTimes(1);
+
+    // A tier whose async conditions all fail falls through as well, and
+    // every condition runs once.
+    const gated = jest.fn(async () => false);
+    const actionWildcard: Mapping.Rule = { name: 'action' };
+    expect(
+      await getMappingEvent(
+        { name: 'product click' },
+        {
+          product: { click: { condition: gated }, '*': { condition: gated } },
+          '*': { click: actionWildcard, '*': T },
+        },
+      ),
+    ).toStrictEqual({ eventMapping: actionWildcard, mappingKey: '* click' });
+    expect(gated).toHaveBeenCalledTimes(2);
+  });
+
   test('an unmatched * * rule runs its condition once', async () => {
     const condition = jest.fn(() => false);
     const mapping: Mapping.Rules = { '*': { '*': { condition } } };
@@ -217,7 +256,7 @@ describe('getMappingEvent', () => {
     ];
 
     test.each(throwing)(
-      'a %s throwing condition is logged and counts as no match',
+      'a %s throwing condition fails the event instead of falling through',
       async (_, condition) => {
         const collector = createMockCollector();
         const fallback: Mapping.Rule = { name: 'fallback' };
@@ -225,12 +264,18 @@ describe('getMappingEvent', () => {
           order: { complete: [{ condition, name: 'broken' }, fallback] },
         };
 
-        const result = await getMappingEvent(event, mapping, collector);
-        expect(result.eventMapping).toBe(fallback);
-        expect(collector.logger.error).toHaveBeenCalledWith(
-          'mapping rule condition failed',
-          { event, mappingKey: 'order complete', error: boom },
+        const failure = await getMappingEvent(event, mapping, collector).then(
+          () => undefined,
+          (err: unknown) => err,
         );
+        expect(failure).toBeInstanceOf(core.StepError);
+        expect(failure).toMatchObject({
+          code: 'mapping',
+          retryable: false,
+          message: 'mapping rule condition failed at "order complete": boom',
+        });
+        // The caller reports the failed event; the lookup logs nothing.
+        expect(collector.logger.error).not.toHaveBeenCalled();
       },
     );
 
@@ -995,16 +1040,16 @@ describe('processEventMapping', () => {
   test('config-level policy applied before event-level policy', async () => {
     const event = {
       name: 'order complete',
-      data: { total: 100 },
+      data: { value: 100 },
     };
 
     const config = {
       policy: {
         'data.configLevel': { value: 'config' },
-        'data.total': {
+        'data.value': {
           fn: (e: unknown) =>
-            isObject(e) && isObject(e.data) && typeof e.data.total === 'number'
-              ? e.data.total * 2
+            isObject(e) && isObject(e.data) && typeof e.data.value === 'number'
+              ? e.data.value * 2
               : undefined,
         },
       },
@@ -1013,12 +1058,12 @@ describe('processEventMapping', () => {
           complete: {
             policy: {
               'data.eventLevel': { value: 'event' },
-              'data.total': {
+              'data.value': {
                 fn: (e: unknown) =>
                   isObject(e) &&
                   isObject(e.data) &&
-                  typeof e.data.total === 'number'
-                    ? e.data.total + 50
+                  typeof e.data.value === 'number'
+                    ? e.data.value + 50
                     : undefined,
               },
             },
@@ -1031,7 +1076,7 @@ describe('processEventMapping', () => {
 
     // Config policy runs first: 100 * 2 = 200
     // Event policy runs second: 200 + 50 = 250
-    expect(result.event.data.total).toBe(250);
+    expect(result.event.data.value).toBe(250);
     expect(result.event.data.configLevel).toBe('config');
     expect(result.event.data.eventLevel).toBe('event');
   });
@@ -1288,7 +1333,7 @@ describe('processEventMapping', () => {
   test('remove strips paths from produced data after evaluation', async () => {
     const event = {
       name: 'order complete',
-      data: { total: 42, currency: 'EUR' },
+      data: { value: 42, currency: 'EUR' },
     };
     const config = {
       mapping: {
@@ -1296,7 +1341,7 @@ describe('processEventMapping', () => {
           complete: {
             data: {
               map: {
-                value: 'data.total',
+                value: 'data.value',
                 currency: 'data.currency',
               },
             },

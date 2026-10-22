@@ -8,7 +8,6 @@ import { SettingsSchema } from '../schemas';
 import { expectSimulationResolves } from '@walkeros/core/dev';
 
 const INIT_DATE_MS = 1700000000000;
-import { resetLoadedScripts } from '../shared/gtag';
 
 type CallRecord = [string, ...unknown[]];
 
@@ -58,7 +57,6 @@ function makeTestEnv(): {
 describe('gtag web destination -- step examples', () => {
   beforeEach(() => {
     resetConsentState();
-    resetLoadedScripts();
     jest.useFakeTimers();
     jest.setSystemTime(new Date(INIT_DATE_MS));
   });
@@ -123,8 +121,9 @@ describe('gtag web destination -- step examples', () => {
     expect(result.error?.issues).toBeUndefined();
   });
 
+  // Non-public examples (silent, consent revoke) run in the conformance test.
   const stepEntries = Object.entries(examples.step).filter(
-    ([name]) => !initNames.has(name),
+    ([name, example]) => !initNames.has(name) && example.public !== false,
   );
 
   it.each(stepEntries)('%s', async (name, example) => {

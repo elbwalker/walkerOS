@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -54,7 +54,7 @@ export const defaultEventForwarding: SegmentStepExample = {
  */
 export const wildcardIgnored: SegmentStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -143,7 +143,8 @@ export const userLoginIdentify: SegmentStepExample = {
   title: 'User login identify',
   description:
     'A user login fires Segment analytics.identify with userId and reserved traits such as email, name, and plan.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000105,
     data: {
       user_id: 'new-user-123',
@@ -199,7 +200,8 @@ export const profileUpdateTraitsOnly: SegmentStepExample = {
   title: 'Profile update',
   description:
     'A profile update calls Segment analytics.identify with traits and no userId to merge traits into the current profile.',
-  in: getEvent('profile update', {
+  in: createEvent({
+    name: 'profile update',
     timestamp: 1700000106,
     data: {
       name: 'Jane Q. Doe',
@@ -245,7 +247,7 @@ export const userLogoutReset: SegmentStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls analytics.reset to clear userId, anonymousId, and traits then generate a new anonymous id.',
-  in: getEvent('user logout', { timestamp: 1700000107 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000107 }),
   mapping: {
     silent: true,
     settings: {
@@ -263,7 +265,8 @@ export const companyUpdateGroup: SegmentStepExample = {
   title: 'Group company',
   description:
     'A company update fires Segment analytics.group with a groupId and traits for account-level tracking.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000108,
     data: {
       company_id: 'comp-456',
@@ -387,7 +390,7 @@ export const orderCompletedEcommerce: SegmentStepExample = {
         currency: { key: 'data.currency', value: 'EUR' },
         shipping: 'data.shipping',
         tax: 'data.taxes',
-        total: 'data.total',
+        total: 'data.value',
         products: {
           loop: [
             'nested',
@@ -493,36 +496,38 @@ export const consentContextOmitted: SegmentStepExample = {
 };
 
 /**
- * Consent granted → deferred load fires for the first time. The
- * destination was initialized with consent requirement; on the walker
- * consent command it calls analytics.load(writeKey, initOptions).
- *
- * Uses the canonical StepExample.command='consent' pattern. The full
- * call shape includes both the settings arg and the initOptions arg.
- */
-export const consentGrantDeferredLoad: SegmentStepExample = {
-  title: 'Consent deferred load',
-  description:
-    'With consent: { analytics: true } in the destination config, a walker consent grant triggers the deferred Segment analytics.load with the configured writeKey.',
-  command: 'consent',
-  in: { analytics: true } as WalkerOS.Consent,
-  out: [
-    [
-      'analytics.load',
-      { writeKey: 'test-project' },
-      { initialPageview: false },
-    ],
-  ],
-};
-
-/**
  * Consent revoked → no SDK call. The walkerOS consent gate handles
  * blocking subsequent events. The destination's on('consent') handler
  * is a no-op on revocation (Segment has no opt-out method).
  */
 export const consentRevokeNoOp: SegmentStepExample = {
   public: false,
+  description:
+    'Segment has no opt-out and Analytics.js sends nothing on its own (initialPageview false), so a revocation makes no call: walkerOS stops the pushes of a consent-gated destination.',
   command: 'consent',
   in: { analytics: false } as WalkerOS.Consent,
+  out: [],
+};
+
+/** A silent rule without settings of its own calls nothing. */
+export const silentRule: SegmentStepExample = {
+  public: false,
+  description: 'A rule with silent: true and no settings calls nothing.',
+  in: getEvent('page view', { timestamp: 1700000140 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group rule of companyUpdateGroup on an update without data: no
+ * groupId resolves, so nothing is sent. A declared skip: an unmet mapping,
+ * not a failure.
+ */
+export const companyUpdateWithoutData: SegmentStepExample = {
+  public: false,
+  description:
+    'A silent rule whose group mapping finds no groupId sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'company update', entity: 'company', action: 'update' },
+  mapping: companyUpdateGroup.mapping,
   out: [],
 };

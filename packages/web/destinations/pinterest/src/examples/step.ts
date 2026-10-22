@@ -1,5 +1,5 @@
-import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import type { Flow } from '@walkeros/core';
+import { createEvent, getEvent, isObject } from '@walkeros/core';
 
 /**
  * Output convention:
@@ -28,7 +28,7 @@ export const defaultForward: Flow.StepExample = {
  */
 export const wildcardIgnored: Flow.StepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -55,7 +55,8 @@ export const siteSearch: Flow.StepExample = {
   title: 'Search',
   description:
     'A site search fires Pinterest search with the search_query field resolved from event data.',
-  in: getEvent('site search', {
+  in: createEvent({
+    name: 'site search',
     timestamp: 1700000103,
     id: 'ev-1700000103',
     data: { query: 'leather jacket' },
@@ -190,17 +191,17 @@ export const orderCompleteCheckout: Flow.StepExample = {
     name: 'checkout',
     data: {
       map: {
-        value: 'data.total',
+        value: 'data.value',
         order_id: 'data.id',
         currency: { key: 'data.currency', value: 'EUR' },
         line_items: {
           loop: [
             'nested',
             {
-              condition: (value: unknown) => {
-                const v = value as { data?: { price?: unknown } };
-                return typeof v?.data?.price === 'number';
-              },
+              condition: (value: unknown) =>
+                isObject(value) &&
+                isObject(value.data) &&
+                typeof value.data.price === 'number',
               map: {
                 product_id: 'data.id',
                 product_name: 'data.color',
@@ -248,7 +249,8 @@ export const userLoginLead: Flow.StepExample = {
   title: 'Lead with matching',
   description:
     'A user login fires pintrk set for enhanced matching and then a lead conversion track call.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000107,
     id: 'ev-1700000107',
     data: {
@@ -294,7 +296,8 @@ export const identifyOnlySilent: Flow.StepExample = {
   title: 'Identify only',
   description:
     'A user update fires pintrk set for enhanced matching without a track call via mapping silent.',
-  in: getEvent('user update', {
+  in: createEvent({
+    name: 'user update',
     timestamp: 1700000108,
     id: 'ev-1700000108',
     data: {
@@ -323,8 +326,10 @@ export const identifyOnlySilent: Flow.StepExample = {
  */
 export const consentRevoke: Flow.StepExample = {
   public: false,
+  description:
+    'For a destination with config.consent { marketing: true }, revoking marketing makes no vendor call: the destination stops sending track calls itself.',
   command: 'consent',
-  in: { marketing: false } as WalkerOS.Consent,
+  in: { marketing: false },
   out: [],
 };
 
@@ -333,7 +338,32 @@ export const consentRevoke: Flow.StepExample = {
  */
 export const consentGrant: Flow.StepExample = {
   public: false,
+  description:
+    'A grant of the required consent lets the destination send track calls again; Pinterest has no consent call to make.',
   command: 'consent',
-  in: { marketing: true } as WalkerOS.Consent,
+  in: { marketing: true },
+  out: [],
+};
+
+/** A silent rule sends no track call and no identity. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no pintrk track call.',
+  in: createEvent({ name: 'page view', timestamp: 1700000109 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent identify rule of identifyOnlySilent on an update without data:
+ * no identity resolves and the rule suppresses the track, so nothing is
+ * sent. A declared skip: an unmet mapping, not a failure.
+ */
+export const identifyOnlySilentWithoutData: Flow.StepExample = {
+  public: false,
+  description:
+    'A silent rule whose identify mapping finds no email or id sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'user update', entity: 'user', action: 'update' },
+  mapping: identifyOnlySilent.mapping,
   out: [],
 };

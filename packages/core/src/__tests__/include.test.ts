@@ -12,7 +12,7 @@ describe('flattenIncludeSections', () => {
       data_currency: 'EUR',
       data_shipping: 5.22,
       data_taxes: 73.76,
-      data_total: 555,
+      data_value: 555,
     });
   });
 
@@ -60,7 +60,7 @@ describe('flattenIncludeSections', () => {
   test('"all" expands to every section', () => {
     const result = flattenIncludeSections(event, ['all']);
     // Should contain keys from all sections
-    expect(result.data_total).toBe(555);
+    expect(result.data_value).toBe(555);
     expect(result.globals_pagegroup).toBe('shop');
     expect(result.context_shopping).toBe('complete');
     expect(result.user_id).toBe('us3r');
@@ -70,7 +70,7 @@ describe('flattenIncludeSections', () => {
 
   test('multiple sections combined', () => {
     const result = flattenIncludeSections(event, ['data', 'globals']);
-    expect(result.data_total).toBe(555);
+    expect(result.data_value).toBe(555);
     expect(result.globals_pagegroup).toBe('shop');
     // No context keys
     expect(result.context_shopping).toBeUndefined();
@@ -162,7 +162,7 @@ describe('processEventMapping with include', () => {
 
     expect(isObject(result.data)).toBe(true);
     expect(result.data).toMatchObject({
-      data_total: 555,
+      data_value: 555,
       data_currency: 'EUR',
     });
   });
@@ -184,7 +184,7 @@ describe('processEventMapping with include', () => {
 
     // Rule-level include wins - only globals, no data
     expect(result.data).toMatchObject({ globals_pagegroup: 'shop' });
-    expect(isObject(result.data) && 'data_total' in result.data).toBe(false);
+    expect(isObject(result.data) && 'data_value' in result.data).toBe(false);
   });
 
   test('config.data wins over include on key conflict', async () => {
@@ -193,7 +193,7 @@ describe('processEventMapping with include', () => {
       include: ['data'],
       data: {
         map: {
-          data_total: { value: 'overridden' },
+          data_value: { value: 'overridden' },
         },
       },
     };
@@ -201,7 +201,7 @@ describe('processEventMapping with include', () => {
     const result = await processEventMapping(event, config, mockCollector);
 
     expect(result.data).toMatchObject({
-      data_total: 'overridden',
+      data_value: 'overridden',
       // Other include keys still present
       data_currency: 'EUR',
     });

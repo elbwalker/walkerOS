@@ -158,7 +158,7 @@ export const setup = async (
   const table = sqlite.table ?? 'events';
 
   // Open transient client (or reuse env-injected one). We do NOT touch
-  // sqlite._client / sqlite._runInsert here, setup is a separate lifecycle.
+  // sqlite._client / sqlite._ready here, setup is a separate lifecycle.
   let client: SqliteClient;
   let owned = true;
   if (isSqliteEnv(env) && env.client) {

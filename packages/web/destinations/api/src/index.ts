@@ -1,6 +1,6 @@
 import type { SendDataValue, SendHeaders, WalkerOS } from '@walkeros/core';
 import type { Settings, Destination } from './types';
-import { isDefined } from '@walkeros/core';
+import { isDefined, StepError } from '@walkeros/core';
 import { sendWeb } from '@walkeros/web-core';
 
 // Types
@@ -28,13 +28,13 @@ function withTraceparent(
   return { ...headers, traceparent: `00-${trace}-${id}-01` };
 }
 
-function send(
+async function send(
   body: SendDataValue,
   settings: Settings,
   sendWebFn: typeof sendWeb,
-): void {
+): Promise<void> {
   const { url, headers, method, transport = 'fetch' } = settings;
-  sendWebFn(url, body, { headers, method, transport });
+  await sendWebFn(url, body, { headers, method, transport });
 }
 
 /** A transformed body as a batch item: JSON object or array text becomes its value. */
@@ -53,55 +53,68 @@ export const destinationAPI: Destination = {
 
   config: {},
 
-  init({ config, logger }) {
+  init({ config }) {
     const { url } = config.settings || {};
-    if (!url) logger.throw('Config settings url missing');
+    if (!url)
+      throw new StepError('API destination needs settings.url', {
+        code: 'config',
+      });
   },
 
-  push(event, { config, rule, data, env, logger }) {
+  async push(event, { config, rule, data, env }) {
     const { settings } = config;
     const { url, transform } = settings || {};
 
-    if (!url) {
-      logger.throw('Config settings url missing');
-      return;
+    if (!url)
+      throw new StepError('API destination needs settings.url', {
+        code: 'config',
+      });
+
+    // A silent rule sends nothing
+    if (!rule?.silent) {
+      const eventData = isDefined(data) ? data : event;
+      // Transform returns body directly, otherwise stringify
+      const body = transform
+        ? transform(eventData, config, rule)
+        : JSON.stringify(eventData);
+
+      const headers = withTraceparent(event, settings?.headers);
+
+      await send(body, { ...settings, url, headers }, env.sendWeb || sendWeb);
     }
-
-    const eventData = isDefined(data) ? data : event;
-    // Transform returns body directly, otherwise stringify
-    const body = transform
-      ? transform(eventData, config, rule)
-      : JSON.stringify(eventData);
-
-    const headers = withTraceparent(event, settings?.headers);
-
-    send(body, { ...settings, url, headers }, env.sendWeb || sendWeb);
   },
 
-  pushBatch(batch, { config, rule, env, logger }) {
+  async pushBatch(batch, { config, rule, env }) {
     const { settings } = config;
     const { url, transform } = settings || {};
 
-    if (!url) {
-      logger.throw('Config settings url missing');
-      return;
+    if (!url)
+      throw new StepError('API destination needs settings.url', {
+        code: 'config',
+      });
+
+    // A silent rule sends nothing
+    if (!rule?.silent) {
+      const items = batch.entries.map((e) =>
+        isDefined(e.data) ? e.data : e.event,
+      );
+
+      // Apply transform to each item if defined, then stringify the array. A
+      // transform returns one serialized body, so a JSON string joins the array
+      // as its value instead of as an escaped string.
+      const payload = transform
+        ? items.map((item) => fromBody(transform(item, config, rule)))
+        : items;
+
+      // No traceparent here: a batch may aggregate events from distinct
+      // upstream traces, so there is no single identity to stamp. Per-event
+      // correlation is emitted on the non-batched push path only.
+      await send(
+        JSON.stringify(payload),
+        { ...settings, url },
+        env.sendWeb || sendWeb,
+      );
     }
-
-    const items = batch.entries.map((e) =>
-      isDefined(e.data) ? e.data : e.event,
-    );
-
-    // Apply transform to each item if defined, then stringify the array. A
-    // transform returns one serialized body, so a JSON string joins the array
-    // as its value instead of as an escaped string.
-    const payload = transform
-      ? items.map((item) => fromBody(transform(item, config, rule)))
-      : items;
-
-    // No traceparent here: a batch may aggregate events from distinct
-    // upstream traces, so there is no single identity to stamp. Per-event
-    // correlation is emitted on the non-batched push path only.
-    send(JSON.stringify(payload), { ...settings, url }, env.sendWeb || sendWeb);
   },
 };
 

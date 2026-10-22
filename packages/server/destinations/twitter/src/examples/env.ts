@@ -20,7 +20,6 @@ type SendServerFn = (
  */
 const mockSendServer: SendServerFn = async () => {
   return {
-    ok: true,
     data: { request_id: 'mock-request-id' },
   };
 };

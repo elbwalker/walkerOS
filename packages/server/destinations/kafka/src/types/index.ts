@@ -160,6 +160,8 @@ export interface KafkaSettings {
 
   // Runtime -- set during init, not user-facing
   _producer?: KafkaProducerMock;
+  /** The producer's connection, opened at the first push. */
+  _connected?: Promise<void>;
 }
 
 export interface Settings {

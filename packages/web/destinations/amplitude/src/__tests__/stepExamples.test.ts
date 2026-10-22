@@ -119,9 +119,14 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
       calls.push([`amplitude.${name}`, ...args]);
     };
   env.amplitude = {
-    initAll: (async (...args: unknown[]) => {
-      calls.push(['amplitude.initAll', ...args]);
-    }) as NonNullable<Env['amplitude']>['initAll'],
+    init: (...args: unknown[]) => {
+      calls.push(['amplitude.init', ...args]);
+      return { promise: Promise.resolve() };
+    },
+    add: (...args: unknown[]) => {
+      calls.push(['amplitude.add', ...args]);
+      return { promise: Promise.resolve() };
+    },
     track: ((eventType: string, props?: Record<string, unknown>) => {
       calls.push(['amplitude.track', eventType, props ?? {}]);
     }) as NonNullable<Env['amplitude']>['track'],
@@ -150,8 +155,6 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
     groupIdentify: ((type: string, name: string, id: RecordingIdentify) => {
       calls.push(['amplitude.groupIdentify', type, name, id.ops]);
     }) as NonNullable<Env['amplitude']>['groupIdentify'],
-    flush: () => ({ promise: Promise.resolve() }),
-    add: () => ({ promise: Promise.resolve() }),
     Identify: RecordingIdentify,
     Revenue: RecordingRevenue,
   };
@@ -159,7 +162,12 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('amplitude destination — step examples', () => {
-  it.each<[string, AmplitudeStepExample]>(Object.entries(examples.step))(
+  // Non-public examples (silent, failures) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each<[string, AmplitudeStepExample]>(published)(
     '%s',
     async (name, example) => {
       const env = clone(examples.env.push) as Env;
@@ -209,9 +217,7 @@ describe('amplitude destination — step examples', () => {
 
       // Drop init — every example triggers init once; it's not part of `out`.
       const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-      const actual = collected().filter(
-        ([path]) => path !== 'amplitude.initAll',
-      );
+      const actual = collected().filter(([path]) => path !== 'amplitude.init');
 
       expect(actual).toEqual(expected);
     },

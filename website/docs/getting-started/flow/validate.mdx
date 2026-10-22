@@ -16,7 +16,7 @@ Event shapes live in the top-level `contract` block of flow.json (a sibling of `
 {
   "version": 4,
   "contract": {
-    "web": { "events": { "order": { "complete": { "properties": { "data": { "required": ["total", "currency"] } } } } } }
+    "web": { "events": { "order": { "complete": { "properties": { "data": { "required": ["value", "currency"] } } } } } }
   }
 }
 ```
@@ -35,7 +35,7 @@ Add a `@walkeros/transformer-validate` step, point its `contract` setting at the
       "events": {
         "order": {
           "complete": {
-            "properties": { "data": { "required": ["total", "currency"] } }
+            "properties": { "data": { "required": ["value", "currency"] } }
           }
         }
       }
@@ -108,7 +108,7 @@ The top-level `contract` block is the reference for setting up mappings, `$contr
 
 ## Break it on purpose
 
-Contracts are easiest to trust after watching one fail. Take the contract above (it requires `total` and `currency` on `order complete` data), run the validate step with `mode: "strict"`, and give it an example whose `in` misses `currency` while its `out` still passes the event on. The validator names the exact path and what the step really does:
+Contracts are easiest to trust after watching one fail. Take the contract above (it requires `value` and `currency` on `order complete` data), run the validate step with `mode: "strict"`, and give it an example whose `in` misses `currency` while its `out` still passes the event on. The validator names the exact path and what the step really does:
 
 <CodeSnippet
   code={`Validation Results:

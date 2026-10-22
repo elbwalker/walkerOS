@@ -117,7 +117,7 @@ With Web API mode, route events to different channels using nested `entity > act
           "complete": {
             "settings": {
               "channel": "#sales",
-              "text": "New order \${data.id}: \${data.total} \${data.currency}"
+              "text": "New order \${data.id}: \${data.value} \${data.currency}"
             }
           }
         },
@@ -153,3 +153,5 @@ Messages support two formatting styles, set at destination level or per rule:
 - **Block Kit**: structured layouts via Slack's [Block Kit](https://api.slack.com/block-kit) (headers, sections, buttons, context). Use the `blocks` setting when you need rich formatting.
 
 When neither `text` nor `blocks` is provided, the destination generates a default message with an event-name header (toggle via `includeHeader`).
+
+`reply_broadcast` is sent only together with a thread.

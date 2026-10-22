@@ -1,15 +1,19 @@
 import type { Config, Settings, PartialConfig } from './types';
-import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 
-export function getConfig(
-  partialConfig: PartialConfig = {},
-  logger: Logger.Instance,
-): Config {
-  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+export function getConfig(partialConfig: PartialConfig = {}): Config {
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { accessToken, adAccountId } = settings;
 
-  if (!accessToken) logger.throw('Config settings accessToken missing');
-  if (!adAccountId) logger.throw('Config settings adAccountId missing');
+  if (!accessToken || !adAccountId) {
+    const missing = [
+      ...(accessToken ? [] : ['accessToken']),
+      ...(adAccountId ? [] : ['adAccountId']),
+    ];
+    throw new StepError(`Config settings ${missing.join(', ')} missing`, {
+      code: 'config',
+    });
+  }
 
   const settingsConfig: Settings = {
     ...settings,

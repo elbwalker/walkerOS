@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * Google Data Manager step examples.
@@ -51,7 +51,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'ev-1700000900000',
     timestamp: 1700000900000,
-    data: { id: 'ORD-600', total: 149.99, currency: 'EUR' },
+    data: { id: 'ORD-600', value: 149.99, currency: 'EUR' },
     user: { id: 'user-abc', email: 'buyer@example.com' },
     source: { type: 'express', platform: 'server' },
   }),
@@ -60,7 +60,7 @@ export const purchase: Flow.StepExample = {
     data: {
       map: {
         transactionId: 'data.id',
-        conversionValue: 'data.total',
+        conversionValue: 'data.value',
         currency: { key: 'data.currency', value: 'USD' },
         eventName: { value: 'purchase' },
         userId: 'user.id',
@@ -106,7 +106,8 @@ export const lead: Flow.StepExample = {
   title: 'Lead',
   description:
     'A demo request form submission is sent to Data Manager as a generate_lead conversion with a hashed email.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     id: 'ev-1700000901000',
     timestamp: 1700000901000,
     data: { type: 'demo-request' },
@@ -200,4 +201,33 @@ export const ga4PageView: Flow.StepExample = {
       ),
     ],
   ],
+};
+
+/** A silent rule sends nothing to the Data Manager API. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description:
+    'A rule with silent: true sends no request to the Data Manager API.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * No transaction id -- an order complete event without data has no
+ * transactionId, which Data Manager requires, so the push fails with
+ * missing-input instead of counting as delivered.
+ */
+export const orderWithoutTransactionId: Flow.StepExample = {
+  public: false,
+  description:
+    'An order complete event without a transaction id cannot be sent to the Data Manager API: the push fails with missing-input instead of counting as delivered.',
+  in: {
+    name: 'order complete',
+    entity: 'order',
+    action: 'complete',
+    timestamp: 1700000991000,
+  },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
 };

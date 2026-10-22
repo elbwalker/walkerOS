@@ -92,6 +92,8 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+gtag.js and a GTM container load through walkerOS, so a blocked script fails later events visibly. An empty GA4 parameter name, or two names that normalize to one, drops that parameter with one ERROR line per cause and still sends the event. A rule with `silent: true` sends nothing. Settings with a key gtag does not read fail `walkeros validate`.
+
 ## Next steps
 
 - [**Mapping**](/docs/mapping): transform events for Google's expected format

@@ -29,7 +29,12 @@ describe('Step Examples', () => {
     __resetMockCalls();
   });
 
-  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
+  // Non-public examples (silent) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each(published)('%s', async (_name, example) => {
     const destination: Destination = jest.requireActual('../').default;
     destination.config = {};
 

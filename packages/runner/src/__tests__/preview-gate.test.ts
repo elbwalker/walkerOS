@@ -257,6 +257,15 @@ describe('preview intake gate', () => {
     });
     expect(res.status).toBe(500);
     expect(res.body).not.toContain('Unauthorized');
+    // A request that answered 500 is a failure: ERROR, not INFO.
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'flow handler error on POST /collect: flow handler exploded',
+      ),
+    );
+    expect(mockLogger.info).not.toHaveBeenCalledWith(
+      expect.stringContaining('flow handler error'),
+    );
   });
 
   it('REJECTS a validly-signed grant minted for a DIFFERENT session (sb binding)', async () => {

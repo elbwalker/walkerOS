@@ -207,6 +207,8 @@ describe('amplitude server destination -- step examples', () => {
           },
         });
         await elb(event);
+        // The destination batches by default: send what it holds.
+        await elb('walker flush');
       }
 
       const actual = collected().filter(([path]) => path !== 'amplitude.init');

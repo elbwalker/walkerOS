@@ -13,7 +13,12 @@ import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashUserData } from './hash';
 
-export const push: PushFn = async function (
+// A silent rule has no bing call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, rule, data, ingest, env, logger, collector },
 ) {
@@ -27,7 +32,7 @@ export const push: PushFn = async function (
     continueOnValidationError,
     ip,
     userAgent,
-  } = config.settings as Settings;
+  } = config.settings!;
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data
@@ -123,20 +128,12 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = (env as Env)?.sendServer || sendServer;
-  const result = await sendServerFn(endpoint, JSON.stringify(body), {
+  await sendServerFn(endpoint, JSON.stringify(body), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
   });
-
-  logger.debug('Bing UET CAPI response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`Bing UET CAPI error: ${JSON.stringify(result)}`);
-  }
 };
 
 const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];

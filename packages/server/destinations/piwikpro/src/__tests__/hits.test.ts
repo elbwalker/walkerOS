@@ -1,7 +1,7 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
+import type { Collector, StandardEventName, WalkerOS } from '@walkeros/core';
 import type { Hit, Rule, Settings } from '../types';
 import type { BuildResult } from '../hits';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { getHashServer } from '@walkeros/server-core';
 import { buildHits } from '../hits';
@@ -23,7 +23,7 @@ describe('buildHits', () => {
   });
 
   function event(
-    name: string,
+    name: StandardEventName,
     props: WalkerOS.DeepPartialEvent = {},
   ): WalkerOS.Event {
     return getEvent(name, {
@@ -33,9 +33,22 @@ describe('buildHits', () => {
     });
   }
 
+  /** An event outside the standard set, with the same timestamp and source. */
+  function otherEvent(
+    name: string,
+    props: WalkerOS.DeepPartialEvent = {},
+  ): WalkerOS.Event {
+    return createEvent({
+      timestamp: 1700000300000,
+      source: SOURCE,
+      ...props,
+      name,
+    });
+  }
+
   /** The hits of a successful build, as parameter maps. */
   function params(result: BuildResult): Array<Map<string, string>> {
-    if ('skip' in result) throw new Error(`unexpected skip: ${result.skip}`);
+    if (!('hits' in result)) throw new Error('unexpected unsent result');
     return result.hits.map((hit) => new Map(hit));
   }
 
@@ -82,30 +95,11 @@ describe('buildHits', () => {
   });
 
   it.each<[string, WalkerOS.Event, Rule | undefined, string]>([
-    ['an unmapped event', event('promotion visible'), undefined, 'unmapped'],
-    [
-      'an unnamed rule without a goal',
-      event('promotion visible'),
-      { settings: { customDimensions: { '1': 'data.name' } } },
-      'unmapped',
-    ],
-    [
-      'a method outside the table',
-      event('setUserId'),
-      { name: 'setUserId' },
-      'unknown method setUserId',
-    ],
     [
       'silent without a goal',
-      event('trackEvent'),
+      otherEvent('trackEvent'),
       { name: 'trackEvent', silent: true },
       'silent',
-    ],
-    [
-      'a missing page url',
-      event('page view', { source: { type: 'collector' } }),
-      undefined,
-      'missing url',
     ],
   ])('skips %s', async (_, event, rule, skip) => {
     expect(await buildHits({ event, rule }, settings, collector)).toEqual({
@@ -113,14 +107,49 @@ describe('buildHits', () => {
     });
   });
 
-  it('skips an invalid method call with its reason', async () => {
+  it.each<[string, WalkerOS.Event, Rule | undefined, string]>([
+    [
+      'a method outside the table',
+      otherEvent('setUserId'),
+      { name: 'setUserId' },
+      'unknown method setUserId',
+    ],
+    [
+      'a missing page url',
+      event('page view', { source: { type: 'collector' } }),
+      undefined,
+      'missing url',
+    ],
+    [
+      'an unmapped event',
+      event('promotion visible'),
+      undefined,
+      'no rule maps the event',
+    ],
+    [
+      'an unnamed rule without a goal',
+      event('promotion visible'),
+      { settings: { customDimensions: { '1': 'data.name' } } },
+      'no rule maps the event',
+    ],
+  ])('rejects %s', async (_, event, rule, invalid) => {
+    expect(await buildHits({ event, rule }, settings, collector)).toEqual({
+      invalid,
+    });
+  });
+
+  it('rejects an invalid method call with its reason', async () => {
     expect(
       await buildHits(
-        { event: event('trackEvent'), rule: { name: 'trackEvent' }, data: [] },
+        {
+          event: otherEvent('trackEvent'),
+          rule: { name: 'trackEvent' },
+          data: [],
+        },
         settings,
         collector,
       ),
-    ).toEqual({ skip: 'trackEvent: category missing' });
+    ).toEqual({ invalid: 'trackEvent: category missing' });
   });
 
   const goalRule: Rule = {
@@ -132,7 +161,7 @@ describe('buildHits', () => {
     const [main, goal] = params(
       await buildHits(
         {
-          event: event('trackEvent', { data: { position: 3 } }),
+          event: otherEvent('trackEvent', { data: { position: 3 } }),
           rule: goalRule,
           data: ['promotion', 'visible'],
         },
@@ -153,7 +182,7 @@ describe('buildHits', () => {
       await buildHits(
         {
           event: event('order complete'),
-          rule: { settings: { goalId: 'g1', goalValue: 'data.total' } },
+          rule: { settings: { goalId: 'g1', goalValue: 'data.value' } },
         },
         settings,
         collector,
@@ -169,7 +198,7 @@ describe('buildHits', () => {
     const hits = params(
       await buildHits(
         {
-          event: event('trackEvent', { data: { position: 3 } }),
+          event: otherEvent('trackEvent', { data: { position: 3 } }),
           rule: { ...goalRule, silent: true },
         },
         settings,
@@ -183,14 +212,14 @@ describe('buildHits', () => {
   it('sets url to the trackLink address', async () => {
     const result = await buildHits(
       {
-        event: event('trackLink'),
+        event: otherEvent('trackLink'),
         rule: { name: 'trackLink' },
         data: ['https://example.com/a.pdf', 'download'],
       },
       settings,
       collector,
     );
-    if ('skip' in result) throw new Error(result.skip);
+    if (!('hits' in result)) throw new Error('unexpected unsent result');
     const [hit] = result.hits;
     expect(hit.filter(([key]) => key === 'url')).toEqual([
       ['url', 'https://example.com/a.pdf'],

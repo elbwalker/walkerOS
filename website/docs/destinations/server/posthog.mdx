@@ -81,3 +81,9 @@ Add to your `flow.json` destinations:
 </Tabs>
 
 <Configuration type="destination" data={data} />
+
+## Batching and delivery
+
+This destination batches by default: `config.batch` sends after 20 events or 10 seconds, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
+
+`settings.include` no longer exists; use `config.include`.

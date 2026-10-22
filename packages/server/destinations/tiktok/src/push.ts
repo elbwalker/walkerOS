@@ -7,13 +7,23 @@ import type {
   Env,
 } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
+import {
+  createMappingRoot,
+  getMappingValue,
+  isObject,
+  StepError,
+} from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashUserData } from './hash';
 
-export const push: PushFn = async function (
+// A silent rule has no TikTok call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
-  { config, rule, data, ingest, collector, env, logger },
+  { config, data, ingest, collector, env, logger },
 ) {
   const {
     accessToken,
@@ -25,7 +35,11 @@ export const push: PushFn = async function (
     partner_name,
     ip,
     userAgent,
-  } = config.settings as import('./types').Settings;
+  } = config.settings ?? {};
+  if (!accessToken || !pixelCode)
+    throw new StepError('TikTok settings missing, init() not run', {
+      code: 'not-ready',
+    });
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data
@@ -112,21 +126,33 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = (env as Env)?.sendServer || sendServer;
-  const result = await sendServerFn(url, JSON.stringify(body), {
+  const response = await sendServerFn(url, JSON.stringify(body), {
     headers: {
       'Access-Token': accessToken,
       'Content-Type': 'application/json',
     },
   });
-
-  logger.debug('TikTok API response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`TikTok API error: ${JSON.stringify(result)}`);
-  }
+  checkResponse(response.data);
 };
+
+/**
+ * TikTok answers HTTP 200 with a non-zero `code` when it rejects the event
+ * (`{ code: 0, message: 'OK' }` on success). A rejection fails the push; the
+ * body stays on the error. Rate limiting (40100) and server errors (5xxxx)
+ * can pass on a retry, a rejected event cannot.
+ */
+function checkResponse(data: unknown): void {
+  if (!isObject(data) || typeof data.code !== 'number' || data.code === 0)
+    return;
+  throw new StepError(
+    `TikTok Events API rejected the event (code ${data.code})`,
+    {
+      code: 'transport',
+      retryable: data.code === 40100 || data.code >= 50000,
+      body: data,
+    },
+  );
+}
 
 const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
 const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [

@@ -15,14 +15,6 @@ export const init: Env | undefined = {
     // gtag absent: initializeGtag() installs it during init.
     dataLayer: [],
   },
-  document: {
-    createElement: () => ({
-      src: '',
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
-  },
 };
 
 export const push: Env = {
@@ -31,14 +23,6 @@ export const push: Env = {
       // Add any gtag-specific properties if needed
     }),
     dataLayer: [],
-  },
-  document: {
-    createElement: () => ({
-      src: '',
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
   },
 };
 

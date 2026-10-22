@@ -1,22 +1,26 @@
 import type { Config, PartialConfig, Settings } from './types';
-import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 
-export function getConfig(
-  partialConfig: PartialConfig = {},
-  logger: Logger.Instance,
-): Config {
-  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+export function getConfig(partialConfig: PartialConfig = {}): Config {
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { apiKey, apiSecret } = settings;
 
-  if (!apiKey) logger.throw('Config settings apiKey missing');
-  if (!apiSecret) logger.throw('Config settings apiSecret missing');
+  if (!apiKey || !apiSecret) {
+    const missing = [
+      ...(apiKey ? [] : ['apiKey']),
+      ...(apiSecret ? [] : ['apiSecret']),
+    ];
+    throw new StepError(`Config settings ${missing.join(', ')} missing`, {
+      code: 'config',
+    });
+  }
 
   const settingsConfig: Settings = {
     pod: 'us1',
     environment: 'production',
     ...settings,
-    apiKey: apiKey as string,
-    apiSecret: apiSecret as string,
+    apiKey,
+    apiSecret,
   };
 
   return { ...partialConfig, settings: settingsConfig };

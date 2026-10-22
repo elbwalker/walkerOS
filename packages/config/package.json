@@ -1,14 +1,15 @@
 {
   "name": "@walkeros/config",
-  "version": "4.8.1",
+  "version": "4.8.2",
   "type": "module",
   "description": "Shared development configuration for walkerOS packages (TypeScript, ESLint, Jest, tsup)",
   "license": "MIT",
   "files": [
     "tsconfig/**/*.json",
-    "eslint/**/*.mjs",
+    "eslint/*.mjs",
+    "eslint/rules/*.mjs",
     "jest/**/*.mjs",
-    "tsup/**/*.mjs",
+    "tsup/*.mjs",
     "tsup/**/*.d.ts",
     "CHANGELOG.md"
   ],
@@ -19,6 +20,7 @@
     "./eslint": "./eslint/index.mjs",
     "./eslint/web": "./eslint/web.mjs",
     "./eslint/node": "./eslint/node.mjs",
+    "./eslint/neutral": "./eslint/neutral.mjs",
     "./jest": "./jest/index.mjs",
     "./jest/web.config": "./jest/web.config.mjs",
     "./jest/node.config": "./jest/node.config.mjs",
@@ -26,11 +28,15 @@
     "./jest/node.setup": "./jest/node.setup.mjs",
     "./tsup": "./tsup/index.mjs"
   },
+  "scripts": {
+    "test": "jest"
+  },
   "dependencies": {
     "@swc/core": "^1.11.13",
     "@swc/jest": "^0.2.37",
     "@testing-library/jest-dom": "^6.6.3",
     "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.1",
     "@eslint/js": "^9.39.4",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",

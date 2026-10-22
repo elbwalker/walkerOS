@@ -1,4 +1,5 @@
 import type { Logger, ServiceAccount } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
 import { managedwriter, adapt, protos } from '@google-cloud/bigquery-storage';
 
@@ -47,7 +48,31 @@ export interface WriteConnection {
 }
 
 /** The fields of an append response that push and pushBatch read. */
-export type AppendOutcome = Pick<AppendResponse, 'rowErrors' | 'appendResult'>;
+export type AppendOutcome = Pick<
+  AppendResponse,
+  'rowErrors' | 'appendResult' | 'error'
+>;
+
+/**
+ * The gRPC statuses the Storage Write SDK retries itself (its stream
+ * connection's `isRetryableError`): ABORTED, UNAVAILABLE, CANCELLED,
+ * INTERNAL, DEADLINE_EXCEEDED.
+ */
+const RETRYABLE_STATUS = [10, 14, 1, 13, 4];
+
+/**
+ * The failure of an append the server answered with an error status: a
+ * quota, a dropped table, a lost permission. Nothing of it was written. The
+ * status message can quote the rows, so only its code is named.
+ */
+export function appendError(outcome: AppendOutcome): StepError | undefined {
+  if (!outcome.error) return undefined;
+  const status = outcome.error.code ?? undefined;
+  return new StepError(`BigQuery append failed (code ${status ?? 'unknown'})`, {
+    code: 'transport',
+    retryable: status !== undefined && RETRYABLE_STATUS.includes(status),
+  });
+}
 
 /** The row writer surface push and pushBatch use. */
 export interface RowWriter {
@@ -319,9 +344,9 @@ export interface EnsureWriterSettings {
 }
 
 /**
- * Single owner of the writer lifecycle on the push path. When the connection's
- * `'error'` handler has flagged the writer broken, attempt a lazy re-open
- * before failing:
+ * Single owner of the writer lifecycle on the push path. The first push opens
+ * the writer (init stays offline). When the connection's `'error'` handler has
+ * flagged the writer broken, attempt a lazy re-open before failing:
  *   - success: swap in the fresh handles, clear the broken flag, proceed.
  *   - failure: stay broken, throw so the event is DLQ-routed.
  *
@@ -353,27 +378,26 @@ export function ensureWriter(
   settings: EnsureWriterSettings,
   logger: Logger.Instance,
 ): Promise<void> {
-  if (!settings.writerBroken) return Promise.resolve();
+  const opening = !settings.writer;
+  if (!opening && !settings.writerBroken) return Promise.resolve();
 
-  // A concurrent caller already started the re-open: join it instead of opening
-  // a second connection (which would orphan one of them).
+  // A concurrent caller already started the (re-)open: join it instead of
+  // opening a second connection (which would orphan one of them).
   if (settings.reopenInFlight) return settings.reopenInFlight;
 
-  const lastError = settings.lastStreamError;
-  logger.info('BigQuery writer broken; attempting one re-open before failing', {
-    error: lastError ? lastError.message : 'unknown stream error',
-  });
-
   const reopen = settings.reopenWriter;
-  if (!reopen) {
-    // No re-open hook (init never wired it): cannot self-heal, stay broken.
+  if (!reopen)
+    // No open hook (init never wired it): cannot open or self-heal.
     return Promise.reject(
-      new Error(
-        'BigQuery writer is broken and no re-open hook is configured: ' +
-          (lastError ? lastError.message : 'unknown stream error'),
-      ),
+      new StepError('BigQuery writer is not initialized', {
+        code: 'not-ready',
+      }),
     );
-  }
+
+  if (!opening)
+    logger.info(
+      'BigQuery writer broken; attempting one re-open before failing',
+    );
 
   const inFlight = (async () => {
     try {
@@ -397,7 +421,8 @@ export function ensureWriter(
       settings.connectionErrorListener = handles.connectionErrorListener;
       settings.writerBroken = false;
       settings.lastStreamError = undefined;
-      logger.info('BigQuery writer re-opened after a stream error');
+      if (!opening)
+        logger.info('BigQuery writer re-opened after a stream error');
     } finally {
       // Clear the memo so a later push after a FAILED re-open retries (on a
       // successful re-open writerBroken is already false, so the next push skips

@@ -84,12 +84,8 @@ export function normalizeBody(body: unknown, base64?: boolean): unknown {
 
   let text = body;
   if (base64) {
-    // atob is untyped in core (no DOM lib, no own @types/node) but present in
-    // every runtime we target: structural access, as in preview.ts.
-    const atobFn = (globalThis as { atob?: (data: string) => string }).atob;
-    if (!atobFn) return body;
     try {
-      const binary = atobFn(body);
+      const binary = atob(body);
       // UTF-8 decode without TextDecoder, which core cannot rely on.
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);

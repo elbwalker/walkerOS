@@ -1,29 +1,19 @@
-/**
- * Default per-destination delivery timeout in ms. Applied when a destination's
- * `config.timeout` is `0` or undefined. A hung delivery is converted into a
- * counted DLQ failure after this window so one slow destination never wedges
- * the collector push.
- */
-export const DEFAULT_DESTINATION_TIMEOUT_MS = 10_000;
+import { StepError } from '@walkeros/core';
+
+export {
+  DEFAULT_DESTINATION_TIMEOUT_MS,
+  resolveDestinationTimeout,
+} from '@walkeros/core';
 
 /**
- * Resolve the effective delivery timeout for a destination. A positive number
- * wins; `0` or undefined falls back to {@link DEFAULT_DESTINATION_TIMEOUT_MS}.
+ * Error thrown when a destination delivery does not settle within its timeout:
+ * a `StepError` with code `timeout` (retryable). The dedicated `name` lets DLQ
+ * consumers discriminate a timeout from a destination-thrown error without
+ * substring matching the message.
  */
-export function resolveDestinationTimeout(timeout?: number): number {
-  return typeof timeout === 'number' && timeout > 0
-    ? timeout
-    : DEFAULT_DESTINATION_TIMEOUT_MS;
-}
-
-/**
- * Error thrown when a destination delivery does not settle within its timeout.
- * The dedicated `name` lets DLQ consumers discriminate a timeout from a
- * destination-thrown error without substring matching the message.
- */
-export class DestinationTimeoutError extends Error {
+export class DestinationTimeoutError extends StepError {
   constructor(message: string) {
-    super(message);
+    super(message, { code: 'timeout' });
     this.name = 'DestinationTimeoutError';
   }
 }

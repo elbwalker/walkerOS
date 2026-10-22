@@ -1,6 +1,12 @@
 import type { WalkerOS, Logger } from '@walkeros/core';
 import type { GA4Settings, Parameters, Env } from '../types';
-import { isObject } from '@walkeros/core';
+import { isObject, StepError } from '@walkeros/core';
+
+/**
+ * Reports a parameter the mapping could not name: the parameter is dropped
+ * and the event still goes out.
+ */
+export type ReportDroppedParam = (message: string, mappingKey: string) => void;
 import { normalizeEventName, normalizeParamName } from '../shared/mapping';
 import { getEnv } from '@walkeros/web-core';
 
@@ -38,11 +44,14 @@ export function pushGA4Event(
   data: WalkerOS.AnyObject,
   env: Env | undefined,
   logger: Logger.Instance,
-): void {
+  reportDropped: ReportDroppedParam,
+): unknown {
   const { window } = getEnv<Env>(env);
 
   if (!settings.measurementId)
-    logger.throw('Config settings ga4.measurementId missing');
+    throw new StepError('Config settings ga4.measurementId missing', {
+      code: 'config',
+    });
 
   // Coerce every param name into GA4's charset before it goes out. Reserved
   // matching runs on the normalized name, so an illegal spelling cannot
@@ -52,8 +61,10 @@ export function pushGA4Event(
     for (const [rawName, value] of Object.entries(data)) {
       const name = normalizeParamName(rawName);
 
+      // A name GA4 cannot carry, or two names one param: the mapping is
+      // wrong. The parameter is dropped and reported, the event still goes.
       if (!name) {
-        logger.warn('GA4 param dropped: empty name');
+        reportDropped('GA4 param dropped: its name is empty', rawName);
         continue;
       }
 
@@ -63,10 +74,13 @@ export function pushGA4Event(
         continue;
       }
 
-      if (name in eventParams)
-        logger.warn(
-          `GA4 param "${name}" overwritten: "${rawName}" collides after normalization`,
+      if (name in eventParams) {
+        reportDropped(
+          'GA4 param dropped: its name collides with an earlier one after normalization',
+          rawName,
         );
+        continue;
+      }
 
       eventParams[name] = value;
     }
@@ -85,5 +99,5 @@ export function pushGA4Event(
   if (settings.debug) eventParams.debug_mode = true;
 
   const gtag = window.gtag!;
-  gtag('event', eventName, eventParams);
+  return gtag('event', eventName, eventParams);
 }

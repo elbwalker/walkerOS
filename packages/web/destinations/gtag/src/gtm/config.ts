@@ -1,19 +1,37 @@
 import type { Logger } from '@walkeros/core';
 import type { GTMSettings, Env } from '../types';
 import { isArray } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
 
 export const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
+
+/**
+ * The GTM container script `loadVendor` injects (once per src and page). The
+ * container replays its dataLayer, so it is only watched for a failure.
+ */
+export function gtmVendor(settings: GTMSettings, timeout?: number, env?: Env) {
+  const { containerId = '', dataLayer, domain } = settings;
+  const dataLayerName = dataLayer || defaultDataLayer;
+  const dl = dataLayerName != defaultDataLayer ? '&l=' + dataLayerName : '';
+  const { window, document } = getEnv<Env>(env);
+  return loadVendor(
+    (domain || defaultDomain) + containerId + dl,
+    () => window[dataLayerName],
+    { timeout, document },
+  );
+}
 
 export function initGTM(
   settings: GTMSettings,
   loadScript?: boolean,
   env?: Env,
   _logger?: Logger.Instance,
-): void {
-  const { window, document } = getEnv<Env>(env);
-  const { containerId, dataLayer, domain } = settings;
+  // The destination's timeout, the deadline of the injected script.
+  timeout?: number,
+): unknown[] {
+  const { window } = getEnv<Env>(env);
+  const { containerId, dataLayer } = settings;
   const dataLayerName = dataLayer || defaultDataLayer;
 
   // Initialize the dataLayer (default or custom name). Custom names resolve
@@ -22,27 +40,17 @@ export function initGTM(
   const dataLayerArray: unknown[] = isArray(existing) ? existing : [];
   window[dataLayerName] = dataLayerArray;
 
+  if (!loadScript || !containerId) return [];
+
   // Load the gtm script and container. The `gtm.js` bootstrap object is part of
   // that snippet and belongs to whoever loads the container: a container loaded
   // elsewhere pushes its own, and a second one re-fires its Page View triggers.
-  if (loadScript && containerId) {
+  const calls = [
     dataLayerArray.push({
       'gtm.start': new Date().getTime(),
       event: 'gtm.js',
-    });
-
-    addScript(containerId, domain || defaultDomain, dataLayerName, document);
-  }
-}
-
-function addScript(
-  containerId: string,
-  src: string,
-  dataLayerName: string,
-  document: Document = globalThis.document,
-) {
-  const dl = dataLayerName != defaultDataLayer ? '&l=' + dataLayerName : '';
-  const script = document.createElement('script');
-  script.src = src + containerId + dl;
-  document.head.appendChild(script);
+    }),
+  ];
+  gtmVendor(settings, timeout, env);
+  return calls;
 }

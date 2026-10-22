@@ -32,7 +32,7 @@ export type InitSettings = Partial<Settings>;
 export interface Mapping {
   /** Piwik PRO goal id (UUID or legacy integer); adds a trackGoal hit. */
   goalId?: string | number;
-  /** Goal revenue, resolved from the event (like "data.total"). */
+  /** Goal revenue, resolved from the event (like "data.value"). */
   goalValue?: WalkerOSMapping.Value;
   /** Custom dimensions for this rule; win per key over the destination ones. */
   customDimensions?: CustomDimensions;
@@ -42,17 +42,6 @@ export interface Env extends DestinationWeb.Env {
   window: {
     // Optional: the SDK queue may be absent until `init` installs it.
     _paq?: Array<unknown>;
-  };
-  document: {
-    createElement: (tagName: string) => {
-      type: string;
-      src: string;
-      async?: boolean;
-      defer?: boolean;
-    };
-    head: {
-      appendChild: (node: unknown) => void;
-    };
   };
 }
 

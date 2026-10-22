@@ -1,6 +1,13 @@
 import type { Mapping, Destination, Env } from './types';
-import { getMappingValue, isArray } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
+import {
+  getGrantedConsent,
+  getMappingValue,
+  isArray,
+  isObject,
+  StepError,
+  stepCall,
+} from '@walkeros/core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
 import type { DimensionValues } from './dimensions';
 import type { MethodName } from './methods';
 import {
@@ -10,7 +17,6 @@ import {
 } from './dimensions';
 import { isIdentified, transition } from './identified';
 import { DIMENSIONS_ARG, isMethodName } from './methods';
-import { logSkip } from './skip';
 
 // Types
 export * as DestinationPiwikPro from './types';
@@ -22,58 +28,98 @@ export * as DestinationPiwikPro from './types';
 // wrapped env.
 const linkTracked = new WeakSet<object>();
 
+/**
+ * Pushes commands onto the queue in one synchronous block, so another
+ * event's commands never interleave, then waits for what each push returns.
+ */
+function pushAll(
+  queue: unknown[],
+  commands: unknown[][],
+  code: string,
+  message: string,
+): Promise<number[]> {
+  return stepCall(
+    () => Promise.all(commands.map((command) => queue.push(command))),
+    code,
+    message,
+  );
+}
+
+/**
+ * ppms.js, injected by `loadVendor` with `loadScript`. `_paq` replays its own
+ * queue, so commands are pushed synchronously and only a failed script is
+ * reported.
+ */
+function vendor(url: string | undefined, env?: Env, timeout?: number) {
+  return loadVendor(
+    url ? `${normalizeUrl(url)}ppms.js` : undefined,
+    () => getEnv<Env>(env).window._paq,
+    { timeout, document: getEnv<Env>(env).document },
+  );
+}
+
 export const destinationPiwikPro: Destination = {
   type: 'piwikpro',
 
   config: {},
 
-  init({ config, env, logger, collector }) {
+  async init({ config, env, collector }) {
     const { window } = getEnv<Env>(env);
     const { settings = {}, loadScript } = config;
     const { appId, url } = settings;
-
-    // Set up the Piwik Pro interface _paq
-    window._paq = window._paq || [];
-    const queue = window._paq;
-    const paq = (command: unknown[]) => {
-      queue.push(command);
-    };
+    const commands: unknown[][] = [];
 
     if (loadScript) {
       // Required only to load and address the tracker
-      if (!appId) return logger.throw('Config settings appId missing');
-      if (!url) return logger.throw('Config settings url missing');
+      if (!appId || !url)
+        throw new StepError(
+          `Piwik PRO with loadScript needs settings ${[
+            ...(appId ? [] : ['appId']),
+            ...(url ? [] : ['url']),
+          ].join(' and ')}`,
+          { code: 'config' },
+        );
 
       const baseUrl = normalizeUrl(url);
 
-      // Load the JavaScript Tracking Client
-      addScript(baseUrl, env);
-
       // Register the tracker url only with script loading
-      paq(['setTrackerUrl', baseUrl + 'ppms.php']);
+      commands.push(['setTrackerUrl', baseUrl + 'ppms.php']);
 
       // Register app id
-      paq(['setSiteId', appId]);
+      commands.push(['setSiteId', appId]);
     }
 
     // Start anonymous, before the tracker loads, unless identification is
     // granted already; a consent object resolves per event from then on.
     if (!isIdentified(settings.identified, collector))
-      transition(collector, false).forEach(paq);
+      commands.push(...transition(collector, false));
+
+    // Set up the Piwik Pro interface _paq and load the tracking client
+    window._paq = window._paq || [];
+    if (loadScript) vendor(url, env, config.timeout);
+    await pushAll(
+      window._paq,
+      commands,
+      'vendor-not-ready',
+      'Piwik PRO did not take its setup commands',
+    );
   },
 
-  async push(event, { config, rule = {}, data, env, collector, logger, id }) {
-    const { window } = getEnv<Env>(env);
-    const queue = window._paq;
-    if (!queue) {
-      logger.warn('Piwik PRO _paq queue missing, init() not run');
-      return;
-    }
+  async push(event, { config, rule = {}, data, env, collector }) {
+    const settings = config.settings || {};
+    if (config.loadScript) vendor(settings.url, env, config.timeout).check();
+    const queue = getEnv<Env>(env).window._paq;
+    if (!queue)
+      throw new StepError('Piwik PRO _paq queue missing: init did not run', {
+        code: 'vendor-not-ready',
+      });
+
+    // This event's commands, pushed in one block at the end.
+    const commands: unknown[][] = [];
     const paq = (command: unknown[]) => {
-      queue.push(command);
+      commands.push(command);
     };
 
-    const settings = config.settings || {};
     const linkTracking = settings.linkTracking !== false;
 
     // A tracking hit; the first one is followed by enableLinkTracking, as in
@@ -98,15 +144,11 @@ export const destinationPiwikPro: Destination = {
       : implicitPageView
         ? 'trackPageView'
         : undefined;
-    if (method === undefined && goalId === undefined) {
-      logSkip(
-        logger,
-        `${id}|${event.name}|unmapped`,
-        `Event "${event.name}" skipped: no rule name, no goal and not a page view`,
-        { event: event.name, reason: 'unmapped' },
+    if (method === undefined && goalId === undefined)
+      throw new StepError(
+        `Piwik PRO has no method for "${event.name}": map it with a rule name or a goal, or ignore it`,
+        { code: 'missing-input' },
       );
-      return;
-    }
 
     // The method hit, unless silent or goal-only
     const hitMethod = rule.silent === true ? undefined : method;
@@ -115,15 +157,8 @@ export const destinationPiwikPro: Destination = {
         ? hitMethod
         : undefined;
 
-    if (hitMethod === undefined && goalId === undefined) {
-      logSkip(
-        logger,
-        `${id}|${event.name}|silent`,
-        `Event "${event.name}" skipped: silent rule without a goal`,
-        { event: event.name, reason: 'silent' },
-      );
-      return;
-    }
+    // A silent rule without a goal sends nothing, no transition either.
+    const sends = hitMethod !== undefined || goalId !== undefined;
 
     // Resolve everything first, so this event's commands are pushed in one
     // synchronous block below and never interleave with another event's.
@@ -149,10 +184,11 @@ export const destinationPiwikPro: Destination = {
         : await getMappingValue(event, mapping.goalValue, { collector });
 
     // Match the tracker's identified state before anything else is pushed
-    transition(
-      collector,
-      isIdentified(settings.identified, collector, event),
-    ).forEach(paq);
+    if (sends)
+      transition(
+        collector,
+        isIdentified(settings.identified, collector, event),
+      ).forEach(paq);
 
     if (hitMethod !== undefined) {
       if (portable === undefined) {
@@ -195,6 +231,34 @@ export const destinationPiwikPro: Destination = {
         ),
       ]);
     }
+
+    if (commands.length)
+      await pushAll(
+        queue,
+        commands,
+        'transport',
+        'Piwik PRO did not take the event commands',
+      );
+  },
+
+  // The destination's required consent decides, as it gates the pushes: a
+  // revocation turns off the link tracking the destination enabled, which
+  // keeps sending on its own; the next hit after a grant turns it on again.
+  async on(type, { config, data, env, collector }) {
+    const required = config.consent;
+    if (type !== 'consent' || !required || !isObject(data)) return;
+    if (!Object.keys(required).some((key) => key in data)) return;
+    if (getGrantedConsent(required, collector.consent) !== false) return;
+    const queue = getEnv(env).window._paq;
+    if (!queue) return;
+
+    linkTracked.delete(collector);
+    await pushAll(
+      queue,
+      [['disableLinkTracking']],
+      'consent-not-applied',
+      'Piwik PRO did not take the consent update',
+    );
   },
 };
 
@@ -237,16 +301,6 @@ function trimTrailing(args: unknown[]): unknown[] {
   let end = args.length;
   while (end > 0 && args[end - 1] === undefined) end--;
   return args.slice(0, end);
-}
-
-function addScript(url: string, env?: Env) {
-  const { document } = getEnv<Env>(env);
-  const script = document.createElement('script');
-  script.type = 'text/javascript';
-  script.src = url + 'ppms.js';
-  script.async = true;
-  script.defer = true;
-  document.head.appendChild(script);
 }
 
 export default destinationPiwikPro;

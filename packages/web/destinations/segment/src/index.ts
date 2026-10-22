@@ -1,5 +1,13 @@
-import type { WalkerOS } from '@walkeros/core';
-import { getMappingValue, isArray, isObject, isString } from '@walkeros/core';
+import type { Logger, WalkerOS } from '@walkeros/core';
+import {
+  getMappingValue,
+  isArray,
+  isObject,
+  isString,
+  isThenable,
+  StepError,
+  stepCall,
+} from '@walkeros/core';
 import { AnalyticsBrowser } from '@segment/analytics-next';
 import type {
   Destination,
@@ -33,12 +41,14 @@ function getSegment(env: Env | undefined): SegmentSDK {
 }
 
 /**
- * Call sdk.load() with destructured Segment settings. Strips walkerOS-
- * specific keys from the options arg passed to the real SDK.
+ * Call sdk.load() with destructured Segment settings. The write key and the
+ * CDN host go into the first argument, the settings Analytics.js reads
+ * there; the rest are its init options.
  */
 function loadAnalytics(sdk: SegmentSDK, settings: Settings): SegmentAnalytics {
   const {
     apiKey,
+    cdnURL,
     identify: _identify,
     group: _group,
     consent: _consent,
@@ -52,24 +62,23 @@ function loadAnalytics(sdk: SegmentSDK, settings: Settings): SegmentAnalytics {
     ...initOptions,
   };
 
-  return sdk.load({ writeKey: apiKey }, options);
+  return sdk.load(
+    { writeKey: apiKey, ...(cdnURL !== undefined ? { cdnURL } : {}) },
+    options,
+  );
 }
 
-/**
- * Resolve the live analytics instance, loading on demand if deferred.
- * Returns undefined if load() was deferred and consent hasn't fired yet.
- */
-function resolveAnalytics(
-  sdk: SegmentSDK,
-  settings: Settings,
-  state: RuntimeState,
-): SegmentAnalytics | undefined {
-  if (state.analytics) return state.analytics;
-  if (state.loaded) return undefined;
-  state.analytics = loadAnalytics(sdk, settings);
-  state.loaded = true;
-  return state.analytics;
+function isSegmentAnalytics(value: unknown): value is SegmentAnalytics {
+  return (
+    isObject(value) &&
+    ['track', 'identify', 'group', 'page', 'reset', 'setAnonymousId'].every(
+      (key) => typeof value[key] === 'function',
+    )
+  );
 }
+
+const send = (fn: () => unknown) =>
+  stepCall(fn, 'transport', 'Segment call failed');
 
 /**
  * Stable hash of a traits object for state-diffing. Uses a deterministic
@@ -96,7 +105,7 @@ function hashTraits(traits: Record<string, unknown> | undefined): string {
  */
 function buildEventOptions(
   event: WalkerOS.Event,
-  settings: Settings,
+  settings: Partial<Settings>,
 ): SegmentEventOptions | undefined {
   const map = settings.consent;
   if (!map || Object.keys(map).length === 0) return undefined;
@@ -123,15 +132,32 @@ function buildEventOptions(
 }
 
 /**
- * Resolve and apply identity mapping. Calls analytics.identify() only
- * when the resolved value differs from the last-fired identity.
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
  */
-function applyIdentify(
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`Segment skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
+/**
+ * Resolve and apply identity mapping. Calls analytics.identify() only
+ * when the resolved value differs from the last-fired identity. False when
+ * no userId, anonymousId or traits resolved.
+ */
+async function applyIdentify(
   analytics: SegmentAnalytics,
   resolved: Record<string, unknown>,
   state: RuntimeState,
   options?: SegmentEventOptions,
-): void {
+): Promise<boolean> {
   const last = state.lastIdentity || {};
   const userId = isString(resolved.userId) ? resolved.userId : undefined;
   const anonymousId = isString(resolved.anonymousId)
@@ -139,77 +165,82 @@ function applyIdentify(
     : undefined;
   const traits =
     isObject(resolved.traits) && !isArray(resolved.traits)
-      ? (resolved.traits as Record<string, unknown>)
+      ? resolved.traits
       : undefined;
 
-  if (anonymousId && anonymousId !== last.anonymousId) {
-    analytics.setAnonymousId(anonymousId);
-  }
+  if (anonymousId && anonymousId !== last.anonymousId)
+    await send(() => analytics.setAnonymousId(anonymousId));
+
+  if (!userId && !anonymousId && !traits) return false;
 
   const traitsHash = hashTraits(traits);
   const userIdChanged = userId !== last.userId;
   const traitsChanged = traitsHash !== (last.traitsHash ?? '');
   const hasChange = userIdChanged || (traits !== undefined && traitsChanged);
 
-  if (!hasChange && !anonymousId) return;
+  if (!hasChange && !anonymousId) return true;
 
-  if (options) {
-    analytics.identify(userId, traits || {}, options);
-  } else {
-    analytics.identify(userId, traits || {});
-  }
+  await send(() =>
+    options
+      ? analytics.identify(userId, traits || {}, options)
+      : analytics.identify(userId, traits || {}),
+  );
 
   state.lastIdentity = {
     userId,
     anonymousId: anonymousId ?? last.anonymousId,
     traitsHash,
   };
+  return true;
 }
 
-function applyGroup(
+/** Resolve and apply the group mapping, once per change. False without a groupId. */
+async function applyGroup(
   analytics: SegmentAnalytics,
   resolved: Record<string, unknown>,
   state: RuntimeState,
   options?: SegmentEventOptions,
-): void {
+): Promise<boolean> {
   const groupId = isString(resolved.groupId) ? resolved.groupId : undefined;
-  if (!groupId) return;
+  if (!groupId) return false;
 
   const traits =
     isObject(resolved.traits) && !isArray(resolved.traits)
-      ? (resolved.traits as Record<string, unknown>)
+      ? resolved.traits
       : undefined;
 
   const last = state.lastGroup || {};
   const traitsHash = hashTraits(traits);
   const groupIdChanged = groupId !== last.groupId;
   const traitsChanged = traitsHash !== (last.traitsHash ?? '');
-  if (!groupIdChanged && !traitsChanged) return;
+  if (!groupIdChanged && !traitsChanged) return true;
 
-  if (options) {
-    analytics.group(groupId, traits || {}, options);
-  } else {
-    analytics.group(groupId, traits || {});
-  }
+  await send(() =>
+    options
+      ? analytics.group(groupId, traits || {}, options)
+      : analytics.group(groupId, traits || {}),
+  );
 
   state.lastGroup = { groupId, traitsHash };
+  return true;
 }
 
+/** Resolve and apply the page mapping. False when it resolved to nothing. */
 async function applyPage(
   analytics: SegmentAnalytics,
   pageMapping: unknown,
   event: WalkerOS.Event,
   collector: unknown,
   options?: SegmentEventOptions,
-): Promise<void> {
+): Promise<boolean> {
   // Boolean true → call page() with no args (SDK auto-collect).
   if (pageMapping === true) {
-    if (options) {
-      analytics.page(undefined, undefined, undefined, options);
-    } else {
-      analytics.page();
-    }
-    return;
+    await send(() =>
+      options
+        ? analytics.page(undefined, undefined, undefined, options)
+        : analytics.page(),
+    );
+    return true;
   }
 
   const resolved = await getMappingValue(
@@ -217,29 +248,30 @@ async function applyPage(
     pageMapping as Parameters<typeof getMappingValue>[1],
     { collector } as Parameters<typeof getMappingValue>[2],
   );
-  if (!isObject(resolved)) return;
+  if (!isObject(resolved)) return false;
 
-  const r = resolved as {
-    category?: unknown;
-    name?: unknown;
-    properties?: unknown;
-  };
-  const category = isString(r.category) ? r.category : undefined;
-  const name = isString(r.name) ? r.name : undefined;
+  const category = isString(resolved.category) ? resolved.category : undefined;
+  const name = isString(resolved.name) ? resolved.name : undefined;
   const properties =
-    isObject(r.properties) && !isArray(r.properties)
-      ? (r.properties as Record<string, unknown>)
+    isObject(resolved.properties) && !isArray(resolved.properties)
+      ? resolved.properties
       : undefined;
 
-  if (options) {
-    analytics.page(category ?? null, name ?? null, properties ?? {}, options);
-  } else if (properties !== undefined) {
-    analytics.page(category ?? null, name ?? null, properties);
-  } else if (name !== undefined || category !== undefined) {
-    analytics.page(category ?? null, name ?? null);
-  } else {
-    analytics.page();
-  }
+  await send(() => {
+    if (options)
+      return analytics.page(
+        category ?? null,
+        name ?? null,
+        properties ?? {},
+        options,
+      );
+    if (properties !== undefined)
+      return analytics.page(category ?? null, name ?? null, properties);
+    if (name !== undefined || category !== undefined)
+      return analytics.page(category ?? null, name ?? null);
+    return analytics.page();
+  });
+  return true;
 }
 
 export const destinationSegment: Destination = {
@@ -247,36 +279,61 @@ export const destinationSegment: Destination = {
 
   config: {},
 
-  init({ config, env }) {
-    if (!config.settings?.apiKey) return false;
-    const settings = config.settings as Settings;
+  // Analytics.js loads in init, so it starts with the page. A consent-gated
+  // destination is initialized only once its consent is granted.
+  async init({ config, env }) {
+    const apiKey = config.settings?.apiKey;
+    if (!apiKey)
+      throw new StepError('Segment needs settings.apiKey', { code: 'config' });
+    const settings: Settings = { ...config.settings, apiKey };
 
-    const sdk = getSegment(env as Env | undefined);
-    const _state: RuntimeState = {
-      lastIdentity: {},
-      lastGroup: {},
-      loaded: false,
-    };
+    const _state: RuntimeState = { lastIdentity: {}, lastGroup: {} };
+    // load() answers the instance at once, itself a thenable that settles
+    // once Analytics.js is ready, so it is not awaited; a wrapped SDK may
+    // answer the instance through a promise. The tuple keeps it unawaited.
+    const [loaded] = await stepCall(
+      async (): Promise<[unknown]> => {
+        const result: unknown = loadAnalytics(getSegment(env), settings);
+        return [
+          isSegmentAnalytics(result) || !isThenable(result)
+            ? result
+            : await result,
+        ];
+      },
+      'vendor-not-ready',
+      'Segment load() failed',
+    );
+    if (!isSegmentAnalytics(loaded))
+      throw new StepError('Segment load() returned no Analytics instance', {
+        code: 'vendor-not-ready',
+      });
 
-    // If config.consent is declared, defer load() until on('consent').
-    // Otherwise load immediately.
-    const requiresConsent =
-      !!config.consent && Object.keys(config.consent).length > 0;
-
-    if (!requiresConsent) {
-      _state.analytics = loadAnalytics(sdk, settings);
-      _state.loaded = true;
-    }
+    // The instance is also the promise of its load, settled once
+    // Analytics.js is ready: a failed load fails the later pushes.
+    if (isThenable(loaded))
+      Promise.resolve(loaded).then(
+        () => undefined,
+        () => {
+          _state.failed = true;
+        },
+      );
+    _state.analytics = loaded;
 
     return { ...config, settings: { ...settings, _state } };
   },
 
-  async push(event, { config, rule, env, data, collector }) {
-    const sdk = getSegment(env as Env | undefined);
-    const settings = (config.settings || {}) as Settings;
+  async push(event, { config, rule, data, collector, logger }) {
+    const settings: Partial<Settings> = config.settings || {};
     const state: RuntimeState = settings._state || {};
-    const analytics = resolveAnalytics(sdk, settings, state);
-    if (!analytics) return;
+    const analytics = state.analytics;
+    if (state.failed)
+      throw new StepError('Segment Analytics.js failed to load', {
+        code: 'vendor-not-loaded',
+      });
+    if (!analytics)
+      throw new StepError('Segment not ready: init did not load Analytics.js', {
+        code: 'not-ready',
+      });
 
     const mappingSettings = rule?.settings || {};
     const options = buildEventOptions(event, settings);
@@ -288,7 +345,7 @@ export const destinationSegment: Destination = {
           ? mappingSettings.reset
           : await getMappingValue(event, mappingSettings.reset, { collector });
       if (resolved) {
-        analytics.reset();
+        await send(() => analytics.reset());
         state.lastIdentity = {};
         state.lastGroup = {};
       }
@@ -300,14 +357,10 @@ export const destinationSegment: Destination = {
       const resolved = await getMappingValue(event, identifyMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        applyIdentify(
-          analytics,
-          resolved as Record<string, unknown>,
-          state,
-          options,
-        );
-      }
+      const applied =
+        isObject(resolved) &&
+        (await applyIdentify(analytics, resolved, state, options));
+      if (!applied) skipped(logger, event, 'identify', 'identify');
     }
 
     // 3. Group - rule-level override wins over destination-level.
@@ -316,66 +369,40 @@ export const destinationSegment: Destination = {
       const resolved = await getMappingValue(event, groupMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        applyGroup(
-          analytics,
-          resolved as Record<string, unknown>,
-          state,
-          options,
-        );
-      }
+      const applied =
+        isObject(resolved) &&
+        (await applyGroup(analytics, resolved, state, options));
+      if (!applied) skipped(logger, event, 'group', 'group');
     }
 
     // 4. Page (explicit first-class Segment pattern)
-    if (mappingSettings.page !== undefined) {
-      await applyPage(
+    if (
+      mappingSettings.page !== undefined &&
+      !(await applyPage(
         analytics,
         mappingSettings.page,
         event,
         collector,
         options,
-      );
-    }
+      ))
+    )
+      skipped(logger, event, 'page', 'page');
 
     // 5. Default track call unless rule opts out via silent.
     if (rule?.silent !== true) {
       const eventName = isString(rule?.name) ? rule.name : event.name;
-      const properties = isObject(data)
-        ? (data as Record<string, unknown>)
-        : {};
+      const properties = isObject(data) ? data : {};
 
-      if (options) {
-        analytics.track(eventName, properties, options);
-      } else {
-        analytics.track(eventName, properties);
-      }
+      await send(() =>
+        options
+          ? analytics.track(eventName, properties, options)
+          : analytics.track(eventName, properties),
+      );
     }
 
+    // A silent rule whose settings resolve nothing (or an identity or group
+    // that is already current) sends nothing: a declared skip.
     settings._state = state;
-  },
-
-  on(type, context) {
-    if (type !== 'consent' || !context.data) return;
-
-    const consent = context.data as WalkerOS.Consent;
-    const required = context.config?.consent;
-    if (!required || Object.keys(required).length === 0) return;
-
-    const settings = (context.config?.settings || {}) as Settings;
-    const state: RuntimeState = settings._state || {};
-    const sdk = getSegment(context.env as Env | undefined);
-
-    const allGranted = Object.keys(required).every(
-      (key) => consent[key] === true,
-    );
-
-    if (allGranted && !state.loaded) {
-      state.analytics = loadAnalytics(sdk, settings);
-      state.loaded = true;
-      settings._state = state;
-    }
-    // If not all granted, walkerOS's config.consent gate blocks subsequent
-    // push() calls - no SDK action needed (Segment has no opt-out method).
   },
 };
 

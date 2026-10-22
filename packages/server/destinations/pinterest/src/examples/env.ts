@@ -19,7 +19,6 @@ async function mockSendServer(
 ): Promise<SendResponse> {
   // Simulate successful Pinterest API response
   return {
-    ok: true,
     data: {
       num_events_received: 1,
       num_events_processed: 1,

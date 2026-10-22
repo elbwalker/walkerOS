@@ -1,5 +1,3 @@
-import type { Logger } from '@walkeros/core';
-
 /** Whether another attempt at the same insert can plausibly succeed. */
 export type Classification = 'retryable' | 'terminal';
 
@@ -36,9 +34,9 @@ const RETRYABLE: ReadonlySet<string> = new Set([
  * up with. Retrying inside a ten second window cannot help a merge backlog and
  * adds parts to it, and the setting that names the limit is not the lever.
  *
- * Everything else terminal explains itself in the server's own message, and the
- * collector already logs every failed push, so a second line would only repeat
- * it.
+ * Everything else terminal is named by its code. The advice travels in the
+ * failure's message, which the collector logs once per cause; the package
+ * writes no failure line of its own.
  */
 const ADVICE: Readonly<Record<string, string>> = {
   '252':
@@ -78,8 +76,7 @@ export function errorCode(error: unknown): string | undefined {
 }
 
 /**
- * Whether a failed insert is worth another attempt, and the one place an
- * operator is told what to change when it is not.
+ * Whether a failed insert is worth another attempt.
  *
  * The code is the classification input, never the HTTP status. ClickHouse maps
  * a few dozen codes to a status of their own and sends everything else as a
@@ -97,17 +94,28 @@ export function errorCode(error: unknown): string | undefined {
  * second, while a batch wrongly called terminal is lost for good, the collector
  * having no retry of its own and never draining its dead letter queue.
  */
-export function classify(
-  error: unknown,
-  logger: Logger.Instance,
-): Classification {
+export function classify(error: unknown): Classification {
   const code = errorCode(error);
 
-  if (code === undefined || RETRYABLE.has(code)) return 'retryable';
+  return code === undefined || RETRYABLE.has(code) ? 'retryable' : 'terminal';
+}
 
-  const advice = ADVICE[code];
+/** What an operator has to change for a terminal code, when it is not obvious. */
+export function adviceFor(code: string | undefined): string | undefined {
+  return code === undefined ? undefined : ADVICE[code];
+}
 
-  if (advice) logger.error(advice, { code });
+/**
+ * The Node errno of a rejection that never reached the server
+ * (`ECONNRESET`, `ENOTFOUND`): the code a ClickHouse code is not.
+ */
+export function errnoOf(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  if (!('code' in error)) return undefined;
 
-  return 'terminal';
+  const { code } = error;
+
+  return typeof code === 'string' && /^E[A-Z0-9_]+$/.test(code)
+    ? code
+    : undefined;
 }

@@ -1,5 +1,30 @@
 # @walkeros/server-destination-gcp
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: BigQuery opens its writer at the first push instead of at startup; a
+  missing dataset or table fails that push with the setup hint. BigQuery and
+  Pub/Sub failures are reported once by the collector instead of being logged
+  twice, and their messages name codes, not row data.
+- 7e5fc27: An append that the BigQuery server rejects (quota, permission, a
+  dropped table) now fails the push instead of counting as delivered. Pub/Sub
+  retries only the error codes its SDK retries.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/server-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

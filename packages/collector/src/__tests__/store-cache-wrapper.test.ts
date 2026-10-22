@@ -1,5 +1,8 @@
 import type { Cache, Logger, Store } from '@walkeros/core';
-import { serializeStoreValue, deserializeStoreValue } from '@walkeros/core';
+import {
+  serializeStoreValue,
+  deserializeStoreValue,
+} from '@walkeros/core/node';
 import { createCacheStore } from '../cache-store';
 import { wrapStoreWithCache } from '../store-cache-wrapper';
 

@@ -167,7 +167,7 @@ const purchaseEvent = getEvent('order complete', {
   data: {
     id: 'ORD-500',
     currency: 'EUR',
-    total: 199.99,
+    value: 199.99,
     items: [
       { sku: 'SKU-1', quantity: 2 },
       { sku: 'SKU-2', quantity: 1 },
@@ -187,4 +187,13 @@ export const purchase: Flow.StepExample = {
   in: purchaseEvent,
   mapping: undefined,
   out: expectedInsert(purchaseEvent),
+};
+
+/** A silent rule inserts no row. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true inserts no row.',
+  in: getEvent('page view', { timestamp: 1700000000124 }),
+  mapping: { silent: true },
+  out: [],
 };

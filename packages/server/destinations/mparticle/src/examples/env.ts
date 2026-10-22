@@ -18,7 +18,6 @@ type MockSendServer = (
 const mockSendServer: MockSendServer = async () => {
   // Simulates mParticle's typical 202 Accepted response for the Events API.
   return {
-    ok: true,
     data: {},
   };
 };

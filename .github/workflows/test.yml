@@ -69,6 +69,11 @@ jobs:
             turbo-${{ runner.os }}-
       - name: Validate documentation
         run: npm run validate:links
+      # Every package is one platform (web, server or neutral) and its tsconfig
+      # and eslint config enforce it. Outside turbo, so no cache can replay an
+      # old pass.
+      - name: Check platform boundaries
+        run: npm run check:platform
       - name: Verify (PR, affected only)
         if: github.event_name == 'pull_request'
         run: |

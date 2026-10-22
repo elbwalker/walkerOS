@@ -188,7 +188,10 @@ describe('Programmatic Bundle API', () => {
             },
           },
           destinations: {
-            api: { config: { settings: { url: '$flow.server.url' } } },
+            api: {
+              package: '@walkeros/web-destination-api',
+              config: { settings: { url: '$flow.server.url' } },
+            },
           },
         },
       },

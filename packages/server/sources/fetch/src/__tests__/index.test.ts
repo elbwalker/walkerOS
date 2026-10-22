@@ -224,6 +224,7 @@ describe('sourceFetch', () => {
       const errorPush = jest
         .fn()
         .mockRejectedValue(new Error('Collector error'));
+      const logger = createMockLogger();
 
       const source = await sourceFetch(
         createSourceContext(
@@ -232,7 +233,7 @@ describe('sourceFetch', () => {
             push: errorPush as never,
             command: mockCommand as never,
             elb: jest.fn() as never,
-            logger: createMockLogger(),
+            logger,
           },
         ),
       );
@@ -248,11 +249,55 @@ describe('sourceFetch', () => {
 
       // A rejected push is a server fault, not client input: the collector
       // resolves pipeline failures, so a rejection is exceptional.
+      // The thrown message goes to the log, never into the answer.
       expect(response.status).toBe(500);
       expect(responseBody).toMatchObject({
         success: false,
+        error: 'Internal server error',
+      });
+      expect(JSON.stringify(responseBody)).not.toContain('Collector error');
+      // The collector never saw it, so this ERROR is the only signal.
+      expect(logger.error).toHaveBeenCalledWith('Event processing failed', {
         error: 'Collector error',
       });
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('logs a thrown push in a batch at ERROR, never in the answer', async () => {
+      const errorPush = jest
+        .fn()
+        .mockRejectedValue(new Error('Collector error'));
+      const logger = createMockLogger();
+
+      const source = await sourceFetch(
+        createSourceContext(
+          {},
+          {
+            push: errorPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger,
+          },
+        ),
+      );
+
+      const response = await source.push(
+        new Request('https://example.com/collect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batch: [{ name: 'page view' }] }),
+        }),
+      );
+
+      expect(response.status).toBe(207);
+      expect(await response.json()).toMatchObject({
+        errors: [{ index: 0, error: 'Internal server error' }],
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        'Batch event 0 processing failed',
+        { error: 'Collector error' },
+      );
+      expect(logger.warn).not.toHaveBeenCalled();
     });
 
     it('answers 400 with the reason when the push settles an invalid-input rejection', async () => {
@@ -506,7 +551,7 @@ describe('sourceFetch', () => {
     it('should process examples.inputs.pageView', async () => {
       const mockPush = jest
         .fn()
-        .mockResolvedValue({ event: { id: 'test-id' } });
+        .mockResolvedValue({ ok: true, event: { id: 'test-id' } });
 
       const source = await sourceFetch(
         createSourceContext(

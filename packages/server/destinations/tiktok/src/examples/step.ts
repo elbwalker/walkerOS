@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent, isObject } from '@walkeros/core';
 
 /**
  * TikTok Events API step examples.
@@ -34,7 +34,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'd1e2f3a4b5c60001',
     timestamp: 1700000900000,
-    data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
+    data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       {
         entity: 'product',
@@ -52,7 +52,7 @@ export const purchase: Flow.StepExample = {
     name: 'CompletePayment',
     data: {
       map: {
-        value: 'data.total',
+        value: 'data.value',
         currency: { key: 'data.currency', value: 'EUR' },
         order_id: 'data.id',
         content_type: { value: 'product' },
@@ -259,7 +259,8 @@ export const lead: Flow.StepExample = {
   title: 'Submit form',
   description:
     'A newsletter form submission is sent to TikTok as a SubmitForm event with the hashed email in user context.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     id: 'd1e2f3a4b5c60004',
     timestamp: 1700000903000,
     data: { type: 'newsletter' },
@@ -311,4 +312,45 @@ export const lead: Flow.StepExample = {
       HEADERS,
     ],
   ],
+};
+
+/** A silent rule sends nothing to TikTok. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request to TikTok.',
+  in: getEvent('page view', {
+    id: 'd1e2f3a4b5c60005',
+    timestamp: 1700000904000,
+  }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/** TikTok rejects the event in an HTTP 200 body. */
+export const rejectedEvent: Flow.StepExample = {
+  public: false,
+  description:
+    'TikTok answers HTTP 200 with a non-zero code: the event was rejected, so the push fails with transport, not retryable, and the event goes to the DLQ.',
+  in: getEvent('page view', {
+    id: 'd1e2f3a4b5c60006',
+    timestamp: 1700000905000,
+  }),
+  respond: {
+    status: 200,
+    body: { code: 40002, message: 'Invalid value for field event' },
+  },
+  outcome: { status: 'failed', code: 'transport', retryable: false },
+};
+
+/** TikTok is busy: a server error code in the HTTP 200 body. */
+export const busy: Flow.StepExample = {
+  public: false,
+  description:
+    'TikTok answers HTTP 200 with a server error code: the push fails with transport, retryable.',
+  in: getEvent('page view', {
+    id: 'd1e2f3a4b5c60007',
+    timestamp: 1700000906000,
+  }),
+  respond: { status: 200, body: { code: 50000, message: 'System error' } },
+  outcome: { status: 'failed', code: 'transport', retryable: true },
 };

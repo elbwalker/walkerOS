@@ -63,7 +63,7 @@ The push context contains:
 Here is an example of a simple destination that sends events to a webhook URL.
 
 <CodeSnippet
-  code={`import type { Destination } from '@walkeros/core';
+  code={`import { StepError, type Destination } from '@walkeros/core';
 
 // 1. Define your settings and bundle your types
 interface WebhookSettings {
@@ -77,22 +77,97 @@ export const destinationWebhook: Destination.Instance<Types> = {
   type: 'webhook',
   config: {},
 
-  async push(event, { config }) {
+  async push(event, { config, rule }) {
     const { settings } = config;
 
-    // 3. Access your settings
-    if (!settings?.url) return;
+    // 3. A missing setting is a failure, never a silent return
+    if (!settings?.url)
+      throw new StepError('Webhook needs settings.url', { code: 'config' });
 
-    // 4. Send the event; a rejection marks the push as failed
-    await fetch(settings.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(event),
-    });
+    // A rule with silent: true sends nothing; the push still returns normally
+    if (!rule?.silent) {
+      // 4. Send the event and await it; fetch resolves on an error status
+      const response = await fetch(settings.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event),
+      });
+      if (!response.ok)
+        throw new StepError(\`HTTP \${response.status}\`, {
+          code: 'transport',
+          status: response.status,
+        });
+    }
   },
 };`}
   language="typescript"
 />
+
+## Reporting failures
+
+A destination reports a failure by throwing. A `push` that returns normally
+counts as delivered, so it must not return early when it could not send, and it
+must await every call it makes: a call that is not awaited can fail after the
+push has already been counted.
+
+Throw a `StepError` from `@walkeros/core` with a `code`, and optionally the
+HTTP `status` and `retryable`. The collector turns the throw into a failed push
+with that reason, counts it in the destination's `failed` counter, adds the
+event to the dead-letter queue and writes one ERROR line per cause and minute.
+
+* **`config`** - a required setting is missing or invalid (not retryable)
+* **`missing-input`** - the event has nothing this destination can send (not
+  retryable)
+* **`vendor-not-loaded`**, **`vendor-not-ready`**, **`vendor-timeout`** - the
+  vendor script is missing, not ready yet or too slow
+* **`transport`** - the request failed; a `429` and a `5xx` status are
+  retryable, other `4xx` statuses are not
+
+Any other throw is a `transport` failure. `retryable` tells a server source
+whether to ask the producer to resend the message. Keep payload data out of the
+error message; put a vendor response on the error's `body`, which is never
+logged.
+
+A value that cannot be mapped is not a failure of the event: drop that field,
+send the event and report the problem once with `reportCause` from
+`@walkeros/core`.
+
+`init` follows the same rule. It throws a `StepError` when the destination
+cannot start, such as a missing setting or a blocked vendor script, and it does
+not return `false`. A destination with a consent requirement is initialized only
+once consent is granted, and an `init` that does not settle within the
+destination's `config.timeout` (10 seconds by default) fails the waiting pushes
+with the `timeout` code.
+
+### Rule options every destination honours
+
+A destination honours `rule.silent`: a rule with `silent: true` sends no event
+of its own and only runs the side effects the rule maps, such as an identify.
+Skip the send with a condition rather than an early `return`, as in the example
+above. A silent rule whose side effects resolve to nothing sends nothing, counts
+as delivered and writes one DEBUG line that names the call and the mapping key,
+never the value.
+
+### Vendor scripts
+
+A web destination that loads a vendor script uses `loadVendor` from
+`@walkeros/web-core`. It injects the script once per page, into the document the destination's `env` provides (the page's own by default), so simulation and server-side rendering work without a browser page. It throws
+`vendor-not-loaded`, `vendor-not-ready` or `vendor-timeout`, so a blocked
+script shows as failed pushes instead of lost events.
+
+### Conformance test
+
+`@walkeros/collector/dev` exports `conformance`, a test kit that runs a
+destination against a real collector and checks, among others, that a failing
+send is reported, that a failure never leaks event data into a log line, that a
+`silent` example sends nothing and that a revoked consent reaches the vendor.
+Call it from a Jest test with the profile that matches the destination:
+`http` for a destination that calls `fetch`, `sdk-env` for a server SDK,
+`web-sdk` for a web SDK started in `init`, `vendor-global` for a vendor script
+that defines a global, or `socket`. A browser profile (`web-sdk`,
+`vendor-global`) also needs the `page` option, imported from
+`@walkeros/web-core/dev`; without it the test fails and names that import. A setting that only works in pairs, such as
+"one of these two", is stated as `anyOf` in the settings schema.
 
 ## The `pushBatch` function (optional)
 
@@ -106,8 +181,12 @@ events and calls `pushBatch` once per flush instead of `push` per event.
 If `pushBatch` throws or rejects, every entry goes to the destination's
 dead-letter queue and counts as failed. To report single rows, resolve
 `{ failed: [{ index, error }] }` with indices into `batch.entries`: only those
-entries fail. A batch flushes after the `elb` calls that filled it have
-resolved, so its outcome shows only in the destination's status and logs.
+entries fail. A batched event answers `queued` with the reason `batch`, so a
+server source acknowledges it when it is queued. A batch flushes after the
+`elb` calls that filled it have resolved, so a failed flush shows in the
+destination's `failed` counter, the dead-letter queue and one ERROR line, but
+the producer's message is not redelivered. A `walker flush` command flushes
+all pending batches at once.
 Pending batches are flushed at shutdown: the collector waits up to 5 seconds
 per flush and logs one that takes longer as failed.
 
@@ -127,8 +206,10 @@ The optional `on` method lets your destination respond to collector lifecycle
 events, for example to handle consent changes or session management. Cleanup
 belongs in `destroy`.
 
-The collector calls `on` only after `init` has run. A destination with `on`
-needs an `init` method, even an empty `init() {}`, or `on` is never called.
+The collector calls `on` once the destination is initialized. A destination
+without an `init` method is initialized without one, when its first event
+clears its consent requirement (or consent is granted), and the `on` deliveries
+that waited meanwhile reach it then, in order.
 
 ### Available Events
 
@@ -154,9 +235,6 @@ are in [State delivery](/docs/collector/commands#state-delivery).
   code={`export const destinationWithConsent: Destination.Instance<Types> = {
   type: 'webhook-consent',
   config: {},
-
-  // Required for on() to be called
-  init() {},
 
   on(type, context) {
     if (type === 'consent') {
@@ -184,7 +262,7 @@ The same lifecycle applies to sources, destinations, and stores. Transformers ar
 
 - Setup is opt-in via `config.setup` in the flow config. The CLI invocation requires it to be `true` or an object; `false` or omitted means the operator's setup invocation is a narrated skip.
 - Idempotency is the package's responsibility. Re-running setup against a fully provisioned environment is a safe no-op.
-- `walkeros setup` runs `init` first and gives `setup` the config `init` returns, if any; when `init` returns `false`, setup is skipped. `destroy` runs after `setup`.
+- `walkeros setup` runs `init` first and gives `setup` the config `init` returns, if any; when `init` throws or returns `false`, the command fails with the reason and setup does not run. `destroy` runs after `setup`.
 - Structured JSON output is opt-in via `--json` (e.g. `walkeros setup <kind>.<name> --json`). In normal mode the CLI narrates the action and never splices a JSON envelope into the output, even if `setup()` returns a value. The opt-in setup behavior and idempotency are independent of `--json`.
 
 ### Example: a destination with setup

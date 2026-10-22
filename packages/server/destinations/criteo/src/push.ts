@@ -9,7 +9,12 @@ import type {
   Settings,
 } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
+import {
+  createMappingRoot,
+  getMappingValue,
+  isObject,
+  StepError,
+} from '@walkeros/core';
 import { getHashServer, sendServer } from '@walkeros/server-core';
 import { DEFAULT_URL } from './config';
 
@@ -91,7 +96,12 @@ function toItems(raw: unknown): CriteoItem[] | undefined {
   return items.length ? items : undefined;
 }
 
-export const push: PushFn = async function (
+// A silent rule has no criteo call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, rule, data, ingest, env, logger, collector },
 ) {
@@ -105,7 +115,13 @@ export const push: PushFn = async function (
     user_data,
     ip,
     userAgent,
-  } = config.settings as Settings;
+  } = config.settings ?? {};
+
+  // init() validates these; a destination that skipped it is not ready.
+  if (!partnerId || !callerId)
+    throw new StepError('Config settings missing, init() not run', {
+      code: 'not-ready',
+    });
 
   const eventData = isObject(data) ? data : {};
   const userDataCustom = user_data
@@ -188,15 +204,7 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = (env as Env)?.sendServer || sendServer;
-  const result = await sendServerFn(url, JSON.stringify(body));
-
-  logger.debug('Criteo API response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`Criteo API error: ${JSON.stringify(result)}`);
-  }
+  await sendServerFn(url, JSON.stringify(body));
 };
 
 const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];

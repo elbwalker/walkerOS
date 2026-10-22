@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -37,7 +37,7 @@ export const simpleConversionId: LinkedInStepExample = {
   title: 'Simple conversion',
   description:
     'A form submit fires a LinkedIn lintrk track with only a conversion_id from Campaign Manager.',
-  in: getEvent('form submit', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'form submit', timestamp: 1700000101 }),
   mapping: {
     settings: {
       conversion: {
@@ -78,7 +78,7 @@ export const orderCompleteFullConversion: LinkedInStepExample = {
       conversion: {
         map: {
           id: { value: 67890 },
-          value: 'data.total',
+          value: 'data.value',
           currency: { key: 'data.currency', value: 'EUR' },
           eventId: 'id',
         },
@@ -151,7 +151,8 @@ export const demoRequestLead: LinkedInStepExample = {
   title: 'Lead conversion',
   description:
     'A demo request fires a LinkedIn lintrk track for a lead conversion with id and event_id only.',
-  in: getEvent('demo request', {
+  in: createEvent({
+    name: 'demo request',
     timestamp: 1700000104,
     id: '1700000104abcdef',
   }),
@@ -187,7 +188,7 @@ export const demoRequestLead: LinkedInStepExample = {
  */
 export const conversionSilenced: LinkedInStepExample = {
   public: false,
-  in: getEvent('form submit', { timestamp: 1700000105 }),
+  in: createEvent({ name: 'form submit', timestamp: 1700000105 }),
   mapping: {
     silent: true,
     settings: {
@@ -202,7 +203,7 @@ export const conversionSilenced: LinkedInStepExample = {
 };
 
 /**
- * Falsy `id` → entire lintrk call is skipped.
+ * Falsy `id` → entire lintrk call is skipped and the push fails missing-input.
  *
  * If the resolved conversion object has no truthy `id`, the destination does
  * NOT call lintrk at all. This protects against misconfigured mappings
@@ -213,7 +214,9 @@ export const conversionSilenced: LinkedInStepExample = {
  */
 export const missingConversionIdIgnored: LinkedInStepExample = {
   public: false,
-  in: getEvent('form submit', { timestamp: 1700000106 }),
+  description:
+    'A conversion mapping whose id resolves to nothing makes no lintrk call, so the push fails with missing-input instead of counting as delivered.',
+  in: createEvent({ name: 'form submit', timestamp: 1700000106 }),
   mapping: {
     settings: {
       conversion: {
@@ -224,6 +227,7 @@ export const missingConversionIdIgnored: LinkedInStepExample = {
     },
   },
   out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
 };
 
 /**
@@ -260,4 +264,18 @@ export const partialFieldsOmitted: LinkedInStepExample = {
       },
     ],
   ],
+};
+
+/**
+ * A revocation of the consent the destination requires. The Insight Tag has
+ * no vendor consent mode, so the collector's consent gate is the only
+ * mechanism and no vendor call is made.
+ */
+export const consentRevoke: LinkedInStepExample = {
+  public: false,
+  description:
+    'For a destination with config.consent { marketing: true }, revoking marketing makes no vendor call: the Insight Tag has no consent mode, the collector stops sending.',
+  command: 'consent',
+  in: { marketing: false },
+  out: [],
 };

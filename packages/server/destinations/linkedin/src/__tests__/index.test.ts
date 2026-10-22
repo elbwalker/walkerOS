@@ -2,9 +2,11 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Rules, Settings } from '../types';
 import {
   clone,
-  getEvent,
+  createEvent,
   createMockContext,
   createMockLogger,
+  getEvent,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -25,7 +27,6 @@ describe('Server Destination LinkedIn', () => {
     jest.clearAllMocks();
 
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: {},
     });
 
@@ -55,7 +56,7 @@ describe('Server Destination LinkedIn', () => {
         logger: createMockLogger(),
         id: 'test-linkedin',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, conversionRuleId missing');
   });
 
   test('init - missing conversionRuleId throws', async () => {
@@ -96,10 +97,11 @@ describe('Server Destination LinkedIn', () => {
 
   test('environment customization', async () => {
     const customSendServer = jest.fn();
-    customSendServer.mockResolvedValue({ ok: true, data: {} });
+    customSendServer.mockResolvedValue({ data: {} });
 
     const customEnv = { sendServer: customSendServer };
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = {
@@ -120,13 +122,12 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('error handling - non-ok response triggers throw', async () => {
-    mockSendServer.mockResolvedValue({
-      ok: false,
-      data: { message: 'Invalid token' },
-      error: '401 Unauthorized',
-    });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 401', { code: 'transport', status: 401 }),
+    );
 
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = {
@@ -146,7 +147,8 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('headers - all 5 required headers are sent', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = {
@@ -178,7 +180,8 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('headers - custom apiVersion in Linkedin-Version header', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = {
@@ -203,7 +206,8 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('email hashing - email is SHA-256 hashed, lowercase trimmed', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: '  User@Example.COM  ' },
     });
     const config: Config = {
@@ -230,7 +234,8 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('email hashing - doNotHash skips hashing', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'already-hashed-value' },
     });
     const config: Config = {
@@ -256,22 +261,25 @@ describe('Server Destination LinkedIn', () => {
     expect(userIds[0].idValue).toBe('already-hashed-value');
   });
 
-  test('no userIds skips - event without email or li_fat_id does not call sendServer', async () => {
-    const event = getEvent('form submit', {
+  test('no userIds fails - event without email or li_fat_id is not sent', async () => {
+    const event = createEvent({
+      name: 'form submit',
       user: { id: 'user-123' },
     });
     const config: Config = {
       settings: { accessToken, conversionRuleId, apiVersion: '202604' },
     };
 
-    await destination.push(
-      event,
-      createMockContext({
-        config,
-        env: testEnv,
-        id: 'test-linkedin',
-      }),
-    );
+    await expect(
+      destination.push(
+        event,
+        createMockContext({
+          config,
+          env: testEnv,
+          id: 'test-linkedin',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'missing-input' });
 
     expect(mockSendServer).not.toHaveBeenCalled();
   });
@@ -279,7 +287,7 @@ describe('Server Destination LinkedIn', () => {
   test('conversion value - amount is string in payload', async () => {
     const event = getEvent('order complete', {
       timestamp: 1700000000000,
-      data: { total: 99.99, currency: 'EUR' },
+      data: { value: 99.99, currency: 'EUR' },
       user: { email: 'test@test.com' },
     });
     const config: Config = {
@@ -290,7 +298,7 @@ describe('Server Destination LinkedIn', () => {
             settings: {
               conversion: {
                 map: {
-                  value: 'data.total',
+                  value: 'data.value',
                   currency: { key: 'data.currency', value: 'EUR' },
                 },
               },
@@ -352,7 +360,8 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('conversionHappenedAt uses event.timestamp in milliseconds', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       timestamp: 1700000900000,
       user: { email: 'test@test.com' },
     });
@@ -374,7 +383,8 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('eventId from event.id for deduplication', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       timestamp: 1700000900000,
       user: { email: 'test@test.com' },
     });
@@ -396,7 +406,8 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('endpoint uses default URL', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = {
@@ -417,7 +428,8 @@ describe('Server Destination LinkedIn', () => {
   });
 
   test('endpoint uses custom URL', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = {

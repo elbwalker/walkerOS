@@ -1,5 +1,34 @@
 # @walkeros/web-core
 
+## 4.8.2
+
+### Patch Changes
+
+- b1d65e2: `loadVendor` injects the script into the document that `env`
+  provides, falling back to the page's own, and fails with `vendor-not-ready`
+  when there is no document at all. The new `@walkeros/web-core/dev` entry
+  exports `mockScriptDocument()` for examples and tests that run without a
+  browser.
+- 964590a: `@walkeros/web-core` exports `moin`, `browserSwapActivator` and
+  `pageObserveSlot`, and `@walkeros/web-core/dev` exports `page` for the
+  conformance tests of web steps.
+- 2374f54: `sendWeb` now throws a `StepError` instead of resolving
+  `{ ok: false }`: `transport` with the status for an error answer or a network
+  error, `timeout`, or `beacon-rejected`. A fetch skips `keepalive` past the
+  browser's 64 KiB limit. New `loadVendor` loads a vendor script once per page
+  and reports `vendor-not-loaded`, `vendor-not-ready` or `vendor-timeout`.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+  - @walkeros/core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

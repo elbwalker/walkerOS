@@ -256,7 +256,7 @@ curl -I http://localhost:8080/walker.js
 
 ```bash
 walkeros validate packages/cli/examples/flow-complete.json -f web --path destinations.collect
-walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"}}' --simulate destination.ga4
+walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order complete","data":{"id":"ORD-100","value":149.8,"currency":"EUR"}}' --simulate destination.ga4
 ```
 
 - The second line prints `mapping: none (skipped before mapping)`: the event has
@@ -294,8 +294,8 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
     key reads a path from the event.
   - `value-fn` at
     `/flows/web/destinations/ga4/config/mapping/order/complete/data/map/value/fn`:
-    fn computes a value from the event, here the total rounded to cents. fn and
-    key are alternatives: next to a key, fn never runs.
+    fn computes a value from the event, here the order value rounded to cents.
+    fn and key are alternatives: next to a key, fn never runs.
   - `value-loop` at
     `/flows/web/destinations/ga4/config/mapping/order/complete/data/map/items/loop`:
     loop turns nested products into GA4 items.
@@ -314,7 +314,7 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
     value is a constant.
   - `rule-condition` at
     `/flows/web/destinations/ga4/config/mapping/order/complete/condition`: A
-    rule condition skips the rule, here for orders without a total.
+    rule condition skips the rule, here for orders without a value.
   - `rule-settings` at
     `/flows/server/destinations/piwikpro/config/mapping/order/complete/settings`:
     Rule settings are per-event package options: the Piwik PRO goal for orders.
@@ -332,7 +332,7 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
 - **CLI:** the GA4 purchase, with consent and one product:
 
 ```bash
-walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"},"nested":[{"entity":"product","data":{"id":"SKU-1","name":"Linen shirt","price":74.9,"quantity":2}}],"consent":{"functional":true}}' --simulate destination.ga4
+walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order complete","data":{"id":"ORD-100","value":149.8,"currency":"EUR"},"nested":[{"entity":"product","data":{"id":"SKU-1","name":"Linen shirt","price":74.9,"quantity":2}}],"consent":{"functional":true}}' --simulate destination.ga4
 ```
 
 - Output:
@@ -636,7 +636,7 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pr
 
 ```bash
 walkeros validate packages/cli/examples/flow-complete.json -t contract
-walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"},"globals":{"language":"en"},"consent":{"functional":true}}' --simulate transformer.validate
+walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"order complete","data":{"id":"ORD-100","value":149.8,"currency":"EUR"},"globals":{"language":"en"},"consent":{"functional":true}}' --simulate transformer.validate
 ```
 
 - **MCP:** `flow_validate`, `flow_simulate`.
@@ -760,7 +760,7 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
   (`user.ltv: 420`, `user.segment: "loyal"`):
 
 ```bash
-walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"},"user":{"id":"cust-42"}}' --simulate transformer.loadUser
+walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"order complete","data":{"id":"ORD-100","value":149.8,"currency":"EUR"},"user":{"id":"cust-42"}}' --simulate transformer.loadUser
 ```
 
 - Build the web bundle straight into the shared folder (web builds ignore root

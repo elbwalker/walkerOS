@@ -1,3 +1,4 @@
+import { acknowledge } from '@walkeros/core';
 import type { Collector, Logger, Source, WalkerOS } from '@walkeros/core';
 import type { Message, SubscriptionOptions } from '@google-cloud/pubsub';
 import { Duration } from '@google-cloud/pubsub';
@@ -74,6 +75,9 @@ async function handleMessage(args: {
   logger: Logger.Instance;
 }): Promise<void> {
   const { message, settings, pushFn, logger } = args;
+  // The error disposition: nack (redeliver) by default, ack if configured.
+  const dispose = () =>
+    settings.onPushError === 'ack' ? message.ack() : message.nack();
   try {
     const decoded = decodeMessage(message, settings.decoder ?? 'json');
     if (decoded === null || decoded === undefined) {
@@ -87,11 +91,17 @@ async function handleMessage(args: {
       return;
     }
     const result = await pushFn(toDeepPartialEvent(decoded));
-    if (result?.ok === false) {
-      // Never delete a message that was not delivered. Route through the
-      // existing error disposition (nack by default, ack if configured).
-      throw new Error('push rejected the message (ok:false)');
+    if (acknowledge(result) === 'retry') {
+      // Never ack a message a redelivery could still deliver. The collector
+      // logged the cause; this line is the per-message trace.
+      logger.debug('Pub/Sub message not delivered, retryable', {
+        id: message.id,
+      });
+      dispose();
+      return;
     }
+    // Delivered, a deterministic failure (in the DLQ, its cause logged) or
+    // rejected input (counted): a redelivery cannot change the outcome.
     message.ack();
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -100,8 +110,7 @@ async function handleMessage(args: {
     } else {
       logger.error('Pub/Sub message handler failed', { id: message.id, error });
     }
-    if (settings.onPushError === 'ack') message.ack();
-    else message.nack();
+    dispose();
   }
 }
 
@@ -175,7 +184,9 @@ export const sourcePubSubPull: Source.Init<Types> = async (context) => {
           `Run "walkeros setup source.${id}" to create it. Original: ${err.message}`,
       );
     } else {
-      logger.error('Pub/Sub subscription stream error (SDK will retry)', {
+      // Self-healing: the SDK reconnects and no message is acked, so none
+      // is lost. WARN: worth acting on if it repeats, intent still met.
+      logger.warn('Pub/Sub subscription stream error (SDK will retry)', {
         error: err.message,
       });
     }

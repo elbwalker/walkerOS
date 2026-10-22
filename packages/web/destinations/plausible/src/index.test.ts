@@ -66,76 +66,24 @@ describe('destination plausible', () => {
     expect(initEnv?.window.plausible).toBeDefined();
   });
 
-  test('init with script load', async () => {
-    // For now, skip complex document mocking and focus on core functionality
-    // TODO: Fix document mocking with environment injection
-    const mockPlausible = jest.fn();
-    const simpleEnv = {
-      ...testEnv,
-      window: {
-        plausible: mockPlausible,
-      },
-      document: {
-        createElement: createElementMock,
-        head: { appendChild: appendChildMock },
-        querySelector: jest.fn(),
-      },
-    };
-
-    const destinationWithEnv = {
-      ...destination,
-      env: simpleEnv,
-    };
-    elb('walker destination', {
-      code: destinationWithEnv,
-      config: { loadScript: true },
-    });
-
-    await elb(event);
-
-    // Verify script createElement was called
-    expect(createElementMock).toHaveBeenCalledWith('script');
-    // Verify appendChild was called
-    expect(appendChildMock).toHaveBeenCalled();
-  });
-
-  test('init with domain', async () => {
+  // loadVendor injects into the page's document, once per src
+  test('init with script load and domain', async () => {
     const domain = 'walkeros.io';
-    const mockScript = {
-      src: '',
-      dataset: {} as Record<string, string>,
-      setAttribute: jest.fn(),
-      removeAttribute: jest.fn(),
-    };
-    createElementMock.mockReturnValue(mockScript);
-
-    const mockPlausible = jest.fn();
-    const simpleEnv = {
-      ...testEnv,
-      window: {
-        plausible: mockPlausible,
-      },
-      document: {
-        createElement: createElementMock,
-        head: { appendChild: appendChildMock },
-        querySelector: jest.fn(),
-      },
-    };
-
     const destinationWithEnv = {
       ...destination,
-      env: simpleEnv,
+      env: { window: { plausible: jest.fn() } },
     };
     elb('walker destination', {
       code: destinationWithEnv,
-      config: {
-        loadScript: true,
-        settings: { domain },
-      },
+      config: { loadScript: true, settings: { domain } },
     });
 
     await elb(event);
 
-    expect((mockScript.dataset as Record<string, string>).domain).toBe(domain);
+    const injected = document.querySelector<HTMLScriptElement>(
+      'script[data-walkeros-vendor]',
+    );
+    expect(injected?.src).toBe(script);
+    expect(injected?.dataset.domain).toBe(domain);
   });
 });

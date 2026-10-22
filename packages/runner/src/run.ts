@@ -14,7 +14,6 @@ import { Level, createTimer, getErrorMessage } from '@walkeros/core';
 import type { Logger } from '@walkeros/core';
 import {
   createCLILogger,
-  createCLILoggerConfig,
   scrubSecrets,
   type CLILoggerColors,
 } from '@walkeros/core/node';
@@ -32,6 +31,7 @@ import {
 } from './resolve-bundle.js';
 import { validatePort } from './validators.js';
 import { runPipeline, type PipelineOptions } from './pipeline.js';
+import { createRuntimeLogging } from './runtime-logging.js';
 import type { RunCommandOptions } from './types.js';
 
 /** The runtime's terminal colours, injected into the shared logger factory. */
@@ -131,6 +131,10 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     [Level.DEBUG]: 'debug',
   } as const;
 
+  // Every line, the runner's and the collector's, is tapped here. The text
+  // line feeds the rings (heartbeat, error sink); the tap also receives the
+  // line as a structured entry (scope, and the context with code, status,
+  // retryable, suppressed) for a forwarder.
   const onLine = (level: Level, message: string) => {
     if (level === Level.ERROR) errorRing.add(message);
     logRing.add({ time: Date.now(), level: LEVEL_NAME[level], message });
@@ -142,21 +146,19 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   const knownSecrets: string[] = [];
   const readKnownSecrets = (): readonly string[] => knownSecrets;
 
-  const logger = createCLILogger(
+  // The runner's logger and the config the deployed bundle's collector builds
+  // its own logger from (`context.logger`), so its destination errors flow
+  // through the SAME `onLine` ring tap as the runner's lines. Without it,
+  // production (no --verbose) passes no `context.logger`, the collector's
+  // createLogger has no handler, and destination "Push failed" errors never
+  // reach the ErrorRing (the heartbeat would report "No errors reported"
+  // despite failed deliveries). Both use the flow's own `logger.format` once
+  // the bundle reports it.
+  const logging = createRuntimeLogging(
     { ...options, onLine, knownSecrets: readKnownSecrets },
     RUNTIME_COLORS,
   );
-
-  // The deployed bundle's collector builds its own logger from this config
-  // (`context.logger`), so its destination errors flow through the SAME
-  // `onLine` ring tap as the runtime logger above. Without this, production
-  // (no --verbose) passes no `context.logger`, the collector's createLogger has
-  // no handler, and destination "Push failed" errors never reach the ErrorRing
-  // (the heartbeat would report "No errors reported" despite failed deliveries).
-  const collectorLoggerConfig = createCLILoggerConfig(
-    { ...options, onLine, knownSecrets: readKnownSecrets },
-    RUNTIME_COLORS,
-  );
+  const { logger } = logging;
 
   try {
     // Resolve port
@@ -230,7 +232,9 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       bundlePath,
       port,
       logger: logger.scope('runner'),
-      loggerConfig: collectorLoggerConfig,
+      loggerConfig: logging.collectorConfig,
+      flowLogger: logging.flowLogger,
+      format: logging.format,
       api: apiConfig,
       errorRing,
       logRing,

@@ -32,7 +32,7 @@ npm install @walkeros/web-destination-tiktok
       "destinations": {
         "tiktok": {
           "package": "@walkeros/web-destination-tiktok",
-          "config": {}
+          "config": { "settings": { "apiKey": "YOUR_PIXEL_ID" } }
         }
       }
     }

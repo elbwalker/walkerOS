@@ -62,17 +62,21 @@ export interface SqliteSettings {
 
   // Runtime, set during init/setup, not user-facing.
   _client?: SqliteClient;
-  _runInsert?: (args: ReadonlyArray<unknown>) => Promise<void>;
+  /** Each table's check and insert preparation, run once at its first push. */
+  _ready?: Map<
+    string,
+    Promise<(args: ReadonlyArray<unknown>) => Promise<void>>
+  >;
   _ownedClient?: boolean;
   /**
-   * Internal flag set by the migration shim. When true, init() runs the legacy
-   * 13-column CREATE TABLE path for backward compatibility. Otherwise init()
-   * assumes the table already exists (created via `walkeros setup destination.<id>`).
+   * Internal flag set by the migration shim. When true, the first push runs
+   * the legacy 13-column CREATE TABLE path for backward compatibility.
+   * Otherwise the table must exist (created via `walkeros setup destination.<id>`).
    */
   _legacyAutoCreate?: boolean;
   /**
    * Internal flag set by the migration shim. When true (legacy `schema: 'manual'`),
-   * init() skips the modern table-existence probe so the user can bring their own
+   * the first push skips the table-existence probe so the user can bring their own
    * table and column shape without hitting the new "table not found" hard-fail.
    */
   _legacySkipProbe?: boolean;

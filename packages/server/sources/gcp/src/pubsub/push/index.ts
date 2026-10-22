@@ -1,5 +1,9 @@
 import type { Source } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
+import {
+  INTERNAL_SERVER_ERROR,
+  isObject,
+  pushResultToOutcome,
+} from '@walkeros/core';
 import { decodeMessage, DecoderError } from '../shared/decoder';
 import type { DecodableMessage } from '../shared/decoder';
 import { getConfig } from './config';
@@ -161,26 +165,21 @@ export const sourcePubSubPush: Source.Init<Types> = async (context) => {
         return;
       }
 
-      const result = await env.push(decoded);
-      if (result?.ok === false) {
-        if (result.invalid === true) {
-          // Permanently-invalid message: a retry can never fix it. Answer
-          // 400 (a nack, same as the decoder-failure path) and leave poison
-          // handling to the subscription's dead-letter policy. The collector
-          // already warned and counted the rejection.
-          res.status(400).json({
-            success: false,
-            error: result.error ?? 'Invalid event',
-          });
-          return;
-        }
-        logger.warn(
-          'Pub/Sub push: event not processed, answering 500 for redelivery',
-          { id: body.message.messageId },
-        );
-        res.status(500).json({
+      // 400 for a permanently invalid message (a nack, as on the decoder
+      // path; poison handling is the subscription's dead-letter policy), 500
+      // when a redelivery could still deliver it, else 200: delivered, or
+      // failed for a reason a redelivery cannot fix (in the DLQ, its cause
+      // line logged by the collector).
+      const outcome = pushResultToOutcome(await env.push(decoded));
+      if (outcome.error) {
+        if (outcome.status === 500)
+          logger.debug(
+            'Pub/Sub push: event not processed, answering 500 for redelivery',
+            { id: body.message.messageId },
+          );
+        res.status(outcome.status ?? 500).json({
           success: false,
-          error: 'Event was not processed.',
+          error: outcome.error,
         });
         return;
       }
@@ -189,10 +188,7 @@ export const sourcePubSubPush: Source.Init<Types> = async (context) => {
       logger.error('Pub/Sub push handler failed', {
         error: error instanceof Error ? error.message : String(error),
       });
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      });
+      res.status(500).json({ success: false, error: INTERNAL_SERVER_ERROR });
     }
   };
 

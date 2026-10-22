@@ -31,7 +31,16 @@ npm install @walkeros/server-destination-twitter
       "destinations": {
         "twitter": {
           "package": "@walkeros/server-destination-twitter",
-          "config": {}
+          "config": {
+            "settings": {
+              "pixelId": "YOUR_PIXEL_ID",
+              "eventId": "tw-xxxxx-xxxxx",
+              "consumerKey": "YOUR_CONSUMER_KEY",
+              "consumerSecret": "YOUR_CONSUMER_SECRET",
+              "accessToken": "YOUR_ACCESS_TOKEN",
+              "accessTokenSecret": "YOUR_ACCESS_TOKEN_SECRET"
+            }
+          }
         }
       }
     }

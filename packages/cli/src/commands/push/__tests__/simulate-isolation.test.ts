@@ -268,7 +268,7 @@ describe('transformer simulation isolation — before chain', () => {
 
     const inputEvent = {
       name: 'order complete',
-      data: { total: 100 },
+      data: { value: 100 },
     } as WalkerOS.DeepPartialEvent;
 
     // Run before chain: validate, then its own next (enrich)
@@ -286,7 +286,7 @@ describe('transformer simulation isolation — before chain', () => {
 
     // Both validate and enrich ran
     expect(processedEvent.data).toEqual({
-      total: 100,
+      value: 100,
       valid: true,
       enriched: true,
     });
@@ -304,7 +304,7 @@ describe('transformer simulation isolation — before chain', () => {
     expect(mainPush).toHaveBeenCalledTimes(1);
     const receivedEvent = mainPush.mock.calls[0][0];
     expect(receivedEvent.data).toEqual({
-      total: 100,
+      value: 100,
       valid: true,
       enriched: true,
     });

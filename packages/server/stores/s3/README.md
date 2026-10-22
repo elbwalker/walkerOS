@@ -29,7 +29,17 @@ npm install @walkeros/server-store-s3
     "default": {
       "config": { "platform": "server" },
       "stores": {
-        "assets": { "package": "@walkeros/server-store-s3", "config": {} }
+        "assets": {
+          "package": "@walkeros/server-store-s3",
+          "config": {
+            "settings": {
+              "bucket": "my-assets",
+              "endpoint": "https://s3.eu-west-1.amazonaws.com",
+              "accessKeyId": "YOUR_ACCESS_KEY",
+              "secretAccessKey": "YOUR_SECRET_KEY"
+            }
+          }
+        }
       }
     }
   }

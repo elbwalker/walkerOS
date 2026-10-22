@@ -537,12 +537,18 @@ describe('sourceLambda', () => {
 
       // A rejected push is a server fault, not client input: the collector
       // resolves pipeline failures, so a rejection is exceptional.
+      // The thrown message goes to the log, never into the answer.
       expect(result.statusCode).toBe(500);
       expect(JSON.parse(result.body)).toMatchObject({
         success: false,
-        error: 'Processing failed',
+        error: 'Internal server error',
         requestId: expect.any(String),
       });
+      expect(result.body).not.toContain('Processing failed');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Event processing failed',
+        expect.objectContaining({ error: expect.any(Error) }),
+      );
     });
 
     it('should reject unsupported methods', async () => {

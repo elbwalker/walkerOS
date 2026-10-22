@@ -79,3 +79,11 @@ Add to your `flow.json` destinations:
 </Tabs>
 
 <Configuration type="destination" data={data} />
+
+## Batching and delivery
+
+This destination batches by default: `config.batch` sends after 200 events or 10 seconds, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
+
+A delivery that Amplitude does not answer with `2xx` fails with its status.
+
+A group name list that holds a non-string is skipped with a DEBUG line, not sent.

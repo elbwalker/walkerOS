@@ -1,5 +1,28 @@
 # @walkeros/server-destination-reddit
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: A failed request is reported as a failed push (dead-letter queue, one
+  ERROR line with the status) instead of counting as delivered or being logged
+  at debug. Events a destination cannot send, such as a missing user identifier,
+  fail with `missing-input`. Rules with `silent: true` send no event of their
+  own.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/server-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

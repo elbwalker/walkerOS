@@ -32,7 +32,14 @@ npm install @walkeros/server-destination-redis
       "destinations": {
         "redis": {
           "package": "@walkeros/server-destination-redis",
-          "config": {}
+          "config": {
+            "settings": {
+              "redis": {
+                "streamKey": "walkeros:events",
+                "url": "redis://localhost:6379"
+              }
+            }
+          }
         }
       }
     }

@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import { toRecordData } from '../lib/records';
 
 /**
@@ -53,11 +53,12 @@ const pageEvent = getEvent('page view', {
 const orderEvt = getEvent('order complete', {
   id: 'ev-1700001001',
   timestamp: 1700001001,
-  data: { id: 'ORD-400', total: 99.99, currency: 'EUR' },
+  data: { id: 'ORD-400', value: 99.99, currency: 'EUR' },
   source: { type: 'express', platform: 'server' },
 });
 
-const signupEvt = getEvent('user signup', {
+const signupEvt = createEvent({
+  name: 'user signup',
   id: 'ev-1700001002',
   timestamp: 1700001002,
   data: { plan: 'pro', source: 'landing-page' },
@@ -115,7 +116,7 @@ export const mappedRecord: Flow.StepExample = {
         id: 'id',
         name: 'name',
         order_id: 'data.id',
-        total: 'data.total',
+        total: 'data.value',
       },
     },
   },
@@ -125,4 +126,13 @@ export const mappedRecord: Flow.StepExample = {
     order_id: 'ORD-400',
     total: 99.99,
   }),
+};
+
+/** A silent rule sends no record to Firehose. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no record to Firehose.',
+  in: pageEvent,
+  mapping: { silent: true },
+  out: [],
 };

@@ -5,13 +5,42 @@ import type {
   CustomerIoTrackClientMock,
   CustomerIoApiClientMock,
 } from './types';
-import { getMappingValue, isObject, isString } from '@walkeros/core';
+import { getMappingValue, isObject, isString, StepError } from '@walkeros/core';
+
+/**
+ * One call to the SDK, awaited. A failure becomes a StepError with a fixed
+ * message: the SDK's own error stays on `cause`, never in the message.
+ */
+async function sdk(
+  message: string,
+  call: () => Promise<unknown>,
+): Promise<void> {
+  try {
+    await call();
+  } catch (error) {
+    throw new StepError(message, {
+      code: 'transport',
+      status: statusOf(error),
+      cause: error,
+    });
+  }
+}
+
+/** The HTTP status of a rejected request (CustomerIORequestError), when known. */
+function statusOf(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  return 'statusCode' in error &&
+    typeof error.statusCode === 'number' &&
+    error.statusCode > 0
+    ? error.statusCode
+    : undefined;
+}
 
 export const push: PushFn = async function (
   event,
-  { config, rule, data, collector, env, logger },
+  { config, rule, data, collector, env },
 ) {
-  const settings = config.settings as Settings;
+  const settings = config.settings!;
   const envTyped = env as
     | {
         trackClient?: CustomerIoTrackClientMock;
@@ -21,10 +50,10 @@ export const push: PushFn = async function (
   const trackClient = envTyped?.trackClient || settings._trackClient;
   const apiClient = envTyped?.apiClient || settings._apiClient;
 
-  if (!trackClient) {
-    logger.warn('Customer.io TrackClient not initialized');
-    return;
-  }
+  if (!trackClient)
+    throw new StepError('Customer.io TrackClient not initialized', {
+      code: 'not-ready',
+    });
 
   const state: RuntimeState = settings._state || {};
   const mappingSettings = rule?.settings || {};
@@ -46,13 +75,10 @@ export const push: PushFn = async function (
       )
     : undefined;
 
-  if (!customerId && !anonymousId) {
-    logger.warn(
-      'Customer.io requires customerId or anonymousId; skipping event',
-      { event: event.name },
-    );
-    return;
-  }
+  if (!customerId && !anonymousId)
+    throw new StepError('Customer.io requires customerId or anonymousId', {
+      code: 'missing-input',
+    });
 
   // 2. Identify -- rule-level overrides destination-level
   const identifyMapping = mappingSettings.identify ?? settings.identify;
@@ -83,20 +109,28 @@ export const push: PushFn = async function (
         void _u;
         const pageData =
           Object.keys(extraData).length > 0 ? extraData : undefined;
-        await trackClient.trackPageView(customerId, url, pageData);
+        await sdk('Customer.io trackPageView failed', () =>
+          trackClient.trackPageView(customerId, url, pageData),
+        );
       }
     }
   }
 
   // 4. Destroy / Suppress / Unsuppress
   if (mappingSettings.destroy === true && customerId) {
-    await trackClient.destroy(customerId);
+    await sdk('Customer.io destroy failed', () =>
+      trackClient.destroy(customerId),
+    );
   }
   if (mappingSettings.suppress === true && customerId) {
-    await trackClient.suppress(customerId);
+    await sdk('Customer.io suppress failed', () =>
+      trackClient.suppress(customerId),
+    );
   }
   if (mappingSettings.unsuppress === true && customerId) {
-    await trackClient.unsuppress(customerId);
+    await sdk('Customer.io unsuppress failed', () =>
+      trackClient.unsuppress(customerId),
+    );
   }
 
   // 5. Device management
@@ -110,12 +144,15 @@ export const push: PushFn = async function (
         platform?: unknown;
         data?: unknown;
       };
-      if (isString(r.deviceId) && isString(r.platform)) {
-        await trackClient.addDevice(
-          customerId,
-          r.deviceId,
-          r.platform,
-          isObject(r.data) ? (r.data as Record<string, unknown>) : undefined,
+      const { deviceId, platform } = r;
+      if (isString(deviceId) && isString(platform)) {
+        await sdk('Customer.io addDevice failed', () =>
+          trackClient.addDevice(
+            customerId,
+            deviceId,
+            platform,
+            isObject(r.data) ? r.data : undefined,
+          ),
         );
       }
     }
@@ -128,8 +165,11 @@ export const push: PushFn = async function (
     );
     if (isObject(resolved)) {
       const r = resolved as { deviceId?: unknown; platform?: unknown };
-      if (isString(r.deviceId) && isString(r.platform)) {
-        await trackClient.deleteDevice(customerId, r.deviceId, r.platform);
+      const { deviceId, platform } = r;
+      if (isString(deviceId) && isString(platform)) {
+        await sdk('Customer.io deleteDevice failed', () =>
+          trackClient.deleteDevice(customerId, deviceId, platform),
+        );
       }
     }
   }
@@ -146,17 +186,20 @@ export const push: PushFn = async function (
         secondaryType?: unknown;
         secondaryId?: unknown;
       };
+      const { primaryType, primaryId, secondaryType, secondaryId } = r;
       if (
-        isString(r.primaryType) &&
-        isString(r.primaryId) &&
-        isString(r.secondaryType) &&
-        isString(r.secondaryId)
+        isString(primaryType) &&
+        isString(primaryId) &&
+        isString(secondaryType) &&
+        isString(secondaryId)
       ) {
-        await trackClient.mergeCustomers(
-          r.primaryType,
-          r.primaryId,
-          r.secondaryType,
-          r.secondaryId,
+        await sdk('Customer.io mergeCustomers failed', () =>
+          trackClient.mergeCustomers(
+            primaryType,
+            primaryId,
+            secondaryType,
+            secondaryId,
+          ),
         );
       }
     }
@@ -168,7 +211,9 @@ export const push: PushFn = async function (
       collector,
     });
     if (isObject(resolved)) {
-      await apiClient.sendEmail(resolved);
+      await sdk('Customer.io sendEmail failed', () =>
+        apiClient.sendEmail(resolved),
+      );
     }
   }
   if (mappingSettings.sendPush !== undefined && apiClient) {
@@ -176,7 +221,9 @@ export const push: PushFn = async function (
       collector,
     });
     if (isObject(resolved)) {
-      await apiClient.sendPush(resolved);
+      await sdk('Customer.io sendPush failed', () =>
+        apiClient.sendPush(resolved),
+      );
     }
   }
 
@@ -194,9 +241,13 @@ export const push: PushFn = async function (
     if (timestampSec !== undefined) eventData.timestamp = timestampSec;
 
     if (customerId) {
-      await trackClient.track(customerId, eventData);
+      await sdk('Customer.io track failed', () =>
+        trackClient.track(customerId, eventData),
+      );
     } else if (anonymousId) {
-      await trackClient.trackAnonymous(anonymousId, eventData);
+      await sdk('Customer.io trackAnonymous failed', () =>
+        trackClient.trackAnonymous(anonymousId, eventData),
+      );
     }
   }
 
@@ -231,7 +282,9 @@ async function applyIdentify(
 
   if (!customerIdChanged && !attributesChanged) return;
 
-  await trackClient.identify(customerId, resolved);
+  await sdk('Customer.io identify failed', () =>
+    trackClient.identify(customerId, resolved),
+  );
 
   state.lastIdentity = {
     customerId,

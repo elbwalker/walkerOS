@@ -12,6 +12,14 @@ import type { DestinationServer } from '@walkeros/server-core';
  * Key difference from web: no setUserId/setDeviceId/setSessionId.
  * Identity is per-event via EventOptions on every SDK call.
  */
+/**
+ * What an SDK call answers: a promise of its result, which resolves after
+ * the event was sent (with its HTTP `code`) instead of rejecting.
+ */
+export interface AmplitudeReturn {
+  promise: Promise<unknown>;
+}
+
 export interface AmplitudeSDK {
   init: (
     apiKey: string,
@@ -21,20 +29,26 @@ export interface AmplitudeSDK {
     eventType: string,
     eventProperties?: Record<string, unknown>,
     eventOptions?: EventOptions,
-  ) => void;
-  identify: (identify: IdentifyInstance, eventOptions?: EventOptions) => void;
-  revenue: (revenue: RevenueInstance, eventOptions?: EventOptions) => void;
+  ) => AmplitudeReturn;
+  identify: (
+    identify: IdentifyInstance,
+    eventOptions?: EventOptions,
+  ) => AmplitudeReturn;
+  revenue: (
+    revenue: RevenueInstance,
+    eventOptions?: EventOptions,
+  ) => AmplitudeReturn;
   setGroup: (
     groupType: string,
     groupName: string | string[],
     eventOptions?: EventOptions,
-  ) => void;
+  ) => AmplitudeReturn;
   groupIdentify: (
     groupType: string,
     groupName: string,
     identify: IdentifyInstance,
     eventOptions?: EventOptions,
-  ) => void;
+  ) => AmplitudeReturn;
   setOptOut: (optOut: boolean) => void;
   flush: () => { promise: Promise<void> };
   Identify: new () => IdentifyInstance;
@@ -163,6 +177,7 @@ export type Config = {
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;
+export type PushBatchFn = CoreDestination.PushBatchFn<Types>;
 
 export type PartialConfig = DestinationServer.PartialConfig<Types>;
 

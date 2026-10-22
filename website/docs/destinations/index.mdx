@@ -46,6 +46,23 @@ analytics platforms, marketing tools, data warehouses, and custom APIs.
 Each destination operates independently, so one failed destination won't affect
 others.
 
+## When delivery fails
+
+An event that a destination did not deliver is never counted as delivered. The
+push result lists the destination under `failed` with a `reason` (a `code`, a
+`message` and whether a retry could help), the destination's `failed` counter
+moves, the event goes to its dead-letter queue and the collector writes one
+ERROR line per cause and minute. This covers a failed request (including an
+error status or a rejected answer inside a `200`), a missing required setting,
+an event the destination cannot send, a vendor script that did not load, and a
+destination whose `init` failed. See [Logger](/docs/collector/logger#failure-codes)
+for the codes.
+
+Two things are not failures. Unmet consent only waits (or, on a server, skips)
+the event and is a `DEBUG` line. A rule with `ignore: true` or `silent: true`
+is a decision, not an error, and every destination honours both. A silent rule whose side-effect mapping (identify, group and the like) resolves to nothing sends nothing, counts as delivered and writes one DEBUG line that names the call and the mapping key, never the value. Events a
+destination batches answer `queued` until the flush.
+
 ## Analytics tools
 
 | Destination | Web | Server |
@@ -103,6 +120,14 @@ others.
 | **<Link to="/docs/destinations/server/pubsub">Google Pub/Sub</Link>** | - | Yes |
 | **<Link to="/docs/destinations/server/redis">Redis Streams</Link>** | - | Yes |
 | **<Link to="/docs/destinations/server/sqlite">SQLite</Link>** | - | Yes |
+
+## Server SDK destinations
+
+The server destinations for Segment, RudderStack, Amplitude and PostHog batch by default (15, 20, 200 and 20 events, each with a 10 second wait) and send a batch through `pushBatch`. Each event keeps its own outcome, so a failed delivery fails that event and lands in the dead-letter queue. `config.batch: { size: 1 }` sends each event at once; there is no JSON switch that turns the default batch off. Options are in [Batch scheduling](/docs/mapping/rule#batch-scheduling).
+
+- **Acknowledgement:** a batched event answers `queued` with the reason `batch`, so a server source acknowledges the producer when the event is queued. A failed flush is reported (one ERROR line with the status, the failed counter, the dead-letter queue) but the message is not redelivered.
+- **Retry budget:** the SDK retries inside the destination's `config.timeout`: a quarter of it per attempt, at most two retries. A value set in the settings wins. RudderStack has a `timeout` setting. Amplitude's requests time out through walkerOS's own transport, and a vendor that never answers fails after the budget.
+- **Deduplication:** each destination passes `event.id` as the vendor's dedup id (`messageId` for Segment and RudderStack, `insert_id` for Amplitude, a UUID derived from `event.id` on PostHog's `capture` only; other call types of Segment, RudderStack and Amplitude use `<event id>-<type>`). Delivery is at least once, and the vendor drops duplicates.
 
 ## Create your own
 

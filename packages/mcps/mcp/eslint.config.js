@@ -1,4 +1,5 @@
 import baseConfig from '@walkeros/config/eslint';
+import { nodePlatform } from '@walkeros/config/eslint/node';
 
 const message =
   'Files, processes and cli loaders or runners belong to src/runtime. Accept a FlowRuntime instead.';
@@ -31,6 +32,7 @@ const devZones = ['src/dev.ts', 'src/examples/**', 'src/schemas/**'];
 
 export default [
   ...baseConfig,
+  ...nodePlatform,
   {
     files: ['src/**/*.ts'],
     ignores: [...tests, ...devZones],

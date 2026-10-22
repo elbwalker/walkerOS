@@ -94,7 +94,7 @@ export const pageView: Flow.StepExample = {
 export const purchase: Flow.StepExample = {
   title: 'Purchase (canary)',
   description:
-    'A GA4 purchase hit decoded to a walkerOS order complete event with id, currency, total, tax, shipping, and coupon.',
+    'A GA4 purchase hit decoded to a walkerOS order complete event with id, currency, value, tax, shipping, and coupon.',
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +
@@ -118,7 +118,7 @@ export const purchase: Flow.StepExample = {
         data: {
           id: 'T-9001',
           currency: 'EUR',
-          total: 149.97,
+          value: 149.97,
           tax: 23.97,
           shipping: 4.95,
           coupon: 'WELCOME10',
@@ -381,4 +381,13 @@ export const batchPost: Flow.StepExample = {
       }),
     ],
   ],
+};
+
+export const noRequest: Flow.StepExample = {
+  public: false,
+  description:
+    'An event without a GA4 request in its ingest (the source sets no ingest.url): nothing to decode, so the transformer fails it with missing-input instead of dropping all traffic.',
+  in: { name: 'page view', source: { type: 'express', platform: 'server' } },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
 };

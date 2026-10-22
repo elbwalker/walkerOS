@@ -10,9 +10,8 @@ export const destinationTikTok: Destination = {
 
   config: {},
 
-  async init({ config: partialConfig, logger }) {
-    const config = getConfig(partialConfig, logger);
-    return config;
+  async init({ config: partialConfig }) {
+    return getConfig(partialConfig);
   },
 
   async push(event, context) {

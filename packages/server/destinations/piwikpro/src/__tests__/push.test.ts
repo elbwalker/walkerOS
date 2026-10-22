@@ -1,6 +1,11 @@
-import type { Collector, Logger, SendResponse, WalkerOS } from '@walkeros/core';
+import type {
+  Collector,
+  SendResponse,
+  StandardEventName,
+  WalkerOS,
+} from '@walkeros/core';
 import type { PartialConfig } from '../types';
-import { createIngest, getEvent, Level } from '@walkeros/core';
+import { createEvent, createIngest, getEvent, StepError } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { destinationPiwikPro } from '..';
 
@@ -9,21 +14,15 @@ const SOURCE = { type: 'collector', url: 'https://www.example.com/docs/' };
 
 describe('push', () => {
   const sendServer = jest.fn<Promise<SendResponse>, unknown[]>();
-  let logs: Array<[Level, string]>;
   let collector: Collector.Instance;
 
   beforeEach(() => {
     sendServer.mockReset();
-    sendServer.mockResolvedValue({ ok: true, data: '' });
-    logs = [];
+    sendServer.mockResolvedValue({ data: '' });
   });
 
   async function setup(config: PartialConfig = {}) {
-    const handler: Logger.Handler = (level, message) => {
-      logs.push([level, message]);
-    };
     ({ collector } = await startFlow({
-      logger: { level: 'DEBUG', handler },
       destinations: {
         piwik: {
           code: { ...destinationPiwikPro, env: { sendServer } },
@@ -37,7 +36,10 @@ describe('push', () => {
     return collector;
   }
 
-  function event(name: string, props: WalkerOS.DeepPartialEvent = {}) {
+  function event(
+    name: StandardEventName,
+    props: WalkerOS.DeepPartialEvent = {},
+  ) {
     return getEvent(name, {
       timestamp: 1700000300000,
       source: SOURCE,
@@ -96,7 +98,7 @@ describe('push', () => {
     expect(requests()[0][0]).toContain('&action_name=M%C3%BCller+Shop&');
   });
 
-  it('sends one request per batch, with goal hits and per-entry ingest, and drops skips', async () => {
+  it('sends one request per batch, with goal hits and per-entry ingest, and fails the unmapped one', async () => {
     await setup({
       batch: { size: 3, wait: 60000 },
       mapping: {
@@ -133,21 +135,20 @@ describe('push', () => {
     expect(goal.get('idgoal')).toBe('g1');
   });
 
-  it('sends nothing for a batch of skipped entries', async () => {
+  it('sends nothing for a batch of unmapped entries', async () => {
     await setup({ batch: { size: 2, wait: 60000 } });
     await collector.push(event('product view'));
     await collector.push(event('product add'));
     await settle();
     expect(sendServer).not.toHaveBeenCalled();
-    expect(collector.status.destinations.piwik.failed).toBe(0);
+    expect(collector.status.destinations.piwik.failed).toBe(2);
   });
 
   it('fails a push on a transport error', async () => {
     await setup();
-    sendServer.mockResolvedValue({
-      ok: false,
-      error: '500 Internal Server Error',
-    });
+    sendServer.mockRejectedValue(
+      new StepError('HTTP 500', { code: 'transport', status: 500 }),
+    );
     const failed = collector.status.failed;
     await collector.push(event('page view'));
     expect(collector.status.failed).toBe(failed + 1);
@@ -155,10 +156,9 @@ describe('push', () => {
 
   it('fails the whole batch on a transport error', async () => {
     await setup({ batch: { size: 2, wait: 60000 } });
-    sendServer.mockResolvedValue({
-      ok: false,
-      error: '500 Internal Server Error',
-    });
+    sendServer.mockRejectedValue(
+      new StepError('HTTP 500', { code: 'transport', status: 500 }),
+    );
     const failed = collector.status.failed;
     await collector.push(event('page view'));
     await collector.push(event('page view'));
@@ -166,26 +166,54 @@ describe('push', () => {
     expect(collector.status.failed).toBe(failed + 2);
   });
 
-  it('warns on a 429 before failing', async () => {
+  it('reports a 429 as a retryable failure with its status', async () => {
     await setup();
-    sendServer.mockResolvedValue({ ok: false, error: '429 Too Many Requests' });
-    await collector.push(event('page view'));
-    expect(logs).toContainEqual([
-      Level.WARN,
-      'Piwik PRO rate limited the request (429)',
-    ]);
+    sendServer.mockRejectedValue(
+      new StepError('HTTP 429', { code: 'transport', status: 429 }),
+    );
+    const result = await collector.push(event('page view'));
+    expect(result.failed?.piwik?.reason).toMatchObject({
+      code: 'transport',
+      status: 429,
+      retryable: true,
+    });
   });
 
-  it('warns once per skip reason, then logs at debug', async () => {
+  it('fails an event the rule cannot send, with missing-input', async () => {
     await setup();
-    // An event name no other test pushes, so the warned key is this test's own
-    await collector.push(event('skip probe'));
-    await collector.push(event('skip probe'));
-    const skips = logs.filter(([, message]) => message.includes('skipped'));
-    expect(skips).toEqual([
-      [Level.WARN, 'Piwik PRO skipped an event: unmapped'],
-      [Level.DEBUG, 'Piwik PRO skipped an event: unmapped'],
-    ]);
+    const result = await collector.push(
+      event('page view', { source: { type: 'collector' } }),
+    );
+    expect(result.failed?.piwik?.reason).toMatchObject({
+      code: 'missing-input',
+      retryable: false,
+    });
+    expect(sendServer).not.toHaveBeenCalled();
+  });
+
+  it('fails only the unsendable entry of a batch', async () => {
+    await setup({ batch: { size: 2, wait: 60000 } });
+    await collector.push(event('page view'));
+    await collector.push(event('page view', { source: { type: 'collector' } }));
+    await settle();
+    expect(requests()[0]).toHaveLength(1);
+    expect(collector.status.destinations.piwik.count).toBe(1);
+    expect(collector.status.destinations.piwik.failed).toBe(1);
+  });
+
+  it('fails an unmapped event with missing-input', async () => {
+    await setup();
+    const result = await collector.push(
+      createEvent({
+        name: 'skip probe',
+        timestamp: 1700000300000,
+        source: SOURCE,
+      }),
+    );
+    expect(result.failed?.piwik?.reason).toMatchObject({
+      code: 'missing-input',
+      retryable: false,
+    });
     expect(sendServer).not.toHaveBeenCalled();
   });
 });

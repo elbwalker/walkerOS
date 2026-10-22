@@ -7,34 +7,36 @@ export const CustomDimensionsSchema = z.record(
   ValueSchema,
 );
 
-export const SettingsSchema = z.object({
-  appId: z
-    .string()
-    .min(1)
-    .describe(
-      'ID of the Piwik PRO site (like XXX-XXX-XXX-XXX-XXX). Required when loadScript is true',
-    )
-    .optional(),
-  url: z
-    .string()
-    .url()
-    .describe(
-      'URL of your Piwik PRO account, normalized to one trailing slash (like https://your_account_name.piwik.pro/). Required when loadScript is true',
-    )
-    .optional(),
-  linkTracking: z
-    .boolean()
-    .default(true)
-    .describe(
-      'Automatic outlink and download tracking, enabled right after the first hit this destination sends. Default: true',
-    ),
-  identified: z
-    .union([z.boolean(), z.record(z.string(), z.boolean())])
-    .describe(
-      'Identified or anonymous tracking. true (default) identifies every hit, false switches the tracker to anonymous mode without cookies (disableCookies, deleteCookies, setUserIsAnonymous) at init. A consent object like { marketing: true } identifies only while that consent is granted and calls enableCookies and deanonymizeUser once it is. Do not repeat these states in config.consent: a destination needs only one of its config.consent states granted, so next to another state the repeated one lets events through on its own, and as the only state it queues every event until granted, so no anonymous hit is sent.',
-    )
-    .optional(),
-  customDimensions: CustomDimensionsSchema.describe(
-    'Custom dimensions applied to every hit, keyed by bare dimension id (like { "1": "data.size" }). Rule-level customDimensions win per key.',
-  ).optional(),
-});
+export const SettingsSchema = z
+  .object({
+    appId: z
+      .string()
+      .min(1)
+      .describe(
+        'ID of the Piwik PRO site (like XXX-XXX-XXX-XXX-XXX). Required when loadScript is true',
+      )
+      .optional(),
+    url: z
+      .string()
+      .url()
+      .describe(
+        'URL of your Piwik PRO account, normalized to one trailing slash (like https://your_account_name.piwik.pro/). Required when loadScript is true',
+      )
+      .optional(),
+    linkTracking: z
+      .boolean()
+      .default(true)
+      .describe(
+        'Automatic outlink and download tracking, enabled right after the first hit this destination sends. Default: true',
+      ),
+    identified: z
+      .union([z.boolean(), z.record(z.string(), z.boolean())])
+      .describe(
+        'Identified or anonymous tracking. true (default) identifies every hit, false switches the tracker to anonymous mode without cookies (disableCookies, deleteCookies, setUserIsAnonymous) at init. A consent object like { marketing: true } identifies only while that consent is granted and calls enableCookies and deanonymizeUser once it is. Do not repeat these states in config.consent: a destination needs only one of its config.consent states granted, so next to another state the repeated one lets events through on its own, and as the only state it queues every event until granted, so no anonymous hit is sent.',
+      )
+      .optional(),
+    customDimensions: CustomDimensionsSchema.describe(
+      'Custom dimensions applied to every hit, keyed by bare dimension id (like { "1": "data.size" }). Rule-level customDimensions win per key.',
+    ).optional(),
+  })
+  .strict();

@@ -65,7 +65,7 @@ describe('storeS3Init', () => {
     mockBucketExists.mockReset();
     mockCreateBucket.mockReset();
     // Default to bucket existing so existing tests are unaffected by the
-    // new init-time bucket-exists guard.
+    // first-operation bucket-exists guard.
     mockBucketExists.mockResolvedValue(true);
   });
 
@@ -77,11 +77,26 @@ describe('storeS3Init', () => {
     expect(store.delete).toBeDefined();
   });
 
+  it('checks the bucket at the first operation, not at init', async () => {
+    const store = await createStore();
+    expect(mockBucketExists).not.toHaveBeenCalled();
+
+    mockGetObjectArrayBuffer.mockResolvedValue(null);
+    await store.get('a');
+    await store.get('b');
+    expect(mockBucketExists).toHaveBeenCalledTimes(1);
+  });
+
   it('should throw an actionable error when the bucket does not exist', async () => {
     mockBucketExists.mockResolvedValue(false);
-    await expect(createStore()).rejects.toThrow(
-      /S3 bucket not found: my-bucket.*walkeros setup store\.test-s3/,
-    );
+    const store = await createStore();
+    await expect(store.get('walker.js')).rejects.toMatchObject({
+      name: 'StepError',
+      code: 'config',
+      message: expect.stringMatching(
+        /S3 bucket not found: my-bucket.*walkeros setup store\.test-s3/,
+      ),
+    });
   });
 
   // Connect the put/get mocks into a single in-memory backing store so a
@@ -114,13 +129,17 @@ describe('storeS3Init', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should return undefined on error', async () => {
-      mockGetObjectArrayBuffer.mockRejectedValue(new Error('NoSuchKey'));
+    it('throws a StepError for a failed read, not a miss', async () => {
+      mockGetObjectArrayBuffer.mockRejectedValue(
+        new Error('Request failed with status 403: AccessDenied'),
+      );
 
       const store = await createStore();
-      const result = await store.get('missing.txt');
-
-      expect(result).toBeUndefined();
+      await expect(store.get('private.txt')).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'transport',
+        message: 'S3 read failed',
+      });
     });
 
     it('should prepend prefix to key', async () => {
@@ -156,6 +175,19 @@ describe('storeS3Init', () => {
     });
   });
 
+  describe('set', () => {
+    it('throws a StepError when the upload fails', async () => {
+      mockPutObject.mockRejectedValue(new Error('Request failed: 403'));
+
+      const store = await createStore();
+      await expect(store.set('a.json', { a: 1 })).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'transport',
+        message: 'S3 write failed',
+      });
+    });
+  });
+
   describe('structured mode (default)', () => {
     it('round-trips an object and stores it as application/json', async () => {
       wireBackingStore();
@@ -187,13 +219,16 @@ describe('storeS3Init', () => {
       expect(result).toEqual({ name: 'logo', body: bytes });
     });
 
-    it('degrades to undefined on an empty object (does not throw)', async () => {
+    it('throws a decode StepError on an empty object, not a miss', async () => {
       mockGetObjectArrayBuffer.mockResolvedValue(new ArrayBuffer(0));
       const store = await createStore();
-      await expect(store.get('empty')).resolves.toBeUndefined();
+      await expect(store.get('empty')).rejects.toMatchObject({
+        code: 'decode',
+        retryable: false,
+      });
     });
 
-    it('degrades to undefined on corrupt non-JSON bytes (does not throw)', async () => {
+    it('throws a decode StepError on corrupt non-JSON bytes, not a miss', async () => {
       const corrupt = Buffer.from('not valid json {');
       mockGetObjectArrayBuffer.mockResolvedValue(
         corrupt.buffer.slice(
@@ -202,7 +237,12 @@ describe('storeS3Init', () => {
         ),
       );
       const store = await createStore();
-      await expect(store.get('corrupt')).resolves.toBeUndefined();
+      await expect(store.get('corrupt')).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'decode',
+        retryable: false,
+        message: 'S3 value could not be decoded',
+      });
     });
 
     it('reject path traversal keys', async () => {
@@ -277,11 +317,14 @@ describe('storeS3Init', () => {
       expect(mockDeleteObject).toHaveBeenCalledWith('old.txt');
     });
 
-    it('should not throw on missing key', async () => {
-      mockDeleteObject.mockRejectedValue(new Error('NoSuchKey'));
+    it('throws a StepError for a failed delete', async () => {
+      mockDeleteObject.mockRejectedValue(new Error('Request failed: 503'));
 
       const store = await createStore();
-      await expect(store.delete('missing.txt')).resolves.toBeUndefined();
+      await expect(store.delete('old.txt')).rejects.toMatchObject({
+        code: 'transport',
+        message: 'S3 delete failed',
+      });
     });
   });
 

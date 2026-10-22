@@ -1,12 +1,3 @@
-// The real @microsoft/clarity package is ESM and can't be parsed by Jest's
-// default CommonJS transformer. Tests always wire their own mock via
-// `env.clarity`, so the real module is never touched; we stub the import
-// with an empty default export to let Jest load the destination file.
-jest.mock('@microsoft/clarity', () => ({
-  __esModule: true,
-  default: {},
-}));
-
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
@@ -57,7 +48,12 @@ describe('clarity destination -- step examples', () => {
     expect(unnamed).toEqual([]);
   });
 
-  it.each<[string, ClarityStepExample]>(Object.entries(examples.step))(
+  // Non-public examples (silent, failures) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each<[string, ClarityStepExample]>(published)(
     '%s',
     async (name, example) => {
       const env = clone(examples.env.push) as Env;
@@ -66,6 +62,8 @@ describe('clarity destination -- step examples', () => {
       const dest = jest.requireActual('../').default;
       const { elb } = await startFlow();
 
+      // Effects before this index belong to the example's `before` grant.
+      let before = 0;
       const baseSettings: Partial<Settings> & { apiKey: string } = {
         apiKey: 'test-project',
         ...(example.settings || {}),
@@ -87,6 +85,7 @@ describe('clarity destination -- step examples', () => {
         // declares one, so a revoke acts on an already-granted destination. Both
         // the grant and the consent-under-test effects are asserted.
         if (example.before) await elb('walker consent', example.before);
+        before = collected().length;
         await elb('walker consent', example.in as WalkerOS.Consent);
       } else {
         // Standard event example.
@@ -110,7 +109,9 @@ describe('clarity destination -- step examples', () => {
       // Drop the init call: every example triggers init once, it is not part
       // of the declared `out`.
       const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-      const actual = collected().filter(([path]) => path !== 'clarity.init');
+      const actual = collected()
+        .slice(before)
+        .filter(([path]) => path !== 'clarity.init');
 
       expect(actual).toEqual(expected);
     },

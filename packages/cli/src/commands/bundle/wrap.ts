@@ -20,7 +20,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import * as esbuild from 'esbuild';
 import {
-  cliCorePlugin,
+  cliPackagesPlugin,
   generateWrapEntry,
   generateWrapEntryServer,
   getNodeExternals,
@@ -230,11 +230,12 @@ export async function wrapSkeleton(
       format: 'esm',
       platform,
       outfile: outputPath,
-      // Resolve `@walkeros/core` (used by the preview activator) from the CLI
-      // package's own dependency tree and the workspace root. Without this,
-      // esbuild looks under the temp entryDir which has no node_modules.
-      // The wrap step always runs from inside the CLI process; both the
-      // CLI's local node_modules and the workspace root are safe anchors.
+      // Resolve `@walkeros/web-core` (the Tag Mode loader and the preview
+      // activator) from the CLI package's own dependency tree and the
+      // workspace root. Without this, esbuild looks under the temp entryDir
+      // which has no node_modules. The wrap step always runs from inside the
+      // CLI process; both the CLI's local node_modules and the workspace root
+      // are safe anchors.
       nodePaths: getNodeResolutionPaths(),
       treeShaking: true,
       logLevel: 'error',
@@ -258,10 +259,10 @@ export async function wrapSkeleton(
       // `window` explicitly, so they still run. The entry has zero exports, so
       // no `globalName` is needed.
       esbuildOptions.format = 'iife';
-      // The entry's core imports (the Tag Mode loader, the preview
-      // activator) come from the CLI's own core, never from a core above the
-      // temp dir.
-      esbuildOptions.plugins = [cliCorePlugin()];
+      // The entry's web-core imports (the Tag Mode loader, the preview
+      // activator) come from the CLI's own web-core, never from a copy above
+      // the temp dir.
+      esbuildOptions.plugins = [cliPackagesPlugin()];
       // Build flags from the needs the skeleton carries. Only a baked observe
       // config adds to them: the recorder runs only for a collector that has
       // one. A skeleton without needs (an older CLI) keeps every flag on.

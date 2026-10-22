@@ -473,7 +473,7 @@ ASCII diagram and detailed explanation.
         "purchase": {
           "in": {
             "name": "order complete",
-            "data": { "id": "ORD-123", "total": 149.97 }
+            "data": { "id": "ORD-123", "value": 149.97 }
           },
           "out": [
             "event",

@@ -1,4 +1,4 @@
-import { addScript, initializeGtag, resetLoadedScripts } from '../shared/gtag';
+import { checkGtag, initializeGtag, loadGtag } from '../shared/gtag';
 import {
   normalizeEventName,
   normalizeParamName,
@@ -14,56 +14,54 @@ const makeGtagWindow = (
   init: { dataLayer?: unknown[]; gtag?: Gtag.Gtag } = {},
 ): WindowWithDataLayer => widen(init);
 
-// Setup DOM mocks
-const mockScript = { src: '' };
-const mockCreateElement = jest.fn(() => mockScript);
-const mockAppendChild = jest.fn();
+/** The src of every script `loadVendor` added. */
+const vendorScripts = () =>
+  Array.from(
+    document.querySelectorAll('script[data-walkeros-vendor]'),
+    (script) => script.getAttribute('src'),
+  );
 
-// Mock document methods
-Object.defineProperty(document, 'createElement', {
-  value: mockCreateElement,
-  writable: true,
-});
+const failScript = (src: string) =>
+  document
+    .querySelector(`script[src="${src}"]`)
+    ?.dispatchEvent(new Event('error'));
 
-Object.defineProperty(document, 'head', {
-  value: { appendChild: mockAppendChild },
-  writable: true,
-});
+const settled = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('Shared Utilities', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockCreateElement.mockReturnValue(mockScript);
-    resetLoadedScripts();
-    mockScript.src = ''; // Reset script src
+    jest.useRealTimers();
   });
 
-  describe('addScript', () => {
-    it('should create and append script with correct src', () => {
-      addScript('G-XXXXXXXXXX');
+  describe('loadGtag', () => {
+    it('loads gtag.js for the id through loadVendor, once', () => {
+      loadGtag('G-ONE');
+      loadGtag('G-ONE');
 
-      expect(mockCreateElement).toHaveBeenCalledWith('script');
-      expect(mockScript.src).toBe(
-        'https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX',
-      );
-      expect(mockAppendChild).toHaveBeenCalledWith(mockScript);
+      expect(vendorScripts()).toEqual([
+        'https://www.googletagmanager.com/gtag/js?id=G-ONE',
+      ]);
     });
 
     // A first-party serving path maps to the id inside the server container,
     // so the id must not be appended.
-    it('should use a custom src verbatim, without appending the id', () => {
-      addScript('G-XXXXXXXXXX', 'https://custom.domain.com/tag_serving_path/');
+    it('uses a custom src verbatim and falls back to googletagmanager.com when it fails', async () => {
+      const src = 'https://custom.domain.com/tag_serving_path/';
+      loadGtag('G-TWO', src);
+      expect(vendorScripts()).toContain(src);
 
-      expect(mockScript.src).toBe(
-        'https://custom.domain.com/tag_serving_path/',
+      failScript(src);
+      await settled();
+
+      expect(vendorScripts()).toContain(
+        'https://www.googletagmanager.com/gtag/js?id=G-TWO',
       );
-    });
-
-    it('should not load the same script twice', () => {
-      addScript('G-XXXXXXXXXX');
-      addScript('G-XXXXXXXXXX');
-
-      expect(mockAppendChild).toHaveBeenCalledTimes(1);
+      // The fallback decides once the first-party script failed.
+      expect(() => checkGtag('G-TWO', src)).not.toThrow();
+      failScript('https://www.googletagmanager.com/gtag/js?id=G-TWO');
+      expect(() => checkGtag('G-TWO', src)).toThrow(
+        expect.objectContaining({ code: 'vendor-not-loaded' }),
+      );
     });
   });
 

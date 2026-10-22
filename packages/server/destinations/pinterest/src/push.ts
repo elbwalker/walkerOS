@@ -1,13 +1,27 @@
 import type { ConversionEvent, PushFn, RequestBody, UserData } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
+import {
+  createMappingRoot,
+  getMappingValue,
+  isObject,
+  StepError,
+} from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { hashEvent } from './hash';
 
-export const push: PushFn = async function (
+// A silent rule has no Pinterest call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, data, ingest, env, logger, collector },
 ) {
+  if (!config.settings)
+    throw new StepError('Pinterest settings missing, init() not run', {
+      code: 'not-ready',
+    });
   const {
     accessToken,
     adAccountId,
@@ -19,7 +33,7 @@ export const push: PushFn = async function (
     partner_name,
     ip,
     userAgent,
-  } = config.settings!;
+  } = config.settings;
 
   const eventData = isObject(data) ? data : {};
   const configData = config.data
@@ -102,18 +116,29 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = env?.sendServer || sendServer;
-  const result = await sendServerFn(endpoint, JSON.stringify(body), {
+  const response = await sendServerFn(endpoint, JSON.stringify(body), {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-
-  logger.debug('Pinterest API response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`Pinterest API error: ${JSON.stringify(result)}`);
-  }
+  checkResponse(response.data);
 };
+
+/**
+ * Pinterest answers HTTP 200 with a per-event `status` and reports an event
+ * it did not process as `failed` (with its `error_message`). A rejected
+ * event fails the push, not retryable; the body stays on the error.
+ */
+function checkResponse(data: unknown): void {
+  if (!isObject(data) || !Array.isArray(data.events)) return;
+  const failed = data.events.filter(
+    (result) => isObject(result) && result.status === 'failed',
+  ).length;
+  if (!failed) return;
+  throw new StepError('Pinterest Conversions API rejected the event', {
+    code: 'transport',
+    retryable: false,
+    body: data,
+  });
+}
 
 const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
 const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [

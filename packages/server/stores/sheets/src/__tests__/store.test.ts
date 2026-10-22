@@ -111,7 +111,7 @@ describe('storeSheetsInit', () => {
   });
 
   describe('init', () => {
-    it('returns a store instance with type "sheets" and reads the key column', async () => {
+    it('returns a store instance and reads the key column at the first operation', async () => {
       const { calls, restore } = installFetch([
         probeOk(),
         jsonResponse({
@@ -125,6 +125,10 @@ describe('storeSheetsInit', () => {
         expect(store.get).toBeDefined();
         expect(store.set).toBeDefined();
         expect(store.delete).toBeDefined();
+        // Init stays offline.
+        expect(calls).toHaveLength(0);
+
+        await store.get('unknown');
         expect(calls).toHaveLength(2);
         expect(calls[0].url).toBe(
           'https://sheets.googleapis.com/v4/spreadsheets/spreadsheet-id-123?fields=spreadsheetId',
@@ -140,7 +144,8 @@ describe('storeSheetsInit', () => {
     it('hard-fails with an actionable error when the spreadsheet is missing', async () => {
       const { restore } = installFetch([{ status: 404 }]);
       try {
-        await expect(storeSheetsInit(createCtx())).rejects.toThrow(
+        const store = await storeSheetsInit(createCtx());
+        await expect(store.get('alice')).rejects.toThrow(
           /Spreadsheet not found.*walkeros setup store\.crm/,
         );
       } finally {
@@ -197,12 +202,12 @@ describe('storeSheetsInit', () => {
       ]);
       try {
         const store = await storeSheetsInit(createCtx());
-        const initialCallCount = calls.length;
 
         const result = await store.get('unknown');
 
         expect(result).toBeUndefined();
-        expect(calls).toHaveLength(initialCallCount);
+        // The spreadsheet check and the key column read, no cell read.
+        expect(calls).toHaveLength(2);
       } finally {
         restore();
       }
@@ -223,22 +228,60 @@ describe('storeSheetsInit', () => {
       }
     });
 
-    it('returns undefined when JSON parse fails', async () => {
+    it('throws a StepError when the cell read fails, not a miss', async () => {
+      const { restore } = installFetch([
+        probeOk(),
+        jsonResponse({ values: [['alice']] }),
+        { status: 403 },
+      ]);
+      try {
+        const store = await storeSheetsInit(createCtx());
+        await expect(store.get('alice')).rejects.toMatchObject({
+          name: 'StepError',
+          code: 'transport',
+          status: 403,
+          retryable: false,
+          message: 'Sheets read failed (HTTP 403)',
+        });
+      } finally {
+        restore();
+      }
+    });
+
+    it('throws a StepError when the key column cannot be read, and retries it', async () => {
+      const { calls, restore } = installFetch([
+        probeOk(),
+        { status: 503 },
+        jsonResponse({ values: [['alice']] }),
+      ]);
+      try {
+        const store = await storeSheetsInit(createCtx());
+        await expect(store.get('alice')).rejects.toMatchObject({
+          code: 'transport',
+          status: 503,
+        });
+        await expect(store.get('unknown')).resolves.toBeUndefined();
+        expect(calls).toHaveLength(3);
+      } finally {
+        restore();
+      }
+    });
+
+    it('throws a decode StepError when the cell is not JSON, not a miss', async () => {
       const { restore } = installFetch([
         probeOk(),
         jsonResponse({ values: [['alice']] }),
         jsonResponse({ values: [['not json']] }),
       ]);
       try {
-        const ctx = createCtx();
-        const store = await storeSheetsInit(ctx);
-        const result = await store.get('alice');
+        const store = await storeSheetsInit(createCtx());
 
-        expect(result).toBeUndefined();
-        expect(ctx.logger.debug).toHaveBeenCalledWith(
-          expect.stringMatching(/JSON parse failed/),
-          expect.objectContaining({ key: 'alice' }),
-        );
+        await expect(store.get('alice')).rejects.toMatchObject({
+          name: 'StepError',
+          code: 'decode',
+          retryable: false,
+          message: 'Sheets value could not be decoded',
+        });
       } finally {
         restore();
       }
@@ -387,11 +430,11 @@ describe('storeSheetsInit', () => {
       ]);
       try {
         const store = await storeSheetsInit(createCtx());
-        const initial = calls.length;
 
         await store.delete('unknown');
 
-        expect(calls).toHaveLength(initial);
+        // The spreadsheet check and the key column read, no cell write.
+        expect(calls).toHaveLength(2);
       } finally {
         restore();
       }
@@ -511,7 +554,8 @@ describe('storeSheetsInit', () => {
         jsonResponse({ values: [['alice']] }),
       ]);
       try {
-        await storeSheetsInit(createCtx({ sheet: 'My Sheet' }));
+        const store = await storeSheetsInit(createCtx({ sheet: 'My Sheet' }));
+        await store.get('unknown');
 
         expect(calls[1].url).toContain(encodeURIComponent("'My Sheet'!A2:A"));
       } finally {

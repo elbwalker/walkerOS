@@ -152,6 +152,40 @@ etc. Operators grep for the verb. No `kind` field is required except in `on.ts`,
 where seven sites share one verb and disambiguate via a typed `kind` field on
 the structured payload.
 
+## Platform boundaries
+
+Every package is one platform: web, server, or neutral (usable on both, like
+`@walkeros/core` and `@walkeros/collector`). Neutral code ships inside walker.js
+and runs on a server too, so it uses neither platform's APIs.
+
+- **Where it is declared.** A step package sets `walkerOS.platform` in its
+  `package.json`: `["web"]`, `["server"]`, or both for neutral. Every other
+  package and published app is in the `declared` table of
+  `packages/config/scripts/check-platform.mjs`. A package declared nowhere fails
+  the check.
+- **Presets.** `base.json` is neutral (`lib: es2020`), `web.json` adds `dom`,
+  `node.json` is `es2022`. All set `types` to `node` and `jest`, so no other
+  `@types` package can bring the DOM back in. A package tsconfig may add only an
+  allowlisted ambient vendor type (`gtag.js`, `facebook-pixel`).
+- **What each may use.** Web: browser globals, no Node globals or builtins
+  (`Buffer`, `process`, `fs`, `node:*`). Server: Node, no browser globals.
+  Neutral: neither, and no `globalThis`, no `jsdom` import and no
+  `/// <reference lib or types>` in any file, tests included. ESLint holds these
+  lines where TypeScript cannot: `@walkeros/config/eslint/web`, `/node` (its
+  `nodePlatform` block) and `/neutral`.
+- **API floor.** Neutral and web code may use ES2020 APIs at most; ES2021 and
+  later (for example the `cause` argument of `new Error`) fail typecheck, so
+  errors assign `cause` themselves.
+- **Needing the other platform.** A neutral package that needs something only
+  the web has defines a small interface in `@walkeros/core` (a port), web-core
+  implements it, and the web caller passes it in explicitly. Examples:
+  `ObserveSlot` (`pageObserveSlot()` from `@walkeros/web-core`) and
+  `Flow.StepPage` (`page` from `@walkeros/web-core/dev`). Node-only code of core
+  lives in `@walkeros/core/node`.
+- **Check.** `npm run check:platform` from the walkerOS root fails for any drift
+  in a preset, `lib`, `types`, eslint config or declaration. CI runs it on every
+  run, outside the turbo cache.
+
 ## Testing
 
 **REQUIRED SKILL:** Use `testing-strategy` for detailed testing patterns.

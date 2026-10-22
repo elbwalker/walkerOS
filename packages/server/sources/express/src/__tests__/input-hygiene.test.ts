@@ -146,8 +146,8 @@ describe('express input hygiene', () => {
         expect(response.headers.get('content-type')).toContain(
           'application/json',
         );
-        const body: { success: boolean } = await response.json();
-        expect(body.success).toBe(false);
+        const body: unknown = await response.json();
+        expect(body).toMatchObject({ success: false });
         expect(mockPush).not.toHaveBeenCalled();
       } finally {
         await close();
@@ -164,29 +164,29 @@ describe('express input hygiene', () => {
         body: `{"pad":"${'x'.repeat(1024 * 1024 + 64)}"}`,
       });
       expect(response.status).toBe(413);
-      const body: { success: boolean } = await response.json();
-      expect(body.success).toBe(false);
+      const body: unknown = await response.json();
+      expect(body).toMatchObject({ success: false });
     } finally {
       await close();
     }
   });
 
-  it('logs a rejected body once at debug with a truncated sample, never at error', async () => {
+  it('logs a rejected body once at debug without its content, never at error', async () => {
     const logger = createMockLogger();
     const { url, close } = await startServer(liveContext(logger));
     try {
       await fetch(`${url}/collect`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: 'a'.repeat(1000),
+        body: `{"email":"${'a'.repeat(1000)}`,
       });
       expect(logger.error).not.toHaveBeenCalled();
       expect(logger.debug).toHaveBeenCalledTimes(1);
-      const [message, context]: [string, { status: number; sample?: string }] =
+      const [message, context]: [string, { status: number }] =
         logger.debug.mock.calls[0];
       expect(message).toBe('Request body rejected');
-      expect(context.status).toBe(400);
-      expect(context.sample).toHaveLength(200);
+      expect(context).toEqual({ status: 400, type: 'entity.parse.failed' });
+      expect(JSON.stringify(context)).not.toMatch(/email|aaaa/);
     } finally {
       await close();
     }
@@ -271,7 +271,7 @@ describe('express input hygiene', () => {
       expect(response.headers.get('content-type')).toContain(
         'application/json',
       );
-      const body: { success: boolean; error: string } = await response.json();
+      const body: unknown = await response.json();
       expect(body).toEqual({ success: false, error: 'Not found' });
       expect(mockPush).not.toHaveBeenCalled();
     } finally {
@@ -416,7 +416,7 @@ describe('express input hygiene', () => {
       try {
         const response = await postEvent(url);
         expect(response.status).toBe(500);
-        const body: { success: boolean; error: string } = await response.json();
+        const body: unknown = await response.json();
         expect(body).toEqual({
           success: false,
           error: 'Internal server error',
@@ -441,8 +441,8 @@ describe('express input hygiene', () => {
         expect(response.headers.get('content-type')).toContain(
           'application/json',
         );
-        const body: { success: boolean } = await response.json();
-        expect(body.success).toBe(false);
+        const body: unknown = await response.json();
+        expect(body).toMatchObject({ success: false });
         expect(logger.error).toHaveBeenCalledWith(fault);
         expect(logger.debug).not.toHaveBeenCalled();
       } finally {

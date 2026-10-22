@@ -131,14 +131,14 @@ describe('queue bounds', () => {
       // After pushToDestinations runs, queuePush carries the denied events
       // (consent not granted). Length must equal the capped queue size.
       expect(destination.queuePush?.length).toBe(3);
-      expect(destination.queuePush?.map((e) => e.name)).toEqual([
+      expect(destination.queuePush?.map((e) => e.event.name)).toEqual([
         'event 2',
         'event 3',
         'event 4',
       ]);
     });
 
-    test('warn-once-on-transition log emitted on overflow', async () => {
+    test('once-on-transition INFO log emitted on overflow', async () => {
       const collector = createTestCollector({ config: { queueMax: 2 } });
 
       // Push 3 events; the third should overflow once.
@@ -146,21 +146,22 @@ describe('queue bounds', () => {
       await pushToDestinations(collector, makeEvent('b'));
       await pushToDestinations(collector, makeEvent('c'));
 
-      // The scoped warn() should have been called for the queue overflow.
-      // We capture both root and scoped loggers via the mock.
+      // The replay buffer only feeds destinations added later: INFO, not
+      // WARN. We capture both root and scoped loggers via the mock.
       const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
         ?.value;
-      const allWarns = [
-        ...(collector.logger.warn as jest.Mock).mock.calls,
-        ...((scopedLogger?.warn as jest.Mock | undefined)?.mock.calls ?? []),
+      const allInfos = [
+        ...(collector.logger.info as jest.Mock).mock.calls,
+        ...((scopedLogger?.info as jest.Mock | undefined)?.mock.calls ?? []),
       ];
-      const queueWarn = allWarns.find((call) =>
+      const queueInfo = allInfos.find((call) =>
         String(call[0]).toLowerCase().includes('queue'),
       );
-      expect(queueWarn).toBeDefined();
+      expect(queueInfo).toBeDefined();
+      expect(collector.logger.warn).not.toHaveBeenCalled();
     });
 
-    test('warn suppressed on subsequent drops within same window', async () => {
+    test('log suppressed on subsequent drops within same window', async () => {
       const collector = createTestCollector({ config: { queueMax: 2 } });
 
       for (let i = 0; i < 5; i++) {
@@ -169,15 +170,15 @@ describe('queue bounds', () => {
 
       const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
         ?.value;
-      const allWarns = [
-        ...(collector.logger.warn as jest.Mock).mock.calls,
-        ...((scopedLogger?.warn as jest.Mock | undefined)?.mock.calls ?? []),
+      const allInfos = [
+        ...(collector.logger.info as jest.Mock).mock.calls,
+        ...((scopedLogger?.info as jest.Mock | undefined)?.mock.calls ?? []),
       ];
-      const queueWarns = allWarns.filter((call) =>
+      const queueInfos = allInfos.filter((call) =>
         String(call[0]).toLowerCase().includes('queue'),
       );
       // Three overflows but only the first transition logs.
-      expect(queueWarns.length).toBe(1);
+      expect(queueInfos.length).toBe(1);
       // Drop counter still tracks every dropped event.
       expect(collector.status.dropped[stepId('collector')]?.queue ?? 0).toBe(3);
     });
@@ -200,7 +201,7 @@ describe('queue bounds', () => {
       }
 
       expect(destination.queuePush?.length).toBe(3);
-      expect(destination.queuePush?.map((e) => e.name)).toEqual([
+      expect(destination.queuePush?.map((e) => e.event.name)).toEqual([
         'event 2',
         'event 3',
         'event 4',

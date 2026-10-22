@@ -1,3 +1,4 @@
+import { createMockContext } from '@walkeros/core';
 import { destinationHubspot } from '..';
 
 describe('init', () => {
@@ -11,6 +12,20 @@ describe('init', () => {
       throw new Error(msg);
     }),
   };
+
+  it('throws a config StepError naming every missing setting', () => {
+    expect(() =>
+      destinationHubspot.init(
+        createMockContext({ config: { settings: {} }, id: 'test' }),
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        name: 'StepError',
+        code: 'config',
+        message: 'Config settings accessToken, eventNamePrefix missing',
+      }),
+    );
+  });
 
   it('throws when accessToken is missing', () => {
     expect(() =>
@@ -30,57 +45,5 @@ describe('init', () => {
         id: 'test',
       } as never),
     ).toThrow('eventNamePrefix');
-  });
-});
-
-describe('destroy', () => {
-  it('flushes remaining event queue on destroy', async () => {
-    const batchSend = jest.fn().mockResolvedValue(undefined);
-    const settings = {
-      accessToken: 'pat-xxx',
-      eventNamePrefix: 'pe12345678_',
-      batch: true,
-      batchSize: 50,
-      _client: {
-        events: {
-          send: {
-            basicApi: { send: jest.fn() },
-            batchApi: { send: batchSend },
-          },
-        },
-        crm: { contacts: { basicApi: { update: jest.fn() } } },
-      },
-      _eventQueue: [
-        {
-          eventName: 'pe12345678_test',
-          email: 'user@example.com',
-          properties: {},
-        },
-      ],
-      _state: {},
-    };
-
-    await destinationHubspot.destroy!({ config: { settings } } as never);
-
-    expect(batchSend).toHaveBeenCalledWith({
-      inputs: [
-        {
-          eventName: 'pe12345678_test',
-          email: 'user@example.com',
-          properties: {},
-        },
-      ],
-    });
-  });
-
-  it('does nothing when no event queue exists', async () => {
-    const settings = {
-      accessToken: 'pat-xxx',
-      eventNamePrefix: 'pe12345678_',
-      _state: {},
-    };
-
-    // Should not throw
-    await destinationHubspot.destroy!({ config: { settings } } as never);
   });
 });

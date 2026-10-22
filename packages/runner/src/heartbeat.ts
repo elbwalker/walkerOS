@@ -214,6 +214,12 @@ export function createHeartbeat(
         logger.error(
           `Heartbeat auth failed (${response.status}). Token may have expired, redeploy to rotate.`,
         );
+      } else if (!response.ok) {
+        // Nothing is lost (the deltas carry over), but the app did not take
+        // this beat, so the operator should know.
+        logger.warn(
+          `Heartbeat rejected (${response.status}); its counters carry over to the next beat.`,
+        );
       }
     } catch (error) {
       // Deltas accumulate on failure, next successful send includes them

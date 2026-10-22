@@ -93,7 +93,7 @@ describe('walkerOS Web Basic Example', () => {
                   data: {
                     map: {
                       transaction_id: 'data.id',
-                      value: 'data.total',
+                      value: 'data.value',
                       currency: { value: 'EUR' },
                     },
                   },
@@ -159,8 +159,8 @@ describe('walkerOS Web Basic Example', () => {
       'purchase',
       expect.objectContaining({
         transaction_id: orderEvent.data.id,
-        value: orderEvent.data.total,
-        data_total: 555,
+        value: orderEvent.data.value,
+        data_value: 555,
         currency: 'EUR',
       }),
     );

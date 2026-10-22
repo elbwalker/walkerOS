@@ -60,21 +60,9 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('init with load script', async () => {
-    const scriptEnv = clone(examples.env.push);
-    const createElementSpy = jest.fn(() => ({
-      src: '',
-      async: false,
-      setAttribute: jest.fn(),
-      removeAttribute: jest.fn(),
-    }));
-    const appendChildSpy = jest.fn();
-
-    scriptEnv.document.createElement = createElementSpy;
-    scriptEnv.document.head.appendChild = appendChildSpy;
-
     const destinationWithEnv = {
       ...destination,
-      env: scriptEnv,
+      env: clone(examples.env.push),
     };
     elb('walker destination', {
       code: destinationWithEnv,
@@ -86,8 +74,33 @@ describe('Destination Meta Pixel', () => {
 
     await elb(event);
 
-    expect(createElementSpy).toHaveBeenCalledWith('script');
-    expect(appendChildSpy).toHaveBeenCalled();
+    const script = document.querySelector(
+      'script[src="https://connect.facebook.net/en_US/fbevents.js"]',
+    );
+    expect(script?.hasAttribute('data-walkeros-vendor')).toBe(true);
+  });
+
+  test('consent revocation reaches the pixel of a gated destination', async () => {
+    const calls: unknown[][] = [];
+    const env = clone(examples.env.push);
+    env.window.fbq = (...args: unknown[]) => {
+      calls.push(args);
+    };
+    elb('walker destination', {
+      code: { ...destination, env },
+      config: { consent: { marketing: true }, settings: { pixelId } },
+    });
+
+    await elb('walker consent', { marketing: true });
+    await elb(event);
+    await elb('walker consent', { marketing: false });
+
+    expect(calls).toEqual([
+      ['init', pixelId],
+      ['consent', 'grant'],
+      ['track', event.name, {}, { eventID: event.id }],
+      ['consent', 'revoke'],
+    ]);
   });
 
   test('push', async () => {

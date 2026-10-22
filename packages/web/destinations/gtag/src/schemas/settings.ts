@@ -5,6 +5,7 @@ import {
   AdsSettingsSchema,
   GTMSettingsSchema,
 } from './primitives';
+import { hasTool, TOOL_PATHS, TOOLS } from '../shared/tools';
 
 export const SettingsSchema = z
   .object({
@@ -27,18 +28,16 @@ export const SettingsSchema = z
       'Google Tag Manager specific configuration settings (like { containerId: GTM-XXXXXXX })',
     ).optional(),
   })
-  .refine(
-    (data) => {
-      return (
-        data.ga4?.measurementId ||
-        data.ads?.conversionId ||
-        data.gtm?.containerId
-      );
-    },
-    {
-      message:
-        'At least one Google tool must be configured (ga4.measurementId, ads.conversionId, or gtm.containerId)',
-    },
-  );
+  .strict()
+  .refine(hasTool, {
+    message: `At least one Google tool must be configured (${TOOL_PATHS})`,
+  })
+  // The same rule in JSON Schema: each alternative requires one tool's id.
+  .meta({
+    anyOf: TOOLS.map(({ tool, id }) => ({
+      required: [tool],
+      properties: { [tool]: { required: [id] } },
+    })),
+  });
 
 export type Settings = z.infer<typeof SettingsSchema>;

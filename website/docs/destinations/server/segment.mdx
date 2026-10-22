@@ -80,3 +80,9 @@ Add to your `flow.json` destinations:
 <Configuration type="destination" data={data} />
 
 Identity is resolved automatically from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. At least one must be present for a call to be sent. Override these paths in settings to match your event structure.
+
+## Batching and delivery
+
+This destination batches by default: `config.batch` sends after 15 events or 10 seconds, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
+
+An event without `userId` or `anonymousId` fails with `missing-input`.

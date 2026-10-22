@@ -168,7 +168,7 @@ describe('flow_validate on the real validator', () => {
   });
 
   it.each([
-    ['f24-unknown-step-keys', 'warnings'],
+    ['f27-only-warning', 'warnings'],
     ['f17-only-skip', 'skips'],
   ])(
     'C9: strict: true on %s (%s) is invalid, the verdict of CLI --strict',
@@ -187,7 +187,7 @@ describe('flow_validate on the real validator', () => {
   );
 
   it.each([
-    ['f24-unknown-step-keys', 'warnings'],
+    ['f27-only-warning', 'warnings'],
     ['f17-only-skip', 'skips'],
   ])('C9 GUARD: without strict %s (%s) stays valid', async (fixture) => {
     const result = await callTool({

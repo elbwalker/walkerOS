@@ -32,7 +32,19 @@ npm install @walkeros/server-destination-datamanager
       "destinations": {
         "datamanager": {
           "package": "@walkeros/server-destination-datamanager",
-          "config": {}
+          "config": {
+            "settings": {
+              "destinations": [
+                {
+                  "operatingAccount": {
+                    "accountId": "123-456-7890",
+                    "accountType": "GOOGLE_ADS"
+                  },
+                  "productDestinationId": "YOUR_CONVERSION_ACTION_ID"
+                }
+              ]
+            }
+          }
         }
       }
     }

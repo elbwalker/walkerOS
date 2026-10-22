@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -29,7 +29,7 @@ export const defaultEventForwarding: FullStoryStepExample = {
  */
 export const wildcardIgnored: FullStoryStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -57,7 +57,8 @@ export const userLoginIdentify: FullStoryStepExample = {
   title: 'User login identify',
   description:
     'A user login fires FullStory setIdentity with uid and profile properties before tracking the event.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000103,
     data: { id: 'u-123', name: 'Jane Doe', email: 'jane@example.com' },
   }),
@@ -124,7 +125,7 @@ export const setUserProperties: FullStoryStepExample = {
     settings: {
       set: {
         map: {
-          revenue: 'data.total',
+          revenue: 'data.value',
           currency: 'data.currency',
         },
       },
@@ -203,7 +204,9 @@ export const combinedFeatures: FullStoryStepExample = {
  */
 export const silentWithIdentify: FullStoryStepExample = {
   public: false,
-  in: getEvent('user login', {
+  description: 'A silent rule still runs its identify.',
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000108,
     data: { id: 'u-123', name: 'Jane Doe' },
   }),
@@ -312,4 +315,52 @@ export const consentRevokeFlag: FullStoryStepExample = {
     ['fullstory.setIdentity', { consent: true }],
     ['fullstory.setIdentity', { consent: false }],
   ],
+};
+
+/** A silent rule without settings of its own calls nothing. */
+export const silentRule: FullStoryStepExample = {
+  public: false,
+  description: 'A rule with silent: true and no settings calls nothing.',
+  in: getEvent('page view', { timestamp: 1700000120 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/** The FullStory SDK is unreachable: its init fails, so the push reports it. */
+export const fullstoryUnreachable: FullStoryStepExample = {
+  public: false,
+  description:
+    'The FullStory SDK fails, so the destination does not start: the push fails with vendor-not-ready, retryable, and the event is in the DLQ.',
+  in: getEvent('product view', { timestamp: 1700000121 }),
+  respond: { error: 'network' },
+  out: [],
+  outcome: { status: 'failed', code: 'vendor-not-ready', retryable: true },
+};
+
+/**
+ * The silent page rule of setPageProperties on a page view without data: no
+ * property resolves and the rule suppresses the event, so nothing is sent. A
+ * declared skip: an unmet mapping, not a failure.
+ */
+export const setPagePropertiesWithoutData: FullStoryStepExample = {
+  public: false,
+  description:
+    'A silent rule whose property mapping finds no data sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'page view', entity: 'page', action: 'view' },
+  mapping: setPageProperties.mapping,
+  out: [],
+};
+
+/**
+ * The silent identify rule of silentWithIdentify on a login without data: no
+ * uid resolves and the rule suppresses the event, so nothing is sent. A
+ * declared skip.
+ */
+export const silentIdentifyWithoutData: FullStoryStepExample = {
+  public: false,
+  description:
+    'A silent rule whose identify mapping finds no uid sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'user login', entity: 'user', action: 'login' },
+  mapping: silentWithIdentify.mapping,
+  out: [],
 };

@@ -16,7 +16,7 @@ const eventPayload = {
 
 const orderPayload = {
   name: 'order complete',
-  data: { id: 'ORD-500', total: 199.99, currency: 'EUR' },
+  data: { id: 'ORD-500', value: 199.99, currency: 'EUR' },
 };
 
 function encodeData(value: unknown): string {

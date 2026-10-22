@@ -97,8 +97,9 @@ function trimUndefined(call: CallRecord): CallRecord {
 }
 
 describe('segment destination — step examples', () => {
+  // Non-public examples (silent, failures) run in the conformance test.
   const stepEntries = Object.entries(examples.step).filter(
-    ([name]) => name !== 'init',
+    ([name, example]) => name !== 'init' && example.public !== false,
   );
 
   it('init', async () => {

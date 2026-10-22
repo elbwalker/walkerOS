@@ -46,7 +46,7 @@ describe('push', () => {
   // and the defaults unapplied, so a push that read them straight off the config
   // would reach the insert with an undefined client.
   it.each([
-    ['init never ran', {}, 'Config settings missing'],
+    ['init never ran', {}, 'ClickHouse client missing'],
     ['init left no client', { settings: { url } }, 'ClickHouse client missing'],
   ])('refuses to insert when %s', async (_case, config, message) => {
     await expect(
@@ -127,48 +127,62 @@ describe('deduplication token', () => {
 
 describe('failure', () => {
   // The collector reads a throw as the delivery failing: it dead-letters the
-  // event and records one transport failure against the breaker. A push that
-  // swallowed the rejection would report a lost event as delivered.
-  it('throws the failure the insert ended on, code included', async () => {
+  // event, logs one line and records one transport failure against the
+  // breaker. A push that swallowed the rejection would report a lost event as
+  // delivered.
+  it('throws a StepError naming the code the insert ended on', async () => {
     const config = await bootstrap();
     __failInsert(1, { code: '16', message: 'no such column' });
 
     await expect(
       destination.push(getEvent('page view'), pushContext(config)),
-    ).rejects.toMatchObject({ code: '16', message: 'no such column' });
+    ).rejects.toMatchObject({
+      name: 'StepError',
+      code: 'transport',
+      retryable: false,
+      message: 'ClickHouse insert failed (code 16)',
+    });
   });
 
-  it('logs the failure at error with the code and the row count', async () => {
+  // The server's own text can quote the rows it could not parse, so it stays
+  // the cause and never reaches the message or a log line.
+  it('writes no failure line of its own and keeps the server text out', async () => {
     const config = await bootstrap();
-    __failInsert(1, { code: '16' });
+    __failInsert(1, { code: '27', message: 'Cannot parse input: alice@x' });
 
     await expect(
       destination.push(getEvent('page view'), pushContext(config)),
-    ).rejects.toBeDefined();
-
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ code: '16', rows: 1 }),
-    );
+    ).rejects.toMatchObject({ message: 'ClickHouse insert failed (code 27)' });
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   // A transport failure carries a Node errno, which is not a ClickHouse code
   // and is deliberately not read as one, so the code is absent for exactly the
-  // failure class the retry exists for. The message is what is left to grep.
-  it('names a codeless transport failure in the error line', async () => {
+  // failure class the retry exists for. The errno is what is left to grep.
+  it('names the errno of a codeless transport failure', async () => {
     // A transport failure is retryable, so the retries are turned off here to
-    // reach the error line without waiting out a delay.
+    // reach the failure without waiting out a delay.
     const config = await bootstrap({ settings: { url, maxRetries: 0 } });
     __failInsert(1, { code: 'ECONNRESET', message: 'socket hang up' });
 
     await expect(
       destination.push(getEvent('page view'), pushContext(config)),
-    ).rejects.toBeDefined();
+    ).rejects.toMatchObject({
+      message: 'ClickHouse insert failed (ECONNRESET)',
+      retryable: true,
+    });
+  });
 
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ code: undefined, message: 'socket hang up' }),
-    );
+  it('carries the advice for a terminal code that needs one', async () => {
+    const config = await bootstrap();
+    __failInsert(1, { code: '60' });
+
+    await expect(
+      destination.push(getEvent('page view'), pushContext(config)),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('table DDL'),
+      retryable: false,
+    });
   });
 
   // One line per delivery at debug, and nothing at a level an operator watches:

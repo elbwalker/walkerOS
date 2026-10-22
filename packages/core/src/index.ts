@@ -36,11 +36,34 @@ export * from './trim';
 export * from './tryCatch';
 export * from './fatalError';
 export * from './invalidEventError';
+export {
+  networkErrorMessage,
+  StepError,
+  stepCall,
+  toFailureReason,
+} from './stepError';
+export type {
+  FailureReason,
+  QueueReason,
+  QueuedReason,
+  StepErrorOptions,
+} from './stepError';
+export { createCauseLog, reportCause } from './causeLog';
+export {
+  DEFAULT_DESTINATION_TIMEOUT_MS,
+  resolveDestinationTimeout,
+} from './timeout';
+export type {
+  CauseKey,
+  CauseLog,
+  CauseLogOptions,
+  CauseLogger,
+} from './causeLog';
 export * from './useHooks';
 export * from './telemetry';
 export * from './telemetryResolver';
 export * from './preview';
-export { MOIN_PARAM, MOIN_PRODUCTION, moin } from './moin';
+export { MOIN_PARAM, MOIN_PRODUCTION } from './moin';
 export type { MoinTarget } from './moin';
 export * from './journey';
 export { getTraceUntil, setTraceUntil } from './traceState';
@@ -92,15 +115,11 @@ export type {
 } from './chain';
 export * from './cache';
 export * from './cache-envelope';
-export {
-  serializeStoreValue,
-  deserializeStoreValue,
-  StoreCodecError,
-  isStoreValue,
-} from './store/codec';
+export { isStoreValue } from './store/codec';
 export * from './state';
 export * from './step-entry';
 export * from './transformer-mapping';
+export * from './mapping-no-ops';
 export * from './examples/formatOut';
 export {
   REF_VAR_FULL,

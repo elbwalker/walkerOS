@@ -1,4 +1,5 @@
 import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import type {
   Config,
   Env,
@@ -155,7 +156,9 @@ function topicArnResolver(
 export function resolveSettings(settings: InitSettings | undefined): Settings {
   const { region, client, runtime } = settings ?? {};
   if (!region || !client || !runtime)
-    throw configError('SNS: the destination was not initialized.');
+    throw new StepError('SNS: the destination was not initialized.', {
+      code: 'not-ready',
+    });
   return {
     topicArn: settings?.topicArn,
     topicName: settings?.topicName,

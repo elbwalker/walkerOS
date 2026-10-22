@@ -1,5 +1,9 @@
 import type { Logger, Store } from '@walkeros/core';
-import { serializeStoreValue, deserializeStoreValue } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
+import {
+  serializeStoreValue,
+  deserializeStoreValue,
+} from '@walkeros/core/node';
 import type {
   GcsStoreSettings,
   ServiceAccountCredentials,
@@ -122,10 +126,16 @@ function assertGcsSettings(
     typeof settings.bucket !== 'string' ||
     settings.bucket.length === 0
   ) {
-    throw new Error(
-      'storeGcsInit: settings.bucket is required (non-empty string)',
-    );
+    throw new StepError('Config settings bucket missing', { code: 'config' });
   }
+}
+
+/** A GCS answer that is not a success, as a StepError with its status. */
+function failedResponse(operation: string, res: Response): StepError {
+  return new StepError(`GCS ${operation} failed (HTTP ${res.status})`, {
+    code: 'transport',
+    status: res.status,
+  });
 }
 
 /**
@@ -183,8 +193,9 @@ async function ensureBucketExists(
 
     if (res.status === 404) {
       const projectId = resolveProjectIdForMessage(credentials);
-      throw new Error(
+      throw new StepError(
         `GCS bucket not found: ${bucket} in project ${projectId}. Run "walkeros setup store.${id}" to create it.`,
+        { code: 'config' },
       );
     }
     if (!res.ok) {
@@ -233,6 +244,29 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
     return prefix + key;
   }
 
+  /** One authorized GCS request; a failed token or network call throws. */
+  async function request(
+    url: string,
+    init: {
+      method?: string;
+      headers?: Record<string, string>;
+      body?: Uint8Array<ArrayBuffer>;
+    } = {},
+  ) {
+    try {
+      const token = await getToken();
+      return await doFetch(url, {
+        ...init,
+        headers: { ...init.headers, Authorization: `Bearer ${token}` },
+      });
+    } catch (err) {
+      throw new StepError('GCS request failed', {
+        code: 'transport',
+        cause: err,
+      });
+    }
+  }
+
   const config: Store.Config<Types> = {
     settings,
     env: context.config.env,
@@ -265,31 +299,26 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
         doFetch,
       );
 
-      let bytes: Buffer;
-      try {
-        const token = await getToken();
-        const url = `${GCS_BASE}/download/storage/v1/b/${bucket}/o/${encodeURIComponent(gcsKey)}?alt=media`;
-        const res = await doFetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return undefined;
-        bytes = Buffer.from(await res.arrayBuffer());
-      } catch {
-        return undefined;
-      }
+      const res = await request(
+        `${GCS_BASE}/download/storage/v1/b/${bucket}/o/${encodeURIComponent(gcsKey)}?alt=media`,
+      );
+      // A missing object is a miss; any other failed read is reported.
+      if (res.status === 404) return undefined;
+      if (!res.ok) throw failedResponse('read', res);
+      const bytes = Buffer.from(await res.arrayBuffer());
       // File mode hands the raw bytes back untouched (Buffer is a Uint8Array,
-      // a valid StoreValue leaf). Structured mode decodes the utf8-JSON payload.
-      // A corrupt or empty payload (GCS can return ok:true with an empty body)
-      // degrades to a miss rather than throwing a raw SyntaxError.
+      // a valid StoreValue leaf). Structured mode decodes the utf8-JSON
+      // payload; a stored value that does not decode (corrupt or empty) is a
+      // failed read, never a miss. The message names no value.
       if (fileMode) return bytes;
       try {
         return deserializeStoreValue(bytes);
       } catch (err) {
-        logger.debug('structured decode failed, degrading to miss', {
-          key,
-          error: err instanceof Error ? err.message : String(err),
+        throw new StepError('GCS value could not be decoded', {
+          code: 'decode',
+          retryable: false,
+          cause: err,
         });
-        return undefined;
       }
     },
 
@@ -306,9 +335,10 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
         } else if (value instanceof Uint8Array) {
           body = bufferToBody(value);
         } else {
-          throw new Error(
+          throw new StepError(
             'storeGcsInit.set: in file mode value must be Uint8Array or string; got ' +
               typeof value,
+            { code: 'config' },
           );
         }
         contentType = mimeFromKey(key);
@@ -327,16 +357,11 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
         doFetch,
       );
 
-      const token = await getToken();
-      const url = `${GCS_BASE}/upload/storage/v1/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(gcsKey)}`;
-      await doFetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': contentType,
-        },
-        body,
-      });
+      const res = await request(
+        `${GCS_BASE}/upload/storage/v1/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(gcsKey)}`,
+        { method: 'POST', headers: { 'Content-Type': contentType }, body },
+      );
+      if (!res.ok) throw failedResponse('write', res);
     },
 
     async delete(key: string): Promise<void> {
@@ -352,16 +377,12 @@ export const storeGcsInit: Store.Init<Types> = (context) => {
         doFetch,
       );
 
-      try {
-        const token = await getToken();
-        const url = `${GCS_BASE}/storage/v1/b/${bucket}/o/${encodeURIComponent(gcsKey)}`;
-        await doFetch(url, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch {
-        /* GCS delete is idempotent */
-      }
+      const res = await request(
+        `${GCS_BASE}/storage/v1/b/${bucket}/o/${encodeURIComponent(gcsKey)}`,
+        { method: 'DELETE' },
+      );
+      // Deleting a missing object is a no-op; any other failure is reported.
+      if (!res.ok && res.status !== 404) throw failedResponse('delete', res);
     },
   };
 };

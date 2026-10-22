@@ -362,11 +362,11 @@ export const orderComplete: Flow.StepExample = {
   in: {
     method: 'POST',
     path: '/collect',
-    body: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+    body: { name: 'order complete', data: { id: 'ORD-123', value: 149.97 } },
   },
   out: {
     name: 'order complete',
-    data: { id: 'ORD-123', total: 149.97 },
+    data: { id: 'ORD-123', value: 149.97 },
     entity: 'order',
     action: 'complete',
   },
@@ -666,10 +666,23 @@ for the complete contract.
 4. **Platform deps via env**: All platform dependencies (window, document,
    express, cors) must go through `env` with fallback to globals/imports:
    `env.express ?? express`. This enables testing without mocking globals.
-5. **Error logging**: Use `logger?.error()` for errors only, not routine
-   operations
-6. **Return Source.Instance**: Return `{ type, config, push }` object
-7. **Optional `destroy` method**: Implement if the source holds resources (HTTP
+5. **Failures are reported, not logged by the source**: a source that cannot
+   start throws a `StepError` (`code: 'config'`) from its factory or `init`; it
+   never returns early and never returns `false`. Input the collector rejects
+   comes back as `invalid` in the push result and is counted as `rejected` by
+   the collector. A failure on the source's own side that the push result does
+   not carry (for example an `elbLayer` entry that fails) goes through
+   `reportCause` from `@walkeros/core` (step `source.<id>`, named by its event,
+   never its payload). Use `logger` for `debug` traces of routine operations.
+6. **Tell the producer the truth**: an HTTP source builds its answer from the
+   push result with `pushResultToOutcome` (or `acknowledge(result)`): `ack`
+   answers 200 with today's body, `retry` (a retryable failure) answers 500, or
+   207 for the failed events of a batch, `reject` (invalid input) answers 400. A
+   failure a resend cannot fix is acknowledged, because redelivery would loop. A
+   queue consumer acks on `ack` and `reject` and nacks only on `retry`. The body
+   never contains a destination id or a step's error text.
+7. **Return Source.Instance**: Return `{ type, config, push }` object
+8. **Optional `destroy` method**: Implement if the source holds resources (HTTP
    servers, timers, connections) that need cleanup on shutdown
 
 ### Gate: Implementation Compiles
@@ -833,8 +846,15 @@ Canonical references:
 4. **Zero hardcoded payloads** - every trigger type, request body, DOM HTML, and
    expected event comes from `examples.step` or `examples.env`. If you need
    something new, add it to examples first.
-5. **Test error paths** - verify graceful error handling and logging for invalid
-   input (add an error example to `examples.step` if needed).
+5. **Test error paths** - verify graceful error handling for invalid input (add
+   an error example to `examples.step` if needed), and that a push that fails
+   for a retryable reason is answered with a retry, a deterministic one with an
+   ack.
+6. **Conformance** - run the source with
+   `conformance('source', source, options)` from `@walkeros/collector/dev`
+   (profile `source`, `createTrigger` for how to feed it); it runs on a real
+   collector. A web source may pass `page` from `@walkeros/web-core/dev`; the
+   kit requires it only for the browser profiles `web-sdk` and `vendor-global`.
 
 ### Gate: Tests Pass
 

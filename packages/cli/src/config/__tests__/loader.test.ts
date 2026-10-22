@@ -111,9 +111,12 @@ describe('loadBundleConfig deferred env by platform', () => {
       flows: {
         serverflow: {
           config: { platform: 'server' },
-          collector: { url: '$env.COLLECTOR_URL' },
+          collector: { globals: { url: '$env.COLLECTOR_URL' } },
           destinations: {
-            d: { config: { apiKey: '$env.API_KEY' } },
+            d: {
+              package: '@walkeros/server-destination-api',
+              config: { settings: { apiKey: '$env.API_KEY' } },
+            },
           },
         },
       },
@@ -121,8 +124,9 @@ describe('loadBundleConfig deferred env by platform', () => {
     const result = loadBundleConfig(config, {
       configPath: './test.json',
     });
-    const collector = result.flowSettings.collector as Record<string, unknown>;
-    expect(collector.url).toBe('__WALKEROS_ENV:COLLECTOR_URL');
+    expect(result.flowSettings.collector?.globals?.url).toBe(
+      '__WALKEROS_ENV:COLLECTOR_URL',
+    );
   });
 
   it('resolves env normally for web flows', () => {
@@ -132,7 +136,7 @@ describe('loadBundleConfig deferred env by platform', () => {
       flows: {
         webflow: {
           config: { platform: 'web' },
-          collector: { url: '$env.WEB_KEY' },
+          collector: { globals: { url: '$env.WEB_KEY' } },
           destinations: {},
         },
       },
@@ -140,8 +144,7 @@ describe('loadBundleConfig deferred env by platform', () => {
     const result = loadBundleConfig(config, {
       configPath: './test.json',
     });
-    const collector = result.flowSettings.collector as Record<string, unknown>;
-    expect(collector.url).toBe('baked-value');
+    expect(result.flowSettings.collector?.globals?.url).toBe('baked-value');
     delete process.env.WEB_KEY;
   });
 });
@@ -170,9 +173,11 @@ describe('loadBundleConfig web $env build environment', () => {
             d: {
               package: '@walkeros/web-destination-gtag',
               config: {
-                declared: '$env.GA4_ID:unset',
-                shell: '$env.SHELL_ID:unset',
-                kek: '$env.KEK:unset',
+                settings: {
+                  declared: '$env.GA4_ID:unset',
+                  shell: '$env.SHELL_ID:unset',
+                  kek: '$env.KEK:unset',
+                },
               },
             },
           },
@@ -187,9 +192,7 @@ describe('loadBundleConfig web $env build environment', () => {
       { configPath: './test.json' },
     );
     expect(result.flowSettings.destinations?.d.config).toEqual({
-      declared: 'G-DECLARED',
-      shell: 'from-config',
-      kek: 'secret',
+      settings: { declared: 'G-DECLARED', shell: 'from-config', kek: 'secret' },
     });
   });
 
@@ -199,9 +202,7 @@ describe('loadBundleConfig web $env build environment', () => {
       buildEnv: {},
     });
     expect(result.flowSettings.destinations?.d.config).toEqual({
-      declared: 'G-DECLARED',
-      shell: 'unset',
-      kek: 'unset',
+      settings: { declared: 'G-DECLARED', shell: 'unset', kek: 'unset' },
     });
   });
 
@@ -211,9 +212,7 @@ describe('loadBundleConfig web $env build environment', () => {
       buildEnv: { GA4_ID: 'G-BASE', SHELL_ID: 'from-base' },
     });
     expect(result.flowSettings.destinations?.d.config).toEqual({
-      declared: 'G-DECLARED',
-      shell: 'from-base',
-      kek: 'unset',
+      settings: { declared: 'G-DECLARED', shell: 'from-base', kek: 'unset' },
     });
   });
 
@@ -227,7 +226,7 @@ describe('loadBundleConfig web $env build environment', () => {
             destinations: {
               d: {
                 package: '@walkeros/server-destination-api',
-                config: { key: '$env.KEY' },
+                config: { settings: { key: '$env.KEY' } },
               },
             },
           },
@@ -236,7 +235,7 @@ describe('loadBundleConfig web $env build environment', () => {
       { configPath: './test.json', buildEnv: {} },
     );
     expect(result.flowSettings.destinations?.d.config).toEqual({
-      key: '__WALKEROS_ENV:KEY',
+      settings: { key: '__WALKEROS_ENV:KEY' },
     });
   });
 });

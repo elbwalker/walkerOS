@@ -216,12 +216,31 @@ export function PromotionPlayground({
       },
       consent: { functional: true, marketing: true },
       user: { session: 'playground' },
-      // A failure the collector logs (a destination push, a mapping) shows
-      // in the Result box, besides the console.
+      // Every event the mapped destination fails (its init, its push, its
+      // mapping) shows in the Result box with the failure's message: the
+      // collector reports each failed event to its observers, while its log
+      // writes one line per cause and minute.
+      observers: [
+        (state) => {
+          if (
+            active &&
+            state.phase === 'error' &&
+            state.stepId === `destination.${DESTINATION_ID}` &&
+            state.error
+          )
+            setResultError(`${DESTINATION_ID}: ${state.error.message}`);
+        },
+      ],
+      // Any other failure the collector logs (a mapping value) shows in the
+      // Result box too, besides the console.
       logger: {
         handler: (level, message, context, scope, original) => {
           original(level, message, context, scope);
-          if (active && level === Level.ERROR)
+          if (
+            active &&
+            level === Level.ERROR &&
+            context.step !== `destination.${DESTINATION_ID}`
+          )
             setResultError(logged(message, context, scope));
         },
       },

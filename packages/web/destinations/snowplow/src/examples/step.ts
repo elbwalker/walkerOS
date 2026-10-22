@@ -202,7 +202,7 @@ export const transaction: Flow.StepExample = {
           schema: SCHEMAS.TRANSACTION,
           data: {
             transaction_id: 'data.id',
-            revenue: 'data.total',
+            revenue: 'data.value',
             currency: { key: 'data.currency', value: 'USD' },
             payment_method: { value: 'credit_card' },
             tax: 'data.taxes',
@@ -387,7 +387,7 @@ export const contextLoop: Flow.StepExample = {
           schema: SCHEMAS.TRANSACTION,
           data: {
             transaction_id: 'data.id',
-            revenue: 'data.total',
+            revenue: 'data.value',
             currency: 'data.currency',
           },
         },
@@ -459,4 +459,27 @@ export const contextLoop: Flow.StepExample = {
       },
     ],
   ],
+};
+
+/** A silent rule sends no Snowplow event. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no Snowplow event.',
+  in: getEvent('product view', { timestamp: 1700000405 }),
+  mapping: { name: ACTIONS.PRODUCT_VIEW, silent: true },
+  out: [],
+};
+
+/**
+ * A revocation of the consent the destination requires turns off the
+ * tracker's own senders: with activityTracking set, the page pings stop.
+ * Without settings.consent there is no Enhanced Consent event.
+ */
+export const consentRevoke: Flow.StepExample = {
+  public: false,
+  description:
+    'For a destination with config.consent { marketing: true } and activityTracking, revoking marketing calls disableActivityTracking, so sp.js stops its page pings; a grant enables them again.',
+  command: 'consent',
+  in: { marketing: false },
+  out: [['window.snowplow', 'disableActivityTracking']],
 };

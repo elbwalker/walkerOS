@@ -70,7 +70,7 @@ order: {
     data: {
       map: {
         transaction_id: 'data.orderId',
-        value: 'data.total',
+        value: 'data.value',
         currency: 'data.currency',
         items: {
           loop: [
@@ -122,7 +122,7 @@ order: {
       map: {
         content_ids: { fn: (e) => e.nested?.map((n) => n.data.id) ?? [] },
         content_type: { value: 'product' },
-        value: 'data.total',
+        value: 'data.value',
         currency: 'data.currency',
         num_items: { fn: (e) => e.nested?.length ?? 0 },
       },
@@ -167,11 +167,11 @@ order: {
   complete: [
     // High-value orders get extra tracking
     {
-      condition: (e) => (e.data?.total ?? 0) > 500,
+      condition: (e) => (e.data?.value ?? 0) > 500,
       name: 'high_value_purchase',
       data: {
         map: {
-          value: 'data.total',
+          value: 'data.value',
           priority: { value: 'high' },
           notify: { value: true },
         },
@@ -180,7 +180,7 @@ order: {
     // Standard orders
     {
       name: 'purchase',
-      data: { map: { value: 'data.total' } },
+      data: { map: { value: 'data.value' } },
     },
   ],
 }

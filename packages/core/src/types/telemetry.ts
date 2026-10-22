@@ -68,8 +68,17 @@ export interface FlowState {
   inEvent?: unknown;
   /** Outbound walker event/payload for this hop. Only populated when level === 'trace' or includeOut === true. */
   outEvent?: unknown;
-  /** Error info when phase === 'error'. */
-  error?: { name?: string; message: string };
+  /**
+   * Error info when phase === 'error'. A delivery failure also carries its
+   * failure `code`, whether a retry can help and the HTTP `status`.
+   */
+  error?: {
+    name?: string;
+    message: string;
+    code?: string;
+    retryable?: boolean;
+    status?: number;
+  };
   /** The mapping rule that matched, when one matched. */
   mappingKey?: string;
   /** Contract rule that matched, if any. */
@@ -89,6 +98,7 @@ export interface FlowState {
     | 'sampled_out'
     | 'disabled'
     | 'dropped'
+    | 'ignored'
     | 'unknown';
   /** Free-form metadata: store key/value, cached: true, etc. */
   meta?: Record<string, unknown>;

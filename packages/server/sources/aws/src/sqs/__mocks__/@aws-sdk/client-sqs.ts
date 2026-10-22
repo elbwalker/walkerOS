@@ -59,6 +59,7 @@ interface MockState {
   receiveBatches: ReceiveBatch[];
   createQueueError?: Error;
   getQueueUrlError?: Error;
+  receiveError?: Error;
   deletedReceiptHandles: string[];
 }
 
@@ -73,6 +74,7 @@ export function __resetMockCalls(): void {
   state.receiveBatches = [];
   state.createQueueError = undefined;
   state.getQueueUrlError = undefined;
+  state.receiveError = undefined;
   state.deletedReceiptHandles = [];
   calls.mockClear();
 }
@@ -100,6 +102,11 @@ export function __setCreateQueueError(err: Error | undefined): void {
 
 export function __setGetQueueUrlError(err: Error | undefined): void {
   state.getQueueUrlError = err;
+}
+
+/** The next ReceiveMessage rejects with `err`, once. */
+export function __setReceiveError(err: Error | undefined): void {
+  state.receiveError = err;
 }
 
 export function __getDeletedReceiptHandles(): string[] {
@@ -265,6 +272,11 @@ export class SQSClient {
   }
 
   private async handleReceive(): Promise<unknown> {
+    const error = state.receiveError;
+    if (error) {
+      state.receiveError = undefined;
+      throw error;
+    }
     const batch = state.receiveBatches.shift();
     if (!batch) {
       // Simulate the long-poll wait so the loop yields control. Without this,

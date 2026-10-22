@@ -1,4 +1,50 @@
+import { StepError } from '@walkeros/core';
 import { sendWeb } from '..';
+
+type BodyMethod<K extends keyof Response> = ReturnType<
+  Extract<Response[K], () => unknown>
+>;
+
+/** A Response for jsdom, which has no fetch API of its own. */
+class FakeResponse implements Response {
+  readonly headers = new Headers();
+  readonly redirected = false;
+  readonly type: ResponseType = 'basic';
+  readonly url = '';
+  readonly body = null;
+  readonly bodyUsed = false;
+  readonly ok: boolean;
+
+  constructor(
+    private readonly content: string,
+    readonly status = 200,
+    readonly statusText = '',
+  ) {
+    this.ok = status >= 200 && status < 300;
+  }
+
+  clone(): Response {
+    return new FakeResponse(this.content, this.status, this.statusText);
+  }
+  text(): Promise<string> {
+    return Promise.resolve(this.content);
+  }
+  json(): Promise<unknown> {
+    return Promise.resolve(JSON.parse(this.content));
+  }
+  arrayBuffer(): BodyMethod<'arrayBuffer'> {
+    return Promise.reject(new Error('unsupported'));
+  }
+  blob(): BodyMethod<'blob'> {
+    return Promise.reject(new Error('unsupported'));
+  }
+  bytes(): BodyMethod<'bytes'> {
+    return Promise.reject(new Error('unsupported'));
+  }
+  formData(): BodyMethod<'formData'> {
+    return Promise.reject(new Error('unsupported'));
+  }
+}
 
 describe('sendWeb', () => {
   const data = { key: 'value' };
@@ -6,13 +52,10 @@ describe('sendWeb', () => {
   const url = 'https://api.walkeros.io/';
 
   const mockFetch = jest.fn(
-    () =>
-      Promise.resolve({
-        text: () => Promise.resolve(dataStringified),
-        ok: true,
-      }) as Promise<Response>,
+    (_input: URL | RequestInfo, _init?: RequestInit): Promise<Response> =>
+      Promise.resolve(new FakeResponse(dataStringified)),
   );
-  const mockBeacon = jest.fn(() => true);
+  const mockBeacon = jest.fn((_url: string, _body?: BodyInit | null) => true);
   const mockXHROpen = jest.fn();
   const mockXHRSend = jest.fn();
   const mockXHRHeader = jest.fn();
@@ -29,6 +72,7 @@ describe('sendWeb', () => {
   const oldBeacon = navigator.sendBeacon;
 
   beforeEach(() => {
+    mockXHR.status = 200;
     window.fetch = mockFetch;
     navigator.sendBeacon = mockBeacon;
     Object.defineProperty(window, 'XMLHttpRequest', {
@@ -43,7 +87,7 @@ describe('sendWeb', () => {
     window.XMLHttpRequest = oldXMLHttpRequest;
   });
 
-  test('fetch', async () => {
+  test('fetch resolves with the data', async () => {
     const response = await sendWeb(url, data, { transport: 'fetch' });
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -54,14 +98,11 @@ describe('sendWeb', () => {
         mode: 'cors',
       }),
     );
-    expect(response).toStrictEqual({
-      ok: true,
-      data: dataStringified,
-      error: undefined,
-    });
+    expect(response).toStrictEqual({ data: dataStringified });
   });
 
-  test('fetch cors', async () => {
+  test('a noCors fetch resolves once the request completes (opaque counts as sent)', async () => {
+    mockFetch.mockResolvedValueOnce(new FakeResponse('', 0));
     const response = await sendWeb(url, data, {
       transport: 'fetch',
       noCors: true,
@@ -69,44 +110,117 @@ describe('sendWeb', () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
-      expect.objectContaining({
-        body: dataStringified,
-        keepalive: true,
-        mode: 'no-cors',
-      }),
+      expect.objectContaining({ mode: 'no-cors' }),
     );
-    expect(response).toStrictEqual({
-      ok: true,
-      data: '',
-      error: undefined,
-    });
+    expect(response).toStrictEqual({ data: '' });
   });
 
   test('fetch credentials', async () => {
-    const response = await sendWeb(url, data, {
-      transport: 'fetch',
-      credentials: 'include',
-    });
+    await sendWeb(url, data, { transport: 'fetch', credentials: 'include' });
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
-      expect.objectContaining({
-        body: dataStringified,
-        keepalive: true,
-        credentials: 'include',
-      }),
+      expect.objectContaining({ credentials: 'include' }),
     );
-    expect(response).toStrictEqual({
-      ok: true,
-      data: dataStringified,
-      error: undefined,
+  });
+
+  test('a 503 throws a retryable StepError with status and body, the body never in the message', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new FakeResponse('{"error":"user@example.com"}', 503, 'Busy'),
+    );
+    const sent = sendWeb(url, data, { transport: 'fetch' });
+
+    await expect(sent).rejects.toBeInstanceOf(StepError);
+    await sent.catch((error: unknown) => {
+      expect(error).toMatchObject({
+        code: 'transport',
+        status: 503,
+        retryable: true,
+        body: '{"error":"user@example.com"}',
+        message: 'HTTP 503',
+      });
     });
   });
 
-  test('beacon', () => {
+  test('a 400 throws a StepError that is not retryable', async () => {
+    mockFetch.mockResolvedValueOnce(new FakeResponse('bad', 400));
+    await expect(
+      sendWeb(url, data, { transport: 'fetch' }),
+    ).rejects.toMatchObject({
+      code: 'transport',
+      status: 400,
+      retryable: false,
+    });
+  });
+
+  test('a network error keeps its cause code in the message, never the address', async () => {
+    const cause = Object.assign(
+      new Error('getaddrinfo ENOTFOUND vendor.example?key=secret'),
+      { code: 'ENOTFOUND' },
+    );
+    mockFetch.mockRejectedValueOnce(
+      Object.assign(new TypeError('fetch failed'), { cause }),
+    );
+    await expect(
+      sendWeb(url, data, { transport: 'fetch' }),
+    ).rejects.toMatchObject({
+      code: 'transport',
+      message: 'fetch failed (ENOTFOUND)',
+    });
+  });
+
+  test('a network error throws code transport', async () => {
+    mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    await expect(
+      sendWeb(url, data, { transport: 'fetch' }),
+    ).rejects.toMatchObject({ code: 'transport', retryable: true });
+  });
+
+  test('keepalive stops once the bodies in flight would exceed 64 KiB', async () => {
+    const releases: Array<() => void> = [];
+    mockFetch.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          releases.push(() => resolve(new FakeResponse('')));
+        }),
+    );
+    const body = 'x'.repeat(30 * 1024);
+
+    const sends = [1, 2, 3].map(() =>
+      sendWeb(url, body, { transport: 'fetch' }),
+    );
+    expect(mockFetch.mock.calls.map(([, init]) => init?.keepalive)).toEqual([
+      true,
+      true,
+      false,
+    ]);
+
+    releases.forEach((release) => release());
+    await Promise.all(sends);
+
+    // The quota is free again once the requests settled.
+    mockFetch.mockImplementation(() => Promise.resolve(new FakeResponse('')));
+    await sendWeb(url, body, { transport: 'fetch' });
+    expect(mockFetch.mock.calls[3][1]?.keepalive).toBe(true);
+  });
+
+  test('beacon returns when the browser accepts it', () => {
     const response = sendWeb(url, data, { transport: 'beacon' });
     expect(mockBeacon).toHaveBeenCalledWith(url, dataStringified);
-    expect(response).toStrictEqual({ ok: true, error: undefined });
+    expect(response).toStrictEqual({});
+  });
+
+  test('a refused beacon throws beacon-rejected, retryable up to 64 KiB', () => {
+    mockBeacon.mockReturnValue(false);
+    expect(() => sendWeb(url, data, { transport: 'beacon' })).toThrow(
+      expect.objectContaining({ code: 'beacon-rejected', retryable: true }),
+    );
+    expect(() =>
+      sendWeb(url, 'x'.repeat(65 * 1024), { transport: 'beacon' }),
+    ).toThrow(
+      expect.objectContaining({ code: 'beacon-rejected', retryable: false }),
+    );
+    mockBeacon.mockReturnValue(true);
   });
 
   test('xhr', () => {
@@ -117,45 +231,31 @@ describe('sendWeb', () => {
       'application/json; charset=utf-8',
     );
     expect(mockXHR.send).toHaveBeenCalledWith(dataStringified);
-    expect(response).toStrictEqual({
-      ok: true,
-      data,
-      error: undefined,
-    });
+    expect(response).toStrictEqual({ data });
   });
 
   test('xhr with custom headers', () => {
     const headers = { 'Custom-Header': 'customValue' };
-    const response = sendWeb(url, data, {
-      transport: 'xhr',
-      headers,
-    });
+    sendWeb(url, data, { transport: 'xhr', headers });
 
-    expect(mockXHRHeader).toHaveBeenCalledWith(
-      'Content-Type',
-      'application/json; charset=utf-8',
-    );
     expect(mockXHRHeader).toHaveBeenCalledWith('Custom-Header', 'customValue');
-    expect(mockXHR.send).toHaveBeenCalledWith(dataStringified);
-    expect(response).toStrictEqual({
-      ok: true,
-      data,
-      error: undefined,
-    });
   });
 
   test('xhr with method option', () => {
-    const response = sendWeb(url, data, {
-      transport: 'xhr',
-      method: 'PUT',
-    });
+    sendWeb(url, data, { transport: 'xhr', method: 'PUT' });
     expect(mockXHROpen).toHaveBeenCalledWith('PUT', url, false);
-    expect(mockXHR.send).toHaveBeenCalledWith(dataStringified);
-    expect(response).toStrictEqual({
-      ok: true,
-      data,
-      error: undefined,
-    });
+  });
+
+  test('a non-2xx xhr throws a StepError with status and body', () => {
+    mockXHR.status = 500;
+    expect(() => sendWeb(url, data, { transport: 'xhr' })).toThrow(
+      expect.objectContaining({
+        code: 'transport',
+        status: 500,
+        retryable: true,
+        body: data,
+      }),
+    );
   });
 
   describe('timeout validation', () => {
@@ -171,105 +271,38 @@ describe('sendWeb', () => {
           }),
       );
 
-    test('falls back to DEFAULT_FETCH_TIMEOUT when timeout is 0', async () => {
-      // Guard must replace 0 with DEFAULT_FETCH_TIMEOUT (10000).
-      // Advancing 5000ms should NOT have aborted yet (abort is at 10000).
-      const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
-      window.fetch = makeHangingFetch();
-      sendWeb(url, data, { transport: 'fetch', timeout: 0 });
-      jest.advanceTimersByTime(5000);
-      expect(abortSpy).not.toHaveBeenCalled();
-    });
+    test.each([0, -1, NaN])(
+      'falls back to the default timeout for %p',
+      (timeout) => {
+        // The default is 10000 ms: nothing is aborted after 5000 ms.
+        const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
+        window.fetch = makeHangingFetch();
+        sendWeb(url, data, { transport: 'fetch', timeout }).catch(
+          () => undefined,
+        );
+        jest.advanceTimersByTime(5000);
+        expect(abortSpy).not.toHaveBeenCalled();
+        jest.advanceTimersByTime(5000);
+      },
+    );
 
-    test('falls back to DEFAULT_FETCH_TIMEOUT when timeout is negative', async () => {
-      const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
-      window.fetch = makeHangingFetch();
-      sendWeb(url, data, { transport: 'fetch', timeout: -1 });
-      jest.advanceTimersByTime(5000);
-      expect(abortSpy).not.toHaveBeenCalled();
-    });
-
-    test('falls back to DEFAULT_FETCH_TIMEOUT when timeout is NaN', async () => {
-      const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
-      window.fetch = makeHangingFetch();
-      sendWeb(url, data, { transport: 'fetch', timeout: NaN });
-      jest.advanceTimersByTime(5000);
-      expect(abortSpy).not.toHaveBeenCalled();
-    });
-
-    test('honors an explicit positive finite timeout', async () => {
+    test('an explicit timeout rejects with code timeout', async () => {
       window.fetch = makeHangingFetch();
       const promise = sendWeb(url, data, { transport: 'fetch', timeout: 50 });
       jest.advanceTimersByTime(50);
-      const response = await promise;
-      expect(response.ok).toBe(false);
-      expect(response.error).toBeDefined();
-    });
-  });
-
-  describe('fetch timeout', () => {
-    test('fetch rejects with timeout error when request exceeds timeout', async () => {
-      // Never resolves on its own; rejects only when the signal aborts.
-      const abortingFetch = jest.fn(
-        (_input: URL | RequestInfo, init?: RequestInit) =>
-          new Promise<Response>((_resolve, reject) => {
-            const signal = init?.signal;
-            signal?.addEventListener('abort', () => {
-              reject(new Error('The operation was aborted.'));
-            });
-          }),
-      );
-      window.fetch = abortingFetch;
-
-      const promise = sendWeb(url, data, {
-        transport: 'fetch',
-        timeout: 50,
+      await expect(promise).rejects.toMatchObject({
+        code: 'timeout',
+        retryable: true,
       });
-
-      // Advance fake timers so the AbortController's setTimeout fires.
-      jest.advanceTimersByTime(50);
-
-      const response = await promise;
-
-      expect(response.ok).toBe(false);
-      expect(response.error).toBeDefined();
     });
 
-    test('fetch uses default timeout when none specified', async () => {
-      const okFetch = jest.fn(
-        () =>
-          Promise.resolve({
-            text: () => Promise.resolve(''),
-            ok: true,
-          }) as Promise<Response>,
-      );
-      window.fetch = okFetch;
-
+    test('fetch passes an abort signal', async () => {
       await sendWeb(url, data, { transport: 'fetch' });
 
-      expect(okFetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         url,
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
-    });
-
-    test('fetch succeeds within timeout', async () => {
-      const okFetch = jest.fn(
-        () =>
-          Promise.resolve({
-            text: () => Promise.resolve(dataStringified),
-            ok: true,
-          }) as Promise<Response>,
-      );
-      window.fetch = okFetch;
-
-      const response = await sendWeb(url, data, {
-        transport: 'fetch',
-        timeout: 5000,
-      });
-
-      expect(response.ok).toBe(true);
-      expect(response.data).toBe(dataStringified);
     });
   });
 });

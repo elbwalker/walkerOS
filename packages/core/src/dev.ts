@@ -8,7 +8,7 @@ export { expectSimulationResolves } from './expectSimulationResolves';
 export * as routeCases from './examples/route-cases';
 export type { Flow } from './types/flow';
 
-export { validateFlowStructure } from './validate-structure';
+export { checkStepKeys, validateFlowStructure } from './validate-structure';
 export type {
   ValidateResult,
   ValidateResultType,

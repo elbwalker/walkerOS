@@ -1,37 +1,47 @@
 import type { Logger } from '@walkeros/core';
 import type { AdsSettings, Env } from '../types';
-import { addScript, initializeGtag } from '../shared/gtag';
+import { StepError } from '@walkeros/core';
+import { initializeGtag, loadGtag } from '../shared/gtag';
 import { getEnv } from '@walkeros/web-core';
 
 export function initAds(
   settings: AdsSettings,
   loadScript: boolean | undefined,
   env: Env | undefined,
-  logger: Logger.Instance,
+  _logger: Logger.Instance,
   gtagExternal = false,
-): void {
-  const { window, document } = getEnv<Env>(env);
+  // The destination's timeout, the deadline of the injected script.
+  timeout?: number,
+): unknown[] {
+  const { window } = getEnv<Env>(env);
   const { conversionId } = settings;
 
-  if (!conversionId) logger.throw('Config settings ads.conversionId missing');
+  if (!conversionId)
+    throw new StepError('Config settings ads.conversionId missing', {
+      code: 'config',
+    });
 
   // Default currency value
   if (!settings.currency) settings.currency = 'EUR';
 
-  if (loadScript) addScript(conversionId, undefined, document);
+  if (loadScript) loadGtag(conversionId, undefined, timeout, env);
 
   // Initialize gtag infrastructure
   initializeGtag(window);
 
   const gtag = window.gtag!;
+  const calls: unknown[] = [];
 
   // See ga4/config.ts: only signal initialisation if walkerOS did it.
-  if (!gtagExternal) gtag('js', new Date());
+  if (!gtagExternal) calls.push(gtag('js', new Date()));
 
   // gtag init call
   if (settings.enhancedConversions) {
-    gtag('config', conversionId, { allow_enhanced_conversions: true });
+    calls.push(
+      gtag('config', conversionId, { allow_enhanced_conversions: true }),
+    );
   } else {
-    gtag('config', conversionId);
+    calls.push(gtag('config', conversionId));
   }
+  return calls;
 }

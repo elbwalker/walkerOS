@@ -246,7 +246,7 @@ export const purchase: Flow.StepExample = {
     data: {
       map: {
         transaction_id: 'data.id',
-        value: 'data.total',
+        value: 'data.value',
         currency: { key: 'data.currency', value: 'EUR' },
       },
     },
@@ -324,6 +324,55 @@ ship **per-tool init examples** — `examples.step.ga4Init`, `adsInit`, `gtmInit
 — instead of a single `init`. The docs render each on its own page via
 `<StepExample example={data.examples.step.ga4Init} />`, and tests pick the right
 init per sub-tool.
+
+#### Failure, silent and consent examples
+
+Besides the happy path, `step.ts` carries `public: false` examples that the
+conformance kit (Phase 8) runs on a real collector:
+
+```typescript
+// A silent rule sends nothing.
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no event.',
+  in: getEvent('page view', { timestamp: 1700000006 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+// An event the destination cannot send is reported, not counted delivered.
+export const missingInput: Flow.StepExample = {
+  public: false,
+  description: 'Without a user id the push fails with missing-input.',
+  in: getEvent('user login', { timestamp: 1700000007 }),
+  mapping: { settings: { identify: { map: { id: 'user.id' } } } },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input', retryable: false },
+};
+
+// A vendor that answers 200 with an error in the body.
+export const rejectedByVendor: Flow.StepExample = {
+  public: false,
+  description: 'The vendor answers 200 and reports the event as failed.',
+  in: getEvent('page view', { timestamp: 1700000008 }),
+  respond: { status: 200, body: { events: [{ status: 'failed' }] } },
+  outcome: { status: 'failed', code: 'transport', retryable: false },
+};
+
+// A consent revocation reaches the vendor.
+export const consentRevoke: Flow.StepExample = {
+  public: false,
+  command: 'consent',
+  in: { marketing: false },
+  out: [['window.vendorSdk', 'consent', 'revoke']],
+};
+```
+
+`outcome` is `{ status: 'failed' | 'queued', code, retryable? }`; `respond` is
+what the vendor's boundary answers (`status`, `body`, or
+`error: 'network' | 'timeout'`). An example that expects no vendor call has
+`out: []`. A "one of these settings" rule (`ga4`, `ads` or `gtm`) is stated as
+`anyOf` in the settings schema, not only in `init`.
 
 For destinations, the Three Type Zones collapse to:
 
@@ -551,10 +600,11 @@ Guidelines:
 
 Use these templates as your starting point:
 
-| File             | Purpose          | Template                                |
-| ---------------- | ---------------- | --------------------------------------- |
-| `types/index.ts` | Type definitions | [types.ts](./templates/simple/types.ts) |
-| `index.ts`       | Main destination | [index.ts](./templates/simple/index.ts) |
+| File                            | Purpose               | Template                                                      |
+| ------------------------------- | --------------------- | ------------------------------------------------------------- |
+| `types/index.ts`                | Type definitions      | [types.ts](./templates/simple/types.ts)                       |
+| `index.ts`                      | Main destination      | [index.ts](./templates/simple/index.ts)                       |
+| `__tests__/conformance.test.ts` | Failure-contract test | [conformance.test.ts](./templates/simple/conformance.test.ts) |
 
 ### Key Patterns
 
@@ -596,6 +646,46 @@ Use these templates as your starting point:
    destinations' `on()` handlers for that command have settled or timed out.
    - For step-example tests, use `command: 'consent'` on `Flow.StepExample` to
      invoke the `on('consent')` handler. Do not push consent data as an event.
+
+8. **A failure is a throw** (the failure contract). A `push` or `init` that
+   returns normally counts as delivered, so:
+   - Throw a `StepError` from `@walkeros/core` with a `code` (`config` for a
+     missing or invalid setting, `missing-input` for an event the destination
+     cannot send, `transport` for a failed request; add `status` for an HTTP
+     status, `retryable` to override the default). Never `return` early, never
+     `return false` from `init`, never log the failure yourself: the collector
+     writes one ERROR line per cause, a failed counter and a DLQ entry.
+   - Await every call the vendor makes. A call that is not awaited fails after
+     the push was already counted as delivered. The lint rules
+     `walkeros/await-send` and `walkeros/no-silent-return` flag both.
+   - A response body goes on the error's `body`, never into its message;
+     messages and log lines never carry event data.
+   - A value-level problem (one mapped field cannot be built) drops that field,
+     sends the event and reports once with `reportCause`. Only a wholly
+     unsendable event throws `missing-input`.
+9. **Scripts through `loadVendor`** (`@walkeros/web-core`). It injects the
+   script once per page into the document `env` provides (the page's own by
+   default) and reports `vendor-not-loaded`, `vendor-not-ready` and
+   `vendor-timeout`. For tests and examples, `mockScriptDocument()` from
+   `@walkeros/web-core/dev` provides a document. For a vendor that replays its
+   own stub, call `check()` in `push`; for any other, `await ready()`. Pass
+   attributes the tag needs (`data-domain`) through `options.attributes`.
+10. **Honour `rule.silent`.** A rule with `silent: true` sends no event of its
+    own and runs only the side effects it maps (identify, group). Do not
+    `return` early for it (`walkeros/no-silent-return` is an error): write
+    `push = async (event, context) => { if (!context.rule?.silent) await send(event, context); }`
+    and run the side effects around it. A silent rule whose side-effect mapping
+    resolves to nothing sends nothing, counts as delivered and writes one DEBUG
+    line (`<Vendor> skipped <call>: <mappingKey> resolved to nothing`, the event
+    name, never the value). Every destination ships a `silent` step example (see
+    Phase 3).
+11. **Consent reaches the vendor.** `config.consent` decides: in
+    `on('consent')`, tell the vendor about a revocation and a grant when it has
+    a switch (`getGrantedConsent(config.consent, collector.consent)`), and throw
+    a `consent-not-applied` StepError when the vendor does not take it.
+12. **Batching.** A server SDK that batches implements `pushBatch` and gets a
+    default `config.batch`; each entry has its own outcome, and
+    `config.batch: { size: 1 }` is the per-event setting.
 
 ### Reserved fields
 
@@ -769,6 +859,29 @@ Use the test template: [index.test.ts](./templates/simple/index.test.ts).
 Reference canonical implementation:
 `packages/web/destinations/gtag/src/__tests__/stepExamples.test.ts`.
 
+### Conformance test
+
+Every destination has a conformance test that runs it on a real collector with
+`conformance('destination', destination, options)` from
+`@walkeros/collector/dev` (template:
+[conformance.test.ts](./templates/simple/conformance.test.ts)). It checks the
+failure contract: a failing send is reported with a cause, a failure never leaks
+event data into a log line, a `silent` example sends nothing, a consent
+revocation reaches the vendor, `init` throws on a missing setting, and every
+event the destination cannot send has a declared outcome. It fails with every
+broken item at once.
+
+The `profile` option says what the destination talks to: `http` (calls `fetch`),
+`sdk-env` (a server SDK injected through `env`), `web-sdk` (a web SDK started in
+`init`: `sdk-env` without the init check), `vendor-global` (a vendor script that
+defines a global), `socket` (a long-lived connection). The browser profiles
+(`web-sdk`, `vendor-global`) also take `page` from `@walkeros/web-core/dev`
+(import it after the `@walkeros/collector/dev` import, pass it right after
+`profile`); without it the test throws
+`profile <name> runs on a page: pass page from @walkeros/web-core/dev`. Server
+destinations pass no `page`. Never prove delivery or loss with a mocked
+collector: `startFlow` and mock only the network or the vendor global.
+
 ### Key Test Patterns
 
 1. **`it.each(Object.entries(examples.step))` is mandatory** — one iteration per
@@ -788,6 +901,10 @@ Reference canonical implementation:
 - [ ] Tests iterate via `it.each(Object.entries(examples.step))`
 - [ ] Tests contain no hardcoded payloads, vendor configs, or expected outputs
 - [ ] Every assertion reads from `examples.step[...].out`
+- [ ] The conformance test passes with the right profile
+- [ ] `examples.step` has a `silent` example, a failure example (`outcome`) for
+      each event the destination cannot send, and a consent revocation example
+      when the vendor has a consent switch
 
 ---
 
@@ -824,6 +941,9 @@ requirements (build, test, lint, no `any`):
       included, and every `exportSchemas` entry has `settings`; the build fails
       otherwise (see
       [using-step-examples](../walkeros-using-step-examples/SKILL.md))
+- [ ] No silent path: a failure is a thrown StepError, every vendor call is
+      awaited, `init` never returns `false`, scripts load through `loadVendor`,
+      `rule.silent` is honoured
 - [ ] Examples match type signatures
 - [ ] Tests use examples for assertions (not hardcoded values)
 - [ ] `walkerOS.json` generated at build time

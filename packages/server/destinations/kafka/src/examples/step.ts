@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -84,14 +84,14 @@ export const mappedData: KafkaStepExample = {
     'A data mapping transforms the event payload before producing it as the Kafka message value.',
   in: getEvent('order complete', {
     timestamp: 1700000102,
-    data: { id: 'ORD-400', total: 99.99, currency: 'EUR' },
+    data: { id: 'ORD-400', value: 99.99, currency: 'EUR' },
   }),
   mapping: {
     name: 'purchase',
     data: {
       map: {
         order_id: 'data.id',
-        revenue: 'data.total',
+        revenue: 'data.value',
         currency: 'data.currency',
       },
     },
@@ -124,7 +124,8 @@ export const keyFromUser: KafkaStepExample = {
   title: 'Key from user id',
   description:
     'A settings.kafka.key path resolves the message key from the event, here using user.id for per-user partitioning.',
-  in: getEvent('user signup', {
+  in: createEvent({
+    name: 'user signup',
     timestamp: 1700000103,
     user: { id: 'usr-789' },
     data: { plan: 'pro' },
@@ -166,7 +167,7 @@ export const topicOverride: KafkaStepExample = {
     'A mapping rule overrides the destination topic so specific events are routed to a dedicated stream.',
   in: getEvent('order complete', {
     timestamp: 1700000104,
-    data: { id: 'ORD-500', total: 42 },
+    data: { id: 'ORD-500', value: 42 },
   }),
   mapping: {
     settings: {
@@ -198,9 +199,18 @@ export const topicOverride: KafkaStepExample = {
  */
 export const ignoredEvent: KafkaStepExample = {
   public: false,
-  in: getEvent('debug noise', {
-    timestamp: 1700000105,
-  }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000105 }),
   mapping: { ignore: true },
+  out: [],
+};
+
+/**
+ * Silent rule -- mapping.silent: true sends no message.
+ */
+export const silentRule: KafkaStepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no message.',
+  in: getEvent('page view', { timestamp: 1700000106 }),
+  mapping: { silent: true },
   out: [],
 };

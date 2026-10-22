@@ -3,7 +3,7 @@ import type {
   WalkerOS,
   Mapping as WalkerOSMapping,
 } from '@walkeros/core';
-import { getMappingValue, isObject } from '@walkeros/core';
+import { getMappingValue, isObject, StepError } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import type {
   CommerceEventData,
@@ -23,11 +23,15 @@ import {
   buildScreenViewEvent,
 } from './batch';
 
-export const push: PushFn = async function (
+// A silent rule has no mparticle call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, rule, data, env, logger, collector },
 ) {
-  const settings = config.settings as Settings;
   const {
     apiKey,
     apiSecret,
@@ -38,7 +42,13 @@ export const push: PushFn = async function (
     consent,
     ip: ipSetting,
     sourceRequestId: sourceRequestIdSetting,
-  } = settings;
+  } = config.settings ?? {};
+
+  // init() validates these; a destination that skipped it is not ready.
+  if (!apiKey || !apiSecret)
+    throw new StepError('Config settings missing, init() not run', {
+      code: 'not-ready',
+    });
 
   const ruleSettings: Mapping = (rule?.settings || {}) as Mapping;
 
@@ -132,20 +142,12 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = env?.sendServer || sendServer;
-  const result = await sendServerFn(endpoint, JSON.stringify(batch), {
+  await sendServerFn(endpoint, JSON.stringify(batch), {
     headers: {
       Authorization: authHeader,
       'Content-Type': 'application/json',
     },
   });
-
-  logger.debug('mParticle API response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`mParticle API error: ${JSON.stringify(result)}`);
-  }
 };
 
 async function resolveIdentities(

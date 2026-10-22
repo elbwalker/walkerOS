@@ -125,7 +125,7 @@ mapping: {
 // Event structure
 {
   name: 'order complete',
-  data: { total: 100 },
+  data: { value: 100 },
   nested: [
     { entity: 'product', data: { id: 'P1' } }
   ]

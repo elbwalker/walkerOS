@@ -33,7 +33,12 @@ npm install @walkeros/server-destination-snapchat
       "destinations": {
         "snapchat": {
           "package": "@walkeros/server-destination-snapchat",
-          "config": {}
+          "config": {
+            "settings": {
+              "accessToken": "YOUR_ACCESS_TOKEN",
+              "pixelId": "YOUR_PIXEL_ID"
+            }
+          }
         }
       }
     }

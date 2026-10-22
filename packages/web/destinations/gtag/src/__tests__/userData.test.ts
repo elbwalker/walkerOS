@@ -19,7 +19,7 @@ describe('resolveUserData', () => {
       const event = getEvent('order complete', {
         data: {
           id: '0rd3r1d',
-          total: 555,
+          value: 555,
           customerEmail: 'buyer@shop.com',
           customerPhone: '+1234567890',
         },
@@ -67,7 +67,7 @@ describe('resolveUserData', () => {
       const event = getEvent('order complete', {
         data: {
           id: '0rd3r1d',
-          total: 555,
+          value: 555,
           city: 'Berlin',
           country: 'DE',
         },
@@ -89,7 +89,7 @@ describe('resolveUserData', () => {
 
     it('should skip fields that resolve to nothing', async () => {
       const event = getEvent('order complete', {
-        data: { id: '0rd3r1d', total: 555, customerEmail: 'buyer@shop.com' },
+        data: { id: '0rd3r1d', value: 555, customerEmail: 'buyer@shop.com' },
       });
 
       const result = await resolveUserData(event, settings, mockCollector);
@@ -99,7 +99,7 @@ describe('resolveUserData', () => {
 
     it('should return undefined when no mapped fields resolve', async () => {
       const event = getEvent('order complete', {
-        data: { id: '0rd3r1d', total: 555 },
+        data: { id: '0rd3r1d', value: 555 },
       });
 
       const result = await resolveUserData(event, settings, mockCollector);

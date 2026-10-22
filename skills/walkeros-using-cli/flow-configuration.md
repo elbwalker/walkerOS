@@ -178,11 +178,11 @@ globs both work, resolved against the install root (where pacote put files):
     "gtag": {
       "package": "@walkeros/web-destination-gtag",
       "config": {
-        "measurementId": "G-XXXXXX"
-      },
-      "mapping": {
-        "product": {
-          "view": { "name": "view_item" }
+        "settings": { "ga4": { "measurementId": "G-XXXXXX" } },
+        "mapping": {
+          "product": {
+            "view": { "name": "view_item" }
+          }
         }
       }
     }
@@ -192,13 +192,11 @@ globs both work, resolved against the install root (where pacote put files):
 
 ### Destination Properties
 
-| Property  | Type                               | Description                                                                |
-| --------- | ---------------------------------- | -------------------------------------------------------------------------- |
-| `package` | `string`                           | NPM package or local package name                                          |
-| `config`  | `object`                           | Destination-specific configuration                                         |
-| `mapping` | `object`                           | Event transformation rules                                                 |
-| `consent` | `object`                           | Required consent levels                                                    |
-| `before`  | `string \| Route[] \| RouteConfig` | Destination chain: runs for this destination only (a `stop` skips only it) |
+| Property  | Type                               | Description                                                                                                |
+| --------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `package` | `string`                           | NPM package or local package name                                                                          |
+| `config`  | `object`                           | `settings` (package-specific), `mapping` (event transformation rules), `consent` (required consent levels) |
+| `before`  | `string \| Route[] \| RouteConfig` | Destination chain: runs for this destination only (a `stop` skips only it)                                 |
 
 **Route shape** (used wherever the type column shows `Route[]` or `RouteConfig`,
 and by `collector.next`). A `RouteConfig` is a **disjoint union**: set at most
@@ -260,11 +258,10 @@ For mapping syntax, see
 ```json
 {
   "sources": {
-    "web": {
-      "package": "@walkeros/web-source",
+    "browser": {
+      "package": "@walkeros/web-source-browser",
       "config": {
-        "dataLayer": true,
-        "globalsStatic": true
+        "settings": { "pageview": true }
       }
     }
   }
@@ -469,51 +466,53 @@ walkeros bundle config.json --all -o dist/all
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/web-source": {},
+            "@walkeros/web-source-browser": {},
             "@walkeros/web-destination-gtag": {}
           }
         }
       },
       "sources": {
-        "web": {
-          "package": "@walkeros/web-source",
-          "config": { "dataLayer": true }
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": { "settings": { "pageview": true } }
         }
       },
       "destinations": {
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
-          "config": { "measurementId": "G-XXXXXX" },
-          "mapping": {
-            "product": {
-              "view": {
-                "name": "view_item",
-                "data": {
-                  "map": {
-                    "currency": { "value": "USD" },
-                    "value": "data.price",
-                    "items": {
-                      "loop": [
-                        "this",
-                        {
-                          "map": {
-                            "item_id": "data.id",
-                            "item_name": "data.name"
+          "config": {
+            "settings": { "ga4": { "measurementId": "G-XXXXXX" } },
+            "mapping": {
+              "product": {
+                "view": {
+                  "name": "view_item",
+                  "data": {
+                    "map": {
+                      "currency": { "value": "USD" },
+                      "value": "data.price",
+                      "items": {
+                        "loop": [
+                          "this",
+                          {
+                            "map": {
+                              "item_id": "data.id",
+                              "item_name": "data.name"
+                            }
                           }
-                        }
-                      ]
+                        ]
+                      }
                     }
                   }
                 }
-              }
-            },
-            "order": {
-              "complete": {
-                "name": "purchase",
-                "data": {
-                  "map": {
-                    "transaction_id": "data.orderId",
-                    "value": "data.total"
+              },
+              "order": {
+                "complete": {
+                  "name": "purchase",
+                  "data": {
+                    "map": {
+                      "transaction_id": "data.orderId",
+                      "value": "data.value"
+                    }
                   }
                 }
               }

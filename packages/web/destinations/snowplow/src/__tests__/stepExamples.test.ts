@@ -35,8 +35,10 @@ function spySnowplow(env: Env): {
 }
 
 describe('snowplow destination — step examples', () => {
+  // The consent revoke runs in the conformance test (gated, granted first)
+  // and in consent.test.ts.
   const stepEntries = Object.entries(examples.step).filter(
-    ([name]) => name !== 'init',
+    ([name, example]) => name !== 'init' && example.command !== 'consent',
   );
 
   it('init', async () => {

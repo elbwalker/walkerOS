@@ -49,7 +49,12 @@ function spyEnv(env: Env): {
 }
 
 describe('fullstory destination -- step examples', () => {
-  it.each<[string, FullStoryStepExample]>(Object.entries(examples.step))(
+  // Non-public examples (silent, failures) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each<[string, FullStoryStepExample]>(published)(
     '%s',
     async (name, example) => {
       const env = clone(examples.env.push) as Env;

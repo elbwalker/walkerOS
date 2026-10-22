@@ -30,6 +30,34 @@ const getVersion = () => {
   }
 };
 
+// The package's walkerOS.platform list (package.json), empty when unset
+const getPlatforms = () => {
+  try {
+    const packagePath = resolve(process.cwd(), 'package.json');
+    const platform = JSON.parse(readFileSync(packagePath, 'utf8')).walkerOS
+      ?.platform;
+    if (Array.isArray(platform)) return platform;
+    return platform ? [platform] : [];
+  } catch {
+    return [];
+  }
+};
+
+// ESM builds of server-only packages define `require`, so the CommonJS SDKs
+// they load with require() work when the ESM build is imported directly.
+// Never for a package a browser imports: `module` does not exist there.
+const CREATE_REQUIRE_BANNER =
+  "import { createRequire } from 'module';const require = createRequire(import.meta.url);";
+
+const serverBanner = () => {
+  const platforms = getPlatforms();
+  if (!platforms.includes('server') || platforms.includes('web')) return {};
+  return {
+    banner: ({ format }) =>
+      format === 'esm' ? { js: CREATE_REQUIRE_BANNER } : {},
+  };
+};
+
 // Modules
 const buildModules = (customConfig = {}) => {
   // Auto-inject package version
@@ -46,6 +74,7 @@ const buildModules = (customConfig = {}) => {
     sourcemap: true,
     declaration: true,
     declarationMap: true,
+    ...serverBanner(),
     define: {
       __VERSION__: JSON.stringify(version),
       ...customConfig.define,

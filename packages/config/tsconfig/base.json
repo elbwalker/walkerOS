@@ -16,6 +16,8 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
+    "lib": ["es2020"],
+    "types": ["node", "jest"],
     "allowJs": true,
     "resolveJsonModule": true,
     "incremental": true,

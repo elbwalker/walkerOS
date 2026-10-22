@@ -95,10 +95,10 @@ export const checkoutPost: Flow.StepExample = {
   in: {
     method: 'POST',
     path: '/collect',
-    body: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+    body: { name: 'order complete', data: { id: 'ORD-123', value: 149.97 } },
   },
   out: [
-    ['elb', { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } }],
+    ['elb', { name: 'order complete', data: { id: 'ORD-123', value: 149.97 } }],
   ],
 };
 ```
@@ -186,11 +186,13 @@ flatten into a single array in execution order:
 import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
+// getEvent pins the timestamp (1700000000000) and derives the id from the event
+// name; pass `id` when the expected output must name a readable one.
 export const purchase: Flow.StepExample = {
-  in: getEvent('order complete', { timestamp: 1700000000 }),
+  in: getEvent('order complete', { id: '1700000000-gr0up-1' }),
   mapping: {
     name: 'Purchase',
-    data: { map: { value: 'data.total', currency: { value: 'EUR' } } },
+    data: { map: { value: 'data.value', currency: { value: 'EUR' } } },
   },
   out: [
     [
@@ -258,6 +260,47 @@ Supported commands: `config`, `consent`, `user`, `run`.
     --simulate destination.ga4 --command consent
   ```
 
+### Failure Step Example (`outcome`, `respond`)
+
+A step's failure modes are examples too. A failure fixture is `public: false`
+and declares what the push result reports through `outcome`; `respond` states
+what the vendor's boundary answers when the failure comes from a response:
+
+```typescript
+export const rejectedByVendor: Flow.StepExample = {
+  public: false,
+  description: 'The vendor answers 200 and reports the event as failed.',
+  in: getEvent('page view'),
+  respond: { status: 200, body: { events: [{ status: 'failed' }] } },
+  outcome: { status: 'failed', code: 'transport', retryable: false },
+};
+
+export const missingInput: Flow.StepExample = {
+  public: false,
+  description:
+    'An event with nothing to send fails instead of counting as delivered.',
+  in: getEvent('page view'),
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+```
+
+- `outcome` is `{ status: 'failed' | 'queued', code, retryable? }`. Absent means
+  the step must not fail. The codes are the collector's failure codes (`config`,
+  `missing-input`, `transport`, `timeout`, `vendor-not-loaded`, ...).
+- `respond` is `{ status?, body?, error?: 'network' | 'timeout' }`.
+- A step with no vendor call for an example has `out: []`. A `silent` rule is an
+  example with `mapping: { silent: true }` and `out: []`, and a deliberate skip
+  (`ignore: true`) is `out: []` with no `outcome`.
+- `runExamples(kind, step, examples, options?)` and
+  `conformance(kind, step, options)` from `@walkeros/collector/dev` run the
+  examples on a real collector and compare the push result with `outcome`.
+  Conformance profiles: destinations `http`, `sdk-env`, `web-sdk`,
+  `vendor-global`, `socket`; `transformer` and `source` for the other kinds. The
+  browser profiles (`web-sdk`, `vendor-global`) need `page` from
+  `@walkeros/web-core/dev` in the options, and a web source may pass it;
+  `runExamples` takes the same option.
+
 ## Writing Examples
 
 ### Best Practices
@@ -283,8 +326,8 @@ import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
 export const purchase: Flow.StepExample = {
-  in: getEvent('order complete', { timestamp: 1700000000 }),
-  mapping: { name: 'Purchase', data: { map: { value: 'data.total' } } },
+  in: getEvent('order complete', { id: '1700000000-gr0up-1' }),
+  mapping: { name: 'Purchase', data: { map: { value: 'data.value' } } },
   out: ['track', 'Purchase', { value: 555 }, { eventID: '1700000000-gr0up-1' }],
 };
 
@@ -423,8 +466,8 @@ export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
     'A completed order mapped to the Meta Pixel Purchase standard event.',
-  in: getEvent('order complete', { timestamp: 1700000000 }),
-  mapping: { name: 'Purchase', data: { map: { value: 'data.total' } } },
+  in: getEvent('order complete', { id: '1700000000-gr0up-1' }),
+  mapping: { name: 'Purchase', data: { map: { value: 'data.value' } } },
   out: [['fbq', 'track', 'Purchase', { value: 555, currency: 'EUR' }]],
 };
 
@@ -713,6 +756,9 @@ When adding step examples to a package or flow:
 - [ ] Include at least one happy-path example
 - [ ] For transformers, include a `false` (filtered) case
 - [ ] Add `it.each` test using step examples
+- [ ] Failure examples (`public: false`, `outcome`, `respond`) for every event
+      the step cannot send, a `silent` example for a destination, and a
+      conformance test (`conformance` from `@walkeros/collector/dev`)
 - [ ] Verify examples compile: `npm run build`
 - [ ] Run tests: `npm run verify:touched -- <pkg>` (L1)
 - [ ] Add `title` and `description` to every public example.

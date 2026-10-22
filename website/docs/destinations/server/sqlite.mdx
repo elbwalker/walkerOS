@@ -90,7 +90,7 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
-The destination opens the connection during `init()` and prepares the INSERT statement once. Schema creation lives in the `setup` lifecycle (see below), not in `init()`. On `destroy()` the connection is closed cleanly. User-provided clients (wired via `env.client` or `settings.sqlite._client`) are left untouched.
+The destination opens the connection during `init()`. The table check and the prepared INSERT run at the first push, so a flow starts without querying the database, and a missing table fails that push with the setup hint. A failed INSERT fails the push and lands in the dead-letter queue. Schema creation lives in the `setup` lifecycle (see below), not in `init()`. On `destroy()` the connection is closed cleanly. User-provided clients (wired via `env.client` or `settings.sqlite._client`) are left untouched.
 
 ## Setup
 
@@ -105,7 +105,7 @@ This runs `CREATE TABLE IF NOT EXISTS` with the canonical 15-column walkerOS Eve
 - `foreign_keys = ON`
 - `temp_store = MEMORY`
 
-Setup is idempotent. Re-running against a populated database is a safe no-op. Drift between the declared schema and the actual table is logged as `WARN setup.drift {field, declared, actual}`. Setup never auto-mutates an existing table, no `ALTER TABLE`, no destructive recreates.
+Setup is idempotent. Re-running against a populated database is a safe no-op. Drift between the declared schema and the actual table is logged as `WARN setup.drift {field, declared, actual}`. Setup never auto-mutates an existing table, no `ALTER TABLE`, no destructive recreates. A constraint error on insert is final and is not retried, and a missing table named by a rule's `table` setting is a `config` error. The legacy `schema: 'auto'` also creates the rule tables.
 
 The default 15-column schema mirrors the canonical walkerOS Event v4 layout. Only `name` is `NOT NULL`. See [Event Model](/docs/getting-started/event-model) for the full field reference.
 

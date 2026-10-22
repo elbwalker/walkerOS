@@ -13,15 +13,6 @@ const noop = () => {};
 export const init: Env | undefined = {
   // Environment before initialization (fbq/_fbq absent until setup() runs)
   window: {},
-  document: {
-    createElement: () => ({
-      src: '',
-      async: false,
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
-  },
 };
 
 export const push: Env = {
@@ -43,15 +34,6 @@ export const push: Env = {
       version: '2.0',
     }),
   },
-  document: {
-    createElement: () => ({
-      src: '',
-      async: false,
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
-  },
 };
 
 /**
@@ -61,6 +43,3 @@ export const push: Env = {
 export const simulation = [
   'call:window.fbq', // Track fbq function calls
 ];
-
-// Future: error scenarios (v2)
-// export const error: Env = { ... };

@@ -74,8 +74,6 @@ export interface Mapping {
  * `window._linkedin_partner_id` / `window._linkedin_data_partner_ids` and
  * installs `window.lintrk` in init; tests can pre-seed `window.lintrk` with
  * a spy to skip the script injection path.
- *
- * `document` is also mocked so `addScript()` can run headlessly.
  */
 export interface Env extends DestinationWeb.Env {
   window: {

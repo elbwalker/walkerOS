@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -51,7 +51,7 @@ export const orderCompleteRevenue: OptimizelyStepExample = {
     timestamp: 1700000102,
     data: {
       revenue_cents: 55500,
-      total: 555,
+      value: 555,
       currency: 'EUR',
       item_count: 3,
     },
@@ -60,7 +60,7 @@ export const orderCompleteRevenue: OptimizelyStepExample = {
     name: 'purchase',
     settings: {
       revenue: 'data.revenue_cents',
-      value: 'data.total',
+      value: 'data.value',
       eventTags: {
         map: {
           currency: 'data.currency',
@@ -86,7 +86,8 @@ export const signupWithAttributes: OptimizelyStepExample = {
   title: 'Signup with attributes',
   description:
     'A user signup sets per-event Optimizely attributes via setAttribute before firing the trackEvent.',
-  in: getEvent('user signup', {
+  in: createEvent({
+    name: 'user signup',
     timestamp: 1700000103,
     data: {
       method: 'google',
@@ -117,7 +118,7 @@ export const signupWithAttributes: OptimizelyStepExample = {
  */
 export const wildcardIgnored: OptimizelyStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000104 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000104 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -130,7 +131,8 @@ export const attributesOnlySilent: OptimizelyStepExample = {
   title: 'Attributes only',
   description:
     'A profile update sets Optimizely user attributes without firing a trackEvent for user enrichment.',
-  in: getEvent('profile update', {
+  in: createEvent({
+    name: 'profile update',
     timestamp: 1700000105,
     data: {
       plan: 'premium',
@@ -155,29 +157,88 @@ export const attributesOnlySilent: OptimizelyStepExample = {
 };
 
 /**
- * Consent revoked -- the destination closes the Optimizely client,
- * flushing queued events and stopping datafile polling.
+ * Consent revoked: no vendor call. Optimizely sends only what walkerOS tracks,
+ * which the consent gate stops, so the client keeps running.
  */
 export const consentRevoked: OptimizelyStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent command with analytics denied closes the Optimizely client and flushes queued events.',
+    'A walker consent command with analytics denied makes no Optimizely call: walkerOS stops tracking for the consent-gated destination, and the client stays ready for the next grant.',
   command: 'consent',
   before: { analytics: true },
-  in: { analytics: false } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
-  out: [['optimizely.close']],
+  in: { analytics: false },
+  out: [],
 };
 
 /**
- * Consent granted -- no immediate SDK action needed. The destination
- * re-initializes on the next push (walkerOS queues events until consent
- * is granted, then re-inits). No calls expected.
+ * Consent granted: no SDK call. The client kept running, so the next push
+ * after a grant tracks again.
  */
 export const consentGranted: OptimizelyStepExample = {
   public: false,
+  description:
+    'A walker consent grant makes no Optimizely call: the client kept running, so the next push tracks again.',
   command: 'consent',
-  in: { analytics: true } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
+  in: { analytics: true },
   out: [],
+};
+
+/** A silent rule sends no trackEvent. */
+export const silentRule: OptimizelyStepExample = {
+  public: false,
+  description:
+    'A rule with silent: true sends no trackEvent call; the user context the rule settings run on is still created.',
+  in: getEvent('page view', { timestamp: 1700000106 }),
+  mapping: { silent: true },
+  out: [['optimizely.createInstance.createUserContext', 'us3r', {}]],
+};
+
+/** Page view without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnPageView: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'page view', entity: 'page', action: 'view' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+
+/** Product view without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnProductView: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'product view', entity: 'product', action: 'view' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+
+/** Order complete without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnOrderComplete: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'order complete', entity: 'order', action: 'complete' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+
+/** User signup without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnUserSignup: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'user signup', entity: 'user', action: 'signup' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
+};
+
+/** Profile update without a user: settings.userId resolves to nothing, nothing is sent. */
+export const missingUserOnProfileUpdate: OptimizelyStepExample = {
+  public: false,
+  description:
+    'Without a user id, settings.userId resolves to nothing: no user context can be created, so the push fails with missing-input instead of counting as delivered.',
+  in: { name: 'profile update', entity: 'profile', action: 'update' },
+  out: [],
+  outcome: { status: 'failed', code: 'missing-input' },
 };

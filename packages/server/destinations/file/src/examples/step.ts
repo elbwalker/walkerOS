@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Format } from '../types';
 
 /**
@@ -96,7 +96,8 @@ export const jsonlTenantShardKey: FileStepExample = {
   title: 'Tenant sharding',
   description:
     'The filename is resolved from an event field so events are partitioned into per-tenant JSONL files.',
-  in: getEvent('custom event', {
+  in: createEvent({
+    name: 'custom event',
     timestamp: 1700000000000,
     data: { tenant: 'acme' },
   }),
@@ -155,4 +156,14 @@ export const csvObjectCell: FileStepExample = {
       '1700000000000,page view,"{""title"":""Hello, \\""World\\"""",""count"":3}"\n',
     ],
   ],
+};
+
+/** A silent rule writes no line. */
+export const silentRule: FileStepExample = {
+  public: false,
+  description: 'A rule with silent: true writes no line.',
+  in: getEvent('page view', { timestamp: 1700000000000 }),
+  settings: { filename: 'events.jsonl' },
+  mapping: { silent: true },
+  out: [],
 };

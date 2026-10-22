@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -93,7 +93,8 @@ export const perEventIdentify: MixpanelStepExample = {
   title: 'Per-event identify',
   description:
     'A mapping-level identify overrides the destination default to resolve the distinct_id from event data.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000102,
     data: {
       user_id: 'resolved-id',
@@ -170,7 +171,8 @@ export const userLoginPeopleSet: MixpanelStepExample = {
   title: 'User login people',
   description:
     'A user login fires Mixpanel people.set, set_once, and increment operations without sending a track event.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000104,
     data: {
       user_id: 'new-user-123',
@@ -230,7 +232,8 @@ export const allPeopleOperations: MixpanelStepExample = {
   title: 'Common people operations',
   description:
     'A profile update exercises the common Mixpanel people vocabulary: set, set_once, increment, append, union, remove, and unset. delete_user is not covered by this example.',
-  in: getEvent('profile update', {
+  in: createEvent({
+    name: 'profile update',
     timestamp: 1700000105,
     data: {
       name: 'Jane Doe',
@@ -304,7 +307,8 @@ export const companyGroupProfile: MixpanelStepExample = {
   title: 'Group profile',
   description:
     'A company update sets Mixpanel group profile properties via groups.set and groups.set_once.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000106,
     data: {
       company_id: 'acme-inc',
@@ -358,7 +362,7 @@ export const historicalImport: MixpanelStepExample = {
   in: getEvent('order complete', {
     timestamp: 1700000107,
     data: {
-      total: 99.99,
+      value: 99.99,
     },
   }),
   settings: {
@@ -379,7 +383,8 @@ export const aliasBeforeTrack: MixpanelStepExample = {
   title: 'Alias before track',
   description:
     'A user login merges a prior anonymous id into the new user id via mp.alias before sending the track event.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000108,
     data: {
       user_id: 'new-user-456',
@@ -407,7 +412,53 @@ export const aliasBeforeTrack: MixpanelStepExample = {
  */
 export const wildcardIgnored: MixpanelStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000109 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000109 }),
   mapping: { ignore: true },
   out: [],
 };
+
+/** A silent rule sends nothing to Mixpanel. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends nothing to Mixpanel.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The event of a people or group profile example without the data its rule
+ * reads: no distinct id and no group key resolve, so there is nothing to
+ * address. A rule that only addresses profiles has nothing else to send, so
+ * it returns normally; that is a declared skip, not a failure.
+ */
+function skipWithoutInput(
+  target: MixpanelStepExample,
+  name: string,
+  timestamp: number,
+): MixpanelStepExample {
+  const [entity, action] = name.split(' ');
+  return {
+    public: false,
+    description: `A ${name} event without the data its rule reads has no profile or group to address: nothing is sent, and that is not a failure.`,
+    in: { name, entity, action, timestamp },
+    mapping: target.mapping,
+    out: [],
+  };
+}
+
+export const userLoginPeopleSetSkip = skipWithoutInput(
+  userLoginPeopleSet,
+  'user login',
+  1700000991000,
+);
+export const allPeopleOperationsSkip = skipWithoutInput(
+  allPeopleOperations,
+  'profile update',
+  1700000992000,
+);
+export const companyGroupProfileSkip = skipWithoutInput(
+  companyGroupProfile,
+  'company update',
+  1700000993000,
+);

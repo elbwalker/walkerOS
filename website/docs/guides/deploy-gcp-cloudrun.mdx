@@ -182,6 +182,22 @@ bq query --use_legacy_sql=false \
   "SELECT name, data, timestamp FROM walkerOS.events WHERE DATE(timestamp) = CURRENT_DATE() ORDER BY timestamp DESC LIMIT 5"
 ```
 
+### Read the Logs
+
+Cloud Run reads JSON lines from stdout and stderr as structured logs, with
+`severity` and `message`. Ask the flow for them with `format: "json"` in its
+collector block, then bundle and deploy again:
+
+```json
+"collector": {
+  "logger": { "level": "INFO", "format": "json" }
+}
+```
+
+A destination that fails to deliver shows up as one `ERROR` entry per cause and
+minute, with the destination id, the cause `code` and the HTTP `status` in the
+`context`. See [Logger](/docs/collector/logger#failure-codes) for the codes.
+
 ## Next Steps
 
 - <Link to="/docs/mapping">Configure event mapping</Link> to transform events before sending to BigQuery

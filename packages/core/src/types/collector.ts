@@ -11,8 +11,9 @@ import type {
   Mapping,
 } from '.';
 import type { Ingest } from './ingest';
-import type { Observe } from '../observeConnect';
+import type { ObserveServer, ObserveSlot, ObserveWeb } from '../observeConnect';
 import type { ObserverFn } from './observer';
+import type { CauseLog } from '../causeLog';
 
 /** Identifies which kind of step a stepId belongs to. */
 export type StepKind =
@@ -97,6 +98,14 @@ export interface Config {
    * destination backfill. Overflow drops oldest (FIFO). Default 1000.
    */
   queueMax?: number;
+  /**
+   * What a destination does with an event whose required consent is not
+   * granted: `'queue'` (default) keeps it in the destination's `queuePush`
+   * until consent is granted; `'skip'` skips it (counted in
+   * `status.destinations[id].skipped`, a DEBUG line), for a server collector
+   * that never receives a later grant for an event's own consent.
+   */
+  consentDenied?: 'queue' | 'skip';
   /** Flow name; keys this flow's entry in event.source.release and the observer flowId. */
   name?: string;
   /** Config release id stamped into event.source.release for this flow. */
@@ -136,11 +145,12 @@ export interface InitConfig extends Partial<Config> {
   /**
    * Observation session connect config, wired by `startFlow` before the run
    * command. The server form attaches a telemetry poster directly from its
-   * config trio; the web form attaches only when an `elbObserve` credential
-   * is present (URL param or storage slot) and its binding matches. Purely
-   * advisory: nothing on this path can affect event processing.
+   * config trio; the web form reads its credential through `slot`
+   * (`pageObserveSlot()` from `@walkeros/web-core`) and attaches only when
+   * one is present and its binding matches. Purely advisory: nothing on this
+   * path can affect event processing.
    */
-  observe?: Observe;
+  observe?: (ObserveWeb & { slot: ObserveSlot }) | ObserveServer;
   /**
    * Caller-supplied observers, added verbatim to `collector.observers` by
    * `startFlow`. Escape hatch for custom emit targets; same advisory
@@ -255,6 +265,11 @@ export interface SourceStatus {
 export interface DestinationStatus {
   count: number;
   failed: number;
+  /**
+   * Events deliberately not sent: a consent-denied event under
+   * `consentDenied: 'skip'`, or an event a mapping rule `ignore`s.
+   */
+  skipped?: number;
   lastAt?: number;
   duration: number;
   /** Current size of the destination's queuePush buffer (point-in-time). */
@@ -293,11 +308,13 @@ export type CommandType =
   | 'context'
   | 'destination'
   | 'elb'
+  | 'flush'
   | 'globals'
   | 'hook'
   | 'init'
   | 'link'
   | 'run'
+  | 'shutdown'
   | 'user'
   | 'walker'
   | string;
@@ -409,6 +426,12 @@ export interface Instance {
    */
   observeLevel?: () => 'off' | 'standard' | 'trace';
   logger: Logger.Instance;
+  /**
+   * The collector's one cause log: every failure line goes through it, one
+   * line per (step, cause code, status) per minute. Set by `startFlow`;
+   * optional only so hand-built test collectors keep compiling.
+   */
+  causeLog?: CauseLog;
   on: On.OnConfig;
   queue: WalkerOS.Events;
   /**

@@ -28,7 +28,7 @@ const FLAGS: BuildFlag[] = [
 /** Strings only the code behind each flag carries. */
 const MARKERS: Record<BuildFlag, string[]> = {
   __WALKEROS_OBSERVE__: [
-    'elbObserve',
+    'credential binding mismatch',
     '/ingest/',
     'X-Walkeros-Binding',
     'new Proxy',

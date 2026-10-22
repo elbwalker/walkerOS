@@ -37,8 +37,8 @@ export type LogFn = (
 ) => void;
 
 /**
- * Throw function signature - logs error then throws
- * Returns never as it always throws
+ * Throw function signature: throws an Error with the message, never logs
+ * (the catching collector logs the failure once). Returns never.
  */
 export type ThrowFn = (message: string | Error, context?: unknown) => never;
 
@@ -90,8 +90,8 @@ export interface Instance {
   debug: LogFn;
 
   /**
-   * Log an error message and throw an Error
-   * Combines logging and throwing in one call
+   * Throw an Error with the message. Does not log: the collector's catch
+   * writes the one line for the failure.
    */
   throw: ThrowFn;
 
@@ -109,6 +109,13 @@ export interface Instance {
 }
 
 /**
+ * Output format of a server terminal logger: one text line per call, or one
+ * JSON object per line (`severity`, `message`, `scope`, `context`, `time`),
+ * which Cloud Run, Loki and Datadog read as structured entries.
+ */
+export type Format = 'text' | 'json';
+
+/**
  * Logger configuration options
  */
 export interface Config {
@@ -117,6 +124,14 @@ export interface Config {
    * @default Level.ERROR
    */
   level?: Level | keyof typeof Level;
+
+  /**
+   * Output format of a server flow's log lines (`@walkeros/core/node`'s
+   * terminal logger, used by `runneros`). Web flows log to the browser
+   * console and reject it.
+   * @default 'text'
+   */
+  format?: Format;
 
   /**
    * Custom log handler function

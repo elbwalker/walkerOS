@@ -84,7 +84,7 @@ function Order({ orderId }: OrderProps) {
           <div>
             <p className="text-gray-600">Total</p>
             <p
-              {...tagger('order').data('total', orderDetails.total).get()}
+              {...tagger('order').data('value', orderDetails.total).get()}
               className="font-semibold"
             >
               €{orderDetails.total.toFixed(2)}

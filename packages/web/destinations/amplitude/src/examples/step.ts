@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -35,7 +35,7 @@ export const defaultEventForwarding: AmplitudeStepExample = {
  */
 export const wildcardIgnored: AmplitudeStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -136,7 +136,8 @@ export const userLoginIdentify: AmplitudeStepExample = {
   title: 'User login identify',
   description:
     'A user login sets the Amplitude userId and runs identify with set, setOnce, and add operations.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000105000,
     data: {
       user_id: 'new-user-123',
@@ -202,7 +203,7 @@ export const userLogoutReset: AmplitudeStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls amplitude.reset to clear the userId and regenerate the deviceId.',
-  in: getEvent('user logout', { timestamp: 1700000106 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000106 }),
   mapping: {
     silent: true,
     settings: {
@@ -223,7 +224,8 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
   title: 'Subscription revenue',
   description:
     'A subscription renewal fires a single amplitude.revenue call with productId, price, and currency fallback.',
-  in: getEvent('subscription renew', {
+  in: createEvent({
+    name: 'subscription renew',
     timestamp: 1700000107,
     data: {
       plan_id: 'plan-pro',
@@ -326,7 +328,7 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
         data_currency: 'EUR',
         data_shipping: 5.22,
         data_taxes: 73.76,
-        data_total: 555,
+        data_value: 555,
         globals_pagegroup: 'shop',
       },
     ],
@@ -341,7 +343,8 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
   title: 'Group assignment',
   description:
     'A company update assigns the user to a group and sets group properties via setGroup and groupIdentify.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000109,
     data: {
       company: 'Acme',
@@ -431,4 +434,27 @@ export const consentGrantOptIn: AmplitudeStepExample = {
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
   out: [['amplitude.setOptOut', false]],
+};
+
+/** A silent rule without settings of its own calls nothing. */
+export const silentRule: AmplitudeStepExample = {
+  public: false,
+  description: 'A rule with silent: true and no settings calls nothing.',
+  in: getEvent('page view', { timestamp: 1700000120 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group rule of groupAssignmentWithProperties on an update
+ * without data: no group resolves, so nothing is sent. A declared skip: an
+ * unmet mapping, not a failure.
+ */
+export const groupAssignmentWithoutData: AmplitudeStepExample = {
+  public: false,
+  description:
+    'A silent rule whose group mapping finds no company sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'company update', entity: 'company', action: 'update' },
+  mapping: groupAssignmentWithProperties.mapping,
+  out: [],
 };

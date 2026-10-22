@@ -4,6 +4,7 @@ import type {
   CustomerIoTrackClientMock,
   CustomerIoApiClientMock,
 } from './types';
+import { StepError } from '@walkeros/core';
 import { getConfig } from './config';
 import { push } from './push';
 
@@ -15,9 +16,9 @@ export const destinationCustomerIo: Destination = {
 
   config: {},
 
-  init({ config: partialConfig, logger, env }) {
-    const config = getConfig(partialConfig, logger);
-    const settings = config.settings as Settings;
+  init({ config: partialConfig, env }) {
+    const config = getConfig(partialConfig);
+    const settings = config.settings!;
 
     // Use env mocks if provided (testing), otherwise create real SDK clients
     const envTyped = env as
@@ -40,7 +41,10 @@ export const destinationCustomerIo: Destination = {
         });
         settings._trackClient = trackClient as CustomerIoTrackClientMock;
       } catch (err) {
-        logger.throw(`Failed to initialize Customer.io TrackClient: ${err}`);
+        throw new StepError('Failed to initialize Customer.io TrackClient', {
+          code: 'config',
+          cause: err,
+        });
       }
     }
 
@@ -56,7 +60,10 @@ export const destinationCustomerIo: Destination = {
         });
         settings._apiClient = apiClient as CustomerIoApiClientMock;
       } catch (err) {
-        logger.throw(`Failed to initialize Customer.io APIClient: ${err}`);
+        throw new StepError('Failed to initialize Customer.io APIClient', {
+          code: 'config',
+          cause: err,
+        });
       }
     }
 
@@ -70,10 +77,12 @@ export const destinationCustomerIo: Destination = {
   },
 
   async destroy({ config }) {
-    const settings = (config?.settings || {}) as Settings;
+    const settings = config?.settings;
     // TrackClient has no flush -- just clear references
-    settings._trackClient = undefined;
-    settings._apiClient = undefined;
+    if (settings) {
+      settings._trackClient = undefined;
+      settings._apiClient = undefined;
+    }
   },
 };
 

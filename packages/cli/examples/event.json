@@ -2,7 +2,7 @@
   "name": "order complete",
   "data": {
     "id": "ORD-2024-12345",
-    "total": 299.99,
+    "value": 299.99,
     "currency": "USD",
     "tax": 24.99,
     "shipping": 15.0

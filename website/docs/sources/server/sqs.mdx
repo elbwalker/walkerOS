@@ -113,7 +113,7 @@ The provisioning identity needs `sqs:CreateQueue`, `sqs:GetQueueAttributes`, `sq
 | `text`           | The raw `body` string is forwarded as-is.               |
 | `raw`            | The body is wrapped in `{ data: { payload: body } }`.   |
 
-A decoder that throws on malformed payloads triggers `onPushError`: `nack` lets visibility expire (SQS redelivers; eventually the DLQ if wired), `ack` deletes the message with a debug log.
+A decoder that throws on malformed payloads, or a push that throws, triggers `onPushError`: `nack` lets visibility expire (SQS redelivers; eventually the DLQ if wired), `ack` deletes the message with a debug log. A push that fails for a retryable reason (a timeout, an unavailable vendor) takes the same path. A failure a redelivery cannot fix (a missing setting, a `4xx` from the vendor, a destination that is not ready) and invalid input are acknowledged and the message is deleted: the failure is in the destination's dead-letter queue and in one ERROR line from the collector, and invalid input is counted as `rejected`.
 
 ## Backpressure
 

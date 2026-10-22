@@ -9,8 +9,6 @@
  * - Every simulation runs destinations on their packages' mock envs
  *   (Pub/Sub, BigQuery, Data Manager). The customers store is an fs store
  *   over the committed demo data (CUSTOMERS_DIR).
- * - Examples a simulation cannot reproduce yet are listed in WAITING with the
- *   reason; each shows up as a todo, never as a silent skip.
  */
 
 import fs from 'fs-extra';
@@ -105,13 +103,7 @@ const INGEST: Record<string, Record<string, unknown>> = {
   'server.destinations.meta.purchase': CHROME,
   'server.destinations.piwikpro.orderWithGoal': CHROME,
   'server.destinations.datamanager.conversionWithGclid': CHROME,
-};
-
-const OWNER = 'docs/plans/2026-09-24-step-examples-real.md';
-
-/** Examples no simulation can reproduce yet, with the reason and owner. */
-const WAITING: Record<string, string> = {
-  'server.transformers.file.walkerJs': `simulate transformer does not capture respond; the HTTP test below serves /walker.js (${OWNER})`,
+  'server.destinations.pubsub.everyEvent': CHROME,
 };
 
 /**
@@ -400,15 +392,8 @@ describe('flow-complete.json', () => {
   };
 
   const cases = collectCases(validateFlowConfig(fs.readJSONSync(configPath)));
-  const runnable = cases.filter((c) => !(c.id in WAITING));
-  const waiting = cases.filter((c) => c.id in WAITING);
 
-  it('lists only existing examples as waiting', () => {
-    const ids = new Set(cases.map((c) => c.id));
-    expect(Object.keys(WAITING).filter((id) => !ids.has(id))).toEqual([]);
-  });
-
-  it.each(runnable.map((c) => [c.id, c] as const))(
+  it.each(cases.map((c) => [c.id, c] as const))(
     'step example %s simulates to its out',
     async (id, c) => {
       const bundlePath = await bundleFor(c);
@@ -513,14 +498,6 @@ describe('flow-complete.json', () => {
     }
   }, 60000);
 
-  it.each(waiting.map((c) => [c.id, WAITING[c.id]] as const))(
-    'step example %s waits: %s',
-    (id) => {
-      const c = cases.find((item) => item.id === id);
-      expect(c?.example.out).toBeUndefined();
-    },
-  );
-
   describe('server flow over HTTP', () => {
     const headers = {
       'content-type': 'application/json',
@@ -547,7 +524,7 @@ describe('flow-complete.json', () => {
       name: 'order complete',
       entity: 'order',
       action: 'complete',
-      data: { id: orderId, total: 129.9, currency: 'EUR' },
+      data: { id: orderId, value: 129.9, currency: 'EUR' },
       nested: [
         {
           entity: 'product',
@@ -797,7 +774,7 @@ describe('flow-complete.json', () => {
             name: 'order complete',
             entity: 'order',
             action: 'complete',
-            data: { id: 'ORD-9', total: 129.9, currency: 'EUR' },
+            data: { id: 'ORD-9', value: 129.9, currency: 'EUR' },
             nested: [
               {
                 entity: 'product',

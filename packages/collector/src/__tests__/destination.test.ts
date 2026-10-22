@@ -127,13 +127,14 @@ describe('Destination', () => {
   });
 
   test('failing init', async () => {
-    // Simulate a failed init
+    // Simulate a failed init: a returned false is not-ready, a failure.
     mockInit.mockImplementation(() => false);
 
-    await pushToDestinations(createWalkerjs(), event);
+    const result = await pushToDestinations(createWalkerjs(), event);
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(0);
     expect(destination.config.init).toBeFalsy();
+    expect(result.failed?.foo.reason?.code).toBe('not-ready');
   });
 
   test('logs an ERROR and counts when destination init throws', async () => {
@@ -153,12 +154,11 @@ describe('Destination', () => {
 
     // The collector must surface the failure at ERROR on the scoped logger
     // AND increment status.failed (Category A - internal pipeline failure).
-    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
-    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
-      .value;
-    expect(scopedLogger.error).toHaveBeenCalledWith(
+    // One cause line for the failure (no cause log on this hand-built
+    // collector: written through its logger, filtered).
+    expect(collector.logger.error).toHaveBeenCalledWith(
       'destination init failed',
-      expect.objectContaining({ error: 'boom' }),
+      expect.objectContaining({ step: 'destination.foo', error: 'boom' }),
     );
     expect(collector.status.failed).toBe(1);
   });
@@ -178,17 +178,16 @@ describe('Destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(0);
 
-    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
-    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
-      .value;
-    expect(scopedLogger.error).toHaveBeenCalledWith(
+    // One cause line for the failure (no cause log on this hand-built
+    // collector: written through its logger, filtered).
+    expect(collector.logger.error).toHaveBeenCalledWith(
       'destination init failed',
-      expect.objectContaining({ error: 'boom' }),
+      expect.objectContaining({ step: 'destination.foo', error: 'boom' }),
     );
     expect(collector.status.failed).toBe(1);
   });
 
-  test('logs an ERROR and counts when queueOn-only init throws', async () => {
+  test('logs an ERROR when queueOn-only init throws', async () => {
     // Mirrors the init-throw test above but exercises the alternate code path
     // at destination.ts:190 (no push events, only queueOn events). That branch
     // previously used tryCatchAsync(destinationInit) without an onError, which
@@ -209,17 +208,17 @@ describe('Destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(0);
 
-    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
-    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
-      .value;
-    expect(scopedLogger.error).toHaveBeenCalledWith(
+    // One cause line for the failure (no cause log on this hand-built
+    // collector: written through its logger, filtered). No event was lost,
+    // so nothing counts as failed.
+    expect(collector.logger.error).toHaveBeenCalledWith(
       'destination init failed',
-      expect.objectContaining({ error: 'boom' }),
+      expect.objectContaining({ step: 'destination.foo', error: 'boom' }),
     );
-    expect(collector.status.failed).toBe(1);
+    expect(collector.status.failed).toBe(0);
   });
 
-  test('logs an ERROR and counts when queueOn-only init rejects', async () => {
+  test('logs an ERROR when queueOn-only init rejects', async () => {
     // Async-rejection variant of the queueOn-only init throw test. Guards
     // against future refactors that drop the await on the queueOn-only branch.
     mockInit.mockRejectedValue(new Error('boom'));
@@ -233,14 +232,14 @@ describe('Destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(0);
 
-    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
-    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
-      .value;
-    expect(scopedLogger.error).toHaveBeenCalledWith(
+    // One cause line for the failure (no cause log on this hand-built
+    // collector: written through its logger, filtered). No event was lost,
+    // so nothing counts as failed.
+    expect(collector.logger.error).toHaveBeenCalledWith(
       'destination init failed',
-      expect.objectContaining({ error: 'boom' }),
+      expect.objectContaining({ step: 'destination.foo', error: 'boom' }),
     );
-    expect(collector.status.failed).toBe(1);
+    expect(collector.status.failed).toBe(0);
   });
 
   test('logs init lifecycle', async () => {
@@ -327,11 +326,16 @@ describe('Destination', () => {
       { destination: createDestination() },
     );
 
-    const call = (scoped.error as jest.Mock).mock.calls.find(
+    const call = (rootLogger.error as jest.Mock).mock.calls.find(
       (args) => args[0] === 'Push failed',
     );
-    expect(call).toBeDefined();
-    expect(call?.[1]).toEqual({ error: 'kaputt', event: event.name });
+    expect(call?.[1]).toEqual({
+      step: 'destination.destination',
+      code: 'transport',
+      retryable: true,
+      error: 'kaputt',
+      event: event.name,
+    });
     // A raw Error has no enumerable own properties: serialized it collapses
     // to `"error":{}` and the cause is gone.
     expect(JSON.stringify(call?.[1])).toContain('kaputt');
@@ -381,7 +385,7 @@ describe('Destination', () => {
     deniedEvent.name = 'denied action';
     deniedEvent.entity = 'denied';
     deniedEvent.action = 'action';
-    destinationWithConsent.queuePush = [deniedEvent];
+    destinationWithConsent.queuePush = [{ event: deniedEvent }];
 
     // Push a new event that carries individual marketing consent.
     // New events are cloned (not consent-overwritten), so this one
@@ -396,7 +400,9 @@ describe('Destination', () => {
 
     // The denied (queued) event should still be in the queue
     expect(destinationWithConsent.queuePush).toHaveLength(1);
-    expect(destinationWithConsent.queuePush[0].name).toBe('denied action');
+    expect(destinationWithConsent.queuePush?.[0].event.name).toBe(
+      'denied action',
+    );
   });
 
   describe('destination on method', () => {
@@ -942,7 +948,7 @@ describe('Destination', () => {
       // queue (queuePush on the live instance), proving gate-not-drop.
       const live = collector.destinations.d;
       expect(live.queuePush).toHaveLength(1);
-      expect(live.queuePush?.[0].name).toBe('page view');
+      expect(live.queuePush?.[0].event.name).toBe('page view');
 
       // Grant consent: the gated event must replay through the batch buffer.
       await elb('walker consent', { marketing: true });

@@ -193,13 +193,18 @@ push.
 
 | Status | Meaning |
 |--------|---------|
-| 200 | Accepted (respond-first mode: accepted for processing, not proof of delivery) or, in synchronous mode, processed |
+| 200 | Accepted (respond-first mode: accepted for processing, not proof of delivery) or, in synchronous mode, processed, or failed for a reason a resend cannot fix (see below) |
 | 400 | Rejected client input: an unparseable `application/json` body (body echoes the parser message), a batch larger than `maxBatchSize` (default 100), or, on synchronous POST, a single event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
 | 404 | Path, or method on that path, not configured in `paths` (JSON body `{ "success": false, "error": "Not found" }`) |
 | 405 | `HEAD` request on a path that serves `GET` (no body) |
 | 413 | Body exceeds the 1mb limit |
 | 415 | Unsupported charset |
-| 500 | On synchronous POST: the pipeline failed to process a valid event. Otherwise: unexpected server fault |
+| 500 | On synchronous POST: the pipeline failed to process a valid event for a reason a resend could fix; the body is `Event was not processed`. Otherwise: unexpected server fault (`Internal server error`) |
+| 207 | On synchronous batch POST: some events failed and a resend could fix it; the body lists the failed indices |
+
+A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
+
+In respond-first mode a request whose event later fails is already answered; the source writes a DEBUG line and the collector's ERROR line is the signal.
 
 GET pixel requests answer 200 with the GIF in every mode, unless a step
 responded first, because an image endpoint cannot carry a useful 400. Rejected pixel input is visible through the

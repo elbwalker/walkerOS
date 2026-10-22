@@ -17,7 +17,6 @@ describe('Step Examples', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: {
         num_events_received: 1,
         num_events_processed: 1,
@@ -26,7 +25,12 @@ describe('Step Examples', () => {
     });
   });
 
-  it.each(Object.entries(examples.step))('%s', async (_name, example) => {
+  // Non-public examples (silent, failures) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each(published)('%s', async (_name, example) => {
     const event = example.in as WalkerOS.Event;
     const mapping = example.mapping;
 

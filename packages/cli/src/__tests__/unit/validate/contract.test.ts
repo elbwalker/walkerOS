@@ -5,8 +5,12 @@ describe('validateContract', () => {
   it('should validate a valid named contract', () => {
     const result = validateContract({
       default: {
-        globals: { required: ['country'] },
-        consent: { required: ['analytics'] },
+        schema: {
+          properties: {
+            globals: { required: ['country'] },
+            consent: { required: ['analytics'] },
+          },
+        },
       },
       web: {
         extend: 'default',
@@ -60,13 +64,26 @@ describe('validateContract', () => {
     expect(result.errors[0].code).toBe('CIRCULAR_EXTENDS');
   });
 
-  it('should report error for invalid section type', () => {
-    const result = validateContract({
-      web: { globals: 'not an object' },
-    });
-    expect(result.valid).toBe(false);
-    expect(result.errors[0].code).toBe('INVALID_SECTION');
-  });
+  it.each(['globals', 'context', 'custom', 'user', 'consent'])(
+    'E9: rejects the %s section, which nothing enforces, and points to schema',
+    (section) => {
+      const result = validateContract({
+        web: {
+          description: 'shop',
+          [section]: { type: 'object', required: ['x'] },
+          events: { product: { view: {} } },
+        },
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toEqual([
+        {
+          path: `web.${section}`,
+          message: `Contract section "${section}" is not enforced: the validate transformer reads only "events" and "schema". Put the rule into "schema" (a JSON Schema for the whole event), for example "schema": { "properties": { "${section}": { ... } } }.`,
+          code: 'UNKNOWN_CONTRACT_KEY',
+        },
+      ]);
+    },
+  );
 
   it('should validate events entity-action structure', () => {
     const result = validateContract({
@@ -82,13 +99,16 @@ describe('validateContract', () => {
     expect(result.errors[0].code).toBe('INVALID_ACTION_KEY');
   });
 
-  it('should accept contract with only consent', () => {
+  it('rejects a contract with only a consent section (not a flat map)', () => {
     const result = validateContract({
       consent_only: {
         consent: { required: ['analytics'] },
       },
     });
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.errors.map((e) => [e.code, e.path])).toEqual([
+      ['UNKNOWN_CONTRACT_KEY', 'consent_only.consent'],
+    ]);
   });
 
   it('should accept empty contract', () => {
@@ -136,9 +156,12 @@ describe('validateContract', () => {
 
   it('should validate deep extend chain', () => {
     const result = validateContract({
-      default: { consent: { required: ['analytics'] } },
+      default: { schema: { properties: { consent: { required: ['x'] } } } },
       web: { extend: 'default', events: { product: { view: {} } } },
-      web_loggedin: { extend: 'web', user: { required: ['id'] } },
+      web_loggedin: {
+        extend: 'web',
+        schema: { properties: { user: { required: ['id'] } } },
+      },
     });
     expect(result.valid).toBe(true);
     expect(result.details.contractCount).toBe(3);
@@ -191,19 +214,19 @@ describe('validateContract canonical shape enforcement', () => {
     expect(result.errors).toEqual([]);
   });
 
-  it('warns on unknown keys next to known ones', () => {
+  it('rejects unknown keys next to known ones', () => {
     const result = validateContract({
       web: { events: {}, unexpected: 'value' },
     });
-    expect(result.valid).toBe(true);
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'UNKNOWN_CONTRACT_KEY',
-          path: 'web.unexpected',
-        }),
-      ]),
-    );
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual([
+      {
+        code: 'UNKNOWN_CONTRACT_KEY',
+        path: 'web.unexpected',
+        message:
+          'Unknown contract key "unexpected" is not supported. Known keys: extend, tagging, description, events, schema.',
+      },
+    ]);
   });
 
   it('rejects non-number tagging and non-object schema', () => {

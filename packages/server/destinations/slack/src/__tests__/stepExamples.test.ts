@@ -49,7 +49,7 @@ function spyEnv(): { env: Env; collected: () => Captured[] } {
 
   const sendServer = ((...args: unknown[]) => {
     calls.push(['sendServer', ...args] as Captured);
-    return Promise.resolve({ ok: true });
+    return Promise.resolve({});
   }) as Env['sendServer'];
 
   return {
@@ -59,7 +59,12 @@ function spyEnv(): { env: Env; collected: () => Captured[] } {
 }
 
 describe('slack server destination -- step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
+  // Non-public examples (silent, failures) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each(published)('%s', async (_name, rawExample) => {
     const example = rawExample as {
       in?: unknown;
       mapping?: unknown;

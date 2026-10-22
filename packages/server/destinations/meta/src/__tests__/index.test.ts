@@ -7,6 +7,7 @@ import {
   createIngest,
   createMockContext,
   createMockLogger,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -29,7 +30,6 @@ describe('Server Destination Meta', () => {
 
     // Reset mockSendServer to default successful response
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: {
         events_received: 1,
         messages: [],
@@ -65,7 +65,7 @@ describe('Server Destination Meta', () => {
         logger: createMockLogger(),
         id: 'test-meta',
       }),
-    ).rejects.toThrow('Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken, pixelId missing');
     await expect(
       destination.init({
         config: { settings: { accessToken, pixelId: '' } },
@@ -159,6 +159,7 @@ describe('Server Destination Meta', () => {
       settings: { accessToken, pixelId, user_data: { em: 'user.email' } },
     };
     const { collector } = await startFlow();
+    const report = jest.spyOn(collector.causeLog!, 'report');
     const rule: Rule = {
       data: {
         map: {
@@ -182,14 +183,14 @@ describe('Server Destination Meta', () => {
       }),
     );
 
-    expect(logger.warn).toHaveBeenCalledTimes(1);
-    expect(logger.warn).toHaveBeenCalledWith(
+    expect(report).toHaveBeenCalledTimes(1);
+    expect(report).toHaveBeenCalledWith(
+      { step: 'destination.test-meta', code: 'mapping' },
       expect.stringContaining('dropped'),
-      {
-        keys: ['email'],
-      },
+      { event: 'entity action', keys: ['email'] },
+      'warn',
     );
-    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain(
+    expect(JSON.stringify(report.mock.calls)).not.toContain(
       'private@example.com',
     );
 
@@ -289,7 +290,7 @@ describe('Server Destination Meta', () => {
 
   test('environment customization', async () => {
     const customSendServer = jest.fn();
-    customSendServer.mockResolvedValue({ ok: true, data: {} });
+    customSendServer.mockResolvedValue({ data: {} });
 
     const customEnv = { sendServer: customSendServer };
     const event = getEvent();
@@ -311,18 +312,9 @@ describe('Server Destination Meta', () => {
   });
 
   test('error', async () => {
-    mockSendServer.mockResolvedValue({
-      ok: false,
-      data: {
-        error: {
-          message: 'Invalid',
-          type: 'OAuthException',
-          code: 190,
-          fbtrace_id: 'abc',
-        },
-      },
-      error: '400 Bad Request',
-    });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 400', { code: 'transport', status: 400 }),
+    );
     const mockCollector = {} as Collector.Instance;
     const event = getEvent();
     const config: Config = {

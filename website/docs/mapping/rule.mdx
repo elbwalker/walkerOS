@@ -40,26 +40,21 @@ that take values) accepts any form documented in
 When an event reaches a destination, the collector picks one rule from
 `mapping[entity][action]`, where entity and action are the two words of the
 event name. An array means "try each in order, first matching rule wins". A
-`'*'` key on the entity or the action level is a wildcard. The lookup runs in
-this order:
+`'*'` key on the entity or the action level is a wildcard. The lookup tries
+four tiers, most specific first:
 
-1. If the mapping has a key for the event's entity, only that entity is
-   searched: the rules under the exact action when that action has a key,
-   otherwise the rules under the entity's `'*'` action.
-2. If the mapping has no key for the entity, the `'*'` entity is searched the
-   same way: the rules under the exact action when that action has a key,
-   otherwise the rules under `'*'`.
-3. If no rule was found (no key matched, or no condition passed), the `'*'` →
-   `'*'` rule is tried.
+1. `entity action`, the exact key.
+2. `entity *`, the entity's own wildcard action.
+3. `* action`, a wildcard entity with the exact action.
+4. `* *`, the global wildcard.
 
-So a `'*'` → `click` rule is used only for entities that have no key of their
-own: with `product: { view: ... }` in the mapping, a `product click` skips it
-and falls through to `'*'` → `'*'`. And when every rule under an exact action
-fails its condition, the lookup goes straight to `'*'` → `'*'` and skips the
-entity's own `'*'` rule.
+The first tier that has a rule whose `condition` passes wins. A tier that has
+rules but whose conditions all fail falls through to the next tier, so a
+`product *` rule is still used when every `product view` rule fails its
+condition.
 
-In this example the entity's own key wins: `product *` is used and `* click`
-is never consulted.
+In this example `product click` has no exact rule, so the second tier wins:
+`product *` is used and `* click` is never consulted.
 
 <LiveCode
   language="typescript"
@@ -110,7 +105,10 @@ Mapping wildcards are **first-match**: the lookup above picks one rule and no ot
 A rule's `condition` is checked while matching: the first rule whose
 `condition` passes is used; if none passes, the `*` → `*` rule applies, if there
 is one. A condition may be async: conditions are awaited one by one, in rule
-order. A condition that throws is logged and counts as no match. Once a rule matches, the collector runs `policy` (event-level), resolves
+order. A condition that throws fails the event: it is not treated as no match,
+because falling through could send an event the rule meant to stop. The push
+answers `ok: false` with the reason `mapping`, and the collector logs one ERROR
+line. Once a rule matches, the collector runs `policy` (event-level), resolves
 `data`, then hands the result to the destination's `push` (or buffers it when
 `batch` is set and the destination batches). A rule-level `consent` is not
 checked: gate a destination with `config.consent`, or a single value with a
@@ -191,16 +189,19 @@ Two flags control destination behaviour and they are not interchangeable:
   called, so nothing is sent and the rule's `name` and `data` are not applied.
   What runs before the rule is applied still runs: the destination's `init` on
   its first event, its `before` chain, the destination-level `policy` and
-  `data`, and the rule's `policy`. Use for suppression. The push result
-  still lists the destination under `done`, and its status counts the event.
+  `data`, and the rule's `policy`. Use for suppression. An ignored event is a
+  deliberate skip, not a delivery: the push result lists the destination
+  neither under `done` nor under `failed`, `status.out` and the destination's
+  `count` do not move, and `status.destinations.<id>.skipped` counts the event.
+  The collector writes a DEBUG line, and Observe shows a skip with the reason
+  `ignored`.
 - `silent: true`: the rule matched and the destination's `push()` **is** called
-  with the rule. On a destination that reads `silent`, `settings.identify`,
+  with the rule. Every destination honours `silent`: `settings.identify`,
   `settings.revenue`, `settings.group`, and other side effects still run and
   only the default forwarding call (e.g. `track()`, `capture()`, `event()`) is
   suppressed. Use for "identify without an event" style flows. A destination
-  that does not read `silent`, such as gtag, Meta or the API destinations,
-  sends the event as usual; the destination's page says whether it supports
-  it.
+  has no side effect to run for a rule that maps none, so the rule then sends
+  nothing and is not a failure.
 
 If both are set on the same rule, `ignore` wins.
 
@@ -242,7 +243,7 @@ await getMappingEvent(
 }
 ```
 
-On a destination that reads `silent`, such as Amplitude, the example runs the
+On a destination such as Amplitude, the example runs the
 `identify()` side effect on `user login` events but skips the default
 forwarding call.
 
@@ -301,7 +302,11 @@ await getMappingValue(event, 'data.id', { collector });
 Normalize events before they reach the collector. At a source a rule renames
 the event (`name`), edits it (`policy`) or drops it (`ignore`); `data`,
 `include`, `batch`, `settings` and `silent` have no effect there, because only
-the edited event moves on. A dropped event's push result is `{ ok: true }`.
+the edited event moves on. `walkeros validate` and the bundle reject those
+keys (`MAPPING_NO_OP`), naming the path and what applies at a source; if such a
+config still runs, the collector logs one ERROR line per step and key when the
+source registers and runs the step. A dropped event's push result is
+`{ ok: true, dropped: true }`.
 
 <CodeSnippet
   code={`await startFlow({
@@ -387,7 +392,9 @@ init, before any event is evaluated. A `null` value clears an inherited field.
 Use `extend` when you want to add or override one field of a default rule while
 inheriting the rest unchanged. Only a package that ships defaults merges
 `extend`, so it has an effect in `@walkeros/transformer-ga4`'s
-`settings.mapping` and is ignored in any other rule.
+`settings.mapping` only. In any other rule, a destination's own mapping
+included, `walkeros validate` and the bundle reject it (`MAPPING_NO_OP`): write
+the fields on the rule itself.
 
 ### `remove` (output layer)
 
@@ -406,7 +413,7 @@ full. Presence of either keyword activates merge mode for that rule.
 
 ### Example: patch a GA4 decoder rule
 
-The transformer-ga4 `purchase` default ships `id`, `currency`, `total`, `tax`,
+The transformer-ga4 `purchase` default ships `id`, `currency`, `value`, `tax`,
 `shipping`, and `coupon`. The config below adds `affiliation` from a GA4 event
 parameter and drops `currency` from the output, keeping all other default
 fields:

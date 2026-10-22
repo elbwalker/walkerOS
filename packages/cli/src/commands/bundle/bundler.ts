@@ -5,10 +5,12 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import type { Flow, MoinTarget, ObserveWeb, PreviewKey } from '@walkeros/core';
 import {
+  getPlatform,
   packageNameToVariable,
   getStepRuntimeProps,
   ENV_MARKER_PREFIX,
   SECRET_MARKER_PREFIX,
+  STEP_FUNCTION_KEYS,
   isPathStepEntry,
   isObject,
 } from '@walkeros/core';
@@ -45,8 +47,8 @@ export {
 };
 
 /**
- * Type guard to check if a code value is an InlineCode object.
- * InlineCode has { push: string, type?: string, init?: string }
+ * Type guard to check if a code value is an InlineCode object: `push`, an
+ * optional `type`, and the other step functions (`STEP_FUNCTION_KEYS`).
  */
 function isInlineCode(code: unknown): code is Flow.Code {
   return (
@@ -67,9 +69,11 @@ function hasCodeReference(code: unknown): boolean {
 
 /**
  * Generates inline code for any component type (source, destination,
- * transformer, store). Handles $code: prefix for push/init functions.
+ * transformer, store). Emits every step function the code defines
+ * (`STEP_FUNCTION_KEYS`: push, pushBatch, init, on, destroy), each with its
+ * $code: prefix removed, so none is dropped on the way into the bundle.
  *
- * @param inline - InlineCode object with push, optional init, optional type
+ * @param inline - InlineCode object with push, optional type and functions
  * @param runtimeProps - The step's runtime fields (`getStepRuntimeProps`),
  *   emitted beside the code. `config` and `env` default to `{}`.
  * @param isDestination - Whether this is a destination (uses different code structure)
@@ -79,9 +83,11 @@ function generateInlineCode(
   runtimeProps: Record<string, unknown>,
   isDestination?: boolean,
 ): string {
-  const pushFn = inline.push.replace('$code:', '');
-  const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
   const typeLine = inline.type ? `type: '${inline.type}',` : '';
+  const functionLines = STEP_FUNCTION_KEYS.flatMap((key) => {
+    const fn = inline[key];
+    return fn ? [`${key}: ${fn.replace('$code:', '')}`] : [];
+  }).join(',\n        ');
 
   const props: Record<string, unknown> = {
     config: {},
@@ -98,8 +104,7 @@ function generateInlineCode(
       code: {
         ${typeLine}
         config: ${processConfigValue(props.config)},
-        ${initFn ? `init: ${initFn},` : ''}
-        push: ${pushFn}
+        ${functionLines}
       },
       ${propLines}
     }`;
@@ -110,8 +115,7 @@ function generateInlineCode(
       code: async (context) => ({
         ${typeLine}
         config: context.config,
-        ${initFn ? `init: ${initFn},` : ''}
-        push: ${pushFn}
+        ${functionLines}
       }),
       ${propLines}
     }`;
@@ -431,8 +435,10 @@ export async function bundleCore(
     );
     const versionsHash = await getHashServer(sortedVersions.join('\n'), 12);
 
-    // Bake provenance before the L1 check and codegen, so the release sits
-    // in both the cache key and the artifact.
+    // Collector defaults, for every call shape (`walkeros push` and simulate
+    // pass no provenance), then provenance: both before the L1 check and
+    // codegen, so they sit in both the cache key and the artifact.
+    applyCollectorDefaults(flowSettings);
     if (provenance) {
       applyCollectorProvenance(
         flowSettings,
@@ -693,9 +699,9 @@ export async function bundleCore(
         // `window` explicitly, so they still run. The browser entry has zero
         // exports, so no `globalName` is needed (one would add a window var).
         stage2Options.format = 'iife';
-        // The entry's Tag Mode loader comes from the CLI's own core, never
-        // from the flow's core in TEMP_DIR, which may predate it.
-        stage2Options.plugins = [cliCorePlugin()];
+        // The entry's Tag Mode loader comes from the CLI's own web-core,
+        // never from a copy in TEMP_DIR, which may predate it.
+        stage2Options.plugins = [cliPackagesPlugin()];
         // Every build flag is defined from the flow's needs, so a feature the
         // flow does not use folds out (see build-flags.ts).
         stage2Options.define = {
@@ -985,30 +991,34 @@ export function getNodeExternals(): string[] {
 }
 
 // Marks the plugin's own lookup, so it is not intercepted again.
-const CLI_CORE = 'walkeros-cli-core';
+const CLI_PACKAGES = 'walkeros-cli-packages';
 
 /**
- * Resolves every `@walkeros/core` import of a generated entry (the Tag Mode
- * loader, the preview activator) from this module's own location: the core
- * this CLI was installed with. Resolving from the entry's temp dir would walk
- * up through every `node_modules` above it, where another core (a flow's
- * pinned one, or a stray install in a shared temp root) can shadow it.
+ * Resolves every `@walkeros/core` and `@walkeros/web-core` import of a
+ * generated entry (the Tag Mode loader, the preview activator) from this
+ * module's own location: the CLI's own walkerOS packages, the ones it was
+ * installed with. Resolving from the entry's temp dir would walk up through
+ * every `node_modules` above it, where another copy (a flow's pinned one, or a
+ * stray install in a shared temp root) can shadow it, or predate the loader.
  */
-export function cliCorePlugin(): esbuild.Plugin {
+export function cliPackagesPlugin(): esbuild.Plugin {
   const resolveDir = path.dirname(fileURLToPath(import.meta.url));
   return {
-    name: CLI_CORE,
+    name: CLI_PACKAGES,
     setup(build) {
-      build.onResolve({ filter: /^@walkeros\/core$/ }, async (args) => {
-        if (args.pluginData === CLI_CORE) return undefined;
-        const resolved = await build.resolve(args.path, {
-          kind: args.kind,
-          resolveDir,
-          pluginData: CLI_CORE,
-        });
-        if (resolved.errors.length > 0) return { errors: resolved.errors };
-        return { path: resolved.path, sideEffects: resolved.sideEffects };
-      });
+      build.onResolve(
+        { filter: /^@walkeros\/(core|web-core)$/ },
+        async (args) => {
+          if (args.pluginData === CLI_PACKAGES) return undefined;
+          const resolved = await build.resolve(args.path, {
+            kind: args.kind,
+            resolveDir,
+            pluginData: CLI_PACKAGES,
+          });
+          if (resolved.errors.length > 0) return { errors: resolved.errors };
+          return { path: resolved.path, sideEffects: resolved.sideEffects };
+        },
+      );
     },
   };
 }
@@ -1598,6 +1608,21 @@ export function buildDataPayload(flowSettings: Flow): Record<string, unknown> {
 }
 
 /**
+ * Bake the collector defaults a flow's platform sets: a server collector
+ * skips consent-denied events (`consentDenied: 'skip'`, counted in
+ * `status.destinations[id].skipped`, DEBUG) instead of queueing them, since
+ * no consent change ever reaches a server flow after the event. An authored
+ * `collector.consentDenied` wins; a web flow keeps the collector default
+ * (`'queue'`).
+ */
+export function applyCollectorDefaults(flowSettings: Flow): void {
+  if (getPlatform(flowSettings) !== 'server') return;
+  const collector = flowSettings.collector ?? {};
+  collector.consentDenied ??= 'skip';
+  flowSettings.collector = collector;
+}
+
+/**
  * Bake flow-config provenance onto the collector before codegen.
  *
  * The flow name keys this flow's entry in `event.source.release`; the release
@@ -1838,6 +1863,45 @@ export { startFlow };`;
 }
 
 /**
+ * The runner contract's logger merge, emitted into every server factory
+ * entry: the host (`runneros`) passes `context.logger` (masking, the error
+ * ring tap), optionally `context.logLevel` (a level it forces, `--verbose`)
+ * and `context.onLogger` (receives the flow's own `{ level, format }` before
+ * the collector starts). The flow's level and format win over the host's;
+ * a flow handler runs first, then the host's, which runs once per line,
+ * always. The flow handler's `originalHandler` does nothing: the host prints
+ * every line, masked and in the flow's format.
+ */
+const HOST_LOGGER_MERGE = `  // The host's logger (masking, its error ring) joins the flow's own: the
+  // flow's level and format win, unless the host forces a level (--verbose);
+  // the flow's handler runs first, then the host's, once per line, always.
+  // The flow handler's originalHandler does nothing, so no line prints a
+  // second time unmasked. The host learns the flow's settings before the
+  // collector starts, so every line, the first included, has its format.
+  if (context.logger) {
+    const own = config.logger || {};
+    const host = context.logger;
+    if (context.onLogger) context.onLogger({ level: own.level, format: own.format });
+    const level = context.logLevel ?? own.level ?? host.level;
+    const printedByHost = () => {};
+    const handler = own.handler && host.handler
+      ? (lvl, message, ctx, scope) => {
+          try {
+            own.handler(lvl, message, ctx, scope, printedByHost);
+          } finally {
+            host.handler(lvl, message, ctx, scope, printedByHost);
+          }
+        }
+      : host.handler || own.handler;
+    config.logger = {
+      ...host,
+      ...(level !== undefined ? { level } : {}),
+      ...(own.format ? { format: own.format } : {}),
+      ...(handler ? { handler } : {}),
+    };
+  }`;
+
+/**
  * Generate a stage 2 entry file for server bundles.
  * Imports startFlow and wireConfig from the stage 1 .mjs file,
  * embeds the data payload, and exports a factory function.
@@ -1854,7 +1918,7 @@ const __configData = ${dataPayload};
 export default async function(context = {}) {
   const config = wireConfig(__configData);
 
-  if (context.logger) config.logger = context.logger;
+${HOST_LOGGER_MERGE}
 
   if (context.sourceSettings && config.sources) {
     for (const src of Object.values(config.sources)) {
@@ -1939,13 +2003,19 @@ export function readObserveConnect(
   return undefined;
 }
 
+/** Imports the page's Observe credential slot into a browser entry. */
+const OBSERVE_SLOT_IMPORT =
+  "import { pageObserveSlot } from '@walkeros/web-core';\n";
+
 /**
  * Emit the STATIC observe connect assignment for a generated entry: bake
  * ONLY the public connect values (`url` + `binding`, plus the optional
- * `flowId`/`level`/`sample` scoping) onto the startFlow config. The runtime
- * connect module inside startFlow does the credential/slot work at boot
- * (the per-session secret arrives out-of-band via the `elbObserve`
- * companion); no emitted byte here is ever secret.
+ * `flowId`/`level`/`sample` scoping) onto the startFlow config, beside the
+ * page slot the web arm reads its credential through. The runtime connect
+ * module inside startFlow does the credential work at boot (the per-session
+ * secret arrives out-of-band via the `elbObserve` companion); no emitted
+ * byte here is ever secret. The entry imports the slot with
+ * `OBSERVE_SLOT_IMPORT`.
  */
 function emitObserveAssignment(observe: ObserveWeb): string {
   const literal: ObserveWeb = {
@@ -1956,11 +2026,11 @@ function emitObserveAssignment(observe: ObserveWeb): string {
     ...(observe.sample !== undefined ? { sample: observe.sample } : {}),
   };
   return `
-  config.observe = ${JSON.stringify(literal)};`;
+  config.observe = { ...${JSON.stringify(literal)}, slot: pageObserveSlot() };`;
 }
 
 /** Imports the Tag Mode loader into a browser entry. */
-const MOIN_IMPORT = "import { moin } from '@walkeros/core';\n";
+const MOIN_IMPORT = "import { moin } from '@walkeros/web-core';\n";
 
 /**
  * The Tag Mode loader call, the first statement of a browser entry: the
@@ -2058,6 +2128,7 @@ export function generateWebEntry(
 
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
+  const observeImport = options.observe ? OBSERVE_SLOT_IMPORT : '';
   const observeBlock = options.observe
     ? emitObserveAssignment(options.observe)
     : '';
@@ -2065,7 +2136,7 @@ export function generateWebEntry(
   const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
   const loaderCall = platform === 'browser' ? emitMoinCall() : '';
 
-  return `${loaderImport}import { startFlow, wireConfig } from '${stage1Specifier}';
+  return `${loaderImport}${observeImport}import { startFlow, wireConfig } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
@@ -2086,9 +2157,9 @@ const __configData = ${dataPayload};
  */
 /**
  * Preview activation wiring. When present and enabled, the generated entry
- * imports the activator from core and lets it decide whether a preview bundle
- * boots in place of this flow. The bundle carries only PUBLIC values: a keyring,
- * an issuer, and opaque bindings. Never a project id, never a secret.
+ * imports the activator from web-core and lets it decide whether a preview
+ * bundle boots in place of this flow. The bundle carries only PUBLIC values: a
+ * keyring, an issuer, and opaque bindings. Never a project id, never a secret.
  */
 export interface WrapEntryPreview {
   enabled: boolean;
@@ -2178,7 +2249,7 @@ export function generateWrapEntry(
   // The activator is imported (not inlined) so its logic is tested as a module
   // and DCE keeps it out of every bundle that does not enable preview.
   const previewImport = previewEnabled
-    ? `import { browserSwapActivator } from '@walkeros/core';\n`
+    ? `import { browserSwapActivator } from '@walkeros/web-core';\n`
     : '';
 
   // Preview-artifact variant: read the SESSION-FORWARDING grant (the
@@ -2257,6 +2328,7 @@ ${grantTargets
   // STATIC observe connect wiring (see emitObserveAssignment): baked inside
   // the IIFE AFTER the activator's early return, so an activated page (the
   // artifact swapped in) never also installs the host's connect module.
+  const observeImport = options.observe ? OBSERVE_SLOT_IMPORT : '';
   const observeBlock = options.observe
     ? emitObserveAssignment(options.observe)
     : '';
@@ -2266,7 +2338,7 @@ ${grantTargets
   const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
   const loaderCall = platform === 'browser' ? emitMoinCall(options.moin) : '';
 
-  return `${loaderImport}${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
+  return `${loaderImport}${previewImport}${observeImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
 
 (async () => {${loaderCall}${previewBlock}
   const config = wireConfig(__configData);${envBlock}${previewGrantBlock}${observeBlock}
@@ -2300,7 +2372,7 @@ export function generateWrapEntryServer(stage1Path: string): string {
 export default async function(context = {}) {
   const config = wireConfig(__configData);
 
-  if (context.logger) config.logger = context.logger;
+${HOST_LOGGER_MERGE}
 
   if (context.sourceSettings && config.sources) {
     for (const src of Object.values(config.sources)) {

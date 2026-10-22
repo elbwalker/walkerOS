@@ -1,7 +1,25 @@
 import type { Flow } from './types/flow';
-import { isObject } from './is';
-import { validateStepEntry } from './step-entry';
-import { getTransformerMappingWarnings } from './transformer-mapping';
+import { isArray, isObject } from './is';
+import { getUnknownStepKeys, validateStepEntry } from './step-entry';
+import {
+  getTransformerMapping,
+  getTransformerMappingWarnings,
+} from './transformer-mapping';
+import {
+  getMappingKeyPaths,
+  getMappingNoOpMessage,
+  getMappingNoOpPaths,
+} from './mapping-no-ops';
+import { VALUE_KEYS, VALUE_PRODUCERS } from './mappingValue';
+import {
+  findMalformedReferences,
+  MALFORMED_REFERENCE,
+} from './schemas/validate-flow-config';
+import { ConfigSchema as SourceConfigSchema } from './schemas/source';
+import { ConfigSchema as TransformerConfigSchema } from './schemas/transformer';
+import { ConfigSchema as DestinationConfigSchema } from './schemas/destination';
+import { ConfigSchema as StoreConfigSchema } from './schemas/store';
+import { InitConfigSchema as CollectorInitConfigSchema } from './schemas/collector';
 import {
   validateComponentNames,
   validateReference,
@@ -78,6 +96,188 @@ function messageOf(error: unknown): string {
 const STATE_SECTIONS = ['sources', 'transformers', 'destinations'] as const;
 
 /**
+ * The keys a step's `config` may carry, per kind, read from core's config
+ * schemas (kept equal to the config types by `config-drift.test-d.ts`).
+ * Collector-owned: the runtime reads them by name and ignores any other.
+ */
+const CONFIG_KEYS: Record<Flow.StepKind, ReadonlyArray<string>> = {
+  Source: Object.keys(SourceConfigSchema.shape),
+  Transformer: Object.keys(TransformerConfigSchema.shape),
+  Destination: Object.keys(DestinationConfigSchema.shape),
+  Store: Object.keys(StoreConfigSchema.shape),
+};
+
+/** The keys a flow's `collector` block may carry (`Collector.InitConfig`). */
+const COLLECTOR_KEYS: ReadonlyArray<string> = Object.keys(
+  CollectorInitConfigSchema.shape,
+);
+
+function unknownKeyErrors(
+  value: unknown,
+  known: ReadonlyArray<string>,
+  path: string,
+  owner: string,
+): ValidationError[] {
+  if (!isObject(value)) return [];
+  return Object.keys(value)
+    .filter((key) => !known.includes(key))
+    .map((key) => ({
+      path: `${path}.${key}`,
+      message: `Unknown key "${key}" in ${owner} is ignored by the runtime. Known keys: ${[...known].sort().join(', ')}.`,
+      code: 'UNKNOWN_KEY',
+    }));
+}
+
+/**
+ * Unknown keys on a step entry and inside its `config`: both are owned by
+ * the collector, which reads them by name, so a typo (`consentt`) would
+ * silently have no effect. Step-level keys are checked here for
+ * destinations and stores; a source is closed by the flow schema and a
+ * transformer by {@link validateStepEntry}. `at` is the step's path.
+ */
+export function checkStepKeys(
+  step: Record<string, unknown>,
+  kind: Flow.StepKind,
+  at: string,
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+  if (kind === 'Destination' || kind === 'Store') {
+    for (const key of getUnknownStepKeys(step, kind)) {
+      errors.push({
+        path: `${at}.${key}`,
+        message: `Unknown key "${key}" on ${kind} is ignored by the runtime. Remove the key, or move it to where it belongs.`,
+        code: 'UNKNOWN_KEY',
+      });
+    }
+  }
+  errors.push(
+    ...unknownKeyErrors(
+      step.config,
+      CONFIG_KEYS[kind],
+      `${at}.config`,
+      `${kind} config`,
+    ),
+  );
+  return errors;
+}
+
+/**
+ * Mapping value objects that do not do what they look like: an object
+ * without an operator (`{ total: 'data.total' }` where `map` was meant) is
+ * dropped at runtime, and of several producers only the first one runs.
+ * Walks every value position of a mapping config (`data`, `policy`, each
+ * rule's `data` and `policy`) and, for a source, `ingest`.
+ */
+function checkMappingValues(
+  config: unknown,
+  at: string,
+  errors: ValidationError[],
+): void {
+  if (!isObject(config)) return;
+  checkValue(config.data, `${at}.data`, errors);
+  checkPolicy(config.policy, `${at}.policy`, errors);
+  const rules = config.mapping;
+  if (!isObject(rules)) return;
+  for (const [entity, actions] of Object.entries(rules)) {
+    if (!isObject(actions)) continue;
+    for (const [action, value] of Object.entries(actions)) {
+      const list: unknown[] = isArray(value) ? value : [value];
+      list.forEach((rule, index) => {
+        if (!isObject(rule)) return;
+        const rulePath = `${at}.mapping.${entity}.${action}${
+          isArray(value) ? `.${index}` : ''
+        }`;
+        checkValue(rule.data, `${rulePath}.data`, errors);
+        checkPolicy(rule.policy, `${rulePath}.policy`, errors);
+      });
+    }
+  }
+}
+
+function checkPolicy(
+  policy: unknown,
+  at: string,
+  errors: ValidationError[],
+): void {
+  if (!isObject(policy)) return;
+  for (const [key, value] of Object.entries(policy))
+    checkValue(value, `${at}.${key}`, errors);
+}
+
+const PRODUCER_ORDER = VALUE_PRODUCERS.join(', ');
+
+function checkValue(
+  value: unknown,
+  at: string,
+  errors: ValidationError[],
+): void {
+  if (isArray(value)) {
+    value.forEach((item, index) => checkValue(item, `${at}.${index}`, errors));
+    return;
+  }
+  if (!isObject(value)) return;
+  const keys = Object.keys(value);
+  if (keys.length === 0) return;
+  if (!VALUE_KEYS.some((key) => key in value)) {
+    errors.push({
+      path: at,
+      message: `Mapping value has no operator (${keys.join(', ')}), so it is dropped at runtime. Wrap the fields in map ({ "map": { ... } }), or use key, value, fn, loop or set.`,
+      code: 'MAPPING_VALUE_NO_OPERATOR',
+    });
+    return;
+  }
+  const producers = VALUE_PRODUCERS.filter((key) => value[key] !== undefined);
+  if (producers.length > 1) {
+    const [runs, ...never] = producers;
+    errors.push({
+      path: at,
+      message: `${never.map((key) => `\`${key}\``).join(', ')} never ${
+        never.length === 1 ? 'runs' : 'run'
+      }: \`${runs}\` is this value's producer (one producer per value, tried in the order ${PRODUCER_ORDER}). Keep one producer; to transform a path, read it inside \`fn\`.`,
+      code: 'MAPPING_VALUE_PRODUCERS',
+    });
+  }
+  if (isObject(value.map))
+    for (const [key, item] of Object.entries(value.map))
+      checkValue(item, `${at}.map.${key}`, errors);
+  if (isArray(value.set))
+    value.set.forEach((item, index) =>
+      checkValue(item, `${at}.set.${index}`, errors),
+    );
+  if (isArray(value.loop))
+    value.loop.forEach((item, index) =>
+      checkValue(item, `${at}.loop.${index}`, errors),
+    );
+}
+
+/**
+ * A `batch` on a destination whose inline `code` has no `pushBatch` has no
+ * effect: events go to `push` one by one. Checked where the implementation
+ * is known statically (inline code); a package step is checked at
+ * registration.
+ */
+function checkInlineBatch(
+  destination: Flow.Destination,
+  at: string,
+  errors: ValidationError[],
+): void {
+  const { code } = destination;
+  if (!isObject(code) || code.pushBatch !== undefined) return;
+  const paths = getMappingKeyPaths(destination.config, 'config', {
+    config: ['batch'],
+    rule: ['batch'],
+  });
+  if (paths.length === 0) return;
+  errors.push({
+    path: at,
+    message: `${paths.map((path) => `\`${path}\``).join(', ')} ${
+      paths.length === 1 ? 'has' : 'have'
+    } no effect: the inline code has no \`pushBatch\`, so events go to \`push\` one by one. Add a \`pushBatch\` function to \`code\`, or remove the batch.`,
+    code: 'BATCH_WITHOUT_PUSH_BATCH',
+  });
+}
+
+/**
  * Every `state` entry (on the step or in its `config`) must name a store
  * declared in `flow.stores`, and that store may not be a `file: true` byte
  * store. An omitted store, `__cache` and `$` references are not checked.
@@ -147,7 +347,14 @@ export function validateStateStores(
  * - each source/destination/store reference specifies exactly one of
  *   package or code, and each transformer entry is a closed, valid shape,
  * - every `$store.` reference points at a defined store,
- * - every `state` store is declared and is not a `file: true` store.
+ * - every `state` store is declared and is not a `file: true` store,
+ * - no unknown key on a step entry, in a step's `config` or in the
+ *   `collector` block (`UNKNOWN_KEY`),
+ * - no mapping field that does nothing at its position (`MAPPING_NO_OP`),
+ * - no mapping value object without an operator or with two producers,
+ * - no `batch` on inline code without `pushBatch`,
+ * - no whole-value reference that would ship as literal text
+ *   (`MALFORMED_REFERENCE`).
  *
  * Intended for fast deploy preflight: catch a bad flow config in well under a
  * second without spinning up a container or compiling anything.
@@ -230,17 +437,64 @@ export function validateFlowStructure(flowConfig: Flow.Json): ValidateResult {
             code: result.code,
           });
         }
-        // A mapping that never runs, or fields in it that do nothing at
-        // the transformer position, warn: rejecting would skip the step.
+        // A mapping that never runs, or fields in it that do nothing at the
+        // transformer position. The runtime still runs the step and logs it
+        // once at registration; validate and the bundle reject it.
         const { config } = transformer;
-        for (const message of getTransformerMappingWarnings({
+        const entry = {
           ...transformer,
           config: isObject(config) ? config : undefined,
-        })) {
-          warnings.push({ path, message, code: 'TRANSFORMER_MAPPING_NO_OP' });
+        };
+        for (const message of getTransformerMappingWarnings(entry)) {
+          errors.push({ path, message, code: 'MAPPING_NO_OP' });
         }
+        const mapping = getTransformerMapping(entry);
+        const field =
+          entry.config?.mapping !== undefined ? 'config.mapping' : 'mapping';
+        checkMappingValues(mapping, `${path}.${field}`, errors);
       }
     }
+
+    // 2c. Closed keys on every step and its config, the collector block,
+    //     mapping fields that do nothing at their position (a transformer's
+    //     are checked in 2b), mapping value objects, and a batch the inline
+    //     code cannot honour.
+    for (const section of STEP_SECTIONS) {
+      const steps = getSection(flow, section);
+      if (!steps) continue;
+      const kind = SECTION_TO_KIND[section];
+      for (const [name, step] of Object.entries(steps)) {
+        const path = `flows.${flowName}.${section}.${name}`;
+        errors.push(...checkStepKeys({ ...step }, kind, path));
+        if (kind !== 'Source' && kind !== 'Destination') continue;
+        const position = kind === 'Source' ? 'source' : 'destination';
+        const noOps = getMappingNoOpPaths(position, step.config, 'config');
+        if (noOps.length > 0)
+          errors.push({
+            path,
+            message: getMappingNoOpMessage(position, noOps),
+            code: 'MAPPING_NO_OP',
+          });
+        checkMappingValues(step.config, `${path}.config`, errors);
+        if (isObject(step.config))
+          checkValue(step.config.ingest, `${path}.config.ingest`, errors);
+      }
+    }
+    for (const [name, destination] of Object.entries(flow.destinations || {})) {
+      checkInlineBatch(
+        destination,
+        `flows.${flowName}.destinations.${name}`,
+        errors,
+      );
+    }
+    errors.push(
+      ...unknownKeyErrors(
+        flow.collector,
+        COLLECTOR_KEYS,
+        `flows.${flowName}.collector`,
+        'collector config',
+      ),
+    );
 
     // 3. Every `$store.` reference must point at a defined store.
     const storeIds = new Set(Object.keys(flow.stores || {}));
@@ -256,6 +510,16 @@ export function validateFlowStructure(flowConfig: Flow.Json): ValidateResult {
 
     // 4. Every `state` store must be declared and must not be a file store.
     errors.push(...validateStateStores(flow, flowName));
+  }
+
+  // 5. Whole-value references that would ship as literal text, the same
+  //    check `validateFlowConfig` runs.
+  for (const issue of findMalformedReferences(flowConfig)) {
+    errors.push({
+      path: issue.path,
+      message: issue.message,
+      code: MALFORMED_REFERENCE,
+    });
   }
 
   return {

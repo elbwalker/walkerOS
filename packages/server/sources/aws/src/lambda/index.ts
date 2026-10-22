@@ -1,6 +1,7 @@
 import type { LambdaSource, Types } from './types';
 import type { Source } from '@walkeros/core';
 import {
+  INTERNAL_SERVER_ERROR,
   batchResponse,
   isBatchBody,
   requestToData,
@@ -173,12 +174,7 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
       });
       return createResponse(
         500,
-        {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Internal server error',
-          requestId,
-        },
+        { success: false, error: INTERNAL_SERVER_ERROR, requestId },
         {},
         requestId,
       );

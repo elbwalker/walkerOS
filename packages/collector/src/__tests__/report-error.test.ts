@@ -49,7 +49,7 @@ describe('reportError', () => {
       const key = stepId('destination', 'bigquery');
       expect(c.status.connectionErrors[key]).toBe(1);
       expect(c.status.failed).toBe(0);
-      expect(logger.error).toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     test('accumulates connectionErrors across repeated orphan reports', async () => {
@@ -72,10 +72,10 @@ describe('reportError', () => {
       expect(c.status.failed).toBe(0);
     });
 
-    test('does not throw when the scoped logger.error throws', async () => {
+    test('does not throw when the scoped logger.warn throws', async () => {
       const c = await collector({});
       const logger = createMockLogger();
-      logger.error.mockImplementation(() => {
+      logger.warn.mockImplementation(() => {
         throw new Error('logger exploded');
       });
       const reportError = buildReportError(
@@ -109,11 +109,13 @@ describe('reportError', () => {
 
       reportError(googleError);
 
-      expect(logger.error).toHaveBeenCalledWith('connection error', {
+      // No event was lost: WARN (Q8), never ERROR.
+      expect(logger.warn).toHaveBeenCalledWith('connection error', {
         error: 'Total timeout of API exceeded 10000 milliseconds',
         name: 'GoogleError',
         code: 4,
       });
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     test('orphan log meta stays lean for a plain Error (no name/code noise)', async () => {
@@ -128,7 +130,7 @@ describe('reportError', () => {
 
       reportError(new Error('stream broken'));
 
-      expect(logger.error).toHaveBeenCalledWith('connection error', {
+      expect(logger.warn).toHaveBeenCalledWith('connection error', {
         error: 'stream broken',
       });
     });
@@ -179,30 +181,41 @@ describe('reportError', () => {
       expect(c.status.failed).toBe(1);
     });
 
-    test('event-bearing log meta carries the transport code when present', async () => {
-      const c = await collector({});
-      const logger = createMockLogger();
+    test('the event-bearing line goes through the cause log: one line per cause, no payload', async () => {
+      const lines: Array<{ message: string; context: unknown }> = [];
+      const c = await collector({
+        logger: {
+          handler: (_level, message, context) => {
+            lines.push({ message, context });
+          },
+        },
+      });
       const dlq: Destination.DLQ = [];
       const reportError = buildReportError(
         c,
         'destination',
         'bigquery',
-        logger,
+        createMockLogger(),
         makeDestination(dlq),
       );
 
-      const err: Error & { code?: number } = Object.assign(
-        new Error('append failed'),
-        { code: 14 },
-      );
+      reportError(new Error('append failed'), event);
+      reportError(new Error('append failed'), event);
 
-      reportError(err, event);
-
-      expect(logger.error).toHaveBeenCalledWith('report error', {
-        error: 'append failed',
-        code: 14,
-        event: event.name,
-      });
+      expect(lines).toEqual([
+        {
+          message:
+            'report error (repeats within a minute are counted in status.destinations.bigquery.failed)',
+          context: {
+            step: 'destination.bigquery',
+            code: 'transport',
+            retryable: true,
+            event: event.name,
+            error: 'append failed',
+          },
+        },
+      ]);
+      expect(c.status.destinations.bigquery.failed).toBe(2);
     });
   });
 

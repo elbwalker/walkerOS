@@ -5,6 +5,7 @@ import express, {
 } from 'express';
 import cors from 'cors';
 import {
+  INTERNAL_SERVER_ERROR,
   requestToData,
   createRespond,
   toEventList,
@@ -29,8 +30,9 @@ const toError = (value: unknown): Error =>
 /**
  * Settle handler for respond-first pushes: the HTTP ack already went out,
  * so a pipeline decline (ok:false) or a rejection can only surface here.
- * Warn on decline; the collector has already error-logged a thrown pipeline
- * failure, this line ties the outcome to the request that was acked.
+ * A decline is a DEBUG trace per event: the collector's cause line already
+ * reports its failure once per cause; this line ties the outcome to the
+ * request that was acked.
  * Invalid-input rejections stay silent here: the collector already warned
  * and counted them at the pipeline gate.
  */
@@ -42,7 +44,7 @@ const settleAfterAck = (
     .then(
       (settled) => {
         if (settled?.ok === false && settled.invalid !== true) {
-          logger.warn('Event not processed after ack', {
+          logger.debug('Event not processed after ack', {
             failed: settled.failed ? Object.keys(settled.failed) : [],
           });
         }
@@ -305,7 +307,9 @@ export const sourceExpress = async (
 
           // Synchronous ack: wait for delivery to settle before responding,
           // and reflect the outcome. Invalid input is the client's fault
-          // (400 with the reason); anything else that failed is ours (500).
+          // (400 with the reason); a failure a resend could still deliver is
+          // ours (500); a failure a resend cannot fix is answered 200, so the
+          // client does not resend it to every healthy destination.
           const results = [];
           for (const event of events) {
             results.push(await env.push(event));
@@ -319,16 +323,13 @@ export const sourceExpress = async (
             return;
           }
 
-          const result = results[0];
-          if (result?.ok === false) {
-            const invalid = result.invalid === true;
+          const outcome = pushResultToOutcome(results[0]);
+          if (outcome.error) {
             respond({
-              status: invalid ? 400 : 500,
+              status: outcome.status,
               body: {
                 success: false,
-                error:
-                  result.error ??
-                  (invalid ? 'Invalid event' : 'Event was not processed'),
+                error: outcome.error,
                 timestamp: Date.now(),
               },
             });
@@ -353,7 +354,7 @@ export const sourceExpress = async (
       if (!res.headersSent) {
         res.status(500).json({
           success: false,
-          error: 'Internal server error',
+          error: INTERNAL_SERVER_ERROR,
         });
       }
     }
@@ -398,18 +399,17 @@ export const sourceExpress = async (
     }
     if (isRequestBodyError(err)) {
       countRejected();
+      // Status and type only: the body and the parser's message (which
+      // quotes the body) can carry personal data.
       env.logger.debug('Request body rejected', {
         status: err.status,
         type: err.type,
-        error: err.message,
-        sample:
-          typeof err.body === 'string' ? err.body.slice(0, 200) : undefined,
       });
       res.status(err.status).json({ success: false, error: err.message });
       return;
     }
     env.logger.error(toError(err));
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    res.status(500).json({ success: false, error: INTERNAL_SERVER_ERROR });
   });
 
   // Source owns the HTTP server (if port configured)

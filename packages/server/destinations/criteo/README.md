@@ -30,7 +30,12 @@ npm install @walkeros/server-destination-criteo
       "destinations": {
         "criteo": {
           "package": "@walkeros/server-destination-criteo",
-          "config": {}
+          "config": {
+            "settings": {
+              "partnerId": "YOUR_PARTNER_ID",
+              "callerId": "YOUR_CALLER_ID"
+            }
+          }
         }
       }
     }

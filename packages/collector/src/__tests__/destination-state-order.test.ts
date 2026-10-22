@@ -187,13 +187,9 @@ describe('destination on(consent) precedes the first push (further activation pa
     expect(collector.destinations.rec).toBeDefined();
     expect(log).toEqual([]);
     await elb('walker consent', { marketing: true });
-    // The denied snapshot delivered at activation stays in queueOn and is
-    // replayed in FIFO order at init; order is preserved, nothing collapsed.
-    expect(log).toEqual([
-      'init',
-      'on:consent:{"marketing":false}',
-      GRANT,
-      'push:page view',
-    ]);
+    // While the destination waits, a consent delivery replaces the queued
+    // one: the cell's latest value supersedes the denied snapshot, so the
+    // grant alone reaches on(), still before the queued event.
+    expect(log).toEqual(['init', GRANT, 'push:page view']);
   });
 });

@@ -189,7 +189,7 @@ Set `setup: true` in the component config to enable provisioning with defaults, 
 
 ### Runtime hard-fail
 
-`storeS3Init` probes `bucketExists()` once when the collector wires the store. On a missing bucket it throws with an actionable message:
+The first `get`, `set` or `delete` probes `bucketExists()` once, not the start of the flow. On a missing bucket it throws with an actionable message:
 
 <CodeSnippet
   code={`S3 bucket not found: my-assets at https://s3.eu-central-1.amazonaws.com. Run "walkeros setup store.assets" to create it.`}

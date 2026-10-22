@@ -6,23 +6,23 @@ import type {
   SqliteSettings,
 } from './types';
 import type { Logger } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
+import { isObject, StepError } from '@walkeros/core';
 
 export function getConfig(
   partialConfig: PartialConfig = {},
   logger: Logger.Instance,
 ): Config {
-  const raw = (partialConfig.settings ?? {}) as Partial<Settings>;
-  const sqlite: Partial<SqliteSettings> =
-    raw.sqlite ?? ({} as Partial<SqliteSettings>);
+  const raw: Partial<Settings> = partialConfig.settings ?? {};
+  const sqlite: Partial<SqliteSettings> = raw.sqlite ?? {};
 
-  if (!sqlite.url) {
-    logger.throw('Config settings sqlite.url missing');
-  }
+  if (!sqlite.url)
+    throw new StepError('Config settings sqlite.url missing', {
+      code: 'config',
+    });
 
   const sqliteSettings: SqliteSettings = {
     ...sqlite,
-    url: sqlite.url as string,
+    url: sqlite.url,
     table: sqlite.table ?? 'events',
   };
 
@@ -37,8 +37,9 @@ export function getConfig(
     );
     if (sqlite.schema === 'manual' && !partialConfig.mapping) {
       // Preserve the existing throw for the legacy "manual without mapping" case.
-      logger.throw(
+      throw new StepError(
         'Config settings sqlite.schema="manual" requires a mapping (no default column mapping will be used).',
+        { code: 'config' },
       );
     }
     sqliteSettings._legacyAutoCreate = sqlite.schema === 'auto';
@@ -63,8 +64,5 @@ export function getConfig(
 
 export function isSqliteEnv(env: unknown): env is Env {
   if (!isObject(env)) return false;
-  const maybe = env as { SqliteDriver?: unknown; client?: unknown };
-  return (
-    typeof maybe.SqliteDriver === 'function' || isObject(maybe.client ?? null)
-  );
+  return typeof env.SqliteDriver === 'function' || isObject(env.client ?? null);
 }

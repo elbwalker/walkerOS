@@ -41,6 +41,7 @@
         "examples/index.ts",
         "examples/mapping.ts",
         "examples/outputs.ts",
+        "templates/simple/conformance.test.ts",
         "templates/simple/index.test.ts",
         "templates/simple/index.ts",
         "templates/simple/types.ts"

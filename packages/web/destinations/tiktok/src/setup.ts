@@ -1,80 +1,53 @@
 import type { DestinationWeb } from '@walkeros/web-core';
+import type { TTQStub } from './types';
 import { getEnv } from '@walkeros/web-core';
 
-const DEFAULT_TIKTOK_SRC = 'https://analytics.tiktok.com/i18n/pixel/events.js';
+/** The TikTok Pixel library, loaded through `loadVendor`. */
+export const SCRIPT_SRC = 'https://analytics.tiktok.com/i18n/pixel/events.js';
 
-/**
- * Inject the TikTok Pixel CDN script. The real SDK replaces the queueing
- * stub created by setup() with a full implementation.
- */
-export function addScript(
-  env?: DestinationWeb.Env,
-  src = DEFAULT_TIKTOK_SRC,
-): void {
-  const { document } = getEnv(env);
-  const script = (document as Document).createElement('script');
-  script.src = src;
-  script.async = true;
-  (document as Document).head.appendChild(script);
-}
-
-interface TTQFunction {
-  (...args: unknown[]): void;
-  methods?: string[];
-  _i?: Record<string, unknown>;
-  loaded?: boolean;
-  page?: (...args: unknown[]) => void;
-  track?: (...args: unknown[]) => void;
-  identify?: (...args: unknown[]) => void;
-  enableCookie?: (...args: unknown[]) => void;
-  disableCookie?: (...args: unknown[]) => void;
-  load?: (...args: unknown[]) => void;
-}
+const METHODS = [
+  'page',
+  'track',
+  'identify',
+  'instances',
+  'debug',
+  'on',
+  'off',
+  'once',
+  'ready',
+  'alias',
+  'group',
+  'enableCookie',
+  'disableCookie',
+];
 
 /**
  * Create the `window.ttq` queue object (TikTok's snippet pattern).
  * Any method call before the real SDK loads is buffered; once the CDN
- * script runs, the queue is replayed in order. Idempotent — does
- * nothing if ttq already exists on the window.
+ * script runs, the queue is replayed in order. Idempotent: does nothing if
+ * ttq already exists on the window (a loaded Pixel, or a mock in tests).
  */
 export function setup(env?: DestinationWeb.Env): void {
   const { window } = getEnv(env);
-  const w = window as unknown as { ttq?: TTQFunction };
-  if (w.ttq && (w.ttq as TTQFunction).loaded) return;
+  if (window.ttq) return;
 
-  // Preserve any existing mock ttq (from env.window.ttq in tests). Only
-  // construct a new queue if nothing is there.
-  if (!w.ttq) {
-    const n = function (...args: unknown[]): void {
-      (n._i as Record<string, unknown[]>) ||= {};
-      ((n._i as { all?: unknown[] }).all ||= []).push(args);
-    } as TTQFunction;
+  const record = (...args: unknown[]): void => {
+    (stub._i.all ||= []).push(args);
+  };
+  const stub: TTQStub = Object.assign(record, {
+    methods: [...METHODS],
+    _i: {},
+    loaded: false,
+  });
 
-    n.methods = [
-      'page',
-      'track',
-      'identify',
-      'instances',
-      'debug',
-      'on',
-      'off',
-      'once',
-      'ready',
-      'alias',
-      'group',
-      'enableCookie',
-      'disableCookie',
-    ];
-
-    // Stub out each method to enqueue through the root `n` function.
-    for (const method of n.methods) {
-      (n as unknown as Record<string, unknown>)[method] = (
-        ...args: unknown[]
-      ) => n(method, ...args);
-    }
-
-    n._i = {};
-    n.loaded = false;
-    w.ttq = n;
-  }
+  // Stub out each method to enqueue through the root function.
+  window.ttq = Object.assign(
+    stub,
+    Object.fromEntries(
+      METHODS.map((method) => [
+        method,
+        (...args: unknown[]) => stub(method, ...args),
+      ]),
+    ),
+  );
 }

@@ -32,7 +32,12 @@ npm install @walkeros/server-destination-mparticle
       "destinations": {
         "mparticle": {
           "package": "@walkeros/server-destination-mparticle",
-          "config": {}
+          "config": {
+            "settings": {
+              "apiKey": "YOUR_API_KEY",
+              "apiSecret": "YOUR_API_SECRET"
+            }
+          }
         }
       }
     }

@@ -15,7 +15,17 @@ export interface BuildInput {
   ingest?: Record<string, unknown>;
 }
 
-export type BuildResult = { hits: Hit[] } | { skip: string };
+/**
+ * `skip` is a deliberate non-send (a silent rule with nothing else to send;
+ * an `ignore` rule never reaches the destination); `invalid` is an event the
+ * rule cannot turn into a request, which fails the push.
+ */
+export type BuildResult =
+  | { hits: Hit[] }
+  | { skip: 'silent' }
+  | { invalid: string };
+
+type Unsent = Exclude<BuildResult, { hits: Hit[] }>;
 
 /**
  * The method a rule selects; an explicit rule name already renamed the event.
@@ -24,15 +34,17 @@ export type BuildResult = { hits: Hit[] } | { skip: string };
 function selectMethod(
   event: WalkerOS.Event,
   rule: Rule | undefined,
-): { method?: MethodName } | { skip: string } {
+): { method?: MethodName } | Unsent {
   const name = rule?.name
     ? event.name
     : event.name === 'page view'
       ? 'trackPageView'
       : undefined;
   if (name === undefined)
-    return rule?.settings?.goalId === undefined ? { skip: 'unmapped' } : {};
-  if (!isMethodName(name)) return { skip: `unknown method ${name}` };
+    return rule?.settings?.goalId === undefined
+      ? { invalid: 'no rule maps the event' }
+      : {};
+  if (!isMethodName(name)) return { invalid: `unknown method ${name}` };
   return { method: name };
 }
 
@@ -85,7 +97,7 @@ export async function buildHits(
   const { event, rule, ingest } = input;
 
   const selected = selectMethod(event, rule);
-  if ('skip' in selected) return selected;
+  if ('skip' in selected || 'invalid' in selected) return selected;
   const { method } = selected;
 
   const identified = isIdentified(settings.identified, collector, event);
@@ -108,7 +120,7 @@ export async function buildHits(
   if (method !== undefined && rule?.silent !== true) {
     const args = await methodArgs(input, collector);
     const result = methodParams(method, args);
-    if ('invalid' in result) return { skip: result.invalid };
+    if ('invalid' in result) return { invalid: result.invalid };
     const index = DIMENSIONS_ARG[method];
     const argument = index === undefined ? undefined : args[index];
     hits.push(
@@ -130,7 +142,7 @@ export async function buildHits(
         ? undefined
         : await getMappingValue(event, goalValue, { collector });
     const result = methodParams('trackGoal', [goalId, value]);
-    if ('invalid' in result) return { skip: result.invalid };
+    if ('invalid' in result) return { invalid: result.invalid };
     hits.push(
       assemble(
         settings,
@@ -144,7 +156,7 @@ export async function buildHits(
 
   if (!hits.length) return { skip: 'silent' };
   if (hits.some((hit) => !hit.some(([key]) => key === 'url')))
-    return { skip: 'missing url' };
+    return { invalid: 'missing url' };
 
   return { hits };
 }

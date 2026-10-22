@@ -262,7 +262,7 @@ describe('validateFlow', () => {
     ).toBe(true);
   });
 
-  it('passes structural warnings through as warnings, not errors', () => {
+  it('rejects a transformer consent that does nothing there (E20, MAPPING_NO_OP)', () => {
     const result = validateFlow({
       version: 4,
       flows: {
@@ -280,14 +280,15 @@ describe('validateFlow', () => {
       },
     });
 
-    expect(result.errors).toEqual([]);
-    expect(result.valid).toBe(true);
-    expect(result.warnings).toContainEqual({
-      path: 'flows.default.transformers.shaped',
-      message:
-        "`mapping.consent` does nothing at the transformer position; only `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply.",
-      code: 'TRANSFORMER_MAPPING_NO_OP',
-    });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual([
+      {
+        path: 'flows.default.transformers.shaped',
+        message:
+          "`mapping.consent` does nothing at the transformer position; only `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply.",
+        code: 'MAPPING_NO_OP',
+      },
+    ]);
   });
 
   it('warns on colon-instead-of-dot typos ($store:NAME)', () => {
@@ -861,8 +862,8 @@ describe('validateFlow', () => {
               properties: {
                 data: {
                   type: 'object',
-                  required: ['total'],
-                  properties: { total: { type: 'number' } },
+                  required: ['value'],
+                  properties: { value: { type: 'number' } },
                 },
               },
             },
@@ -885,7 +886,7 @@ describe('validateFlow', () => {
       name: 'order complete',
       entity: 'order',
       action: 'complete',
-      data: { total: 9.99 },
+      data: { value: 9.99 },
       user: { hash: 'h1' },
       source: { type: 'express' },
     };
@@ -893,7 +894,7 @@ describe('validateFlow', () => {
       name: 'order complete',
       entity: 'order',
       action: 'complete',
-      data: { total: 9.99 },
+      data: { value: 9.99 },
       user: {},
       source: { type: 'express' },
     };
@@ -1193,5 +1194,415 @@ describe('validateFlow', () => {
         result.errors.some((e) => e.code === 'INCOMPATIBLE_EXAMPLES'),
       ).toBe(true);
     });
+  });
+});
+
+describe('closed schemas (silent failures E1, E7, E10, E11, E14, E24, E25, E26)', () => {
+  const code = {
+    type: 'console',
+    init: '$code:() => {}',
+    push: '$code:(event) => { console.log(event.name); }',
+  };
+
+  it('E1: rejects unknown keys inside a destination config', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            console: {
+              config: {
+                queueMaxx: 5,
+                mappingg: { page: { view: { name: 'pv' } } },
+                consentt: { marketing: true },
+              },
+              code,
+            },
+          },
+        },
+      },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.map((e) => [e.code, e.path])).toEqual([
+      ['UNKNOWN_KEY', 'flows.default.destinations.console.config.queueMaxx'],
+      ['UNKNOWN_KEY', 'flows.default.destinations.console.config.mappingg'],
+      ['UNKNOWN_KEY', 'flows.default.destinations.console.config.consentt'],
+    ]);
+  });
+
+  it('E1: an unknown key on a destination entry is an error', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            console: { validate: { data: { type: 'object' } }, code },
+          },
+        },
+      },
+    });
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        path: 'flows.default.destinations.console.validate',
+        code: 'UNKNOWN_KEY',
+      }),
+    ]);
+  });
+
+  it('collector.consentDenied is a known key; an unknown collector key is not', () => {
+    const flow = (collector: Record<string, unknown>) => ({
+      version: 4,
+      flows: { default: { config: { platform: 'server' }, collector } },
+    });
+    expect(validateFlow(flow({ consentDenied: 'skip' })).errors).toEqual([]);
+    expect(validateFlow(flow({ consentDeny: 'skip' })).errors).toEqual([
+      expect.objectContaining({
+        path: 'flows.default.collector.consentDeny',
+        code: 'UNKNOWN_KEY',
+      }),
+    ]);
+  });
+
+  it('E2: rejects an inline code key the bundler would drop', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            console: { code: { ...code, onConsent: '$code:() => {}' } },
+          },
+        },
+      },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0]).toMatchObject({
+      path: 'flows.default.destinations.console.code',
+      code: 'SCHEMA_VALIDATION',
+    });
+    expect(result.errors[0].message).toContain('onConsent');
+  });
+
+  it('E2: accepts on, pushBatch and destroy in inline code', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            console: {
+              config: { batch: 10 },
+              code: {
+                ...code,
+                on: '$code:(type) => {}',
+                pushBatch: '$code:(batch) => {}',
+                destroy: '$code:() => {}',
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(result.errors).toEqual([]);
+  });
+
+  it('E3: rejects a batch on inline code without pushBatch', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: { console: { config: { batch: 10 }, code } },
+        },
+      },
+    });
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        path: 'flows.default.destinations.console',
+        code: 'BATCH_WITHOUT_PUSH_BATCH',
+      }),
+    ]);
+  });
+
+  it('E7: rejects a mapping value with key and fn', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            console: {
+              config: {
+                mapping: {
+                  page: {
+                    view: {
+                      data: {
+                        map: {
+                          title: {
+                            key: 'data.title',
+                            fn: '$code:(v) => String(v).toUpperCase()',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              code,
+            },
+          },
+        },
+      },
+    });
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        path: 'flows.default.destinations.console.config.mapping.page.view.data.map.title',
+        code: 'MAPPING_VALUE_PRODUCERS',
+        message: expect.stringContaining('`fn` never runs'),
+      }),
+    ]);
+  });
+
+  it('E14: rejects a mapping object without an operator', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'server' },
+          destinations: {
+            rec: {
+              code: { type: 'rec', push: '$code:(event, ctx) => {}' },
+              config: {
+                data: { total: 'data.total', currency: 'data.currency' },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        path: 'flows.default.destinations.rec.config.data',
+        code: 'MAPPING_VALUE_NO_OPERATOR',
+      }),
+    ]);
+  });
+
+  it('E24, E25: rejects mapping fields with no effect at a source and a destination', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          sources: {
+            s: {
+              code,
+              config: { mapping: { page: { view: { data: 'data' } } } },
+            },
+          },
+          destinations: {
+            d: {
+              code,
+              config: {
+                mapping: { page: { view: { extend: { name: 'x' } } } },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(result.errors.map((e) => [e.code, e.path])).toEqual([
+      ['MAPPING_NO_OP', 'flows.default.sources.s'],
+      ['MAPPING_NO_OP', 'flows.default.destinations.d'],
+    ]);
+    expect(result.errors[0].message).toContain(
+      'edit the event at a source with `policy`',
+    );
+    expect(result.errors[1].message).toContain(
+      "applies only inside a package's own `settings.mapping` (today `@walkeros/transformer-ga4`)",
+    );
+  });
+
+  it.each([
+    ['$flow. tracking-server.url', 'tracking-server'],
+    ['$flow.1st.url', '1st'],
+    ['https://$flow.web.url/e', 'tracking-server'],
+    ['$store.cache.key', 'tracking-server'],
+    ['$secret.api_key', 'tracking-server'],
+    ['see $contract.web', 'tracking-server'],
+  ])('E26: rejects %s', (url, serverName) => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        [serverName]: {
+          config: { platform: 'server', url: 'https://collect.example.com' },
+        },
+        web: {
+          config: { platform: 'web' },
+          destinations: { api: { code, config: { settings: { url } } } },
+        },
+      },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.web.destinations.api.config.settings.url',
+        code: 'MALFORMED_REFERENCE',
+      }),
+    );
+  });
+
+  it('E26: a valid hyphenated $flow reference passes', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        'tracking-server': {
+          config: { platform: 'server', url: 'https://collect.example.com' },
+        },
+        web: {
+          config: { platform: 'web' },
+          destinations: {
+            api: {
+              code,
+              config: { settings: { url: '$flow.tracking-server.url' } },
+            },
+          },
+        },
+      },
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  it('E11: an empty $flow value is unresolved, not inlined', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        server: {
+          config: {
+            platform: 'server',
+            url: 'https://collect.example.com',
+            settings: { region: '' },
+          },
+        },
+        web: {
+          config: { platform: 'web' },
+          destinations: {
+            api: {
+              code,
+              config: { settings: { region: '$flow.server.settings.region' } },
+            },
+          },
+        },
+      },
+    });
+    expect(result.errors).toEqual([
+      {
+        path: 'flows.web',
+        message:
+          '$flow.server.settings.region is empty. Set flows.server.config.settings.region.',
+        code: 'UNRESOLVED_REFERENCE',
+      },
+    ]);
+  });
+
+  it('E10: a validate step contract with $env is recorded in details.skipped', () => {
+    const result = validateFlow(
+      {
+        version: 4,
+        contract: {
+          web: {
+            events: {
+              product: {
+                view: {
+                  type: 'object',
+                  required: ['data'],
+                  properties: {
+                    data: {
+                      type: 'object',
+                      properties: {
+                        price: { type: 'number', minimum: '$env.MIN_PRICE' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        flows: {
+          default: {
+            config: { platform: 'web' },
+            transformers: {
+              validate: {
+                package: '@walkeros/transformer-validate',
+                config: {
+                  settings: { contract: ['$contract.web'], mode: 'strict' },
+                },
+                examples: {
+                  cheap: {
+                    in: {
+                      name: 'product view',
+                      entity: 'product',
+                      action: 'view',
+                      data: { price: 1 },
+                    },
+                    out: [
+                      [
+                        'return',
+                        {
+                          event: {
+                            name: 'product view',
+                            entity: 'product',
+                            action: 'view',
+                            data: { price: 1 },
+                          },
+                        },
+                      ],
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      { strict: true },
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.details.skipped).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.default.transformers.validate',
+        check: 'flow:contract-examples',
+        code: 'CONTRACT_NOT_STATIC',
+      }),
+    );
+  });
+
+  it('rejects logger.format on a web flow, accepts it on a server flow', () => {
+    const flow = (platform: string) => ({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform },
+          collector: { logger: { level: 'WARN', format: 'json' } },
+          destinations: {
+            d: { code, config: { logger: { format: 'text' } } },
+          },
+        },
+      },
+    });
+    expect(validateFlow(flow('server')).errors).toEqual([]);
+    expect(
+      validateFlow(flow('web')).errors.map((e) => [e.code, e.path]),
+    ).toEqual([
+      ['WEB_LOGGER_FORMAT', 'flows.default.collector.logger.format'],
+      [
+        'WEB_LOGGER_FORMAT',
+        'flows.default.destinations.d.config.logger.format',
+      ],
+    ]);
   });
 });

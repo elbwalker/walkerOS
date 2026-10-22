@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -196,7 +196,8 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
   title: 'Complete registration',
   description:
     'A user register fires ttq.identify for advanced matching and then tracks CompleteRegistration.',
-  in: getEvent('user register', {
+  in: createEvent({
+    name: 'user register',
     id: '55555555eeeeeeee',
     data: {
       email: 'new@acme.com',
@@ -265,7 +266,7 @@ export const orderCompleteCompletePayment: TikTokStepExample = {
     data: {
       map: {
         content_type: { value: 'product' },
-        value: 'data.total',
+        value: 'data.value',
         currency: { key: 'data.currency', value: 'EUR' },
         order_id: 'data.id',
         contents: {
@@ -329,7 +330,8 @@ export const searchSubmitSearch: TikTokStepExample = {
   title: 'Search',
   description:
     'A search submit fires TikTok Search with the query field mapped from event data.',
-  in: getEvent('search submit', {
+  in: createEvent({
+    name: 'search submit',
     id: '777777770000aaaa',
     data: {
       term: 'hiking backpack',
@@ -387,5 +389,39 @@ export const consentRevokeDisableCookie: TikTokStepExample = {
   before: { marketing: true },
   in: { marketing: false } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
-  out: [['ttq.enableCookie'], ['ttq.disableCookie']],
+  out: [['window.ttq.disableCookie']],
+};
+
+/** A silent rule sends no track call. */
+export const silentRule: TikTokStepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no ttq.track call.',
+  in: getEvent('page view', { timestamp: 1700000600 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * A silent rule that only sets an identity, on an event with no email, phone
+ * or id: nothing resolves and the rule suppresses the track, so nothing is
+ * sent. A declared skip: an unmet mapping, not a failure.
+ */
+export const silentIdentifyWithoutData: TikTokStepExample = {
+  public: false,
+  description:
+    'A silent rule whose identify mapping finds no email, phone or id sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'user update', entity: 'user', action: 'update' },
+  mapping: {
+    silent: true,
+    settings: {
+      identify: {
+        map: {
+          email: 'data.email',
+          phone_number: 'data.phone',
+          external_id: 'data.id',
+        },
+      },
+    },
+  },
+  out: [],
 };

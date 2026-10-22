@@ -78,7 +78,9 @@ describe('packages reference resource', () => {
       uri: 'walkeros://reference/packages',
     });
     const parsed: unknown = JSON.parse(firstText(result));
-    expect(rows(parsed)[0].name).toBe('@walkeros/web-destination-gtag');
+    expect(rows(record(parsed).catalog)[0].name).toBe(
+      '@walkeros/web-destination-gtag',
+    );
     expect(
       fetchedUrls.every(
         (u) =>

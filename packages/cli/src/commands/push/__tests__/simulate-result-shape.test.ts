@@ -23,14 +23,16 @@ const validEvent: WalkerOS.DeepPartialEvent = {
   action: 'complete',
 };
 
-// Config object missing the source's `package` → simulateSource throws inside
-// the try block and maps the error into a `Simulation.Result`.
+// A structurally valid source without a `package` (inline code) →
+// simulateSource throws inside the try block and maps the error into a
+// `Simulation.Result`. (A source with neither package nor code is rejected
+// earlier, by the bundle preflight.)
 const sourceConfigNoPackage: Flow.Json = {
   version: 4,
   flows: {
     default: {
       config: { platform: 'web' },
-      sources: { browser: { config: {} } },
+      sources: { browser: { code: { push: '$code:() => {}' }, config: {} } },
     },
   },
 };

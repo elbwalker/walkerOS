@@ -1,7 +1,7 @@
 import { createEvent, getEvent } from '..';
 
 describe('createEvent', () => {
-  const timestamp = new Date().setHours(0, 13, 37, 0);
+  const timestamp = 1700000000000;
 
   const defaultEvent = {
     name: 'entity action',
@@ -86,5 +86,41 @@ describe('createEvent', () => {
         trigger: 'visible',
       }),
     );
+  });
+});
+
+describe('getEvent', () => {
+  it('returns the same event on every call and every day', () => {
+    const a = getEvent('order complete');
+    jest.useFakeTimers().setSystemTime(new Date('2031-01-01T12:00:00Z'));
+    const b = getEvent('order complete');
+    jest.useRealTimers();
+    expect(b).toEqual(a);
+    expect(a.timestamp).toBe(1700000000000);
+  });
+
+  it('derives the id from the name', () => {
+    expect(getEvent('page view').id).toBe('f0cc5f6fec3d8eeb');
+    expect(getEvent('page view').id).not.toBe(getEvent('product view').id);
+  });
+
+  it('keeps explicit props', () => {
+    expect(getEvent('page view', { timestamp: 5 }).timestamp).toBe(5);
+    expect(getEvent('page view', { id: 'custom' }).id).toBe('custom');
+  });
+
+  it('carries the order value as data.value', () => {
+    expect(getEvent('order complete').data).toStrictEqual({
+      id: '0rd3r1d',
+      currency: 'EUR',
+      shipping: 5.22,
+      taxes: 73.76,
+      value: 555,
+    });
+  });
+
+  it('accepts only standard event names', () => {
+    // @ts-expect-error unknown standard event names do not compile
+    expect(getEvent('not a standard event').name).toBe('not a standard event');
   });
 });

@@ -1,19 +1,29 @@
 import type { Config, Env, PartialConfig, Settings } from './types';
-import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
+import { retryBudget } from '@walkeros/server-core';
 import { PostHog } from 'posthog-node';
 
 export function getConfig(
   partialConfig: PartialConfig = {},
   env: Env | undefined,
-  logger: Logger.Instance,
 ): Config {
-  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { apiKey } = settings;
 
-  if (!apiKey) logger.throw('Config settings apiKey missing');
+  if (!apiKey)
+    throw new StepError('Config settings apiKey missing', { code: 'config' });
+
+  // The SDK's own retry ends within config.timeout: a quarter of it per
+  // request, two retries a tenth of it apart. A value set in the settings
+  // wins.
+  const budget = retryBudget(partialConfig.timeout);
+  const options: Record<string, unknown> = {
+    requestTimeout: budget.attempt,
+    fetchRetryCount: budget.retries,
+    fetchRetryDelay: budget.wait,
+  };
 
   // Extract PostHog SDK options from settings
-  const options: Record<string, unknown> = {};
   if (settings.host) options.host = settings.host;
   if (settings.flushAt !== undefined) options.flushAt = settings.flushAt;
   if (settings.flushInterval !== undefined)

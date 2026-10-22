@@ -332,7 +332,7 @@ describe('resolveSettings', () => {
   it('applies the documented defaults', () => {
     const config: PartialConfig = { settings: { url, client } };
 
-    expect(resolveSettings(config, logger)).toEqual({
+    expect(resolveSettings(config)).toEqual({
       url,
       database: 'default',
       table: 'events',
@@ -353,7 +353,7 @@ describe('resolveSettings', () => {
       },
     };
 
-    expect(resolveSettings(config, logger)).toMatchObject({
+    expect(resolveSettings(config)).toMatchObject({
       database: 'analytics',
       table: 'hits',
       maxRetries: 3,
@@ -365,7 +365,7 @@ describe('resolveSettings', () => {
       settings: { url, maxRetries: 0, client },
     };
 
-    expect(resolveSettings(config, logger).maxRetries).toBe(0);
+    expect(resolveSettings(config).maxRetries).toBe(0);
   });
 
   it('merges the flow settings under the insert defaults', () => {
@@ -373,7 +373,7 @@ describe('resolveSettings', () => {
       settings: { url, clickhouseSettings: { async_insert: 1 }, client },
     };
 
-    expect(resolveSettings(config, logger).clickhouseSettings).toEqual({
+    expect(resolveSettings(config).clickhouseSettings).toEqual({
       async_insert: 1,
       input_format_skip_unknown_fields: 0,
       input_format_null_as_default: 0,
@@ -381,20 +381,20 @@ describe('resolveSettings', () => {
   });
 
   it('refuses a config without settings', () => {
-    expect(() => resolveSettings({}, logger)).toThrow(
-      'Config settings missing, init() not run',
+    expect(() => resolveSettings({})).toThrow(
+      'ClickHouse client missing, init() not run',
     );
   });
 
   it('refuses settings without a client', () => {
-    expect(() => resolveSettings({ settings: { url } }, logger)).toThrow(
+    expect(() => resolveSettings({ settings: { url } })).toThrow(
       'ClickHouse client missing, init() not run',
     );
   });
 
   it('refuses settings without a url', () => {
-    expect(() =>
-      resolveSettings({ settings: { url: '', client } }, logger),
-    ).toThrow('Config settings url missing');
+    expect(() => resolveSettings({ settings: { url: '', client } })).toThrow(
+      'Config settings url missing',
+    );
   });
 });

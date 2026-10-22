@@ -1,4 +1,3 @@
-import { createMockLogger } from '@walkeros/core';
 import { getConfig, normalizeUrl } from '../config';
 
 describe('getConfig', () => {
@@ -6,28 +5,23 @@ describe('getConfig', () => {
     ['url', { appId: 'site-1' }],
     ['appId', { url: 'https://acc.piwik.pro' }],
   ])('throws when %s is missing', (name, settings) => {
-    const logger = createMockLogger();
-    expect(() => getConfig({ settings }, logger)).toThrow(
+    expect(() => getConfig({ settings })).toThrow(
       `Config settings ${name} missing`,
     );
   });
 
   it('normalizes url and keeps every other setting unchanged', () => {
-    const logger = createMockLogger();
-    const config = getConfig(
-      {
-        settings: {
-          url: 'https://acc.piwik.pro',
-          appId: 'site-1',
-          timeout: 2000,
-          identified: { marketing: true },
-          ip: false,
-          customDimensions: { '1': 'data.size' },
-        },
-        consent: { analytics: true },
+    const config = getConfig({
+      settings: {
+        url: 'https://acc.piwik.pro',
+        appId: 'site-1',
+        timeout: 2000,
+        identified: { marketing: true },
+        ip: false,
+        customDimensions: { '1': 'data.size' },
       },
-      logger,
-    );
+      consent: { analytics: true },
+    });
 
     expect(config).toEqual({
       settings: {

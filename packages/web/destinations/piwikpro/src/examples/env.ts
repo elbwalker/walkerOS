@@ -11,29 +11,11 @@ export const init: Env | undefined = {
   window: {
     // _paq absent: init() is expected to install the queue.
   },
-  document: {
-    createElement: () => ({
-      type: '',
-      src: '',
-      async: false,
-      defer: false,
-    }),
-    head: { appendChild: () => {} },
-  },
 };
 
 export const push: Env = {
   window: {
     _paq: [],
-  },
-  document: {
-    createElement: () => ({
-      type: '',
-      src: '',
-      async: false,
-      defer: false,
-    }),
-    head: { appendChild: () => {} },
   },
 };
 

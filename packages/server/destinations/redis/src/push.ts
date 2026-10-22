@@ -1,26 +1,22 @@
 import type {
   PushFn,
   RedisSettings,
-  RedisClientMock,
   XaddArg,
   SerializationMode,
 } from './types';
-import { isString } from '@walkeros/core';
+import { isString, StepError } from '@walkeros/core';
 
-export const push: PushFn = async function (event, { config, rule, logger }) {
-  const settings = config.settings as { redis?: RedisSettings } | undefined;
-  const redis: RedisSettings | undefined = settings?.redis;
+// A silent rule has no XADD of its own: nothing to append.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await append(event, context);
+};
 
-  if (!redis) {
-    logger.warn('Redis settings missing');
-    return;
-  }
-
-  const client = redis._client;
-  if (!client) {
-    logger.warn('Redis client not initialized');
-    return;
-  }
+const append: PushFn = async function (event, { config, rule, logger }) {
+  const settings = config.settings;
+  const client = settings?.redis?._client;
+  if (!settings?.redis || !client)
+    throw new StepError('Redis client not initialized', { code: 'not-ready' });
+  const redis: RedisSettings = settings.redis;
 
   // Derive stream key: rule override -> destination default
   const ruleSettings = rule?.settings ?? {};
@@ -33,7 +29,7 @@ export const push: PushFn = async function (event, { config, rule, logger }) {
   // Serialize event
   const fields: string[] =
     serialization === 'flat'
-      ? flattenEvent(event as unknown as Record<string, unknown>)
+      ? flattenEvent(event)
       : ['event', JSON.stringify(event)];
 
   // Build XADD arguments
@@ -51,18 +47,20 @@ export const push: PushFn = async function (event, { config, rule, logger }) {
 
   logger.debug('Redis XADD', { stream: streamKey });
 
+  let entryId: string | null;
   try {
-    const entryId = await (client as RedisClientMock).xadd(...args);
-    logger.debug('Redis XADD complete', { stream: streamKey, entryId });
+    entryId = await client.xadd(...args);
   } catch (error) {
-    logger.error('Redis XADD failed', {
-      stream: streamKey,
-      error: error instanceof Error ? error.message : String(error),
+    // The collector reports it; the client's own message stays the cause.
+    throw new StepError('Redis XADD failed', {
+      code: 'transport',
+      cause: error,
     });
   }
+  logger.debug('Redis XADD complete', { stream: streamKey, entryId });
 };
 
-function flattenEvent(event: Record<string, unknown>): string[] {
+function flattenEvent(event: object): string[] {
   const fields: string[] = [];
   for (const [key, value] of Object.entries(event)) {
     fields.push(

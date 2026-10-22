@@ -10,8 +10,8 @@ export const destinationLinkedIn: Destination = {
 
   config: {},
 
-  async init({ config: partialConfig, logger }) {
-    const config = getConfig(partialConfig, logger);
+  async init({ config: partialConfig }) {
+    const config = getConfig(partialConfig);
     return config;
   },
 

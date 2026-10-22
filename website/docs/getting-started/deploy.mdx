@@ -73,6 +73,7 @@ flow, bundle again and redeploy the new artifact.
 - Gate CI: `walkeros validate flow.json --strict` turns contract violations
   into errors, see [validate](/docs/getting-started/flow/validate).
 - Wire consent before real traffic, see the [consent guide](/docs/guides/consent).
+- On a server, set `"logger": { "format": "json" }` in the `collector` block so your platform reads each log line as structured data, see [Logger](/docs/collector/logger#log-format).
 - Keep `flow.json` in git: deploys stay reviewable and reversible.
 
 ## Next steps

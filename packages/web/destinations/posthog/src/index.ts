@@ -1,5 +1,12 @@
-import type { WalkerOS } from '@walkeros/core';
-import { getMappingValue, isObject, isString } from '@walkeros/core';
+import type { Logger, WalkerOS } from '@walkeros/core';
+import {
+  getGrantedConsent,
+  getMappingValue,
+  isObject,
+  isString,
+  StepError,
+  stepCall,
+} from '@walkeros/core';
 import posthogSDK from 'posthog-js';
 import type {
   Destination,
@@ -33,11 +40,15 @@ function getPostHog(env: Env | undefined): PostHogSDK {
  *
  * Returns the updated lastIdentity snapshot.
  */
-function applyIdentity(
+async function applyIdentity(
   posthog: PostHogSDK,
   resolved: Record<string, unknown>,
   lastIdentity: RuntimeState['lastIdentity'] = {},
-): NonNullable<RuntimeState['lastIdentity']> {
+): Promise<{
+  lastIdentity: NonNullable<RuntimeState['lastIdentity']>;
+  applied: boolean;
+}> {
+  let applied = false;
   const updated = { ...lastIdentity };
 
   const distinctId = resolved.distinctId;
@@ -50,14 +61,24 @@ function applyIdentity(
 
   if (isString(distinctId) && distinctId !== '') {
     if (distinctId !== lastIdentity.distinctId || $set || $setOnce) {
-      posthog.identify(distinctId, $set, $setOnce);
+      await stepCall(
+        () => posthog.identify(distinctId, $set, $setOnce),
+        'transport',
+        'PostHog identify failed',
+      );
       updated.distinctId = distinctId;
     }
+    applied = true;
   } else if ($set || $setOnce) {
-    posthog.setPersonProperties($set, $setOnce);
+    await stepCall(
+      () => posthog.setPersonProperties($set, $setOnce),
+      'transport',
+      'PostHog setPersonProperties failed',
+    );
+    applied = true;
   }
 
-  return updated;
+  return { lastIdentity: updated, applied };
 }
 
 /**
@@ -65,11 +86,15 @@ function applyIdentity(
  * Like identity, group changes are tracked in runtime state and only re-fired
  * when type or key changes.
  */
-function applyGroup(
+async function applyGroup(
   posthog: PostHogSDK,
   resolved: Record<string, unknown>,
   lastGroup: RuntimeState['lastGroup'] = {},
-): NonNullable<RuntimeState['lastGroup']> {
+): Promise<{
+  lastGroup: NonNullable<RuntimeState['lastGroup']>;
+  applied: boolean;
+}> {
+  let applied = false;
   const updated = { ...lastGroup };
   const type = resolved.type;
   const key = resolved.key;
@@ -79,13 +104,34 @@ function applyGroup(
 
   if (isString(type) && isString(key)) {
     if (type !== lastGroup.type || key !== lastGroup.key || properties) {
-      posthog.group(type, key, properties);
+      await stepCall(
+        () => posthog.group(type, key, properties),
+        'transport',
+        'PostHog group failed',
+      );
       updated.type = type;
       updated.key = key;
     }
+    applied = true;
   }
 
-  return updated;
+  return { lastGroup: updated, applied };
+}
+
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`PostHog skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
 }
 
 export const destinationPostHog: Destination = {
@@ -94,8 +140,10 @@ export const destinationPostHog: Destination = {
   config: {},
 
   async init({ config, env }) {
-    const settings = config.settings;
-    if (!settings?.apiKey) return false;
+    // A copy, so the destructure below does not read keys off the live settings
+    const settings = { ...config.settings };
+    if (!settings.apiKey)
+      throw new StepError('PostHog needs settings.apiKey', { code: 'config' });
 
     const posthog = getPostHog(env as Env | undefined);
 
@@ -122,12 +170,17 @@ export const destinationPostHog: Destination = {
     // destination is truly ready before returning; otherwise we resolve
     // immediately so tests with no-op mocks don't hang.
     let loadedFired = false;
-    posthog.init(apiKey, {
-      ...options,
-      loaded: () => {
-        loadedFired = true;
-      },
-    });
+    await stepCall(
+      () =>
+        posthog.init(apiKey, {
+          ...options,
+          loaded: () => {
+            loadedFired = true;
+          },
+        }),
+      'vendor-not-ready',
+      'PostHog init failed',
+    );
     if (!loadedFired) {
       await Promise.resolve();
     }
@@ -136,7 +189,7 @@ export const destinationPostHog: Destination = {
     return { ...config, settings: { ...settings, _state } };
   },
 
-  async push(event, { config, rule, env, data, collector }) {
+  async push(event, { config, rule, env, data, collector, logger }) {
     const posthog = getPostHog(env as Env | undefined);
     const settings = (config.settings || {}) as Settings;
     const mappingSettings = rule?.settings || {};
@@ -151,7 +204,11 @@ export const destinationPostHog: Destination = {
               collector,
             });
       if (resolved) {
-        posthog.reset();
+        await stepCall(
+          () => posthog.reset(),
+          'transport',
+          'PostHog reset failed',
+        );
         state.lastIdentity = {};
         state.lastGroup = {};
       }
@@ -163,13 +220,11 @@ export const destinationPostHog: Destination = {
       const resolved = await getMappingValue(event, identifyMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        state.lastIdentity = applyIdentity(
-          posthog,
-          resolved as Record<string, unknown>,
-          state.lastIdentity,
-        );
-      }
+      const identity = isObject(resolved)
+        ? await applyIdentity(posthog, resolved, state.lastIdentity)
+        : undefined;
+      if (identity?.applied) state.lastIdentity = identity.lastIdentity;
+      else skipped(logger, event, 'identify', 'identify');
     }
 
     // 3. Group - rule-level override wins over destination-level.
@@ -178,13 +233,11 @@ export const destinationPostHog: Destination = {
       const resolved = await getMappingValue(event, groupMapping, {
         collector,
       });
-      if (isObject(resolved)) {
-        state.lastGroup = applyGroup(
-          posthog,
-          resolved as Record<string, unknown>,
-          state.lastGroup,
-        );
-      }
+      const group = isObject(resolved)
+        ? await applyGroup(posthog, resolved, state.lastGroup)
+        : undefined;
+      if (group?.applied) state.lastGroup = group.lastGroup;
+      else skipped(logger, event, 'group', 'group');
     }
 
     // 4. Default capture - unless rule opts out via silent.
@@ -193,34 +246,35 @@ export const destinationPostHog: Destination = {
       const properties = isObject(data)
         ? (data as Record<string, unknown>)
         : {};
-      posthog.capture(eventName, properties);
+      await stepCall(
+        () => posthog.capture(eventName, properties),
+        'transport',
+        'PostHog capture failed',
+      );
     }
 
-    // Persist state. walkerOS destinations are long-lived singletons so
+    // A silent rule whose mappings resolve nothing sends nothing: a declared
+    // skip, not a failure. Persist state. walkerOS destinations are long-lived singletons so
     // mutating settings in place is safe (Snowplow precedent).
     settings._state = state;
   },
 
-  on(type, context) {
-    if (type !== 'consent' || !context?.data) return;
-    const posthog = getPostHog(context.env as Env | undefined);
+  // The destination's required consent decides on the whole consent state,
+  // as it gates the pushes, and only a change that names a required key
+  // reaches PostHog: a revocation opts out, a grant opts back in.
+  async on(type, { config, data, env, collector }) {
+    const required = config.consent;
+    if (type !== 'consent' || !required || !isObject(data)) return;
+    if (!Object.keys(required).some((key) => key in data)) return;
 
-    const consent = context.data as WalkerOS.Consent;
-    // Derive required consent keys from config.consent. If all declared
-    // keys are granted, opt IN; otherwise opt OUT. Missing config.consent
-    // means nothing to check and we take no action.
-    const required = (context.config as { consent?: WalkerOS.Consent })
-      ?.consent;
-    if (!required || Object.keys(required).length === 0) return;
-
-    const allGranted = Object.keys(required).every(
-      (key) => consent[key] === true,
+    const posthog = getPostHog(env as Env | undefined);
+    const granted = getGrantedConsent(required, collector.consent) !== false;
+    await stepCall(
+      () =>
+        granted ? posthog.opt_in_capturing() : posthog.opt_out_capturing(),
+      'consent-not-applied',
+      'PostHog did not take the consent update',
     );
-    if (allGranted) {
-      posthog.opt_in_capturing();
-    } else {
-      posthog.opt_out_capturing();
-    }
   },
 };
 

@@ -135,9 +135,7 @@ export async function insertRows(
 
       return;
     } catch (error) {
-      // Classified before the budget is read, so the operator hears about a
-      // terminal failure even where there was never a retry to skip.
-      const retryable = classify(error, logger) === 'retryable';
+      const retryable = classify(error) === 'retryable';
 
       if (!retryable || attempt >= retries) throw error;
 

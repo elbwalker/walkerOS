@@ -8,6 +8,9 @@ import { getMappingValue } from './mapping';
 import { wrapCacheEnvelope, readCacheEnvelope } from './cache-envelope';
 import { isStoreValue } from './store/codec';
 import { isThenable } from './is';
+import { FatalError } from './fatalError';
+import { reportCause } from './causeLog';
+import { toFailureReason } from './stepError';
 
 interface CompiledCacheRule {
   match: CompiledMatcher;
@@ -56,11 +59,18 @@ export function compileCache(cache: Cache<EventCacheRule>): CompiledCache {
   };
 }
 
+/**
+ * Look a cache rule's key up in its store. A read that throws (a refused or
+ * failed request, not a miss) is a MISS for that event, reported once per
+ * cause under the store's step through the collector's cause log. Without a
+ * collector there is nowhere to report, and the throw propagates.
+ */
 export async function checkCache(
   compiled: CompiledCache,
   store: Store.Instance,
   context: Record<string, unknown>,
   namespace?: string,
+  collector?: Collector.Instance,
 ): Promise<CacheResult | null> {
   const rule = compiled.rules.find((r) => r.match(context));
   if (!rule) return null;
@@ -79,7 +89,26 @@ export async function checkCache(
   // Promise<T | undefined>`). Always await so a Promise return from an
   // async store (Redis, fs, the cache wrapper) never lands in the HIT
   // path as the cached "value".
-  const decoded = readCacheEnvelope(await store.get(namespacedKey));
+  let stored: StoreValue | undefined;
+  try {
+    stored = await store.get(namespacedKey);
+  } catch (err) {
+    if (!collector || err instanceof FatalError) throw err;
+    const reason = toFailureReason(err);
+    reportCause(
+      collector,
+      collector.logger,
+      {
+        step: `store.${compiled.storeId ?? '__cache'}`,
+        code: reason.code,
+        status: reason.status,
+      },
+      'cache read failed, treated as a miss',
+      { error: reason.message, retryable: reason.retryable },
+    );
+    return { status: 'MISS', key: namespacedKey, rule };
+  }
+  const decoded = readCacheEnvelope(stored);
 
   if (decoded === undefined)
     return { status: 'MISS', key: namespacedKey, rule };

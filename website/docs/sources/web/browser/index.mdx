@@ -104,6 +104,17 @@ await elb('walker init', document.querySelector('#app'));`}
 
 See [Commands](/docs/sources/web/browser/commands) for complete API documentation.
 
+## Leaving the page
+
+When the page goes away (`pagehide`) or turns hidden, the source sends
+`walker flush`, so destination batches that have not reached their size or wait
+yet are sent before the visitor is gone. The listeners are removed when the
+source is destroyed.
+
+A failing `elbLayer` entry (an event or command the collector could not
+process) is logged as one ERROR line that names the event, never its data, and
+counts as failed.
+
 ## Single-page apps
 
 With `history: true` the source follows route changes by itself.

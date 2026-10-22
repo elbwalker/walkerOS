@@ -509,7 +509,7 @@ const teaching = {
     note: 'examples are the contract of a step: this in gives this out, checked by simulation.',
     docs: [{ page: 'getting-started/flow/step-examples' }],
     cli: [
-      `walkeros push ${FILE} -f web -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"}}' --simulate destination.ga4`,
+      `walkeros push ${FILE} -f web -e '{"name":"order complete","data":{"id":"ORD-100","value":149.8,"currency":"EUR"}}' --simulate destination.ga4`,
     ],
   },
   'example-title': {
@@ -637,7 +637,7 @@ const teaching = {
     chapter: 'mapping',
     level: 'intermediate',
     useCases: [],
-    note: 'fn computes a value from the event, here the total rounded to cents. fn and key are alternatives: next to a key, fn never runs.',
+    note: 'fn computes a value from the event, here the order value rounded to cents. fn and key are alternatives: next to a key, fn never runs.',
     docs: [],
   },
   'value-loop': {
@@ -693,7 +693,7 @@ const teaching = {
     chapter: 'mapping',
     level: 'intermediate',
     useCases: [],
-    note: 'A rule condition skips the rule, here for orders without a total.',
+    note: 'A rule condition skips the rule, here for orders without a value.',
     docs: [],
   },
   'rule-settings': {
@@ -1530,7 +1530,6 @@ const teaching = {
     useCases: ['script-serving'],
     note: 'walker.js is served first party from the server flow.',
     docs: [{ page: 'transformers/file' }],
-    example: { step: 'file', name: 'walkerJs' },
     cli: [
       `walkeros bundle ${FILE} -f web -o packages/cli/examples/shared/walker.js`,
     ],
@@ -1886,6 +1885,12 @@ export const flowCompleteCoverage = {
     push: 'code-push',
     type: 'code-type',
     init: { excluded: 'the inline pageGroup step needs no setup' },
+    pushBatch: {
+      excluded:
+        'the inline pageGroup step is a transformer; batching is a destination concern',
+    },
+    on: { excluded: 'the inline pageGroup step reacts to no collector event' },
+    destroy: { excluded: 'the inline pageGroup step holds nothing to release' },
   } satisfies Coverage<keyof Flow.Code>,
   source: {
     package: 'step-package',
@@ -1963,6 +1968,8 @@ export const flowCompleteCoverage = {
     mapping: 'example-mapping',
     out: 'example-out',
     command: 'example-command',
+    outcome: RUNTIME('outcome (a failure example, public: false)'),
+    respond: RUNTIME('respond (a failure example, public: false)'),
   } satisfies Coverage<keyof Flow.StepExample>,
   sourceConfig: {
     settings: 'step-settings',
@@ -2028,6 +2035,10 @@ export const flowCompleteCoverage = {
     state: 'state-set',
     init: RUNTIME('init'),
     disabled: RUNTIME('disabled'),
+    timeout: {
+      excluded:
+        'the transformers here initialize at once; the default 10 s applies',
+    },
     mock: RUNTIME('mock'),
     chainMocks: RUNTIME('chainMocks'),
     mapping: 'ga4-consent-map',
@@ -2056,6 +2067,10 @@ export const flowCompleteCoverage = {
     logger: 'collector-logger',
     queueMax: {
       excluded: 'the default bound fits; dlqMax is the knob this file turns',
+    },
+    consentDenied: {
+      excluded:
+        'walkeros bundle sets it for server flows; this web example keeps the default queue',
     },
     name: RUNTIME('name'),
     release: {
@@ -2208,7 +2223,7 @@ export const flowCompleteCli: CliEntry[] = [
     chapter: 'chains-routing',
   },
   {
-    command: `walkeros push ${FILE} -f web -e '{"name":"order complete","data":{"id":"ORD-100","total":149.8,"currency":"EUR"}}' --simulate destination.ga4`,
+    command: `walkeros push ${FILE} -f web -e '{"name":"order complete","data":{"id":"ORD-100","value":149.8,"currency":"EUR"}}' --simulate destination.ga4`,
     chapter: 'mapping',
   },
   {

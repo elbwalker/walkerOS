@@ -1,5 +1,5 @@
 import type { Destination, On, WalkerOS } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import { createCauseLog, createMockLogger } from '@walkeros/core';
 import { startFlow } from '..';
 import { getStateHold, isStateDeliveryInFlight } from '../on';
 
@@ -93,7 +93,7 @@ describe('a timed-out on() still running', () => {
     jest.useRealTimers();
   });
 
-  test('a grant that lands after its timeout is overwritten by the later deny before any event is delivered', async () => {
+  test('a grant that lands after its timeout is overwritten by the later deny; events past one window fail', async () => {
     const log: string[] = [];
     const hung = deferred();
     const logger = createMockLogger();
@@ -101,17 +101,28 @@ describe('a timed-out on() still running', () => {
       destinations: { d: overlapRecorder(log, hung.promise) },
     });
     await elb('page view', {});
-    Object.assign(collector, { logger });
+    // The cause log writes through the logger it was created with.
+    Object.assign(collector, { logger, causeLog: createCauseLog(logger) });
     log.length = 0;
 
     await grantThatTimesOut(elb);
-    await elb('page view', {});
+    const held = await elb('page view', {});
     await elb('walker consent', { marketing: false });
     await jest.advanceTimersByTimeAsync(TIMEOUT);
-    await elb('page view', {});
+    const blocked = await elb('page view', {});
+
+    // Within the window the event is held; once the failed grant has not
+    // recovered for a whole window the destination is blocked: the held
+    // event and this one fail instead of parking.
+    expect(held).toMatchObject({ queued: { d: { reason: { code: 'held' } } } });
+    expect(blocked).toMatchObject({
+      ok: false,
+      failed: { d: { reason: { code: 'blocked' } } },
+    });
+    expect(collector.status.destinations.d.failed).toBe(2);
 
     // The late grant lands on the vendor now. Its settle re-delivers the
-    // current consent and drains the held events, with no further push.
+    // current consent and releases the hold; nothing is left to drain.
     hung.resolve();
     await jest.advanceTimersByTimeAsync(0);
     expect(log).toEqual([
@@ -119,12 +130,16 @@ describe('a timed-out on() still running', () => {
       'end:{"marketing":true}',
       'start:{"marketing":false}',
       'end:{"marketing":false}',
-      'push:page view',
-      'push:page view',
     ]);
     expect(getStateHold(collector.destinations.d)).toBeUndefined();
     expect(isStateDeliveryInFlight(collector.destinations.d)).toBe(false);
-    expect(loggerCalls(logger, 'error', 'on callback failed')).toHaveLength(1);
+    expect(
+      loggerCalls(
+        logger,
+        'error',
+        'consent not applied: the destination on(consent) handler failed; its events are held until a retry succeeds',
+      ),
+    ).toHaveLength(1);
     expect(
       loggerCalls(logger, 'debug', 'late settle after timeout'),
     ).toHaveLength(1);
@@ -149,7 +164,9 @@ describe('a timed-out on() still running', () => {
 
     expect(log).toEqual(['start:{"marketing":true}']);
     expect(isStateDeliveryInFlight(collector.destinations.d)).toBe(true);
-    expect(collector.destinations.d.queuePush).toHaveLength(3);
+    // Each push comes a window after the failed grant: blocked, failed.
+    expect(collector.destinations.d.queuePush).toHaveLength(0);
+    expect(collector.status.destinations.d.failed).toBe(3);
   });
 
   test('a sibling destination keeps receiving events during the hang', async () => {
@@ -184,7 +201,7 @@ describe('a timed-out on() still running', () => {
     expect(getStateHold(collector.destinations.d)).toBeDefined();
   });
 
-  test('a handler that never settles keeps the destination held, and walker run discards its held events', async () => {
+  test('a handler that never settles keeps the destination blocked: its events fail, nothing parks', async () => {
     const log: string[] = [];
     const { elb, collector } = await startFlow({
       destinations: {
@@ -200,14 +217,16 @@ describe('a timed-out on() still running', () => {
       await jest.advanceTimersByTimeAsync(TIMEOUT * 10);
       await elb('page view', {});
     }
-    expect(collector.destinations.d.queuePush).toHaveLength(3);
+    expect(collector.destinations.d.queuePush).toHaveLength(0);
+    expect(collector.status.destinations.d.failed).toBe(3);
 
     await elb('walker run');
     await elb('page view', {});
 
     expect(log).toEqual(['start:{"marketing":true}']);
     expect(getStateHold(collector.destinations.d)).toBeDefined();
-    expect(collector.destinations.d.queuePush).toHaveLength(1);
+    expect(collector.destinations.d.queuePush).toHaveLength(0);
+    expect(collector.status.destinations.d.failed).toBe(4);
   });
 
   test('a grant that rejects after its timeout behaves like one that resolves late', async () => {
@@ -218,7 +237,8 @@ describe('a timed-out on() still running', () => {
       destinations: { d: overlapRecorder(log, hung.promise) },
     });
     await elb('page view', {});
-    Object.assign(collector, { logger });
+    // The cause log writes through the logger it was created with.
+    Object.assign(collector, { logger, causeLog: createCauseLog(logger) });
     log.length = 0;
 
     await grantThatTimesOut(elb);
@@ -237,7 +257,13 @@ describe('a timed-out on() still running', () => {
     ]);
     expect(getStateHold(collector.destinations.d)).toBeUndefined();
     expect(isStateDeliveryInFlight(collector.destinations.d)).toBe(false);
-    expect(loggerCalls(logger, 'error', 'on callback failed')).toHaveLength(1);
+    expect(
+      loggerCalls(
+        logger,
+        'error',
+        'consent not applied: the destination on(consent) handler failed; its events are held until a retry succeeds',
+      ),
+    ).toHaveLength(1);
   });
 
   test('a late settle while frequent other-cell commands arrive still recovers at once', async () => {
@@ -484,7 +510,9 @@ describe('a handler that re-emits state during a catch-up outside a command', ()
     expect(calls).toBeLessThanOrEqual(10);
     expect(log).toEqual(['push:page view']);
     expect(getStateHold(collector.destinations.d)).toBeDefined();
-    expect(collector.destinations.d.queuePush).toHaveLength(1);
+    // The retry at the window end did not recover: blocked, the event fails.
+    expect(collector.destinations.d.queuePush).toHaveLength(0);
+    expect(collector.destinations.d.dlq).toHaveLength(1);
     expect(
       loggerCalls(logger, 'error', 'state delivery did not converge'),
     ).toHaveLength(1);

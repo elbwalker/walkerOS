@@ -15,6 +15,10 @@ declare module '@google-cloud/bigquery-storage' {
   ): void;
   export function __setNextAppendThrow(err: unknown): void;
   export function __setNextGetResultReject(err: unknown): void;
+  export function __setNextAppendStatus(status: {
+    code: number;
+    message: string;
+  }): void;
   export function __setNextOpenWriterError(err: unknown): void;
 }
 

@@ -14,9 +14,10 @@ The logger is walkerOS's standard logging system, available in all sources and
 destinations via `env.logger` or `logger` parameter. It provides scoped,
 level-aware logging that replaces console.log.
 
-**Core principle:** Don't log what the collector already logs. Only log
-meaningful operations like external API calls, transformations, and validation
-errors.
+**Core principle:** Don't log what the collector already logs, and never log a
+failure yourself. A step reports a failure by throwing a `StepError`; the
+collector writes the one ERROR line per cause. Log only meaningful operations
+like external API calls and transformations, at `debug`.
 
 ## Logger Access
 
@@ -104,85 +105,103 @@ scoped logger.
 - **External API calls**: Before/after with request/response details
 - **Auth operations**: Token refresh, client creation/failures
 - **Transformations**: Complex mappings or data processing
-- **Validation errors**: Always use `logger.throw` for fatal errors
+- **Notes that are not failures**: a deliberate decision, an advisory about
+  configuration (`warn`: walkerOS acted, the intent is still met)
+- **Never failures**: a missing setting, a failed request or an unsendable event
+  is a thrown `StepError`, not a log line
 
 ## Usage Patterns
 
-### Pattern 1: Validation Errors (Always Use logger.throw)
+### Pattern 1: Validation Errors (Throw a StepError)
 
 ```typescript
-// ✅ GOOD - Fatal configuration error
-async init({ config, logger }) {
+import { StepError } from '@walkeros/core';
+
+// ✅ GOOD - A missing setting is a failure: throw, never return or log
+async init({ config }) {
   const { apiKey, projectId } = config.settings || {};
 
-  if (!apiKey) {
-    logger.throw('Config settings apiKey missing');
-  }
+  if (!apiKey)
+    throw new StepError('Config settings apiKey missing', { code: 'config' });
 
-  if (!projectId) {
-    logger.throw('Config settings projectId missing');
-  }
+  if (!projectId)
+    throw new StepError('Config settings projectId missing', {
+      code: 'config',
+    });
 }
 ```
 
-**Why logger.throw:**
+**Why a thrown StepError:**
 
-- Logs the error at ERROR level (always visible)
-- Throws Error automatically (no separate throw needed)
-- Collector catches and handles gracefully
-- Never returns (TypeScript type: `never`)
+- The collector turns the throw into a failed push (or a failed start), counts
+  it, and writes **one** ERROR line per cause and minute with the code
+- A step that also logged the failure would write a second line for the same
+  cause
+- `code` and `retryable` tell a server source whether to ask the producer to
+  resend (`config`, `missing-input` and a 4xx are not retryable)
+- `logger.throw` only throws now. It writes no log line, so it is not a way to
+  report a failure
+
+Never `return` early or `return false` from `init` instead of throwing: a step
+that returns normally counts as delivered.
 
 ### Pattern 2: External API Calls
 
 ```typescript
-// ✅ GOOD - Log external calls with context
+import { StepError } from '@walkeros/core';
+
+// ✅ GOOD - Trace the call at debug, throw on a failure
 async push(event, { config, logger }) {
   const endpoint = 'https://api.vendor.com/events';
 
-  // Log before call
-  logger.debug('Calling API', {
-    endpoint,
-    method: 'POST',
-    eventId: event.id,
-  });
+  logger.debug('Calling API', { endpoint, method: 'POST', eventId: event.id });
 
   const response = await fetch(endpoint, {
     method: 'POST',
     body: JSON.stringify(event),
   });
 
-  // Log after call
-  logger.debug('API response', {
-    status: response.status,
-    ok: response.ok,
-  });
+  logger.debug('API response', { status: response.status, ok: response.ok });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.throw(`API error (${response.status}): ${errorText}`);
-  }
+  if (!response.ok)
+    // The status sets retryable (429 and 5xx retry, other 4xx do not). The
+    // response body goes on `body`, never into the message, and never into a
+    // log line.
+    throw new StepError(`HTTP ${response.status}`, {
+      code: 'transport',
+      status: response.status,
+      body: await response.text(),
+    });
 }
 ```
+
+Prefer `sendWeb` / `sendServer`: they already throw a `StepError` with the
+status and body.
 
 ### Pattern 3: Auth Operations
 
 ```typescript
-// ✅ GOOD - Log auth client creation
+import { StepError } from '@walkeros/core';
+
+// ✅ GOOD - Trace the client creation, throw on failure
 async init({ config, logger }) {
   try {
     const authClient = await createAuthClient(config.settings);
     logger.debug('Auth client created');
-
     return {
       env: { authClient },
     };
   } catch (error) {
-    logger.throw(
-      `Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    );
+    throw new StepError('Authentication failed', {
+      code: 'config',
+      cause: error,
+    });
   }
 }
 ```
+
+The SDK's own message stays on `cause`, so a vendor error that carries personal
+data never reaches a log line.
 
 ### Pattern 4: Server Startup (Sources)
 
@@ -254,7 +273,8 @@ When updating a source/destination to use the logger:
 
 - [ ] Remove all `console.log`, `console.warn`, `console.error` statements
 - [ ] Remove verbose init/push status logging (let collector handle)
-- [ ] Add `logger.throw` for all validation errors (apiKey missing, etc.)
+- [ ] Throw a `StepError` with a `code` for every failure (apiKey missing,
+      failed request, unsendable event); never log a failure and return
 - [ ] Add `logger.debug` before external API calls (with endpoint, method)
 - [ ] Add `logger.debug` after external API calls (with response status)
 - [ ] Add `logger.debug` for auth operations (client creation, token refresh)
@@ -263,19 +283,23 @@ When updating a source/destination to use the logger:
 
 ## Testing with Logger
 
-Use `createMockLogger` from `@walkeros/core` in tests:
+Use `createMockLogger` from `@walkeros/core` to check `debug` traces. To prove
+that a failure is reported, start a real collector (`startFlow`), mock only the
+network or the vendor global, and read the push result; a mocked collector
+cannot see loss:
 
 ```typescript
-import { createMockLogger } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 
-test('throws on missing apiKey', () => {
-  const logger = createMockLogger();
+test('a missing apiKey fails the push', async () => {
+  const { elb } = await startFlow({
+    destinations: { vendor: { code: destination, config: { settings: {} } } },
+  });
 
-  expect(() => {
-    destination.init({ config: {}, logger });
-  }).toThrow('Config settings apiKey missing');
+  const result = await elb({ name: 'page view' });
 
-  expect(logger.throw).toHaveBeenCalledWith('Config settings apiKey missing');
+  expect(result.ok).toBe(false);
+  expect(result.failed?.vendor.reason?.code).toBe('config');
 });
 ```
 
@@ -302,6 +326,18 @@ const { elb } = await startFlow({
 - `'WARN'`: Errors + warnings
 - `'INFO'`: Errors + warnings + info
 - `'DEBUG'`: Everything
+
+**Level contract:** `ERROR` means the user's intent is not met (an event was not
+delivered, a setting has no effect). `WARN` means walkerOS acted and the intent
+is still met. `INFO` is lifecycle and self-healing. `DEBUG` is the per-event
+trace and deliberate decisions: unmet consent, a skipped event and a consent
+wait are `debug`, never a failure.
+
+**Format:** on a server flow, `"collector": { "logger": { "format": "json" } }`
+prints one JSON object per line (`severity`, `message`, `time`, `scope`,
+`context`), which platforms such as Cloud Run read as structured logs. A web
+flow rejects `format`. The flow's own handler and the runtime's handler both see
+every line, so forwarding to a monitoring service needs no parsing.
 
 ## Related Skills
 

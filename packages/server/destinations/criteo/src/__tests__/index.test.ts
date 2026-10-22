@@ -2,10 +2,12 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import {
   clone,
+  createEvent,
   createIngest,
-  getEvent,
   createMockContext,
   createMockLogger,
+  getEvent,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -27,7 +29,6 @@ describe('Server Destination Criteo', () => {
     jest.clearAllMocks();
 
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: 'OK',
     });
 
@@ -57,7 +58,7 @@ describe('Server Destination Criteo', () => {
         logger: createMockLogger(),
         id: 'test-criteo',
       }),
-    ).rejects.toThrow('Config settings partnerId missing');
+    ).rejects.toThrow('Config settings partnerId, callerId missing');
   });
 
   test('init - missing callerId throws', async () => {
@@ -183,7 +184,7 @@ describe('Server Destination Criteo', () => {
     expect(body.events[0].event).toBe('trackTransaction');
 
     jest.clearAllMocks();
-    mockSendServer.mockResolvedValue({ ok: true, data: 'OK' });
+    mockSendServer.mockResolvedValue({ data: 'OK' });
 
     await destination.push(
       event,
@@ -241,7 +242,8 @@ describe('Server Destination Criteo', () => {
   });
 
   test('raw email is hashed into md5, sha256, sha256_md5', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'user@example.com' },
     });
     const config: Config = {
@@ -317,7 +319,9 @@ describe('Server Destination Criteo', () => {
   });
 
   test('error response throws', async () => {
-    mockSendServer.mockResolvedValue({ ok: false, error: '401' });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 401', { code: 'transport', status: 401 }),
+    );
 
     const event = getEvent();
     const config: Config = { settings: { partnerId, callerId } };
@@ -332,7 +336,7 @@ describe('Server Destination Criteo', () => {
 
   test('environment customization via env.sendServer', async () => {
     const customSendServer = jest.fn();
-    customSendServer.mockResolvedValue({ ok: true, data: 'OK' });
+    customSendServer.mockResolvedValue({ data: 'OK' });
 
     const customEnv = { sendServer: customSendServer };
     const event = getEvent();
@@ -351,7 +355,7 @@ describe('Server Destination Criteo', () => {
     const dest = jest.requireActual('../').default;
     const event = getEvent('order complete', {
       timestamp: 1700000900000,
-      data: { id: 'ORD-1', total: 100, currency: 'EUR' },
+      data: { id: 'ORD-1', value: 100, currency: 'EUR' },
       nested: [
         {
           entity: 'product',

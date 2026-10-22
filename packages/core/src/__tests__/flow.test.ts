@@ -17,6 +17,7 @@ import {
 } from '../schemas/flow';
 import {
   FlowCycleError,
+  FlowReferenceError,
   getFlowSettings,
   getPlatform,
   packageNameToVariable,
@@ -1453,8 +1454,7 @@ describe('Pattern Resolution', () => {
       process.env = originalEnv;
     });
 
-    test('resolves $env.NAME from process.env', () => {
-      process.env.GA4_ID = 'G-ENV123';
+    test('resolves $env.NAME from the env map', () => {
       const setup: Flow.Json = {
         version: 4,
         flows: {
@@ -1471,14 +1471,15 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowSettings(setup);
+      const config = getFlowSettings(setup, undefined, {
+        env: { GA4_ID: 'G-ENV123' },
+      });
       expect(config.destinations?.gtag.config).toEqual({
         id: 'G-ENV123',
       });
     });
 
     test('uses default value when env var not set', () => {
-      delete process.env.MISSING_VAR;
       const setup: Flow.Json = {
         version: 4,
         flows: {
@@ -1495,14 +1496,13 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowSettings(setup);
+      const config = getFlowSettings(setup, undefined, { env: {} });
       expect(config.destinations?.test.config).toEqual({
         value: 'default-value',
       });
     });
 
     test('throws when env var missing and no default', () => {
-      delete process.env.REQUIRED_VAR;
       const setup: Flow.Json = {
         version: 4,
         flows: {
@@ -1519,13 +1519,12 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      expect(() => getFlowSettings(setup)).toThrow(
+      expect(() => getFlowSettings(setup, undefined, { env: {} })).toThrow(
         'Environment variable "REQUIRED_VAR" not found and no default provided',
       );
     });
 
     test('env var takes precedence over default when set', () => {
-      process.env.MY_VAR = 'from-env';
       const setup: Flow.Json = {
         version: 4,
         flows: {
@@ -1542,10 +1541,42 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowSettings(setup);
+      const config = getFlowSettings(setup, undefined, {
+        env: { MY_VAR: 'from-env' },
+      });
       expect(config.destinations?.test.config).toEqual({
         value: 'from-env',
       });
+    });
+
+    test('never reads process.env when no env map is given', () => {
+      process.env.WALKEROS_PROBE = 'x';
+      const setup = (value: string): Flow.Json => ({
+        version: 4,
+        flows: {
+          default: {
+            config: { platform: 'web' },
+            destinations: {
+              test: { package: '@walkeros/test', config: { value } },
+            },
+          },
+        },
+      });
+      let caught: unknown;
+      try {
+        getFlowSettings(setup('$env.WALKEROS_PROBE'));
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(FlowReferenceError);
+      expect(caught).toMatchObject({
+        code: 'MISSING_ENV',
+        reference: 'WALKEROS_PROBE',
+      });
+      expect(
+        getFlowSettings(setup('$env.WALKEROS_PROBE:d')).destinations?.test
+          .config,
+      ).toEqual({ value: 'd' });
     });
 
     test('an explicit env map is the only source, never process.env', () => {
@@ -1598,18 +1629,7 @@ describe('Pattern Resolution', () => {
   });
 
   describe('Combined Patterns', () => {
-    const originalEnv = process.env;
-
-    beforeEach(() => {
-      process.env = { ...originalEnv };
-    });
-
-    afterEach(() => {
-      process.env = originalEnv;
-    });
-
     test('uses $var as default value for $env when env not set', () => {
-      delete process.env.GA4_ID;
       const setup: Flow.Json = {
         version: 4,
         variables: {
@@ -1629,14 +1649,13 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowSettings(setup);
+      const config = getFlowSettings(setup, undefined, { env: {} });
       expect(config.destinations?.gtag.config).toEqual({
         measurementId: 'G-FALLBACK123',
       });
     });
 
     test('env value takes precedence over $var default', () => {
-      process.env.GA4_ID = 'G-FROM-ENV';
       const setup: Flow.Json = {
         version: 4,
         variables: {
@@ -1656,7 +1675,9 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowSettings(setup);
+      const config = getFlowSettings(setup, undefined, {
+        env: { GA4_ID: 'G-FROM-ENV' },
+      });
       expect(config.destinations?.gtag.config).toEqual({
         measurementId: 'G-FROM-ENV',
       });
@@ -1905,19 +1926,12 @@ describe('deferred env resolution', () => {
   });
 
   it('resolves $env normally when deferred is false', () => {
-    process.env.TEST_SECRET = 'hunter2';
     const setup = makeSetup({ key: '$env.TEST_SECRET' });
-    const config = getFlowSettings(setup, 'test', { deferred: false });
+    const config = getFlowSettings(setup, 'test', {
+      deferred: false,
+      env: { TEST_SECRET: 'hunter2' },
+    });
     expect(config.collector).toEqual({ key: 'hunter2' });
-    delete process.env.TEST_SECRET;
-  });
-
-  it('resolves $env normally when no options passed', () => {
-    process.env.TEST_SECRET = 'hunter2';
-    const setup = makeSetup({ key: '$env.TEST_SECRET' });
-    const config = getFlowSettings(setup, 'test');
-    expect(config.collector).toEqual({ key: 'hunter2' });
-    delete process.env.TEST_SECRET;
   });
 });
 
@@ -2537,7 +2551,6 @@ describe('$flow references', () => {
   });
 
   test('resolves $env inside referenced flow before $flow resolves', () => {
-    process.env.SERVER_URL = 'https://prod.example.com/collect';
     const config: Flow.Json = {
       version: 4,
       flows: {
@@ -2550,14 +2563,12 @@ describe('$flow references', () => {
         },
       },
     };
-    try {
-      const web = getFlowSettings(config, 'web');
-      expect(web.destinations?.api.config).toEqual({
-        settings: { url: 'https://prod.example.com/collect' },
-      });
-    } finally {
-      delete process.env.SERVER_URL;
-    }
+    const web = getFlowSettings(config, 'web', {
+      env: { SERVER_URL: 'https://prod.example.com/collect' },
+    });
+    expect(web.destinations?.api.config).toEqual({
+      settings: { url: 'https://prod.example.com/collect' },
+    });
   });
 
   test('resolves a flow name with a hyphen', () => {
@@ -2614,6 +2625,32 @@ describe('$flow references', () => {
       },
     };
     expect(() => getFlowSettings(config, 'web')).toThrow(/url/);
+  });
+
+  test('treats an empty value as unresolved, as soft mode does', () => {
+    const config: Flow.Json = {
+      version: 4,
+      flows: {
+        server: {
+          config: {
+            platform: 'server',
+            url: 'https://collect.example.com',
+            settings: { region: '' },
+          },
+        },
+        web: {
+          config: { platform: 'web' },
+          destinations: {
+            api: {
+              config: { settings: { region: '$flow.server.settings.region' } },
+            },
+          },
+        },
+      },
+    };
+    expect(() => getFlowSettings(config, 'web')).toThrow(
+      '$flow.server.settings.region is empty. Set flows.server.config.settings.region.',
+    );
   });
 
   test('detects cycles', () => {
@@ -2923,7 +2960,6 @@ describe('$var unified resolver', () => {
   });
 
   it('variable containing $env resolves at use', () => {
-    process.env.TEST_VAR = 'envvalue';
     const config: Flow.Json = {
       version: 4,
       variables: { token: '$env.TEST_VAR' },
@@ -2936,9 +2972,10 @@ describe('$var unified resolver', () => {
         },
       },
     };
-    const flow = getFlowSettings(config);
+    const flow = getFlowSettings(config, undefined, {
+      env: { TEST_VAR: 'envvalue' },
+    });
     expect(flow.config?.settings?.t).toBe('envvalue');
-    delete process.env.TEST_VAR;
   });
 
   it('step-level object variable shadows root-level scalar', () => {
@@ -2970,21 +3007,10 @@ describe('$var unified resolver', () => {
 // ========================================
 
 describe('getFlowSettings resolves $env inside config.credentials', () => {
-  const ENV_KEYS = ['SA', 'PK'] as const;
-  const saved: Record<string, string | undefined> = {};
-
-  beforeEach(() => {
-    for (const key of ENV_KEYS) saved[key] = process.env[key];
-    process.env.SA = '{"client_email":"svc@example.com"}';
-    process.env.PK = 'private-key-value';
-  });
-
-  afterEach(() => {
-    for (const key of ENV_KEYS) {
-      if (saved[key] === undefined) delete process.env[key];
-      else process.env[key] = saved[key];
-    }
-  });
+  const env = {
+    SA: '{"client_email":"svc@example.com"}',
+    PK: 'private-key-value',
+  };
 
   it('resolves a string config.credentials on a destination', () => {
     const config: Flow.Json = {
@@ -2998,7 +3024,7 @@ describe('getFlowSettings resolves $env inside config.credentials', () => {
         },
       },
     };
-    const flow = getFlowSettings(config);
+    const flow = getFlowSettings(config, undefined, { env });
     expect(flow.destinations?.d.config).toEqual({
       credentials: '{"client_email":"svc@example.com"}',
     });
@@ -3016,7 +3042,7 @@ describe('getFlowSettings resolves $env inside config.credentials', () => {
         },
       },
     };
-    const flow = getFlowSettings(config);
+    const flow = getFlowSettings(config, undefined, { env });
     expect(flow.stores?.s.config).toEqual({
       credentials: '{"client_email":"svc@example.com"}',
     });
@@ -3036,7 +3062,7 @@ describe('getFlowSettings resolves $env inside config.credentials', () => {
         },
       },
     };
-    const flow = getFlowSettings(config);
+    const flow = getFlowSettings(config, undefined, { env });
     expect(flow.sources?.src.config).toEqual({
       credentials: { private_key: 'private-key-value' },
     });
@@ -3061,7 +3087,7 @@ describe('getFlowSettings resolves $env inside config.credentials', () => {
         },
       },
     };
-    const flow = getFlowSettings(config);
+    const flow = getFlowSettings(config, undefined, { env });
     expect(flow.destinations?.d.config).toEqual({
       credentials: {
         client_email: '{"client_email":"svc@example.com"}',

@@ -53,7 +53,7 @@ register the same code on its own server.
 | `walkeros://reference/variables`   | Variable patterns ($var/$env/$code/$store)                  |
 | `walkeros://reference/contract`    | Event schemas, wildcards, inheritance                       |
 | `walkeros://reference/examples`    | A complete, tested flow config (flow-complete.json)         |
-| `walkeros://reference/packages`    | Full package catalog                                        |
+| `walkeros://reference/packages`    | Full package catalog, `{ catalog, count, warnings? }`       |
 | `walkeros://schema/{packageName}`  | Per-package JSON schemas                                    |
 
 ## Prompts

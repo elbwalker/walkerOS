@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * mParticle Events API step examples.
@@ -133,7 +133,7 @@ export const commercePurchase: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'ev-1700000300000',
     timestamp: 1700000300000,
-    data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
+    data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     user: { id: 'user-123' },
     source: { type: 'express', platform: 'server' },
   }),
@@ -147,7 +147,7 @@ export const commercePurchase: Flow.StepExample = {
             map: {
               action: { value: 'purchase' },
               transaction_id: 'data.id',
-              total_amount: 'data.total',
+              total_amount: 'data.value',
             },
           },
         },
@@ -193,7 +193,8 @@ export const identityAndAttributes: Flow.StepExample = {
   title: 'User identities',
   description:
     'A form submission sends a custom_event whose batch carries user_identities resolved from destination settings.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     id: 'ev-1700000400000',
     timestamp: 1700000400000,
     data: { type: 'newsletter' },
@@ -230,4 +231,13 @@ export const identityAndAttributes: Flow.StepExample = {
       OPTIONS,
     ],
   ],
+};
+
+/** A silent rule sends nothing to mParticle. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request to mParticle.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
 };

@@ -19,7 +19,6 @@ async function mockSendServer(
 ): Promise<SendResponse> {
   // Simulate successful Meta API response
   return {
-    ok: true,
     data: {
       events_received: 1,
       messages: [],

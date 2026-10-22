@@ -12,6 +12,7 @@ import type { InitOptions as EngagementInitOptions } from '@amplitude/engagement
 // walkerOS mapping-based `identify`. Omit it so Settings can re-declare it.
 type BrowserOptions = Omit<AmplitudeTypes.BrowserOptions, 'identify'>;
 export type AmplitudeBrowserOptions = AmplitudeTypes.BrowserOptions;
+export type AmplitudePlugin = AmplitudeTypes.Plugin;
 
 /**
  * Destination-level settings.
@@ -59,57 +60,61 @@ export interface Mapping {
 }
 
 /**
- * Amplitude SDK surface — the subset of @amplitude/unified the
- * destination actually uses. Mirrors the real module's named exports so
- * tests can mock each method individually via env.amplitude.
+ * Amplitude SDK surface: the subset of @amplitude/unified the
+ * destination actually uses. Mirrors the real client's methods so tests can
+ * mock each one via env.amplitude. Generic over the Identify and Revenue
+ * instances, so the real SDK gets back the instances it created.
  */
-export interface AmplitudeSDK {
-  initAll: (apiKey: string, options?: Record<string, unknown>) => Promise<void>;
-  track: (eventType: string, eventProperties?: Record<string, unknown>) => void;
-  identify: (identify: IdentifyInstance) => void;
-  revenue: (revenue: RevenueInstance) => void;
-  reset: () => void;
-  setOptOut: (optOut: boolean) => void;
-  setUserId: (userId: string | undefined) => void;
-  setDeviceId: (deviceId: string) => void;
-  setSessionId: (sessionId: number) => void;
-  setGroup: (groupType: string, groupName: string | string[]) => void;
-  groupIdentify: (
-    groupType: string,
-    groupName: string,
-    identify: IdentifyInstance,
-  ) => void;
-  flush: () => { promise: Promise<void> };
-  add: (plugin: unknown) => { promise: Promise<void> };
-  Identify: new () => IdentifyInstance;
-  Revenue: new () => RevenueInstance;
+export interface AmplitudeSDK<
+  I extends IdentifyInstance = IdentifyInstance,
+  R extends RevenueInstance = RevenueInstance,
+> {
+  /** Analytics. */
+  init: (apiKey: string, options?: AmplitudeBrowserOptions) => unknown;
+  /** One plugin: Session Replay, Experiment or Guides & Surveys. */
+  add: (plugin: AmplitudePlugin) => unknown;
+  track: (
+    eventType: string,
+    eventProperties?: Record<string, unknown>,
+  ) => unknown;
+  identify: (identify: I) => unknown;
+  revenue: (revenue: R) => unknown;
+  reset: () => unknown;
+  setOptOut: (optOut: boolean) => unknown;
+  setUserId: (userId: string | undefined) => unknown;
+  setDeviceId: (deviceId: string) => unknown;
+  setSessionId: (sessionId: number) => unknown;
+  setGroup: (groupType: string, groupName: string | string[]) => unknown;
+  groupIdentify: (groupType: string, groupName: string, identify: I) => unknown;
+  Identify: new () => I;
+  Revenue: new () => R;
 }
 
-/** Chainable Identify — mirrors @amplitude/unified Identify class. */
+/** Chainable Identify, as the @amplitude/unified Identify class. */
 export interface IdentifyInstance {
-  set: (property: string, value: unknown) => IdentifyInstance;
-  setOnce: (property: string, value: unknown) => IdentifyInstance;
-  add: (property: string, value: number) => IdentifyInstance;
-  append: (property: string, value: unknown) => IdentifyInstance;
-  prepend: (property: string, value: unknown) => IdentifyInstance;
-  preInsert: (property: string, value: unknown) => IdentifyInstance;
-  postInsert: (property: string, value: unknown) => IdentifyInstance;
-  remove: (property: string, value: unknown) => IdentifyInstance;
-  unset: (property: string) => IdentifyInstance;
-  clearAll: () => IdentifyInstance;
+  set(property: string, value: unknown): IdentifyInstance;
+  setOnce(property: string, value: unknown): IdentifyInstance;
+  add(property: string, value: number): IdentifyInstance;
+  append(property: string, value: unknown): IdentifyInstance;
+  prepend(property: string, value: unknown): IdentifyInstance;
+  preInsert(property: string, value: unknown): IdentifyInstance;
+  postInsert(property: string, value: unknown): IdentifyInstance;
+  remove(property: string, value: unknown): IdentifyInstance;
+  unset(property: string): IdentifyInstance;
+  clearAll(): IdentifyInstance;
 }
 
-/** Chainable Revenue — mirrors @amplitude/unified Revenue class. */
+/** Chainable Revenue, as the @amplitude/unified Revenue class. */
 export interface RevenueInstance {
-  setProductId: (id: string) => RevenueInstance;
-  setPrice: (price: number) => RevenueInstance;
-  setQuantity: (quantity: number) => RevenueInstance;
-  setRevenueType: (type: string) => RevenueInstance;
-  setCurrency: (currency: string) => RevenueInstance;
-  setRevenue: (revenue: number) => RevenueInstance;
-  setReceipt: (receipt: string) => RevenueInstance;
-  setReceiptSig: (signature: string) => RevenueInstance;
-  setEventProperties: (properties: Record<string, unknown>) => RevenueInstance;
+  setProductId(id: string): RevenueInstance;
+  setPrice(price: number): RevenueInstance;
+  setQuantity(quantity: number): RevenueInstance;
+  setRevenueType(type: string): RevenueInstance;
+  setCurrency(currency: string): RevenueInstance;
+  setRevenue(revenue: number): RevenueInstance;
+  setReceipt(receipt: string): RevenueInstance;
+  setReceiptSig(signature: string): RevenueInstance;
+  setEventProperties(properties: Record<string, unknown>): RevenueInstance;
 }
 
 /**

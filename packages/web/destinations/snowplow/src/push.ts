@@ -17,6 +17,7 @@ import {
   getMappingValue,
   isString,
   isNumber,
+  StepError,
 } from '@walkeros/core';
 import { SCHEMAS } from './types';
 
@@ -52,14 +53,15 @@ export async function pushSnowplowEvent(
   actionName?: string,
   config?: Config,
   logger?: Logger.Instance,
+  silent = false,
 ): Promise<void> {
   const settings = config?.settings;
   const adapter = settings?._state?.adapter;
 
-  if (!adapter) {
-    logger?.throw('Tracker not initialized');
-    return;
-  }
+  if (!adapter)
+    throw new StepError('Snowplow tracker not initialized', {
+      code: 'not-ready',
+    });
   const runtimeState = settings?._state;
 
   // Set userId once on first event where value is available
@@ -110,15 +112,13 @@ export async function pushSnowplowEvent(
     }
   }
 
+  // A silent rule runs the identity and page side effects above and sends
+  // no event
+  if (silent) return;
+
   // Handle structured events (bypasses self-describing events)
   if (mapping.struct) {
-    await handleStructuredEvent(
-      event,
-      mapping.struct,
-      adapter,
-      collector,
-      logger,
-    );
+    await handleStructuredEvent(event, mapping.struct, adapter, collector);
     return;
   }
 
@@ -129,37 +129,35 @@ export async function pushSnowplowEvent(
   }
 
   // Handle self-describing events
-  if (actionName) {
-    const actionSchema =
-      mapping.snowplow?.actionSchema ||
-      settings?.snowplow?.actionSchema ||
-      SCHEMAS.ACTION;
-
-    const context = await buildContext(event, mapping, collector);
-
-    // Build event data based on schema type
-    let eventData: WalkerOS.AnyObject = {};
-
-    if (isObject(mapping.data) && 'map' in mapping.data) {
-      // Use mapped data for self-describing events (e.g., percent_progress)
-      const mapped = await getMappingValue(event, mapping.data, { collector });
-      if (isObject(mapped)) eventData = mapped as WalkerOS.AnyObject;
-    } else if (actionSchema === SCHEMAS.ACTION) {
-      // Ecommerce pattern: include type field
-      eventData = { type: actionName };
-    }
-    // else: empty data {} for marker events (media play/pause/etc.)
-
-    adapter.trackSelfDescribingEvent({
-      event: { schema: actionSchema, data: eventData as WalkerOS.Properties },
-      context: context.length > 0 ? context : undefined,
+  if (!actionName)
+    throw new StepError('Snowplow rule has no action name', {
+      code: 'missing-input',
     });
-  } else {
-    logger?.info('Event skipped: no action name in mapping', {
-      event: event.name,
-      hasContext: !!mapping.context?.length,
-    });
+
+  const actionSchema =
+    mapping.snowplow?.actionSchema ||
+    settings?.snowplow?.actionSchema ||
+    SCHEMAS.ACTION;
+
+  const context = await buildContext(event, mapping, collector);
+
+  // Build event data based on schema type
+  let eventData: WalkerOS.AnyObject = {};
+
+  if (isObject(mapping.data) && 'map' in mapping.data) {
+    // Use mapped data for self-describing events (e.g., percent_progress)
+    const mapped = await getMappingValue(event, mapping.data, { collector });
+    if (isObject(mapped)) eventData = mapped as WalkerOS.AnyObject;
+  } else if (actionSchema === SCHEMAS.ACTION) {
+    // Ecommerce pattern: include type field
+    eventData = { type: actionName };
   }
+  // else: empty data {} for marker events (media play/pause/etc.)
+
+  adapter.trackSelfDescribingEvent({
+    event: { schema: actionSchema, data: eventData as WalkerOS.Properties },
+    context: context.length > 0 ? context : undefined,
+  });
 }
 
 /**
@@ -243,29 +241,20 @@ async function handleStructuredEvent(
   struct: StructuredEventMapping,
   adapter: SnowplowAdapter,
   collector: Collector.Instance,
-  logger?: Logger.Instance,
 ): Promise<void> {
   // Resolve required fields
   const category = await getMappingValue(event, struct.category, { collector });
   const action = await getMappingValue(event, struct.action, { collector });
 
-  // Category and action are required - skip with warning if not present
-  if (!category || !isString(category)) {
-    logger?.info('Struct event skipped: invalid category', {
-      event: event.name,
-      category,
-      reason: !category ? 'missing' : 'not a string',
+  // Category and action are required: without them nothing can be sent
+  if (!category || !isString(category))
+    throw new StepError('Snowplow struct event needs a category string', {
+      code: 'missing-input',
     });
-    return;
-  }
-  if (!action || !isString(action)) {
-    logger?.info('Struct event skipped: invalid action', {
-      event: event.name,
-      action,
-      reason: !action ? 'missing' : 'not a string',
+  if (!action || !isString(action))
+    throw new StepError('Snowplow struct event needs an action string', {
+      code: 'missing-input',
     });
-    return;
-  }
 
   // Resolve optional fields
   const label = struct.label

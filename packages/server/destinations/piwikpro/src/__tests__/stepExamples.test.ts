@@ -31,11 +31,16 @@ function asPublished(rule: Rule | undefined): Rule | undefined {
  * calls to filter.
  */
 describe('Step Examples', () => {
+  // Failure examples (with an outcome) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.outcome === undefined,
+  );
+
   const sendServer = jest.fn<Promise<SendResponse>, unknown[]>();
 
   beforeEach(() => {
     sendServer.mockReset();
-    sendServer.mockResolvedValue({ ok: true, data: '' });
+    sendServer.mockResolvedValue({ data: '' });
   });
 
   async function run(
@@ -66,14 +71,11 @@ describe('Step Examples', () => {
     );
   }
 
-  it.each<[string, StepExample]>(Object.entries(examples.step))(
-    '%s',
-    async (_, example) => {
-      expect(await run(example, example.mapping)).toEqual(example.out);
-    },
-  );
+  it.each<[string, StepExample]>(published)('%s', async (_, example) => {
+    expect(await run(example, example.mapping)).toEqual(example.out);
+  });
 
-  it.each<[string, StepExample]>(Object.entries(examples.step))(
+  it.each<[string, StepExample]>(published)(
     '%s as published',
     async (_, example) => {
       expect(await run(example, asPublished(example.mapping))).toEqual(

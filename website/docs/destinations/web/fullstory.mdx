@@ -89,6 +89,11 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+Without `settings.consent`, a destination with `config.consent` stops capture
+when the required consent is revoked (`shutdown`) and starts it on a grant
+(`start`). A missing `orgId` is a `config` error, and a FullStory call that
+fails fails the event.
+
 ## Consent
 
 FullStory supports runtime consent via `start`/`shutdown` (recording on/off) or

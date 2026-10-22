@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-amplitude",
   "description": "Amplitude server destination for walkerOS",
-  "version": "4.8.1",
+  "version": "4.8.2",
   "license": "MIT",
   "exports": {
     ".": {
@@ -35,12 +35,13 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
+    "@amplitude/analytics-core": "2.48.2",
     "@amplitude/analytics-node": "^1.5.53",
-    "@walkeros/core": "4.8.1",
-    "@walkeros/server-core": "4.8.1"
+    "@walkeros/core": "4.8.2",
+    "@walkeros/server-core": "4.8.2"
   },
   "devDependencies": {
-    "@walkeros/collector": "4.8.1"
+    "@walkeros/collector": "4.8.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

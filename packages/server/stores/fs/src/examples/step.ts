@@ -27,3 +27,13 @@ export const pathTraversalRejection: Flow.StepExample = {
   in: { operation: 'get', key: '../../etc/passwd' },
   out: [['get', '../../etc/passwd', undefined]],
 };
+
+/** A read that fails for another reason than a missing file. */
+export const failedRead: Flow.StepExample = {
+  public: false,
+  description:
+    'The file system fails the read with another error than a missing file (permission denied, a broken disk): get throws a StepError instead of answering a miss.',
+  in: { operation: 'get', key: 'private.json' },
+  respond: { error: 'network' },
+  outcome: { status: 'failed', code: 'transport' },
+};

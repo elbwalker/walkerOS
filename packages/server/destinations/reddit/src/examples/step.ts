@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent, isObject } from '@walkeros/core';
 
 /**
  * Reddit Conversions API step examples.
@@ -38,7 +38,7 @@ export const purchase: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'ev-1700000900',
     timestamp: 1700000900,
-    data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
+    data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       {
         entity: 'product',
@@ -60,7 +60,7 @@ export const purchase: Flow.StepExample = {
       map: {
         event_metadata: {
           map: {
-            value_decimal: 'data.total',
+            value_decimal: 'data.value',
             currency: { key: 'data.currency', value: 'EUR' },
             item_count: {
               fn: (event: unknown) =>
@@ -232,7 +232,8 @@ export const lead: Flow.StepExample = {
   title: 'Lead',
   description:
     'A form submission is sent to Reddit as a Lead conversion with the SHA-256 hashed email and external id.',
-  in: getEvent('form submit', {
+  in: createEvent({
+    name: 'form submit',
     id: 'ev-1700000903',
     timestamp: 1700000903,
     data: { form: 'contact' },
@@ -285,7 +286,8 @@ export const signUp: Flow.StepExample = {
   title: 'Sign up',
   description:
     'A user signup is sent to Reddit as a SignUp conversion with hashed user identifiers.',
-  in: getEvent('user signup', {
+  in: createEvent({
+    name: 'user signup',
     id: 'ev-1700000904',
     timestamp: 1700000904,
     data: { method: 'email' },
@@ -338,7 +340,8 @@ export const search: Flow.StepExample = {
   title: 'Search',
   description:
     'A site search is sent to Reddit as a Search conversion with an item count in event_metadata.',
-  in: getEvent('site search', {
+  in: createEvent({
+    name: 'site search',
     id: 'ev-1700000905',
     timestamp: 1700000905,
     data: { query: 'walkerOS destinations' },
@@ -380,4 +383,13 @@ export const search: Flow.StepExample = {
       OPTIONS,
     ],
   ],
+};
+
+/** A silent rule sends nothing to Reddit. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request to Reddit.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
 };

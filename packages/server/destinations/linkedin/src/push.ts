@@ -8,11 +8,22 @@ import type {
   UserIdentifier,
   UserInfo,
 } from './types';
-import { getMappingValue, isArray, isObject, isString } from '@walkeros/core';
+import {
+  getMappingValue,
+  isArray,
+  isObject,
+  isString,
+  StepError,
+} from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 import { getHashServer } from '@walkeros/server-core';
 
-export const push: PushFn = async function (
+// A silent rule has no linkedin call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, rule, data, env, logger, collector },
 ) {
@@ -76,8 +87,11 @@ export const push: PushFn = async function (
     });
   }
 
-  // Skip event if no user identifiers
-  if (userIds.length === 0) return;
+  // An event without a user identifier cannot be matched by LinkedIn
+  if (userIds.length === 0)
+    throw new StepError('No user identifier to send the event with', {
+      code: 'missing-input',
+    });
 
   // Build optional userInfo
   let userInfo: UserInfo | undefined;
@@ -149,7 +163,7 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = (env as Env)?.sendServer || sendServer;
-  const result = await sendServerFn(endpoint, JSON.stringify(body), {
+  await sendServerFn(endpoint, JSON.stringify(body), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
@@ -158,12 +172,4 @@ export const push: PushFn = async function (
       'Linkedin-Version': apiVersion,
     },
   });
-
-  logger.debug('LinkedIn API response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`LinkedIn API error: ${JSON.stringify(result)}`);
-  }
 };

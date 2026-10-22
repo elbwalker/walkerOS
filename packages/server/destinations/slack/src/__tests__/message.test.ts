@@ -1,12 +1,12 @@
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import { buildMessage, interpolate } from '../message';
 
 describe('interpolate', () => {
   it('replaces ${data.field} from the event', () => {
     const event = getEvent('order complete', {
-      data: { id: 'ORD-1', total: 50 },
+      data: { id: 'ORD-1', value: 50 },
     });
-    expect(interpolate('Order ${data.id} for ${data.total}', event)).toBe(
+    expect(interpolate('Order ${data.id} for ${data.value}', event)).toBe(
       'Order ORD-1 for 50',
     );
   });
@@ -27,10 +27,10 @@ describe('buildMessage', () => {
 
   it('uses interpolated text from rule.settings when provided', () => {
     const event = getEvent('order complete', {
-      data: { id: 'ORD-1', total: 50 },
+      data: { id: 'ORD-1', value: 50 },
     });
     const msg = buildMessage(event, baseSettings, {
-      text: 'Order ${data.id}: ${data.total}',
+      text: 'Order ${data.id}: ${data.value}',
     });
     expect(msg.text).toBe('Order ORD-1: 50');
     expect(msg.blocks).toBeUndefined();
@@ -44,7 +44,8 @@ describe('buildMessage', () => {
   });
 
   it('auto-generates default blocks when no text or blocks supplied', () => {
-    const event = getEvent('lead submit', {
+    const event = createEvent({
+      name: 'lead submit',
       data: { name: 'Acme', email: 'sales@acme.test' },
       source: { type: 'crm', platform: 'server' },
     });

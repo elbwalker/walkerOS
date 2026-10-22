@@ -1,13 +1,19 @@
-import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type {
+  Collector,
+  Destination,
+  Transformer,
+  WalkerOS,
+} from '@walkeros/core';
+import { createMockLogger, StepError } from '@walkeros/core';
 import { runTransformerChain } from '../transformer';
+import { startFlow } from '..';
 
 /**
  * Transformer init error visibility: when transformerInit throws inside
- * runTransformerChain, the outer tryCatchAsync wrap MUST log the original
- * cause via the scoped logger AND increment `collector.status.failed`
- * (Category A - internal pipeline failure). Downstream behavior is
- * unchanged: the chain stops, the event is dropped.
+ * runTransformerChain, the cause is reported once (cause line under the
+ * transformer's step) AND `collector.status.failed` increments. The chain
+ * stops for that copy and the failure travels in the chain result, so the
+ * push answers `ok: false` instead of reading as a drop.
  */
 
 function createTestCollector(
@@ -81,11 +87,15 @@ describe('transformer init throws (Category A)', () => {
     // Pipeline failure counts.
     expect(collector.status.failed).toBe(1);
 
+    expect(result.failure).toEqual({
+      by: 'bad',
+      reason: { code: 'transformer', message: 'init boom', retryable: false },
+    });
+
     const errorCall = findLoggerError(collector, 'transformer init failed');
-    expect(errorCall).toBeDefined();
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
-        transformer: 'bad',
+        step: 'transformer.bad',
         error: 'init boom',
       }),
     );
@@ -109,10 +119,74 @@ describe('transformer init throws (Category A)', () => {
 
     const context = findLoggerError(collector, 'transformer init failed')?.[1];
 
-    expect(context).toEqual({ transformer: 'bad', error: 'init boom' });
+    expect(context).toEqual({
+      step: 'transformer.bad',
+      code: 'transformer',
+      type: 'mock',
+      retryable: false,
+      error: 'init boom',
+    });
     // A raw Error serializes to `"error":{}`, blanking the cause in the
     // output an operator reads.
     expect(JSON.stringify(context)).toContain('init boom');
+  });
+});
+
+function sink(delivered: WalkerOS.Event[]): Destination.Instance {
+  return {
+    type: 'sink',
+    config: {},
+    push: async (event) => {
+      delivered.push(event);
+    },
+  };
+}
+
+describe('transformer init contract (C7)', () => {
+  it('an init returning false at runtime fails the push instead of stopping it silently', async () => {
+    const delivered: WalkerOS.Event[] = [];
+    const initFalse = (): false => false;
+    const enrich: Transformer.Instance = {
+      type: 'enrich',
+      config: {},
+      // @ts-expect-error init may no longer return false: the type rejects it, the runtime guard reports it
+      init: initFalse,
+      push: (event) => ({ event }),
+    };
+    const { elb } = await startFlow({
+      next: 'enrich',
+      transformers: { enrich: { code: async () => enrich } },
+      destinations: { sink: { code: sink(delivered) } },
+    });
+    const r = await elb('page view');
+    expect(r.ok).toBe(false);
+    expect(r.dropped).toBeUndefined();
+    expect(r.reason?.code).toBe('not-ready');
+    expect(r.error).toContain('enrich');
+    expect(delivered).toHaveLength(0);
+  });
+
+  it('an init throwing a StepError fails the push with its reason', async () => {
+    const delivered: WalkerOS.Event[] = [];
+    const enrich: Transformer.Instance = {
+      type: 'enrich',
+      config: {},
+      init: () => {
+        throw new StepError('Config settings salt missing', {
+          code: 'config',
+        });
+      },
+      push: (event) => ({ event }),
+    };
+    const { elb } = await startFlow({
+      next: 'enrich',
+      transformers: { enrich: { code: async () => enrich } },
+      destinations: { sink: { code: sink(delivered) } },
+    });
+    const r = await elb('page view');
+    expect(r.ok).toBe(false);
+    expect(r.reason?.code).toBe('config');
+    expect(delivered).toHaveLength(0);
   });
 });
 

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn } from './lifecycle';
+import type { FailureReason } from '../stepError';
 import type { Ingest } from './ingest';
 import type { Config as MappingConfig } from './mapping';
 import type { MatchExpression } from './matcher';
@@ -147,6 +148,12 @@ export interface Config<T extends TypesGeneric = Types> {
   state?: import('./state').State | import('./state').State[];
   init?: boolean; // Track init state (like Destination)
   disabled?: boolean; // Completely skip this transformer in chains
+  /**
+   * Timeout in ms (default 10000) for `init` and for each `push`: one that
+   * does not settle within this window fails the push with code `timeout`;
+   * the next push retries the init.
+   */
+  timeout?: number;
   /** Return this value instead of calling push(). Global mock for all chains. */
   mock?: unknown;
   /** Path-specific mock values keyed by chain path (e.g., "destination.ga4.before"). Takes precedence over global mock. */
@@ -213,8 +220,10 @@ export interface ChainCopy<E = WalkerOS.DeepPartialEvent> {
  * with the ingest it finished with. The next position goes on with each
  * pair.
  *
- * - dropped (a transformer returned `false` or threw): `copies` empty,
- *   `droppedBy` names the transformer.
+ * - dropped (a transformer returned `false`): `copies` empty, `droppedBy`
+ *   names the transformer.
+ * - failed (a transformer threw, or its `init` threw or returned `false`):
+ *   `failure` names it and carries the reason; not a drop.
  * - route `stop`: `copies` empty, `stopped: true`; `droppedBy` names the
  *   transformer whose route stopped it, absent for the start route.
  * - `cache.stop: true` HIT: `copies` holds the cached copy, `stopped: true`.
@@ -227,6 +236,18 @@ export interface ChainResult {
   stopped?: true;
   /** Transformer that dropped or stopped the chain. */
   droppedBy?: string;
+  /**
+   * A transformer that threw or could not start: the failed copy ends (not
+   * a drop), and the position answers `ok: false` with this reason. Other
+   * copies of a fork still go on in `copies`.
+   */
+  failure?: ChainFailure;
+}
+
+/** A transformer in a chain that failed: its id and why. */
+export interface ChainFailure {
+  by: string;
+  reason: FailureReason;
 }
 
 /**
@@ -256,12 +277,12 @@ export type Fn<
  *
  * @param context - Transformer context
  * @returns void - initialization successful
- * @returns false - initialization failed, skip this transformer
+ * @throws StepError - initialization failed; the push fails
  * @returns Config<T> - return updated config
  */
 export type InitFn<T extends TypesGeneric = Types> = (
   context: Context<T>,
-) => WalkerOS.PromiseOrValue<void | false | Config<T>>;
+) => WalkerOS.PromiseOrValue<void | Config<T>>;
 
 /**
  * Transformer instance returned by Init function.

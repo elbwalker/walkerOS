@@ -1,7 +1,7 @@
 import type { Cache, Collector, Store } from '@walkeros/core';
 import { emitStep, useHooks } from '@walkeros/core';
 import { createCacheStore } from './cache-store';
-import { stepError, stepState } from './observerEmit';
+import { observerStepError, stepState } from './observerEmit';
 import { wrapStoreWithCache } from './store-cache-wrapper';
 import { buildReportError } from './report-error';
 
@@ -94,7 +94,7 @@ function applyStoreHooks(
       );
       errState.durationMs = finished - started;
       errState.meta = { op: 'get', key };
-      errState.error = stepError(err);
+      errState.error = observerStepError(err);
       emitStep(collector, errState);
       throw err;
     }
@@ -139,7 +139,7 @@ function applyStoreHooks(
       );
       errState.durationMs = finished - started;
       errState.meta = { op: 'set', key };
-      errState.error = stepError(err);
+      errState.error = observerStepError(err);
       emitStep(collector, errState);
       throw err;
     }
@@ -177,7 +177,7 @@ function applyStoreHooks(
       );
       errState.durationMs = finished - started;
       errState.meta = { op: 'delete', key };
-      errState.error = stepError(err);
+      errState.error = observerStepError(err);
       emitStep(collector, errState);
       throw err;
     }

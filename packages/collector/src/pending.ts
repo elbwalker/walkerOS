@@ -1,5 +1,8 @@
 import type { Collector } from '@walkeros/core';
-import { registerDestination } from './destination';
+import {
+  checkDestinationRegistration,
+  registerDestination,
+} from './destination';
 import { catchUpDestinationState, isRequireSatisfied } from './on';
 import { flushSourceQueueOn, isSourceStarted } from './source';
 
@@ -67,8 +70,9 @@ export async function reconcilePending(
 
     delete collector.pending.destinations[id];
     const instance = registerDestination(def);
+    checkDestinationRegistration(collector, id, instance, true);
     if (instance.config.queue !== false) {
-      instance.queuePush = [...collector.queue];
+      instance.queuePush = collector.queue.map((event) => ({ event }));
     }
     collector.destinations[id] = instance;
     await catchUpDestinationState(collector, instance, id);

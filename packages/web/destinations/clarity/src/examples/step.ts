@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -35,7 +35,7 @@ export const defaultEventForwarding: ClarityStepExample = {
  */
 export const wildcardIgnored: ClarityStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -50,7 +50,8 @@ export const userLoginIdentify: ClarityStepExample = {
   title: 'User login identify',
   description:
     'A user login fires Clarity.identify with custom id, session id, page id, and friendly name then tracks the event.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000102,
     data: { id: 'u-123', name: 'Jane Doe' },
     globals: { pagegroup: 'shop', pagetype: 'home' },
@@ -199,7 +200,7 @@ export const orderCompleteInclude: ClarityStepExample = {
     ['clarity.setTag', 'data_currency', 'EUR'],
     ['clarity.setTag', 'data_shipping', '5.22'],
     ['clarity.setTag', 'data_taxes', '73.76'],
-    ['clarity.setTag', 'data_total', '555'],
+    ['clarity.setTag', 'data_value', '555'],
     ['clarity.event', 'order complete'],
   ],
 };
@@ -294,7 +295,7 @@ export const consentGrantBoth: ClarityStepExample = {
 export const consentRevoke: ClarityStepExample = {
   title: 'Consent revoked',
   description:
-    'With settings.consent mapping analytics to analytics_Storage and marketing to ad_Storage, a grant of both and then a walker consent command denying both call Clarity.consentV2 twice, the second time with denied flags.',
+    'With settings.consent mapping analytics to analytics_Storage and marketing to ad_Storage, a walker consent command denying both calls Clarity.consentV2 with denied flags.',
   command: 'consent',
   before: { analytics: true, marketing: true },
   in: { analytics: false, marketing: false } as WalkerOS.Consent,
@@ -307,11 +308,41 @@ export const consentRevoke: ClarityStepExample = {
   out: [
     [
       'clarity.consentV2',
-      { analytics_Storage: 'granted', ad_Storage: 'granted' },
-    ],
-    [
-      'clarity.consentV2',
       { analytics_Storage: 'denied', ad_Storage: 'denied' },
     ],
   ],
+};
+
+/** A silent rule without settings of its own calls nothing. */
+export const silentRule: ClarityStepExample = {
+  public: false,
+  description: 'A rule with silent: true and no settings calls nothing.',
+  in: getEvent('page view', { timestamp: 1700000110 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/** The Clarity SDK is unreachable: its init fails, so the push reports it. */
+export const clarityUnreachable: ClarityStepExample = {
+  public: false,
+  description:
+    'The Clarity SDK fails, so the destination does not start: the push fails with vendor-not-ready, retryable, and the event is in the DLQ.',
+  in: getEvent('product view', { timestamp: 1700000111 }),
+  respond: { error: 'network' },
+  out: [],
+  outcome: { status: 'failed', code: 'vendor-not-ready', retryable: true },
+};
+
+/**
+ * The silent tag rule of pageViewSilent on a page view without data: no tag
+ * resolves and the rule suppresses the event, so nothing is sent. A declared
+ * skip: an unmet mapping, not a failure.
+ */
+export const pageViewSilentWithoutData: ClarityStepExample = {
+  public: false,
+  description:
+    'A silent rule whose tag mapping finds no data sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'page view', entity: 'page', action: 'view' },
+  mapping: pageViewSilent.mapping,
+  out: [],
 };

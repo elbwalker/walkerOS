@@ -1,5 +1,30 @@
 # @walkeros/server-source-aws
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: A push that failed for a reason a resend cannot fix (a missing
+  setting, a 4xx, a destination that is not ready) is acknowledged: SQS deletes
+  the message, Pub/Sub acks it, HTTP sources answer 200. Only retryable failures
+  nack or answer 500, or 207 for a batch, with the fixed text
+  `Event was not processed`.
+- 2374f54: A nack for a retryable failure logs at DEBUG, because the collector's
+  ERROR line reports the cause once per minute instead of one line per message.
+  Transient Pub/Sub stream errors and SQS receive errors that the SDK or loop
+  retries log at WARN instead of ERROR.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+  - @walkeros/core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

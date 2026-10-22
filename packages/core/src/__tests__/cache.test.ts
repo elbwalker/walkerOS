@@ -6,7 +6,7 @@ import {
   createMappingRoot,
 } from '../cache';
 import { getNextSteps } from '../route';
-import { serializeStoreValue, deserializeStoreValue } from '../store/codec';
+import { serializeStoreValue, deserializeStoreValue } from '../node/storeCodec';
 import {
   createMockCollector,
   createMockStore,

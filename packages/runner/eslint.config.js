@@ -1,4 +1,5 @@
 import baseConfig from '@walkeros/config/eslint';
+import { nodePlatform } from '@walkeros/config/eslint/node';
 
 // The base config's own no-restricted-syntax selectors. A flat config replaces
 // a rule set twice for one file rather than merging it, so the block below
@@ -26,6 +27,7 @@ const apiPathSyntax = [
 
 export default [
   ...baseConfig,
+  ...nodePlatform,
   {
     files: ['src/**/*.ts'],
     ignores: ['src/api-paths.ts', 'src/**/__tests__/**', 'src/**/*.test.ts'],

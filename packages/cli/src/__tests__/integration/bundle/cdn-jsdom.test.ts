@@ -146,15 +146,15 @@ describe('CDN bundle — jsdom smoke', () => {
     const fetchCalls: FetchCall[] = [];
     const windowAny = dom.window as unknown as {
       fetch: (url: unknown, init?: { body?: unknown }) => unknown;
-      Response: new (body?: unknown, init?: unknown) => unknown;
       setTimeout: typeof setTimeout;
     };
+    // jsdom has no `Response`: answer with Node's, as a browser would.
     windowAny.fetch = (async (url: unknown, init?: { body?: unknown }) => {
       fetchCalls.push({
         url: String(url),
         body: init?.body != null ? String(init.body) : undefined,
       });
-      return new windowAny.Response('{}', { status: 200 });
+      return new Response('{}', { status: 200 });
     }) as unknown as typeof windowAny.fetch;
 
     dom.window.eval(script);
@@ -391,6 +391,45 @@ describe('CDN bundle without a browser source — window.elb', () => {
     expect(added).not.toContain('elb');
     // The collector global is still emitted by the wrap.
     expect(added).toContain('walkerOS');
+  }, 120000);
+});
+
+/**
+ * A browser flow whose only step is neutral brings no web package into its
+ * build, yet its entry imports the Tag Mode loader from `@walkeros/web-core`:
+ * the CLI resolves it from its own tree.
+ */
+describe('CDN bundle whose only step is neutral', () => {
+  const NEUTRAL_FLOW = withLocalPackages({
+    version: 4,
+    flows: {
+      default: {
+        config: { platform: 'web' },
+        sources: {},
+        destinations: { demo: { package: '@walkeros/destination-demo' } },
+      },
+    },
+  });
+
+  let tmpDir: string;
+
+  beforeAll(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'walkeros-neutral-'));
+  });
+
+  afterAll(async () => {
+    await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  });
+
+  it('takes the Tag Mode loader from the CLI web-core', async () => {
+    const out = join(tmpDir, 'walker.js');
+    await bundle(NEUTRAL_FLOW, {
+      target: 'cdn',
+      silent: true,
+      cache: false,
+      buildOverrides: { output: out },
+    });
+    expect(await readFile(out, 'utf8')).toContain('walkeros.moin');
   }, 120000);
 });
 

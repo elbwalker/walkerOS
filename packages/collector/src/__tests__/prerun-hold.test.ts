@@ -27,38 +27,43 @@ describe('pre-run hold buffer', () => {
     expect(collector.preRunQueue[0].event.name).toBe('page view');
   });
 
-  test('the buffer is bounded by queueMax with drop-oldest', async () => {
+  test('the buffer is bounded by queueMax and refuses the newest event', async () => {
     const { collector, elb } = await startFlow({
       run: false,
       queueMax: 2,
+      logger: { handler: () => undefined },
+    });
+
+    await elb({ name: 'a one', data: {} });
+    await elb({ name: 'b two', data: {} });
+    const refused = await elb({ name: 'c three', data: {} });
+
+    // The held events were promised already; the newest one is told.
+    expect(refused.ok).toBe(false);
+    expect(collector.preRunQueue).toHaveLength(2);
+    expect(collector.preRunQueue.map((h) => h.event.name)).toEqual([
+      'a one',
+      'b two',
+    ]);
+  });
+
+  test('a refused event is counted failed, never as a drop of a held one', async () => {
+    const { collector, elb } = await startFlow({
+      run: false,
+      queueMax: 2,
+      logger: { handler: () => undefined },
     });
 
     await elb({ name: 'a one', data: {} });
     await elb({ name: 'b two', data: {} });
     await elb({ name: 'c three', data: {} });
 
-    expect(collector.preRunQueue).toHaveLength(2);
-    expect(collector.preRunQueue.map((h) => h.event.name)).toEqual([
-      'b two',
-      'c three',
-    ]);
-  });
-
-  test('overflow is counted in status.dropped, separately from the replay buffer', async () => {
-    const { collector, elb } = await startFlow({ run: false, queueMax: 2 });
-
-    await elb({ name: 'a one', data: {} });
-    await elb({ name: 'b two', data: {} });
-    // Third push evicts the oldest: one real event lost, so it must be counted
-    // and not merely debug-logged.
-    await elb({ name: 'c three', data: {} });
-
-    expect(collector.status.dropped['collector.preRun']?.queue).toBe(1);
-    // Kept apart from the post-run replay buffer's counter.
+    expect(collector.status.failed).toBe(1);
+    expect(collector.status.dropped['collector.preRun']).toBeUndefined();
     expect(collector.status.dropped.collector?.queue).toBeUndefined();
 
     await elb({ name: 'd four', data: {} });
-    expect(collector.status.dropped['collector.preRun']?.queue).toBe(2);
+    expect(collector.status.failed).toBe(2);
   });
 
   test('a failing replayed event surfaces in the run result', async () => {

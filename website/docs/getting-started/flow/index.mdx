@@ -286,7 +286,7 @@ Transformers process events between sources and destinations. They validate, enr
 **Configuration options:**
 - **`package`** - The npm package (required for package-based steps, optional when using `code:`)
 - **`import`** - Named export of `package` to use (optional; the package's default export otherwise)
-- **`code`** - Inline code object `{ push, type?, init? }`, used instead of `package` (see [Inline Code](#inline-code-without-packages))
+- **`code`** - Inline code object `{ push, type?, init?, pushBatch?, on?, destroy? }`, used instead of `package` (see [Inline Code](#inline-code-without-packages))
 - **`config`** - Transformer-specific configuration
 - **`env`** - Environment-specific settings
 - **`before`** - Pre-transformer chain (runs before this transformer's push)
@@ -447,8 +447,11 @@ Use `code` object instead of `package`:
 - **`push`** - The push function with `$code:` prefix (required)
 - **`type`** - Optional instance type identifier
 - **`init`** - Optional init function with `$code:` prefix
+- **`pushBatch`**, **`on`**, **`destroy`** - Optional functions of a destination with `$code:` prefix (`batch` in the destination's `config` needs `pushBatch`)
 
 **Rules:**
+- Any other key in `code` fails `walkeros validate` and the bundle
+- A `push` that cannot send throws; a `push` that returns normally counts as delivered
 - Use `package` OR `code`, never both
 - `config` stays separate (same as package-based)
 - `$code:` prefix outputs raw JavaScript at bundle time

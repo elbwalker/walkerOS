@@ -297,7 +297,7 @@ Variables for its values, a GA4 Event tag.
 | walkerOS event   | GA4 event       | Parameters                                                                 |
 | ---------------- | --------------- | -------------------------------------------------------------------------- |
 | `product view`   | `view_item`     | `currency`, `value` from `data.price`, `items`                              |
-| `order complete` | `purchase`      | `transaction_id` from `data.id`, `value` from `data.total`, `currency`, `items` |
+| `order complete` | `purchase`      | `transaction_id` from `data.id`, `value` from `data.value`, `currency`, `items` |
 | `session start`  | `session start` | optional: `data.source`, `data.medium`, `data.campaign` under names of your own |
 
 An order confirmation is tagged like any other element, with its products
@@ -306,7 +306,7 @@ inside, and the same items variable reads them:
 <CodeSnippet
   code={`<div
   data-elb="order"
-  data-elb-order="id:0rd3r1d;total:50"
+  data-elb-order="id:0rd3r1d;value:50"
   data-elbaction="load:complete"
 >
   <div

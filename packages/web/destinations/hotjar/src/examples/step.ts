@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -27,7 +27,7 @@ export const defaultEventForwarding: HotjarStepExample = {
  */
 export const wildcardIgnored: HotjarStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -55,7 +55,8 @@ export const userLoginIdentify: HotjarStepExample = {
   title: 'User login identify',
   description:
     'A user login fires Hotjar.identify with userId and attributes before firing the event.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000103,
     data: { id: 'u-123', email: 'jane@example.com', plan: 'premium' },
   }),
@@ -151,5 +152,19 @@ export const pageViewSilent: HotjarStepExample = {
   mapping: {
     silent: true,
   },
+  out: [],
+};
+
+/**
+ * The silent stateChange rule of pageViewStateChange on a page view without
+ * data: no path resolves and the rule suppresses the event, so nothing is
+ * sent. A declared skip: an unmet mapping, not a failure.
+ */
+export const pageViewStateChangeWithoutData: HotjarStepExample = {
+  public: false,
+  description:
+    'A silent rule whose stateChange mapping finds no path sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'page view', entity: 'page', action: 'view' },
+  mapping: pageViewStateChange.mapping,
   out: [],
 };

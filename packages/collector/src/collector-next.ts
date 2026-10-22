@@ -26,6 +26,8 @@ export interface CollectorNextResult {
   respond?: RespondFn;
   /** Set when a route stop or a transformer ended every copy. */
   dropped?: true;
+  /** A transformer of the chain failed: the push fails with its reason. */
+  failure?: Transformer.ChainFailure;
 }
 
 /**
@@ -61,6 +63,11 @@ export async function runCollectorNext(
     COLLECTOR_NEXT_PATH,
   );
   const respond = result.respond ?? meta.respond;
+  const failure = result.failure;
+
+  // A transformer failed and no copy goes on: not a drop, the push fails.
+  if (failure && result.copies.length === 0)
+    return { copies: [], respond, failure };
 
   if (result.copies.length === 0) {
     collector.logger.debug(
@@ -88,5 +95,6 @@ export async function runCollectorNext(
       ingest: copy.ingest,
     })),
     respond,
+    ...(failure ? { failure } : {}),
   };
 }

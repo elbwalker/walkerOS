@@ -32,7 +32,12 @@ npm install @walkeros/server-destination-reddit
       "destinations": {
         "reddit": {
           "package": "@walkeros/server-destination-reddit",
-          "config": {}
+          "config": {
+            "settings": {
+              "accessToken": "YOUR_ACCESS_TOKEN",
+              "pixelId": "YOUR_PIXEL_ID"
+            }
+          }
         }
       }
     }

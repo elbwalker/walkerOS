@@ -1,5 +1,5 @@
 {
-  "extends": "@walkeros/config/tsconfig/base.json",
+  "extends": "@walkeros/config/tsconfig/web.json",
   "compilerOptions": {
     "rootDir": "src"
   },

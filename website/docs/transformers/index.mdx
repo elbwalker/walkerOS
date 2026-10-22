@@ -102,7 +102,14 @@ transformer steps, but the semantic differs by position. On a destination,
 `mapping` shapes the vendor payload. On a transformer step, it mutates the
 event itself. Only `policy` and a rule's `condition`, `policy`, `name` and
 `ignore` apply there; every other field does nothing and is named in a
-one-time warning at init.
+one ERROR line at registration, and `walkeros validate` rejects them
+(`MAPPING_NO_OP`).
+:::
+
+:::note Timeout
+`config.timeout` (milliseconds, default 10000) bounds a transformer's `init` and
+each `push`. A push that does not settle fails the event with the code
+`timeout`.
 :::
 
 :::note Closed schema

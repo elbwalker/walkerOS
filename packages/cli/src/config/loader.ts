@@ -8,6 +8,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { getFlowSettings, getPlatform, type Flow } from '@walkeros/core';
+import { validateFlowStructure } from '@walkeros/core/dev';
 import type { BuildOptions } from '../types/bundle.js';
 import {
   validateFlowConfig,
@@ -72,6 +73,23 @@ export interface LoadConfigOptions {
 }
 
 /**
+ * The bundle preflight: the structural checks `walkeros validate` runs
+ * (`validateFlowStructure`), on the flow being built. A flow validate
+ * rejects (an unknown key, a mapping field with no effect at its position,
+ * a malformed reference) stops here, before anything is resolved or built,
+ * and the error names every path.
+ */
+function assertFlowStructure(config: Flow.Json, flowName: string): void {
+  const { errors } = validateFlowStructure({
+    ...config,
+    flows: { [flowName]: config.flows[flowName] },
+  });
+  if (errors.length === 0) return;
+  const lines = errors.map((error) => `  - ${error.path}: ${error.message}`);
+  throw new Error(`Invalid configuration:\n${lines.join('\n')}`);
+}
+
+/**
  * Load and parse bundle configuration.
  *
  * @remarks
@@ -110,6 +128,7 @@ export function loadBundleConfig(
   // Determine which flow to use
   const flowName = resolveFlow(config, options.flowName, availableFlows);
 
+  assertFlowStructure(config, flowName);
   assertLiteralBuildEnv(config, flowName);
 
   // Resolve with deferred mode first (markers don't affect platform detection)

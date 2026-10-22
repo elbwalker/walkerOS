@@ -39,7 +39,7 @@ export const purchase: Flow.StepExample = {
         revenue: {
           map: {
             currency: { value: 'EUR' },
-            amount: 'data.total',
+            amount: 'data.value',
           },
         },
       },
@@ -91,4 +91,27 @@ export const customEvent: Flow.StepExample = {
       },
     ],
   ],
+};
+
+/** A silent rule sends no Plausible event. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no Plausible event.',
+  in: getEvent('page view', { timestamp: 1700000600 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * A revocation of the consent the destination requires. Plausible has no
+ * consent mode, so the collector's consent gate is the only mechanism and no
+ * vendor call is made.
+ */
+export const consentRevoke: Flow.StepExample = {
+  public: false,
+  description:
+    'For a destination with config.consent { marketing: true }, revoking marketing makes no vendor call: Plausible has no consent mode, the collector stops sending.',
+  command: 'consent',
+  in: { marketing: false },
+  out: [],
 };

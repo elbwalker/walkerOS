@@ -133,10 +133,22 @@ export interface Env extends DestinationWeb.Env {
   window: {
     ttq: TTQ;
   };
-  document: {
-    createElement: (tagName: string) => Element;
-    head: { appendChild: (node: unknown) => void };
-  };
+}
+
+/**
+ * The queue `setup()` installs until the Pixel script replaces it: each
+ * call is kept in `_i.all`.
+ */
+export type TTQStub = ((...args: unknown[]) => void) & {
+  methods: string[];
+  _i: Record<string, unknown[]>;
+  loaded: boolean;
+};
+
+declare global {
+  interface Window {
+    ttq?: TTQ | TTQStub;
+  }
 }
 
 export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;

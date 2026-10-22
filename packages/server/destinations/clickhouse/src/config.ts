@@ -3,6 +3,7 @@ import type {
   ClickHouseSettings,
 } from '@clickhouse/client';
 import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import { createClient } from '@clickhouse/client';
 import type {
   ClickHouseClientFactory,
@@ -187,13 +188,11 @@ function endpointHost(url: string): string {
 /** The resolved settings before init attaches the live client. */
 type ResolvedSettings = Omit<Settings, 'client'>;
 
-function withDefaults(
-  settings: InitSettings,
-  logger: Logger.Instance,
-): ResolvedSettings {
-  const { url, clickhouse } = settings;
+function withDefaults(settings: InitSettings | undefined): ResolvedSettings {
+  const { url, clickhouse } = settings ?? {};
 
-  if (!url) return logger.throw('Config settings url missing');
+  if (!url || !settings)
+    throw new StepError('Config settings url missing', { code: 'config' });
 
   return {
     url,
@@ -260,11 +259,7 @@ export function getConfig(
   env: Env | undefined,
   logger: Logger.Instance,
 ): Config {
-  const { settings } = config;
-
-  if (!settings) return logger.throw('Config settings missing');
-
-  const resolved = withDefaults(settings, logger);
+  const resolved = withDefaults(config.settings);
   const options = resolveClientOptions(
     resolved,
     config.credentials,
@@ -296,17 +291,14 @@ export function getConfig(
  * so the insert path holds a live client and a complete configuration without
  * guarding field by field.
  */
-export function resolveSettings(
-  config: PartialConfig,
-  logger: Logger.Instance,
-): Settings {
+export function resolveSettings(config: PartialConfig): Settings {
   const { settings } = config;
+  const client = settings?.client;
 
-  if (!settings) return logger.throw('Config settings missing, init() not run');
+  if (!settings || !client)
+    throw new StepError('ClickHouse client missing, init() not run', {
+      code: 'not-ready',
+    });
 
-  const { client } = settings;
-
-  if (!client) return logger.throw('ClickHouse client missing, init() not run');
-
-  return { ...withDefaults(settings, logger), client };
+  return { ...withDefaults(settings), client };
 }

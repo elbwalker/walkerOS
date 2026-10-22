@@ -17,7 +17,7 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
   const record =
     (name: string) =>
     (...args: unknown[]) => {
-      calls.push([`heap.${name}`, ...args]);
+      calls.push([`window.heap.${name}`, ...args]);
     };
 
   const heap: HeapSDK = {
@@ -42,58 +42,65 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('heap destination — step examples', () => {
-  it.each<[string, HeapStepExample]>(Object.entries(examples.step))(
-    '%s',
-    async (name, example) => {
-      const env = clone(examples.env.push) as Env;
-      const { env: spiedEnv, collected } = spyEnv(env);
-
-      const dest = jest.requireActual('../').default;
-      const { elb } = await startFlow();
-
-      const baseSettings: Partial<Settings> & { appId: string } = {
-        appId: 'test-app-id',
-        ...(example.settings || {}),
-      };
-
-      if (example.command === 'consent') {
-        // Consent examples: declare the consent key on the destination so
-        // on() knows what to check, then fire walker consent.
-        await elb('walker destination', {
-          code: { ...dest, env: spiedEnv },
-          config: {
-            consent: { analytics: true },
-            settings: baseSettings,
-          },
-        });
-        // Grant first when the example declares it, so the gated destination is
-        // loaded before the consent under test (it never loads under denial).
-        // Both the grant and the consent-under-test effects are asserted.
-        if (example.before) await elb('walker consent', example.before);
-        await elb('walker consent', example.in as WalkerOS.Consent);
-      } else {
-        const event = example.in as WalkerOS.Event;
-        const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-        const mappingConfig = mapping
-          ? { [event.entity]: { [event.action]: mapping } }
-          : undefined;
-
-        await elb('walker destination', {
-          code: { ...dest, env: spiedEnv },
-          config: {
-            settings: baseSettings,
-            mapping: mappingConfig,
-          },
-        });
-        await elb(event);
-      }
-
-      const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-      // Filter init-time load() call.
-      const actual = collected().filter(([path]) => path !== 'heap.load');
-      expect(actual).toEqual(expected);
-    },
+  // Non-public examples (silent) run in the conformance test.
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
   );
+
+  it.each<[string, HeapStepExample]>(published)('%s', async (name, example) => {
+    const env = clone(examples.env.push) as Env;
+    const { env: spiedEnv, collected } = spyEnv(env);
+
+    const dest = jest.requireActual('../').default;
+    const { elb } = await startFlow();
+
+    // Effects before this index belong to the example's `before` grant.
+    let before = 0;
+    const baseSettings: Partial<Settings> & { appId: string } = {
+      appId: 'test-app-id',
+      ...(example.settings || {}),
+    };
+
+    if (example.command === 'consent') {
+      // Consent examples: declare the consent key on the destination so
+      // on() knows what to check, then fire walker consent.
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
+          consent: { analytics: true },
+          settings: baseSettings,
+        },
+      });
+      // Grant first when the example declares it, so the gated destination is
+      // loaded before the consent under test (it never loads under denial).
+      // Both the grant and the consent-under-test effects are asserted.
+      if (example.before) await elb('walker consent', example.before);
+      before = collected().length;
+      await elb('walker consent', example.in as WalkerOS.Consent);
+    } else {
+      const event = example.in as WalkerOS.Event;
+      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+      const mappingConfig = mapping
+        ? { [event.entity]: { [event.action]: mapping } }
+        : undefined;
+
+      await elb('walker destination', {
+        code: { ...dest, env: spiedEnv },
+        config: {
+          settings: baseSettings,
+          mapping: mappingConfig,
+        },
+      });
+      await elb(event);
+    }
+
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+    // Filter init-time load() call.
+    const actual = collected()
+      .slice(before)
+      .filter(([path]) => path !== 'window.heap.load');
+    expect(actual).toEqual(expected);
+  });
 });
 
 it('declares simulation paths that resolve', () =>

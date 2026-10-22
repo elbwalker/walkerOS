@@ -37,7 +37,7 @@ export const checkout: Flow.StepExample = {
   in: getEvent('order complete', {
     id: 'a1b2c3d4e5f60001',
     timestamp: 1700000900,
-    data: { id: 'ORD-300', total: 249.99, currency: 'EUR' },
+    data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       {
         entity: 'product',
@@ -62,7 +62,7 @@ export const checkout: Flow.StepExample = {
       map: {
         custom_data: {
           map: {
-            value: 'data.total',
+            value: 'data.value',
             currency: { key: 'data.currency', value: 'EUR' },
             order_id: 'data.id',
             num_items: {
@@ -346,4 +346,36 @@ export const signup: Flow.StepExample = {
       OPTIONS,
     ],
   ],
+};
+
+/** A silent rule sends nothing to Pinterest. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no request to Pinterest.',
+  in: getEvent('page view', {
+    id: 'a1b2c3d4e5f60006',
+    timestamp: 1700000905,
+  }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/** Pinterest rejects the event in an HTTP 200 body. */
+export const rejectedEvent: Flow.StepExample = {
+  public: false,
+  description:
+    'Pinterest answers HTTP 200 and reports the event as failed: the push fails with transport, not retryable, and the event goes to the DLQ.',
+  in: getEvent('page view', {
+    id: 'a1b2c3d4e5f60007',
+    timestamp: 1700000906,
+  }),
+  respond: {
+    status: 200,
+    body: {
+      num_events_received: 1,
+      num_events_processed: 0,
+      events: [{ status: 'failed', error_message: 'Invalid event_time' }],
+    },
+  },
+  outcome: { status: 'failed', code: 'transport', retryable: false },
 };

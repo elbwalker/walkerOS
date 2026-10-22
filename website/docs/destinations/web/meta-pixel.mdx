@@ -90,3 +90,8 @@ Add to your `flow.json` destinations:
 </Tabs>
 
 <Configuration type="destination" data={data} />
+
+A destination with `config.consent` calls `fbq('consent', 'revoke')` when the
+required consent is revoked and `fbq('consent', 'grant')` when it is granted. A
+blocked `fbevents.js` fails later events visibly, and a missing `pixelId` is a
+`config` error. A rule with `silent: true` sends no event.

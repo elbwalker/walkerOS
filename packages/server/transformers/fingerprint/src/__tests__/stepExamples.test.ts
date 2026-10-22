@@ -61,9 +61,9 @@ describe('Step Examples', () => {
     });
   });
 
-  describe('missingFields', () => {
-    it('should still produce a hash when ingest is empty', async () => {
-      const example = examples.step.missingFields;
+  describe('missingIngest', () => {
+    it('fails with missing-input when ingest is empty', async () => {
+      const example = examples.step.missingIngest;
       const event = example.in as WalkerOS.DeepPartialEvent;
 
       const transformer = await transformerFingerprint(
@@ -72,14 +72,10 @@ describe('Step Examples', () => {
         }),
       );
 
-      // No ingest fields provided: each empty input warns once
-      const result = await transformer.push(event, createPushContext({}));
-
-      expect(result).toBeDefined();
-      expect(getByPath(result, 'event.user.hash')).toBeDefined();
-      expect(typeof getByPath(result, 'event.user.hash')).toBe('string');
-      expect(getByPath(result, 'event.user.hash')).toHaveLength(16);
-      expect(getByPath(result, 'event.name')).toBe(event.name);
+      // No ip and no user agent: every visitor would share one hash.
+      await expect(
+        transformer.push(event, createPushContext({})),
+      ).rejects.toMatchObject({ code: 'missing-input' });
     });
   });
 

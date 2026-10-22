@@ -6,14 +6,9 @@ import {
 } from '@aws-sdk/client-firehose';
 import { NotFoundException, ThrottledException } from '@aws-sdk/client-sns';
 import { CredentialsProviderError } from '@smithy/core/config';
+import { StepError } from '@walkeros/core';
 import type { DeliveryTarget } from '../errors';
-import {
-  AwsDeliveryError,
-  configError,
-  fromSdkError,
-  localError,
-  recordError,
-} from '../errors';
+import { configError, fromSdkError, localError, recordError } from '../errors';
 
 const firehose: DeliveryTarget = {
   service: 'Firehose',
@@ -67,6 +62,11 @@ describe('fromSdkError', () => {
       { code: 'ECONNRESET', status: undefined, retryable: true },
     ],
     [
+      'an error that never reached AWS',
+      new Error('Connection refused'),
+      { code: 'Error', status: undefined, retryable: true },
+    ],
+    [
       'a 400 ResourceNotFoundException',
       new ResourceNotFoundException({
         message: 'Stream walkeros-events not found',
@@ -84,7 +84,7 @@ describe('fromSdkError', () => {
   ])('classifies %s with the SDK classifier', (_name, sdkError, expected) => {
     const error = fromSdkError(sdkError, firehose);
 
-    expect(error).toBeInstanceOf(AwsDeliveryError);
+    expect(error).toBeInstanceOf(StepError);
     expect({
       code: error.code,
       status: error.status,
@@ -94,7 +94,15 @@ describe('fromSdkError', () => {
     expect(error.message).toContain('walkeros-events');
     expect(error.message).toContain('eu-west-1');
     expect(error.message).toContain(expected.code);
+    expect(error.message).not.toContain(sdkError.message);
     expect(error).not.toHaveProperty('maybeDelivered');
+  });
+
+  it('keeps the text of anything thrown out of the message', () => {
+    const error = fromSdkError('user@example.com', firehose);
+    expect(error).toMatchObject({ code: 'UnknownError', retryable: false });
+    expect(error.message).not.toContain('user@example.com');
+    expect(error.cause).toBe('user@example.com');
   });
 
   it.each([
@@ -118,7 +126,7 @@ describe('fromSdkError', () => {
   ])('passes %s through without a fix', (name, target) => {
     const error = fromSdkError(namedError(name), target);
     expect(error.message).toBe(
-      `${target.service} ${target.service === 'SNS' ? 'topic' : 'stream'} "${target.resource}" (${target.region}): ${name}: ${name} happened`,
+      `${target.service} ${target.service === 'SNS' ? 'topic' : 'stream'} "${target.resource}" (${target.region}): ${name}`,
     );
   });
 
@@ -132,7 +140,7 @@ describe('fromSdkError', () => {
     expect(error.cause).toBe(sdkError);
   });
 
-  it('returns an AwsDeliveryError unchanged', () => {
+  it('returns a StepError unchanged', () => {
     const error = configError('bad');
     expect(fromSdkError(error, firehose)).toBe(error);
   });
@@ -140,17 +148,23 @@ describe('fromSdkError', () => {
 
 describe('package errors', () => {
   it('marks a record rejected inside a 200 as retryable', () => {
+    const answer = {
+      errorCode: 'ServiceUnavailableException',
+      errorMessage: 'Slow down.',
+    };
     const error = recordError(
       firehose,
       'ServiceUnavailableException',
-      'Slow down.',
       200,
+      answer,
     );
     expect(error).toMatchObject({
       code: 'ServiceUnavailableException',
       status: 200,
       retryable: true,
+      body: answer,
     });
+    expect(error.message).not.toContain('Slow down.');
   });
 
   it.each([
@@ -165,7 +179,7 @@ describe('package errors', () => {
 
   it('configuration errors are not retryable', () => {
     expect(configError('fix it')).toMatchObject({
-      code: 'InvalidConfig',
+      code: 'config',
       retryable: false,
       message: 'fix it',
     });

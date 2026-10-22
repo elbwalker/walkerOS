@@ -1,6 +1,7 @@
 import type { Config, Env, PartialConfig, Settings } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
 import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import { BigQuery } from '@google-cloud/bigquery';
 import { parseCredentials } from '../pubsub/config';
 
@@ -9,11 +10,14 @@ export function getConfig(
   env: Env | undefined,
   logger: Logger.Instance,
 ): Config {
-  const settings = partialConfig.settings || ({} as Settings);
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { projectId, bigquery } = settings;
   let { client, location, datasetId, tableId } = settings;
 
-  if (!projectId) logger.throw('Config settings projectId missing');
+  if (!projectId)
+    throw new StepError('Config settings projectId missing', {
+      code: 'config',
+    });
 
   location = location || 'EU';
   datasetId = datasetId || 'walkerOS';
@@ -24,9 +28,9 @@ export function getConfig(
 
   // `config.credentials` (parse-if-string) merges into the client options.
   // `settings.bigquery` stays the raw passthrough escape hatch.
-  const parsed = parseCredentials(partialConfig.credentials, logger);
-  // parseCredentials returns the object form (or undefined); a string can only
-  // remain on the invalid-JSON path, which logger.throw already handles.
+  const parsed = parseCredentials(partialConfig.credentials);
+  // parseCredentials returns the object form (or undefined); an invalid JSON
+  // string throws a config StepError.
   const credentials =
     parsed !== undefined && typeof parsed !== 'string' ? parsed : undefined;
   if (credentials !== undefined) {

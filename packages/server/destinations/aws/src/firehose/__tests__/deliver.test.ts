@@ -1,7 +1,6 @@
 import { ServiceUnavailableException } from '@aws-sdk/client-firehose';
-import { createMockLogger } from '@walkeros/core';
+import { StepError, createMockLogger } from '@walkeros/core';
 import { deliver } from '../lib/deliver';
-import { AwsDeliveryError } from '../../lib/errors';
 import type { Answer } from './support';
 import { STREAM, accepted, events, initialized, recordingEnv } from './support';
 import { resolveSettings } from '../config';
@@ -122,7 +121,7 @@ describe('deliver', () => {
       createMockLogger(),
     );
 
-    expect(failure.error).toBeInstanceOf(AwsDeliveryError);
+    expect(failure.error).toBeInstanceOf(StepError);
     expect(failure.error).toMatchObject({
       code: 'ServiceUnavailableException',
       status: 500,

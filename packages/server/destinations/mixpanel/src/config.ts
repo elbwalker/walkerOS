@@ -6,6 +6,7 @@ import type {
   Settings,
 } from './types';
 import type { Logger } from '@walkeros/core';
+import { StepError } from '@walkeros/core';
 import Mixpanel from 'mixpanel';
 
 export function getConfig(
@@ -13,10 +14,11 @@ export function getConfig(
   env: Env | undefined,
   logger: Logger.Instance,
 ): Config {
-  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+  const settings: Partial<Settings> = partialConfig.settings || {};
   const { apiKey } = settings;
 
-  if (!apiKey) logger.throw('Config settings apiKey missing');
+  if (!apiKey)
+    throw new StepError('Config settings apiKey missing', { code: 'config' });
 
   // Build SDK init options from settings
   const initOptions: Record<string, unknown> = {};

@@ -235,8 +235,8 @@ console.log(collector.status);
 //     browser: { count: 100, lastAt: 1707580900000, duration: 1200 }
 //   },
 //   destinations: {
-//     ga4:  { count: 95, failed: 0, lastAt: 1707580900000, duration: 800,
-//             queuePushSize: 0, dlqSize: 0 },
+//     ga4:  { count: 95, failed: 0, skipped: 0, lastAt: 1707580900000,
+//             duration: 800, queuePushSize: 0, dlqSize: 0 },
 //     meta: { count: 0, failed: 5, lastAt: 1707580850000, duration: 400,
 //             queuePushSize: 0, dlqSize: 5 }
 //   },
@@ -255,21 +255,51 @@ const avgMs = ga4.duration / (ga4.count + ga4.failed);`}
   language="typescript"
 />
 
+### What a push answers
+
+`elb` and `collector.push` answer a `PushResult`. For each destination the
+event ends in one of three places:
+
+* `done`: the destination delivered the event,
+* `queued`: the event is waiting, with a `reason`: `consent` (the destination
+  waits for a grant), `batch` (it sits in a batch until the flush) or `held`
+  (a state delivery to the destination, such as its consent handler, is running or failed; the destination retries once per window),
+* `failed`: the destination did not deliver it, with a `reason` that carries
+  a `code`, a `message` and `retryable` (see the table in
+  [Logger](./logger#failure-codes)).
+
+An event a destination skips on purpose, because a rule has `ignore: true`
+or because consent is denied on a server collector, appears under none of the
+three and is counted in `status.destinations.<id>.skipped`.
+
+`ok` is `false` when any destination failed, and also when a step before the
+destinations failed: `reason` then names the cause, for example `queue-full`
+(the collector has not run yet and its queue is full), `transformer` (a
+transformer threw or is not ready) or `mapping` (a rule `condition` threw).
+Unmet consent is never a failure, so a consent wait answers `ok: true` with
+`queued`.
+
+A source that answers a producer reads this result: see
+[Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
+
 ### What `failed` counts
 
 `collector.status.failed` is the single counter for any walkerOS-internal
-pipeline failure. Contributing sites:
+pipeline failure. Each destination also counts its own failures in
+`status.destinations.<id>.failed`. Contributing sites:
 
-* a destination's `push` threw, or the destination reported an error through
-  `context.reportError`,
+* a destination's `push` or `pushBatch` threw, or the destination reported an
+  error through `context.reportError`,
+* a destination could not start or did not become ready: `init` threw or did
+  not settle within `config.timeout`, an open circuit breaker, a destination
+  held past one retry window, a full queue,
 * an exception escaped the inner pipeline of `collector.push` or
   `collector.command` (any uncaught error inside the boundary),
-* mapping outer-wrap failures (an internal throw inside
-  `processMappingValue`),
+* a transformer threw or is not ready,
+* a rule `condition` threw (the event fails with `mapping`),
 * source startup failures (`code()` threw, `init()` threw, queued-on
   flush threw),
-* transformer init failures,
-* destination init failures.
+* transformer init failures.
 
 Rejected client input does not increment `status.failed`. An event
 the pipeline declares invalid (a missing or malformed `name`) resolves as
@@ -278,59 +308,57 @@ counts on `collector.status.sources.<id>.rejected`. That keeps `failed` a
 measure of walkerOS faults rather than of whatever the public internet
 posts at a collector endpoint.
 
-User-supplied callback throws are visibility-only: they log at error
-level but do not increment `status.failed`. This keeps the counter a
-clean pipeline-health signal. Sites in this group:
+User-supplied callback throws in `on` subscriptions (`destination.on`,
+`source.on`, consent rules, `ready`, `run`, `session`, generic) log at error
+level but do not increment `status.failed`. A mapping `fn`, `validate` or
+value-level callback that throws drops only that value; the event still goes
+out and the collector logs one ERROR line per cause. A destination whose
+`on('consent')` handler fails is reported as `consent-not-applied`.
 
-* `on` subscriptions (`destination.on`, `source.on`, consent rules,
-  `ready`, `run`, `session`, generic),
-* mapping `condition`, `fn`, and `validate` callbacks.
-
-In both cases the collector logs at error level:
-
-<CodeSnippet
-  code={`// destination-side failure (event: the event name)
-logger.scope('<destination type>').error('Push failed', { error, event });
-
-// collector-side boundary failure (event: the event name)
-logger.error('push failed', { error, event });
-logger.error('command failed', { error, command });
-
-// pipeline-internal failures (counted)
-logger.error('mapping processing failed', { event, error });
-logger.scope('source').error('source factory failed', { sourceId, error });
-logger.scope('source').error('source init failed', { sourceId, error });
-logger
-  .scope('source')
-  .error('source on flush failed', { sourceId, type, error });
-logger
-  .scope('transformer:<type>')
-  .error('transformer init failed', { transformer, error });
-logger.scope('<destination type>').error('destination init failed', { error });
-
-// user-callback failures (logged, NOT counted; event: the whole event)
-logger.error('mapping rule condition failed', { event, mappingKey, error });
-logger.error('mapping condition failed', { event, error });
-logger.error('mapping fn failed', { event, error });
-logger.error('mapping validate failed', { event, error });
-logger.scope('on').error('on callback failed', { kind, error });`}
-  language="typescript"
-/>
+Every failure is written to the log by the collector, once per cause. See
+[Logger](./logger#failure-lines) for the line format, the rate limit and the
+codes.
 
 A source whose `init()` throws stays with `config.init === false`
 instead of being marked initialized, so `source.config.init` shows that the
 source did not start.
 
-Alarm on the ratio of `status.failed` to `status.in`. The log message text
-plus structured fields are enough to filter destination vs boundary
-failures downstream.
+Alarm on the ratio of `status.failed` to `status.in`. The structured fields of
+each line (`step`, `code`, `status`, `retryable`) are enough to filter
+destination vs boundary failures downstream.
 
-**Personal data in logs.** The push, command and destination failure logs
-carry the event name and the error message, never the event's data. The
-mapping logs (`mapping processing failed` and the callback failures) carry the
-whole event, including `user` and `data`. If your events carry personal data,
-redact it in a custom logger `handler`; do not parse and rewrite at every call
-site.
+**Personal data in logs.** Failure lines carry the step id, the cause code,
+the HTTP status, the event name, the mapping key and the error message
+(capped at 300 characters), never the event's `data`, `user`, `consent`,
+`globals`, `context` or `custom`, an ingest value, a vendor response body or a
+setting value. A vendor response body stays on the error object.
+
+### Consent-denied events on a server
+
+A collector holds an event that a destination's `consent` does not allow, and
+sends it when consent is granted later (`consentDenied: 'queue'`, the
+default). A server has no later grant for an event's own consent, so server
+flows built by the CLI default to `consentDenied: 'skip'`: the event is not
+queued, the destination counts it in `skipped`, and the collector writes a
+DEBUG line. Set the value in the flow's `collector` block to choose the other
+mode; an authored value always wins. Unmet consent is never an error or a
+warning.
+
+<CodeSnippet
+  code={`"collector": {
+  "consentDenied": "queue"
+}`}
+  language="json"
+/>
+
+A held event keeps the consent it was admitted with: when its destination's
+hold ends it is delivered even if the collector's consent changed meanwhile.
+
+### Flushing batches
+
+`walker flush` sends every pending destination batch at once and leaves the
+collector running (see [Commands](./commands#walker-flush)). The browser source
+sends it when the page goes away.
 
 ### Fatal errors
 
@@ -383,10 +411,21 @@ metaDrops?.dlq ?? 0; // monotonic count of evicted DLQ entries`}
 ## Buffer bounds
 
 The collector keeps four internal buffers per process. Each is size-bounded
-with a configurable cap; on overflow the oldest entries are evicted (FIFO),
-the corresponding `dropped` counter is incremented, and a warning is logged.
-The collector buffers and the DLQ warn once per overflow window; the consent
-queue warns on every eviction.
+with a configurable cap, and the `dropped` or `failed` counter moves on
+overflow. What happens to the entry and how loud it is depends on the buffer:
+
+* `collector.queue` evicts the oldest entry and logs once per overflow window
+  at INFO, because it only feeds destinations added later.
+* `collector.preRunQueue` refuses the newest event. That push answers
+  `ok: false` with the reason `queue-full`, counts as failed and logs an ERROR
+  line.
+* `destination.queuePush` evicts the oldest consent-waiting event first and
+  counts it in `dropped`; it logs once per overflow window at DEBUG, because
+  unmet consent is never an error. When the destination is held and the queue
+  holds only held events, the newest event is refused and fails with
+  `queue-full`.
+* `destination.dlq` evicts the oldest failed entry (it was reported failed
+  already, only its replay material is lost) and logs an ERROR line.
 
 | Buffer                  | Purpose                                              | Default cap | Config                              |
 | ----------------------- | ---------------------------------------------------- | ----------- | ----------------------------------- |

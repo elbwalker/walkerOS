@@ -7,22 +7,24 @@ import {
   getSpanId,
   InvalidEventError,
   processEventMapping,
+  reportCause,
+  StepError,
+  toFailureReason,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
-import {
-  pushBounded,
-  resetOverflowFlag,
-  seededQueueMax,
-  warnOverflowOnce,
-} from './buffers';
-import { bumpDropped, errorMeta } from './report-error';
+import { pushBounded, seededQueueMax } from './buffers';
 import { createEvent, enrichEvent } from './handle';
-import { pushToDestinations, createPushResult } from './destination';
+import {
+  chainFailureResult,
+  createPushResult,
+  mergePushResults,
+  pushToDestinations,
+} from './destination';
 import {
   emitCollectorDrop,
   journeyFields,
-  stepError,
+  observerStepError,
   stepState,
 } from './observerEmit';
 import { runTransformerChain } from './transformer';
@@ -69,35 +71,42 @@ export function createPush<T extends Collector.Instance>(
           // by runCollector, so the pipeline (mapping, chains, enrichment)
           // runs exactly once, with post-run state. See prerun-hold.test.ts.
           if (!collector.allowed) {
+            // Bounded: when full, the newest event is refused (the held ones
+            // were promised already). That push answers `ok: false` with
+            // `queue-full`, counted failed, one cause line.
             const max = seededQueueMax(collector.config.queueMax);
             const held = pushBounded(
               collector.preRunQueue,
               { event, options },
-              { max },
+              { max, onOverflow: 'dropNewest' },
             );
-            if (held.dropped > 0) {
-              // Counted under its own step id, NOT `stepId('collector')`: that
-              // one's `queue` counter is the post-run replay buffer, and
-              // pre-run loss is a different problem with a different fix, so
-              // the two stay separately diagnosable.
-              const droppedCount = bumpDropped(
-                collector.status,
-                'collector.preRun',
-                'queue',
-                held.dropped,
+            if (!held.appended) {
+              const reason = toFailureReason(
+                new StepError(
+                  `collector.preRunQueue full (queueMax ${max}): event refused before run`,
+                  { code: 'queue-full' },
+                ),
               );
-              warnOverflowOnce(
-                collector.preRunQueue,
+              collector.status.failed++;
+              reportCause(
+                collector,
                 collector.logger,
-                'collector.preRunQueue overflow; oldest events dropped',
-                { buffer: 'queue', cap: max, droppedCount },
+                { step: 'collector', code: reason.code },
+                'Push refused',
+                {
+                  event: event.name,
+                  retryable: reason.retryable,
+                  error: reason.message,
+                },
               );
-            } else if (collector.preRunQueue.length < max) {
-              resetOverflowFlag(collector.preRunQueue);
+              return createPushResult({
+                ok: false,
+                reason,
+                error: reason.message,
+              });
             }
             collector.logger.debug('event held until run', {
               name: event.name,
-              dropped: held.dropped,
             });
             return createPushResult({ ok: true });
           }
@@ -114,6 +123,9 @@ export function createPush<T extends Collector.Instance>(
           } = options;
           let respond = initialRespond;
           let partialEvent = event;
+          // A transformer of the source's next chain that failed in one copy
+          // of a fork while another copy goes on.
+          let preChainFailure: Elb.PushResult | undefined;
 
           // Build filtered destination set if include/exclude specified
           const filteredDests =
@@ -133,9 +145,19 @@ export function createPush<T extends Collector.Instance>(
               collector,
             );
 
-            // Check ignore flag
+            // A rule that ignores the event: deliberately not forwarded, a
+            // drop the result and observers see.
             if (processed.ignore) {
-              return createPushResult({ ok: true });
+              const at = id ? `source.${id}` : 'collector.push';
+              collector.logger.debug('Event ignored by source mapping', {
+                at,
+                mappingKey: processed.mappingKey,
+              });
+              emitCollectorDrop(collector, processed.event, pipelineIngest, {
+                reason: 'ignored',
+                at,
+              });
+              return createPushResult({ ok: true, dropped: true });
             }
 
             // Check consent requirements
@@ -184,6 +206,13 @@ export function createPush<T extends Collector.Instance>(
               respond,
               chainPath,
             );
+
+            // A transformer failed and no copy goes on: the push fails.
+            const chainFailure = chainResult.failure
+              ? chainFailureResult(chainResult.failure)
+              : undefined;
+            if (chainFailure && chainResult.copies.length === 0)
+              return chainFailure;
 
             // Dropped or stopped: the event never reaches the collector.
             if (chainResult.copies.length === 0) {
@@ -248,11 +277,17 @@ export function createPush<T extends Collector.Instance>(
                 sourceStatus.duration += Date.now() - pushStart;
               }
 
-              return forkResults[0] ?? createPushResult({ ok: true });
+              // Every copy's outcome is reported, worst first.
+              const [first, ...rest] = forkResults;
+              return mergePushResults(
+                first,
+                chainFailure ? [...rest, chainFailure] : rest,
+              );
             }
 
             partialEvent = chainResult.copies[0].event;
             pipelineIngest = chainResult.copies[0].ingest;
+            if (chainFailure) preChainFailure = chainFailure;
           }
 
           // Enrich into a full event (timing, source info, defaults)
@@ -263,7 +298,7 @@ export function createPush<T extends Collector.Instance>(
           );
 
           // Push to destinations with id and ingest
-          const result = await pushToDestinations(
+          const delivered = await pushToDestinations(
             collector,
             fullEvent,
             {
@@ -288,7 +323,9 @@ export function createPush<T extends Collector.Instance>(
             sourceStatus.duration += Date.now() - pushStart;
           }
 
-          return result;
+          return preChainFailure
+            ? mergePushResults(delivered, [preChainFailure])
+            : delivered;
         },
         (err: unknown) => {
           if (err instanceof FatalError) throw err;
@@ -306,9 +343,20 @@ export function createPush<T extends Collector.Instance>(
               const sourceStatus = collector.status.sources[sourceId];
               sourceStatus.rejected = (sourceStatus.rejected ?? 0) + 1;
             }
-            collector.logger.warn('invalid event rejected', {
-              error: err.message,
-            });
+            // WARN (the producer should act, the pipeline is fine), one line
+            // per source per window: a client sending garbage cannot flood
+            // the log.
+            reportCause(
+              collector,
+              collector.logger,
+              {
+                step: sourceId ? `source.${sourceId}` : 'collector',
+                code: 'invalid',
+              },
+              'invalid event rejected',
+              { error: err.message },
+              'warn',
+            );
             return createPushResult({
               ok: false,
               invalid: true,
@@ -316,17 +364,26 @@ export function createPush<T extends Collector.Instance>(
             });
           }
           collector.status.failed++;
-          // Identify the event by NAME only. The log context is serialized
-          // into stderr, the error ring and the managed-run jsonl sink, so it
-          // stays primitive and low-cardinality: the full event (user,
-          // consent, data) and the raw ingest payload would be a PII egress,
-          // and per-event values would make every failure look distinct to
-          // the ring's message dedup.
-          collector.logger.error('push failed', {
-            ...errorMeta(err),
-            event: event.name,
+          // A throwing rule `condition` (`mapping`) or any other fault: the
+          // push fails with its reason. The line names the event by NAME
+          // only, never the event or the ingest payload.
+          const reason = toFailureReason(err);
+          reportCause(
+            collector,
+            collector.logger,
+            { step: 'collector', code: reason.code, status: reason.status },
+            options.id ? `push failed at source.${options.id}` : 'push failed',
+            {
+              event: event.name,
+              retryable: reason.retryable,
+              error: reason.message,
+            },
+          );
+          return createPushResult({
+            ok: false,
+            reason,
+            error: reason.message,
           });
-          return createPushResult({ ok: false });
         },
       )();
     },
@@ -396,7 +453,7 @@ export function createPush<T extends Collector.Instance>(
         journey,
       );
       errState.durationMs = finished - started;
-      errState.error = stepError(err);
+      errState.error = observerStepError(err);
       emitStep(collector, errState);
       throw err;
     }

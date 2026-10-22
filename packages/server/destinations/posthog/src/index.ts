@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { Destination, Env, Settings } from './types';
 import { getConfig } from './config';
-import { push } from './push';
+import { push, pushBatch } from './push';
 
 // Types
 export * as DestinationPostHog from './types';
@@ -9,19 +9,19 @@ export * as DestinationPostHog from './types';
 export const destinationPostHog: Destination = {
   type: 'posthog',
 
-  config: {},
+  // Batched by default, at the SDK's own former defaults (20 events, 10 s).
+  config: { batch: { size: 20, wait: 10_000 } },
 
-  async init({ config: partialConfig, env, logger }) {
-    const config = getConfig(partialConfig, env as Env | undefined, logger);
-    return config;
+  async init({ config: partialConfig, env }) {
+    return getConfig(partialConfig, env);
   },
 
-  async push(event, context) {
-    return await push(event, context);
-  },
+  push,
+
+  pushBatch,
 
   async destroy({ config }) {
-    const client = (config?.settings as Settings | undefined)?.client;
+    const client = config?.settings?.client;
     if (client) {
       await client.shutdown();
     }

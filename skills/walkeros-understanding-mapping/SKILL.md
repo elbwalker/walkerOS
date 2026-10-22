@@ -308,7 +308,7 @@ mapping: {
     complete: {
       policy: {
         'enriched.total_cents': {
-          fn: (event) => Math.round(event.data.total * 100)
+          fn: (event) => Math.round(event.data.value * 100)
         }
       },
       name: 'purchase',

@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -147,7 +147,7 @@ export const revenueEvent: KlaviyoStepExample = {
     user: { id: 'us3r', email: 'user@example.com' },
     data: {
       id: 'ORD-123',
-      total: 99.99,
+      value: 99.99,
       itemNames: ['Widget A', 'Widget B'],
     },
   }),
@@ -163,7 +163,7 @@ export const revenueEvent: KlaviyoStepExample = {
       },
     },
     settings: {
-      value: 'data.total',
+      value: 'data.value',
     },
   },
   out: [
@@ -211,7 +211,8 @@ export const userLoginIdentify: KlaviyoStepExample = {
   title: 'User login identify',
   description:
     'A user login upserts the Klaviyo profile with name, organization, and custom properties without firing an event.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     id: 'a1b2c3d4e5f60103',
     timestamp: 1700000103,
     user: { id: 'us3r', email: 'user@acme.com' },
@@ -333,7 +334,8 @@ export const emailOnly: KlaviyoStepExample = {
   title: 'Email only',
   description:
     'A newsletter signup uses only the email address as the Klaviyo profile identifier, with no external id.',
-  in: getEvent('newsletter signup', {
+  in: createEvent({
+    name: 'newsletter signup',
     id: 'a1b2c3d4e5f60105',
     timestamp: 1700000105,
     user: { email: 'subscriber@example.com' },
@@ -378,7 +380,8 @@ export const emailOnly: KlaviyoStepExample = {
  */
 export const wildcardIgnored: KlaviyoStepExample = {
   public: false,
-  in: getEvent('debug noise', {
+  in: createEvent({
+    name: 'debug noise',
     id: 'a1b2c3d4e5f60106',
     timestamp: 1700000106,
     user: { id: 'us3r', email: 'user@example.com' },
@@ -401,7 +404,7 @@ export const dedupedOrder: KlaviyoStepExample = {
     id: 'a1b2c3d4e5f60107',
     timestamp: 1700000107,
     user: { id: 'us3r', email: 'user@example.com' },
-    data: { id: 'ORD-123', total: 49.5 },
+    data: { id: 'ORD-123', value: 49.5 },
   }),
   mapping: {
     name: 'Placed Order',
@@ -488,3 +491,44 @@ export const numericUniqueId: KlaviyoStepExample = {
     ],
   ],
 };
+
+/** A silent rule sends nothing to Klaviyo. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true sends nothing to Klaviyo.',
+  in: getEvent('page view', { timestamp: 1700000990000 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * No identity -- Klaviyo needs a profile identifier for the event, so the
+ * push fails with missing-input instead of counting as delivered. One per
+ * event name above, so every example's event without identity has its
+ * declared outcome.
+ */
+function withoutIdentity(name: string, timestamp: number): Flow.StepExample {
+  const [entity, action] = name.split(' ');
+  return {
+    public: false,
+    description: `A ${name} event without a profile identifier cannot be sent to Klaviyo: the push fails with missing-input instead of counting as delivered.`,
+    in: { name, entity, action, timestamp },
+    out: [],
+    outcome: { status: 'failed', code: 'missing-input', retryable: false },
+  };
+}
+
+export const noIdentityOrderComplete = withoutIdentity(
+  'order complete',
+  1700000991000,
+);
+export const noIdentityProductView = withoutIdentity(
+  'product view',
+  1700000991001,
+);
+export const noIdentityPageView = withoutIdentity('page view', 1700000991002);
+export const noIdentityNewsletterSignup = withoutIdentity(
+  'newsletter signup',
+  1700000991003,
+);
+export const noIdentityUserLogin = withoutIdentity('user login', 1700000991004);

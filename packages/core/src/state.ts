@@ -9,6 +9,9 @@ import { deepMerge } from './deepMerge';
 import { isArray, isDefined, isObject, isString } from './is';
 import { isPropertyType } from './property';
 import { tryCatchAsync } from './tryCatch';
+import { reportCause } from './causeLog';
+import type { CauseKey } from './causeLog';
+import { toFailureReason } from './stepError';
 
 /**
  * Resolve a store by id. An `undefined` id falls back to the default
@@ -64,6 +67,46 @@ function isEmptyResult(value: unknown): boolean {
 }
 
 /**
+ * Report a state problem through the collector's cause log. A partial
+ * collector without a logger (tests) has nowhere to write.
+ */
+function reportState(
+  collector: Collector.Instance,
+  key: CauseKey,
+  message: string,
+  context: Record<string, unknown>,
+): void {
+  if (collector.causeLog || collector.logger)
+    reportCause(collector, collector.logger, key, message, context);
+}
+
+/**
+ * Read a store key. A read that throws (a refused or failed request, not a
+ * miss) is reported once per cause under the store's step and answered as
+ * failed; the event is never failed by a read.
+ */
+async function readStore(
+  store: Store.Instance,
+  storeId: string,
+  key: string,
+  collector: Collector.Instance,
+): Promise<{ ok: true; value: Store.StoreValue | undefined } | { ok: false }> {
+  try {
+    return { ok: true, value: await store.get(key) };
+  } catch (err) {
+    if (err instanceof FatalError) throw err;
+    const reason = toFailureReason(err);
+    reportState(
+      collector,
+      { step: `store.${storeId}`, code: reason.code, status: reason.status },
+      'store read failed',
+      { error: reason.message, retryable: reason.retryable },
+    );
+    return { ok: false };
+  }
+}
+
+/**
  * Apply declarative store operations against an event, in array order,
  * sequentially.
  *
@@ -85,8 +128,11 @@ function isEmptyResult(value: unknown): boolean {
  * Each entry is fail-open: a store or resolution error is logged and the
  * event is left unmutated, the chain continues. An unknown store logs an
  * error and a `file: true` store is skipped with a warning. A key that does
- * not resolve warns; a store miss is silent. Only `FatalError` rethrows (via
- * `getMappingValue`).
+ * not resolve is reported at ERROR (the enrichment is lost); a store miss is
+ * silent. A read that throws is a miss for that event (a `get` applies its
+ * fallbacks) and is reported once per cause; a merge whose read throws skips
+ * its write, since a blind overwrite would drop the stored fields. Only
+ * `FatalError` rethrows (via `getMappingValue`).
  */
 export async function applyState<E extends WalkerOS.DeepPartialEvent>(
   states: State[],
@@ -126,13 +172,15 @@ export async function applyState<E extends WalkerOS.DeepPartialEvent>(
           event: result,
           consent: eventConsent(result),
         };
+        const storeId = entry.store ?? '__cache';
         const rawKey = await getMappingValue(root, entry.key, context);
         if (!isString(rawKey)) {
-          collector.logger?.warn?.('[state] key did not resolve', {
-            mode: entry.mode,
-            store: entry.store,
-            key: entry.key,
-          });
+          reportState(
+            collector,
+            { step: `store.${storeId}`, code: 'mapping' },
+            `[state] ${entry.mode} key did not resolve, entry skipped`,
+            isString(entry.key) ? { mappingKey: entry.key } : {},
+          );
           return;
         }
         // namespace state keys on the shared default store to avoid cache collisions
@@ -157,7 +205,9 @@ export async function applyState<E extends WalkerOS.DeepPartialEvent>(
             return;
           }
           // Read only when a merge is possible. Not atomic: read, merge, write.
-          const stored: Store.StoreValue | undefined = await store.get(key);
+          const read = await readStore(store, storeId, key, collector);
+          if (!read.ok) return;
+          const stored = read.value;
           if (isDefined(stored) && !isObject(stored))
             collector.logger?.warn?.(
               '[state] stored value is not an object, replaced',
@@ -180,7 +230,8 @@ export async function applyState<E extends WalkerOS.DeepPartialEvent>(
           );
           return;
         }
-        const fetched = await store.get(key);
+        const read = await readStore(store, storeId, key, collector);
+        const fetched = read.ok ? read.value : undefined;
         if (!isDefined(entry.mapping)) {
           if (!isDefined(fetched)) return; // miss: leave event unchanged
           if (target.side === 'ingest') {

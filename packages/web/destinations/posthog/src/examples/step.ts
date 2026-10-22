@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -33,7 +33,7 @@ export const defaultEventForwarding: PostHogStepExample = {
  */
 export const wildcardIgnored: PostHogStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -128,7 +128,8 @@ export const userLoginIdentify: PostHogStepExample = {
   title: 'User login identify',
   description:
     'A user login fires PostHog identify with $set and $set_once person properties, skipping the capture.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000105000,
     data: {
       user_id: 'new-user-123',
@@ -191,7 +192,8 @@ export const profileUpdateSetPersonProperties: PostHogStepExample = {
   title: 'Set person properties',
   description:
     'A profile update calls setPersonProperties to enrich the PostHog profile without changing identity.',
-  in: getEvent('profile update', {
+  in: createEvent({
+    name: 'profile update',
     timestamp: 1700000106,
     data: {
       name: 'Jane Doe',
@@ -234,7 +236,7 @@ export const userLogoutReset: PostHogStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls posthog.reset to clear the distinct id and generate a new anonymous one.',
-  in: getEvent('user logout', { timestamp: 1700000107 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000107 }),
   mapping: {
     silent: true,
     settings: {
@@ -255,7 +257,8 @@ export const groupAssignmentWithProperties: PostHogStepExample = {
   title: 'Group assignment',
   description:
     'A company update assigns the user to a PostHog group and sets group properties via posthog.group.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000108,
     data: {
       company_id: 'company_123',
@@ -320,7 +323,7 @@ export const orderCompleteWithInclude: PostHogStepExample = {
         data_currency: 'EUR',
         data_shipping: 5.22,
         data_taxes: 73.76,
-        data_total: 555,
+        data_value: 555,
         globals_pagegroup: 'shop',
       },
     ],
@@ -360,4 +363,28 @@ export const consentGrantOptIn: PostHogStepExample = {
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
   out: [['posthog.opt_in_capturing']],
+};
+
+/** A silent rule sends no capture call. */
+export const pageViewSilent: PostHogStepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no PostHog capture call.',
+  in: getEvent('page view', { timestamp: 1700000109 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group rule of groupAssignmentWithProperties on an update
+ * without data: no group type and key resolve and the rule suppresses the
+ * capture, so nothing is sent. A declared skip: an unmet mapping, not a
+ * failure.
+ */
+export const companyUpdateWithoutData: PostHogStepExample = {
+  public: false,
+  description:
+    'A silent rule whose group mapping finds no group sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'company update', entity: 'company', action: 'update' },
+  mapping: groupAssignmentWithProperties.mapping,
+  out: [],
 };

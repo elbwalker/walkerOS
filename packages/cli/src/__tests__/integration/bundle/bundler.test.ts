@@ -145,6 +145,32 @@ describe('Bundler', () => {
     ).resolves.not.toThrow();
   });
 
+  it('bakes consentDenied skip into a server flow without provenance (the push and simulate call shape)', async () => {
+    const serverFlow: Flow = {
+      config: { platform: 'server' },
+      destinations: {
+        sink: {
+          code: { type: 'sink', push: '$code:() => {}' },
+          config: {},
+        },
+      },
+    };
+    const output = path.join(testOutputDir, 'consent-skip', 'flow.mjs');
+    const buildOptions = createBuildOptions({
+      packages: {},
+      platform: 'node',
+      format: 'esm',
+      output,
+    });
+
+    await bundle(serverFlow, buildOptions, logger, false);
+
+    expect(serverFlow.collector?.consentDenied).toBe('skip');
+    jest.restoreAllMocks();
+    const code = await fs.readFile(output, 'utf-8');
+    expect(code).toMatch(/"consentDenied":\s*"skip"/);
+  });
+
   describe('Stats Collection', () => {
     it('should collect bundle stats when requested', async () => {
       const flowSettings: Flow = {

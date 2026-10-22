@@ -96,6 +96,8 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+The Clarity script loads through walkerOS, so a blocked script fails later events visibly. A missing `apiKey` is a `config` error.
+
 ## Consent translation
 
 Clarity expects its own category names (`analytics_Storage`, `ad_Storage`).
@@ -103,7 +105,7 @@ walkerOS uses arbitrary consent keys, so the translation is explicit: configure
 `settings.consent` once and the destination maps every `walker consent` event
 into `Clarity.consentV2({ ... })`. A granted key becomes `granted`, any other
 value `denied`, and a mapped key missing from the consent event is left out.
-Without `settings.consent`, the destination takes no action on consent changes.
+Without `settings.consent`, a destination with `config.consent` grants `analytics_Storage` when the required consent is granted and denies both `analytics_Storage` and `ad_Storage` when it is revoked. `ad_Storage` follows only `settings.consent`.
 
 `settings.consent` only tells Clarity the consent state. The destination loads
 the Clarity script when the flow starts. To load Clarity only after consent is

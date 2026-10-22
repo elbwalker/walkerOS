@@ -1,5 +1,32 @@
 # @walkeros/transformer-ga4
 
+## 4.8.2
+
+### Patch Changes
+
+- 7e5fc27: A request with more events than `settings.maxEvents` is dropped whole
+  and now writes an ERROR line, no longer a WARN, because those events are lost.
+  Raise `maxEvents` if your own server-to-server calls send larger batches.
+- 2374f54: An event without a GA4 request in its ingest now fails with
+  `missing-input` instead of being dropped at debug level, so a source missing
+  `config.ingest` shows as an error. A request that cannot be decoded fails the
+  event with code `transformer`.
+- 4100ede: GA4 `purchase` and `refund` hits now decode the order amount into
+  `data.value` instead of `data.total`, matching the standard `order complete`
+  event. A mapping that reads `data.total` from these events must read
+  `data.value` now.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+  - @walkeros/core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

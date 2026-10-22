@@ -1,5 +1,5 @@
 import type { Destination, WalkerOS } from '@walkeros/core';
-import { createMockLogger, FatalError } from '@walkeros/core';
+import { createCauseLog, createMockLogger, FatalError } from '@walkeros/core';
 import { startFlow } from '..';
 import { getStateHold } from '../on';
 
@@ -107,26 +107,30 @@ describe('async destination on() settles before the first push', () => {
         }),
       },
     });
-    Object.assign(collector, { logger });
+    // The cause log writes through the logger it was created with.
+    Object.assign(collector, { logger, causeLog: createCauseLog(logger) });
     await elb('page view', {});
     await elb('walker consent', { marketing: true });
     expect(log).toEqual(['d:init', 'd:on:start']);
     expect(getStateHold(collector.destinations.d)?.type).toBe('consent');
     // Held, not dropped: the event is back in the destination's own queue.
     expect(collector.destinations.d.queuePush).toHaveLength(1);
-    const errorCall = findLoggerError(logger, 'on callback failed');
+    // A failed on(consent) is consent-not-applied: one line per cause.
+    const errorCall = findLoggerError(
+      logger,
+      'consent not applied: the destination on(consent) handler failed; its events are held until a retry succeeds',
+    );
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
-        kind: 'destination',
-        destId: 'd',
-        type: 'consent',
-        name: 'DestinationTimeoutError',
+        step: 'destination.d',
+        code: 'consent-not-applied',
+        error: 'Destination "d" on(consent) did not settle within 20ms',
       }),
     );
     expect(collector.status.failed).toBe(0);
   });
 
-  test('a rejecting on() holds the destination and is logged as an on callback failure', async () => {
+  test('a rejecting on(consent) holds the destination and is logged as consent-not-applied', async () => {
     const log: string[] = [];
     const logger = createMockLogger();
     const { elb, collector } = await startFlow({
@@ -134,16 +138,20 @@ describe('async destination on() settles before the first push', () => {
         d: asyncRecorder(log, () => Promise.reject(new Error('sdk down'))),
       },
     });
-    Object.assign(collector, { logger });
+    // The cause log writes through the logger it was created with.
+    Object.assign(collector, { logger, causeLog: createCauseLog(logger) });
     await elb('page view', {});
     await elb('walker consent', { marketing: true });
     expect(log).toEqual(['d:init', 'd:on:start']);
     expect(getStateHold(collector.destinations.d)?.type).toBe('consent');
-    const errorCall = findLoggerError(logger, 'on callback failed');
+    const errorCall = findLoggerError(
+      logger,
+      'consent not applied: the destination on(consent) handler failed; its events are held until a retry succeeds',
+    );
     expect(errorCall?.[1]).toEqual(
       expect.objectContaining({
-        kind: 'destination',
-        destId: 'd',
+        step: 'destination.d',
+        code: 'consent-not-applied',
         error: 'sdk down',
       }),
     );
@@ -344,10 +352,11 @@ describe('async destination on() settles before the first push', () => {
     ]);
   });
 
-  test('a failed queued delta is re-delivered as the cell by the next queued entry, before the first push', async () => {
+  test('deltas queued while waiting coalesce into the whole cell; its failure holds the first push', async () => {
     const log: string[] = [];
     let calls = 0;
     const { elb, collector } = await startFlow({
+      logger: { handler: () => undefined },
       destinations: {
         d: dataRecorder(
           log,
@@ -360,19 +369,29 @@ describe('async destination on() settles before the first push', () => {
       },
     });
     await elb('page view', {});
-    // Not granted yet: the destination stays uninitialized and both deltas
-    // wait in its queue for the init flush.
+    // Not granted yet: the destination stays uninitialized and the deltas
+    // coalesce into one queued consent entry, the cell's latest value.
     await elb('walker consent', { functional: true });
     expect(log).toEqual([]);
+    expect(
+      collector.destinations.d.queueOn?.filter(
+        (entry) => entry.type === 'consent',
+      ),
+    ).toHaveLength(1);
     await elb('walker consent', { marketing: true });
-    expect(getStateHold(collector.destinations.d)).toBeUndefined();
+    // The one delivery carries the whole cell and fails: the destination is
+    // held and the event is not pushed before its consent reached on().
     expect(log).toEqual([
       'init',
-      'start:consent:{"functional":true}',
       'start:consent:{"functional":true,"marketing":true}',
-      'end:consent',
-      'push:page view',
     ]);
+    expect(getStateHold(collector.destinations.d)?.type).toBe('consent');
+    expect(log).not.toContain('push:page view');
+
+    // The next state command re-delivers the cell; the held event follows.
+    await elb('walker consent', { analytics: true });
+    expect(getStateHold(collector.destinations.d)).toBeUndefined();
+    expect(log).toContain('push:page view');
   });
 });
 

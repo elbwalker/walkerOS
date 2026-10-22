@@ -1,54 +1,44 @@
+import { mockScriptDocument } from '@walkeros/web-core/dev';
 import type { Env, TTQ } from '../types';
 
 const noop = () => {};
 
-/** Build a fresh mock ttq — each call returns a new object so tests can mutate independently. */
+/** Build a fresh mock ttq: each call returns a new object so tests can mutate independently. */
 function makeMockTTQ(): TTQ {
-  const fn = (() => {}) as unknown as TTQ;
-  fn.load = noop;
-  fn.page = noop;
-  fn.track = noop;
-  fn.identify = noop;
-  fn.enableCookie = noop;
-  fn.disableCookie = noop;
-  fn.methods = [
-    'page',
-    'track',
-    'identify',
-    'instances',
-    'debug',
-    'on',
-    'off',
-    'once',
-    'ready',
-    'alias',
-    'group',
-    'enableCookie',
-    'disableCookie',
-  ];
-  fn._i = {};
-  fn.loaded = true;
-  return fn;
+  return Object.assign(() => {}, {
+    load: noop,
+    page: noop,
+    track: noop,
+    identify: noop,
+    enableCookie: noop,
+    disableCookie: noop,
+    methods: [
+      'page',
+      'track',
+      'identify',
+      'instances',
+      'debug',
+      'on',
+      'off',
+      'once',
+      'ready',
+      'alias',
+      'group',
+      'enableCookie',
+      'disableCookie',
+    ],
+    _i: {},
+    loaded: true,
+  });
 }
 
-/**
- * Minimal web env — window has a mock ttq. document has the bare minimum
- * for addScript() (createElement + head.appendChild), with no-op
- * implementations so init() can run without a real DOM.
- */
+/** Minimal web env: window has a mock ttq, document takes the Pixel script. */
 function makeEnv(): Env {
   return {
     window: {
       ttq: makeMockTTQ(),
     },
-    document: {
-      createElement: () =>
-        ({
-          src: '',
-          async: false,
-        }) as unknown as Element,
-      head: { appendChild: noop },
-    },
+    document: mockScriptDocument(),
   };
 }
 

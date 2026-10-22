@@ -1,5 +1,61 @@
 # @walkeros/cli
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: Server flows skip consent-denied events by default
+  (`collector.consentDenied: 'skip'`; an authored value wins). A flow's own
+  `logger` level, format and handler apply under `runneros`. `walkeros setup`
+  fails with the reason when a step's `init` throws or returns `false`. Inline
+  `on`, `pushBatch` and `destroy` reach the bundle. A flow's custom log handler
+  gets a no-op `originalHandler`.
+- 2374f54: `walkeros validate` reports unknown keys, mapping keys with no
+  effect, values without an operator, malformed references and `batch` without
+  `pushBatch` as errors (`MAPPING_NO_OP` replaces the warning
+  `TRANSFORMER_MAPPING_NO_OP`), and `bundle`, `push`, `simulate`, `setup` stop
+  on them before building. An unknown settings key is an error where the package
+  closes its schema.
+- dbb558d: The CLI authenticates with a token only: create one under Account >
+  Automation tokens and set `WALKEROS_TOKEN`. `walkeros auth login`, `logout`
+  and `token` are removed, with the stored session and their exports. An old
+  sign-in in the config file is no longer read, and `walkeros api` refuses an
+  `Authorization` header.
+- 964590a: Browser and wrap bundles import from `@walkeros/web-core`, which
+  ships with the CLI, so no extra package is downloaded.
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [b1d65e2]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+  - @walkeros/collector@4.8.2
+  - @walkeros/core@4.8.2
+  - @walkeros/server-core@4.8.2
+  - @walkeros/server-destination-api@4.8.2
+  - @walkeros/web-core@4.8.2
+  - @walkeros/transformer-validate@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

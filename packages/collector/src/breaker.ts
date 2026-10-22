@@ -1,4 +1,5 @@
-import type { BreakerState, Destination } from '@walkeros/core';
+import type { BreakerState, Collector, Destination } from '@walkeros/core';
+import { stepId } from '@walkeros/core';
 
 /**
  * Step-general circuit breaker.
@@ -199,4 +200,43 @@ export function isBreakerProbePermitted(
   if (!breaker) return true;
   if (breaker.state === 'closed' || breaker.state === 'half-open') return true;
   return breaker.openUntil !== undefined && now >= breaker.openUntil;
+}
+
+/**
+ * Record a destination's push outcome on its breaker, keyed on its canonical
+ * id (`config.id`, else its id in the flow) like the gate. Presence-gated:
+ * a no-op without `config.breaker`. The one entry for the delivery pass, the
+ * batch flush and the outcome sink.
+ */
+export function recordBreaker(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  id: string,
+  outcome: StepOutcome,
+): void {
+  const config = resolveBreakerConfig(destination.config.breaker);
+  if (!config) return;
+  recordStepOutcome(
+    collector.status.breakers,
+    stepId('destination', destination.config.id || id),
+    outcome,
+    config.threshold,
+    config.cooldown,
+  );
+}
+
+/**
+ * Release the half-open probe a destination's delivery pass took without
+ * reaching the transport. Presence-gated like `recordBreaker`.
+ */
+export function releaseBreakerProbe(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  id: string,
+): void {
+  if (!resolveBreakerConfig(destination.config.breaker)) return;
+  releaseProbe(
+    collector.status.breakers,
+    stepId('destination', destination.config.id || id),
+  );
 }

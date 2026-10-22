@@ -31,7 +31,14 @@ npm install @walkeros/server-destination-kafka
       "destinations": {
         "kafka": {
           "package": "@walkeros/server-destination-kafka",
-          "config": {}
+          "config": {
+            "settings": {
+              "kafka": {
+                "brokers": ["localhost:9092"],
+                "topic": "walkeros-events"
+              }
+            }
+          }
         }
       }
     }

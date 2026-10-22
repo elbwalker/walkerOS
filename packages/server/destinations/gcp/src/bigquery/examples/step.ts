@@ -39,7 +39,7 @@ const purchaseEvent = getEvent('order complete', {
   timestamp: 1700001101,
   data: {
     id: 'ORD-500',
-    total: 199.99,
+    value: 199.99,
     items: [{ sku: 'SKU-1', qty: 2 }],
   },
   source: { type: 'express', platform: 'server' },
@@ -52,4 +52,34 @@ export const purchase: Flow.StepExample = {
   in: purchaseEvent,
   mapping: undefined,
   out: [['appendRows', [expectedRow(purchaseEvent)]]],
+};
+
+/** A silent rule appends no row. */
+export const silentRule: Flow.StepExample = {
+  public: false,
+  description: 'A rule with silent: true appends no row.',
+  in: getEvent('page view', { timestamp: 1700000000500 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * A failed append: the Storage Write call fails, so the row is not written
+ * and the push fails, retryable, instead of counting as delivered. An append
+ * the server answers with an error status (a quota, a dropped table) fails
+ * the same way, retryable only for the statuses the SDK retries itself.
+ */
+export const appendFailed: Flow.StepExample = {
+  public: false,
+  description:
+    'A failed Storage Write append fails the push, retryable, instead of counting as delivered.',
+  in: getEvent('page view', { timestamp: 1700001102 }),
+  respond: { error: 'network' },
+  out: [
+    [
+      'appendRows',
+      [expectedRow(getEvent('page view', { timestamp: 1700001102 }))],
+    ],
+  ],
+  outcome: { status: 'failed', code: 'transport', retryable: true },
 };

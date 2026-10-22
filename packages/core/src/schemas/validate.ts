@@ -4,6 +4,8 @@ export interface ValidationIssue {
   message: string;
   severity: 'error' | 'warning';
   path?: string;
+  /** A stable code for checks shared with `validateFlowStructure`. */
+  code?: string;
   line: number;
   column: number;
   endLine?: number;

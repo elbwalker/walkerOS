@@ -2,10 +2,12 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Rules, Settings } from '../types';
 import {
   clone,
+  createEvent,
   createIngest,
-  getEvent,
   createMockContext,
   createMockLogger,
+  getEvent,
+  StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -40,7 +42,6 @@ describe('Server Destination Twitter', () => {
     jest.clearAllMocks();
 
     mockSendServer.mockResolvedValue({
-      ok: true,
       data: { request_id: 'mock-request-id' },
     });
 
@@ -168,10 +169,11 @@ describe('Server Destination Twitter', () => {
 
   test('environment customization', async () => {
     const customSendServer = jest.fn();
-    customSendServer.mockResolvedValue({ ok: true, data: {} });
+    customSendServer.mockResolvedValue({ data: {} });
 
     const customEnv = { sendServer: customSendServer };
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = { settings: baseSettings };
@@ -190,13 +192,12 @@ describe('Server Destination Twitter', () => {
   });
 
   test('error handling - non-ok response triggers throw', async () => {
-    mockSendServer.mockResolvedValue({
-      ok: false,
-      data: { message: 'Invalid auth' },
-      error: '401 Unauthorized',
-    });
+    mockSendServer.mockRejectedValue(
+      new StepError('HTTP 401', { code: 'transport', status: 401 }),
+    );
 
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = { settings: baseSettings };
@@ -214,7 +215,8 @@ describe('Server Destination Twitter', () => {
   });
 
   test('OAuth Authorization header is present and well-formed', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = { settings: baseSettings };
@@ -236,7 +238,8 @@ describe('Server Destination Twitter', () => {
   });
 
   test('endpoint uses default URL with apiVersion and pixelId', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = { settings: baseSettings };
@@ -253,7 +256,8 @@ describe('Server Destination Twitter', () => {
   });
 
   test('endpoint uses custom URL override', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = {
@@ -272,7 +276,8 @@ describe('Server Destination Twitter', () => {
   });
 
   test('email hashing - email is SHA-256 hashed, trimmed, lowercased', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: '  User@Example.COM  ' },
     });
     const config: Config = { settings: baseSettings };
@@ -292,7 +297,8 @@ describe('Server Destination Twitter', () => {
   });
 
   test('email hashing - doNotHash skips hashing', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'already-hashed-email' },
     });
     const config: Config = {
@@ -311,7 +317,8 @@ describe('Server Destination Twitter', () => {
   });
 
   test('phone hashing - phone is SHA-256 hashed', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { phone: '+1234567890' },
     });
     const config: Config = { settings: baseSettings };
@@ -332,7 +339,8 @@ describe('Server Destination Twitter', () => {
   });
 
   test('twclid passthrough - not hashed', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
       context: { twclid: ['raw-twclid-value', 0] },
     });
@@ -356,22 +364,26 @@ describe('Server Destination Twitter', () => {
     expect(twclidId).toEqual({ twclid: 'raw-twclid-value' });
   });
 
-  test('no primary identifier - event is skipped', async () => {
-    const event = getEvent('form submit', {
+  test('no primary identifier - event fails with missing-input', async () => {
+    const event = createEvent({
+      name: 'form submit',
       user: { id: 'user-123' },
     });
     const config: Config = { settings: baseSettings };
 
-    await destination.push(
-      event,
-      createMockContext({ config, env: testEnv, id: 'test-twitter' }),
-    );
+    await expect(
+      destination.push(
+        event,
+        createMockContext({ config, env: testEnv, id: 'test-twitter' }),
+      ),
+    ).rejects.toMatchObject({ code: 'missing-input' });
 
     expect(mockSendServer).not.toHaveBeenCalled();
   });
 
   test('conversion_time is ISO 8601 format', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       timestamp: 1700000900000,
       user: { email: 'test@test.com' },
     });
@@ -389,7 +401,8 @@ describe('Server Destination Twitter', () => {
   });
 
   test('conversion_id equals event.id', async () => {
-    const event = getEvent('form submit', {
+    const event = createEvent({
+      name: 'form submit',
       user: { email: 'test@test.com' },
     });
     const config: Config = { settings: baseSettings };
@@ -406,7 +419,7 @@ describe('Server Destination Twitter', () => {
   test('value is cast to string in payload', async () => {
     const event = getEvent('order complete', {
       timestamp: 1700000000000,
-      data: { total: 99.99, currency: 'EUR' },
+      data: { value: 99.99, currency: 'EUR' },
       user: { email: 'test@test.com' },
     });
     const config: Config = {
@@ -415,7 +428,7 @@ describe('Server Destination Twitter', () => {
         order: {
           complete: {
             settings: {
-              value: 'data.total',
+              value: 'data.value',
               currency: { key: 'data.currency', value: 'EUR' },
             },
           },
@@ -535,7 +548,7 @@ describe('Server Destination Twitter', () => {
 
     test('fills client IP and user agent from ingest by default', async () => {
       await destination.push(
-        getEvent('form submit', { user: { email: 'test@test.com' } }),
+        createEvent({ name: 'form submit', user: { email: 'test@test.com' } }),
         createMockContext({
           config: { settings: { ...baseSettings } },
           env: testEnv,
@@ -548,7 +561,8 @@ describe('Server Destination Twitter', () => {
 
     test('falls back to event.user.ip and userAgent', async () => {
       await destination.push(
-        getEvent('form submit', {
+        createEvent({
+          name: 'form submit',
           user: {
             email: 'test@test.com',
             ip: '198.51.100.2',
@@ -566,7 +580,7 @@ describe('Server Destination Twitter', () => {
 
     test('sends neither when disabled with false', async () => {
       await destination.push(
-        getEvent('form submit', { user: { email: 'test@test.com' } }),
+        createEvent({ name: 'form submit', user: { email: 'test@test.com' } }),
         createMockContext({
           config: {
             settings: { ...baseSettings, ip: false, userAgent: false },
@@ -581,7 +595,7 @@ describe('Server Destination Twitter', () => {
 
     test('lets an explicitly mapped value win', async () => {
       await destination.push(
-        getEvent('form submit', { user: { email: 'test@test.com' } }),
+        createEvent({ name: 'form submit', user: { email: 'test@test.com' } }),
         createMockContext({
           config: { settings: { ...baseSettings } },
           data: { user_data: { ip_address: '10.0.0.1' } },

@@ -1,7 +1,14 @@
 import type { DestinationWeb } from '@walkeros/web-core';
-import { getEnv } from '@walkeros/web-core';
-import { getMappingValue, isObject, isString } from '@walkeros/core';
-import type { Collector, WalkerOS } from '@walkeros/core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
+import {
+  getGrantedConsent,
+  getMappingValue,
+  isObject,
+  isString,
+  StepError,
+  stepCall,
+} from '@walkeros/core';
+import type { Collector, Logger, Mapping, WalkerOS } from '@walkeros/core';
 import type {
   Destination,
   EventData,
@@ -22,28 +29,40 @@ const PINTEREST_SCRIPT_SRC = 'https://s.pinimg.com/ct/core.js';
  */
 function installPintrkQueue(env?: DestinationWeb.Env): void {
   const { window } = getEnv(env);
-  const w = window as Window & { pintrk?: Pintrk };
-  if (w.pintrk) return;
-  const queue: unknown[][] = [];
-  const fn = ((...args: unknown[]) => {
-    (w.pintrk!.queue as unknown[][]).push(args);
-  }) as unknown as Pintrk;
-  fn.queue = queue;
-  fn.version = '3.0';
-  w.pintrk = fn;
+  if (window.pintrk) return;
+  const pintrk: Pintrk = Object.assign(
+    (...args: unknown[]) => {
+      pintrk.queue?.push(args);
+    },
+    { queue: [], version: '3.0' },
+  );
+  window.pintrk = pintrk;
+}
+
+/** The pintrk queue or tag, or a StepError when it is not there. */
+function getPintrk(env?: DestinationWeb.Env): Pintrk {
+  const { pintrk } = getEnv(env).window;
+  if (!pintrk)
+    throw new StepError('Pinterest Tag not ready: pintrk is missing', {
+      code: 'vendor-not-ready',
+    });
+  return pintrk;
 }
 
 /**
- * Insert the Pinterest core.js script tag. Async, non-blocking. Matches the
- * plausible/meta precedent.
+ * The core.js script `loadVendor` injects unless `loadScript` is false.
+ * pintrk replays its own queue, so it is called synchronously and only a
+ * failed script is reported.
  */
-function addScript(env?: DestinationWeb.Env): void {
-  const { document } = getEnv(env);
-  const doc = document as Document;
-  const script = doc.createElement('script');
-  script.src = PINTEREST_SCRIPT_SRC;
-  script.async = true;
-  doc.head.appendChild(script);
+function vendor(
+  config: { loadScript?: boolean; timeout?: number },
+  env?: DestinationWeb.Env,
+) {
+  return loadVendor(
+    config.loadScript !== false ? PINTEREST_SCRIPT_SRC : undefined,
+    () => getEnv(env).window.pintrk,
+    { timeout: config.timeout, document: getEnv(env).document },
+  );
 }
 
 /**
@@ -52,19 +71,14 @@ function addScript(env?: DestinationWeb.Env): void {
  */
 async function resolveIdentify(
   event: WalkerOS.Event,
-  mappingValue: unknown,
+  mappingValue: Mapping.Value | undefined,
   collector: Collector.Instance,
 ): Promise<IdentifyFields | undefined> {
   if (mappingValue === undefined || mappingValue === null) return undefined;
-  const resolved = await getMappingValue(
-    event,
-    mappingValue as Parameters<typeof getMappingValue>[1],
-    { collector },
-  );
+  const resolved = await getMappingValue(event, mappingValue, { collector });
   if (!isObject(resolved)) return undefined;
   const fields: IdentifyFields = {};
-  const em = (resolved as Record<string, unknown>).em;
-  const external_id = (resolved as Record<string, unknown>).external_id;
+  const { em, external_id } = resolved;
   if (isString(em) && em) fields.em = em;
   if (isString(external_id) && external_id) fields.external_id = external_id;
   return Object.keys(fields).length > 0 ? fields : undefined;
@@ -80,108 +94,130 @@ function identifyEqual(a?: IdentifyFields, b?: IdentifyFields): boolean {
   return a.em === b.em && a.external_id === b.external_id;
 }
 
+/**
+ * A configured mapping that resolved to nothing skips its call: a declared
+ * skip, said once at DEBUG with the event and the mapping key, never the
+ * value, so a wrong mapping path does not look like an event without data.
+ */
+function skipped(
+  logger: Logger.Instance,
+  event: WalkerOS.Event,
+  call: string,
+  key: string,
+): void {
+  logger.debug(`Pinterest skipped ${call}: ${key} resolved to nothing`, {
+    event: event.name,
+  });
+}
+
 export const destinationPinterest: Destination = {
   type: 'pinterest',
 
   config: {},
 
-  init({ config, env }) {
-    const settings = config.settings;
-    if (!settings?.apiKey) return false;
+  async init({ config, env }) {
+    // A copy, so adding the runtime state below does not write onto the live settings
+    const settings = { ...config.settings };
+    if (!settings.apiKey)
+      throw new StepError('Pinterest needs settings.apiKey', {
+        code: 'config',
+      });
+    const { apiKey } = settings;
 
     const pageview = settings.pageview !== false;
 
     installPintrkQueue(env);
-    if (config.loadScript !== false) addScript(env);
+    vendor(config, env);
 
-    const { window } = getEnv(env);
-    const pintrk = (window as Window).pintrk as Pintrk;
+    const pintrk = getPintrk(env);
 
-    pintrk('load', settings.apiKey);
-    if (pageview) pintrk('page');
+    await stepCall(
+      () => pintrk('load', apiKey),
+      'vendor-not-ready',
+      'Pinterest load call failed',
+    );
+    if (pageview)
+      await stepCall(
+        () => pintrk('page'),
+        'vendor-not-ready',
+        'Pinterest page call failed',
+      );
 
     // Seed runtime state (mutation is allowed on Settings._state).
-    settings._state = {
-      lastIdentify: undefined,
-      consentGranted: true,
+    return {
+      ...config,
+      settings: {
+        ...settings,
+        _state: { lastIdentify: undefined, consentGranted: true },
+      },
     };
-
-    return config;
   },
 
-  async push(event, { config, rule, data, env, collector }) {
-    const settings = (config.settings || {}) as Settings;
+  async push(event, { config, rule, data, env, collector, logger }) {
+    vendor(config, env).check();
+
+    const settings: Partial<Settings> = config.settings || {};
     const state = (settings._state ||= { consentGranted: true });
-    if (state.consentGranted === false) return; // Consent revoked - suppress
 
-    const { window } = getEnv(env);
-    const pintrk = (window as Window).pintrk as Pintrk;
-    if (!pintrk) return;
+    const pintrk = getPintrk(env);
 
-    // 1. Identity - per-event override falls back to destination-level.
-    const identifyMapping =
-      (rule?.settings?.identify as unknown) ?? settings.identify;
-    const identify = await resolveIdentify(event, identifyMapping, collector);
-    if (identify && !identifyEqual(identify, state.lastIdentify)) {
-      pintrk('set', identify);
-      state.lastIdentify = identify;
-    }
+    // Consent revoked: suppress. This is the consent state, not a failure.
+    if (state.consentGranted !== false) {
+      // 1. Identity - per-event override falls back to destination-level.
+      // A silent rule whose identify resolves nothing (or an identity that
+      // is already current) sends nothing: a declared skip, not a failure.
+      const identifyMapping = rule?.settings?.identify ?? settings.identify;
+      const identify = await resolveIdentify(event, identifyMapping, collector);
+      if (!identify) {
+        if (identifyMapping !== undefined)
+          skipped(logger, event, 'set', 'identify');
+      } else if (!identifyEqual(identify, state.lastIdentify)) {
+        await stepCall(
+          () => pintrk('set', identify),
+          'transport',
+          'Pinterest set call failed',
+        );
+        state.lastIdentify = identify;
+      }
 
-    // 2. Silent - process identity (above) but suppress the default track.
-    if (rule?.silent === true) return;
+      // 2. Silent - process identity (above) but suppress the default track.
+      if (rule?.silent !== true) {
+        // 3. Track
+        const eventName = isString(rule?.name) ? rule.name : event.name;
 
-    // 3. Track
-    const eventName = isString(rule?.name)
-      ? (rule!.name as string)
-      : event.name;
+        // context.data contains both include-flattened and mapping.data-resolved
+        // properties. Include is the bottom layer, mapping.data wins on conflict.
+        const contextData: Record<string, unknown> = isObject(data) ? data : {};
 
-    // context.data contains both include-flattened and mapping.data-resolved
-    // properties. Include is the bottom layer, mapping.data wins on conflict.
-    const contextData: Record<string, unknown> = isObject(data)
-      ? (data as Record<string, unknown>)
-      : {};
+        const eventData: EventData = {
+          ...(event.id ? { event_id: event.id } : {}),
+          ...contextData,
+        };
 
-    const eventData: EventData = {
-      ...(event.id ? { event_id: event.id } : {}),
-      ...contextData,
-    };
-
-    pintrk('track', eventName, eventData);
-  },
-
-  on(type, context) {
-    if (type !== 'consent' || !context.data) return;
-    const settings = context.config?.settings as Settings | undefined;
-    if (!settings) return;
-
-    const consent = context.data as WalkerOS.Consent;
-    const required = context.config?.consent;
-    if (!required) return;
-
-    const keys = Object.keys(required);
-    if (keys.length === 0) return;
-
-    // Deny as soon as any required key is explicitly false. Grant only if
-    // every required key is explicitly true.
-    let anyDenied = false;
-    let allGranted = true;
-    for (const key of keys) {
-      if (consent[key] === true) continue;
-      if (consent[key] === false) {
-        anyDenied = true;
-        allGranted = false;
-      } else {
-        // undefined / unknown - don't flip
-        allGranted = false;
+        await stepCall(
+          () => pintrk('track', eventName, eventData),
+          'transport',
+          'Pinterest track call failed',
+        );
       }
     }
+  },
 
-    const state = (settings._state ||= { consentGranted: true });
-    if (anyDenied) {
-      state.consentGranted = false;
-    } else if (allGranted) {
-      state.consentGranted = true;
-    }
+  // Pinterest has no consent API: the destination stops its own sends. The
+  // destination's required consent decides on the whole consent state, as
+  // it gates the pushes, and only a change that names a required key counts.
+  on(type, { config, data, collector }) {
+    const required = config.consent;
+    if (type !== 'consent' || !required || !isObject(data)) return;
+    if (!Object.keys(required).some((key) => key in data)) return;
+    const settings = config.settings;
+    if (!isObject(settings)) return;
+
+    const state = isObject(settings._state)
+      ? settings._state
+      : (settings._state = { consentGranted: true });
+    state.consentGranted =
+      getGrantedConsent(required, collector.consent) !== false;
   },
 };
 

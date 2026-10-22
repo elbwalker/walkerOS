@@ -34,7 +34,7 @@ describe('logger usage', () => {
     const mockLogger = createMockLogger();
     const mockPush = jest
       .fn()
-      .mockResolvedValue({ event: { id: 'forwarded' } });
+      .mockResolvedValue({ ok: true, event: { id: 'forwarded' } });
 
     const source = await sourceFetch(
       createSourceContext(
@@ -69,7 +69,9 @@ describe('logger usage', () => {
       createSourceContext(
         {},
         {
-          push: jest.fn().mockResolvedValue({ event: { id: 'test' } }) as never,
+          push: jest
+            .fn()
+            .mockResolvedValue({ ok: true, event: { id: 'test' } }) as never,
           command: jest.fn() as never,
           elb: jest.fn() as never,
           logger: mockLogger,

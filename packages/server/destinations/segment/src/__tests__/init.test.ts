@@ -27,7 +27,16 @@ describe('init', () => {
 describe('destroy', () => {
   it('calls closeAndFlush on the analytics instance', async () => {
     const closeAndFlush = jest.fn().mockResolvedValue(undefined);
-    const mockAnalytics = { closeAndFlush } as unknown as SegmentAnalyticsMock;
+    const delivered = () => undefined;
+    const mockAnalytics: SegmentAnalyticsMock = {
+      track: delivered,
+      identify: delivered,
+      group: delivered,
+      page: delivered,
+      screen: delivered,
+      flush: () => Promise.resolve(),
+      closeAndFlush,
+    };
 
     const config = {
       settings: {

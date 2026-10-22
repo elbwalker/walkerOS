@@ -103,6 +103,9 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
   language="javascript"
 />
 
+The source reads the page's `window` and needs no `env`, in integrated and
+bundled mode alike. In tests, `env.window` replaces it.
+
 Every event carries the page context in `source`, like browser source events:
 `{ type: 'dataLayer', platform: 'web', url, referrer }`, with `url` from
 `window.location.href` and `referrer` from `document.referrer`. Both are read
@@ -167,7 +170,7 @@ The source emits walkerOS events whose `name` is `"<prefix> <gtag-action>"`. The
             "data": {
               "map": {
                 "id": "transaction_id",
-                "total": "value",
+                "value": "value",
                 "currency": "currency"
               }
             }
@@ -219,7 +222,7 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
   code={`// Old
 dataLayer.push({ event: 'purchase', value: 99.99 });
 // New
-elb({ name: 'order complete', data: { total: 99.99 } });`}
+elb({ name: 'order complete', data: { value: 99.99 } });`}
   language="typescript"
 />
 

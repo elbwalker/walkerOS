@@ -1,6 +1,6 @@
 import type { Destination, Logger } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
-import { errorCode } from './classify';
+import { isObject, StepError } from '@walkeros/core';
+import { adviceFor, classify, errnoOf, errorCode } from './classify';
 import { resolveSettings } from './config';
 import { eventToRow } from './eventToRow';
 import type { InsertEntry } from './insert';
@@ -43,36 +43,47 @@ function toInsertEntry({ event, data }: Entry): InsertEntry {
  * client optional and the defaults unapplied, so they have to be narrowed once
  * per delivery.
  *
- * A failure is logged and rethrown as it arrived. The collector reads a throw
- * as the whole delivery failing: every event goes to the dead letter queue and
- * one transport failure is recorded against the destination's breaker.
- * Swallowing the rejection would report lost events as delivered.
+ * A failure is thrown as the package's own StepError: the collector reads a
+ * throw as the whole delivery failing, every event goes to the dead letter
+ * queue, one line is logged and one transport failure is recorded against the
+ * destination's breaker. Swallowing the rejection would report lost events as
+ * delivered.
  */
 export async function deliver(
   entries: readonly Entry[],
   config: PartialConfig,
   logger: Logger.Instance,
 ): Promise<void> {
-  const settings = resolveSettings(config, logger);
+  const settings = resolveSettings(config);
 
   try {
     await insertRows(entries.map(toInsertEntry), settings, logger);
   } catch (error) {
-    // The message travels beside the code because the code is often absent: a
-    // transport failure carries a Node errno, which is not a ClickHouse code
-    // and is deliberately not read as one. `ECONNRESET` is the commonest
-    // retryable failure there is, and a line that named neither it nor the
-    // server's own text would leave an operator grepping for nothing.
-    logger.error('ClickHouse insert failed', {
-      code: errorCode(error),
-      message: error instanceof Error ? error.message : String(error),
-      rows: entries.length,
-    });
-
-    throw error;
+    throw insertError(error);
   }
 
   // A landed delivery stays at debug. Every event that arrives produces one of
   // these, so anything louder buries the line that matters.
   logger.debug('ClickHouse insert ok', { rows: entries.length });
+}
+
+/**
+ * A failed insert as the package's StepError. The message names the ClickHouse
+ * code, or the Node errno of a rejection that never reached the server
+ * (`ECONNRESET` is the commonest retryable failure there is), plus the advice
+ * for the terminal codes that need one. Never the server's own text: it can
+ * quote the rows it could not parse. The original error stays the cause.
+ */
+function insertError(error: unknown): StepError {
+  const code = errorCode(error);
+  const reason = code ? `code ${code}` : errnoOf(error);
+  return new StepError(
+    adviceFor(code) ??
+      `ClickHouse insert failed${reason ? ` (${reason})` : ''}`,
+    {
+      code: 'transport',
+      retryable: classify(error) === 'retryable',
+      cause: error,
+    },
+  );
 }

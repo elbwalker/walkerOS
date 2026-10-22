@@ -776,6 +776,10 @@ requirements (build, test, lint, no `any`):
 - [ ] Category mapping uses OR logic for many-to-one
 - [ ] Consent state always includes explicit `false` for denied groups
 - [ ] `destroy()` cleans up ALL listeners and restores wrapped functions
+- [ ] Detection never fails silently: a setting the source needs that is missing
+      throws a `StepError` (`code: 'config'`) from `init`, and `init` never
+      returns early or returns `false`; a CMP that is simply absent is not an
+      error (consent stays unknown)
 - [ ] README follows required structure
 - [ ] Consent guide page updated
 

@@ -4,25 +4,27 @@ import type { Settings, Rule, Env } from '../types';
 import { type Collector } from '@walkeros/core';
 import {
   clone,
+  createEvent,
   createMockContext,
   createMockLogger,
   getEvent,
 } from '@walkeros/core';
 
 // Mock all tool implementations
+// The init helpers and pushAdsEvent answer the results of their calls.
 jest.mock('../ga4', () => ({
-  initGA4: jest.fn(),
+  initGA4: jest.fn(() => []),
   pushGA4Event: jest.fn(),
 }));
 
 jest.mock('../ads', () => ({
-  initAds: jest.fn(),
-  pushAdsEvent: jest.fn(),
+  initAds: jest.fn(() => []),
+  pushAdsEvent: jest.fn(() => []),
   resolveUserData: jest.fn(),
 }));
 
 jest.mock('../gtm', () => ({
-  initGTM: jest.fn(),
+  initGTM: jest.fn(() => []),
   pushGTMEvent: jest.fn(),
 }));
 
@@ -69,10 +71,10 @@ describe('Unified Gtag Destination', () => {
   });
 
   describe('init', () => {
-    it('should throw when no tools are configured', () => {
+    it('should throw when no tools are configured', async () => {
       const config = { settings: {} };
 
-      expect(() =>
+      await expect(
         destinationGtag.init!({
           id: contextId,
           config,
@@ -80,16 +82,20 @@ describe('Unified Gtag Destination', () => {
           collector: mockCollector,
           logger: mockLogger,
         }),
-      ).toThrow('Config settings missing');
+      ).rejects.toMatchObject({
+        code: 'config',
+        message:
+          'Config settings ga4.measurementId, ads.conversionId or gtm.containerId missing',
+      });
     });
 
-    it('should initialize GA4 only', () => {
+    it('should initialize GA4 only', async () => {
       const settings: Settings = {
         ga4: { measurementId: 'G-XXXXXXXXXX' },
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init!({
+      const result = await destinationGtag.init!({
         id: contextId,
         config,
         env: mockEnv,
@@ -104,18 +110,19 @@ describe('Unified Gtag Destination', () => {
         mockEnv,
         mockLogger,
         true,
+        undefined,
       );
       expect(initAds).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
     });
 
-    it('should initialize Google Ads only', () => {
+    it('should initialize Google Ads only', async () => {
       const settings: Settings = {
         ads: { conversionId: 'AW-XXXXXXXXX' },
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init!({
+      const result = await destinationGtag.init!({
         id: contextId,
         config,
         env: mockEnv,
@@ -130,18 +137,19 @@ describe('Unified Gtag Destination', () => {
         mockEnv,
         mockLogger,
         true,
+        undefined,
       );
       expect(initGA4).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
     });
 
-    it('should initialize GTM only', () => {
+    it('should initialize GTM only', async () => {
       const settings: Settings = {
         gtm: { containerId: 'GTM-XXXXXXX' },
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init!({
+      const result = await destinationGtag.init!({
         id: contextId,
         config,
         env: mockEnv,
@@ -155,12 +163,13 @@ describe('Unified Gtag Destination', () => {
         true,
         mockEnv,
         mockLogger,
+        undefined,
       );
       expect(initGA4).not.toHaveBeenCalled();
       expect(initAds).not.toHaveBeenCalled();
     });
 
-    it('should initialize all tools when configured', () => {
+    it('should initialize all tools when configured', async () => {
       const settings: Settings = {
         ga4: { measurementId: 'G-XXXXXXXXXX' },
         ads: { conversionId: 'AW-XXXXXXXXX' },
@@ -168,7 +177,7 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init!({
+      const result = await destinationGtag.init!({
         id: contextId,
         config,
         env: mockEnv,
@@ -183,6 +192,7 @@ describe('Unified Gtag Destination', () => {
         mockEnv,
         mockLogger,
         true,
+        undefined,
       );
       expect(initAds).toHaveBeenCalledWith(
         settings.ads,
@@ -190,22 +200,24 @@ describe('Unified Gtag Destination', () => {
         mockEnv,
         mockLogger,
         true,
+        undefined,
       );
       expect(initGTM).toHaveBeenCalledWith(
         settings.gtm,
         true,
         mockEnv,
         mockLogger,
+        undefined,
       );
     });
 
-    it('should pass loadScript parameter correctly', () => {
+    it('should pass loadScript parameter correctly', async () => {
       const settings: Settings = {
         ga4: { measurementId: 'G-XXXXXXXXXX' },
       };
       const config = { settings, loadScript: false };
 
-      destinationGtag.init!({
+      await destinationGtag.init!({
         id: contextId,
         config,
         env: mockEnv,
@@ -219,6 +231,7 @@ describe('Unified Gtag Destination', () => {
         mockEnv,
         mockLogger,
         true,
+        undefined,
       );
     });
   });
@@ -255,6 +268,7 @@ describe('Unified Gtag Destination', () => {
         mockData,
         mockEnv,
         mockLogger,
+        expect.any(Function),
       );
     });
 
@@ -511,6 +525,7 @@ describe('Unified Gtag Destination', () => {
         mockData,
         mockEnv,
         mockLogger,
+        expect.any(Function),
       );
       expect(pushAdsEvent).toHaveBeenCalledWith(
         mockEvent,
@@ -577,6 +592,7 @@ describe('Unified Gtag Destination', () => {
         mockData,
         mockEnv,
         mockLogger,
+        expect.any(Function),
       );
     });
   });
@@ -611,7 +627,10 @@ describe('Unified Gtag Destination', () => {
         });
 
         // Call a regular event
-        const event = getEvent('button click', { data: { id: 'test-btn' } });
+        const event = createEvent({
+          name: 'button click',
+          data: { id: 'test-btn' },
+        });
         destination.push(
           event,
           createMockContext({
@@ -682,7 +701,7 @@ describe('Unified Gtag Destination', () => {
         expect(pushGA4Event).toHaveBeenCalled();
       });
 
-      it('should call gtag consent update on subsequent consent changes', () => {
+      it('should call gtag consent update on subsequent consent changes', async () => {
         // Set up destination with default consent mode
         const destination = { ...destinationGtag };
         destination.config = {
@@ -691,7 +710,7 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // First consent call (should use 'default' then 'update')
-        destination.on?.('consent', {
+        await destination.on?.('consent', {
           id: contextId,
           collector: mockCollector,
           config: destination.config,
@@ -718,7 +737,7 @@ describe('Unified Gtag Destination', () => {
         mockGtag.mockClear();
 
         // Second consent call (should only use 'update')
-        destination.on?.('consent', {
+        await destination.on?.('consent', {
           id: contextId,
           collector: mockCollector,
           config: destination.config,
@@ -948,20 +967,23 @@ describe('Unified Gtag Destination', () => {
       orderEnv.window.gtag = gtag;
     });
 
-    it('emits consent default (denied) before tool init when config.consent is set', () => {
+    it('emits consent default (denied) before tool init when config.consent is set', async () => {
       const calls: string[] = [];
       gtag.mockImplementation((...args: unknown[]) => {
         if (args[0] === 'consent' && args[1] === 'default')
           calls.push('default');
       });
-      (initGA4 as jest.Mock).mockImplementation(() => calls.push('initGA4'));
+      (initGA4 as jest.Mock).mockImplementation(() => {
+        calls.push('initGA4');
+        return [];
+      });
 
       const config = {
         consent: { marketing: true },
         settings: { ga4: { measurementId: 'G-X' } },
       };
 
-      destinationGtag.init!({
+      await destinationGtag.init!({
         id: contextId,
         config,
         env: orderEnv,
@@ -978,10 +1000,43 @@ describe('Unified Gtag Destination', () => {
       });
     });
 
-    it('does NOT emit a default when there is no consent signal', () => {
+    it('sends the denied default again after an init whose default call failed', async () => {
+      let fail = true;
+      gtag.mockImplementation((...args: unknown[]) => {
+        if (fail && args[0] === 'consent' && args[1] === 'default') {
+          fail = false;
+          throw new Error('gtag wrapper failed');
+        }
+      });
+      const config = {
+        consent: { marketing: true },
+        settings: { ga4: { measurementId: 'G-X' } },
+      };
+      const context = {
+        id: contextId,
+        config,
+        env: orderEnv,
+        collector: mockCollector,
+        logger: createThrowingLogger(),
+      };
+
+      await expect(destinationGtag.init!(context)).rejects.toMatchObject({
+        code: 'vendor-not-ready',
+      });
+      gtag.mockClear();
+      await destinationGtag.init!(context);
+
+      expect(gtag.mock.calls[0]).toEqual([
+        'consent',
+        'default',
+        expect.objectContaining({ ad_storage: 'denied' }),
+      ]);
+    });
+
+    it('does NOT emit a default when there is no consent signal', async () => {
       const config = { settings: { ga4: { measurementId: 'G-X' } } };
 
-      destinationGtag.init!({
+      await destinationGtag.init!({
         id: contextId,
         config,
         env: orderEnv,
@@ -996,12 +1051,12 @@ describe('Unified Gtag Destination', () => {
       );
     });
 
-    it('adds wait_for_update in advanced mode', () => {
+    it('adds wait_for_update in advanced mode', async () => {
       const config = {
         settings: { como_advanced: true, ga4: { measurementId: 'G-X' } },
       };
 
-      destinationGtag.init!({
+      await destinationGtag.init!({
         id: contextId,
         config,
         env: orderEnv,
@@ -1016,12 +1071,12 @@ describe('Unified Gtag Destination', () => {
       );
     });
 
-    it('does NOT emit a default when como_advanced is false and no config.consent', () => {
+    it('does NOT emit a default when como_advanced is false and no config.consent', async () => {
       const config = {
         settings: { como_advanced: false, ga4: { measurementId: 'G-X' } },
       };
 
-      destinationGtag.init!({
+      await destinationGtag.init!({
         id: contextId,
         config,
         env: orderEnv,
@@ -1036,7 +1091,7 @@ describe('Unified Gtag Destination', () => {
       );
     });
 
-    it('emits the custom como mapping as the denied default', () => {
+    it('emits the custom como mapping as the denied default', async () => {
       const config = {
         consent: { marketing: true },
         settings: {
@@ -1045,7 +1100,7 @@ describe('Unified Gtag Destination', () => {
         },
       };
 
-      destinationGtag.init!({
+      await destinationGtag.init!({
         id: contextId,
         config,
         env: orderEnv,

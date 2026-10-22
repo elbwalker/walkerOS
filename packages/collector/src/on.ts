@@ -6,10 +6,12 @@ import type {
   Source,
   Logger,
 } from '@walkeros/core';
-import { isArray, FatalError } from '@walkeros/core';
+import { isArray, FatalError, reportCause, stepId } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
 import { mergeEnvironments, pushToDestinations } from './destination';
+import { DEFAULT_QUEUE_MAX } from './buffers';
+import { bumpDropped } from './report-error';
 import { buildReportError, errorMeta } from './report-error';
 import { reconcilePending } from './pending';
 import { flushSourceQueueOn, isSourceStarted } from './source';
@@ -431,7 +433,7 @@ export async function callDestinationOn(
     gated &&
     (overdueDeliveries.get(destination) || stateCalls.has(destination))
   ) {
-    markStateLost(collector, destination, type);
+    markStateLost(collector, destination, type, false);
     if (!overdueDeliveries.get(destination))
       deferredDuringCall.add(destination);
     return false;
@@ -490,7 +492,23 @@ export async function callDestinationOn(
       (err) => {
         settled = false;
         if (err instanceof DestinationTimeoutError) timedOut = true;
-        logOnCallbackError(collector, 'destination', err, { destId, type });
+        if (type === 'consent') {
+          // The vendor never got the consent decision: a destination
+          // failure (not an unmet condition), one line per cause.
+          if (err instanceof FatalError) throw err;
+          reportCause(
+            collector,
+            collector.logger,
+            {
+              step: stepId('destination', destId),
+              code: 'consent-not-applied',
+            },
+            'consent not applied: the destination on(consent) handler failed; its events are held until a retry succeeds',
+            { type: destination.type, ...errorMeta(err) },
+          );
+        } else {
+          logOnCallbackError(collector, 'destination', err, { destId, type });
+        }
       },
     )();
     threw = false;
@@ -624,7 +642,32 @@ function recoverDestinationState(
  */
 export interface StateHold {
   type: On.Types;
+  /** When the hold was last raised or its delivery last failed: paces retries. */
   since: number;
+  /**
+   * When a delivery first failed (threw, or timed out) while the hold lasts;
+   * absent while the hold only covers a running delivery. A hold failing for
+   * one retry window blocks the destination.
+   */
+  failedAt?: number;
+}
+
+/**
+ * Raise or refresh a destination's hold. A failed delivery dates the
+ * failure once; later failures and deliveries keep that date.
+ */
+function setStateHold(
+  destination: Destination.Instance,
+  type: On.Types,
+  failed: boolean,
+): void {
+  const now = Date.now();
+  const failedAt = stateHolds.get(destination)?.failedAt;
+  stateHolds.set(destination, {
+    type,
+    since: now,
+    ...(failedAt !== undefined || failed ? { failedAt: failedAt ?? now } : {}),
+  });
 }
 
 const stateHolds = new WeakMap<Destination.Instance, StateHold>();
@@ -722,16 +765,18 @@ export function endInitFlush(
  * taken back, the next delivery of the cell carries all of it, and the
  * destination is held, dated now, until that delivery settles. Used for a
  * delivery that failed, one the init flush never reached, and one the cascade
- * bound suppressed.
+ * bound suppressed. A delivery only deferred behind a running call
+ * (`failed: false`) does not start the hold's failure window.
  */
 export function markStateLost(
   collector: Collector.Instance,
   destination: Destination.Instance,
   type: On.Types,
+  failed = true,
 ): void {
   clearMark(collector, destination, type);
   addLostCell(destination, type);
-  stateHolds.set(destination, { type, since: Date.now() });
+  setStateHold(destination, type, failed);
 }
 
 /**
@@ -762,7 +807,7 @@ export function openStateDelivery(
   type: On.Types,
 ): void {
   stateInFlight.set(destination, (stateInFlight.get(destination) || 0) + 1);
-  stateHolds.set(destination, { type, since: Date.now() });
+  setStateHold(destination, type, false);
 }
 
 /**
@@ -1136,11 +1181,39 @@ export async function deliverStateToDestination(
   }
 
   // Uninitialized, or its init flush is still running: the delivery joins
-  // the queue behind the older entries, so it never overtakes them.
+  // the queue behind the older entries, so it never overtakes them. While
+  // the destination waits (not flushing), a state delivery replaces an
+  // earlier queued one of its cell, in place: the cell's current value
+  // supersedes older ones, so a destination waiting for consent holds one
+  // entry per state type. A running flush delivers every entry in order.
+  // Other deliveries are bounded by `queueMax`: the oldest is dropped, one
+  // ERROR per cause.
   const flush = initFlushes.get(destination);
   if (!destination.config.init || flush) {
-    destination.queueOn = destination.queueOn || [];
-    destination.queueOn.push({ type, data });
+    const queue = (destination.queueOn = destination.queueOn || []);
+    const earlier =
+      gated && !flush ? queue.findIndex((entry) => entry.type === type) : -1;
+    if (earlier !== -1) {
+      queue[earlier] = { type, data: resolveDeliveryData(collector, type) };
+    } else if (!gated) {
+      const max = destination.config.queueMax ?? DEFAULT_QUEUE_MAX;
+      const lifecycle = queue.filter((entry) => !isStateDelivery(entry.type));
+      if (lifecycle.length >= max) {
+        queue.splice(queue.indexOf(lifecycle[0]), 1);
+        const step = stepId('destination', destination.config.id || destId);
+        bumpDropped(collector.status, step, 'queue', 1);
+        reportCause(
+          collector,
+          collector.logger,
+          { step, code: 'on-overflow' },
+          `destination.queueOn full (queueMax ${max}): oldest on() delivery dropped`,
+          { type: destination.type },
+        );
+      }
+      queue.push({ type, data });
+    } else {
+      queue.push({ type, data });
+    }
     if (gated) {
       setMark(collector, destination, type);
       // A state entry joining a running flush holds the destination for the

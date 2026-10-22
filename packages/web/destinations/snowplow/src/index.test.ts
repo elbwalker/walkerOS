@@ -2,9 +2,10 @@ import type { WalkerOS, Mapping } from '@walkeros/core';
 import type { DestinationSnowplow } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
-import { getEvent, mockEnv } from '@walkeros/core';
+import { createEvent, getEvent, mockEnv } from '@walkeros/core';
 import {
   clearUserData,
+  destinationSnowplow,
   enableAnonymousTracking,
   disableAnonymousTracking,
   SCHEMAS,
@@ -13,7 +14,7 @@ import {
   MEDIA_ACTIONS,
 } from '.';
 import { examples } from './dev';
-import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
+import { DEFAULT_SCRIPT_URL } from './setup';
 
 // Step example `.mapping` is typed as `unknown` (it can be any rule shape).
 // Narrow to the destination's Rule type for use in `mappingConfig`.
@@ -143,42 +144,35 @@ describe('destination snowplow', () => {
 
     await elb(getEvent());
 
-    // logger.throw logs error and throws, collector catches and logs
+    // init throws a StepError; the collector writes the one line
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[snowplow]'),
-      'Config settings collectorUrl missing',
+      'ERROR',
+      expect.stringContaining('destination init failed'),
+      expect.objectContaining({
+        type: 'snowplow',
+        error: 'Snowplow needs settings.collectorUrl',
+      }),
     );
     consoleErrorSpy.mockRestore();
   });
 
   describe('loadScript with scriptUrl', () => {
-    let createdScripts: Array<{ src: string }>;
+    // loadVendor injects into the page's document, once per src
+    const scriptSrcs = () =>
+      Array.from(document.querySelectorAll('script[data-walkeros-vendor]')).map(
+        (script) => script.getAttribute('src'),
+      );
 
-    beforeEach(() => {
-      createdScripts = [];
-      resetLoadedScripts();
-    });
+    const scriptEnv: DestinationSnowplow.Env = {
+      window: {
+        snowplow: Object.assign(() => {}, { q: [] }),
+      },
+    };
 
     test('uses custom scriptUrl when provided', async () => {
       const customScriptUrl =
         'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@3.24.0/dist/sp.js';
-
-      // Create env that captures created scripts
-      const scriptEnv: DestinationSnowplow.Env = {
-        window: {
-          snowplow: Object.assign(() => {}, { q: [] }),
-        },
-        document: {
-          createElement: () => {
-            const element = { src: '', async: false };
-            createdScripts.push(element);
-            return element;
-          },
-          head: {
-            appendChild: () => {},
-          },
-        },
-      };
 
       const destinationWithEnv = {
         ...destination,
@@ -197,28 +191,10 @@ describe('destination snowplow', () => {
 
       await elb(getEvent());
 
-      expect(createdScripts.length).toBeGreaterThan(0);
-      expect(createdScripts[0].src).toBe(customScriptUrl);
+      expect(scriptSrcs()).toContain(customScriptUrl);
     });
 
     test('uses default CDN URL when scriptUrl not provided', async () => {
-      // Create env that captures created scripts
-      const scriptEnv: DestinationSnowplow.Env = {
-        window: {
-          snowplow: Object.assign(() => {}, { q: [] }),
-        },
-        document: {
-          createElement: () => {
-            const element = { src: '', async: false };
-            createdScripts.push(element);
-            return element;
-          },
-          head: {
-            appendChild: () => {},
-          },
-        },
-      };
-
       const destinationWithEnv = {
         ...destination,
         env: scriptEnv,
@@ -235,14 +211,13 @@ describe('destination snowplow', () => {
 
       await elb(getEvent());
 
-      expect(createdScripts.length).toBeGreaterThan(0);
-      expect(createdScripts[0].src).toBe(DEFAULT_SCRIPT_URL);
+      expect(scriptSrcs()).toContain(DEFAULT_SCRIPT_URL);
     });
   });
 
   test('event without mapping is skipped', async () => {
     // Test that events without mapping configuration are silently skipped
-    const event = getEvent('custom unmapped');
+    const event = createEvent({ name: 'custom unmapped' });
 
     const destinationWithEnv = {
       ...destination,
@@ -740,6 +715,41 @@ describe('destination snowplow', () => {
       );
       expect(enableCall).toBeDefined();
     });
+
+    test('fails init with config when settings.tracker meets URL plugins', async () => {
+      const { elb: push } = await startFlow({
+        destinations: {
+          snowplow: {
+            // The module's own export: StepError's class must be the
+            // collector's, which a requireActual copy is not.
+            code: destinationSnowplow,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                tracker: {
+                  newTracker: () => undefined,
+                  trackSelfDescribingEvent: () => undefined,
+                },
+                plugins: [
+                  {
+                    url: 'https://cdn.example.com/form-tracking.js',
+                    name: ['snowplowFormTracking', 'FormTrackingPlugin'],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      const result = await push(getEvent('page view'));
+      expect(result.ok).toBe(false);
+      expect(result.failed?.snowplow?.reason).toMatchObject({
+        code: 'config',
+        message:
+          'Snowplow loads the URL plugins in settings.plugins (FormTrackingPlugin) only with sp.js, not with settings.tracker: load them on your own tracker, or drop settings.tracker so walkerOS loads them',
+      });
+    });
   });
 
   describe('anonymousTracking', () => {
@@ -1233,7 +1243,7 @@ describe('destination snowplow', () => {
         ...getEvent('order complete'),
         data: {
           id: 'ORD-123',
-          total: 1048,
+          value: 1048,
           currency: 'USD',
         },
         nested: [
@@ -1264,7 +1274,7 @@ describe('destination snowplow', () => {
                         'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
                       data: {
                         transaction_id: 'data.id',
-                        revenue: 'data.total',
+                        revenue: 'data.value',
                         currency: 'data.currency',
                       },
                     },
@@ -2943,9 +2953,14 @@ describe('destination snowplow', () => {
 
       await elb(getEvent());
 
+      // The destination throws; the collector writes the one line for it.
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[snowplow]'),
-        'tracker.newTracker is required for browser-tracker mode',
+        'ERROR',
+        expect.stringContaining('destination init failed'),
+        expect.objectContaining({
+          type: 'snowplow',
+          error: 'tracker.newTracker is required for browser-tracker mode',
+        }),
       );
       consoleErrorSpy.mockRestore();
     });
@@ -2968,9 +2983,15 @@ describe('destination snowplow', () => {
 
       await elb(getEvent());
 
+      // The destination throws; the collector writes the one line for it.
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[snowplow]'),
-        'tracker.trackSelfDescribingEvent is required for browser-tracker mode',
+        'ERROR',
+        expect.stringContaining('destination init failed'),
+        expect.objectContaining({
+          type: 'snowplow',
+          error:
+            'tracker.trackSelfDescribingEvent is required for browser-tracker mode',
+        }),
       );
       consoleErrorSpy.mockRestore();
     });

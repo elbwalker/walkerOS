@@ -1,11 +1,11 @@
-import type { Env, Lintrk } from '../types';
+import type { Env } from '../types';
 
 /**
  * Example environment configurations for LinkedIn Insight Tag destination.
  *
  * Tests clone `push` and replace `window.lintrk` with a jest.fn() to collect
  * calls. Production leaves `env` undefined — the destination mutates the real
- * `window` object and injects the LinkedIn CDN script via `addScript()`.
+ * `window` object and injects the LinkedIn CDN script through `loadVendor`.
  */
 
 const noop = () => {};
@@ -20,17 +20,6 @@ export const init: Env | undefined = {
     _linkedin_data_partner_ids: undefined,
     lintrk: undefined,
   },
-  document: {
-    createElement: () => ({
-      src: '',
-      async: false,
-      dataset: {},
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
-    querySelector: () => null,
-  },
 };
 
 /**
@@ -43,18 +32,7 @@ export const push: Env = {
   window: {
     _linkedin_partner_id: '123456',
     _linkedin_data_partner_ids: ['123456'],
-    lintrk: Object.assign(noop, { q: [] as unknown[] }) as unknown as Lintrk,
-  },
-  document: {
-    createElement: () => ({
-      src: '',
-      async: false,
-      dataset: {},
-      setAttribute: () => {},
-      removeAttribute: () => {},
-    }),
-    head: { appendChild: () => {} },
-    querySelector: () => null,
+    lintrk: Object.assign(noop, { q: [] }),
   },
 };
 

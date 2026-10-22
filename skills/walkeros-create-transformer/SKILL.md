@@ -296,7 +296,14 @@ complete implementation example.
    [templates/validation/schemas.ts](templates/validation/schemas.ts))
 3. **Push receives pushContext**: The `push` function gets event + push context
 4. **Return values**: `{ event }` (continue), `void` (passthrough), `false`
-   (cancel)
+   (cancel on purpose: a deliberate drop, not a failure)
+5. **A failure is a throw**: throw a `StepError` from `@walkeros/core` with a
+   `code`. `missing-input` is the code for an event or an ingest that lacks the
+   input the transformer needs (do not drop it silently); `config` for a missing
+   setting. `init` throws instead of returning `false` or returning early, and a
+   transformer never logs a failure itself: the collector turns the throw into
+   `ok: false` with the transformer named and writes the one ERROR line. A
+   transformer that throws a plain error fails with the code `transformer`.
 
 ### 5.3 Export
 
@@ -326,6 +333,11 @@ a complete test suite showing:
 2. **`createPushContext()` helper** - Standardizes push context creation
 3. **Examples for test data** - Don't hardcode test values
 4. **Return value testing** - Verify `event`, `void`, or `false` returns
+5. **Conformance** - `conformance('transformer', transformer, options)` from
+   `@walkeros/collector/dev` (profile `transformer`) runs it on a real
+   collector. A transformer needs no `page`. A transformer whose input is the
+   ingest and not an event declares its failure with a `missing-input` example
+   (an event as `in`, `out: []`, a description).
 
 ### Gate: Tests Pass
 
@@ -367,6 +379,8 @@ requirements (build, test, lint, no `any`):
       [using-step-examples](../walkeros-using-step-examples/SKILL.md))
 - [ ] Examples include before/after event pairs
 - [ ] Return values handle all cases (event, void, false)
+- [ ] A failure is a thrown `StepError` (`missing-input` for absent input),
+      `init` throws instead of returning `false`, conformance test passes
 - [ ] Tests use examples for assertions (not hardcoded values)
 - [ ] `walkerOS.json` generated at build time
 - [ ] `walkerOS` field in package.json

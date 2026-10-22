@@ -1,7 +1,13 @@
-import type { Logger, WalkerOS } from '@walkeros/core';
+import type { Elb, Logger, WalkerOS } from '@walkeros/core';
 import type { DestinationPiwikPro } from '.';
 import { startFlow } from '@walkeros/collector';
-import { createMockLogger, getEvent, isObject, Level } from '@walkeros/core';
+import {
+  createEvent,
+  createMockLogger,
+  getEvent,
+  isObject,
+  Level,
+} from '@walkeros/core';
 import { destinationPiwikPro } from '.';
 import { hints } from './hints';
 import { MappingSchema, SettingsSchema, settings } from './schemas';
@@ -15,13 +21,6 @@ interface Harness {
   elb: WalkerOS.Elb;
   paq: unknown[];
   logs: LogEntry[];
-}
-
-interface ScriptElement {
-  type: string;
-  src: string;
-  async?: boolean;
-  defer?: boolean;
 }
 
 const appId = 'XXX-XXX-XXX-XXX-XXX';
@@ -38,10 +37,6 @@ const toIdentified = [['enableCookies'], ['deanonymizeUser']];
 function createEnv(paq?: unknown[]): DestinationPiwikPro.Env {
   return {
     window: paq ? { _paq: paq } : {},
-    document: {
-      createElement: () => ({ type: '', src: '', async: false, defer: false }),
-      head: { appendChild: () => {} },
-    },
   };
 }
 
@@ -83,18 +78,8 @@ async function runInit(
   if (!init) throw new Error('init missing');
 
   const paq: unknown[] = [];
-  const scripts: ScriptElement[] = [];
-  const env: DestinationPiwikPro.Env = {
-    window: { _paq: paq },
-    document: {
-      createElement: () => {
-        const script: ScriptElement = { type: '', src: '' };
-        scripts.push(script);
-        return script;
-      },
-      head: { appendChild: () => {} },
-    },
-  };
+  const env: DestinationPiwikPro.Env = { window: { _paq: paq } };
+  const before = vendorScripts();
   const { collector, elb } = await startFlow();
   if (consent) await elb('walker consent', consent);
 
@@ -106,7 +91,24 @@ async function runInit(
     collector,
   });
 
-  return { paq, scripts };
+  // loadVendor adds a script once per src and page.
+  return {
+    paq,
+    scripts: vendorScripts().filter((src) => !before.includes(src)),
+  };
+}
+
+/** The src of every script `loadVendor` added. */
+function vendorScripts(): string[] {
+  return Array.from(
+    document.querySelectorAll('script[data-walkeros-vendor]'),
+    (script) => script.getAttribute('src') ?? '',
+  );
+}
+
+/** The reason the one destination of a push failed with. */
+function failure(result: Elb.PushResult) {
+  return Object.values(result.failed ?? {})[0]?.reason;
 }
 
 function warnings(logs: LogEntry[], text: string): LogEntry[] {
@@ -151,20 +153,17 @@ describe('Destination PiwikPro', () => {
       expect(paq).toEqual([['trackPageView', '/docs/']]);
     });
 
-    test('unmapped event pushes nothing and warns once (W2)', async () => {
+    test('unmapped event pushes nothing and fails with missing-input (W2)', async () => {
       const { elb, paq, logs } = await setup();
 
-      await elb('foo bar');
-      await elb('foo bar');
+      const result = await elb('foo bar');
 
-      const skipped = 'Event "foo bar" skipped';
       expect(paq).toEqual([]);
-      expect(warnings(logs, skipped)).toHaveLength(1);
-      expect(
-        logs.filter(
-          (log) => log.level === Level.DEBUG && log.message.includes(skipped),
-        ),
-      ).toHaveLength(1);
+      expect(failure(result)).toMatchObject({
+        code: 'missing-input',
+        retryable: false,
+      });
+      expect(warnings(logs, 'foo bar')).toEqual([]);
     });
 
     test('an implicit rule with a goal sends only the goal', async () => {
@@ -175,7 +174,7 @@ describe('Destination PiwikPro', () => {
             complete: {
               settings: {
                 goalId: 'g1',
-                goalValue: 'data.total',
+                goalValue: 'data.value',
                 customDimensions: { '1': 'data.id' },
               },
             },
@@ -193,7 +192,7 @@ describe('Destination PiwikPro', () => {
     });
 
     test('an implicit rule without a goal is still unmapped', async () => {
-      const { elb, paq, logs } = await setup({
+      const { elb, paq } = await setup({
         mapping: {
           order: {
             complete: { settings: { customDimensions: { '1': 'data.id' } } },
@@ -201,10 +200,10 @@ describe('Destination PiwikPro', () => {
         },
       });
 
-      await elb(getEvent('order complete'));
+      const result = await elb(getEvent('order complete'));
 
       expect(paq).toEqual([]);
-      expect(warnings(logs, 'Event "order complete" skipped')).toHaveLength(1);
+      expect(failure(result)).toMatchObject({ code: 'missing-input' });
     });
 
     test('explicit rule name passes through as a state setter', async () => {
@@ -212,7 +211,7 @@ describe('Destination PiwikPro', () => {
         mapping: { user: { login: { name: 'setUserId', data: 'user.id' } } },
       });
 
-      await elb(getEvent('user login'));
+      await elb(createEvent({ name: 'user login' }));
 
       expect(paq).toEqual([['setUserId', 'us3r']]);
     });
@@ -224,7 +223,7 @@ describe('Destination PiwikPro', () => {
             complete: {
               name: 'trackEvent',
               data: { set: [{ value: 'order' }, { value: 'complete' }] },
-              settings: { goalId: 'g1', goalValue: 'data.total' },
+              settings: { goalId: 'g1', goalValue: 'data.value' },
             },
           },
         },
@@ -287,25 +286,48 @@ describe('Destination PiwikPro', () => {
       expect(paq).toEqual([...group('/a/'), ...group('/b/')]);
     });
 
-    test('silent rule without a goal sends nothing and warns once', async () => {
+    test('silent rule without a goal sends nothing', async () => {
       const { elb, paq, logs } = await setup({
         mapping: { page: { view: { silent: true } } },
       });
 
-      await elb(pageView);
-      await elb(pageView);
+      expect((await elb(pageView)).ok).toBe(true);
 
       expect(paq).toEqual([]);
-      expect(warnings(logs, 'Event "page view" skipped')).toHaveLength(1);
+      expect(warnings(logs, 'page view')).toEqual([]);
     });
 
-    test('missing _paq warns and pushes nothing (W13)', async () => {
-      const { elb, paq, logs } = await setup({ init: true }, { queue: false });
+    test('missing _paq fails with vendor-not-ready and pushes nothing (W13)', async () => {
+      const { elb, paq } = await setup({ init: true }, { queue: false });
 
-      await elb(pageView);
+      const result = await elb(pageView);
 
       expect(paq).toEqual([]);
-      expect(warnings(logs, '_paq')).toHaveLength(1);
+      expect(failure(result)).toMatchObject({
+        code: 'vendor-not-ready',
+        retryable: true,
+      });
+    });
+
+    test('a consent revocation turns off link tracking for a consent-gated destination, the next hit turns it on', async () => {
+      const { elb, paq } = await setup({
+        consent: { marketing: true },
+        settings: { linkTracking: true },
+      });
+
+      await elb('walker consent', { marketing: true });
+      await elb(pageView);
+      await elb('walker consent', { marketing: false });
+      await elb('walker consent', { marketing: true });
+      await elb(pageView);
+
+      expect(paq).toEqual([
+        ['trackPageView', title],
+        ['enableLinkTracking'],
+        ['disableLinkTracking'],
+        ['trackPageView', title],
+        ['enableLinkTracking'],
+      ]);
     });
   });
 
@@ -444,7 +466,7 @@ describe('Destination PiwikPro', () => {
         },
       });
 
-      await elb(getEvent('user login'));
+      await elb(createEvent({ name: 'user login' }));
 
       expect(paq).toEqual([['setUserId', 'us3r']]);
     });
@@ -508,9 +530,9 @@ describe('Destination PiwikPro', () => {
     test.each([
       ['appId', { url }],
       ['url', { appId }],
-    ])('throws for missing %s with loadScript', async (_name, settings) => {
+    ])('throws for missing %s with loadScript', async (name, settings) => {
       await expect(runInit({ loadScript: true, settings })).rejects.toThrow(
-        'missing',
+        `needs settings ${name}`,
       );
     });
 
@@ -530,9 +552,7 @@ describe('Destination PiwikPro', () => {
         settings: { appId, url: 'https://acc.piwik.pro' },
       });
 
-      expect(scripts.map((script) => script.src)).toEqual([
-        'https://acc.piwik.pro/ppms.js',
-      ]);
+      expect(scripts).toEqual(['https://acc.piwik.pro/ppms.js']);
       expect(paq).toEqual([
         ['setTrackerUrl', 'https://acc.piwik.pro/ppms.php'],
         ['setSiteId', appId],
@@ -591,7 +611,7 @@ describe('Destination PiwikPro', () => {
         mapping: { user: { login: { name: 'setUserId', data: 'user.id' } } },
       });
 
-      await elb(getEvent('user login'));
+      await elb(createEvent({ name: 'user login' }));
       await elb(pageView);
 
       expect(paq).toEqual([
@@ -633,7 +653,7 @@ describe('Destination PiwikPro', () => {
       expect(MappingSchema.safeParse({ goalValue: 10 }).success).toBe(true);
       expect(
         MappingSchema.safeParse({
-          goalValue: { map: { total: 'data.total' } },
+          goalValue: { map: { total: 'data.value' } },
           customDimensions: { '1': { map: { size: 'data.size' } } },
         }).success,
       ).toBe(true);
@@ -655,7 +675,7 @@ describe('Destination PiwikPro', () => {
     test('mapping accepts a rule without goalId (W8)', () => {
       expect(MappingSchema.safeParse({}).success).toBe(true);
       expect(
-        MappingSchema.safeParse({ goalId: 7, goalValue: 'data.total' }).success,
+        MappingSchema.safeParse({ goalId: 7, goalValue: 'data.value' }).success,
       ).toBe(true);
     });
   });

@@ -1,21 +1,21 @@
-import type { Env, RudderStackAnalyticsMock } from '../types';
+import type {
+  Env,
+  RudderStackAnalyticsMock,
+  RudderStackCallback,
+} from '../types';
 
-type SdkCall = (_params: Record<string, unknown>) => void;
-type SdkFlush = (
-  _callback?: (err?: Error, data?: unknown) => void,
-) => Promise<void>;
-
-const noop: SdkCall = () => {};
-const asyncNoop: SdkFlush = () => Promise.resolve();
+/** Every call is sent: its callback answers without an error. */
+const sent = (_params: unknown, callback?: RudderStackCallback) => callback?.();
+const asyncNoop = () => Promise.resolve();
 
 function createMockAnalytics(): RudderStackAnalyticsMock {
   return {
-    track: noop,
-    identify: noop,
-    group: noop,
-    page: noop,
-    screen: noop,
-    alias: noop,
+    track: sent,
+    identify: sent,
+    group: sent,
+    page: sent,
+    screen: sent,
+    alias: sent,
     flush: asyncNoop,
   };
 }

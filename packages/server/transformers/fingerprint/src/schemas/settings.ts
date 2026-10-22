@@ -18,9 +18,9 @@ export const SettingsSchema = z
   .object({
     salt: z
       .string()
-      .optional()
+      .min(1)
       .describe(
-        'Secret key for the hash (HMAC), e.g. "$env.FINGERPRINT_SALT". Without it the hash can be reversed to the IP; a warning is logged.',
+        'Secret key for the hash (HMAC), e.g. "$env.FINGERPRINT_SALT". Required: without it the hash could be reversed to the IP.',
       ),
     rotate: z
       .enum(['daily', 'hourly', 'none'])
@@ -58,6 +58,7 @@ export const SettingsSchema = z
         'Truncate hash to this length. Default: full 64-char SHA-256 hash',
       ),
   })
+  .strict()
   .describe(
     'Fingerprint transformer: a cookieless, privacy-friendly visitor hash',
   );

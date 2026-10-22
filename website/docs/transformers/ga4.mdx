@@ -145,9 +145,9 @@ The transformer expects the source to populate `ctx.ingest` with these keys:
 | `path` | `string` | no       | Request path. Use it to gate the `before` chain when the source also receives other traffic. |
 | `body` | `string` | no       | Raw POST body. Multi-event batches are `\n`-separated lines. |
 
-`config.ingest` must use the `map` operator with **direct field paths on the request scope** (no `req.` prefix), as shown above. A bare object like `{ "url": "req.url" }` is silently inert: without an operator no field is extracted, `ctx.ingest` stays empty, and the transformer drops the hit.
+`config.ingest` must use the `map` operator with **direct field paths on the request scope** (no `req.` prefix), as shown above. A bare object like `{ "url": "req.url" }` has no operator: `walkeros validate` and the bundle reject it (`MAPPING_VALUE_NO_OPERATOR`). If it still runs, the value is dropped with an ERROR line from the collector, `ctx.ingest` stays empty, and the transformer fails every hit with `missing-input`.
 
-If `url` is missing or not a string the transformer drops the event silently.
+If `url` is missing or not a string the transformer fails the event with the `missing-input` code instead of dropping it. A request that cannot be decoded fails with the `transformer` code. Both show as one ERROR line per cause and minute, and the source answers 200 because resending the same request would fail again.
 
 ### GA4 hits and walkerOS events on one source
 
@@ -262,8 +262,8 @@ Because decoded events now carry `source.url`, the [fingerprint transformer](/do
 | `begin_checkout`      | `order start`      | `currency`, `value`, `coupon`     |
 | `add_shipping_info`   | `order shipping`   | `currency`, `value`, `tier`       |
 | `add_payment_info`    | `order payment`    | `currency`, `value`, `type`       |
-| `purchase`            | `order complete`   | `id`, `currency`, `total`, `tax`, `shipping`, `coupon` |
-| `refund`              | `order refund`     | `id`, `currency`, `total`         |
+| `purchase`            | `order complete`   | `id`, `currency`, `value`, `tax`, `shipping`, `coupon` |
+| `refund`              | `order refund`     | `id`, `currency`, `value`         |
 | `add_to_wishlist`     | `wishlist add`     | `currency`, `value`               |
 
 ### List / promotion
@@ -344,7 +344,7 @@ User config applies per event name; other events keep their defaults. A rule wit
 }
 ```
 
-`id`, `total`, `tax`, `shipping`, and `coupon` stay as the default defines them. A `null` value in `extend` clears an inherited field, for example `"extend": { "data": { "map": { "tax": null } } }`.
+`id`, `value`, `tax`, `shipping`, and `coupon` stay as the default defines them. A `null` value in `extend` clears an inherited field, for example `"extend": { "data": { "map": { "tax": null } } }`.
 
 ### Replace a default rule
 
@@ -363,7 +363,7 @@ Without `extend` or `remove`, the whole rule is taken from your config:
               "data": {
                 "map": {
                   "id": "params.ep.transaction_id",
-                  "total": "params.epn.value",
+                  "value": "params.epn.value",
                   "currency": "params.ep.currency",
                   "coupon": "params.ep.promo_code"
                 }
@@ -437,7 +437,7 @@ The string is compiled to a `RegExp` at init time.
 
 ## Batch size limit
 
-Every decoded event continues through the pipeline as its own push, and a source's batch limit (such as the express `maxBatchSize`) only covers JSON batches, not a raw `text/plain` body. The transformer therefore caps the events in one request with `settings.maxEvents` (default `100`). It counts the non-empty lines of the POST body before decoding, and a request with more lines than the cap is dropped whole: no event from it is decoded, and one `warn` log line records the line count and the cap. The source still answers the client with success, so that log line is the only sign of the drop. Raise the cap only if your own server-to-server calls send larger batches:
+Every decoded event continues through the pipeline as its own push, and a source's batch limit (such as the express `maxBatchSize`) only covers JSON batches, not a raw `text/plain` body. The transformer therefore caps the events in one request with `settings.maxEvents` (default `100`). It counts the non-empty lines of the POST body before decoding, and a request with more lines than the cap is dropped whole: no event from it is decoded, and the collector writes one ERROR line with the line count and the cap. The source still answers the client with success, so that log line is the only sign of the drop. Raise the cap only if your own server-to-server calls send larger batches:
 
 ```json
 "settings": {

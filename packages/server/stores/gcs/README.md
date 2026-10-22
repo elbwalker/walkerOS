@@ -29,7 +29,10 @@ npm install @walkeros/server-store-gcs
     "default": {
       "config": { "platform": "server" },
       "stores": {
-        "assets": { "package": "@walkeros/server-store-gcs", "config": {} }
+        "assets": {
+          "package": "@walkeros/server-store-gcs",
+          "config": { "settings": { "bucket": "my-assets" } }
+        }
       }
     }
   }

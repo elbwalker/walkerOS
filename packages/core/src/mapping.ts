@@ -4,7 +4,10 @@ import { isArray, isDefined, isObject, isThenable } from './is';
 import { assign } from './assign';
 import { flattenIncludeSections } from './include';
 import { resolveMappingValue } from './mappingValue';
+import type { ValueTrace } from './mappingValue';
 import { FatalError } from './fatalError';
+import { StepError } from './stepError';
+import { getErrorMessage } from './getErrorMessage';
 
 /**
  * Gets the mapping for an event.
@@ -22,21 +25,15 @@ export async function getMappingEvent(
   const [entity, action] = (event.name || '').split(' ');
   if (!mapping || !entity || !action) return {};
 
-  let eventMapping: Mapping.Rule | undefined;
-  let mappingKey = '';
-  let entityKey = entity;
-  let actionKey = action;
-
-  // A condition that throws or rejects: logged and no match. A FatalError,
-  // and any throw without a collector (nothing to log to), propagates.
-  const onConditionError = (err: unknown, key: string): false => {
-    if (err instanceof FatalError || !collector) throw err;
-    collector.logger.error('mapping rule condition failed', {
-      event,
-      mappingKey: key,
-      error: err,
-    });
-    return false;
+  // A condition that throws or rejects fails the event: falling through to
+  // the next rule would release an event the throwing rule meant to stop or
+  // strip. A FatalError propagates as is.
+  const onConditionError = (err: unknown, key: string): never => {
+    if (err instanceof FatalError) throw err;
+    throw new StepError(
+      `mapping rule condition failed at "${key}": ${getErrorMessage(err)}`,
+      { code: 'mapping', retryable: false, cause: err },
+    );
   };
 
   // Synchronous unless the condition returns a promise.
@@ -102,35 +99,44 @@ export async function getMappingEvent(
   ): Promise<Mapping.Rule | undefined> =>
     (await pending) ? rule : resolveEventMapping(key, list, index + 1);
 
-  if (!mapping[entityKey]) entityKey = '*';
-  const entityMapping = mapping[entityKey];
-
-  if (entityMapping) {
-    if (!entityMapping[actionKey]) actionKey = '*';
-    const found = resolveEventMapping(
-      `${entityKey} ${actionKey}`,
-      entityMapping[actionKey],
-    );
-    // Only an async condition costs an await. A thenable check, not
-    // `instanceof Promise`: pages may replace the global Promise.
-    eventMapping = isThenable(found) ? await found : found;
+  // The tiers in the order the mapping schema states: exact, entity
+  // wildcard, action wildcard, global wildcard. A tier whose rules all fail
+  // their conditions falls through to the next; a tier met twice (an event
+  // named with a literal `*`) is tried once, so each condition runs once.
+  const tiers: Array<[string, string]> = [];
+  for (const tier of [
+    [entity, action],
+    [entity, '*'],
+    ['*', action],
+    ['*', '*'],
+  ] as const) {
+    if (!tiers.some(([e, a]) => e === tier[0] && a === tier[1]))
+      tiers.push([tier[0], tier[1]]);
   }
 
-  // The * * fallback, unless the lookup above already tried exactly those
-  // rules (each condition runs once).
-  if (
-    !eventMapping &&
-    !(entityMapping && entityKey === '*' && actionKey === '*')
-  ) {
-    entityKey = '*';
-    actionKey = '*';
-    const found = resolveEventMapping('* *', mapping[entityKey]?.[actionKey]);
-    eventMapping = isThenable(found) ? await found : found;
-  }
+  const resolveTier = (
+    index: number,
+  ): Mapping.Result | Promise<Mapping.Result> => {
+    for (let tier = index; tier < tiers.length; tier++) {
+      const [entityKey, actionKey] = tiers[tier];
+      const rules = mapping[entityKey]?.[actionKey];
+      if (!rules) continue;
+      const mappingKey = `${entityKey} ${actionKey}`;
+      const found = resolveEventMapping(mappingKey, rules);
+      // Only an async condition costs an await. A thenable check, not
+      // `instanceof Promise`: pages may replace the global Promise.
+      if (isThenable(found))
+        return Promise.resolve(found).then(
+          (eventMapping): Mapping.Result | Promise<Mapping.Result> =>
+            eventMapping ? { eventMapping, mappingKey } : resolveTier(tier + 1),
+        );
+      if (found) return { eventMapping: found, mappingKey };
+    }
+    return { eventMapping: undefined, mappingKey: '' };
+  };
 
-  if (eventMapping) mappingKey = `${entityKey} ${actionKey}`;
-
-  return { eventMapping, mappingKey };
+  const result = resolveTier(0);
+  return isThenable(result) ? await result : result;
 }
 
 /**
@@ -146,6 +152,19 @@ export async function getMappingValue(
   data: Mapping.Data = {},
   context: Mapping.ValueContext,
 ): Promise<WalkerOS.Property | undefined> {
+  return valueAt(value, data, context);
+}
+
+/**
+ * `getMappingValue` with the matched rule's mapping key, so a value that
+ * fails is reported with the rule it belongs to.
+ */
+async function valueAt(
+  value: WalkerOS.DeepPartialEvent | unknown | undefined,
+  data: Mapping.Data,
+  context: Mapping.ValueContext,
+  trace?: ValueTrace,
+): Promise<WalkerOS.Property | undefined> {
   if (!isDefined(value)) return;
 
   // The type requires context and collector. The optional chaining lets an
@@ -160,7 +179,12 @@ export async function getMappingValue(
   const event = (context?.event ??
     (isObject(value) ? value : {})) as WalkerOS.DeepPartialEvent;
 
-  return resolveMappingValue(value, data, { ...context, consent, event });
+  return resolveMappingValue(
+    value,
+    data,
+    { ...context, consent, event },
+    trace,
+  );
 }
 
 /**
@@ -216,14 +240,19 @@ export async function processEventMapping<
     collector,
   );
 
+  // A value that fails is reported with the rule it belongs to.
+  const trace: ValueTrace | undefined = mappingKey ? { mappingKey } : undefined;
+
   // Step 2.5: Apply event-level policy (modifies event)
   if (eventMapping?.policy) {
     await Promise.all(
       Object.entries(eventMapping.policy).map(async ([key, mapping]) => {
-        const value = await getMappingValue(event, mapping, {
-          collector,
+        const value = await valueAt(
           event,
-        });
+          mapping,
+          { collector, event },
+          trace,
+        );
         event = setByPath(event, key, value);
       }),
     );
@@ -232,7 +261,7 @@ export async function processEventMapping<
   // Step 3: Transform global data
   let data =
     config.data &&
-    (await getMappingValue(event, config.data, { collector, event }));
+    (await valueAt(event, config.data, { collector, event }, trace));
 
   const silent = Boolean(eventMapping?.silent);
 
@@ -256,10 +285,7 @@ export async function processEventMapping<
     if (eventMapping.data) {
       const dataEvent =
         eventMapping.data &&
-        (await getMappingValue(event, eventMapping.data, {
-          collector,
-          event,
-        }));
+        (await valueAt(event, eventMapping.data, { collector, event }, trace));
       data =
         isObject(data) && isObject(dataEvent) // Only merge objects
           ? assign(data, dataEvent)

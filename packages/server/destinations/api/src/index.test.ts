@@ -30,16 +30,18 @@ describe('Destination API', () => {
   });
 
   test('init', async () => {
-    // Test with no URL - should not call sendServer
-    await destination.push(
-      event,
-      createMockContext({
-        config: {},
-        env: testEnv,
-        logger: mockLogger,
-        id: 'test-api',
-      }),
-    );
+    // Test with no URL - fails with config and does not call sendServer
+    await expect(
+      destination.push(
+        event,
+        createMockContext({
+          config: {},
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'config' });
     expect(mockSendServer).not.toHaveBeenCalled();
 
     // Test with URL - should call sendServer
@@ -207,11 +209,6 @@ describe('Destination API', () => {
         eventName: event.name,
       }),
     );
-
-    expect(testLogger.debug).toHaveBeenCalledWith(
-      'API destination response',
-      expect.objectContaining({ ok: undefined }),
-    );
   });
 
   describe('pushBatch', () => {
@@ -292,16 +289,18 @@ describe('Destination API', () => {
       );
     });
 
-    test('sends nothing without a url', async () => {
-      await destination.pushBatch!(
-        batchOf([{ event: getEvent('product view') }]),
-        createMockContext({
-          config: {},
-          env: testEnv,
-          logger: mockLogger,
-          id: 'test-api',
-        }),
-      );
+    test('fails without a url', async () => {
+      await expect(
+        destination.pushBatch!(
+          batchOf([{ event: getEvent('product view') }]),
+          createMockContext({
+            config: {},
+            env: testEnv,
+            logger: mockLogger,
+            id: 'test-api',
+          }),
+        ),
+      ).rejects.toMatchObject({ code: 'config' });
 
       expect(mockSendServer).not.toHaveBeenCalled();
     });
@@ -369,11 +368,6 @@ describe('Destination API', () => {
       expect(testLogger.debug).toHaveBeenCalledWith(
         'API destination sending batch',
         expect.objectContaining({ url, method: 'PUT', events: 2 }),
-      );
-
-      expect(testLogger.debug).toHaveBeenCalledWith(
-        'API destination response',
-        expect.objectContaining({ ok: undefined }),
       );
     });
   });

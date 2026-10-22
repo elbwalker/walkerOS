@@ -32,7 +32,7 @@ npm install @walkeros/server-destination-posthog
       "destinations": {
         "posthog": {
           "package": "@walkeros/server-destination-posthog",
-          "config": {}
+          "config": { "settings": { "apiKey": "YOUR_API_KEY" } }
         }
       }
     }

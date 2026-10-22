@@ -43,7 +43,8 @@ ENV PORT=8080
 ENV BUNDLE=/app/flow/flow.mjs
 # Sized for the 512 MB container: V8 fails with a heap-limit trace instead of
 # being OOM-killed silently. Revisit to 768 if the container grows to 1 GB.
-ENV NODE_OPTIONS=--max-old-space-size=384
+# --no-warnings: the runner logs process warnings itself (WARN, flow format).
+ENV NODE_OPTIONS="--max-old-space-size=384 --no-warnings"
 ENV PATH="/app/node_modules/.bin:${PATH}"
 
 EXPOSE 8080

@@ -1,4 +1,5 @@
 import type { Destination, Hooks, On, WalkerOS } from '.';
+import type { FailureReason } from '../stepError';
 
 // Event signatures only
 export interface EventFn<R = Promise<PushResult>> {
@@ -67,6 +68,12 @@ export interface PushResult {
   invalid?: boolean;
   /** Human-readable failure reason when ok is false. */
   error?: string;
+  /**
+   * Why the push failed when `ok` is false without a `failed` entry: a full
+   * pre-run queue (`queue-full`), a transformer that threw (`transformer`)
+   * or is not ready, a rule `condition` that threw (`mapping`).
+   */
+  reason?: FailureReason;
 }
 
 // Simplified Layer type for core collector

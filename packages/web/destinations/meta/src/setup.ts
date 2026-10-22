@@ -1,16 +1,8 @@
 import type { Env } from './types';
 import { getEnv } from '@walkeros/web-core';
 
-export function addScript(
-  env?: Env,
-  src = 'https://connect.facebook.net/en_US/fbevents.js',
-) {
-  const { document } = getEnv<Env>(env);
-  const script = document.createElement('script');
-  script.src = src;
-  script.async = true;
-  document.head.appendChild(script);
-}
+/** The Meta Pixel library, loaded through `loadVendor`. */
+export const SCRIPT_SRC = 'https://connect.facebook.net/en_US/fbevents.js';
 
 /**
  * The fbevents.js bootstrap stub: a callable that queues calls until the real

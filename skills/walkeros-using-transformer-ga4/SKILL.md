@@ -147,7 +147,7 @@ source must populate) is also surfaced as a package hint, so `package_get` on
 Use `extend` to add or override individual fields of a shipped default rule
 without replacing it in full. Use `remove` to strip fields from the output.
 
-The `purchase` default ships `id`, `currency`, `total`, `tax`, `shipping`, and
+The `purchase` default ships `id`, `currency`, `value`, `tax`, `shipping`, and
 `coupon`. To add `affiliation` from a GA4 event parameter and drop `currency`:
 
 ```json
@@ -171,7 +171,7 @@ The `purchase` default ships `id`, `currency`, `total`, `tax`, `shipping`, and
 ```
 
 `extend.data.map` is deep-merged onto the default `data.map`, leaving `id`,
-`total`, `tax`, `shipping`, and `coupon` intact. `remove: ["currency"]` strips
+`value`, `tax`, `shipping`, and `coupon` intact. `remove: ["currency"]` strips
 that field from the final payload. A `null` value in `extend` clears an
 inherited field, for example `"extend": { "data": { "map": { "tax": null } } }`
 drops `tax` from the default `data.map`.
@@ -188,7 +188,7 @@ keyword keeps the existing replace behavior.
       "data": {
         "map": {
           "id": "params.ep.transaction_id",
-          "total": "params.epn.value",
+          "value": "params.epn.value",
           "currency": "params.ep.currency",
           "coupon": "params.ep.promo_code"
         }

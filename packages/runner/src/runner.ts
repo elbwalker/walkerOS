@@ -14,8 +14,14 @@ import type {
 } from '@walkeros/core';
 import type { HealthServer } from './health-server.js';
 import { loadBundle } from './load-bundle.js';
+import type { FlowLogger } from './runtime-logging.js';
 
-export interface RuntimeConfig {
+/**
+ * What the runner hands the bundle factory as its context, beside the logger
+ * config: the server settings and the flow logger contract (`logLevel`,
+ * `onLogger`).
+ */
+export interface RuntimeConfig extends Partial<FlowLogger> {
   port?: number;
   host?: string;
 }

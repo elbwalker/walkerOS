@@ -145,7 +145,7 @@ It never runs automatically. It verifies the spreadsheet exists and (if configur
 
 ### Runtime hard-fail
 
-The first call to `init()` issues a single `GET /spreadsheets/<id>?fields=spreadsheetId` per process per spreadsheet ID. On 404 it throws with an actionable message:
+The first operation (`get`, `set` or `delete`) issues a single `GET /spreadsheets/<id>?fields=spreadsheetId` per process per spreadsheet ID. On 404 it throws with an actionable message:
 
 <CodeSnippet
   code={`Spreadsheet not found: <id>. Run "walkeros setup store.<id>" to ensure the sheet exists and is shared with the service account.`}

@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -27,11 +27,12 @@ export const defaultCapture: PostHogStepExample = {
   title: 'Default capture',
   description:
     'A walker event becomes a PostHog capture call with the user id as distinctId and no extra properties.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { id: 'ev1700000100', timestamp: 1700000100 }),
   out: [
     [
       'client.capture',
       {
+        uuid: 'b8a7f21f-1a9f-8aa7-8480-8d16fb64c44c',
         distinctId: 'us3r',
         event: 'product view',
         properties: {},
@@ -48,12 +49,13 @@ export const captureWithInclude: PostHogStepExample = {
   title: 'Capture with include',
   description:
     'Destination-level include flattens data and globals sections into prefixed PostHog event properties.',
-  in: getEvent('order complete', { timestamp: 1700000101 }),
+  in: getEvent('order complete', { id: 'ev1700000101', timestamp: 1700000101 }),
   configInclude: ['data', 'globals'],
   out: [
     [
       'client.capture',
       {
+        uuid: 'a5a5ede9-4f3b-85f4-b30f-3da8773fabfa',
         distinctId: 'us3r',
         event: 'order complete',
         properties: {
@@ -61,7 +63,7 @@ export const captureWithInclude: PostHogStepExample = {
           data_currency: 'EUR',
           data_shipping: 5.22,
           data_taxes: 73.76,
-          data_total: 555,
+          data_value: 555,
           globals_pagegroup: 'shop',
         },
       },
@@ -77,7 +79,8 @@ export const identifyWithSetAndSetOnce: PostHogStepExample = {
   title: 'Identify with $set',
   description:
     'A user login fires PostHog identify with $set and $set_once person properties and skips the capture.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000102,
     data: {
       user_id: 'new-user-123',
@@ -133,7 +136,8 @@ export const groupIdentifyWithProperties: PostHogStepExample = {
   title: 'Group identify',
   description:
     'A company update fires PostHog groupIdentify with group type, key, and associated group properties.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000103,
     data: {
       company_id: 'company_123',
@@ -182,6 +186,7 @@ export const captureWithGroupContext: PostHogStepExample = {
   description:
     'A destination-level group mapping attaches the resolved group context to every PostHog capture call.',
   in: getEvent('page view', {
+    id: 'ev1700000104',
     timestamp: 1700000104,
     globals: { pagegroup: 'docs', company_id: 'company_123' },
   }),
@@ -197,6 +202,7 @@ export const captureWithGroupContext: PostHogStepExample = {
     [
       'client.capture',
       {
+        uuid: 'c6a47305-44fc-8835-b15f-3f494c1f9e20',
         distinctId: 'us3r',
         event: 'page view',
         properties: {},
@@ -205,6 +211,9 @@ export const captureWithGroupContext: PostHogStepExample = {
     ],
   ],
 };
+
+const analyticsDenied: WalkerOS.Consent = { analytics: false };
+const analyticsGranted: WalkerOS.Consent = { analytics: true };
 
 /**
  * Consent revoked - after analytics consent is granted (PostHog loads and is
@@ -218,8 +227,8 @@ export const consentRevoke: PostHogStepExample = {
     'A walker consent command with analytics denied calls client.disable on the PostHog client.',
   command: 'consent',
   before: { analytics: true },
-  in: { analytics: false } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
+  in: analyticsDenied,
+  settings: {},
   out: [['client.enable'], ['client.disable']],
 };
 
@@ -231,7 +240,36 @@ export const consentGrant: PostHogStepExample = {
   description:
     'A walker consent command with analytics granted calls client.enable on the PostHog client.',
   command: 'consent',
-  in: { analytics: true } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>,
+  in: analyticsGranted,
+  settings: {},
   out: [['client.enable']],
+};
+
+/** A silent rule without identify or group mappings calls nothing. */
+export const silentRule: PostHogStepExample = {
+  public: false,
+  description:
+    'A rule with silent: true and no identify or group mapping sends nothing to PostHog.',
+  in: getEvent('page view', { timestamp: 1700000105 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group identify rule of groupIdentifyWithProperties on an event
+ * without data: no group key resolves and the rule suppresses the capture,
+ * so nothing is sent.
+ */
+export const groupIdentifyWithoutData: PostHogStepExample = {
+  public: false,
+  description:
+    'A silent group rule whose key finds no data sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: {
+    name: 'company update',
+    entity: 'company',
+    action: 'update',
+    timestamp: 1700000106,
+  },
+  mapping: groupIdentifyWithProperties.mapping,
+  out: [],
 };

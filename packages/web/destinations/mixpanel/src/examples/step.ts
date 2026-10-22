@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -33,7 +33,7 @@ export const defaultEventForwarding: MixpanelStepExample = {
  */
 export const wildcardIgnored: MixpanelStepExample = {
   public: false,
-  in: getEvent('debug noise', { timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -121,7 +121,8 @@ export const userLoginIdentifyAndPeople: MixpanelStepExample = {
   title: 'User login identify',
   description:
     'A user login identifies the user and fires Mixpanel people set, set_once, and increment operations.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000105000,
     data: {
       user_id: 'new-user-123',
@@ -195,7 +196,8 @@ export const profileUpdateAllPeopleOperations: MixpanelStepExample = {
   title: 'All people operations',
   description:
     'A profile update exercises the full Mixpanel people vocabulary including set, increment, append, union, and remove.',
-  in: getEvent('profile update', {
+  in: createEvent({
+    name: 'profile update',
     timestamp: 1700000106,
     data: {
       name: 'Jane Doe',
@@ -265,7 +267,7 @@ export const accountDeleteUser: MixpanelStepExample = {
   title: 'Delete user',
   description:
     'An account delete fires Mixpanel people.delete_user to remove the user profile from the project.',
-  in: getEvent('account delete', { timestamp: 1700000107 }),
+  in: createEvent({ name: 'account delete', timestamp: 1700000107 }),
   mapping: {
     silent: true,
     settings: {
@@ -287,7 +289,7 @@ export const userLogoutReset: MixpanelStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls mixpanel.reset to clear persistence and generate a new anonymous distinct id.',
-  in: getEvent('user logout', { timestamp: 1700000108 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000108 }),
   mapping: {
     silent: true,
     settings: {
@@ -305,7 +307,8 @@ export const userGroupAssociation: MixpanelStepExample = {
   title: 'Group association',
   description:
     'A user login associates the user to a company group via mixpanel.set_group and fires the default track.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
     timestamp: 1700000109,
     data: {
       user_id: 'user-456',
@@ -358,7 +361,8 @@ export const companyUpdateGroupProfile: MixpanelStepExample = {
   title: 'Group profile',
   description:
     'A company update sets Mixpanel group profile properties via get_group.set and get_group.set_once.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
     timestamp: 1700000110,
     data: {
       company_id: 'acme-inc',
@@ -436,4 +440,28 @@ export const consentGrantOptIn: MixpanelStepExample = {
   in: { analytics: true } as WalkerOS.Consent,
   settings: {} as Partial<Settings>,
   out: [['mixpanel.opt_in_tracking']],
+};
+
+/** A silent rule sends no track call. */
+export const pageViewSilent: MixpanelStepExample = {
+  public: false,
+  description: 'A rule with silent: true sends no Mixpanel track call.',
+  in: getEvent('page view', { timestamp: 1700000108 }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
+ * The silent group profile rule of companyUpdateGroupProfile on an update
+ * without data: no group key and id resolve and the rule suppresses the
+ * track, so nothing is sent. A declared skip: an unmet mapping, not a
+ * failure.
+ */
+export const companyUpdateWithoutData: MixpanelStepExample = {
+  public: false,
+  description:
+    'A silent rule whose group profile mapping finds no group sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: { name: 'company update', entity: 'company', action: 'update' },
+  mapping: companyUpdateGroupProfile.mapping,
+  out: [],
 };

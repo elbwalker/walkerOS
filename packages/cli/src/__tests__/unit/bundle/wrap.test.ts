@@ -208,7 +208,7 @@ export const __configData = { test: true };
       app: 'https://stage.app.walkeros.io',
       base: 'https://stage.cdn.walkeros.io/tag-mode/',
     });
-    // The call keeps its literals; the minified core renames `moin`.
+    // The call keeps its literals; the minified web-core renames `moin`.
     expect(stage).toMatch(
       /\w+\(\{\s*app: "https:\/\/stage\.app\.walkeros\.io",\s*base: "https:\/\/stage\.cdn\.walkeros\.io\/tag-mode\/"\s*\}\)/,
     );
@@ -251,18 +251,21 @@ describe('wrapSkeleton core resolution', () => {
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'wrap-shadow-test-'));
-    // An older core above the wrap's temp dir, as a shared /tmp can hold one.
-    const shadow = path.join(tmpDir, 'node_modules', '@walkeros', 'core');
-    await fs.outputJson(path.join(shadow, 'package.json'), {
-      name: '@walkeros/core',
-      version: '0.0.1',
-      type: 'module',
-      exports: { '.': './index.mjs' },
-    });
-    await fs.writeFile(
-      path.join(shadow, 'index.mjs'),
-      'export const shadowCore = true;\n',
-    );
+    // An older core and web-core above the wrap's temp dir, as a shared /tmp
+    // can hold them.
+    for (const name of ['core', 'web-core']) {
+      const shadow = path.join(tmpDir, 'node_modules', '@walkeros', name);
+      await fs.outputJson(path.join(shadow, 'package.json'), {
+        name: `@walkeros/${name}`,
+        version: '0.0.1',
+        type: 'module',
+        exports: { '.': './index.mjs' },
+      });
+      await fs.writeFile(
+        path.join(shadow, 'index.mjs'),
+        'export const shadowCore = true;\n',
+      );
+    }
     // The CLI's temp root is read once at load: reload it under tmpDir.
     jest
       .spyOn(jest.requireActual<typeof os>('os'), 'tmpdir')
@@ -274,7 +277,7 @@ describe('wrapSkeleton core resolution', () => {
     await fs.remove(tmpDir).catch(() => {});
   });
 
-  it('imports the loader from the CLI core, never from a core above its temp dir', async () => {
+  it('imports the loader from the CLI web-core, never from a copy above its temp dir', async () => {
     const { wrapSkeleton: wrap } =
       await import('../../../commands/bundle/wrap.js');
     const skeletonPath = path.join(tmpDir, 'skeleton.mjs');

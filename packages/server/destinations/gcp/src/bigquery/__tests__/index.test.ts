@@ -13,6 +13,7 @@ import {
   __setNextAppendRowErrors,
   __setNextAppendThrow,
   __setNextGetResultReject,
+  __setNextAppendStatus,
   __setNextOpenWriterError,
   __getLastConnection,
   __getAllConnections,
@@ -26,7 +27,7 @@ import {
 import type { MockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 import { eventToRow } from '../eventToRow';
-import { openWriter } from '../writer';
+import { ensureWriter, openWriter } from '../writer';
 
 jest.mock('@google-cloud/bigquery');
 jest.mock('@google-cloud/bigquery-storage');
@@ -64,6 +65,19 @@ describe('Server Destination BigQuery', () => {
     });
   }
 
+  /** Init, then the writer open the first push makes (init stays offline). */
+  async function initOpen(
+    initSettings: InitSettings,
+    logger?: MockLogger,
+    timeout?: number,
+    reportError?: (err: unknown, event?: WalkerOS.Event) => void,
+  ) {
+    const config = await callInit(initSettings, logger, timeout, reportError);
+    if (config && config.settings)
+      await ensureWriter(config.settings, createMockLogger());
+    return config;
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
     __resetMockCalls();
@@ -74,11 +88,14 @@ describe('Server Destination BigQuery', () => {
     testEnv = clone(env.push);
   });
 
-  test('init opens the JSONWriter through the 5-step sequence', async () => {
+  test('init stays offline; the first push opens the JSONWriter through the 5-step sequence', async () => {
     const result = await callInit({ projectId, datasetId, tableId });
 
     expect(result).toBeTruthy();
-    if (!result) return;
+    if (!result || !result.settings) return;
+    expect(__getMockCalls()).toEqual([]);
+
+    await ensureWriter(result.settings, createMockLogger());
 
     const methods = __getMockCalls().map((c) => c.method);
     expect(methods).toEqual([
@@ -94,7 +111,7 @@ describe('Server Destination BigQuery', () => {
   });
 
   test('init forwards settings.bigquery auth to the Storage Write client', async () => {
-    await callInit({
+    await initOpen({
       projectId,
       datasetId,
       tableId,
@@ -124,6 +141,7 @@ describe('Server Destination BigQuery', () => {
       reportError: () => undefined,
     });
     if (!config || !config.settings) throw new Error('init returned no config');
+    await ensureWriter(config.settings, createMockLogger());
 
     // Query client (BigQuery) carries the credentials on its constructor options.
     // The example mock records its ctor options on `this.options`.
@@ -168,83 +186,53 @@ describe('Server Destination BigQuery', () => {
     );
   });
 
-  test('init logs error and rethrows on non-NotFound openWriter failure', async () => {
-    // Simulate the INVALID_ARGUMENT case (e.g., TYPE_UNSPECIFIED). Code 3 is
-    // gRPC INVALID_ARGUMENT, which is NOT in the isNotFound (5/404) set.
+  test('the first push fails with a transport StepError on a non-NotFound open failure', async () => {
+    // Code 3 is gRPC INVALID_ARGUMENT, which is NOT in the isNotFound (5/404)
+    // set. The SDK error stays the cause, so its routing code is kept.
     const underlyingError: Error & { code?: number } = Object.assign(
       new Error('TYPE_UNSPECIFIED: bad write stream type'),
       { code: 3 },
     );
-    __setNextOpenWriterError(underlyingError);
-
     const logger = createMockLogger();
+    const config = await callInit({ projectId, datasetId, tableId }, logger);
+    if (!config) throw new Error('init returned void');
+    __setNextOpenWriterError(underlyingError);
 
     await expect(
-      callInit({ projectId, datasetId, tableId }, logger),
-    ).rejects.toThrow('TYPE_UNSPECIFIED: bad write stream type');
-
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('BigQuery init failed'),
-      expect.objectContaining({
-        error: 'TYPE_UNSPECIFIED: bad write stream type',
-      }),
-    );
-    const errorCall = logger.error.mock.calls.find(
-      (call: unknown[]) =>
-        typeof call[0] === 'string' && call[0].includes('BigQuery init failed'),
-    );
-    expect(errorCall).toBeDefined();
-    if (!errorCall) return;
-    const errorContext = errorCall[1];
-    expect(
-      typeof errorContext === 'object' &&
-        errorContext !== null &&
-        'error' in errorContext,
-    ).toBe(true);
-    if (
-      typeof errorContext !== 'object' ||
-      errorContext === null ||
-      !('error' in errorContext)
-    )
-      return;
-    expect(errorContext.error).toBe('TYPE_UNSPECIFIED: bad write stream type');
+      destination.push(
+        event,
+        createMockContext({ config, env: testEnv, logger, id: 'test-bq' }),
+      ),
+    ).rejects.toMatchObject({
+      name: 'StepError',
+      code: 'transport',
+      retryable: true,
+      message: 'BigQuery writer could not be opened',
+      cause: underlyingError,
+    });
+    // The collector writes the one line.
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
-  test('init logs and throws an informative, DLQ-routable error on a non-NotFound failure', async () => {
-    // The destination no longer scrubs error messages itself: secret redaction
-    // is standardized at the CLI logger handler (covers stderr + heartbeat ring)
-    // and the thrown error is scrubbed on output there. Here the destination's
-    // job is to log the failure and rethrow the RAW error so it stays
-    // informative and DLQ-routable, keeping its routing `code`.
-    const underlyingError: Error & { code?: number } = Object.assign(
-      new Error('streams/_default" contains illegal characters'),
-      { code: 3 }, // INVALID_ARGUMENT — not NotFound, so it hits the catch-all
+  test('the first push fails with the setup hint when the table is missing', async () => {
+    const config = await callInit({ projectId, datasetId, tableId });
+    if (!config) throw new Error('init returned void');
+    __setNextOpenWriterError(
+      Object.assign(new Error('Not found: Table'), { code: 5 }),
     );
-    __setNextOpenWriterError(underlyingError);
 
-    const logger = createMockLogger();
-
-    let thrown: unknown;
-    try {
-      await callInit({ projectId, datasetId, tableId }, logger);
-    } catch (err) {
-      thrown = err;
-    }
-
-    // The thrown error is the raw error: informative and DLQ-routable, with its
-    // routing code intact (read without a cast).
-    expect(thrown).toBe(underlyingError);
-    expect(thrown).toBeInstanceOf(Error);
-    if (!(thrown instanceof Error)) return;
-    expect(thrown.message).toContain('contains illegal characters');
-    expect('code' in thrown).toBe(true);
-    if (!('code' in thrown)) return;
-    const withCode: { code?: unknown } = thrown;
-    expect(withCode.code).toBe(3);
-
-    // Still informative for the operator.
-    const serialized = JSON.stringify(logger.error.mock.calls);
-    expect(serialized).toContain('BigQuery init failed');
+    await expect(
+      destination.push(
+        event,
+        createMockContext({ config, env: testEnv, id: 'test-bq' }),
+      ),
+    ).rejects.toMatchObject({
+      code: 'config',
+      retryable: false,
+      message: expect.stringContaining(
+        'Run "walkeros setup destination.test-bq" to create them.',
+      ),
+    });
   });
 
   test('push appends one row through JSONWriter', async () => {
@@ -351,7 +339,7 @@ describe('Server Destination BigQuery', () => {
   });
 
   test('destroy closes writer and writeClient', async () => {
-    const result = await callInit({ projectId, datasetId, tableId });
+    const result = await initOpen({ projectId, datasetId, tableId });
     expect(result).toBeTruthy();
     if (!result) return;
     __resetMockCalls();
@@ -486,33 +474,23 @@ describe('Server Destination BigQuery', () => {
         }),
       );
 
+      // The row's own message can quote the row: only its code is named.
       expect(outcome).toEqual({
         failed: [
           {
             index: 0,
             error: expect.objectContaining({
-              code: 3,
-              message: 'invalid row',
+              name: 'StepError',
+              code: 'transport',
+              retryable: false,
+              message: 'BigQuery row append failed (code 3)',
             }),
           },
         ],
       });
 
-      // INFO summary with ok/failed counts for operator visibility.
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({ ok: 2, failed: 1 }),
-      );
-
-      // ERROR per row error.
-      expect(logger.error).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          index: 0,
-          code: 3,
-          message: 'invalid row',
-        }),
-      );
+      // The collector writes the failure lines.
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     test('rejects when appendRows throws', async () => {
@@ -538,7 +516,11 @@ describe('Server Destination BigQuery', () => {
             id: 'test-bq',
           }),
         ),
-      ).rejects.toThrow('append boom');
+      ).rejects.toMatchObject({
+        name: 'StepError',
+        message: 'BigQuery batch append threw',
+        cause: expect.objectContaining({ message: 'append boom' }),
+      });
     });
 
     test('rejects when init() has not run (writer missing)', async () => {
@@ -569,7 +551,10 @@ describe('Server Destination BigQuery', () => {
             id: 'test-bq',
           }),
         ),
-      ).rejects.toThrow('writer is missing');
+      ).rejects.toMatchObject({
+        code: 'not-ready',
+        message: 'BigQuery writer is not initialized',
+      });
     });
   });
 
@@ -581,7 +566,7 @@ describe('Server Destination BigQuery', () => {
     // healthy connection on expiry. The stream keeps the SDK's own default.
 
     test('init forwards config.timeout to the unary schema fetch but never to the appendRows stream', async () => {
-      await callInit({ projectId, datasetId, tableId }, undefined, 5000);
+      await initOpen({ projectId, datasetId, tableId }, undefined, 5000);
 
       const streamCall = __getMockCalls().find(
         (c) => c.method === 'createStreamConnection',
@@ -595,7 +580,7 @@ describe('Server Destination BigQuery', () => {
     });
 
     test('init applies the default unary deadline when config.timeout is unset', async () => {
-      await callInit({ projectId, datasetId, tableId });
+      await initOpen({ projectId, datasetId, tableId });
 
       const streamCall = __getMockCalls().find(
         (c) => c.method === 'createStreamConnection',
@@ -613,7 +598,7 @@ describe('Server Destination BigQuery', () => {
       // sentinel. Resolution falls back to the default so the unary call
       // always gets a positive deadline, mirroring the collector's
       // resolveDestinationTimeout.
-      await callInit({ projectId, datasetId, tableId }, undefined, 0);
+      await initOpen({ projectId, datasetId, tableId }, undefined, 0);
 
       const streamCall = __getMockCalls().find(
         (c) => c.method === 'createStreamConnection',
@@ -662,14 +647,16 @@ describe('Server Destination BigQuery', () => {
             id: 'test-bq',
           }),
         ),
-      ).rejects.toThrow('Deadline exceeded');
+      ).rejects.toMatchObject({
+        message: 'BigQuery row append threw',
+        cause: deadlineError,
+      });
     });
 
-    test('a getResult rejection surfaces the raw, informative, DLQ-routable error from push', async () => {
-      // Single-event path (batching off): a getResult() rejection must surface
-      // to the collector/DLQ as the RAW error, keeping its message and routing
-      // `code`. Secret redaction is standardized at the CLI logger handler, so
-      // the destination no longer scrubs here.
+    test('a getResult rejection fails push with its error as the cause, logged by the collector only', async () => {
+      // Single-event path (batching off): a getResult() rejection surfaces to
+      // the collector/DLQ as a StepError whose cause is the raw error, its
+      // routing `code` intact. The raw message stays out of the reported one.
       const logger = createMockLogger();
       const { writer, writeClient } = await openWriter(
         { projectId, datasetId, tableId },
@@ -694,9 +681,8 @@ describe('Server Destination BigQuery', () => {
       );
       __setNextGetResultReject(appendError);
 
-      let thrown: unknown;
-      try {
-        await destination.push(
+      await expect(
+        destination.push(
           event,
           createMockContext({
             config,
@@ -706,25 +692,88 @@ describe('Server Destination BigQuery', () => {
             logger,
             id: 'test-bq',
           }),
+        ),
+      ).rejects.toMatchObject({
+        name: 'StepError',
+        code: 'transport',
+        message: 'BigQuery row append threw',
+        cause: appendError,
+      });
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    test.each([
+      ['RESOURCE_EXHAUSTED, a quota', 8, false],
+      ['NOT_FOUND, a dropped table', 5, false],
+      ['UNAVAILABLE with write retries off', 14, true],
+    ])(
+      'an append answered with %s fails push, retryable as the SDK retries it',
+      async (_name, code, retryable) => {
+        const { writer, writeClient } = await openWriter(
+          { projectId, datasetId, tableId },
+          createMockLogger(),
         );
-      } catch (err) {
-        thrown = err;
-      }
+        const config: Config = {
+          settings: {
+            client: new BigQuery({ projectId }),
+            projectId,
+            datasetId,
+            tableId,
+            location: 'EU',
+            writer,
+            writeClient,
+          },
+        };
+        __setNextAppendStatus({ code, message: 'row 0 quoted here' });
 
-      // The raw error surfaces: an Error, informative, with the routing code
-      // intact (read without a cast).
-      expect(thrown).toBe(appendError);
-      expect(thrown).toBeInstanceOf(Error);
-      if (!(thrown instanceof Error)) return;
-      expect(thrown.message).toContain('contains illegal characters');
-      expect('code' in thrown).toBe(true);
-      if (!('code' in thrown)) return;
-      const withCode: { code?: unknown } = thrown;
-      expect(withCode.code).toBe(3);
+        const pushing = destination.push(
+          event,
+          createMockContext({ config, env: testEnv, id: 'test-bq' }),
+        );
+        await expect(pushing).rejects.toMatchObject({
+          name: 'StepError',
+          code: 'transport',
+          retryable,
+          message: `BigQuery append failed (code ${code})`,
+        });
+      },
+    );
 
-      // The destination still logs the failure for the operator.
-      const serialized = JSON.stringify(logger.error.mock.calls);
-      expect(serialized).toContain('BigQuery row append threw');
+    test('an append answered with an error status fails the whole batch', async () => {
+      if (!destination.pushBatch) throw new Error('pushBatch missing');
+      const { writer, writeClient } = await openWriter(
+        { projectId, datasetId, tableId },
+        createMockLogger(),
+      );
+      const config: Config = {
+        settings: {
+          client: new BigQuery({ projectId }),
+          projectId,
+          datasetId,
+          tableId,
+          location: 'EU',
+          writer,
+          writeClient,
+        },
+      };
+      __setNextAppendStatus({ code: 7, message: 'permission denied' });
+      const events = [createEvent(), createEvent()];
+
+      await expect(
+        destination.pushBatch(
+          {
+            key: 'k',
+            events,
+            data: events.map(() => undefined),
+            entries: events.map((event) => ({ event })),
+          },
+          createMockContext({ config, env: testEnv, id: 'test-bq' }),
+        ),
+      ).rejects.toMatchObject({
+        code: 'transport',
+        retryable: false,
+        message: 'BigQuery append failed (code 7)',
+      });
     });
 
     test('a deadline-exceeded getResult rejects pushBatch (whole batch DLQ)', async () => {
@@ -768,14 +817,17 @@ describe('Server Destination BigQuery', () => {
             id: 'test-bq',
           }),
         ),
-      ).rejects.toThrow('Deadline exceeded');
+      ).rejects.toMatchObject({
+        message: 'BigQuery batch append threw',
+        cause: deadlineError,
+      });
     });
   });
 
   describe("connection 'error' containment + self-heal", () => {
     test('a non-retryable stream error sets writerBroken, calls reportError (orphan), and DLQ-routes the next push', async () => {
       const reportError = jest.fn();
-      const config = await callInit(
+      const config = await initOpen(
         { projectId, datasetId, tableId },
         undefined,
         undefined,
@@ -821,14 +873,17 @@ describe('Server Destination BigQuery', () => {
             id: 'test-bq',
           }),
         ),
-      ).rejects.toThrow('re-open failed');
+      ).rejects.toMatchObject({
+        message: 'BigQuery writer could not be opened',
+        cause: expect.objectContaining({ message: 're-open failed' }),
+      });
 
       // Stayed broken after a failed re-open.
       expect(settings.writerBroken).toBe(true);
     });
 
     test('the next push self-heals (re-opens) and delivers when writerBroken', async () => {
-      const config = await callInit({ projectId, datasetId, tableId });
+      const config = await initOpen({ projectId, datasetId, tableId });
       if (!config) throw new Error('init returned void');
       const { settings } = config;
       if (!settings) throw new Error('settings missing after init');
@@ -880,6 +935,7 @@ describe('Server Destination BigQuery', () => {
       if (!config || !config.settings)
         throw new Error('init returned no config');
       const { settings } = config;
+      await ensureWriter(settings, createMockLogger());
 
       __getLastConnection().__emitConnectionError(new Error('stream gone'));
       expect(settings.writerBroken).toBe(true);
@@ -910,7 +966,7 @@ describe('Server Destination BigQuery', () => {
     test('a broken writer DLQ-routes the whole batch when re-open fails (batch path)', async () => {
       if (!destination.pushBatch) throw new Error('pushBatch missing');
 
-      const config = await callInit({ projectId, datasetId, tableId });
+      const config = await initOpen({ projectId, datasetId, tableId });
       if (!config) throw new Error('init returned void');
       const { settings } = config;
       if (!settings) throw new Error('settings missing after init');
@@ -936,13 +992,16 @@ describe('Server Destination BigQuery', () => {
             id: 'test-bq',
           }),
         ),
-      ).rejects.toThrow('re-open failed (batch)');
+      ).rejects.toMatchObject({
+        message: 'BigQuery writer could not be opened',
+        cause: expect.objectContaining({ message: 're-open failed (batch)' }),
+      });
 
       expect(settings.writerBroken).toBe(true);
     });
 
     test('concurrent pushes on a broken writer trigger exactly ONE re-open (no orphaned connection or listener)', async () => {
-      const config = await callInit({ projectId, datasetId, tableId });
+      const config = await initOpen({ projectId, datasetId, tableId });
       if (!config) throw new Error('init returned void');
       const { settings } = config;
       if (!settings) throw new Error('settings missing after init');
@@ -994,7 +1053,7 @@ describe('Server Destination BigQuery', () => {
     });
 
     test('a re-opened appendRows stream carries no gax deadline (push path)', async () => {
-      const config = await callInit(
+      const config = await initOpen(
         { projectId, datasetId, tableId },
         undefined,
         5000,
@@ -1038,7 +1097,7 @@ describe('Server Destination BigQuery', () => {
     test('a re-opened appendRows stream carries no gax deadline (batch path)', async () => {
       if (!destination.pushBatch) throw new Error('pushBatch missing');
 
-      const config = await callInit(
+      const config = await initOpen(
         { projectId, datasetId, tableId },
         undefined,
         5000,

@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 import type { Settings } from '../types';
 
 /**
@@ -29,6 +29,7 @@ export const defaultTrack: SegmentStepExample = {
   description:
     'A walker event becomes a Segment analytics.track call with userId and anonymousId resolved from the event.',
   in: getEvent('product view', {
+    id: 'ev1700000100',
     timestamp: 1700000100,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
@@ -36,6 +37,7 @@ export const defaultTrack: SegmentStepExample = {
     [
       'analytics.track',
       {
+        messageId: 'ev1700000100',
         userId: 'us3r',
         anonymousId: 's3ss10n',
         event: 'product view',
@@ -54,6 +56,7 @@ export const mappedEventName: SegmentStepExample = {
   description:
     "A mapping renames the event so the Segment track call uses Segment's canonical 'Order Completed' name.",
   in: getEvent('order complete', {
+    id: 'ev1700000101',
     timestamp: 1700000101,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
@@ -64,6 +67,7 @@ export const mappedEventName: SegmentStepExample = {
     [
       'analytics.track',
       {
+        messageId: 'ev1700000101',
         userId: 'us3r',
         anonymousId: 's3ss10n',
         event: 'Order Completed',
@@ -83,6 +87,7 @@ export const destinationIdentify: SegmentStepExample = {
   description:
     'Destination-level identify fires Segment analytics.identify with traits on the first push only, then the track call follows.',
   in: getEvent('page view', {
+    id: 'ev1700000102',
     timestamp: 1700000102,
     user: { id: 'us3r', session: 's3ss10n', email: 'user@example.com' },
   }),
@@ -101,6 +106,7 @@ export const destinationIdentify: SegmentStepExample = {
     [
       'analytics.identify',
       {
+        messageId: 'ev1700000102-identify',
         userId: 'us3r',
         anonymousId: 's3ss10n',
         traits: { email: 'user@example.com' },
@@ -110,6 +116,7 @@ export const destinationIdentify: SegmentStepExample = {
     [
       'analytics.track',
       {
+        messageId: 'ev1700000102',
         userId: 'us3r',
         anonymousId: 's3ss10n',
         event: 'page view',
@@ -127,7 +134,9 @@ export const userLoginIdentify: SegmentStepExample = {
   title: 'User login identify',
   description:
     'A user login fires only Segment analytics.identify with the userId and traits, skipping the track.',
-  in: getEvent('user login', {
+  in: createEvent({
+    name: 'user login',
+    id: 'ev1700000103',
     timestamp: 1700000103,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -158,6 +167,7 @@ export const userLoginIdentify: SegmentStepExample = {
     [
       'analytics.identify',
       {
+        messageId: 'ev1700000103-identify',
         userId: 'new-user-123',
         anonymousId: 's3ss10n',
         traits: { email: 'user@acme.com', name: 'Jane Doe', plan: 'premium' },
@@ -174,7 +184,9 @@ export const companyGroup: SegmentStepExample = {
   title: 'Group company',
   description:
     'A company update fires Segment analytics.group with groupId and group traits for account-level tracking.',
-  in: getEvent('company update', {
+  in: createEvent({
+    name: 'company update',
+    id: 'ev1700000104',
     timestamp: 1700000104,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -205,6 +217,7 @@ export const companyGroup: SegmentStepExample = {
     [
       'analytics.group',
       {
+        messageId: 'ev1700000104-group',
         userId: 'us3r',
         anonymousId: 's3ss10n',
         groupId: 'comp-456',
@@ -224,6 +237,7 @@ export const pageView: SegmentStepExample = {
   description:
     'A page view fires Segment analytics.page with category, name, and properties instead of a generic track.',
   in: getEvent('page view', {
+    id: 'ev1700000105',
     timestamp: 1700000105,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -252,6 +266,7 @@ export const pageView: SegmentStepExample = {
     [
       'analytics.page',
       {
+        messageId: 'ev1700000105-page',
         userId: 'us3r',
         anonymousId: 's3ss10n',
         category: 'docs',
@@ -270,7 +285,9 @@ export const screenView: SegmentStepExample = {
   title: 'Screen view',
   description:
     'A screen view fires Segment analytics.screen with name, category, and properties for mobile app tracking.',
-  in: getEvent('screen view', {
+  in: createEvent({
+    name: 'screen view',
+    id: 'ev1700000106',
     timestamp: 1700000106,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
@@ -299,6 +316,7 @@ export const screenView: SegmentStepExample = {
     [
       'analytics.screen',
       {
+        messageId: 'ev1700000106-screen',
         userId: 'us3r',
         anonymousId: 's3ss10n',
         name: 'Welcome',
@@ -318,6 +336,7 @@ export const anonymousOnly: SegmentStepExample = {
   description:
     'When no userId is resolved Segment accepts a track call keyed solely by anonymousId.',
   in: getEvent('product view', {
+    id: 'ev1700000107',
     timestamp: 1700000107,
     user: { session: 's3ss10n' },
   }),
@@ -328,6 +347,7 @@ export const anonymousOnly: SegmentStepExample = {
     [
       'analytics.track',
       {
+        messageId: 'ev1700000107',
         anonymousId: 's3ss10n',
         event: 'product view',
         properties: {},
@@ -346,6 +366,7 @@ export const consentForwarding: SegmentStepExample = {
   description:
     'Walker consent keys are mapped to Segment categoryPreferences on the analytics context for downstream filtering.',
   in: getEvent('product view', {
+    id: 'ev1700000108',
     timestamp: 1700000108,
     user: { id: 'us3r', session: 's3ss10n' },
     consent: { analytics: true, marketing: true },
@@ -360,6 +381,7 @@ export const consentForwarding: SegmentStepExample = {
     [
       'analytics.track',
       {
+        messageId: 'ev1700000108',
         userId: 'us3r',
         anonymousId: 's3ss10n',
         event: 'product view',
@@ -379,15 +401,72 @@ export const consentForwarding: SegmentStepExample = {
 };
 
 /**
+ * No identity -- neither userId nor anonymousId resolves from the event, so
+ * Segment cannot take it: the push fails with missing-input instead of
+ * counting as delivered. One per event name above, so every example's event
+ * without identity has its declared outcome.
+ */
+function withoutIdentity(name: string, timestamp: number): SegmentStepExample {
+  const [entity, action] = name.split(' ');
+  return {
+    public: false,
+    description: `A ${name} event without userId or anonymousId cannot be sent to Segment: the push fails with missing-input instead of counting as delivered.`,
+    in: { name, entity, action, timestamp },
+    out: [],
+    outcome: { status: 'failed', code: 'missing-input', retryable: false },
+  };
+}
+
+export const noIdentityProduct = withoutIdentity('product view', 1700000110);
+export const noIdentityOrder = withoutIdentity('order complete', 1700000111);
+export const noIdentityPage = withoutIdentity('page view', 1700000112);
+export const noIdentityLogin = withoutIdentity('user login', 1700000113);
+export const noIdentityCompany = withoutIdentity('company update', 1700000114);
+export const noIdentityScreen = withoutIdentity('screen view', 1700000115);
+
+/** A silent rule without identify, group, page or screen calls nothing. */
+export const silentRule: SegmentStepExample = {
+  public: false,
+  description:
+    'A rule with silent: true and no identify, group, page or screen mapping sends nothing to Segment.',
+  in: getEvent('page view', {
+    timestamp: 1700000116,
+    user: { id: 'us3r', session: 's3ss10n' },
+  }),
+  mapping: { silent: true },
+  out: [],
+};
+
+/**
  * Wildcard ignore -- the event matches a mapping rule with ignore: true.
  * The destination fires zero SDK calls.
  */
 export const wildcardIgnored: SegmentStepExample = {
   public: false,
-  in: getEvent('debug noise', {
+  in: createEvent({
+    name: 'debug noise',
     timestamp: 1700000109,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: { ignore: true },
+  out: [],
+};
+
+/**
+ * The silent group rule of companyGroup on an event without company data: no
+ * groupId resolves and the rule suppresses the track, so nothing is sent.
+ */
+export const companyGroupWithoutData: SegmentStepExample = {
+  public: false,
+  description:
+    'A silent group rule whose groupId finds no data sends nothing: an unmet mapping, not a failure, so the push returns normally.',
+  in: {
+    name: 'company update',
+    entity: 'company',
+    action: 'update',
+    timestamp: 1700000120,
+    user: { id: 'us3r', session: 's3ss10n' },
+  },
+  mapping: companyGroup.mapping,
   out: [],
 };

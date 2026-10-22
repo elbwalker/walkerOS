@@ -3,13 +3,11 @@ import { createMockLogger } from '../mockLogger';
 import { getMappingValue } from '../mapping';
 
 /**
- * Mapping error visibility: throws inside user-supplied callbacks
- * (condition, fn, validate) MUST log via the scoped logger but MUST
- * NOT increment `collector.status.failed` (Category B - user code).
- *
- * The outer `processMappingValue` wrap in `getMappingValue` (Category A)
- * MUST log AND increment `status.failed` for internal walkerOS pipeline
- * failures.
+ * Mapping error visibility: a value whose user code throws (condition, fn,
+ * validate), whose resolution throws, or that has no operator is dropped and
+ * reported once through the cause log, with the event's name and never the
+ * event. It never increments `collector.status.failed`: the event is still
+ * delivered with its other values.
  */
 
 function createTestCollector(): Collector.Instance {
@@ -51,8 +49,8 @@ function createTestCollector(): Collector.Instance {
   } as unknown as Collector.Instance;
 }
 
-describe('mapping condition throws (Category B)', () => {
-  test('logs via scoped logger and does NOT increment status.failed', async () => {
+describe('mapping condition throws', () => {
+  test('reports the value and does NOT increment status.failed', async () => {
     const collector = createTestCollector();
     const event: WalkerOS.DeepPartialEvent = { name: 'page view' };
 
@@ -73,15 +71,17 @@ describe('mapping condition throws (Category B)', () => {
 
     // Find the error log somewhere in the logger tree (root or scoped).
     const errorCall = findLoggerError(collector, 'mapping condition failed');
-    expect(errorCall).toBeDefined();
-    expect(errorCall?.[1]).toEqual(
-      expect.objectContaining({ error: expect.any(Error) }),
-    );
+    expect(errorCall?.[1]).toEqual({
+      step: 'mapping',
+      code: 'mapping',
+      event: 'page view',
+      error: 'condition boom',
+    });
   });
 });
 
-describe('mapping fn throws (Category B)', () => {
-  test('logs via scoped logger and does NOT increment status.failed', async () => {
+describe('mapping fn throws', () => {
+  test('reports the value and does NOT increment status.failed', async () => {
     const collector = createTestCollector();
     const event: WalkerOS.DeepPartialEvent = { name: 'page view' };
 
@@ -98,15 +98,17 @@ describe('mapping fn throws (Category B)', () => {
     expect(collector.status.failed).toBe(0);
 
     const errorCall = findLoggerError(collector, 'mapping fn failed');
-    expect(errorCall).toBeDefined();
-    expect(errorCall?.[1]).toEqual(
-      expect.objectContaining({ error: expect.any(Error) }),
-    );
+    expect(errorCall?.[1]).toEqual({
+      step: 'mapping',
+      code: 'mapping',
+      event: 'page view',
+      error: 'fn boom',
+    });
   });
 });
 
-describe('mapping validate throws (Category B)', () => {
-  test('logs via scoped logger and does NOT increment status.failed', async () => {
+describe('mapping validate throws', () => {
+  test('reports the value and does NOT increment status.failed', async () => {
     const collector = createTestCollector();
     const event: WalkerOS.DeepPartialEvent = {
       name: 'page view',
@@ -127,15 +129,17 @@ describe('mapping validate throws (Category B)', () => {
     expect(collector.status.failed).toBe(0);
 
     const errorCall = findLoggerError(collector, 'mapping validate failed');
-    expect(errorCall).toBeDefined();
-    expect(errorCall?.[1]).toEqual(
-      expect.objectContaining({ error: expect.any(Error) }),
-    );
+    expect(errorCall?.[1]).toEqual({
+      step: 'mapping',
+      code: 'mapping',
+      event: 'page view',
+      error: 'validate boom',
+    });
   });
 });
 
-describe('processMappingValue outer wrap (Category A)', () => {
-  test('logs and increments status.failed when an internal throw escapes', async () => {
+describe('processMappingValue outer wrap', () => {
+  test('reports the dropped value when an internal throw escapes, the event goes on', async () => {
     const collector = createTestCollector();
     const event: WalkerOS.DeepPartialEvent = { name: 'page view' };
 
@@ -164,14 +168,48 @@ describe('processMappingValue outer wrap (Category A)', () => {
     // Outer wrap catches; downstream undefined.
     expect(result).toBeUndefined();
 
-    // Internal pipeline failures count.
-    expect(collector.status.failed).toBe(1);
+    // A dropped value is not a failed event.
+    expect(collector.status.failed).toBe(0);
 
-    const errorCall = findLoggerError(collector, 'mapping processing failed');
-    expect(errorCall).toBeDefined();
-    expect(errorCall?.[1]).toEqual(
-      expect.objectContaining({ error: expect.any(Error) }),
+    const errorCall = findLoggerError(collector, 'mapping value failed');
+    expect(errorCall?.[1]).toEqual({
+      step: 'mapping',
+      code: 'mapping',
+      event: 'page view',
+      error: 'internal boom',
+    });
+  });
+});
+
+describe('a value object without an operator (E14)', () => {
+  test('drops that value instead of resolving to the whole input, keeps the others', async () => {
+    const collector = createTestCollector();
+    const event: WalkerOS.DeepPartialEvent = {
+      name: 'order complete',
+      data: { value: 42, currency: 'EUR' },
+      user: { email: 'person@example.com' },
+    };
+
+    // A plain object of paths, the shape a hand-written config arrives in.
+    const order: Record<string, string> = { total: 'data.value' };
+    const mapping: Mapping.Value = {
+      map: { order, currency: 'data.currency' },
+    };
+
+    const result = await getMappingValue(event, mapping, { collector, event });
+
+    expect(result).toEqual({ currency: 'EUR' });
+    expect(collector.status.failed).toBe(0);
+    const errorCall = findLoggerError(
+      collector,
+      'mapping value has no operator (total): wrap the fields in map, or use key, value, fn, loop or set',
     );
+    expect(errorCall?.[1]).toEqual({
+      step: 'mapping',
+      code: 'mapping',
+      event: 'order complete',
+    });
+    expect(JSON.stringify(errorCall)).not.toContain('person@example.com');
   });
 });
 

@@ -47,6 +47,7 @@
     "test:integration": "turbo run test:integration --filter=@walkeros/cli --concurrency=1",
     "test:e2e": "turbo run test:e2e --filter=@walkeros/cli --concurrency=1",
     "test:smoke": "turbo run typecheck lint test test:integration --filter=@walkeros/core --filter=@walkeros/collector --filter=@walkeros/cli --affected --summarize",
+    "check:platform": "node --test packages/config/scripts/check-platform.test.mjs && node packages/config/scripts/check-platform.mjs",
     "verify:touched": "bash scripts/verify-touched.sh",
     "verify:affected": "turbo run typecheck lint test --affected --summarize",
     "verify:force": "turbo run test --affected --force --summarize",

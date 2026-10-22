@@ -20,14 +20,14 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 />
 
 The server API destination sends events from Node.js to any HTTP(S) endpoint
-using native HTTP/HTTPS modules. It auto-selects HTTP or HTTPS from the URL, supports configurable timeouts (default 5000ms), custom transforms, and dependency injection for testing.
+using `fetch`. It supports configurable timeouts (default 5000ms), custom transforms, and dependency injection for testing.
 
 <WhereThisFits
   pre={<>Server API is a <strong>server destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'API', highlight: true } },
   }}
-  post={<>Sends events server-side to any HTTP endpoint using Node.js native modules with configurable request formatting and batching.</>}
+  post={<>Sends events server-side to any HTTP endpoint using `fetch` with configurable request formatting and batching.</>}
 />
 
 ## Installation
@@ -89,9 +89,11 @@ await startFlow({
   language="typescript"
 />
 
-A request that fails, times out or gets an error status is only logged at
-debug level: the event counts as delivered and does not reach the dead-letter
-queue.
+A request that fails, times out or gets an error status is reported as a failed
+push: the event reaches the dead-letter queue and the collector logs one ERROR
+line per cause and minute with the HTTP status. A `429` and a `5xx` answer are
+retryable, other `4xx` answers are not. Without `settings.url` the destination
+fails to start with a `config` error.
 
 ### With custom transform
 

@@ -13,11 +13,31 @@
 
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, isObject, isString } from '@walkeros/core';
 import { examples } from '../dev';
 import type { Env, Lintrk, Settings } from '../types';
 
 type CallRecord = [string, ...unknown[]];
+
+function isConsent(value: unknown): value is WalkerOS.Consent {
+  return (
+    isObject(value) &&
+    Object.values(value).every((granted) => typeof granted === 'boolean')
+  );
+}
+
+function isEvent(value: unknown): value is WalkerOS.Event {
+  return (
+    isObject(value) &&
+    isString(value.name) &&
+    isString(value.entity) &&
+    isString(value.action)
+  );
+}
+
+function isRule(value: unknown): value is WalkerOSMapping.Rule {
+  return isObject(value);
+}
 
 /**
  * Install a spy on env.window.lintrk. The spy records every call prefixed
@@ -40,16 +60,8 @@ function spyEnv(env: Env): {
 }
 
 describe('linkedin destination — step examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (_name, rawExample) => {
-    const example = rawExample as {
-      in?: unknown;
-      mapping?: unknown;
-      out?: ReadonlyArray<CallRecord>;
-      command?: 'consent' | 'user' | 'config' | 'run';
-      settings?: Partial<Settings>;
-    };
-
-    const env = clone(examples.env.push) as Env;
+  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+    const env = clone(examples.env.push);
     const { env: spiedEnv, collected } = spyEnv(env);
 
     const dest = jest.requireActual('../').default;
@@ -61,15 +73,18 @@ describe('linkedin destination — step examples', () => {
     };
 
     if (example.command === 'consent') {
-      // Not currently used by LinkedIn fixtures.
+      if (!isConsent(example.in))
+        throw new Error(`step example "${name}" has no consent input`);
       await elb('walker destination', {
         code: { ...dest, env: spiedEnv },
         config: { settings: baseSettings, consent: { marketing: true } },
       });
-      await elb('walker consent', example.in as WalkerOS.Consent);
+      await elb('walker consent', example.in);
     } else {
-      const event = example.in as WalkerOS.Event;
-      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+      if (!isEvent(example.in))
+        throw new Error(`step example "${name}" has no event input`);
+      const event = example.in;
+      const mapping = isRule(example.mapping) ? example.mapping : undefined;
       const mappingConfig = mapping
         ? { [event.entity]: { [event.action]: mapping } }
         : undefined;
@@ -84,9 +99,6 @@ describe('linkedin destination — step examples', () => {
       await elb(event);
     }
 
-    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-    const actual = collected();
-
-    expect(actual).toEqual(expected);
+    expect(collected()).toEqual([...(example.out ?? [])]);
   });
 });

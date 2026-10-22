@@ -365,11 +365,16 @@ describe('sourceCloudFunction', () => {
 
       // A rejected push is a server fault, not client input: the collector
       // resolves pipeline failures, so a rejection is exceptional.
+      // The thrown message goes to the log, never into the answer.
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        error: 'Processing failed',
+        error: 'Internal server error',
       });
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Event processing failed',
+        expect.objectContaining({ error: expect.any(Error) }),
+      );
     });
   });
 

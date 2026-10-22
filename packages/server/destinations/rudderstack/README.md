@@ -33,7 +33,12 @@ npm install @walkeros/server-destination-rudderstack
       "destinations": {
         "rudderstack": {
           "package": "@walkeros/server-destination-rudderstack",
-          "config": {}
+          "config": {
+            "settings": {
+              "writeKey": "YOUR_WRITE_KEY",
+              "dataPlaneUrl": "https://your-dataplane.example.com"
+            }
+          }
         }
       }
     }

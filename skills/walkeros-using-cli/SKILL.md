@@ -118,7 +118,7 @@ not used there.
       "destinations": {
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
-          "config": { "measurementId": "G-XXXXXX" }
+          "config": { "settings": { "ga4": { "measurementId": "G-XXXXXX" } } }
         }
       }
     }
@@ -192,7 +192,7 @@ Target a specific step and provide input as `SourceInput`
 walkeros push flow.json --simulate source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
 
 # Simulate a destination step with an event
-walkeros push flow.json --simulate destination.gtag -e '{"entity":"order","action":"complete","data":{"total":149.97}}'
+walkeros push flow.json --simulate destination.gtag -e '{"entity":"order","action":"complete","data":{"value":149.97}}'
 ```
 
 Example output (a destination step prints its matched mapping key and every
@@ -424,8 +424,9 @@ Options:
 Output:
 
 - Web: `dist/walker.js` (single self-contained IIFE). Every browser entry (this
-  bundle, managed wraps, walker.js) calls the Tag Mode loader `moin()` first; it
-  stays idle unless the page was opened with `?elbMoin`.
+  bundle, managed wraps, walker.js) calls the Tag Mode loader `moin()` from
+  `@walkeros/web-core` first; it stays idle unless the page was opened with
+  `?elbMoin`.
 - Server: `dist/{flow.mjs, package.json, node_modules/}` (always a directory;
   nft-traced)
 - Server archive: `flow.tar.gz` / `flow.tgz` (the server bundle directory packed

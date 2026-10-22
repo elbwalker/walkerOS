@@ -86,33 +86,17 @@ describe('GTM Implementation', () => {
     });
 
     it('should push the init event and load the container when loadScript is true', () => {
-      const script = {
-        src: '',
-        setAttribute: () => {},
-        removeAttribute: () => {},
-      };
-      const appended: unknown[] = [];
-      const env: Env = {
-        window: { dataLayer: mockDataLayer },
-        document: {
-          createElement: () => script,
-          head: {
-            appendChild: (node) => {
-              appended.push(node);
-            },
-          },
-        },
-      };
+      const env: Env = { window: { dataLayer: mockDataLayer } };
 
-      initGTM({ containerId: 'GTM-XXXXXXX' }, true, env);
+      initGTM({ containerId: 'GTM-LOADSCRIPT' }, true, env);
 
       expect(mockDataLayer).toEqual([
         { 'gtm.start': expect.any(Number), event: 'gtm.js' },
       ]);
-      expect(appended).toHaveLength(1);
-      expect(script.src).toBe(
-        'https://www.googletagmanager.com/gtm.js?id=GTM-XXXXXXX',
+      const script = document.querySelector(
+        'script[src="https://www.googletagmanager.com/gtm.js?id=GTM-LOADSCRIPT"]',
       );
+      expect(script?.hasAttribute('data-walkeros-vendor')).toBe(true);
     });
   });
 
@@ -160,7 +144,6 @@ describe('GTM Implementation', () => {
         window: {
           dataLayer: customDataLayer,
         },
-        document: mockEnv.document,
       };
 
       pushGTMEvent(mockEvent, settings, {}, {}, customEnv);

@@ -1,5 +1,51 @@
 # @walkeros/web-destination-snowplow
 
+## 4.8.2
+
+### Patch Changes
+
+- 7e5fc27: On a revocation, activity tracking and the link, form, button and
+  YouTube plugins switch off and come back on a grant. Error tracking and
+  FocalMeter have no off switch, so a revocation fails visibly
+  (`consent-not-applied`). With `settings.tracker`, URL plugins fail at `init`
+  with a `config` error.
+- 2374f54: Validation rejects `skipOdp` (Optimizely) and `pageViewTracking`
+  (Snowplow): neither was read, so they had no effect. Snowplow's settings
+  schema now lists every setting the code reads, with `collectorUrl` required,
+  so a typo in a setting name now fails validation.
+- 2374f54: A failed vendor call, a missing required setting (`config`) and an
+  event that cannot be sent (`missing-input`) are reported as failed pushes,
+  with the dead-letter queue and one ERROR line, instead of counting as
+  delivered. Rules with `silent: true` send no event. Settings schemas reject
+  unknown keys.
+- b1d65e2: Web destinations that load a vendor script inject it through the
+  document of their `env`, so simulation and server-side rendering work without
+  a browser page. A page still gets the script in its own document by default,
+  and a missing document fails the push with `vendor-not-ready`.
+- 7e5fc27: An event that no rule maps fails with `missing-input` in Snowplow;
+  add an `ignore: true` rule for events you do not send. Optimizely fails events
+  from visitors without the configured `userId` with `missing-input` instead of
+  dropping them.
+- 2374f54: Vendor scripts load through walkerOS: a blocked or slow script fails
+  later events visibly (`vendor-not-loaded`, `vendor-timeout`) instead of losing
+  them. Pushes made while the script loads wait for it, and each script is
+  injected once per page.
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [b1d65e2]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+  - @walkeros/core@4.8.2
+  - @walkeros/web-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

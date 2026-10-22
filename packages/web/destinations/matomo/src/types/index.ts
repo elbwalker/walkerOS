@@ -51,17 +51,6 @@ export interface Env extends DestinationWeb.Env {
     _paq?: Array<unknown>;
     location?: { href?: string };
   };
-  document: {
-    createElement: (tagName: string) => {
-      type: string;
-      src: string;
-      async?: boolean;
-      defer?: boolean;
-    };
-    head: {
-      appendChild: (node: unknown) => void;
-    };
-  };
 }
 
 export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;

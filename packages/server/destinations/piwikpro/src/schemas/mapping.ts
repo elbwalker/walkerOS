@@ -9,7 +9,7 @@ export const MappingSchema = z.object({
     )
     .optional(),
   goalValue: schemas.ValueSchema.describe(
-    'Goal revenue, a mapping value resolved against the event (like "data.total"), sent as revenue on the goal hit',
+    'Goal revenue, a mapping value resolved against the event (like "data.value"), sent as revenue on the goal hit',
   ).optional(),
   customDimensions: CustomDimensionsSchema.describe(
     'Custom dimensions for this rule, keyed by bare dimension id. Values are mapping values resolved against the event (like { "1": "data.size" }). Wins per key over the destination customDimensions.',

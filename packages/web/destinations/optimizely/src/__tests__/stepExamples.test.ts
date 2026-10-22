@@ -44,54 +44,56 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('optimizely destination -- step examples', () => {
-  it.each<[string, OptimizelyStepExample]>(Object.entries(examples.step))(
-    '%s',
-    async (name, example) => {
-      const { env, collected } = spyEnv();
-      const dest = jest.requireActual('../').default;
-      const { elb } = await startFlow();
+  // Non-public examples (silent, failures) run in the conformance test.
+  it.each<[string, OptimizelyStepExample]>(
+    Object.entries(examples.step).filter(
+      ([, example]) => example.public !== false,
+    ),
+  )('%s', async (name, example) => {
+    const { env, collected } = spyEnv();
+    const dest = jest.requireActual('../').default;
+    const { elb } = await startFlow();
 
-      const baseSettings: Partial<Settings> & { sdkKey: string } = {
-        sdkKey: 'test-sdk-key',
-        userId: 'user.id',
-        ...(example.settings || {}),
-      };
+    const baseSettings: Partial<Settings> & { sdkKey: string } = {
+      sdkKey: 'test-sdk-key',
+      userId: 'user.id',
+      ...(example.settings || {}),
+    };
 
-      if (example.command === 'consent') {
-        await elb('walker destination', {
-          code: { ...dest, env },
-          config: {
-            consent: { analytics: true },
-            settings: baseSettings,
-          },
-        });
-        // Load the gated destination under a prior grant first when the example
-        // declares one, so a revoke acts on an already-granted destination.
-        if (example.before) await elb('walker consent', example.before);
-        await elb('walker consent', example.in as WalkerOS.Consent);
-      } else {
-        const event = example.in as WalkerOS.Event;
-        const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
-        const mappingConfig = mapping
-          ? { [event.entity]: { [event.action]: mapping } }
-          : undefined;
+    if (example.command === 'consent') {
+      await elb('walker destination', {
+        code: { ...dest, env },
+        config: {
+          consent: { analytics: true },
+          settings: baseSettings,
+        },
+      });
+      // Load the gated destination under a prior grant first when the example
+      // declares one, so a revoke acts on an already-granted destination.
+      if (example.before) await elb('walker consent', example.before);
+      await elb('walker consent', example.in as WalkerOS.Consent);
+    } else {
+      const event = example.in as WalkerOS.Event;
+      const mapping = example.mapping as WalkerOSMapping.Rule | undefined;
+      const mappingConfig = mapping
+        ? { [event.entity]: { [event.action]: mapping } }
+        : undefined;
 
-        await elb('walker destination', {
-          code: { ...dest, env },
-          config: {
-            settings: baseSettings,
-            mapping: mappingConfig,
-          },
-        });
-        await elb(event);
-      }
+      await elb('walker destination', {
+        code: { ...dest, env },
+        config: {
+          settings: baseSettings,
+          mapping: mappingConfig,
+        },
+      });
+      await elb(event);
+    }
 
-      const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
-      const actual = collected();
+    const expected = (example.out ?? []) as ReadonlyArray<CallRecord>;
+    const actual = collected();
 
-      expect(actual).toEqual(expected);
-    },
-  );
+    expect(actual).toEqual(expected);
+  });
 });
 
 it('declares simulation paths that resolve', () =>

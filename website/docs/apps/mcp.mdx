@@ -354,7 +354,7 @@ package. The hosted server describes them itself when a client connects; see
 | `walkeros://reference/variables` | Variable patterns ($var/$env/$code/$store) |
 | `walkeros://reference/contract` | Event schemas, wildcards, inheritance |
 | `walkeros://reference/examples` | A complete, tested flow config with web, server and warehouse flows |
-| `walkeros://reference/packages` | Full package catalog |
+| `walkeros://reference/packages` | Full package catalog as `{ catalog, count, warnings? }`; `warnings` says when the npm search failed, so a partial catalog is never read as an empty one |
 | `walkeros://schema/{packageName}` | Per-package JSON schemas |
 
 ### Prompts

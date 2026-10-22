@@ -12,6 +12,11 @@ import { events, outputs, env as mockEnv } from '../../examples';
  * 2. Include id field - required in context
  * 3. Use rule instead of mapping - property renamed in PushContext
  * 4. Use examples for test data - don't hardcode test values
+ * 5. Await push: it returns a promise and a failure is a rejection
+ *
+ * The failure contract (a failing send is reported, a silent rule sends
+ * nothing, consent reaches the vendor) is proven by conformance.test.ts on a
+ * real collector. Do not prove delivery or loss with a mocked collector.
  */
 
 // Helper to create push context for testing
@@ -32,7 +37,7 @@ describe('destinationVendor', () => {
     jest.clearAllMocks();
   });
 
-  test('page view produces correct output', () => {
+  test('page view produces correct output', async () => {
     const mockSdk = jest.fn();
     const context = createPushContext({
       env: {
@@ -42,7 +47,7 @@ describe('destinationVendor', () => {
       data: { url: '/home', title: 'Home Page' },
     });
 
-    destinationVendor.push(events.pageView, context);
+    await destinationVendor.push(events.pageView, context);
 
     // Verify against expected output from examples
     expect(mockSdk).toHaveBeenCalledWith(
@@ -51,7 +56,7 @@ describe('destinationVendor', () => {
     );
   });
 
-  test('purchase produces correct output', () => {
+  test('purchase produces correct output', async () => {
     const mockSdk = jest.fn();
     const context = createPushContext({
       env: {
@@ -66,7 +71,7 @@ describe('destinationVendor', () => {
       },
     });
 
-    destinationVendor.push(events.purchase, context);
+    await destinationVendor.push(events.purchase, context);
 
     expect(mockSdk).toHaveBeenCalledWith(
       outputs.purchaseCall.method,
@@ -74,7 +79,7 @@ describe('destinationVendor', () => {
     );
   });
 
-  test('custom event produces correct output', () => {
+  test('custom event produces correct output', async () => {
     const mockSdk = jest.fn();
     const context = createPushContext({
       env: {
@@ -84,7 +89,7 @@ describe('destinationVendor', () => {
       data: { button_id: 'cta', button_text: 'Sign Up' },
     });
 
-    destinationVendor.push(events.buttonClick, context);
+    await destinationVendor.push(events.buttonClick, context);
 
     expect(mockSdk).toHaveBeenCalledWith(
       outputs.customEventCall.method,

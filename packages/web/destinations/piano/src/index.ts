@@ -1,52 +1,68 @@
-import type { Env, Destination, PianoAnalytics } from './types';
-import { isDefined, isObject } from '@walkeros/core';
+import type { Config, Env, Destination, PianoAnalytics } from './types';
+import { isObject, StepError, stepCall } from '@walkeros/core';
+import { getEnv, loadVendor } from '@walkeros/web-core';
 
 // Types
 export * as DestinationPiano from './types';
 
 const SCRIPT_SRC = 'https://tag.aticdn.net/piano-analytics.js';
 
+/**
+ * The Piano SDK. It has no stub that replays calls, so a push waits for the
+ * script `loadVendor` injected (`loadScript`), or finds `pa` on the page.
+ */
+function vendor(config: Config, env?: Env) {
+  return loadVendor(
+    config.loadScript ? SCRIPT_SRC : undefined,
+    () => resolvePa(env),
+    { timeout: config.timeout, document: getEnv(env).document },
+  );
+}
+
+// SDK instances already configured, so setConfigurations runs once each.
+const configured = new WeakSet<PianoAnalytics>();
+
 export const destinationPiano: Destination = {
   type: 'piano',
 
   config: {},
 
-  init({ config, env, logger }) {
-    const settings = config.settings || {};
-
-    const configure = () => {
-      const pa = resolvePa(env);
-      if (pa && isDefined(settings.site) && isDefined(settings.collectDomain)) {
-        pa.setConfigurations({
-          site: settings.site,
-          collectDomain: settings.collectDomain,
-          ...(isObject(settings.options) ? settings.options : {}),
-        });
-      }
-    };
-
-    // When we inject the SDK it loads asynchronously, so `window.pa` is not
-    // available in the same tick. Defer configuration until `onload` fires,
-    // and warn if the script never loads (e.g. blocked or network failure) so
-    // the destination does not silently send unconfigured events.
-    if (config.loadScript) {
-      addScript(SCRIPT_SRC, configure, () =>
-        logger.warn(
-          'Piano Analytics script failed to load, destination not configured',
-        ),
+  init({ config, env }) {
+    const { site, collectDomain } = config.settings || {};
+    const missing = [
+      site === undefined ? 'site' : undefined,
+      !collectDomain ? 'collectDomain' : undefined,
+    ].filter((key) => key !== undefined);
+    if (missing.length)
+      throw new StepError(
+        `Piano Analytics needs settings ${missing.join(' and ')}`,
+        { code: 'config' },
       );
-    } else {
-      configure();
-    }
 
-    return config;
+    vendor(config, env);
   },
 
-  push(event, { data, env }) {
-    const pa = resolvePa(env);
-    if (!pa) return;
+  async push(event, { config, data, env, rule }) {
+    const pa = await vendor(config, env).ready();
+    const settings = config.settings;
 
-    pa.sendEvent(event.name, isObject(data) ? data : {});
+    await stepCall(
+      async () => {
+        if (settings && !configured.has(pa)) {
+          await pa.setConfigurations({
+            site: settings.site,
+            collectDomain: settings.collectDomain,
+            ...(isObject(settings.options) ? settings.options : {}),
+          });
+          configured.add(pa);
+        }
+
+        if (!rule?.silent)
+          await pa.sendEvent(event.name, isObject(data) ? data : {});
+      },
+      'transport',
+      'Piano Analytics call failed',
+    );
   },
 };
 
@@ -54,23 +70,10 @@ export const destinationPiano: Destination = {
  * Resolve the Piano `pa` SDK without casts: prefer the injected env (tests,
  * simulation), fall back to the browser global declared on `Window`.
  */
-function resolvePa(env: Env): PianoAnalytics | undefined {
+function resolvePa(env?: Env): PianoAnalytics | undefined {
   return (
-    env.window?.pa ?? (typeof window !== 'undefined' ? window.pa : undefined)
+    env?.window?.pa ?? (typeof window !== 'undefined' ? window.pa : undefined)
   );
-}
-
-function addScript(
-  src = SCRIPT_SRC,
-  onReady?: () => void,
-  onError?: () => void,
-) {
-  if (typeof document === 'undefined') return;
-  const script = document.createElement('script');
-  script.src = src;
-  if (onReady) script.onload = () => onReady();
-  if (onError) script.onerror = () => onError();
-  document.head.appendChild(script);
 }
 
 export default destinationPiano;

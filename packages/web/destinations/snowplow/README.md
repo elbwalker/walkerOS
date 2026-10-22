@@ -32,13 +32,30 @@ npm install @walkeros/web-destination-snowplow
       "destinations": {
         "snowplow": {
           "package": "@walkeros/web-destination-snowplow",
-          "config": {}
+          "config": {
+            "settings": { "collectorUrl": "https://collector.example.com" }
+          }
         }
       }
     }
   }
 }
 ```
+
+## Plugins
+
+URL plugins in `settings.plugins` load with sp.js. With `settings.tracker` (your
+own browser tracker), init fails with a `config` error if any are set: load them
+on your own tracker, or drop `settings.tracker` so walkerOS loads them.
+
+## Consent
+
+With `config.consent` set, a revocation of that consent stops walkerOS's events
+and the senders that run on their own: activity pings (`activityTracking`) and
+the sp.js plugins for link clicks, forms, buttons and YouTube. The next grant
+starts them again. The error tracking and FocalMeter plugins have no off switch,
+so a revocation fails with `consent-not-applied` while they keep sending: load
+them only after consent. Other plugins are not switched.
 
 ## Documentation
 

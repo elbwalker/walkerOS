@@ -16,8 +16,9 @@ const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
 const noopLogger = createLogger();
 
 describe('meta web destination -- step examples', () => {
+  // Non-public examples (silent, consent) run in the conformance test.
   const stepEntries = Object.entries(examples.step).filter(
-    ([name]) => name !== 'init',
+    ([name, example]) => name !== 'init' && example.public !== false,
   );
 
   it('init', async () => {

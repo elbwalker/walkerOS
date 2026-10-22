@@ -35,7 +35,12 @@ function buildEventType(name: string): EventType {
   return { tracking_type: 'Custom', custom_event_name: name };
 }
 
-export const push: PushFn = async function (
+// A silent rule has no reddit call of its own: nothing to send.
+export const push: PushFn = async function (event, context) {
+  if (!context.rule?.silent) await send(event, context);
+};
+
+const send: PushFn = async function (
   event,
   { config, data, ingest, env, logger, collector },
 ) {
@@ -125,17 +130,9 @@ export const push: PushFn = async function (
   });
 
   const sendServerFn = env?.sendServer || sendServer;
-  const result = await sendServerFn(endpoint, JSON.stringify(body), {
+  await sendServerFn(endpoint, JSON.stringify(body), {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-
-  logger.debug('Reddit API response', {
-    ok: isObject(result) ? result.ok : true,
-  });
-
-  if (isObject(result) && result.ok === false) {
-    logger.throw(`Reddit API error: ${JSON.stringify(result)}`);
-  }
 };
 
 const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];

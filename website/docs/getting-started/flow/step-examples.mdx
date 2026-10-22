@@ -11,8 +11,8 @@ Add `examples` to any step in your flow config to document what it expects and p
 ```json
 "examples": {
   "purchase": {
-    "in": { "name": "order complete", "data": { "id": "ORD-123", "total": 149.97 } },
-    "mapping": { "name": "purchase", "data": { "map": { "transaction_id": "data.id", "value": "data.total" } } },
+    "in": { "name": "order complete", "data": { "id": "ORD-123", "value": 149.97 } },
+    "mapping": { "name": "purchase", "data": { "map": { "transaction_id": "data.id", "value": "data.value" } } },
     "out": [["gtag", "event", "purchase", { "transaction_id": "ORD-123", "value": 149.97, "send_to": "G-DEMO123456" }]]
   }
 }
@@ -50,14 +50,14 @@ Each example has a human-readable name and two fields:
     "purchase": {
       "in": {
         "name": "order complete",
-        "data": { "id": "ORD-123", "total": 149.97, "currency": "EUR" }
+        "data": { "id": "ORD-123", "value": 149.97, "currency": "EUR" }
       },
       "mapping": {
         "name": "purchase",
         "data": {
           "map": {
             "transaction_id": "data.id",
-            "value": "data.total",
+            "value": "data.value",
             "currency": "data.currency"
           }
         }

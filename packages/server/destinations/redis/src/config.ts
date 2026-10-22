@@ -5,24 +5,20 @@ import type {
   PartialConfig,
   Env,
 } from './types';
-import type { Logger } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
+import { isObject, StepError } from '@walkeros/core';
 
-export function getConfig(
-  partialConfig: PartialConfig = {},
-  logger: Logger.Instance,
-): Config {
-  const raw = (partialConfig.settings ?? {}) as Partial<Settings>;
-  const redis: Partial<RedisSettings> =
-    raw.redis ?? ({} as Partial<RedisSettings>);
+export function getConfig(partialConfig: PartialConfig = {}): Config {
+  const raw: Partial<Settings> = partialConfig.settings ?? {};
+  const redis: Partial<RedisSettings> = raw.redis ?? {};
 
-  if (!redis.streamKey) {
-    logger.throw('Config settings redis.streamKey missing');
-  }
+  if (!redis.streamKey)
+    throw new StepError('Config settings redis.streamKey missing', {
+      code: 'config',
+    });
 
   const redisSettings: RedisSettings = {
     ...redis,
-    streamKey: redis.streamKey as string,
+    streamKey: redis.streamKey,
     serialization: redis.serialization ?? 'json',
   };
 
@@ -32,7 +28,9 @@ export function getConfig(
 }
 
 export function isRedisEnv(env: unknown): env is Env {
-  if (!isObject(env)) return false;
-  const maybe = env as { Redis?: { Client?: unknown } };
-  return typeof maybe.Redis?.Client === 'function';
+  return (
+    isObject(env) &&
+    isObject(env.Redis) &&
+    typeof env.Redis.Client === 'function'
+  );
 }

@@ -84,7 +84,7 @@ Add to your `flow.json` destinations:
 
 ## User identification
 
-The destination builds a `userIds` array from the event data. At least one identifier is required or the event is silently skipped.
+The destination builds a `userIds` array from the event data. At least one identifier is required; an event without one fails with `missing-input`.
 
 **SHA256_EMAIL**: resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending. Set `doNotHash: ['email']` if you are pre-hashing upstream.
 
@@ -113,7 +113,7 @@ The default `conversionRuleId` from settings applies to all events. Override it 
         "conversion": {
           "map": {
             "ruleId": { "value": "99887766" },
-            "value": "data.total",
+            "value": "data.value",
             "currency": { "key": "data.currency", "value": "EUR" }
           }
         }

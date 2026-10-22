@@ -21,14 +21,20 @@ import {
   storeCache,
   applyUpdate,
   createMappingRoot,
+  getMappingNoOpMessage,
+  getMappingNoOpPaths,
   stepId,
 } from '@walkeros/core';
-import { runTransformerChain } from './transformer';
+import { checkChainTargets, runTransformerChain } from './transformer';
 import { compileStepState, runStepState, warnStateOff } from './state';
 import { buildReportError, errorMeta } from './report-error';
 import { isStateDelivery, shouldDeliver, setMark } from './on';
 import { reconcilePending } from './pending';
-import { createPushResult } from './destination';
+import {
+  chainFailureResult,
+  createPushResult,
+  mergePushResults,
+} from './destination';
 import { emitCollectorDrop } from './observerEmit';
 import { getCacheStore } from './cache';
 import {
@@ -133,6 +139,19 @@ export async function initSource(
     terminus,
   } = sourceDefinition;
 
+  // Registration checks, once at ERROR (the source still runs): mapping
+  // keys that do nothing at a source, and the transformers its chains name.
+  // Build flag: CLI bundles check both at build time and fold this out.
+  if (typeof __WALKEROS_VALIDATE__ === 'undefined' || __WALKEROS_VALIDATE__) {
+    const noOps = getMappingNoOpPaths('source', config, 'config');
+    if (noOps.length)
+      collector.logger
+        .scope('source')
+        .error(`Source ${sourceId}: ${getMappingNoOpMessage('source', noOps)}`);
+    checkChainTargets(collector, `source.${sourceId}.before`, before);
+    checkChainTargets(collector, `source.${sourceId}.next`, next);
+  }
+
   // Compile declarative state entries once. For a source, all state entries
   // run before handing the event to `collector.push` (get enriches the event
   // the collector receives, set stashes from it), so they execute together in
@@ -200,6 +219,9 @@ export async function initSource(
     let copies: Transformer.ChainCopy[] = [
       { event: identified, ingest: scope.ingest },
     ];
+    // A transformer of the before chain that failed (with no copy left, or
+    // in one copy of a fork): the push fails.
+    let beforeFailure: Elb.PushResult | undefined;
 
     // Run source.before chain (consent-exempt, pre-source preprocessing).
     // The route resolves hop by hop with `{ ingest, event }`, the event being
@@ -215,6 +237,10 @@ export async function initSource(
         scope.respond,
         chainPath,
       );
+      if (beforeResult.failure) {
+        beforeFailure = chainFailureResult(beforeResult.failure);
+        if (beforeResult.copies.length === 0) return beforeFailure;
+      }
       if (beforeResult.copies.length === 0) {
         // Dropped or stopped: the event never reaches the collector.
         emitCollectorDrop(collector, identified, scope.ingest, {
@@ -248,6 +274,8 @@ export async function initSource(
           cacheStore,
           cacheContext,
           // no per-step prefix — cache keys honor user-provided namespace only
+          undefined,
+          collector,
         );
 
         if (cacheResult) {
@@ -341,18 +369,26 @@ export async function initSource(
 
     // Push each event independently through the post-before pipeline. The
     // source's `next` route travels as the pre-collector chain and resolves
-    // per event, after the source's state, inside `collector.push`.
-    let pushResult: Elb.PushResult = { ok: true } as Elb.PushResult;
+    // per event, after the source's state, inside `collector.push`. Every
+    // copy's outcome is reported, worst first.
+    const results: Elb.PushResult[] = [];
     for (const copy of copies) {
-      pushResult = await terminalPush(copy.event, {
-        ...options,
-        id: sourceId,
-        ingest: copy.ingest,
-        respond: scope.respond,
-        mapping: config,
-        preChain: next,
-      });
+      results.push(
+        await terminalPush(copy.event, {
+          ...options,
+          id: sourceId,
+          ingest: copy.ingest,
+          respond: scope.respond,
+          mapping: config,
+          preChain: next,
+        }),
+      );
     }
+    const [first, ...rest] = results;
+    const pushResult = mergePushResults(
+      first ?? createPushResult({ ok: true }),
+      beforeFailure ? [...rest, beforeFailure] : rest,
+    );
 
     // Wait for any deferred MISS update work to land on the source's
     // respond sender before returning control to the source. This

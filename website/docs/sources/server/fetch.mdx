@@ -103,10 +103,14 @@ Server sources require platform-specific handlers. For containerized deployments
 
 | Status | Meaning |
 |--------|---------|
-| 200 | Event processed |
+| 200 | Event processed, or failed for a reason a resend cannot fix (see below) |
 | 400 | Rejected client input: the pipeline declared the event invalid. The body echoes the validation message, for example `Event name is required` |
-| 500 | The pipeline failed to process a valid event, or an unexpected server fault |
-| 207 | Batch request where some events succeeded and others failed. The body carries per-index errors |
+| 500 | The pipeline failed to process a valid event for a reason a resend could fix (the body is `Event was not processed`), or an unexpected server fault (`Internal server error`) |
+| 207 | Batch request where some events succeeded and others failed in a way a resend could fix. The body carries per-index errors |
+
+A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
+
+A per-event "not processed" in a batch logs at DEBUG, because the collector's ERROR line is the signal. A push that throws inside a batch logs an ERROR and answers `Internal server error`.
 
 Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
 inflating `status.failed`, and is logged at warn with the reason instead of as an

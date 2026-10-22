@@ -6,7 +6,7 @@ describe('Contract schema validation', () => {
       version: 4,
       contract: {
         default: {
-          globals: { required: ['country'] },
+          schema: { properties: { globals: { required: ['country'] } } },
           events: {
             product: {
               '*': {
@@ -23,7 +23,7 @@ describe('Contract schema validation', () => {
         },
         web: {
           extend: 'default',
-          consent: { required: ['analytics'] },
+          schema: { properties: { consent: { required: ['analytics'] } } },
         },
       },
       flows: {
@@ -43,18 +43,24 @@ describe('Contract schema validation', () => {
     expect(result.success).toBe(false);
   });
 
-  it('should accept contract with only sections, no events', () => {
-    const result = JsonSchema.safeParse({
-      version: 4,
-      contract: {
-        consent_only: {
-          consent: { required: ['analytics'] },
+  it.each(['globals', 'context', 'custom', 'user', 'consent'])(
+    'rejects the %s section: nothing enforces it (E9)',
+    (section) => {
+      const result = JsonSchema.safeParse({
+        version: 4,
+        contract: {
+          web: { [section]: { required: ['analytics'] } },
         },
-      },
-      flows: { default: { config: { platform: 'web' } } },
-    });
-    expect(result.success).toBe(true);
-  });
+        flows: { default: { config: { platform: 'web' } } },
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]).toMatchObject({
+        code: 'unrecognized_keys',
+        keys: [section],
+        path: ['contract', 'web'],
+      });
+    },
+  );
 
   it('should accept v4 setup without contract', () => {
     const result = JsonSchema.safeParse({

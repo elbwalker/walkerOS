@@ -1,5 +1,40 @@
 # @walkeros/web-source-browser
 
+## 4.8.2
+
+### Patch Changes
+
+- 2374f54: New: the source sends `walker flush` when the page goes away
+  (`pagehide`, or the document turning hidden), so batched events are delivered.
+  A failing `elbLayer` entry now logs one ERROR naming its event, never its
+  data, and counts as failed.
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+- Updated dependencies [7e5fc27]
+- Updated dependencies [2374f54]
+- Updated dependencies [964590a]
+- Updated dependencies [4100ede]
+- Updated dependencies [2374f54]
+- Updated dependencies [2374f54]
+- Updated dependencies [15eb7b2]
+- Updated dependencies [33a2779]
+- Updated dependencies [33a2779]
+- Updated dependencies [b1d65e2]
+- Updated dependencies [964590a]
+- Updated dependencies [2374f54]
+  - @walkeros/collector@4.8.2
+  - @walkeros/core@4.8.2
+  - @walkeros/web-core@4.8.2
+
 ## 4.8.1
 
 ### Patch Changes

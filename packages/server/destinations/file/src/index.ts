@@ -1,44 +1,48 @@
-import { getMappingValue, isString, isObject } from '@walkeros/core';
-import type { Destination, InitFn, PushFn, Settings } from './types';
+import { getMappingValue, isString, isObject, StepError } from '@walkeros/core';
+import type {
+  Destination,
+  FileWriteStream,
+  InitFn,
+  PushFn,
+  Settings,
+} from './types';
 import {
   createState,
   ensureHandle,
+  fileError,
   getState,
   registerState,
   removeState,
   serialize,
+  writeLine,
 } from './helpers';
 
 export * as DestinationFile from './types';
 
-const init: InitFn = async ({ id, config, env, logger }) => {
-  const partial = (config?.settings ?? {}) as Partial<Settings>;
-  if (partial.filename === undefined || partial.filename === null) {
-    logger.throw(
-      "file destination: 'filename' is required (string or Mapping.Value)",
-    );
-    return false;
-  }
+const init: InitFn = async ({ id, config, env, reportError }) => {
+  const partial: Partial<Settings> = config?.settings ?? {};
+  if (partial.filename === undefined || partial.filename === null)
+    throw new StepError('Config settings filename missing', {
+      code: 'config',
+    });
   if (
     !isString(partial.filename) &&
     !(isObject(partial.filename) || Array.isArray(partial.filename))
-  ) {
-    logger.throw(
-      "file destination: 'filename' must be a string or a Mapping.Value",
+  )
+    throw new StepError(
+      'Config settings filename must be a string or a Mapping.Value',
+      { code: 'config' },
     );
-    return false;
-  }
 
   const format = partial.format ?? 'jsonl';
   if (
     (format === 'tsv' || format === 'csv') &&
     (!partial.fields || partial.fields.length === 0)
-  ) {
-    logger.throw(
-      `file destination: format '${format}' requires non-empty 'fields'`,
+  )
+    throw new StepError(
+      `Config settings format '${format}' requires non-empty fields`,
+      { code: 'config' },
     );
-    return false;
-  }
 
   const settings: Settings = {
     filename: partial.filename,
@@ -46,19 +50,17 @@ const init: InitFn = async ({ id, config, env, logger }) => {
     fields: partial.fields,
   };
 
-  const state = createState(env);
+  const state = createState(env, reportError);
 
-  // Eager open for static filename — fail-fast on bad path.
+  // Eager open for static filename: a bad path shows at startup.
   if (isString(settings.filename)) {
     try {
       await ensureHandle(state, settings.filename);
     } catch (err) {
-      logger.throw(
-        `file destination: failed to open '${settings.filename}': ${
-          err instanceof Error ? err.message : String(err)
-        }`,
-      );
-      return false;
+      throw new StepError(`file destination: failed to open the file`, {
+        code: 'config',
+        cause: err,
+      });
     }
   }
 
@@ -70,17 +72,18 @@ const init: InitFn = async ({ id, config, env, logger }) => {
   };
 };
 
-const push: PushFn = async (event, { id, config, collector, logger }) => {
-  const settings = config.settings as Settings | undefined;
-  if (!settings) {
-    logger.warn('file destination: settings missing');
-    return;
-  }
+// A silent rule has no line of its own: nothing to write.
+const push: PushFn = async (event, context) => {
+  if (!context.rule?.silent) await write(event, context);
+};
+
+const write: PushFn = async (event, { id, config, collector }) => {
+  const settings = config.settings;
   const state = getState(id);
-  if (!state) {
-    logger.warn('file destination: state missing, init may have failed');
-    return;
-  }
+  if (!settings || !state)
+    throw new StepError('file destination: not initialized', {
+      code: 'not-ready',
+    });
 
   let filename: string;
   if (isString(settings.filename)) {
@@ -89,24 +92,27 @@ const push: PushFn = async (event, { id, config, collector, logger }) => {
     const resolved = await getMappingValue(event, settings.filename, {
       collector,
     });
-    if (!isString(resolved) || resolved.length === 0) {
-      logger.warn(
-        'file destination: dynamic filename resolved to empty or non-string, dropping event',
+    if (!isString(resolved) || resolved.length === 0)
+      throw new StepError(
+        'file destination: the filename mapping resolved to no name',
+        { code: 'missing-input' },
       );
-      return;
-    }
     filename = resolved;
   }
 
+  let handle: FileWriteStream;
   try {
-    const handle = await ensureHandle(state, filename);
-    handle.write(serialize(event, settings.format ?? 'jsonl', settings.fields));
+    handle = await ensureHandle(state, filename);
   } catch (err) {
-    logger.warn(
-      `file destination: write failed for ${filename}: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
+    throw fileError('open', err);
+  }
+  try {
+    await writeLine(
+      handle,
+      serialize(event, settings.format ?? 'jsonl', settings.fields),
     );
+  } catch (err) {
+    throw fileError('write', err);
   }
 };
 

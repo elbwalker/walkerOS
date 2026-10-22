@@ -7,7 +7,7 @@ import type {
   Settings,
 } from './types';
 import type { Logger } from '@walkeros/core';
-import { isObject } from '@walkeros/core';
+import { isObject, StepError } from '@walkeros/core';
 import { PubSub } from '@google-cloud/pubsub';
 
 interface ResolvedClientConfig {
@@ -48,12 +48,18 @@ export function getConfig(
     typeof settings.projectId === 'string' ? settings.projectId : '';
   const topic = typeof settings.topic === 'string' ? settings.topic : '';
 
-  if (!projectId) logger.throw('Config settings projectId missing');
-  if (!topic) logger.throw('Config settings topic missing');
+  if (!projectId || !topic) {
+    const missing = [
+      ...(projectId ? [] : ['projectId']),
+      ...(topic ? [] : ['topic']),
+    ];
+    throw new StepError(`Config settings ${missing.join(', ')} missing`, {
+      code: 'config',
+    });
+  }
 
   const credentials = parseCredentials(
     resolveCredentials(partialConfig, logger),
-    logger,
   );
 
   // Build the client once: prefer pre-supplied settings.client, then env-
@@ -103,23 +109,21 @@ export function resolveCredentials(
 
 export function parseCredentials(
   raw: Settings['credentials'],
-  logger: Logger.Instance,
 ): Settings['credentials'] {
   if (raw === undefined) return undefined;
-  if (typeof raw === 'string') {
-    try {
-      const parsed: unknown = JSON.parse(raw);
-      if (!isServiceAccountCredentials(parsed)) {
-        logger.throw('Invalid credentials JSON');
-        return undefined;
-      }
-      return parsed;
-    } catch {
-      logger.throw('Invalid credentials JSON');
-      return undefined;
-    }
+  if (typeof raw !== 'string') return raw;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new StepError('Invalid credentials JSON', {
+      code: 'config',
+      cause: err,
+    });
   }
-  return raw;
+  if (!isServiceAccountCredentials(parsed))
+    throw new StepError('Invalid credentials JSON', { code: 'config' });
+  return parsed;
 }
 
 function isServiceAccountCredentials(

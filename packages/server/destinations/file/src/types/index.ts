@@ -3,7 +3,6 @@ import type {
   Mapping as CoreMapping,
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
-import type { WriteStream } from 'node:fs';
 
 export type Format = 'jsonl' | 'tsv' | 'csv';
 
@@ -37,8 +36,18 @@ export interface Mapping {}
  * inject a fake implementation via env.fs.
  */
 export interface FileWriteStream {
-  write: (chunk: string) => boolean;
+  /**
+   * Calls `callback` once the chunk is written, with the error if it failed
+   * (node streams answer `boolean`). An injected writer may answer with a
+   * promise instead.
+   */
+  write: (
+    chunk: string,
+    callback: (error?: Error | null) => void,
+  ) => boolean | PromiseLike<unknown>;
   end: () => void;
+  /** A stream reports a failed open or write as an `error` event. */
+  on?: (event: 'error', listener: (error: Error) => void) => unknown;
 }
 
 export interface Env extends DestinationServer.Env {
@@ -50,7 +59,7 @@ export interface Env extends DestinationServer.Env {
     createWriteStream: (
       path: string,
       options: { flags: string },
-    ) => FileWriteStream | WriteStream;
+    ) => FileWriteStream;
     mkdir: (path: string, options: { recursive: boolean }) => Promise<void>;
   };
 }

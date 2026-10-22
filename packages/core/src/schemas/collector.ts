@@ -120,6 +120,12 @@ export const ConfigSchema = z
       .describe(
         'Maximum events retained in collector.queue (late-registration replay). FIFO drop on overflow. Default 1000.',
       ),
+    consentDenied: z
+      .enum(['queue', 'skip'])
+      .optional()
+      .describe(
+        "What a destination does with a consent-denied event: 'queue' (default) keeps it until consent is granted, 'skip' skips it (counted in status.destinations[id].skipped).",
+      ),
     name: z
       .string()
       .optional()

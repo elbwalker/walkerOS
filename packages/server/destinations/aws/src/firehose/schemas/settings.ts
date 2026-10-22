@@ -32,22 +32,39 @@ export const FirehoseConfigSchema = z.object({
   config: config.optional(),
 });
 
-export const SettingsSchema = z.object({
-  // Optional in the schema only so the deprecated alias still validates;
-  // init throws when neither form names a stream.
-  streamName,
-  region: region.optional(),
-  newline: z
-    .boolean()
-    .describe(
-      'Append a newline to every record (default true). Set false when the stream adds its own new line delimiter.',
-    )
-    .optional(),
-  config: config.optional(),
-  client: client.optional(),
-  firehose: FirehoseConfigSchema.describe(
-    'Deprecated: use the flat fields streamName, region, config and client.',
-  ).optional(),
-});
+export const SettingsSchema = z
+  .object({
+    // Optional in the schema only so the deprecated alias still validates;
+    // init throws when neither form names a stream.
+    streamName,
+    region: region.optional(),
+    newline: z
+      .boolean()
+      .describe(
+        'Append a newline to every record (default true). Set false when the stream adds its own new line delimiter.',
+      )
+      .optional(),
+    config: config.optional(),
+    client: client.optional(),
+    firehose: FirehoseConfigSchema.describe(
+      'Deprecated: use the flat fields streamName, region, config and client.',
+    ).optional(),
+  })
+  .refine(
+    (settings) =>
+      settings.streamName !== undefined ||
+      settings.firehose?.streamName !== undefined,
+    { message: 'Set settings.streamName' },
+  )
+  // The same rule in JSON Schema: the stream is named in one of both forms.
+  .meta({
+    anyOf: [
+      { required: ['streamName'] },
+      {
+        required: ['firehose'],
+        properties: { firehose: { required: ['streamName'] } },
+      },
+    ],
+  });
 
 export type Settings = z.infer<typeof SettingsSchema>;

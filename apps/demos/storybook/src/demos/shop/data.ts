@@ -176,7 +176,7 @@ export const checkoutSummary: SummaryLine[] = [
   { label: 'Taxes', property: 'taxes', amount: 5.52, currency: 'EUR' },
   {
     label: 'Total',
-    property: 'total',
+    property: 'value',
     amount: 259.52,
     currency: 'EUR',
     emphasis: true,
@@ -207,7 +207,7 @@ export const order: OrderContent = {
     { label: 'Subtotal', property: 'subtotal', amount: 249, currency: 'EUR' },
     { label: 'Shipping', property: 'shipping', amount: 5 },
     { label: 'Taxes', property: 'taxes', amount: 5.52 },
-    { label: 'Total', property: 'total', amount: 259.52, emphasis: true },
+    { label: 'Total', property: 'value', amount: 259.52, emphasis: true },
   ],
   address: {
     lines: ['elbwalker GmbH', 'Gerhofstraße 1-3'],
