@@ -31,8 +31,6 @@ complete.
 - At plan completion (L2, affected since `origin/main`):
   `npm run verify:affected`
 
-See `/workspaces/developer/AGENT.md` rule 11 for the full doctrine.
-
 ## XP Principles (Non-Negotiable)
 
 | Principle    | In Practice                                              |

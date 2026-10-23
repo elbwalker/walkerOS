@@ -176,8 +176,8 @@ contract field resolves by key.
 
 :::note
 `ip` is absent on this source: a Fetch `Request` reports no client IP and
-walkerOS does not guess one. Read `headers.x-forwarded-for` if your proxy sets
-it.
+walkerOS does not guess one. Map the header your proxy sets, as in
+[Client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy).
 :::
 
 ## Usage

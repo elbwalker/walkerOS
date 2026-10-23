@@ -110,9 +110,7 @@ export interface WrappedStoreInstance extends Store.Instance {
  * number of tiers (negligible for the typical 2-3 tier chain). Each tier owns
  * its own `exp` from its own rule, so the staleness bound is per tier.
  *
- * Write semantics (`set` / `delete`) follow the "cache is advisory" policy
- * documented in `docs/plans/2026-05-13-store-cache-design.md` (Write path and
- * error policy):
+ * Write semantics (`set` / `delete`) follow the "cache is advisory" policy:
  *   - Backing first. If `backing.set`/`backing.delete` throws, the wrapper
  *     throws and the cache layer is never touched. The backing is the source
  *     of truth and its failures must surface to the caller.

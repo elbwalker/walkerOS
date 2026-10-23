@@ -19,8 +19,6 @@ export * as DestinationLinkedIn from './types';
  * Loads the LinkedIn Insight Tag script from LinkedIn's CDN and forwards
  * explicit conversions via `window.lintrk('track', ...)`. Opt-in: events
  * without `mapping.settings.conversion` produce zero calls.
- *
- * See `/workspaces/developer/docs/research/linkedin-destination-guide.md`.
  */
 
 const LINKEDIN_SCRIPT_SRC =

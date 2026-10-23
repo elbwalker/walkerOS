@@ -83,9 +83,9 @@ apps/
 - **No `any`:** Never in production code
 - **XP principles:** DRY, KISS, YAGNI, TDD
 - **Test first:** Watch it fail before implementing
-- **Verify:** Use the verification tiers from `/workspaces/developer/AGENT.md`
-  rule 11. Default L1 (touched package) per task. L2 at plan completion. Never
-  L4 unless the plan touched shared infra or the user asked.
+- **Verify:** Default L1 per task (`npm run verify:touched -- <pkg>`, the
+  touched package). L2 at plan completion (`npm run verify:affected`). Never L4
+  (the full suite) unless the plan touched shared infra or the user asked.
 
 ## Creating/Maintaining Skills
 
