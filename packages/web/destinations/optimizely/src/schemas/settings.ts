@@ -11,13 +11,13 @@ export const SettingsSchema = z
     userId: z
       .unknown()
       .describe(
-        'walkerOS mapping value to resolve userId for experiment bucketing. Example: "user.id" or { key: "user.id", value: "user.device" } for fallback.',
+        'walkerOS mapping value to resolve userId for experiment bucketing. Example: "user.id", or the fallback chain ["user.id", "user.device"]. An event where it resolves to no string fails with missing-input.',
       )
       .optional(),
     attributes: z
       .unknown()
       .describe(
-        'User attributes for audience targeting. Resolves to Record<string, unknown>. Applied to every event via createUserContext().',
+        'User attributes for audience targeting. Resolves to Record<string, unknown>. Applied through createUserContext() when the user context is created, on the first event of each userId; a later change for the same userId is not applied.',
       )
       .optional(),
     updateInterval: z

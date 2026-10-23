@@ -6,8 +6,10 @@ import {
   getBrowserVersion,
   getMappingValue,
   getOS,
+  reportCause,
   setByPath,
   StepError,
+  stepId,
 } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 import type { FingerprintSettings } from './types';
@@ -108,17 +110,17 @@ export const transformerFingerprint: Transformer.Init<
     config: { ...config, settings: { ...settings, salt } },
 
     async push(event, context) {
-      const { ingest, collector } = context;
+      const { ingest, collector, id } = context;
 
       const source = createMappingRoot(ingest, event);
       const resolve = async (value: Mapping.Value) =>
         String((await getMappingValue(source, value, { collector })) ?? '');
 
-      const inputValues = await Promise.all(
-        inputs.map(async ({ name, value }) => {
-          const resolved = await resolve(value);
-          return resolved ? reduceInput[name](resolved) : '';
-        }),
+      const resolvedValues = await Promise.all(
+        inputs.map(({ value }) => resolve(value)),
+      );
+      const inputValues = resolvedValues.map((resolved, i) =>
+        resolved ? reduceInput[inputs[i].name](resolved) : '',
       );
 
       const fieldValues = await Promise.all(fields.map(resolve));
@@ -135,8 +137,25 @@ export const transformerFingerprint: Transformer.Init<
           { code: 'missing-input' },
         );
 
-      inputs.forEach(({ name }, i) => {
-        if (inputValues[i] || warnedEmpty.has(name)) return;
+      inputs.forEach(({ name, value }, i) => {
+        if (inputValues[i]) return;
+
+        // Only the ip reducer turns text into nothing: the value is not one
+        // address (a forwarded chain, a word). The event is still delivered,
+        // so this is reported, never thrown, and never carries the value.
+        if (resolvedValues[i]) {
+          const path = typeof value === 'string' ? ` (${value})` : '';
+          reportCause(
+            collector,
+            logger,
+            { step: stepId('transformer', id), code: 'invalid' },
+            `Fingerprint input "${name}" is not one IP address, so the hash is made without it${path}`,
+            {},
+          );
+          return;
+        }
+
+        if (warnedEmpty.has(name)) return;
         warnedEmpty.add(name);
         logger.warn(
           `Fingerprint input "${name}" resolved empty, so hashes are less distinct. Check the source's config.ingest or set settings.${name}.`,

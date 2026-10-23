@@ -12,7 +12,8 @@ production-ready live demo for data ownership and sovereignty.
 ## Setup
 
 ```bash
-cd /workspaces/developer/walkerOS/apps/demos/flows
+# from the repository root
+cd apps/demos/flows
 
 export PROJECT_ID=YOUR_PROJECTID
 export DATASET_ID=YOUR_DATASET

@@ -33,7 +33,11 @@ npm install @walkeros/web-destination-snowplow
         "snowplow": {
           "package": "@walkeros/web-destination-snowplow",
           "config": {
-            "settings": { "collectorUrl": "https://collector.example.com" }
+            "loadScript": true,
+            "settings": {
+              "collectorUrl": "https://collector.example.com",
+              "pageViewEvent": "page view"
+            }
           }
         }
       }
@@ -41,6 +45,9 @@ npm install @walkeros/web-destination-snowplow
   }
 }
 ```
+
+This sends page views. Every other event needs a rule with a `name` (the action
+type) or a `struct`; an event without one fails with `missing-input`.
 
 ## Plugins
 

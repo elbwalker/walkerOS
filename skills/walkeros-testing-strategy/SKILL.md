@@ -416,11 +416,10 @@ approach destinations use — see
 
 ## Commands
 
-Verification tier (per `/workspaces/developer/AGENT.md` rule 11):
+Verification tiers (run from the repository root):
 
 ```bash
 # L1, the default during a task: typecheck, lint, test for the touched package
-cd /workspaces/developer/walkerOS
 npm run verify:touched -- core
 npm run verify:touched -- web-destination-gtag
 

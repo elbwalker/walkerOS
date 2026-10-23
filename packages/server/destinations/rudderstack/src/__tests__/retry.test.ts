@@ -56,12 +56,13 @@ describe('rudderstack retry within config.timeout', () => {
     const plane = await dataPlane([503, 503, 200]);
     const collector = await flowWith(plane.url);
 
-    const started = Date.now();
     const result = await collector.push(createEvent({ name: 'product view' }));
 
+    // The collector races the push against config.timeout, so ok means the
+    // SDK's retries landed inside it; a wall clock here would also time the
+    // collector and the test runner.
     expect(result.ok).toBe(true);
     expect(plane.requests()).toBe(3);
-    expect(Date.now() - started).toBeLessThan(TIMEOUT);
     await collector.command('shutdown');
     await plane.close();
   });

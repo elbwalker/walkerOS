@@ -112,21 +112,28 @@ Add to your `flow.json` destinations:
 
 ## Opt-in conversion model
 
-LinkedIn is an **opt-in conversion platform**. Every tracked event must
+LinkedIn is an opt-in conversion platform. Every tracked event must
 reference a pre-created Conversion Rule in Campaign Manager via its numeric
 `conversion_id`. Events without an explicit `mapping.settings.conversion`
 produce zero `lintrk` calls. This is the opposite of analytics destinations
 (Amplitude, Clarity, PostHog) which forward every event by default. Map only
 the events that matter for attribution.
 
+Events that no rule sends still count as delivered. To report them as skipped
+instead, add a wildcard rule with `ignore: true` (`'*': { '*': { ignore: true } }`)
+and map the events you want, see [ignore vs silent](/docs/mapping/rule#ignore-vs-skip).
+
 ## Falsy guards
 
 The destination protects against misconfigured mappings:
 
-- If `id` resolves to falsy or `0` the entire `lintrk` call is skipped (no
-  silent error or partial conversion).
-- If `value` / `currency` / `eventId` resolve to falsy, those individual
-  fields are dropped from the call. `id` is always required.
+- If `id` resolves to nothing, `0` or a non-numeric string, no `lintrk` call
+  is made and the push fails with `missing-input`: the push result lists the
+  destination under `failed` and the collector writes an ERROR line. A numeric
+  string such as `"67890"` is sent as a number.
+- `value` (a number or numeric string), `currency` and `eventId` (non-empty
+  strings) are left out of the call when they resolve to anything else. A
+  `value` of `0` is sent.
 
 ## Consent
 
@@ -142,29 +149,26 @@ LinkedIn is an advertising platform. The walkerOS consent key is **`marketing`**
   language="typescript"
 />
 
-The walkerOS `config.consent` gate blocks unconsented events from reaching
-the destination in the first place. The Insight Tag itself has no vendor
-opt-out API. When consent is later revoked, walkerOS stops sending events,
-but the loaded tag stays in the page.
-
-Events that no rule sends still count as delivered. To report them as skipped
-instead, add a wildcard rule with `ignore: true` (`'*': { '*': { ignore: true } }`)
-and map the events you want.
+Until `marketing` is granted, the collector holds the destination's events in
+a queue and sends them once consent is granted, see
+[consent management](/docs/guides/consent). The Insight Tag itself has no
+vendor opt-out API: after a revocation, walkerOS holds new events again, but
+the loaded tag stays in the page.
 
 ### Deferred script load
 
-If you want the Insight Tag to load **only** after consent is granted, set
-`loadScript: true` and leave `config.consent.marketing` un-granted at init
-time. The destination will not load the script during init and injects it
-the first time an `on('consent')` event grants `marketing`. The
-handler is idempotent. If a `<script src="...snap.licdn.com...">` already
-exists in the DOM, no second injection happens.
+With `loadScript: true` and `config.consent`, the Insight Tag loads only after
+consent is granted: the destination initializes, and injects the tag, once
+`marketing` is granted. walkerOS injects the tag once per page. If your page
+already embeds the Insight Tag snippet, leave `loadScript` off (the default):
+the destination then only sets the partner ID and, if the page has none yet,
+the `lintrk` queue, and sends its calls through the page's tag. With both, the
+tag loads twice.
 
 :::note Auto page view + retargeting
 The Insight Tag fires its own page view on load and drops first-party cookies
-for audience building. The destination has no knob to suppress this. It is
-the expected behavior for retargeting, separate from explicit conversion
-tracking.
+for audience building. The destination has no setting to suppress this. The
+page view serves retargeting and is separate from the conversions you map.
 :::
 
 ## No identity tracking
@@ -172,13 +176,15 @@ tracking.
 LinkedIn identity on the web is cookie-based. The Insight Tag manages its
 own first-party cookies and matches visitors against LinkedIn member profiles
 server-side. There is no `lintrk('identify', ...)` API. The destination does
-**not** forward user IDs, emails, phone numbers, or the `li_fat_id` click ID.
+not forward user IDs, emails, phone numbers, or the `li_fat_id` click ID.
 
-A future `@walkeros/server-destination-linkedin` (Conversions API) will
-consume `li_fat_id` from the session source for advanced matching, sharing
-the `event_id` field for browser/server deduplication.
+The [server LinkedIn destination](/docs/destinations/server/linkedin) sends
+conversions through the Conversions API with `eventId` set to the event's `id`
+and can forward `li_fat_id`. Map `eventId: 'id'` here, as in the example above,
+to [deduplicate](/docs/destinations/server/linkedin#browser-deduplication)
+conversions sent from both.
 
 ## Related
 
-- [LinkedIn Insight Tag documentation](https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads-reporting/conversions/)
+- [LinkedIn Insight Tag documentation](https://www.linkedin.com/help/lms/answer/a489169)
 - [Bundled mode](/docs/getting-started/modes/bundled)

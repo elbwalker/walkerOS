@@ -7,7 +7,7 @@ import type { DestinationWeb } from '@walkeros/web-core';
 /**
  * LinkedIn Insight Tag runtime surface.
  *
- * The Insight Tag script installs `window.lintrk` — a single function that
+ * The Insight Tag script installs `window.lintrk`, a single function that
  * accepts exactly one tracked action: `lintrk('track', data)`.
  *
  * Before the script loads, the destination installs a queue-backed shim so
@@ -39,13 +39,8 @@ declare global {
 /**
  * Destination-level settings.
  *
- * apiKey — the LinkedIn Partner ID (numeric string, e.g. "123456"), assigned
- *          to `window._linkedin_partner_id` before the script loads.
- * include — event sections made available for mapping resolution. Present for
- *          consistency with other destinations; has no effect at call time
- *          because `lintrk()` only accepts four fixed fields. Kept so users
- *          can reference section-prefixed keys in future custom mapping
- *          strategies without a breaking change.
+ * apiKey: the LinkedIn Partner ID (numeric string, e.g. "123456"), assigned
+ *         to `window._linkedin_partner_id` before the script loads.
  */
 export interface Settings {
   apiKey: string;
@@ -56,21 +51,22 @@ export type InitSettings = Partial<Settings>;
 /**
  * Per-rule mapping settings.
  *
- * conversion — mapping value resolving to an object with short keys:
+ * conversion: mapping value resolving to an object with short keys:
  *   { id (required), value?, currency?, eventId? }
  *
  * `id` becomes `conversion_id` (number, Campaign Manager conversion rule ID).
  * Other keys translate 1:1 to the vendor parameter names.
  *
- * Events without a resolved `conversion.id` are silently ignored — LinkedIn
- * is an opt-in conversion model.
+ * A rule without `conversion` makes no call: LinkedIn is an opt-in
+ * conversion model. A `conversion` that resolves to no `id` fails the push
+ * with `missing-input`.
  */
 export interface Mapping {
   conversion?: WalkerOSMapping.Value;
 }
 
 /**
- * Env — mock surface for tests and dev. The destination mutates
+ * Env: mock surface for tests and dev. The destination mutates
  * `window._linkedin_partner_id` / `window._linkedin_data_partner_ids` and
  * installs `window.lintrk` in init; tests can pre-seed `window.lintrk` with
  * a spy to skip the script injection path.
