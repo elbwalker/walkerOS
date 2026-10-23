@@ -75,3 +75,11 @@ on it. On a destination that also configures `ga4` or `ads`, the same flag
 governs whether those scripts are loaded too.
 
 <Configuration type="destination" data={data} />
+
+## dataLayer example
+
+A mapped event is pushed to the dataLayer with `event` set to the mapped name
+and the mapped values beside it. The rule selects GTM with an empty `gtm`
+setting.
+
+<StepExample example={data.examples.step.gtmDataLayerPush} />

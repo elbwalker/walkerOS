@@ -48,8 +48,8 @@ The destination supports two tracking approaches:
 <Tabs groupId="tracker-mode">
   <TabItem value="spjs" label="JavaScript Tag (sp.js)" default>
 
-Loads the Snowplow tracker script automatically. This approach is simple to
-set up and works everywhere.
+With `loadScript: true`, the destination loads the Snowplow tracker script
+(sp.js).
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -105,7 +105,7 @@ const { elb } = await startFlow({
 Uses imported functions directly: smaller bundles through tree-shaking, and
 type-safe calls.
 
-**Available packages and functions:**
+Available packages and functions:
 
 | Package | Functions | Purpose |
 |---------|-----------|---------|
@@ -372,6 +372,7 @@ event data comes from the rule's `settings.data`.
   name: 'video play',
   data: {
     id: 'video-123',
+    playbackId: 'playback-1',
     title: 'Product Demo',
     currentTime: 0,
     duration: 120,
@@ -380,26 +381,32 @@ event data comes from the rule's `settings.data`.
 
 await elb({
   name: 'video progress',
-  data: { id: 'video-123', percentProgress: 25 },
+  data: { id: 'video-123', playbackId: 'playback-1', percentProgress: 25 },
 });
 
 await elb({
   name: 'video pause',
-  data: { id: 'video-123', currentTime: 45 },
+  data: { id: 'video-123', playbackId: 'playback-1', currentTime: 45 },
 });
 
 await elb({
   name: 'video end',
-  data: { id: 'video-123', duration: 120 },
+  data: { id: 'video-123', playbackId: 'playback-1', duration: 120 },
 });`}
   language="typescript"
 />
 
 ### Media mapping configuration
 
-Configure media event mappings with the `MEDIA_SCHEMAS` constants. The
-`MEDIA_PLAYER` entity (`media_player` 1-0-0) requires `currentTime`,
-`duration`, `ended`, `loop`, `muted`, `paused`, `playbackRate` and `volume`:
+Configure media event mappings with the `MEDIA_SCHEMAS` constants. Give every
+media rule the `SESSION` entity with one `mediaSessionId` per playback:
+Snowplow's media data model groups the events of a playback by this ID, and the
+destination attaches only the entities a rule lists. Every event of the playback
+must carry the ID (`playbackId` in the events above): an event without it is
+still sent, with an empty `SESSION` entity that fails Snowplow's schema
+validation. The `MEDIA_PLAYER` entity (`media_player` 1-0-0) requires
+`currentTime`, `duration`, `ended`, `loop`, `muted`, `paused`, `playbackRate`
+and `volume`:
 
 <CodeSnippet
   code={`import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
@@ -411,6 +418,9 @@ Configure media event mappings with the `MEDIA_SCHEMAS` constants. The
       settings: {
         snowplow: { actionSchema: MEDIA_SCHEMAS.PLAY },
         context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }, {
           schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
           data: {
             currentTime: 'data.currentTime',
@@ -430,15 +440,31 @@ Configure media event mappings with the `MEDIA_SCHEMAS` constants. The
       settings: {
         snowplow: { actionSchema: MEDIA_SCHEMAS.PERCENT_PROGRESS },
         data: { map: { percentProgress: 'data.percentProgress' } },
+        context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }],
       },
     },
     pause: {
       name: 'pause',
-      settings: { snowplow: { actionSchema: MEDIA_SCHEMAS.PAUSE } },
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.PAUSE },
+        context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }],
+      },
     },
     end: {
       name: 'end',
-      settings: { snowplow: { actionSchema: MEDIA_SCHEMAS.END } },
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.END },
+        context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }],
+      },
     },
   },
 }`}
@@ -447,7 +473,8 @@ Configure media event mappings with the `MEDIA_SCHEMAS` constants. The
 
 ### Ad tracking
 
-Track video advertisements with pre-roll, mid-roll, and post-roll events:
+Track video advertisements with pre-roll, mid-roll, and post-roll events. Ads
+belong to the playback, so their rules carry the same `SESSION` entity:
 
 <CodeSnippet
   code={`import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
@@ -459,6 +486,9 @@ Track video advertisements with pre-roll, mid-roll, and post-roll events:
       settings: {
         snowplow: { actionSchema: MEDIA_SCHEMAS.AD_BREAK_START },
         context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }, {
           schema: MEDIA_SCHEMAS.AD_BREAK,
           data: {
             breakId: 'data.breakId',
@@ -473,6 +503,9 @@ Track video advertisements with pre-roll, mid-roll, and post-roll events:
       settings: {
         snowplow: { actionSchema: MEDIA_SCHEMAS.AD_START },
         context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }, {
           schema: MEDIA_SCHEMAS.AD,
           data: {
             adId: 'data.adId',

@@ -347,7 +347,9 @@ export const RuleSchema = z
     condition: z
       .string()
       .optional()
-      .describe('Condition function as string: return true to process event'),
+      .describe(
+        'Condition function as string: the rule matches only when it returns true; otherwise the next rule is tried. A condition that throws fails the event.',
+      ),
     consent: ConsentSchema.optional().describe(
       'Not enforced yet. To require consent for a destination, set consent in its config.',
     ),
@@ -365,7 +367,7 @@ export const RuleSchema = z
       ])
       .optional()
       .describe(
-        'Batch scheduling: bare number is the debounce wait window (legacy); object form supports wait/size/age.',
+        'Batch scheduling: a number is the debounce wait window in ms; the object form sets wait, size and age. Works only on a destination with pushBatch.',
       ),
     include: z
       .array(z.string())
@@ -386,7 +388,7 @@ export const RuleSchema = z
         'Run side effects (settings.identify, ...) but suppress the destination default push call.',
       ),
     extend: RulePatchSchema.optional().describe(
-      'Merge mode: a partial rule deep-merged onto the package-shipped default at this key (instead of replacing it). A null value clears an inherited field.',
+      'Merge mode, only inside the settings.mapping of a package that ships default rules (@walkeros/transformer-ga4): a partial rule deep-merged onto the package-shipped default at this key instead of replacing it. A null value clears an inherited field. Validate rejects it in any other rule.',
     ),
     remove: z
       .array(z.string())
@@ -488,7 +490,7 @@ export const ResultSchema = z
     mappingKey: z
       .string()
       .optional()
-      .describe('Mapping key used (e.g., "product.view")'),
+      .describe('Mapping key used (e.g., "product view")'),
   })
   .meta({
     id: 'MappingResult',

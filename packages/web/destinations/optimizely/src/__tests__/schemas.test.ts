@@ -1,8 +1,8 @@
 import { isObject } from '@walkeros/core';
-import { settings } from '../schemas';
+import { mapping, settings } from '../schemas';
 
-function description(key: string): unknown {
-  const properties = settings.properties;
+function description(key: string, schema = settings): unknown {
+  const properties = schema.properties;
   return isObject(properties) && isObject(properties[key])
     ? properties[key].description
     : undefined;
@@ -16,6 +16,16 @@ describe('schemas', () => {
   });
 
   it('attributes text says when attributes are applied', () => {
-    expect(description('attributes')).toMatch(/user context is created/);
+    const attributes = description('attributes');
+    expect(attributes).toMatch(/user context is created/);
+    expect(attributes).toMatch(/differs from the previous event/);
+    expect(attributes).not.toMatch(/first event of each userId/);
+  });
+
+  it('eventKey text says it has no effect and names the rule name', () => {
+    const eventKey = description('eventKey', mapping);
+    expect(eventKey).toMatch(/no effect/);
+    expect(eventKey).toMatch(/rule's name/);
+    expect(eventKey).not.toMatch(/^Override/);
   });
 });

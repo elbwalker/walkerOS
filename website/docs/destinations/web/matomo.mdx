@@ -92,23 +92,34 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
-A destination with `config.consent` tells Matomo about a revocation:
-`forgetConsentGiven` stops link tracking too, and a grant sends
-`setConsentGiven`. An event no rule maps fails with `missing-input` (add an `ignore: true` rule for events you do not send), and an
-invalid `goalId` sends the hit without the goal and logs one ERROR line per
-cause. A rule with `silent: true` sends only its goal.
+With `loadScript: true` the destination loads `matomo.js` from `url` and sets
+the tracker URL and site id; a missing `siteId` or `url` fails it with a
+`config` error. Without `loadScript`, your own Matomo snippet does both.
+Commands go onto Matomo's `_paq` queue, which the tracker works through once
+it has loaded, so events pushed before that count as sent. If the injected
+`matomo.js` fails to load, the pushes after its error fail with
+`vendor-not-loaded` and an ERROR line. If no tracker ever loads (no
+`loadScript` and no snippet of your own, or a `matomo.js` that neither loads
+nor fails), every event counts as sent and none reaches Matomo.
+
+A destination with `config.consent` tells Matomo when its consent changes:
+once none of its required keys is granted, it sends `forgetConsentGiven`, which
+stops link tracking too, and a grant sends `setConsentGiven`.
 
 ## Unmapped events
 
-An event without `rule.name` that is not a page view and sets no tracking flag
-(`siteSearch`, `contentImpression` or `contentInteraction`) sends only its goal
-when the rule has `settings.goalId`, so a goal-only rule needs no name. Without
-a goal, such an event fails with `missing-input`; add an `ignore: true` rule for
-events you do not send.
+A page view needs no rule: it sends `trackPageView` with the page title. Any
+other event without `rule.name` and without a tracking flag (`siteSearch`,
+`contentImpression` or `contentInteraction`) sends only its goal when the rule
+has `settings.goalId`, so a goal-only rule needs no name. Without a goal, such
+an event fails with `missing-input`; add an `ignore: true` rule for events you
+do not send. A rule with `silent: true` sends only its goal, and nothing
+without one.
 
-A `goalId` must be a Matomo goal ID, a positive integer like `1` or `"1"`. The
-destination sends the event's own hit without the goal and logs one ERROR line
-per cause.
+A `goalId` must be a Matomo goal ID, a positive integer like `1` or `"1"`.
+Another value is skipped and logs one ERROR line per cause: the event's own
+hit goes without the goal, a goal-only rule fails with `missing-input`, and a
+`silent: true` rule sends nothing.
 
 ## Ecommerce
 

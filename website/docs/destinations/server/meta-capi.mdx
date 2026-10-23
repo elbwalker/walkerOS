@@ -96,9 +96,13 @@ The server event is built from the walkerOS event:
 | `action_source` | `settings.action_source`, or `website` if it is not set. |
 | `event_source_url` | `event.source.url`, added only when `action_source` is `website`. |
 
-Keys returned by `data` mappings are added to the top level of the server event. `user_data` combines `settings.user_data` with the `user_data` mapped in the destination `config.data` and in the rule's `data`. When the same key is mapped in more than one place, the rule's value wins.
+Keys returned by `data` mappings are added to the top level of the server event. Meta reads the business data of an event (`value`, `currency`, `contents`, `order_id`, `content_type`, `num_items`) only from the `custom_data` object, so map those keys under `custom_data`; Meta does not document them at the top level of the server event. `user_data` combines `settings.user_data` with the `user_data` mapped in the destination `config.data` and in the rule's `data`. When the same key is mapped in more than one place, the rule's value wins.
 
 If `user_data` contains `fbclid`, the destination replaces it with `fbc` in the format `fb.1.{creationTime}.{fbclid}`. The creation time is the session start in milliseconds when the collector has a session, and the event timestamp otherwise.
+
+A `Purchase` rule that puts the order into `custom_data`:
+
+<StepExample example={data.examples.step.purchase} />
 
 If `test_event_code` is set, it is added to the request body.
 

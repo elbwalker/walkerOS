@@ -1,7 +1,7 @@
 # walkerOS Flow Demo
 
-Real 1st party data collection and tag management with walkerOS. A
-production-ready live demo for data ownership and sovereignty.
+First-party data collection and tag management with walkerOS, as a live demo
+that you deploy to your own Google Cloud project.
 
 ## Prerequisites
 
@@ -26,28 +26,22 @@ export ENDPOINT=YOUR_ENDPOINT
 
 ## Step 1: Minimal Server Flow
 
-The simplest possible flow: receive events and log them.
+The simplest possible flow, saved as `server.json`: receive events and log them.
 
 ```json
 {
   "version": 4,
   "flows": {
     "server": {
-      "server": {},
-      "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {}
-      },
+      "config": { "platform": "server" },
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
           "import": "sourceExpress",
           "config": {
             "settings": {
-              "path": "/collect",
-              "port": 8080,
-              "status": true
+              "paths": ["/collect"],
+              "port": 8080
             }
           }
         }
@@ -107,31 +101,24 @@ curl -X POST $ENDPOINT/collect \
 
 ## Step 2: Add BigQuery Destination
 
-Now store events in YOUR BigQuery - real data sovereignty.
+Now store events in your own BigQuery.
 
-Add the BigQuery destination to your flow.json:
+Add the BigQuery destination to `server.json`:
 
 ```json
 {
   "version": 4,
   "flows": {
     "server": {
-      "server": {},
-      "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {},
-        "@walkeros/server-destination-gcp": {}
-      },
+      "config": { "platform": "server" },
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
           "import": "sourceExpress",
           "config": {
             "settings": {
-              "path": "/collect",
-              "port": 8080,
-              "status": true
+              "paths": ["/collect"],
+              "port": 8080
             }
           }
         }
@@ -151,10 +138,11 @@ Add the BigQuery destination to your flow.json:
           "package": "@walkeros/server-destination-gcp",
           "import": "destinationBigQuery",
           "config": {
+            "setup": true,
             "settings": {
-              "projectId": "$PROJECT_ID",
-              "datasetId": "$DATASET_ID",
-              "tableId": "$TABLE_ID",
+              "projectId": "$env.PROJECT_ID",
+              "datasetId": "$env.DATASET_ID",
+              "tableId": "$env.TABLE_ID",
               "location": "EU"
             }
           }
@@ -167,23 +155,31 @@ Add the BigQuery destination to your flow.json:
 
 **What changed:**
 
-- Added `@walkeros/server-destination-gcp` package
-- Added `bigquery` destination with your GCP project details
+- Added the `bigquery` destination of `@walkeros/server-destination-gcp` with
+  your GCP project details
+- `$env.PROJECT_ID`, `$env.DATASET_ID` and `$env.TABLE_ID` are read from the
+  environment when the flow runs
+- `"setup": true` lets `walkeros setup` create the dataset and table
 
 ### Deploy Step 2
 
 ```bash
+# Create the dataset and table once. The BigQuery client reads Application
+# Default Credentials: run `gcloud auth application-default login` first
+npx walkeros setup destination.bigquery -c ./server.json
+
 # Rebuild with the BigQuery destination
 npx walkeros bundle ./server.json -o dist/ --no-cache
 sed "s/^ARG WALKEROS_VERSION$/ARG WALKEROS_VERSION=$(npx walkeros --version)/" \
   Dockerfile.collect > dist/Dockerfile
 
-# Deploy to Cloud Run
+# Deploy to Cloud Run, with the values the $env references read
 gcloud run deploy walkeros-demo \
   --source ./dist \
   --region $REGION \
   --allow-unauthenticated \
-  --port 8080
+  --port 8080 \
+  --set-env-vars PROJECT_ID=$PROJECT_ID,DATASET_ID=$DATASET_ID,TABLE_ID=$TABLE_ID
 ```
 
 ### Verify in BigQuery
@@ -203,29 +199,16 @@ bq query --use_legacy_sql=false \
 
 ## Step 3: Add Web Flow
 
-Now add browser-side tracking that sends to YOUR server.
+Now add browser-side tracking that sends to your server.
 
-Add the `web` flow to your flow.json:
+Save the web flow as `web.json`:
 
 ```json
 {
   "version": 4,
   "flows": {
-    "server": {
-      // ... same as Step 2
-    },
     "web": {
-      "web": {
-        "windowCollector": "collector",
-        "windowElb": "elb"
-      },
-      "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/web-source-browser": {},
-        "@walkeros/destination-demo": {},
-        "@walkeros/web-destination-api": {},
-        "@walkeros/web-destination-gtag": {}
-      },
+      "config": { "platform": "web" },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
@@ -253,7 +236,14 @@ Add the `web` flow to your flow.json:
           "import": "destinationAPI",
           "config": {
             "settings": {
-              "url": "$ENDPOINT/collect"
+              "url": "$env.ENDPOINT/collect"
+            },
+            "mapping": {
+              "batch": {
+                "me": {
+                  "batch": 100
+                }
+              }
             }
           }
         },
@@ -269,9 +259,6 @@ Add the `web` flow to your flow.json:
             }
           }
         }
-      },
-      "collector": {
-        "run": true
       }
     }
   }
@@ -282,13 +269,14 @@ Add the `web` flow to your flow.json:
 
 - Browser source captures page views and tagged DOM events
 - Demo destination logs to browser console
-- API destination sends to YOUR Cloud Run endpoint
+- API destination sends to your Cloud Run endpoint, read from `$ENDPOINT` when
+  you bundle; the `batch me` events of the demo page's batch boxes go in batches
 - GA4 destination sends to Google Analytics (optional)
 
 ### Deploy Step 3
 
 ```bash
-# Build the web bundle: a single walker.js
+# Build the web bundle: a single walker.js ($ENDPOINT must be set)
 npx walkeros bundle ./web.json -o dist/web/ --no-cache
 
 # Host it on any static host, e.g. a public Cloud Storage bucket
@@ -303,21 +291,25 @@ export SERVE_URL=https://storage.googleapis.com/$BUCKET
 echo "walker.js available at: $SERVE_URL/walker.js"
 ```
 
+Point the walker.js `<script>` at the end of `index.html` to
+`$SERVE_URL/walker.js`, then open the page.
+
 ---
 
 ### What to Show
 
-1. **Click buttons** - See events in the visual console
-2. **Open Network tab** - Events go to YOUR endpoint, not google-analytics.com
-3. **Open BigQuery** - Events arrive in your database
-4. **Browser console** -
-   `elb({ name: 'custom event', data: { label: 'here' } })`
+1. Click the buttons and watch the events in the visual console.
+2. In the Network tab, the events go to your endpoint (and, with the GA4
+   destination, to Google Analytics).
+3. In BigQuery, the events arrive in your database.
+4. In the browser console, run
+   `elb({ name: 'custom event', data: { label: 'here' } })`.
 
 ---
 
 ## Step 4: Load Test
 
-Prove it's production-ready.
+Load test the server flow with k6.
 
 ```bash
 cd pentest
@@ -373,7 +365,7 @@ flows/
 | `$DATASET_ID` | Your BigQuery dataset                  |
 | `$TABLE_ID`   | Your BigQuery table (default: events)  |
 | `$REGION`     | Cloud Run region (e.g., europe-west3)  |
-| `$ENDPOINT`   | Your collect endpoint URL              |
+| `$ENDPOINT`   | Your Cloud Run service URL             |
 | `$SERVE_URL`  | Your walker.js hosting URL             |
 | `$BUCKET`     | Cloud Storage bucket hosting walker.js |
 

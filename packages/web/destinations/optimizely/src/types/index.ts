@@ -12,7 +12,7 @@ export interface Settings {
   sdkKey: string;
   /** walkerOS mapping value to resolve userId for experiment bucketing. */
   userId?: WalkerOSMapping.Value;
-  /** User attributes for audience targeting, applied to every event. */
+  /** User attributes for audience targeting, applied when the user context is created (first event, or a userId that differs from the previous event's). */
   attributes?: WalkerOSMapping.Value;
   /** Polling interval for datafile updates in ms. Default: 60000. */
   updateInterval?: number;
@@ -41,7 +41,7 @@ export type InitSettings = Partial<Settings>;
  * Per-rule mapping settings.
  */
 export interface Mapping {
-  /** Override event key sent to Optimizely. If omitted, event.name is used. */
+  /** Has no effect: the event key sent is the rule's name, or event.name. */
   eventKey?: string;
   /** Revenue mapping. Resolves to integer (cents). Passed as eventTags.revenue. */
   revenue?: WalkerOSMapping.Value;

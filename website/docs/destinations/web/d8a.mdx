@@ -146,4 +146,12 @@ nothing: if your consent source reports analytics consent as `analytics`,
 `como: { analytics: 'analytics_storage', marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'] }`.
 Disable consent mode with `como: false`.
 
+Until the first consent command, d8a counts consent as granted. Without
+`config.consent`, as in the installation example, the page view d8a sends when
+the tracker starts goes out as granted, and the `_d8a` cookies are set before a
+later denial and stay after it. With `config.consent`, such as
+`{ functional: true }`, the collector holds the destination until that consent
+is granted (see [consent management](/docs/guides/consent)), so the tracker
+starts and sends its page view only after the grant.
+
 <Configuration type="destination" data={data} />

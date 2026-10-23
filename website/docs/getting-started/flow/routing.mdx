@@ -48,7 +48,7 @@ The rules that apply everywhere:
 1. **Resolved per hop**: each route is evaluated when the event reaches it, never ahead of time. Its `match` reads `{ ingest, event }` as the previous step left them, so a route can decide on a value an earlier step loaded, for example a `state` get that writes `ingest.tier`. A conditional `next` on a transformer sees what that transformer did.
 2. **Repeated steps run as written**: a step listed twice runs twice.
 3. **Cycles**: a transformer's own `next` that leads back to a step already on that insertion path is skipped. Each copy of an event is also limited to 256 steps.
-4. **Unknown ids**: an id that names no transformer is logged as a warning and skipped, and the chain continues. `walkeros validate` reports it as an `UNKNOWN_ROUTE_TARGET` error.
+4. **Unknown ids**: an id that names no transformer is skipped and the chain continues; the collector logs one ERROR line per id. `walkeros validate` reports it as an `UNKNOWN_ROUTE_TARGET` error.
 5. **Forks and stops**: `many` splits the event into independent copies and `stop` ends one copy, see [Route operators](#route-operators) and [Dropping an event with `stop`](#dropping-an-event-with-stop).
 
 ## Where transformers run
@@ -104,6 +104,38 @@ A `string` names a transformer (or a path, see below). A `Route[]` runs each ent
 
 At every position, `match` reads the same root: `{ ingest, event }`. Use `ingest.*` for request context and `event.*` for the event as it is at that point (at `source.before`, the source's raw output). Each route is evaluated only when the event reaches it.
 
+### Match conditions
+
+A condition reads the value at `key`, a dot path into `{ ingest, event }`, and
+compares it with `value`, which is always a string:
+
+```json
+{ "key": "event.data.total", "operator": "gt", "value": "100" }
+```
+
+| Operator | Passes when the value at `key` |
+|----------|--------------------------------|
+| `eq` | equals `value` |
+| `contains` | contains `value` |
+| `prefix` | starts with `value` |
+| `suffix` | ends with `value` |
+| `regex` | matches the regular expression `value`; add `^` and `$` to match the whole value |
+| `gt` | is a number greater than `value` |
+| `lt` | is a number less than `value` |
+| `exists` | is set (not `undefined` or `null`). `value` is ignored but required: use `""` |
+
+`eq`, `contains`, `prefix`, `suffix` and `regex` compare text, case-sensitive.
+A number or boolean is compared as its text (`12` equals `"12"`), and a missing
+key reads as an empty string, so `eq` with `""` passes when the key is missing.
+`gt` and `lt` compare numbers: a numeric string counts (`"12"` is 12), an empty
+string or `null` counts as 0, and a missing key or other text never passes. An
+invalid `regex` pattern fails `walkeros validate`.
+
+`"not": true` on a condition inverts it. It also inverts a missing key: `gt`
+with `not` passes for an event without the key. Combine conditions with
+`{ "and": [...] }` (every condition passes) and `{ "or": [...] }` (any
+condition passes); both nest.
+
 ### Route operators
 
 A `RouteConfig` is a disjoint union. Pick the operator that matches the routing shape you need:
@@ -130,7 +162,8 @@ nothing and the event continues unchanged, here to the source's `next`.
 
 <FlowSlice feature="ga4-other-dropped" />
 
-The conditions use the combinator `and` and three operators:
+The first branch combines `prefix` and `regex` with `and`, and the script
+branch uses `suffix`:
 
 <FlowSlice feature="match-and" />
 

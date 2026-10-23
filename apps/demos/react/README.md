@@ -1,19 +1,20 @@
 # walkerOS React Demo
 
-This demo showcases how to integrate walkerOS into a React application using
-TypeScript and Vite.
+This demo integrates walkerOS into a React application built with TypeScript and
+Vite.
 
 ## Features
 
-- **Page Navigation Tracking**: Automatic page view tracking with React Router
-- **Global Context**: Different page contexts (page:A, page:B) for segmentation
-- **Consent Management**: Interactive consent bar with localStorage persistence
-- **Multiple Destinations**: Console logging, batch events, API, GA4, and
-  dataLayer
-- **Event Mapping**: Demonstrates how to transform events for different
-  destinations
-- **Data Attributes**: Declarative tracking using data-elb attributes
-- **Programmatic Tracking**: Manual event triggering from React components
+- **Shop pages**: home, category, product detail, checkout and order
+  confirmation, routed with React Router
+- **Page views**: `walker run` on every route change sends the page view
+- **Consent**: Accept, Deny and Reset in the control bar, with the choice kept
+  in `localStorage`
+- **Destinations**: console, console batch, API, GA4 and dataLayer
+- **Batching**: `visible` events go to the console batch destination in batches
+- **Tagging**: `data-elb` attributes built with the browser source's tagger
+- **Highlighting**: the control bar highlights tagged elements by attribute
+- **Programmatic Tracking**: events sent with `elb` from React components
 
 ## Setup
 
@@ -33,42 +34,56 @@ The app will be available at http://localhost:3001
 
 ## Configuration
 
-The walkerOS configuration is located in `src/walker/config.json`. It includes:
+The walkerOS setup is in `src/walker/index.ts`, one `startFlow` call:
 
-- **Collector settings**: Consent defaults, session configuration
-- **Browser source**: Data attribute prefix, page view tracking, visible
-  tracking
+- **Collector**: `run: false` (the app sends `walker run` per route) and
+  `consent: { functional: true }`
+- **Browser source**: `pageview: true`, `elb: 'elb'`
 - **Destinations**:
-  - Console: Logs all events with timestamps
-  - Console Batch: Bundles visible events for batch processing
-  - API: Sends events to configured endpoint (default: httpbin.org)
-  - GA4: Google Analytics 4 with event mapping
-  - dataLayer: Pushes events to window.dataLayer
+  - Console: logs every event
+  - Console Batch: receives the `visible` events of every entity in batches
+    (`batch: 1000`, a wait of 1000 ms)
+  - API: sends events to `https://httpbin.org/post`, with analytics consent
+  - GA4: Google Analytics 4 with a placeholder measurement ID, with analytics
+    and marketing consent
+  - dataLayer: pushes events to `window.dataLayer`
+
+A stored choice (`walker_consent` in `localStorage`) is applied again when the
+app loads.
 
 ## Usage
 
 ### Consent Management
 
-The consent bar at the bottom allows users to:
+The control bar at the bottom allows users to:
 
 - **Accept**: Enables all tracking (functional, analytics, marketing)
 - **Deny**: Disables analytics and marketing, keeps functional
-- **Reset**: Clears consent choice
+- **Reset**: Forgets the stored choice; the current consent stays until the page
+  reloads
 
 ### Data Attribute Tracking
 
-Add tracking to any element using data attributes:
+Components build their `data-elb` attributes with the tagger from
+`src/walker/index.ts`:
 
-```html
-<!-- Track entity with action -->
-<div data-elb="product" data-elbaction="click">
-  <h3 data-elb-product="name:#innerText">Product Name</h3>
-  <p data-elb-product="price:#innerText">$99.99</p>
-</div>
+```tsx
+import { tagger } from '../walker';
 
-<!-- Set global properties -->
-<a data-elbglobals="page:A" href="/page-a">Page A</a>
+<Link
+  to={`/product/${product.id}`}
+  {...tagger()
+    .entity('product')
+    .action('click')
+    .data({ id: product.id, name: product.name, price: product.price })
+    .context('position', index + 1)
+    .get()}
+>
 ```
+
+This renders `data-elb="product"`, `data-elbaction="click:click"`,
+`data-elb-product="id:...;name:...;price:..."` and
+`data-elbcontext="position:1"`.
 
 ### Programmatic Tracking
 
@@ -91,23 +106,21 @@ window.elb('walker consent', {
 
 ## Development
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
-- `npm run typecheck` - Check TypeScript types
+- `npm run dev`: start the development server
+- `npm run build`: build for production
+- `npm run lint`: run ESLint
+- `npm run typecheck`: check the TypeScript types
+- `npm test`: run the tests
 
 ## Architecture
 
 ```
 src/
-├── walker/              # walkerOS configuration and initialization
-│   ├── config.json     # Main configuration file
-│   └── index.ts        # Initialization logic
-├── components/         # React components
-│   ├── Navigation.tsx  # Top navigation with page globals
-│   └── ConsentBar.tsx  # Consent management UI
-├── pages/              # Page components
-│   ├── PageA.tsx       # Demo page A
-│   └── PageB.tsx       # Demo page B
-└── App.tsx            # Main app component with routing
+├── walker/
+│   ├── index.ts        # startFlow, stored consent, tagger
+│   └── destinations/   # Console, console batch and dataLayer destinations
+├── components/         # Navigation, ControlBar, product and checkout parts
+├── pages/              # Home, Category, Detail, Checkout, OrderConfirmation
+├── data/products.ts    # Product data
+└── App.tsx             # Routes, walker run on every route change
 ```

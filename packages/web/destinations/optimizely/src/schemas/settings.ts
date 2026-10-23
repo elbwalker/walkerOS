@@ -17,7 +17,7 @@ export const SettingsSchema = z
     attributes: z
       .unknown()
       .describe(
-        'User attributes for audience targeting. Resolves to Record<string, unknown>. Applied through createUserContext() when the user context is created, on the first event of each userId; a later change for the same userId is not applied.',
+        "User attributes for audience targeting. Resolves to Record<string, unknown>. Applied through createUserContext() when the user context is created: on the first event and on every event whose userId differs from the previous event's. A change while the userId stays the same is not applied.",
       )
       .optional(),
     updateInterval: z

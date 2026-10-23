@@ -4,7 +4,7 @@ export const MappingSchema = z.object({
   eventKey: z
     .string()
     .describe(
-      'Override event key sent to Optimizely. If omitted, the walkerOS event name is used. Must match an event created in your Optimizely project.',
+      "Has no effect: the event key sent to Optimizely is the rule's name, or the walkerOS event name. Set the rule's name to an event created in your Optimizely project.",
     )
     .optional(),
   revenue: z

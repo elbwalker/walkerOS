@@ -114,6 +114,27 @@ describe('runExamples', () => {
       ).resolves.toBeUndefined();
     });
 
+    it('runs a mapping as published: a function that needs its module fails', async () => {
+      const scoped: Flow.StepExamples = {
+        scoped: {
+          in: getEvent('page view', { user: { id: 'user-1' } }),
+          mapping: {
+            condition: (event: unknown) =>
+              isObject(event) && event.name === 'page view',
+            silent: true,
+          },
+          out: [],
+        },
+      };
+
+      await expect(
+        runExamples('destination', good, scoped, { settings }),
+      ).resolves.toBeUndefined();
+      await expect(
+        runExamples('destination', good, scoped, { settings, published: true }),
+      ).rejects.toThrow(/example scoped/);
+    });
+
     it('looks claimed examples up by their standard event name (R1, R3)', async () => {
       const examples: Flow.StepExamples = {
         anyKey: {

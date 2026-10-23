@@ -595,6 +595,40 @@ export interface RunOptions {
   settings?: Record<string, unknown>;
   /** The package's examples env (`examples.env`: `push` and `simulation`). */
   env?: Record<string, unknown>;
+  /**
+   * Run each example as `walkerOS.json` publishes it: every mapping function
+   * as its source text, evaluated without the module it was written in, so a
+   * function that needs an import fails here instead of in a user's flow.
+   */
+  published?: boolean;
+}
+
+/**
+ * A value as published: functions as source text, evaluated again in no
+ * module scope. Every `$code` object is evaluated, not only the ones made
+ * here, so pass only a package's own examples, never untrusted input.
+ */
+function asPublished(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  return JSON.parse(
+    JSON.stringify(value, (_, inner: unknown) =>
+      typeof inner === 'function' ? { $code: inner.toString() } : inner,
+    ),
+    (_, inner: unknown) =>
+      isObject(inner) && typeof inner.$code === 'string'
+        ? new Function(`return (${inner.$code});`)()
+        : inner,
+  );
+}
+
+/** The examples with their mappings as published. */
+function publishedExamples(examples: Flow.StepExamples): Flow.StepExamples {
+  return Object.fromEntries(
+    Object.entries(examples).map(([name, example]) => [
+      name,
+      { ...example, mapping: asPublished(example.mapping) },
+    ]),
+  );
 }
 
 export interface DestinationRunOptions extends RunOptions {
@@ -974,7 +1008,7 @@ export function runExamples<T extends Source.TypesGeneric>(
 ): Promise<void>;
 export async function runExamples(...given: RunArgsGiven): Promise<void> {
   const args = complete(given);
-  const examples = args[2];
+  const examples = args[3].published ? publishedExamples(args[2]) : args[2];
   const problems: string[] = [];
 
   if (args[0] === 'destination' && args[3].claims)

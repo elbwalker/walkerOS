@@ -180,9 +180,14 @@ not forward user IDs, emails, phone numbers, or the `li_fat_id` click ID.
 
 The [server LinkedIn destination](/docs/destinations/server/linkedin) sends
 conversions through the Conversions API with `eventId` set to the event's `id`
-and can forward `li_fat_id`. Map `eventId: 'id'` here, as in the example above,
-to [deduplicate](/docs/destinations/server/linkedin#browser-deduplication)
-conversions sent from both.
+and can forward `li_fat_id`. To
+[deduplicate](https://learn.microsoft.com/en-us/linkedin/marketing/conversions/deduplication)
+conversions sent from both, LinkedIn needs a separate conversion rule for each
+data source: the Insight Tag rule's ID goes in `conversion.id` here, the
+Conversions API rule's ID in the server destination's `conversionRuleId`. Map
+`eventId: 'id'` here, as in the example above, so both send the same event ID.
+LinkedIn then counts a conversion it receives from both once, under the Insight
+Tag rule.
 
 ## Related
 

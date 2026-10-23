@@ -457,7 +457,8 @@ export namespace Flow {
      * Name of the transformer to execute after this source captures an event.
      * Creates a pre-collector transformer chain. Chain ends at the collector.
      * If omitted, events route directly to the collector.
-     * Can be an array for explicit chain control (bypasses transformer.next resolution).
+     * Can be an array: its members run in order, and each member's own `next`
+     * runs right after that member.
      */
     next?: Route;
 

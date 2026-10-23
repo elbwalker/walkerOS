@@ -6,7 +6,7 @@ sidebar_position: 99
 
 # Create Your Own Destination
 
-This guide provides the essentials for building a custom walkerOS destination.
+This guide shows how to build a custom walkerOS destination.
 
 ## The destination interface
 
@@ -34,8 +34,8 @@ which is called for every event.
 
 ## The `push` function
 
-The `push` function is where you'll implement the logic to send the event to
-your desired service. It receives the `event` and a `context` object.
+The `push` function sends the event to your service. It receives the `event`
+and a `context` object.
 
 <CodeSnippet
   code={`type PushFn<T extends TypesGeneric = Types> = (
@@ -60,7 +60,7 @@ The push context contains:
 
 ## Example: A simple webhook destination
 
-Here is an example of a simple destination that sends events to a webhook URL.
+This example destination sends events to a webhook URL.
 
 <CodeSnippet
   code={`import { StepError, type Destination } from '@walkeros/core';
@@ -72,22 +72,29 @@ interface WebhookSettings {
 
 type Types = Destination.Types<WebhookSettings>;
 
-// 2. Create the destination object
+// 2. A missing setting is a failure, never a silent return
+function requireUrl(config: Destination.Config<Types>): string {
+  const url = config.settings?.url;
+  if (!url)
+    throw new StepError('Webhook needs settings.url', { code: 'config' });
+  return url;
+}
+
+// 3. Create the destination object
 export const destinationWebhook: Destination.Instance<Types> = {
   type: 'webhook',
   config: {},
 
+  // init fails when the destination cannot start
+  init({ config }) {
+    requireUrl(config);
+  },
+
   async push(event, { config, rule }) {
-    const { settings } = config;
-
-    // 3. A missing setting is a failure, never a silent return
-    if (!settings?.url)
-      throw new StepError('Webhook needs settings.url', { code: 'config' });
-
     // A rule with silent: true sends nothing; the push still returns normally
     if (!rule?.silent) {
       // 4. Send the event and await it; fetch resolves on an error status
-      const response = await fetch(settings.url, {
+      const response = await fetch(requireUrl(config), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(event),
@@ -151,23 +158,30 @@ never the value.
 ### Vendor scripts
 
 A web destination that loads a vendor script uses `loadVendor` from
-`@walkeros/web-core`. It injects the script once per page, into the document the destination's `env` provides (the page's own by default), so simulation and server-side rendering work without a browser page. It throws
-`vendor-not-loaded`, `vendor-not-ready` or `vendor-timeout`, so a blocked
-script shows as failed pushes instead of lost events.
+`@walkeros/web-core` and passes it the document of its `env`
+(`getEnv(env).document`, the page's own by default), so a simulation with a
+mock env never touches a real page. It injects the script once per page and
+fails with `vendor-not-loaded`, `vendor-not-ready` or `vendor-timeout`, so a
+blocked script shows as failed pushes instead of lost events.
 
 ### Conformance test
 
 `@walkeros/collector/dev` exports `conformance`, a test kit that runs a
-destination against a real collector and checks, among others, that a failing
-send is reported, that a failure never leaks event data into a log line, that a
-`silent` example sends nothing and that a revoked consent reaches the vendor.
-Call it from a Jest test with the profile that matches the destination:
-`http` for a destination that calls `fetch`, `sdk-env` for a server SDK,
-`web-sdk` for a web SDK started in `init`, `vendor-global` for a vendor script
-that defines a global, or `socket`. A browser profile (`web-sdk`,
-`vendor-global`) also needs the `page` option, imported from
-`@walkeros/web-core/dev`; without it the test fails and names that import. A setting that only works in pairs, such as
-"one of these two", is stated as `anyOf` in the settings schema.
+destination against a real collector and checks, among others, that `init`
+throws a `config` error naming each required setting, that a failing send is
+reported, that a failure never leaks event data into a log line, that a
+`silent` example sends nothing and, for a vendor script, that a revoked consent
+reaches the vendor. Call it from a Jest test on real timers with the
+destination, its step examples, its settings schema, minimal valid `settings`,
+the package `root` and the profile that matches the destination: `http` for a
+destination that calls `fetch`, `sdk-env` for a server SDK, `web-sdk` for a web
+SDK started in `init`, `vendor-global` for a vendor script that defines a
+global, or `socket`. A browser profile (`web-sdk`, `vendor-global`) also needs
+the `page` option, imported from `@walkeros/web-core/dev`; without it the test
+fails and names that import. The
+[conformance test template](https://github.com/elbwalker/walkerOS/blob/main/skills/walkeros-create-destination/templates/simple/conformance.test.ts)
+shows the call. A "one of these settings" rule is stated as `anyOf` in the
+settings schema.
 
 ## The `pushBatch` function (optional)
 
@@ -175,8 +189,9 @@ When the destination's config sets `batch` (see
 [Batch scheduling](/docs/mapping/rule#batch-scheduling)), the collector buffers
 events and calls `pushBatch` once per flush instead of `push` per event.
 `batch.entries` holds one entry per event with its `event`, mapped `data`,
-`rule`, `ingest` and `respond`. Without `pushBatch`, every event goes to `push` and the
-`batch` setting has no effect.
+`rule`, `ingest` and `respond`. Without `pushBatch`, every event goes to `push`,
+the `batch` setting has no effect and the collector logs one ERROR line when it
+registers the destination.
 
 If `pushBatch` throws or rejects, every entry goes to the destination's
 dead-letter queue and counts as failed. To report single rows, resolve
@@ -206,10 +221,11 @@ The optional `on` method lets your destination respond to collector lifecycle
 events, for example to handle consent changes or session management. Cleanup
 belongs in `destroy`.
 
-The collector calls `on` once the destination is initialized. A destination
-without an `init` method is initialized without one, when its first event
-clears its consent requirement (or consent is granted), and the `on` deliveries
-that waited meanwhile reach it then, in order.
+The collector calls `on` once the destination is initialized, with or without
+an `init` method; deliveries that arrive earlier wait and reach it then, in
+order. A destination with a consent requirement is initialized only once that
+requirement is met (see
+[Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent)).
 
 ### Available Events
 
@@ -223,9 +239,14 @@ that waited meanwhile reach it then, in order.
 The handler may be async. For `consent`, `user`, `globals` and `custom`, the
 collector waits for the handler to settle, up to `config.timeout` (10 seconds
 by default), before it pushes events to the destination. If the handler does
-not settle in that time, or rejects, the destination's events stay queued
-until a later delivery of the state settles, and are discarded at the next
-`walker run`. Lifecycle events are awaited too but hold no events, and they can
+not settle in that time, or rejects, the collector logs one ERROR line and
+holds the destination's events for one more `config.timeout`: the push result
+lists them as `queued` with the reason `held`, and a `walker run` discards
+them. A push after that window retries a delivery whose handler rejected. A
+handler that timed out and is still running gets no new delivery until it
+settles, and one that never settles gets none. Until a delivery
+succeeds, the held events and every later one fail with the code `blocked`.
+Lifecycle events are awaited too but hold no events, and they can
 reach the handler while it is still busy with a state update. The full rules
 are in [State delivery](/docs/collector/commands#state-delivery).
 
@@ -252,9 +273,9 @@ are in [State delivery](/docs/collector/commands#state-delivery).
 
 ## Setup lifecycle (optional)
 
-Components may implement an optional `setup()` lifecycle to provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook registrations) before the runtime ever processes events. Setup is **operator-time**: it runs only when an operator explicitly invokes `walkeros setup <kind>.<name>`. The runtime never auto-invokes it.
+Components may implement an optional `setup()` lifecycle to provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables, webhook registrations) before the runtime processes events. Setup runs only when an operator invokes `walkeros setup <kind>.<name>`; the runtime never calls it.
 
-This separation isolates one-shot infrastructure provisioning from the high-volume event hot path. Production flows can ship with restricted runtime credentials (write-only) while operators run setup with elevated credentials (create) once per environment.
+Provisioning therefore stays off the event path. Production flows can ship with restricted runtime credentials (write-only), while an operator runs setup once per environment with elevated credentials (create).
 
 The same lifecycle applies to sources, destinations, and stores. Transformers are pure functions and have no setup.
 

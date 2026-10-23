@@ -10,13 +10,20 @@ export const SettingsSchema = z
       ),
     disableTextCapture: z
       .boolean()
-      .describe('Disable Heap auto text capture. Default: true.')
+      .describe(
+        'Disable Heap auto text capture. Default: true. Applied only with loadScript: true, in the config the classic Heap SDK reads when it loads; with your own Heap snippet, set it there.',
+      )
       .optional(),
-    secureCookie: z.boolean().describe('SSL-only cookies.').optional(),
+    secureCookie: z
+      .boolean()
+      .describe(
+        'SSL-only cookies. Applied only with loadScript: true, in the config the classic Heap SDK reads when it loads.',
+      )
+      .optional(),
     heapConfig: z
       .record(z.string(), z.unknown())
       .describe(
-        'Additional heap.load() options, merged over the options above. Example: { "trackingServer": "https://heap.example.com" }.',
+        'Additional options for the classic Heap SDK, merged over disableTextCapture and secureCookie. Applied only with loadScript: true. Example: { "trackingServer": "https://heap.example.com" }.',
       )
       .optional(),
     identify: z

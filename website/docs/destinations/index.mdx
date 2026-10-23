@@ -58,8 +58,13 @@ an event the destination cannot send, a vendor script that did not load, and a
 destination whose `init` failed. See [Logger](/docs/collector/logger#failure-codes)
 for the codes.
 
-Two things are not failures. Unmet consent only waits (or, on a server, skips)
-the event and is a `DEBUG` line. A rule with `ignore: true` or `silent: true`
+Two things are not failures. An event without the destination's required
+consent waits: the push result lists the destination under `queued` with the
+reason `consent`, no line is logged, and the event is sent once consent is
+granted. A server flow built by the CLI skips such an event instead, with one
+`DEBUG` line (see
+[consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
+A rule with `ignore: true` or `silent: true`
 is a decision, not an error, and every destination honours both. A silent rule whose side-effect mapping (identify, group and the like) resolves to nothing sends nothing, counts as delivered and writes one DEBUG line that names the call and the mapping key, never the value. Events a
 destination batches answer `queued` until the flush.
 

@@ -403,7 +403,8 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
 /**
  * Consent revoked → amplitude.setOptOut(true). The destination checks
  * the consent keys declared in config.consent and toggles optOut
- * accordingly (strict: all required keys must be granted).
+ * accordingly (one granted required key is enough, as at the collector's
+ * consent gate).
  *
  * Uses the canonical StepExample.command='consent' pattern: the test
  * runner dispatches via elb('walker consent', in) instead of pushing

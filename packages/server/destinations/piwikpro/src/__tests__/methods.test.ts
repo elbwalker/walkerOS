@@ -183,6 +183,11 @@ describe('methodParams', () => {
       [products, { orderId: 'o1' }],
       'ecommerceOrder: grandTotal missing',
     ],
+    [
+      'ecommerceAddToCart',
+      [products, { currencyCode: 'eur' }],
+      'ecommerceAddToCart: currencyCode not an ISO 4217 code',
+    ],
   ])('%s %j is invalid', (name, args, invalid) => {
     expect(methodParams(name, args)).toEqual({ invalid });
   });
@@ -236,11 +241,23 @@ describe('methodParams', () => {
     });
   });
 
-  it('ignores arguments beyond the method list', () => {
-    const info = { orderId: 'o1', grandTotal: 10 };
-    expect(
-      methodParams('ecommerceOrder', [products, info, { currencyCode: 'EUR' }]),
-    ).toEqual(methodParams('ecommerceOrder', [products, info]));
+  // The JS API's trailing options object; its currencyCode is the API's cur.
+  it.each<[MethodName, unknown[]]>([
+    ['ecommerceProductDetailView', [products]],
+    ['ecommerceAddToCart', [products]],
+    ['ecommerceRemoveFromCart', [products]],
+    ['ecommerceCartUpdate', [products, 840]],
+    ['ecommerceOrder', [products, { orderId: 'o1', grandTotal: 10 }]],
+  ])('%s sends the options currencyCode as cur', (method, args) => {
+    const without = methodParams(method, args);
+    const withCurrency = methodParams(method, [
+      ...args,
+      { currencyCode: 'EUR' },
+    ]);
+    if (!('params' in without)) throw new Error(`${method} is invalid`);
+    expect(withCurrency).toEqual({
+      params: [...without.params, ['cur', 'EUR']],
+    });
   });
 });
 

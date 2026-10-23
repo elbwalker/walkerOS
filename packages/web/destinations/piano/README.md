@@ -50,11 +50,12 @@ npm install @walkeros/web-destination-piano
 }
 ```
 
-With `loadScript: true` the destination loads the Piano SDK script and calls
-`pa.setConfigurations({ site, collectDomain })` once the script has loaded.
-Events that arrive before that are dropped, so the page view at start is lost.
-If you load the SDK yourself before walkerOS starts, omit `loadScript`; the
-destination then configures `window.pa` on init.
+With `loadScript: true` the destination loads the Piano SDK script. Events
+pushed while it loads wait for it, so the page view at start is sent; if the
+script is blocked, they fail with `vendor-not-loaded`. If you load the SDK
+yourself before walkerOS starts, omit `loadScript`. Either way the destination
+calls `pa.setConfigurations` with `site`, `collectDomain` and `options` before
+its first event.
 
 ## Settings
 

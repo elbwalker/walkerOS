@@ -95,8 +95,11 @@ Add to your `flow.json` destinations:
 
 walkerOS sets two defaults that differ from Amplitude's: `autocapture: false`,
 because walkerOS sources capture events, and `identityStorage: 'none'`, so the
-SDK sets no identity cookies. It still writes its event queue and plugin state
-to `localStorage`. Without stored identity, Amplitude starts a new
+SDK sets no identity cookies. At init the SDK still fetches its remote
+configuration from Amplitude (`sr-client-cfg.amplitude.com`, or the EU host with
+`serverZone: 'EU'`) and keeps it in `localStorage`, next to its queue of unsent
+events and the state of any plugin that runs. `fetchRemoteConfig: false` turns
+that fetch off. Without stored identity, Amplitude starts a new
 device ID and session on every page load. To keep them across page loads, map
 `device` and `session` in `settings.identify` (see the Destination identify
 example above), or set `identityStorage` yourself.
@@ -105,25 +108,27 @@ example above), or set `identityStorage` yourself.
 
 The destination's `config.consent` decides when Amplitude is allowed to
 collect: a revocation calls `setOptOut(true)` and a grant `setOptOut(false)`.
-A missing `apiKey` fails the destination with a `config` error, and an Amplitude
-call that fails fails the event, which shows as a failed push.
+A missing `apiKey` fails the destination with a `config` error. Otherwise an
+event counts as delivered once the Amplitude SDK has accepted the call, and only
+a call that throws fails it. The SDK sends events afterwards, and a request that
+Amplitude rejects (a wrong `apiKey`) or that never reaches Amplitude is not
+reported: the push result stays `ok`, `status.destinations.amplitude.failed`
+stays 0 and no ERROR line is logged. The only sign is the SDK's own console
+message, `Amplitude Logger [Error]`.
 
 ## Plugins
 
 With just `apiKey` set, only Amplitude analytics starts. Session Replay,
 Experiment, and Guides & Surveys start only when you enable them: setting
 `sessionReplay`, `experiment.deploymentKey` or `engagement` starts that plugin
-and no other. Session Replay fetches its remote configuration from Amplitude and
-Guides & Surveys loads its SDK from `cdn.amplitude.com`. Session Replay and
-Experiment ship in the destination's bundle. Events from a setup with plugins no
-longer carry the `amplitude-ts-unified` library prefix. The settings accept SDK
+and no other. Guides & Surveys loads its SDK from `cdn.amplitude.com`. Session
+Replay and Experiment ship in the destination's bundle. The settings accept SDK
 options that the schema does not list and pass them through.
 
 Session Replay records a sampled share of sessions. The share is
 `sessionReplay.sampleRate` (default 0) unless the project's Session Replay
 sampling settings in Amplitude set it; those take precedence and also decide
-whether capture is on. Experiment uses `experiment.deploymentKey`, or the API key
-when it is missing.
+whether capture is on.
 
 ```typescript
 settings: {

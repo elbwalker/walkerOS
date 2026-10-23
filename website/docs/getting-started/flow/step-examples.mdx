@@ -359,6 +359,46 @@ it.each(Object.entries(examples))(
 
 This pattern means your flow config is the single source of truth for both documentation and tests.
 
+### Run a package's examples with `runExamples`
+
+Packages do not hand-roll that loop. `runExamples` from `@walkeros/collector/dev` starts a real collector for each example, applies the example's mapping through the destination's real config (`example.mapping ?? config.mapping`), records the vendor calls and compares them with `out`. A fixture that declares an `outcome` is compared with the push result as well.
+
+<CodeSnippet
+  code={`import type { StandardEventName } from '@walkeros/core';
+import { runExamples } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
+import { destinationMeta } from '@walkeros/web-destination-meta';
+import { examples } from '@walkeros/web-destination-meta/dev';
+
+const claims: StandardEventName[] = [
+  'page view',
+  'product view',
+  'product add',
+  'order complete',
+];
+
+// The init example takes a config as in, not an event, so it runs separately
+const { init, ...events } = examples.step;
+
+it('maps the claimed standard events', async () => {
+  await runExamples('destination', destinationMeta, events, {
+    settings: { pixelId: '1234567890' },
+    env: { push: examples.env.push, simulation: examples.env.simulation },
+    page,
+    claims,
+    published: true,
+  });
+});`}
+  language="typescript"
+/>
+
+- **Pinned standard events.** An example for a standard event starts from `getEvent(name)` in `@walkeros/core`, which returns the same event on every run: timestamp `1700000000000` and an id derived from the event name only. Because of that, an `out` can name the timestamp and id literally.
+- **`claims`.** The standard events a destination maps. Each claimed event needs a public example (the most complete case of it), and every public event example must be claimed. A claimed event without one, or a public event example that is not claimed, fails the run. Init examples take a config instead of an event and are not part of the check.
+- **`public: false`.** Edge cases, other tools and failure fixtures stay in the package as tests but out of docs, the app and MCP.
+- **Failure examples.** A fixture with `outcome` (and `respond` for a vendor answer) states how a failure is reported, such as `{ status: 'failed', code: 'missing-input' }`. Failure paths are examples too, not only the happy path.
+- **`published: true`.** Runs each mapping function the way `walkerOS.json` publishes it, as source text outside its module. A condition that relies on an imported helper passes as written and fails here, as it would in your flow.
+- **Literal outs.** An `out` is written from the vendor's documented request, not computed by the package's own code. If the code disagrees with the documented request, the example or the code is wrong, and the run shows it.
+
 ## Package-level vs flow-level examples
 
 Examples exist at two levels:

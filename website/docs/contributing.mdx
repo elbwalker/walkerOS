@@ -5,9 +5,9 @@ position: 7
 ---
 
 walkerOS is open source and will remain open source. We believe companies should
-own their data infrastructure. True data ownership only comes when you control
-your data collection. No vendor lock-in, no surprises. You own your code, your
-data, your future.
+own their data infrastructure, and that includes controlling their own data
+collection. With walkerOS you keep your code and your data, without vendor
+lock-in.
 
 There are multiple ways to contribute, and we appreciate them all.
 
@@ -58,8 +58,8 @@ runs for release prep.
 ### Code
 
 - Fix bugs or implement new features
-- Create new destinations or sources (see `skills/create-destination` and
-  `skills/create-source` for guidance)
+- Create new destinations or sources (see `skills/walkeros-create-destination`
+  and `skills/walkeros-create-source` for guidance)
 - Improve existing packages
 
 ### Documentation
@@ -114,16 +114,23 @@ The project is organized as a monorepo:
 
 ```text
 packages/
-├── core/           # Types, utilities, schemas
-├── collector/      # Event processing engine
-├── config/         # Shared tooling config
-├── web/            # Browser: sources/, destinations/
-└── server/         # Node.js: sources/, destinations/
+├── core/            # Types, utilities, schemas
+├── collector/       # Event processing engine
+├── config/          # Shared tooling config
+├── cli/             # The walkeros command line
+├── runner/          # Runs built flows (walkeros/flow image)
+├── mcps/            # MCP servers
+├── destinations/    # Destinations for every platform (demo)
+├── transformers/    # Transformers for every platform
+├── web/             # Browser: core/, sources/, destinations/
+└── server/          # Node.js: core/, sources/, destinations/, stores/, transformers/
 
 apps/
-├── quickstart/     # Validated examples
-├── walkerjs/       # Browser bundle
-└── demos/          # Demo applications
+├── explorer/        # Component and style library
+├── quickstart/      # Validated examples
+├── walkerjs/        # Browser bundle
+├── storybook-addon/ # Storybook addon
+└── demos/           # Demo applications
 ```
 
 ## Resources

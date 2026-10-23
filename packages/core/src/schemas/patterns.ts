@@ -256,7 +256,9 @@ export const ProcessingControlConfig = z
     condition: z
       .string()
       .optional()
-      .describe('Condition function: return true to process'),
+      .describe(
+        'Condition function: the rule matches only when it returns true',
+      ),
   })
   .partial();
 

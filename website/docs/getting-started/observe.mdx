@@ -24,9 +24,9 @@ Your code and config carry only public connect values: the observer `url` and
 the project `binding`. Neither is a secret, both are safe to commit.
 
 The per-session credential arrives out-of-band: as a URL parameter in the
-browser, or as environment variables on the server. **No credentials ever live
-in committed artifacts**, not in `flow.json`, not in a built bundle, not in
-your application code.
+browser, or as environment variables on the server. No credential is ever
+stored in a committed artifact: `flow.json`, a built bundle and your
+application code carry none.
 
 ## Web, integrated mode
 
@@ -63,7 +63,9 @@ Then open your dev URL with a session credential appended:
 />
 
 On load, the runtime checks that the credential's binding matches the one in
-your config, persists the credential in `localStorage`, removes the parameter
+your config (a credential for another binding is ignored and logged at `WARN`,
+which the default `ERROR` log level hides), persists the credential in
+`localStorage`, removes the parameter
 from the address bar, and starts posting flow records to the observer. Later
 page loads reuse the stored credential, so one activation lasts until the
 Observe session ends.
@@ -147,10 +149,15 @@ WALKEROS_OBSERVE_LEVEL=standard # optional: off | standard | trace`}
 `observeFromEnv` returns a config only when the full trio (`URL`,
 `DEPLOYMENT_ID`, `INGEST_TOKEN`) is present; otherwise it returns `undefined`
 and the deployment does no observation work. A set but unrecognized
-`WALKEROS_OBSERVE_LEVEL` (a typo like `offf`) also disables observation
-entirely rather than silently observing at `standard`. The ingest token is
-the one secret in this setup, which is why it lives in the deployment
-environment and nowhere else.
+`WALKEROS_OBSERVE_LEVEL` (a typo like `offf`) also makes it return
+`undefined`, so nothing is observed. The ingest token is the one secret in
+this setup, which is why it lives in the deployment environment and nowhere
+else.
+
+A bundled server flow needs no code for this: `runneros start` reads the same
+variables and observes once all three are set. It handles an unrecognized
+`WALKEROS_OBSERVE_LEVEL` differently: it logs
+`Ignoring invalid WALKEROS_OBSERVE_LEVEL` and observes at `standard`.
 
 ## Connect values vs telemetry knobs
 
@@ -160,20 +167,21 @@ questions:
 | Fields | Question | Who sets them |
 | --- | --- | --- |
 | `url`, `binding` | Where to attach, and which project may attach | You, committed once |
-| `level`, `sample` | How verbose managed telemetry is, and what fraction of records it emits | The managing platform, per deployment |
+| `level`, `sample` | How verbose the records are, and what fraction of events they cover | You, in the web bundle's config; on a server, `level` in `WALKEROS_OBSERVE_LEVEL` and `sample` only in code, on the `observe` object of `startFlow` |
 
 The web connect pair is `url` and `binding`, nothing else. `level`
-(`off` | `standard` | `trace`) and `sample` (a fraction from 0 to 1) are
-managed-telemetry knobs: leave them unset in your own config and let the
-managing platform decide what gets captured. It sets them per runtime, not per
-session: an Observe session's `--level` steers the container arm it provisions,
-while the web arm captures at the level baked into the bundle it loads. On the
-server, `WALKEROS_OBSERVE_LEVEL` is the same knob in environment form.
+(`off` | `standard` | `trace`) and `sample` (a fraction from 0 to 1) decide
+what gets captured. A web arm captures at the level and sample baked into the
+bundle it loads, from `config.observe` or the `observe` object of `startFlow`;
+unset, they are `standard` and `1`. On the server, `WALKEROS_OBSERVE_LEVEL` is
+the same knob in environment form; the `config.observe` block of a server flow
+has no effect on `runneros start`. An Observe session in the walkerOS app sets
+the level of the container arm it starts.
 
 ## Bring your own observer
 
-Observation is an open channel, not a hosted-only feature. Any function can
-receive the same flow records via `observers`:
+Observation also works without the hosted app: any function can receive the
+same flow records via `observers`:
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
@@ -188,35 +196,35 @@ records to your own endpoint, a log pipeline, or a test assertion.
 
 ## Observability and runtime tracing
 
-A flow's baseline observability is set by the `flow.<name>.config.observe` block:
+`level` decides what a runtime emits:
 
 | Level | What the runtime emits |
 |-------|------------------------|
-| `off` | No baseline records are emitted. In a managed deployment the observer and trace poll stay wired, so runtime trace can still elevate to `trace`; a self-hosted bundle built with no telemetry option makes no fetches at all. |
+| `off` | No records. Under `runneros start`, a trace window can still raise it to `trace` (see below). |
 | `standard` (default) | Structural FlowState records, without inbound or outbound event payloads. |
-| `trace` | Full payloads on every hop (inbound and outbound), sample rate `1`. |
-
-When `observe` is omitted, managed deployments default to `standard`.
+| `trace` | Full payloads on every hop, inbound and outbound. |
 
 ### Activating trace at runtime (no redeploy)
 
-Trace can be turned on and off for a running deployment without rebuilding or redeploying. The mechanism is a poll, not the heartbeat:
+`runneros start` can turn trace on and off for a running server flow without a rebuild or redeploy. The mechanism is a poll, not the heartbeat:
 
-1. The deployment carries a trace window timestamp (`traceUntil`).
-2. The observer exposes `GET /trace/:deploymentId` (authenticated with the ingest token), returning `{ "traceUntil": "<ISO timestamp>" | null }`.
-3. Both the server runtime (`runneros start`) and the deployed browser bundle poll that endpoint about every 15 seconds and feed the returned value into `resolveTelemetryOptions({ traceUntil })` in `@walkeros/core`.
+1. When the three observer variables are set and the level is not already `trace`, the runtime calls `GET <WALKEROS_OBSERVER_URL>/trace/<WALKEROS_DEPLOYMENT_ID>` with the ingest token, at start and then about every 15 seconds.
+2. The observer answers `{ "traceUntil": "<ISO timestamp>" | null }`.
+3. The runtime feeds the value into `resolveTelemetryOptions({ traceUntil })` in `@walkeros/core`.
 
 The resolver applies the value per emit:
 
-- A `traceUntil` that parses to a **future** ISO timestamp forces `level: trace` with full inbound and outbound payloads and `sample: 1`, overriding the flow's `observe` block.
-- A `null` or **past** value reverts to the flow's `observe` baseline.
+- A `traceUntil` that parses to a **future** ISO timestamp forces `level: trace` with full inbound and outbound payloads and `sample: 1`, overriding the baseline level (`WALKEROS_OBSERVE_LEVEL`).
+- A `null` or **past** value reverts to the baseline level.
 - The window self-expires once the timestamp passes, so trace stops on its own with no further action.
 
 Only a `200` with a parseable body changes the active trace state. A network error, a non-200, or an unparseable response leaves the current window untouched, so a transient observer outage never silently disables (or enables) tracing.
 
+Web bundles and a `startFlow` with `observeFromEnv` do not poll; they keep their configured level. The walkerOS app sets no trace window, so the poll matters only for an observer you run yourself that serves this endpoint.
+
 ### Journey correlation across flows
 
-Every FlowState record carries correlation fields so a single observer can stitch one request across web and server flows. These fields survive every level, including `standard`; they are never gated behind `trace`.
+Every FlowState record carries correlation fields so a single observer can stitch one request across web and server flows. These fields are present at every level, including `standard`.
 
 | Field | Meaning |
 |-------|---------|
@@ -237,21 +245,21 @@ The records of one event assemble into a single journey, identified by that even
 
 | Status | Meaning |
 |--------|---------|
-| `pending` | The journey is still settling: a record arrived recently, or an expected hop has no terminal record yet. |
-| `complete` | Every expected hop reached a terminal state (`out`, `error`, or `skip`). |
+| `pending` | The journey is still settling: its last record arrived within the settle window (15 seconds by default), so more may follow. |
+| `complete` | Every expected hop reached a terminal state (`out`, `error`, or `skip`) or was handed to a batch. |
 | `partial` | The journey has settled, but an expected hop never produced a terminal record. |
 
 "Expected" comes from the flow's step topology when one is known (only steps downstream of a processed hop are expected); without a topology, a journey is `complete` once every observed hop is terminal. A separate `lossy` flag is orthogonal to status: a journey is `lossy` when a `seq` gap (see [Loss-visible transport](#loss-visible-transport)) overlaps its window, so a journey can be `complete` and `lossy`, or `partial` and `lossy`, at once.
 
 ### Vendor-call capture
 
-At `trace` level a destination can record the outgoing vendor calls it makes, so an observer sees not just the mapped event but the exact call that left for the vendor. A destination opts in by declaring its observable callables as dot-paths (the `gtag` destination declares `call:window.gtag`); the runtime then wraps those callables and records each `{ fn, args, ts }` onto the record's outbound payload, with arguments sanitized to JSON-safe markers.
+At `trace` level a destination can record the outgoing vendor calls it makes, so an observer sees the exact call that left for the vendor as well as the mapped event. A destination opts in by declaring its observable callables as dot-paths (the `gtag` destination declares `call:window.gtag`); the runtime then wraps those callables and records each `{ fn, args, ts }` onto the record's outbound payload, with arguments sanitized to JSON-safe markers.
 
 Capture works whenever the destination reaches its callable through the env. Server and simulate runs carry the callable in the env directly. On live web a destination resolves a real global (for example `window.gtag`) through `@walkeros/web-core`'s `getEnv`; the runtime wraps the declared callables at that resolution point, so calls are recorded without the destination or the page changing. The batched delivery path is not captured: batched sends flush against the unwrapped env, so a batching destination shows its per-event input and output but not its vendor calls. Recorded calls are payload-class: they appear only when the outbound payload does (`trace`, or an explicit `includeOut`).
 
 ### Loss-visible transport
 
-The batched poster stamps each record with a monotonic `seq` before sending. A dropped or rejected POST is never re-sequenced, so a gap in `seq` at the observer makes lost telemetry visible instead of silent. The poster also splits a batch by real UTF-8 byte size (`maxBodyBytes`, default 60000) rather than letting an oversized body fail with a 413.
+The batched poster stamps each record with a monotonic `seq` before sending. A dropped or rejected POST is never re-sequenced, so a gap in `seq` at the observer shows lost telemetry. The poster also splits a batch by real UTF-8 byte size (`maxBodyBytes`, default 60000) rather than letting an oversized body fail with a 413.
 
 ## Next steps
 

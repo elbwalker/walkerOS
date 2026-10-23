@@ -156,9 +156,12 @@ Pinterest is an advertising platform. The walkerOS consent key is
 
 Until `marketing` is granted, the destination does not load the Pinterest Tag
 and the collector holds its events in a queue. They are sent once consent is
-granted, see [consent management](/docs/guides/consent). Pinterest has no
-consent call, so after a revocation walkerOS holds new events again until the
-next grant, while the loaded tag stays in the page.
+granted, see [consent management](/docs/guides/consent). After a revocation,
+walkerOS holds new events again until the next grant. The destination does not
+tell the loaded tag: Pinterest's consent call
+[`pintrk('setconsent', false)`](https://help.pinterest.com/en/business/article/install-the-base-code)
+deletes the tag's first-party cookies and storage, and the destination never
+makes it, so the tag stays in the page and keeps them.
 
 :::note Auto page view
 The destination fires `pintrk('page')` once on init by default to match
@@ -170,8 +173,9 @@ out.
 
 The [server Pinterest destination](/docs/destinations/server/pinterest) sends
 conversions through the Conversions API. Both destinations send the event's
-`id` as `event_id`; give an event the same Pinterest event name on both sides
-so Pinterest can deduplicate it.
+`id` as `event_id`, unless a rule's `data` maps its own `event_id`, which
+replaces it. Give an event the same Pinterest event name and `event_id` on both
+sides so Pinterest can deduplicate it.
 
 ## Related
 
